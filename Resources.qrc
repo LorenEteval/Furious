@@ -1,0 +1,40 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="Icons/bootstrap">
+        <file alias="arrow-return-left.svg">Icons/bootstrap/arrow-return-left.svg</file>
+        <file alias="arrow-return-right.svg">Icons/bootstrap/arrow-return-right.svg</file>
+        <file alias="box-arrow-in-left.svg">Icons/bootstrap/box-arrow-in-left.svg</file>
+        <file alias="files.svg">Icons/bootstrap/files.svg</file>
+        <file alias="folder2-open.svg">Icons/bootstrap/folder2-open.svg</file>
+        <file alias="gear-wide-connected.svg">Icons/bootstrap/gear-wide-connected.svg</file>
+        <file alias="globe2.svg">Icons/bootstrap/globe2.svg</file>
+        <file alias="lightning-charge.svg">Icons/bootstrap/lightning-charge.svg</file>
+        <file alias="lock-fill.svg">Icons/bootstrap/lock-fill.svg</file>
+        <file alias="pencil-square.svg">Icons/bootstrap/pencil-square.svg</file>
+        <file alias="rocket-takeoff.svg">Icons/bootstrap/rocket-takeoff.svg</file>
+        <file alias="rocket-takeoff-connected.svg">Icons/bootstrap/rocket-takeoff-connected.svg</file>
+        <file alias="rocket-takeoff-connected-dark.svg">Icons/bootstrap/rocket-takeoff-connected-dark.svg</file>
+        <file alias="rocket-takeoff-dark.svg">Icons/bootstrap/rocket-takeoff-dark.svg</file>
+        <file alias="rocket-takeoff-window.svg">Icons/bootstrap/rocket-takeoff-window.svg</file>
+        <file alias="save.svg">Icons/bootstrap/save.svg</file>
+        <file alias="scissors.svg">Icons/bootstrap/scissors.svg</file>
+        <file alias="shuffle.svg">Icons/bootstrap/shuffle.svg</file>
+        <file alias="unlock-fill.svg">Icons/bootstrap/unlock-fill.svg</file>
+    </qresource>
+    <qresource prefix="Icons/bootstrap/white">
+        <file alias="arrow-return-left.svg">Icons/bootstrap/white/arrow-return-left.svg</file>
+        <file alias="arrow-return-right.svg">Icons/bootstrap/white/arrow-return-right.svg</file>
+        <file alias="box-arrow-in-left.svg">Icons/bootstrap/white/box-arrow-in-left.svg</file>
+        <file alias="files.svg">Icons/bootstrap/white/files.svg</file>
+        <file alias="folder2-open.svg">Icons/bootstrap/white/folder2-open.svg</file>
+        <file alias="gear-wide-connected.svg">Icons/bootstrap/white/gear-wide-connected.svg</file>
+        <file alias="globe2.svg">Icons/bootstrap/white/globe2.svg</file>
+        <file alias="lightning-charge.svg">Icons/bootstrap/white/lightning-charge.svg</file>
+        <file alias="lock-fill.svg">Icons/bootstrap/white/lock-fill.svg</file>
+        <file alias="pencil-square.svg">Icons/bootstrap/white/pencil-square.svg</file>
+        <file alias="save.svg">Icons/bootstrap/white/save.svg</file>
+        <file alias="scissors.svg">Icons/bootstrap/white/scissors.svg</file>
+        <file alias="shuffle.svg">Icons/bootstrap/white/shuffle.svg</file>
+        <file alias="unlock-fill.svg">Icons/bootstrap/white/unlock-fill.svg</file>
+    </qresource>
+</RCC>
