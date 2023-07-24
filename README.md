@@ -45,9 +45,9 @@ and [hysteria](https://github.com/apernet/hysteria).
 
 ## Install
 
-> Note: Due to better binary files compatibility on Windows, if you are Windows user, you can skip this section and
-> download zip file in the release page that contains pre-built binaries. Otherwise you need to follow the instructions
-> below.
+> Note: Due to better binary files compatibility on Windows platform, Windows users can skip this section and
+> download zip file in the [release](https://github.com/LorenEteval/Furious/releases) page that contains
+> pre-built binaries. Otherwise you need to follow the instructions below.
 
 ### Core Building Tools
 
