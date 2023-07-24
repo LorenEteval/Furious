@@ -8,11 +8,10 @@ import platform
 
 APPLICATION_NAME = 'Furious'
 APPLICATION_VERSION = __version__
-# TODO
 APPLICATION_MACOS_SIGNATURE = 'com.furious'
-APPLICATION_ABOUT_PAGE = 'https://www.baidu.com/'
-APPLICATION_REPO_OWNER_NAME = 'xtls'
-APPLICATION_REPO_NAME = 'xray-core'
+APPLICATION_ABOUT_PAGE = 'https://github.com/LorenEteval/Furious/'
+APPLICATION_REPO_OWNER_NAME = 'LorenEteval'
+APPLICATION_REPO_NAME = 'Furious'
 
 ORGANIZATION_NAME = 'Furious'
 ORGANIZATION_DOMAIN = 'furious.network'
