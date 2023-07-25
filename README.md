@@ -27,21 +27,21 @@ and [hysteria](https://github.com/apernet/hysteria).
 
 ### Windows
 
-![Windows-Light-EN](https://raw.githubusercontent.com/LorenEteval/Furious/main/screenshot/Windows-Light-EN.png)
+![Windows-Light-EN](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/Windows-Light-EN.png)
 
-![Windows-Light-CN](https://raw.githubusercontent.com/LorenEteval/Furious/main/screenshot/Windows-Light-CN.png)
+![Windows-Light-CN](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/Windows-Light-CN.png)
 
 ### macOS
 
-![macOS-Light](https://raw.githubusercontent.com/LorenEteval/Furious/main/screenshot/macOS-Light.png)
+![macOS-Light](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/macOS-Light.png)
 
-![macOS-Dark](https://raw.githubusercontent.com/LorenEteval/Furious/main/screenshot/macOS-Dark.png)
+![macOS-Dark](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/macOS-Dark.png)
 
 ### Ubuntu
 
-![Ubuntu-Light](https://raw.githubusercontent.com/LorenEteval/Furious/main/screenshot/Ubuntu-Light.png)
+![Ubuntu-Light](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/Ubuntu-Light.png)
 
-![Ubuntu-Dark](https://raw.githubusercontent.com/LorenEteval/Furious/main/screenshot/Ubuntu-Dark.png)
+![Ubuntu-Dark](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/Ubuntu-Dark.png)
 
 ## Install
 
