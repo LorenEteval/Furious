@@ -39,7 +39,7 @@ setup(
     author_email='loren.eteval@proton.me',
     url='https://github.com/LorenEteval/Furious',
     packages=find_packages(),
-    package_data={'Furious': ['data/**']},
+    package_data={'Furious': ['Data/**']},
     include_package_data=True,
     install_requires=get_install_requires(),
     entry_points={
