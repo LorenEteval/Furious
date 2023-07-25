@@ -432,8 +432,7 @@ class ProxyOutboundObject:
                 'id': self.uuid_,
                 'security': self.encryption,
                 # Extension
-                # TODO
-                'email': 'user@furious.com',
+                'email': 'user@Furious.GUI',
             }
 
             # For VMess(V2rayN share standard) only.
@@ -447,8 +446,7 @@ class ProxyOutboundObject:
                 'id': self.uuid_,
                 'encryption': self.encryption,
                 # Extension
-                # TODO
-                'email': 'user@furious.com',
+                'email': 'user@Furious.GUI',
             }
 
             if self.kwargs.get('flow'):
