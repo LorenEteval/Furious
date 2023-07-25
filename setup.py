@@ -32,7 +32,7 @@ setup(
     name='Furious-GUI',
     version=__version__,
     license='GPL v3.0',
-    description='A cross-platform GUI client that launches your beloved GFW to outer space.',
+    description='A PyQt-based cross platform GUI client that launches your beloved GFW to outer space.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='Loren Eteval',
