@@ -1,6 +1,6 @@
 # Furious
 
-A cross-platform GUI client that launches your beloved GFW to outer space.
+A PyQt-based cross platform GUI client that launches your beloved GFW to outer space.
 Support [Xray-core](https://github.com/XTLS/Xray-core)
 and [hysteria](https://github.com/apernet/hysteria).
 
@@ -86,6 +86,20 @@ Furious
 ```
 
 Furious will enable startup on boot by default if it's launched for the first time. Happy browsing!
+
+## Run From Source
+
+Clone this repository and enter the project folder. Install requirements:
+
+```
+pip install -r requirements.txt
+```
+
+Run:
+
+```
+python -m Furious
+```
 
 ## Core Installation Script
 
