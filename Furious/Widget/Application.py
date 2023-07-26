@@ -149,10 +149,6 @@ class Application(SingletonApplication):
 
         self.MainWidget = None
 
-        # Shared action
-        self.ImportLinkAction = None
-        self.ImportJSONAction = None
-
     def __getattr__(self, key):
         try:
             return Settings.get(key)
