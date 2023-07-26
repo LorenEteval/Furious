@@ -1,8 +1,10 @@
 # Furious
 
-A PyQt-based cross platform GUI client that launches your beloved GFW to outer space.
+A PySide6-based cross platform GUI client that launches your beloved GFW to outer space.
 Support [Xray-core](https://github.com/XTLS/Xray-core)
 and [hysteria](https://github.com/apernet/hysteria).
+
+![Furious](https://raw.githubusercontent.com/LorenEteval/Furious/main/Icons/png/rocket-takeoff-window-400x400.png)
 
 ## Features
 
