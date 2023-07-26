@@ -74,6 +74,8 @@ must have tools ready for building these bindings for your current platform firs
 
 ### Install Furious
 
+Furious requires Python 3.8 and above.
+
 ```
 pip install Furious-GUI
 ```
@@ -117,4 +119,4 @@ Below are some one-click/automatic installation script that's been tested to wor
 
 ## License
 
-License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENSE)
+License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENSE).
