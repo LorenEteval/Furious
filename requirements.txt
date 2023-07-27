@@ -1,9 +1,10 @@
+wheel
 PySide6-Essentials
 Xray-core
 hysteria
 ujson
 pybase64
 pyqrcode
-sysproxy; sys_platform == 'win32'
-darkdetect; sys_platform != 'darwin'
-darkdetect[macos-listener]; sys_platform == 'darwin'
+sysproxy; sys_platform == "win32"
+darkdetect; sys_platform != "darwin"
+darkdetect[macos-listener]; sys_platform == "darwin"

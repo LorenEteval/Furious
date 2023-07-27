@@ -6,6 +6,7 @@ from setuptools import setup, find_packages
 
 def get_install_requires():
     requires = [
+        'wheel',
         'PySide6-Essentials',
         'Xray-core',
         'hysteria',
