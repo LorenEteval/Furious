@@ -3,29 +3,6 @@ from Furious.Utility.Constants import PLATFORM
 
 from setuptools import setup, find_packages
 
-
-def get_install_requires():
-    requires = [
-        'wheel',
-        'PySide6-Essentials',
-        'Xray-core',
-        'hysteria',
-        'ujson',
-        'pybase64',
-        'pyqrcode',
-    ]
-
-    if PLATFORM == 'Windows':
-        requires.append('sysproxy')
-
-    if PLATFORM == 'Darwin':
-        requires.append('darkdetect[macos-listener]')
-    else:
-        requires.append('darkdetect')
-
-    return requires
-
-
 with open('README.md', 'r', encoding='utf-8') as file:
     long_description = file.read()
 
@@ -42,7 +19,18 @@ setup(
     packages=find_packages(),
     package_data={'Furious': ['Data/**']},
     include_package_data=True,
-    install_requires=get_install_requires(),
+    install_requires=[
+        'wheel',
+        'PySide6-Essentials',
+        'Xray-core',
+        'hysteria',
+        'ujson',
+        'pybase64',
+        'pyqrcode',
+        'sysproxy; sys_platform == "win32"',
+        'darkdetect; sys_platform != "darwin"',
+        'darkdetect[macos-listener]; sys_platform == "darwin"',
+    ],
     entry_points={
         'gui_scripts': [
             'Furious = Furious.__main__:main',
