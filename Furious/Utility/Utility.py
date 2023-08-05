@@ -21,7 +21,14 @@ class Base64Encoder:
 
     @staticmethod
     def decode(text):
-        return pybase64.b64decode(text, validate=True)
+        return pybase64.b64decode(text, validate=False)
+
+
+class Protocol:
+    VMess = 'VMess'
+    VLESS = 'VLESS'
+    Shadowsocks = 'shadowsocks'
+    Hysteria = 'hysteria'
 
 
 class StateContext:
@@ -148,12 +155,15 @@ bootstrapIconWhite = functools.partial(icon, 'bootstrap/white')
 
 def protocolRepr(protocol):
     if protocol.lower() == 'vmess':
-        return 'VMess'
+        return Protocol.VMess
 
     if protocol.lower() == 'vless':
-        return 'VLESS'
+        return Protocol.VLESS
 
-    return ''
+    if protocol.lower() == 'shadowsocks':
+        return Protocol.Shadowsocks
+
+    return protocol
 
 
 def getAbsolutePath(path):

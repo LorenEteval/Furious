@@ -2,11 +2,13 @@ from Furious.Core.Configuration import (
     Configuration,
     XrayCoreConfiguration,
     ProxyOutboundObject,
+    ProxyOutboundObjectSS,
 )
 from Furious.Gui.Action import Action
 from Furious.Widget.Widget import Menu, MessageBox
 from Furious.Utility.Utility import (
     Base64Encoder,
+    Protocol,
     StateContext,
     Storage,
     bootstrapIcon,
@@ -219,7 +221,7 @@ class ImportLinkAction(Action):
 
             remark = urllib.parse.unquote(parseResult.fragment)
 
-            uuid_, remote_host, remote_port = re.split(r'[@:]', parseResult.path)
+            uuid_, remote_host, remote_port = re.split(r'[@:]', parseResult.netloc)
 
             encryption = queryObject.get('encryption', 'none')
             type_ = queryObject.get('type', 'tcp')
@@ -262,6 +264,83 @@ class ImportLinkAction(Action):
 
             return '', False
 
+    @staticmethod
+    def parseShareLinkSIP002(data):
+        try:
+            result = urllib.parse.urlparse(data)
+            remark = urllib.parse.unquote(result.fragment)
+
+            try:
+                # Try pack with 3 element
+                userinfo, address, port = re.split(r'[@:]', result.netloc)
+
+                # Some old SS share link doesn't add padding
+                # in base64 encoding. Add padding to userinfo
+                method, password = (
+                    Base64Encoder.decode(userinfo + '===').decode().split(':')
+                )
+            except ValueError:
+                # Unpack error. Try pack with 4 element
+
+                method, password, address, port = re.split(r'[@:]', result.netloc)
+            except Exception as ex:
+                # Any non-exit exceptions
+
+                raise ex
+
+            myJSON = XrayCoreConfiguration.build(
+                ProxyOutboundObjectSS(
+                    urllib.parse.unquote(method),
+                    urllib.parse.unquote(password),
+                    address,
+                    port,
+                )
+            )
+
+            QApplication.instance().MainWidget.importServer(
+                remark,
+                ujson.dumps(
+                    myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
+                ),
+            )
+
+            logger.info(
+                f'import share link from clipboard success. '
+                f'Remark: {remark}. Protocol: {Protocol.Shadowsocks}'
+            )
+
+            return remark, True
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            return '', False
+
+    def parseShareLinkSS(self, data):
+        try:
+            # ss://base64...
+            myData = Base64Encoder.decode(data[5:]).decode()
+            myJSON = XrayCoreConfiguration.build(
+                ProxyOutboundObjectSS(*re.split(r'[@:]', myData))
+            )
+
+            QApplication.instance().MainWidget.importServer(
+                'sslegacy',
+                ujson.dumps(
+                    myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
+                ),
+            )
+
+            logger.info(
+                f'import share link from clipboard success. '
+                f'Remark: sslegacy. Protocol: {Protocol.Shadowsocks}'
+            )
+
+            return 'sslegacy', True
+        except Exception:
+            # Any non-exit exceptions
+
+            return self.parseShareLinkSIP002(data)
+
     def parseShareLink(self, shareLink):
         try:
             myHead, myBody = shareLink.split('://')
@@ -277,12 +356,15 @@ class ImportLinkAction(Action):
                 except Exception:
                     # Any non-exit exceptions
 
-                    return self.parseShareLinkVMess(myBody, isV2rayN=False)
+                    return self.parseShareLinkVMess(shareLink, isV2rayN=False)
                 else:
                     return self.parseShareLinkVMess(myJSON, isV2rayN=True)
 
             if myHead.lower() == 'vless':
-                return self.parseShareLinkStandard('vless', myBody)
+                return self.parseShareLinkStandard('vless', shareLink)
+
+            if myHead.lower() == 'ss':
+                return self.parseShareLinkSS(shareLink)
 
             return '', False
 
