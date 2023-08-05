@@ -1,5 +1,5 @@
 from Furious.Core.Core import XrayCore, Hysteria
-from Furious.Utility.Utility import protocolRepr
+from Furious.Utility.Utility import Protocol, protocolRepr
 
 
 class Intellisense:
@@ -24,7 +24,7 @@ class Intellisense:
                         return protocolRepr(outbound['protocol'])
 
             if Intellisense.getCoreType(ob) == Hysteria.name():
-                return 'hysteria'
+                return Protocol.Hysteria
 
             return ''
         except Exception:
@@ -36,14 +36,25 @@ class Intellisense:
     def getCoreAddr(ob):
         try:
             if Intellisense.getCoreType(ob) == XrayCore.name():
+                protocol = Intellisense.getCoreProtocol(ob)
+
                 for outbound in ob['outbounds']:
                     if outbound['tag'] == 'proxy':
-                        return ';'.join(
-                            list(
-                                f'{server["address"]}'
-                                for server in outbound['settings']['vnext']
+                        if protocol == Protocol.VMess or protocol == Protocol.VLESS:
+                            return ';'.join(
+                                list(
+                                    f'{server["address"]}'
+                                    for server in outbound['settings']['vnext']
+                                )
                             )
-                        )
+
+                        if protocol == Protocol.Shadowsocks:
+                            return ';'.join(
+                                list(
+                                    f'{server["address"]}'
+                                    for server in outbound['settings']['servers']
+                                )
+                            )
 
             if Intellisense.getCoreType(ob) == Hysteria.name():
                 return ob['server'].split(':')[0]
@@ -58,14 +69,25 @@ class Intellisense:
     def getCorePort(ob):
         try:
             if Intellisense.getCoreType(ob) == XrayCore.name():
+                protocol = Intellisense.getCoreProtocol(ob)
+
                 for outbound in ob['outbounds']:
                     if outbound['tag'] == 'proxy':
-                        return ';'.join(
-                            list(
-                                f'{server["port"]}'
-                                for server in outbound['settings']['vnext']
+                        if protocol == Protocol.VMess or protocol == Protocol.VLESS:
+                            return ';'.join(
+                                list(
+                                    f'{server["port"]}'
+                                    for server in outbound['settings']['vnext']
+                                )
                             )
-                        )
+
+                        if protocol == Protocol.Shadowsocks:
+                            return ';'.join(
+                                list(
+                                    f'{server["port"]}'
+                                    for server in outbound['settings']['servers']
+                                )
+                            )
 
             if Intellisense.getCoreType(ob) == Hysteria.name():
                 return ob['server'].split(':')[1]
