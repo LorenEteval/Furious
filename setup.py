@@ -1,5 +1,4 @@
 from Furious.Version import __version__
-from Furious.Utility.Constants import PLATFORM
 
 from setuptools import setup, find_packages
 
@@ -20,7 +19,6 @@ setup(
     package_data={'Furious': ['Data/**']},
     include_package_data=True,
     install_requires=[
-        'wheel',
         'PySide6-Essentials',
         'Xray-core',
         'hysteria',
