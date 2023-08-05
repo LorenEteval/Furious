@@ -1,4 +1,3 @@
-wheel
 PySide6-Essentials
 Xray-core
 hysteria
