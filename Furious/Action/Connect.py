@@ -64,6 +64,8 @@ class ConnectAction(Action):
 
         self.connectingFlag = False
 
+        self.disconnectReason = ''
+
         # Note: The connection test is carried out item by item
         # from top to bottom. If any of these succeed,
         # connected action will be executed.
@@ -94,6 +96,13 @@ class ConnectAction(Action):
                 return self.disconnectAction(
                     f'{XrayCore.name()}: {_("Invalid server configuration")}'
                 )
+            else:
+                self.coreRunning = False
+                self.disconnectReason = (
+                    f'{XrayCore.name()}: {_("Invalid server configuration")}'
+                )
+
+                return
 
         if exitcode == XrayCore.ExitCode.ServerStartFailure:
             if not self.isConnecting():
@@ -101,10 +110,22 @@ class ConnectAction(Action):
                 return self.disconnectAction(
                     f'{XrayCore.name()}: {_("Failed to start core")}'
                 )
+            else:
+                self.coreRunning = False
+                self.disconnectReason = (
+                    f'{XrayCore.name()}: {_("Failed to start core")}'
+                )
+
+                return
 
         if not self.isConnecting():
             # Protect connecting action. Mandatory
             self.disconnectAction(
+                f'{XrayCore.name()}: {_("Core terminated unexpectedly")}'
+            )
+        else:
+            self.coreRunning = False
+            self.disconnectReason = (
                 f'{XrayCore.name()}: {_("Core terminated unexpectedly")}'
             )
 
@@ -120,6 +141,13 @@ class ConnectAction(Action):
                 return self.disconnectAction(
                     f'{Hysteria.name()}: {_("Invalid server configuration")}'
                 )
+            else:
+                self.coreRunning = False
+                self.disconnectReason = (
+                    f'{Hysteria.name()}: {_("Invalid server configuration")}'
+                )
+
+                return
 
         if exitcode == Hysteria.ExitCode.RemoteNetworkError:
             if not self.isConnecting():
@@ -127,10 +155,22 @@ class ConnectAction(Action):
                 return self.disconnectAction(
                     f'{Hysteria.name()}: {_("Connection to server has been lost")}'
                 )
+            else:
+                self.coreRunning = False
+                self.disconnectReason = (
+                    f'{Hysteria.name()}: {_("Connection to server has been lost")}'
+                )
+
+                return
 
         if not self.isConnecting():
             # Protect connecting action. Mandatory
             self.disconnectAction(
+                f'{Hysteria.name()}: {_("Core terminated unexpectedly")}'
+            )
+        else:
+            self.coreRunning = False
+            self.disconnectReason = (
                 f'{Hysteria.name()}: {_("Core terminated unexpectedly")}'
             )
 
@@ -228,6 +268,8 @@ class ConnectAction(Action):
 
         # Accept new action
         self.setDisabledAction(False)
+
+        self.disconnectReason = ''
 
         self.connectingFlag = False
 
@@ -517,13 +559,16 @@ class ConnectAction(Action):
                     f'{self.coreName}: connection test failed. {self.networkReply.errorString()}'
                 )
 
-                if self.testTime < len(self.testPool):
+                if self.testTime < len(self.testPool) and self.coreRunning:
                     # Try next
                     self.startConnectionTest(showRoutingChangedMessage)
                 else:
-                    self.disconnectAction(
-                        f'{self.coreName}: {_("Connection test failed")}'
-                    )
+                    if self.disconnectReason:
+                        self.disconnectAction(self.disconnectReason)
+                    else:
+                        self.disconnectAction(
+                            f'{self.coreName}: {_("Connection test failed")}'
+                        )
             else:
                 logger.info(f'{self.coreName}: connection test success. Connected')
 
@@ -626,8 +671,14 @@ class ConnectAction(Action):
             return
 
         if not self.coreRunning:
-            # No valid HTTP proxy endpoint / Core has exited.
-            # reset / disconnect has been called
+            # 1. No valid HTTP proxy endpoint. reset / disconnect has been called
+
+            if self.isConnecting():
+                # 2. Core has exited. disconnectReason must not be empty
+                assert self.disconnectReason
+
+                self.disconnectAction(self.disconnectReason)
+
             return
 
         try:
