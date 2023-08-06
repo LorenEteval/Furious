@@ -1861,6 +1861,7 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
             'name': 'Help',
             'actions': [
                 ShowLogAction(parent=self),
+                Seperator(),
                 CheckForUpdatesAction(parent=self),
                 AboutAction(parent=self),
             ],
