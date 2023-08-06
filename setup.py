@@ -25,6 +25,7 @@ setup(
         'ujson',
         'pybase64',
         'pyqrcode',
+        'pypng',
         'sysproxy; sys_platform == "win32"',
         'darkdetect; sys_platform != "darwin"',
         'darkdetect[macos-listener]; sys_platform == "darwin"',
