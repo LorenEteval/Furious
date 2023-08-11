@@ -71,6 +71,7 @@ import os
 import copy
 import ujson
 import logging
+import functools
 
 logger = logging.getLogger(__name__)
 
@@ -631,6 +632,22 @@ class WhetherToUpdateInfoBox(MessageBox):
             self.moveToCenter()
 
 
+def versionToNumber(version):
+    major_weight = 10000
+    minor_weight = 100
+    patch_weight = 1
+
+    return functools.reduce(
+        lambda x, y: x + y,
+        list(
+            int(ver) * weight
+            for ver, weight in zip(
+                version.split('.'), [major_weight, minor_weight, patch_weight]
+            )
+        ),
+    )
+
+
 class CheckForUpdatesAction(Action):
     def __init__(self, **kwargs):
         super().__init__(_('Check For Updates'), **kwargs)
@@ -701,7 +718,9 @@ class CheckForUpdatesAction(Action):
 
                 info = ujson.loads(data)
 
-                if info['tag_name'] > APPLICATION_VERSION:
+                if versionToNumber(info['tag_name']) > versionToNumber(
+                    APPLICATION_VERSION
+                ):
                     self.whetherToUpdateInfoBox.version = info['tag_name']
                     self.whetherToUpdateInfoBox.setWindowTitle(_(APPLICATION_NAME))
                     self.whetherToUpdateInfoBox.setStandardButtons(
