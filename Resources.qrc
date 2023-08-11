@@ -4,6 +4,7 @@
         <file alias="arrow-return-left.svg">Icons/bootstrap/arrow-return-left.svg</file>
         <file alias="arrow-return-right.svg">Icons/bootstrap/arrow-return-right.svg</file>
         <file alias="box-arrow-in-left.svg">Icons/bootstrap/box-arrow-in-left.svg</file>
+        <file alias="file-earmark.svg">Icons/bootstrap/file-earmark.svg</file>
         <file alias="files.svg">Icons/bootstrap/files.svg</file>
         <file alias="folder2-open.svg">Icons/bootstrap/folder2-open.svg</file>
         <file alias="gear-wide-connected.svg">Icons/bootstrap/gear-wide-connected.svg</file>
@@ -25,6 +26,7 @@
         <file alias="arrow-return-left.svg">Icons/bootstrap/white/arrow-return-left.svg</file>
         <file alias="arrow-return-right.svg">Icons/bootstrap/white/arrow-return-right.svg</file>
         <file alias="box-arrow-in-left.svg">Icons/bootstrap/white/box-arrow-in-left.svg</file>
+        <file alias="file-earmark.svg">Icons/bootstrap/white/file-earmark.svg</file>
         <file alias="files.svg">Icons/bootstrap/white/files.svg</file>
         <file alias="folder2-open.svg">Icons/bootstrap/white/folder2-open.svg</file>
         <file alias="gear-wide-connected.svg">Icons/bootstrap/white/gear-wide-connected.svg</file>
