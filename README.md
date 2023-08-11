@@ -16,8 +16,8 @@ and [hysteria](https://github.com/apernet/hysteria).
 * Support import from JSON or share link(`vmess://...`, `vless://...` or `ss://`, including the
   newest [REALITY](https://github.com/XTLS/REALITY) share standard).
 * Support export to JSON, share link or QRCode.
-* Two built-in routing mode support: Bypass Mainland China(with Ads filter) and Global. You can also choose to use your
-  own routing rules.
+* Built-in routing mode support: Bypass Mainland China(with Ads filter), Bypass Iran(with Ads filter) and Global. You
+  can also choose to customize your own routing rules.
 * Built-in editor support.
 * VPN-client user experience.
 * Support system theme detection and switch to dark/light theme automatically.
@@ -74,6 +74,8 @@ must have tools ready for building these bindings for your current platform firs
 
 ### Install Furious
 
+> Note: Install Furious in a Python virtual environment(i.e. venv) is recommended.
+
 Furious requires **Python 3.8 and above**.
 
 ```
@@ -94,6 +96,8 @@ Furious will enable startup on boot by default if it's launched for the first ti
 ## Run From Source
 
 Clone this repository and enter the project folder. Install requirements:
+
+> Note: Install requirements in a Python virtual environment(i.e. venv) is recommended.
 
 > Note: To install requirements successfully you will also need
 > those [Core Building Tools](https://github.com/LorenEteval/Furious#core-building-tools) above.
