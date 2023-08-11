@@ -206,26 +206,6 @@ def getAbsolutePath(path):
     return path if os.path.isabs(path) else str(ROOT_DIR / path)
 
 
-def swapListItem(listOrTuple, index0, index1):
-    swap = listOrTuple[index0]
-
-    listOrTuple[index0] = listOrTuple[index1]
-    listOrTuple[index1] = swap
-
-
-def moveToCenter(widget, parent=None):
-    geometry = widget.geometry()
-
-    if parent is None:
-        center = QApplication.primaryScreen().availableGeometry().center()
-    else:
-        center = parent.geometry().center()
-
-    geometry.moveCenter(center)
-
-    widget.move(geometry.topLeft())
-
-
 def getUbuntuRelease():
     try:
         result = subprocess.run(
@@ -248,3 +228,23 @@ def getUbuntuRelease():
         # Any non-exit exceptions
 
         return ''
+
+
+def swapListItem(listOrTuple, index0, index1):
+    swap = listOrTuple[index0]
+
+    listOrTuple[index0] = listOrTuple[index1]
+    listOrTuple[index1] = swap
+
+
+def moveToCenter(widget, parent=None):
+    geometry = widget.geometry()
+
+    if parent is None:
+        center = QApplication.primaryScreen().availableGeometry().center()
+    else:
+        center = parent.geometry().center()
+
+    geometry.moveCenter(center)
+
+    widget.move(geometry.topLeft())
