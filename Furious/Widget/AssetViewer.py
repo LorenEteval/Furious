@@ -7,6 +7,7 @@ from Furious.Utility.Utility import (
     SupportThemeChangedCallback,
     bootstrapIcon,
     bootstrapIconWhite,
+    getUbuntuRelease,
     moveToCenter,
 )
 from Furious.Utility.Translator import Translatable, gettext as _
@@ -168,6 +169,11 @@ class AssetViewerWidget(
         self.listWidget.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.listWidget.setIconSize(QtCore.QSize(64, 64))
 
+        if PLATFORM == 'Linux' and getUbuntuRelease() == '20.04':
+            self.initialTheme = darkdetect.theme()
+        else:
+            self.initialTheme = None
+
         self.flushItem()
         self.setCentralWidget(self.listWidget)
 
@@ -238,14 +244,14 @@ class AssetViewerWidget(
         for index in indexes:
             os.remove(AssetViewerWidget.AssetDir / self.listWidget.item(index).text())
 
-    def flushItem(self):
+    def flushItemByTheme(self, theme):
         self.listWidget.clear()
 
         for filename in os.listdir(AssetViewerWidget.AssetDir):
             if os.path.isfile(AssetViewerWidget.AssetDir / filename):
                 item = QListWidgetItem(filename)
 
-                if darkdetect.theme() == 'Dark':
+                if theme == 'Dark':
                     if PLATFORM == 'Windows':
                         # Windows. Always use black icon
                         item.setIcon(bootstrapIcon('file-earmark.svg'))
@@ -255,6 +261,15 @@ class AssetViewerWidget(
                     item.setIcon(bootstrapIcon('file-earmark.svg'))
 
                 self.listWidget.addItem(item)
+
+    def flushItem(self):
+        if PLATFORM == 'Linux' and getUbuntuRelease() == '20.04':
+            assert self.initialTheme is not None
+
+            # Ubuntu 20.04. Flush by initial theme
+            self.flushItemByTheme(self.initialTheme)
+        else:
+            self.flushItemByTheme(darkdetect.theme())
 
     def closeEvent(self, event):
         event.ignore()
@@ -268,8 +283,12 @@ class AssetViewerWidget(
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
     def themeChangedCallback(self, theme):
-        # TODO
-        pass
+        if PLATFORM == 'Linux' and getUbuntuRelease() == '20.04':
+            # Ubuntu 20.04 system dark theme does not
+            # change menu color. Do nothing
+            pass
+        else:
+            self.flushItemByTheme(theme)
 
     def retranslate(self):
         with StateContext(self):
