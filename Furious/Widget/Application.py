@@ -1,5 +1,6 @@
 from Furious.Widget.SystemTrayIcon import SystemTrayIcon
 from Furious.Widget.EditConfiguration import EditConfigurationWidget
+from Furious.Widget.EditRouting import EditRoutingWidget
 from Furious.Widget.LogViewer import LogViewerWidget
 from Furious.Utility.Constants import (
     APPLICATION_NAME,
@@ -140,6 +141,8 @@ class Application(SingletonApplication):
         self.customFontEnabled = False
         self.customFontName = ''
 
+        self.editRoutingWidget = None
+
         self.logViewerWidget = None
         self.logViewerHandle = None
         self.logStreamHandle = None
@@ -181,7 +184,7 @@ class Application(SingletonApplication):
 
         logging.basicConfig(
             format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
-            level=logging.DEBUG,
+            level=logging.INFO,
             handlers=(self.logViewerHandle, self.logStreamHandle),
         )
         logging.raiseExceptions = False
@@ -244,6 +247,7 @@ class Application(SingletonApplication):
         self.aboutToQuit.connect(self.cleanup)
 
         self.MainWidget = EditConfigurationWidget()
+        self.editRoutingWidget = EditRoutingWidget()
 
         self.tray = SystemTrayIcon()
         self.tray.show()
@@ -257,11 +261,15 @@ class Application(SingletonApplication):
         Proxy.off()
         Proxy.daemonOff()
 
-        if self.tray is not None:
-            self.tray.ConnectAction.stopCore()
+        # Avoid calling core exit callback. Cores are cleaned by OS.
+        # if self.tray is not None:
+        #     self.tray.ConnectAction.stopCore()
 
         if self.MainWidget is not None:
             self.MainWidget.syncSettings()
+
+        if self.editRoutingWidget is not None:
+            self.editRoutingWidget.syncSettings()
 
         if self.logViewerWidget is not None:
             self.logViewerWidget.syncSettings()

@@ -9,7 +9,6 @@ from Furious.Utility.Translator import Translatable, gettext as _
 
 from PySide6 import QtCore
 from PySide6.QtGui import QAction, QActionGroup
-from PySide6.QtWidgets import QApplication
 
 import logging
 import darkdetect
@@ -47,6 +46,11 @@ class Action(Translatable, SupportThemeChangedCallback, QAction):
                 self._actionGroup = ActionGroup(self, *menu.actions())
 
                 self.setActionGroup(self._actionGroup)
+            else:
+                self._actionGroup = None
+        else:
+            self._menu = None
+            self._actionGroup = None
 
         self.setCheckable(checkable)
         self.setChecked(checked)
@@ -64,6 +68,20 @@ class Action(Translatable, SupportThemeChangedCallback, QAction):
             self.triggeredCallback(paramChecked)
 
         self.triggered.connect(triggerSignal)
+
+    def addAction(self, action):
+        if self._menu is not None:
+            self._menu.addAction(action)
+
+            if self._actionGroup is not None:
+                self._actionGroup.addAction(action)
+
+    def removeAction(self, action):
+        if self._menu is not None:
+            self._menu.removeAction(action)
+
+            if self._actionGroup is not None:
+                self._actionGroup.removeAction(action)
 
     @property
     def textEnglish(self):
@@ -127,7 +145,7 @@ class Action(Translatable, SupportThemeChangedCallback, QAction):
 
     def retranslate(self):
         def recursiveTranslate(action, memo):
-            if action not in memo and not action.isSeparator():
+            if action not in memo and not action.isSeparator() and action.translatable:
                 action.setText(_(action.text()))
 
             memo[action] = True

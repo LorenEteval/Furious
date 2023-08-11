@@ -1,4 +1,5 @@
 from Furious.Gui.Action import Action, Seperator
+from Furious.Utility.Constants import APP
 from Furious.Utility.Utility import (
     StateContext,
     SupportConnectedCallback,
@@ -8,14 +9,51 @@ from Furious.Utility.Utility import (
 from Furious.Utility.Translator import Translatable, gettext as _
 
 from PySide6 import QtCore
+from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import (
+    QHeaderView,
+    QInputDialog,
+    QLineEdit,
+    QListWidget,
     QMenu,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QStyledItemDelegate,
+    QTableWidget,
     QTabWidget,
     QTextBrowser,
 )
+
+
+class HeaderView(SupportConnectedCallback, QHeaderView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setSectionsClickable(True)
+
+        self.setStyleSheet(
+            f'QHeaderView::section:hover {{ background-color: #008AE1; }}'
+        )
+
+    def connectedCallback(self):
+        self.setStyleSheet(
+            f'QHeaderView::section:hover {{ background-color: #EB212E; }}'
+        )
+
+    def disconnectedCallback(self):
+        self.setStyleSheet(
+            f'QHeaderView::section:hover {{ background-color: #008AE1; }}'
+        )
+
+
+class ListWidget(QListWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @property
+    def selectedIndex(self):
+        return sorted(list(set(index.row() for index in self.selectedIndexes())))
 
 
 class Menu(Translatable, QMenu):
@@ -99,18 +137,110 @@ class PushButton(Translatable, QPushButton):
         self.setText(_(self.text()))
 
 
+class StyledItemDelegate(QStyledItemDelegate):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def createEditor(self, parent, option, index):
+        editor = QLineEdit(parent)
+        editor.setFont(QFont(APP().customFontName))
+
+        return editor
+
+
+class TableWidget(QTableWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @property
+    def selectedIndex(self):
+        return sorted(list(set(index.row() for index in self.selectedIndexes())))
+
+    def setSelectionColor(self, color):
+        self.setStyleSheet(f'QTableWidget {{ selection-background-color: {color}; }}')
+
+    def activateItemByIndex(self, index, activate=True):
+        if activate:
+            for column in range(self.columnCount()):
+                item = self.item(int(index), column)
+
+                if item is None:
+                    # Do nothing
+                    continue
+
+                font = item.font()
+                font.setBold(True)
+
+                item.setFont(font)
+
+                if APP().tray is None:
+                    # Initializing
+                    item.setForeground(QColor('#008AE1'))
+                else:
+                    if APP().tray.ConnectAction.isConnected():
+                        item.setForeground(QColor('#EB212E'))
+                    else:
+                        item.setForeground(QColor('#008AE1'))
+        else:
+            for column in range(self.columnCount()):
+                item = self.item(int(index), column)
+
+                if item is None:
+                    # Do nothing
+                    continue
+
+                font = item.font()
+                font.setBold(False)
+
+                item.setFont(font)
+                item.setForeground(QBrush())
+
+
 class TabWidget(Translatable, QTabWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def retranslate(self):
-        for i in range(self.tabBar().count()):
-            self.tabBar().setTabText(i, _(self.tabBar().tabText(i)))
+        for index in range(self.count()):
+            self.setTabText(index, _(self.tabText(index)))
 
 
 class ZoomablePlainTextEdit(QPlainTextEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def getIndent(line):
+        indent = ''
+
+        for char in line:
+            if char.isspace():
+                indent += char
+            else:
+                break
+
+        return indent
+
+    def smartIndent(self, event):
+        cursor = self.textCursor()
+        indent = self.getIndent(cursor.block().text())
+
+        # Do newline action
+        super().keyPressEvent(event)
+
+        # Add last line indent
+        cursor.insertText(indent)
+
+        self.setTextCursor(cursor)
+
+    def keyPressEvent(self, event):
+        if (
+            event.key() == QtCore.Qt.Key.Key_Return
+            or event.key() == QtCore.Qt.Key.Key_Enter
+        ):
+            self.smartIndent(event)
+        else:
+            super().keyPressEvent(event)
 
     def wheelEvent(self, event):
         if event.modifiers() == QtCore.Qt.KeyboardModifier.ControlModifier:

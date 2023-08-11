@@ -1,5 +1,5 @@
 from Furious.Gui.Icon import Icon
-from Furious.Utility.Constants import PLATFORM, ROOT_DIR
+from Furious.Utility.Constants import APP, PLATFORM, ROOT_DIR
 
 from PySide6.QtWidgets import QApplication
 
@@ -46,29 +46,27 @@ class StateContext:
         self._ob.setDisabled(False)
 
 
-class Storage:
+class ServerStorage:
     EMPTY_OBJECT = {'model': []}
 
     @staticmethod
     def init():
-        return copy.deepcopy(Storage.EMPTY_OBJECT)
+        return copy.deepcopy(ServerStorage.EMPTY_OBJECT)
 
     @staticmethod
     def sync(ob=None):
         if ob is None:
             # Object is up-to-date
-            QApplication.instance().Configuration = Storage.toStorage(
-                QApplication.instance().MainWidget.StorageObj
-            )
+            APP().Configuration = ServerStorage.toStorage(APP().MainWidget.StorageObj)
         else:
             # Object is up-to-date
-            QApplication.instance().Configuration = Storage.toStorage(ob)
+            APP().Configuration = ServerStorage.toStorage(ob)
 
     @staticmethod
     def toObject(st):
         if not st:
-            # Storage does not exist, or is empty
-            return Storage.init()
+            # Server storage does not exist, or is empty
+            return ServerStorage.init()
 
         return ujson.loads(Base64Encoder.decode(st))
 
@@ -80,8 +78,46 @@ class Storage:
 
     @staticmethod
     def clear():
-        QApplication.instance().Configuration = ''
-        QApplication.instance().ActivatedItemIndex = str(-1)
+        APP().Configuration = ''
+        APP().ActivatedItemIndex = str(-1)
+
+
+class RoutesStorage:
+    # remark, corename, routes
+    EMPTY_OBJECT = {'model': []}
+
+    @staticmethod
+    def init():
+        return copy.deepcopy(RoutesStorage.EMPTY_OBJECT)
+
+    @staticmethod
+    def sync(ob=None):
+        if ob is None:
+            # Object is up-to-date
+            APP().CustomRouting = RoutesStorage.toStorage(
+                APP().editRoutingWidget.StorageObj
+            )
+        else:
+            # Object is up-to-date
+            APP().CustomRouting = RoutesStorage.toStorage(ob)
+
+    @staticmethod
+    def toObject(st):
+        if not st:
+            # Server storage does not exist, or is empty
+            return RoutesStorage.init()
+
+        return ujson.loads(Base64Encoder.decode(st))
+
+    @staticmethod
+    def toStorage(ob):
+        return Base64Encoder.encode(
+            ujson.dumps(ob, ensure_ascii=False, escape_forward_slashes=False).encode()
+        )
+
+    @staticmethod
+    def clear():
+        APP().CustomRouting = ''
 
 
 class Switch:

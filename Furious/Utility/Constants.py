@@ -1,10 +1,14 @@
 from Furious.Version import __version__
 
 from PySide6 import QtCore
+from PySide6.QtWidgets import QApplication
 
 import math
 import pathlib
 import platform
+import functools
+
+APP = functools.partial(QApplication.instance)
 
 APPLICATION_NAME = 'Furious'
 APPLICATION_VERSION = __version__
@@ -24,9 +28,9 @@ GOLDEN_RATIO = (math.sqrt(5) - 1) / 2
 
 SYSTEM_LANGUAGE = QtCore.QLocale().name()[:2].upper()
 
-ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT_DIR / 'Data'
-CRASH_LOG_DIR = ROOT_DIR / 'CrashLog'
+ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
+DATA_DIR = ROOT_DIR / APPLICATION_NAME / 'Data'
+CRASH_LOG_DIR = ROOT_DIR / APPLICATION_NAME / 'CrashLog'
 
 PROXY_SERVER_BYPASS = (
     'localhost;*.local;127.*;10.*;172.16.*;172.17.*;'

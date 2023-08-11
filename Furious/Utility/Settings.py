@@ -1,4 +1,3 @@
-from Furious.Action.Routing import SUPPORTED_ROUTING
 from Furious.Action.Language import SUPPORTED_LANGUAGE
 from Furious.Utility.Constants import SYSTEM_LANGUAGE
 from Furious.Utility.Utility import Switch
@@ -53,22 +52,42 @@ SMART_CHOSEN_LANGUAGE = (
 )
 
 SUPPORTED_SETTINGS = (
+    # Connected last time or not
     Settings('Connect', Switch.RANGE),
-    Settings('Routing', SUPPORTED_ROUTING),
+    # User Routing option
+    Settings('Routing'),
+    # User Custom Routing object
+    Settings('CustomRouting'),
+    # User Configuration
     Settings('Configuration'),
+    # User Activated Server Index
     Settings('ActivatedItemIndex'),
+    # Main Widget Window Size
     Settings('MainWidgetWindowSize'),
+    # Edit Routing Widget Window Size
+    Settings('RoutesWidgetWindowSize'),
+    # Edit Routing Widget Editor Window Size
+    Settings('RoutesEditorWindowSize'),
+    # Main Widget Section Size
     Settings('ServerWidgetSectionSizeTable'),
+    # Edit Routing Widget Section Size
+    Settings('RoutesWidgetSectionSizeTable'),
+    # Main Widget Font Point Size
     Settings('EditorWidgetPointSize'),
+    # Log Viewer Widget Font Point Size
     Settings('ViewerWidgetPointSize'),
+    # User selected language
     Settings('Language', SUPPORTED_LANGUAGE, SMART_CHOSEN_LANGUAGE),
+    # Startup On Boot
     Settings('StartupOnBoot', Switch.RANGE, Switch.ON_),  # On by default
+    # Show Progressbar
     Settings(
         # For user experience: On by default
         'ShowProgressBarWhenConnecting',
         Switch.RANGE,
         Switch.ON_,
     ),
+    # Show Tab and spaces
     Settings('ShowTabAndSpacesInEditor', Switch.RANGE),
 )
 

@@ -1,11 +1,11 @@
 from Furious.Core.Core import XrayCore, Hysteria
 from Furious.Core.Intellisense import Intellisense
 from Furious.Core.Configuration import Configuration
-from Furious.Action.Routing import SUPPORTED_ROUTING_DETAIL
+from Furious.Action.Routing import BUILTIN_ROUTING_TABLE, BUILTIN_ROUTING
 from Furious.Gui.Action import Action
 from Furious.Widget.ConnectingProgressBar import ConnectingProgressBar
 from Furious.Widget.Widget import MessageBox
-from Furious.Utility.Constants import APPLICATION_NAME, PROXY_SERVER_BYPASS
+from Furious.Utility.Constants import APP, APPLICATION_NAME, PROXY_SERVER_BYPASS
 from Furious.Utility.Utility import (
     Switch,
     SupportConnectedCallback,
@@ -16,7 +16,6 @@ from Furious.Utility.Translator import gettext as _
 from Furious.Utility.Proxy import Proxy
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import QApplication
 from PySide6.QtNetwork import (
     QNetworkAccessManager,
     QNetworkReply,
@@ -180,7 +179,7 @@ class ConnectAction(Action):
         self.Hysteria.stop()
 
     def showConnectingProgressBar(self):
-        if QApplication.instance().ShowProgressBarWhenConnecting == Switch.ON_:
+        if APP().ShowProgressBarWhenConnecting == Switch.ON_:
             self.connectingProgressBar.progressBar.setValue(0)
             # Update the progress bar every 50ms
             self.connectingProgressBar.timer.start(50)
@@ -209,7 +208,7 @@ class ConnectAction(Action):
     def setDisabledAction(self, value):
         self.setDisabled(value)
 
-        QApplication.instance().tray.RoutingAction.setDisabled(value)
+        APP().tray.RoutingAction.setDisabled(value)
 
     def setConnectingStatus(self, showProgressBar=True):
         if showProgressBar:
@@ -220,13 +219,13 @@ class ConnectAction(Action):
         self.setText(_('Connecting'))
         self.setIcon(bootstrapIcon('lock-fill.svg'))
 
-        QApplication.instance().tray.setPlainIcon()
+        APP().tray.setPlainIcon()
 
     def setConnectedStatus(self):
         self.hideConnectingProgressBar(done=True)
         self.setDisabledAction(False)
 
-        QApplication.instance().tray.setConnectedIcon()
+        APP().tray.setConnectedIcon()
 
         # Finished. Reset connecting flag
         self.connectingFlag = False
@@ -255,8 +254,8 @@ class ConnectAction(Action):
         self.setIcon(bootstrapIcon('unlock-fill.svg'))
         self.setChecked(False)
 
-        QApplication.instance().Connect = Switch.OFF
-        QApplication.instance().tray.setPlainIcon()
+        APP().Connect = Switch.OFF
+        APP().tray.setPlainIcon()
 
         self.proxyServer = ''
 
@@ -276,12 +275,12 @@ class ConnectAction(Action):
     @property
     def MainWidget(self):
         # Handy reference
-        return QApplication.instance().MainWidget
+        return APP().MainWidget
 
     @property
     def activatedServer(self):
         try:
-            activatedIndex = int(QApplication.instance().ActivatedItemIndex)
+            activatedIndex = int(APP().ActivatedItemIndex)
 
             if activatedIndex < 0:
                 return None
@@ -395,10 +394,9 @@ class ConnectAction(Action):
                 if validateProxyServer(proxyServer):
                     self.coreRunning = True
 
-                    routing = QApplication.instance().Routing
+                    routing = APP().Routing
 
-                    logger.info(f'Core {XrayCore.name()} configured')
-                    logger.info(f'Routing is {routing}')
+                    logger.info(f'core {XrayCore.name()} configured')
 
                     def fixLoggingRelativePath(attr):
                         # Relative path fails if booting on start up
@@ -426,53 +424,35 @@ class ConnectAction(Action):
                     fixLoggingRelativePath('access')
                     fixLoggingRelativePath('error')
 
-                    if routing == 'Bypass':
-                        self.coreJSON['routing'] = {
-                            'domainStrategy': 'IPIfNonMatch',
-                            'domainMatcher': 'hybrid',
-                            'rules': (
-                                # ads
-                                {
-                                    'type': 'field',
-                                    'outboundTag': 'block',
-                                    'domain': ['geosite:category-ads-all'],
-                                },
-                                # geosite
-                                {
-                                    'type': 'field',
-                                    'outboundTag': 'direct',
-                                    'domain': ['geosite:cn'],
-                                },
-                                # geoip
-                                {
-                                    'type': 'field',
-                                    'outboundTag': 'direct',
-                                    'ip': ['geoip:private', 'geoip:cn'],
-                                },
-                                # Proxy everything
-                                {
-                                    'type': 'field',
-                                    'port': '0-65535',
-                                    'outboundTag': 'proxy',
-                                },
-                            ),
-                        }
-                    if routing == 'Global':
-                        self.coreJSON['routing'] = {
-                            'domainStrategy': 'IPIfNonMatch',
-                            'domainMatcher': 'hybrid',
-                            'rules': (
-                                # Proxy everything
-                                {
-                                    'type': 'field',
-                                    'port': '0-65535',
-                                    'outboundTag': 'proxy',
-                                },
-                            ),
-                        }
-                    if routing == 'Custom':
+                    # Filter Custom
+                    if routing in BUILTIN_ROUTING[:-1]:
+                        routingObject = BUILTIN_ROUTING_TABLE[routing][XrayCore.name()]
+
+                        logger.info(f'routing is {routing}')
+                        logger.info(f'RoutingObject: {routingObject}')
+
+                        self.coreJSON['routing'] = routingObject
+                    elif routing == 'Custom':
+                        logger.info(f'routing is {routing}')
+                        logger.info(f'RoutingObject: {self.XrayRouting}')
+
                         # Assign user routing
                         self.coreJSON['routing'] = self.XrayRouting
+                    else:
+                        try:
+                            routingWidget = APP().editRoutingWidget
+
+                            route = routingWidget.RoutesList[int(routing)]
+
+                            logger.info(f'routing is {route["remark"]}')
+                            logger.info(f'RoutingObject: {route[XrayCore.name()]}')
+
+                            self.coreJSON['routing'] = route[XrayCore.name()]
+                        except Exception:
+                            # Any non-exit exceptions
+
+                            # Fast fail
+                            self.coreJSON = {}
 
                     # Refresh configuration modified before. User cannot feel
                     self.coreText = ujson.dumps(
@@ -498,33 +478,52 @@ class ConnectAction(Action):
                 if validateProxyServer(proxyServer):
                     self.coreRunning = True
 
-                    routing = QApplication.instance().Routing
+                    routing = APP().Routing
 
-                    logger.info(f'Core {Hysteria.name()} configured')
-                    logger.info(f'Routing is {routing}')
+                    logger.info(f'core {Hysteria.name()} configured')
 
-                    if routing == 'Bypass':
+                    # Filter Global, Custom
+                    if routing in BUILTIN_ROUTING[:-2]:
+                        logger.info(f'routing is {routing}')
+
+                        routingObject = BUILTIN_ROUTING_TABLE[routing][Hysteria.name()]
+
                         self.Hysteria.start(
-                            self.coreText, Hysteria.rule(), Hysteria.mmdb()
+                            self.coreText,
+                            Hysteria.rule(routingObject.get('acl')),
+                            Hysteria.mmdb(routingObject.get('mmdb')),
                         )
-                    if routing == 'Global':
+                    elif routing == 'Global':
+                        logger.info(f'routing is {routing}')
+
                         self.Hysteria.start(self.coreText, '', '')
-                    if routing == 'Custom':
-                        if self.coreJSON.get('acl') is not None:
-                            # acl specified
-                            if self.coreJSON.get('mmdb') is not None:
-                                # mmdb specified. Start "as is"
-                                self.Hysteria.start(
-                                    self.coreText,
-                                    Hysteria.rule(self.coreJSON['acl']),
-                                    Hysteria.mmdb(self.coreJSON['mmdb']),
-                                )
-                            else:
-                                # mmdb not specified. Route as global
-                                self.Hysteria.start(self.coreText, '', '')
-                        else:
-                            # acl not specified. Route as global
-                            self.Hysteria.start(self.coreText, '', '')
+                    elif routing == 'Custom':
+                        logger.info(f'routing is {routing}')
+
+                        self.Hysteria.start(
+                            self.coreText,
+                            Hysteria.rule(self.coreJSON.get('acl')),
+                            Hysteria.mmdb(self.coreJSON.get('mmdb')),
+                        )
+                    else:
+                        try:
+                            routingWidget = APP().editRoutingWidget
+
+                            route = routingWidget.RoutesList[int(routing)]
+
+                            logger.info(f'routing is {route["remark"]}')
+                            logger.info(f'RoutingObject: {route[Hysteria.name()]}')
+
+                            self.Hysteria.start(
+                                self.coreText,
+                                Hysteria.rule(route[Hysteria.name()].get('acl')),
+                                Hysteria.mmdb(route[Hysteria.name()].get('mmdb')),
+                            )
+                        except Exception:
+                            # Any non-exit exceptions
+
+                            # Fast fail
+                            self.Hysteria.start('', '', '')
 
             return Hysteria.name()
 
@@ -572,24 +571,28 @@ class ConnectAction(Action):
             else:
                 logger.info(f'{self.coreName}: connection test success. Connected')
 
-                QApplication.instance().Connect = Switch.ON_
+                APP().Connect = Switch.ON_
 
                 # Connected status
                 self.setConnectedStatus()
 
                 if showRoutingChangedMessage:
                     # Routing changed
-                    QApplication.instance().tray.showMessage(
-                        _('Routing changed: ')
-                        + _(
-                            f'{SUPPORTED_ROUTING_DETAIL[QApplication.instance().Routing]}'
+                    try:
+                        routingWidget = APP().editRoutingWidget
+
+                        route = routingWidget.RoutesList[int(APP().Routing)]
+
+                        APP().tray.showMessage(
+                            _('Routing changed: ') + f'{route["remark"]}'
                         )
-                    )
+                    except ValueError:
+                        APP().tray.showMessage(
+                            _('Routing changed: ') + _(f'{APP().Routing}')
+                        )
                 else:
                     # Connected
-                    QApplication.instance().tray.showMessage(
-                        f'{self.coreName}: {_("Connected")}'
-                    )
+                    APP().tray.showMessage(f'{self.coreName}: {_("Connected")}')
 
         self.networkReply.finished.connect(finishedCallback)
 
@@ -600,11 +603,8 @@ class ConnectAction(Action):
         # Connecting
         self.connectingFlag = True
 
-        if (
-            not QApplication.instance().Configuration
-            or len(self.MainWidget.ServerList) == 0
-        ):
-            QApplication.instance().Connect = Switch.OFF
+        if not APP().Configuration or len(self.MainWidget.ServerList) == 0:
+            APP().Connect = Switch.OFF
 
             self.setChecked(False)
             self.connectingFlag = False
@@ -615,7 +615,7 @@ class ConnectAction(Action):
         myText = self.activatedServer
 
         if myText is None:
-            QApplication.instance().Connect = Switch.OFF
+            APP().Connect = Switch.OFF
 
             self.setChecked(False)
             self.connectingFlag = False
@@ -624,7 +624,7 @@ class ConnectAction(Action):
             return
 
         if myText == '':
-            QApplication.instance().Connect = Switch.OFF
+            APP().Connect = Switch.OFF
 
             self.setChecked(False)
             self.connectingFlag = False
@@ -637,7 +637,7 @@ class ConnectAction(Action):
         except Exception:
             # Any non-exit exceptions
 
-            QApplication.instance().Connect = Switch.OFF
+            APP().Connect = Switch.OFF
 
             self.setChecked(False)
             self.connectingFlag = False
@@ -657,6 +657,9 @@ class ConnectAction(Action):
             self.connectingAction()
 
     def connectingAction(self, showProgressBar=True, showRoutingChangedMessage=False):
+        # Connecting. Redefined
+        self.connectingFlag = True
+
         # Connecting status
         self.setConnectingStatus(showProgressBar)
 
@@ -703,7 +706,7 @@ class ConnectAction(Action):
 
         SupportConnectedCallback.callDisconnectedCallback()
 
-        QApplication.instance().tray.showMessage(reason)
+        APP().tray.showMessage(reason)
 
     def reconnectAction(self, reason=''):
         self.disconnectAction(reason)

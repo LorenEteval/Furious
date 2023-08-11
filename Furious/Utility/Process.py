@@ -1,7 +1,5 @@
 from Furious.Widget.Application import Application
-from Furious.Utility.Constants import PLATFORM, CRASH_LOG_DIR
-
-from PySide6.QtWidgets import QApplication
+from Furious.Utility.Constants import APP, PLATFORM, CRASH_LOG_DIR
 
 import os
 import sys
@@ -41,8 +39,8 @@ class Process(ProcessContext.Process):
 
         self.saveCrashLog(exceptionType, exceptionValue, tb)
 
-        if QApplication.instance() is not None:
-            QApplication.instance().exit(error)
+        if APP() is not None:
+            APP().exit(error)
         else:
             sys.exit(error)
 
@@ -63,10 +61,10 @@ class Process(ProcessContext.Process):
                 traceback.format_exception(exceptionType, exceptionValue, tb),
             )
 
-            if QApplication.instance() is None:
+            if APP() is None:
                 crashLog = f'{stackLog}'
             else:
-                crashLog = f'{QApplication.instance().log()}\n{stackLog}'
+                crashLog = f'{APP().log()}\n{stackLog}'
 
             with open(CRASH_LOG_DIR / self.logFileName, 'w', encoding='utf-8') as file:
                 file.write(crashLog)

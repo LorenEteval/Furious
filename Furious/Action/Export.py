@@ -2,6 +2,7 @@ from Furious.Core.Configuration import Configuration
 from Furious.Gui.Action import Action
 from Furious.Widget.Widget import Menu, MessageBox
 from Furious.Widget.ExportQRCode import ExportQRCode
+from Furious.Utility.Constants import APP
 from Furious.Utility.Utility import StateContext, bootstrapIcon
 from Furious.Utility.Translator import gettext as _
 
@@ -110,7 +111,7 @@ class ExportJSONResultBox(MessageBox):
 
 
 def exportLink(selectedIndex):
-    serverList = QApplication.instance().MainWidget.ServerList
+    serverList = APP().MainWidget.ServerList
     serverLink = []
     successStr = []
     failureStr = []
@@ -140,7 +141,7 @@ class ExportLinkAction(Action):
         self.exportLinkResult = ExportLinkResultBox('', '', isQRCodeExport=False)
 
     def triggeredCallback(self, checked):
-        selectedIndex = QApplication.instance().MainWidget.selectedIndex
+        selectedIndex = APP().MainWidget.selectedIndex
 
         if len(selectedIndex) == 0:
             # Nothing selected. Do nothing
@@ -166,7 +167,7 @@ class ExportQRCodeAction(Action):
         self.exportLinkResult = ExportLinkResultBox('', '', isQRCodeExport=True)
 
     def triggeredCallback(self, checked):
-        selectedIndex = QApplication.instance().MainWidget.selectedIndex
+        selectedIndex = APP().MainWidget.selectedIndex
 
         if len(selectedIndex) == 0:
             # Nothing selected. Do nothing
@@ -194,7 +195,7 @@ class ExportJSONAction(Action):
         self.exportJSONResult = ExportJSONResultBox()
 
     def triggeredCallback(self, checked):
-        selectedIndex = QApplication.instance().MainWidget.selectedIndex
+        selectedIndex = APP().MainWidget.selectedIndex
 
         if len(selectedIndex) == 0:
             # Nothing selected. Do nothing
@@ -203,7 +204,7 @@ class ExportJSONAction(Action):
         try:
             QApplication.clipboard().setText(
                 '\n'.join(
-                    QApplication.instance().MainWidget.ServerList[index]['config']
+                    APP().MainWidget.ServerList[index]['config']
                     for index in selectedIndex
                 )
             )

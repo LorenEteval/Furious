@@ -1,5 +1,6 @@
 from Furious.Gui.Action import Action
 from Furious.Widget.Widget import Menu
+from Furious.Utility.Constants import APP
 from Furious.Utility.Utility import bootstrapIcon
 from Furious.Utility.Translator import (
     Translatable,
@@ -7,8 +8,6 @@ from Furious.Utility.Translator import (
     ABBR_TO_LANGUAGE,
     LANGUAGE_TO_ABBR,
 )
-
-from PySide6.QtWidgets import QApplication
 
 import logging
 
@@ -24,10 +23,10 @@ class LanguageChildAction(Action):
     def triggeredCallback(self, checked):
         checkedLanguage = LANGUAGE_TO_ABBR[self.text()]
 
-        if QApplication.instance().Language != checkedLanguage:
+        if APP().Language != checkedLanguage:
             logger.info(f'set language to \'{self.text()}\'')
 
-            QApplication.instance().Language = checkedLanguage
+            APP().Language = checkedLanguage
 
             Translatable.retranslateAll()
 
@@ -43,8 +42,7 @@ class LanguageAction(Action):
                         # Language representation
                         text,
                         checkable=True,
-                        checked=text
-                        == ABBR_TO_LANGUAGE[QApplication.instance().Language],
+                        checked=text == ABBR_TO_LANGUAGE[APP().Language],
                     )
                     for text in list(LANGUAGE_TO_ABBR.keys())
                 ),

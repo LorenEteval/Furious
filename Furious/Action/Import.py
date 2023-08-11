@@ -6,11 +6,12 @@ from Furious.Core.Configuration import (
 )
 from Furious.Gui.Action import Action
 from Furious.Widget.Widget import Menu, MessageBox
+from Furious.Utility.Constants import APP
 from Furious.Utility.Utility import (
     Base64Encoder,
     Protocol,
     StateContext,
-    Storage,
+    ServerStorage,
     bootstrapIcon,
     protocolRepr,
 )
@@ -145,7 +146,7 @@ class ImportLinkAction(Action):
 
         if choice == MessageBox.ButtonRole.AcceptRole.value:
             # Go to edit
-            QApplication.instance().MainWidget.show()
+            APP().MainWidget.show()
         else:
             # OK. Do nothing
             pass
@@ -186,7 +187,7 @@ class ImportLinkAction(Action):
 
                 remark = urllib.parse.unquote(getOrDefault('ps'))
 
-                QApplication.instance().MainWidget.importServer(
+                APP().MainWidget.importServer(
                     remark,
                     ujson.dumps(
                         myJSON,
@@ -246,7 +247,7 @@ class ImportLinkAction(Action):
                 )
             )
 
-            QApplication.instance().MainWidget.importServer(
+            APP().MainWidget.importServer(
                 remark,
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
@@ -297,7 +298,7 @@ class ImportLinkAction(Action):
                 )
             )
 
-            QApplication.instance().MainWidget.importServer(
+            APP().MainWidget.importServer(
                 remark,
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
@@ -323,7 +324,7 @@ class ImportLinkAction(Action):
                 ProxyOutboundObjectSS(*re.split(r'[@:]', myData))
             )
 
-            QApplication.instance().MainWidget.importServer(
+            APP().MainWidget.importServer(
                 'sslegacy',
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
@@ -380,7 +381,7 @@ class ImportLinkAction(Action):
 
             if result:
                 # Sync it
-                Storage.sync()
+                ServerStorage.sync()
 
                 self.showLinkImportOK(remark)
             else:
@@ -388,7 +389,7 @@ class ImportLinkAction(Action):
         else:
             successRemark = []
 
-            rowCount = QApplication.instance().MainWidget.rowCount
+            rowCount = APP().MainWidget.rowCount
 
             for shareLink in splitByNewLine:
                 remark, result = self.parseShareLink(shareLink)
@@ -402,7 +403,7 @@ class ImportLinkAction(Action):
                 return
 
             # At least one server's been imported. Sync it
-            Storage.sync()
+            ServerStorage.sync()
 
             if len(successRemark) == 1:
                 # Fall back to single
@@ -445,7 +446,7 @@ class ImportJSONAction(Action):
 
         if choice == MessageBox.ButtonRole.AcceptRole.value:
             # Go to edit
-            QApplication.instance().MainWidget.show()
+            APP().MainWidget.show()
         else:
             # OK. Do nothing
             pass
@@ -460,7 +461,7 @@ class ImportJSONAction(Action):
 
             self.showJSONErrorBox()
         else:
-            QApplication.instance().MainWidget.importServer(
+            APP().MainWidget.importServer(
                 _('Untitled'), self.clipboard, syncStorage=True
             )
 
