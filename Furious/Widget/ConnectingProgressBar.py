@@ -1,12 +1,16 @@
 from Furious.Utility.Constants import APPLICATION_NAME, GOLDEN_RATIO
-from Furious.Utility.Utility import bootstrapIcon, StateContext
+from Furious.Utility.Utility import (
+    bootstrapIcon,
+    StateContext,
+    SupportConnectedCallback,
+)
 from Furious.Utility.Translator import Translatable, gettext as _
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import QHBoxLayout, QProgressBar, QWidget
 
 
-class ConnectingProgressBar(Translatable, QWidget):
+class ConnectingProgressBar(Translatable, SupportConnectedCallback, QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -53,6 +57,38 @@ class ConnectingProgressBar(Translatable, QWidget):
         event.ignore()
 
         self.hide()
+
+    def connectedCallback(self):
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+
+        self.progressBar.setStyleSheet(
+            f'QProgressBar {{'
+            f'    border-radius: 2px;'
+            f'    text-align: center;'
+            f'}}'
+            f''
+            f'QProgressBar::chunk {{'
+            f'    background-color: #EB212E;'
+            f'      width: 10px;'
+            f'      margin: 0.5px;'
+            f'}}'
+        )
+
+    def disconnectedCallback(self):
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+
+        self.progressBar.setStyleSheet(
+            f'QProgressBar {{'
+            f'    border-radius: 2px;'
+            f'    text-align: center;'
+            f'}}'
+            f''
+            f'QProgressBar::chunk {{'
+            f'    background-color: #43ACED;'
+            f'      width: 10px;'
+            f'      margin: 0.5px;'
+            f'}}'
+        )
 
     def retranslate(self):
         with StateContext(self):

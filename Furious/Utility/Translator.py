@@ -1,6 +1,5 @@
-from Furious.Utility.Constants import APPLICATION_NAME
-
-from PySide6.QtWidgets import QApplication
+from Furious.Core.Core import XrayCore, Hysteria
+from Furious.Utility.Constants import APP, APPLICATION_NAME
 
 
 class Translatable:
@@ -8,6 +7,8 @@ class Translatable:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.translatable = True
 
         Translatable.Object.append(self)
 
@@ -19,7 +20,8 @@ class Translatable:
         for ob in Translatable.Object:
             assert isinstance(ob, Translatable)
 
-            ob.retranslate()
+            if ob.translatable:
+                ob.retranslate()
 
 
 class Translator:
@@ -58,9 +60,9 @@ def installTranslation(translation):
 
 def gettext(source, locale=None):
     if locale is None:
-        assert QApplication.instance() is not None
+        assert APP() is not None
 
-        return _trans.translate(source, QApplication.instance().Language)
+        return _trans.translate(source, APP().Language)
     else:
         assert locale in list(LANGUAGE_TO_ABBR.values())
 
@@ -83,6 +85,8 @@ NO_TRANSLATION = [
     APPLICATION_NAME,
     *LANGUAGE_TO_ABBR.keys(),
     'TLS',
+    XrayCore.name(),
+    Hysteria.name(),
 ]
 
 NO_TRANSLATION_DICT = {key: True for key in NO_TRANSLATION}
@@ -124,6 +128,11 @@ TRANSLATION = {
         'ZH': '绕过中国大陆',
         'TW': '繞過中國大陸',
     },
+    'Bypass Iran': {
+        'ES': 'Evitar Irán',
+        'ZH': '绕过伊朗',
+        'TW': '繞過伊朗',
+    },
     'Global': {
         'ES': 'Global',
         'ZH': '全球',
@@ -133,6 +142,11 @@ TRANSLATION = {
         'ES': 'Personalizado',
         'ZH': '自定义',
         'TW': '自定義',
+    },
+    'Edit Routing...': {
+        'ES': 'Editar Enrutamiento...',
+        'ZH': '编辑路由...',
+        'TW': '編輯路由...',
     },
     'Import': {
         'ES': 'Importar',
@@ -496,15 +510,15 @@ TRANSLATION = {
         'ZH': '删除',
         'TW': '刪除',
     },
-    'Delete this configuration?': {
-        'ES': '¿Eliminar esta configuración?',
-        'ZH': '删除此配置？',
-        'TW': '刪除此配置？',
-    },
     'Delete these configuration?': {
         'ES': '¿Eliminar esta configuración?',
         'ZH': '删除这些配置？',
         'TW': '刪除這些配置？',
+    },
+    'Delete this configuration?': {
+        'ES': '¿Eliminar esta configuración?',
+        'ZH': '删除此配置？',
+        'TW': '刪除此配置？',
     },
     'Connecting. Please wait.': {
         'ES': 'Conectando. Espere por favor.',
@@ -636,6 +650,93 @@ TRANSLATION = {
         'ES': 'Desplácese Hasta el Servidor Activado',
         'ZH': '滚动到激活的服务器',
         'TW': '滾動到激活的服務器',
+    },
+    # Edit Routing widget
+    'Edit Routing': {
+        'ES': 'Editar Enrutamiento',
+        'ZH': '编辑路由',
+        'TW': '編輯路由',
+    },
+    'Type': {
+        'ES': 'Tipo',
+        'ZH': '类型',
+        'TW': '類型',
+    },
+    'Built-in': {
+        'ES': 'Incorporado',
+        'ZH': '内置',
+        'TW': '内置',
+    },
+    'Routing Rules': {
+        'ES': 'Reglas de Enrutamiento',
+        'ZH': '路由规则',
+        'TW': '路由規則',
+    },
+    'User Defined': {
+        'ES': 'Usuario Definido',
+        'ZH': '用户定义',
+        'TW': '用戶定義',
+    },
+    'Add routing': {
+        'ES': 'Agregar enrutamiento',
+        'ZH': '添加路由',
+        'TW': '添加路由',
+    },
+    'Enter routing remark:': {
+        'ES': 'Introducir comentario de enrutamiento:',
+        'ZH': '输入路由名称：',
+        'TW': '輸入路由名稱：',
+    },
+    'Add': {
+        'ES': 'Agregar',
+        'ZH': '添加',
+        'TW': '添加',
+    },
+    'Import Asset File...': {
+        'ES': 'Importar Archivo de Activos...',
+        'ZH': '导入资源文件...',
+        'TW': '導入資源文件...',
+    },
+    'Error saving routing configuration': {
+        'ES': 'Error al guardar la configuración de enrutamiento',
+        'ZH': '保存路由配置时出错',
+        'TW': '保存路由配置時出錯',
+    },
+    # Asset Viewer
+    'Asset File': {
+        'ES': 'Activos',
+        'ZH': '资源文件',
+        'TW': '資源文件',
+    },
+    'Asset file already exists. Overwrite?': {
+        'ES': 'Archivo de activos ya existe. ¿Sobrescribir?',
+        'ZH': '资源文件已存在。是否覆盖？',
+        'TW': '資源文件已存在。是否覆蓋？',
+    },
+    'Error import asset file.': {
+        'ES': 'Error al importar el archivo de activos.',
+        'ZH': '导入资源文件出错。',
+        'TW': '導入資源文件出錯。',
+    },
+    'Import asset file success.': {
+        'ES': 'Importar archivo de activos con éxito.',
+        'ZH': '导入资源文件成功。',
+        'TW': '導入資源文件成功。',
+    },
+    'Delete these asset files?': {
+        'ES': '¿Eliminar estos archivos de activos?',
+        'ZH': '删除这些资源文件？',
+        'TW': '刪除這些資源文件？',
+    },
+    'Delete this asset file?': {
+        'ES': '¿Eliminar este archivo de activos?',
+        'ZH': '删除该资源文件？',
+        'TW': '刪除該資源文件？',
+    },
+    'All files (*)': {
+        'ES': 'Todos los archivos (*)',
+        'ZH': '所有文件 (*)',
+        'TW': '所有文件 (*)',
     },
     # Log Viewer
     'Log Viewer': {

@@ -1,8 +1,7 @@
 from Furious.Gui.Action import Action
+from Furious.Utility.Constants import APP
 from Furious.Utility.Utility import bootstrapIcon
 from Furious.Utility.Translator import gettext as _
-
-from PySide6.QtWidgets import QApplication
 
 
 class ExitAction(Action):
@@ -13,4 +12,4 @@ class ExitAction(Action):
         )
 
     def triggeredCallback(self, checked):
-        QApplication.instance().exit()
+        APP().exit()

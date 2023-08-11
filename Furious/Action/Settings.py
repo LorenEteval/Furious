@@ -1,10 +1,9 @@
 from Furious.Gui.Action import Action
 from Furious.Widget.Widget import Menu
+from Furious.Utility.Constants import APP
 from Furious.Utility.Utility import bootstrapIcon, Switch
 from Furious.Utility.Translator import gettext as _
 from Furious.Utility.StartupOnBoot import StartupOnBoot
-
-from PySide6.QtWidgets import QApplication
 
 
 class SettingsChildAction(Action):
@@ -16,23 +15,23 @@ class SettingsChildAction(Action):
             if checked:
                 StartupOnBoot.on_()
 
-                QApplication.instance().StartupOnBoot = Switch.ON_
+                APP().StartupOnBoot = Switch.ON_
             else:
                 StartupOnBoot.off()
 
-                QApplication.instance().StartupOnBoot = Switch.OFF
+                APP().StartupOnBoot = Switch.OFF
         if self.textCompare('Show Progress Bar When Connecting'):
             if checked:
-                QApplication.instance().ShowProgressBarWhenConnecting = Switch.ON_
+                APP().ShowProgressBarWhenConnecting = Switch.ON_
             else:
-                QApplication.instance().ShowProgressBarWhenConnecting = Switch.OFF
+                APP().ShowProgressBarWhenConnecting = Switch.OFF
         if self.textCompare('Show Tab And Spaces In Editor'):
             if checked:
-                QApplication.instance().ShowTabAndSpacesInEditor = Switch.ON_
+                APP().ShowTabAndSpacesInEditor = Switch.ON_
             else:
-                QApplication.instance().ShowTabAndSpacesInEditor = Switch.OFF
+                APP().ShowTabAndSpacesInEditor = Switch.OFF
 
-            QApplication.instance().MainWidget.showTabAndSpacesIfNecessary()
+            APP().MainWidget.showTabAndSpacesIfNecessary()
 
 
 class SettingsAction(Action):
@@ -44,19 +43,17 @@ class SettingsAction(Action):
                 SettingsChildAction(
                     _('Startup On Boot'),
                     checkable=True,
-                    checked=QApplication.instance().StartupOnBoot == Switch.ON_,
+                    checked=APP().StartupOnBoot == Switch.ON_,
                 ),
                 SettingsChildAction(
                     _('Show Progress Bar When Connecting'),
                     checkable=True,
-                    checked=QApplication.instance().ShowProgressBarWhenConnecting
-                    == Switch.ON_,
+                    checked=APP().ShowProgressBarWhenConnecting == Switch.ON_,
                 ),
                 SettingsChildAction(
                     _('Show Tab And Spaces In Editor'),
                     checkable=True,
-                    checked=QApplication.instance().ShowTabAndSpacesInEditor
-                    == Switch.ON_,
+                    checked=APP().ShowTabAndSpacesInEditor == Switch.ON_,
                 ),
             ),
             useActionGroup=False,

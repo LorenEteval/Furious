@@ -4,26 +4,30 @@ from Furious.Core.Intellisense import Intellisense
 from Furious.Core.Configuration import Configuration
 from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import (
+    HeaderView,
     Menu,
     MessageBox,
     PushButton,
+    StyledItemDelegate,
+    TableWidget,
     TabWidget,
     ZoomablePlainTextEdit,
 )
 from Furious.Widget.IndentSpinBox import IndentSpinBox
 from Furious.Utility.Constants import (
-    PLATFORM,
+    APP,
     APPLICATION_NAME,
     APPLICATION_VERSION,
     APPLICATION_ABOUT_PAGE,
     APPLICATION_REPO_OWNER_NAME,
     APPLICATION_REPO_NAME,
+    PLATFORM,
     GOLDEN_RATIO,
 )
 from Furious.Utility.Utility import (
     Base64Encoder,
     StateContext,
-    Storage,
+    ServerStorage,
     Switch,
     SupportConnectedCallback,
     bootstrapIcon,
@@ -34,10 +38,9 @@ from Furious.Utility.Translator import Translatable, gettext as _
 from Furious.Utility.Theme import DraculaTheme
 
 from PySide6 import QtCore
-from PySide6.QtGui import QBrush, QColor, QDesktopServices, QFont, QTextOption
+from PySide6.QtGui import QDesktopServices, QFont, QTextOption
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QApplication,
     QDialog,
     QFileDialog,
     QGridLayout,
@@ -110,11 +113,12 @@ class ImportFileAction(Action):
             try:
                 with open(filename, 'r', encoding='utf-8') as file:
                     plainText = file.read()
-            except Exception:
+            except Exception as ex:
                 # Any non-exit exceptions
 
                 self.openErrorBox.setWindowTitle(_('Error opening file'))
                 self.openErrorBox.setText(_('Invalid configuration file.'))
+                self.openErrorBox.setInformativeText(str(ex))
 
                 # Show the MessageBox and wait for user to close it
                 self.openErrorBox.exec()
@@ -218,7 +222,7 @@ class ScrollToActivatedServerAction(Action):
         )
 
     def triggeredCallback(self, checked):
-        if QApplication.instance().MainWidget.modified:
+        if APP().MainWidget.modified:
             self.parent().saveChangeFirst.exec()
 
             return
@@ -273,7 +277,7 @@ def questionReconnect(saveConfInfo):
 
     if choice == MessageBox.ButtonRole.AcceptRole.value:
         # Reconnect
-        QApplication.instance().tray.ConnectAction.reconnectAction()
+        APP().tray.ConnectAction.reconnectAction()
     else:
         # OK. Do nothing
         pass
@@ -308,7 +312,7 @@ class SaveAsServerAction(Action):
             )
 
             # Sync it
-            Storage.sync()
+            ServerStorage.sync()
 
             self.parent().markAsSaved()
 
@@ -318,7 +322,7 @@ class SaveAsServerAction(Action):
             if myFocusIndex == self.parent().activatedItemIndex:
                 # Activated configuration modified
 
-                if server and QApplication.instance().tray.ConnectAction.isConnected():
+                if server and APP().tray.ConnectAction.isConnected():
                     questionReconnect(self.saveConfInfo)
 
             return True
@@ -594,12 +598,20 @@ class ZoomOutAction(Action):
         self.parent().plainTextEdit.zoomOut()
 
 
+class RoutingAction(Action):
+    def __init__(self, **kwargs):
+        super().__init__(_('Edit Routing...'), **kwargs)
+
+    def triggeredCallback(self, checked):
+        APP().editRoutingWidget.show()
+
+
 class ShowLogAction(Action):
     def __init__(self, **kwargs):
         super().__init__(_('Show Log...'), **kwargs)
 
     def triggeredCallback(self, checked):
-        QApplication.instance().logViewerWidget.showMaximized()
+        APP().logViewerWidget.showMaximized()
 
 
 class WhetherToUpdateInfoBox(MessageBox):
@@ -637,7 +649,7 @@ class CheckForUpdatesAction(Action):
         )
 
     def triggeredCallback(self, checked):
-        proxyServer = QApplication.instance().tray.ConnectAction.proxyServer
+        proxyServer = APP().tray.ConnectAction.proxyServer
 
         if proxyServer:
             logger.info(f'check for updates uses proxy server {proxyServer}')
@@ -828,15 +840,13 @@ class SaveChangeFirst(MessageBox):
             self.moveToCenter()
 
 
-class NormalServerHorizontalHeader(QHeaderView):
+class NormalServerHorizontalHeader(HeaderView):
     class SortOrder:
         Ascending_ = False
         Descending = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
-
-        self.setSectionsClickable(True)
 
         self.sectionClicked.connect(self.handleSectionClicked)
         self.sectionResized.connect(self.handleSectionResized)
@@ -848,7 +858,7 @@ class NormalServerHorizontalHeader(QHeaderView):
 
     @QtCore.Slot(int)
     def handleSectionClicked(self, clickedIndex):
-        if QApplication.instance().MainWidget.modified:
+        if APP().MainWidget.modified:
             self.parent().saveChangeFirst.exec()
 
             return
@@ -890,7 +900,7 @@ class NormalServerHorizontalHeader(QHeaderView):
         )
 
         # Sync it
-        Storage.sync()
+        ServerStorage.sync()
 
         # Flush it
         self.parent().flushAll()
@@ -936,36 +946,9 @@ class NormalServerHorizontalHeader(QHeaderView):
         self.parent().sectionSizeTable[str(index)] = newSize
 
 
-class NormalServerVerticalHeader(SupportConnectedCallback, QHeaderView):
+class NormalServerVerticalHeader(HeaderView):
     def __init__(self, *args, **kwargs):
         super().__init__(QtCore.Qt.Orientation.Vertical, *args, **kwargs)
-
-        self.setSectionsClickable(True)
-
-        self.setStyleSheet(
-            f'QHeaderView::section:hover {{ background-color: #008AE1; }}'
-        )
-
-    def connectedCallback(self):
-        self.setStyleSheet(
-            f'QHeaderView::section:hover {{ background-color: #EB212E; }}'
-        )
-
-    def disconnectedCallback(self):
-        self.setStyleSheet(
-            f'QHeaderView::section:hover {{ background-color: #008AE1; }}'
-        )
-
-
-class NormalServerWidgetItemDelegate(QStyledItemDelegate):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def createEditor(self, parent, option, index):
-        editor = QLineEdit(parent)
-        editor.setFont(QFont(QApplication.instance().customFontName))
-
-        return editor
 
 
 def toJSONMayBeNull(text):
@@ -977,7 +960,7 @@ def toJSONMayBeNull(text):
         return {}
 
 
-class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
+class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
     # Might be extended in the future
     HEADER_LABEL = [
         'Remark',
@@ -1028,7 +1011,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
         self.editorTab = self.parent().editorTab
 
         # Delegate
-        self.delegate = NormalServerWidgetItemDelegate(parent=self)
+        self.delegate = StyledItemDelegate(parent=self)
         self.setItemDelegate(self.delegate)
 
         # Scroll bar value list. v, h
@@ -1056,9 +1039,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
 
         try:
             # Restore horizontal section size
-            self.sectionSizeTable = ujson.loads(
-                QApplication.instance().ServerWidgetSectionSizeTable
-            )
+            self.sectionSizeTable = ujson.loads(APP().ServerWidgetSectionSizeTable)
 
             # Block resize callback
             self.horizontalHeader().blockSignals(True)
@@ -1083,9 +1064,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
         )
 
         for column in range(self.horizontalHeader().count()):
-            self.horizontalHeaderItem(column).setFont(
-                QFont(QApplication.instance().customFontName)
-            )
+            self.horizontalHeaderItem(column).setFont(QFont(APP().customFontName))
 
         # Install custom header
         self.setVerticalHeader(NormalServerVerticalHeader(self))
@@ -1160,7 +1139,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
     @property
     def activatedItemIndex(self):
         try:
-            return int(QApplication.instance().ActivatedItemIndex)
+            return int(APP().ActivatedItemIndex)
         except Exception:
             # Any non-exit exceptions
 
@@ -1169,10 +1148,6 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
     @property
     def activatedItem(self):
         return self.item(self.activatedItemIndex, 0)
-
-    @property
-    def selectedIndex(self):
-        return sorted(list(set(index.row() for index in self.selectedIndexes())))
 
     @property
     def currentFocus(self):
@@ -1193,7 +1168,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
 
             if oldItem is None:
                 # Item does not exists
-                newItem.setFont(QFont(QApplication.instance().customFontName))
+                newItem.setFont(QFont(APP().customFontName))
             else:
                 # Use existing
                 newItem.setFont(oldItem.font())
@@ -1272,48 +1247,13 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
 
         # Avoid unnecessary encode/write, etc.
         if remarkModified:
-            Storage.sync()
-
-    def setSelectionColor(self, color):
-        self.setStyleSheet(f'QTableWidget {{ selection-background-color: {color}; }}')
+            ServerStorage.sync()
 
     def activateItemByIndex(self, index, activate=True):
+        super().activateItemByIndex(index, activate)
+
         if activate:
-            for column in range(self.columnCount()):
-                serverItem = self.item(int(index), column)
-
-                if serverItem is None:
-                    # Do nothing
-                    return
-
-                serverFont = serverItem.font()
-                serverFont.setBold(True)
-
-                serverItem.setFont(serverFont)
-
-                if QApplication.instance().tray is None:
-                    # Initializing
-                    serverItem.setForeground(QColor('#008AE1'))
-                else:
-                    if QApplication.instance().tray.ConnectAction.isConnected():
-                        serverItem.setForeground(QColor('#EB212E'))
-                    else:
-                        serverItem.setForeground(QColor('#008AE1'))
-
-            QApplication.instance().ActivatedItemIndex = str(index)
-        else:
-            for column in range(self.columnCount()):
-                serverItem = self.item(int(index), column)
-
-                if serverItem is None:
-                    # Do nothing
-                    return
-
-                serverFont = serverItem.font()
-                serverFont.setBold(False)
-
-                serverItem.setFont(serverFont)
-                serverItem.setForeground(QBrush())
+            APP().ActivatedItemIndex = str(index)
 
     def setCurrentItemByIndex(self, index):
         self.setCurrentItem(self.item(index, 0))
@@ -1322,7 +1262,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
         swapListItem(self.ServerList, index0, index1)
         swapListItem(self.ScrollList, index0, index1)
 
-        # Storage sync is done by caller!!!
+        # Server storage sync is done by caller!!!
 
         self.flushRow(index0, self.ServerList[index0])
         self.flushRow(index1, self.ServerList[index1])
@@ -1362,7 +1302,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
         self.swapItem(index, index - 1)
 
     def moveUpSelectedItem(self):
-        if QApplication.instance().MainWidget.modified:
+        if APP().MainWidget.modified:
             self.saveChangeFirst.exec()
 
             return
@@ -1382,7 +1322,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
             self.moveUpItemByIndex(index)
 
         # Sync it
-        Storage.sync()
+        ServerStorage.sync()
 
         # Don't use setCurrentItemXXX since it will
         # trigger handleCurrentItemChanged. Just switch context
@@ -1405,7 +1345,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
         self.swapItem(index, index + 1)
 
     def moveDownSelectedItem(self):
-        if QApplication.instance().MainWidget.modified:
+        if APP().MainWidget.modified:
             self.saveChangeFirst.exec()
 
             return
@@ -1425,7 +1365,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
             self.moveDownItemByIndex(index)
 
         # Sync it
-        Storage.sync()
+        ServerStorage.sync()
 
         # Don't use setCurrentItemXXX since it will
         # trigger handleCurrentItemChanged. Just switch context
@@ -1441,7 +1381,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
         )
 
     def duplicateSelectedItem(self):
-        if QApplication.instance().MainWidget.modified:
+        if APP().MainWidget.modified:
             self.saveChangeFirst.exec()
 
             return
@@ -1454,15 +1394,13 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
 
         for index in indexes:
             if 0 <= index < len(self.ServerList):
-                QApplication.instance().MainWidget.importServer(
-                    **self.ServerList[index]
-                )
+                APP().MainWidget.importServer(**self.ServerList[index])
 
         # Sync it
-        Storage.sync()
+        ServerStorage.sync()
 
     def deleteSelectedItem(self):
-        if QApplication.instance().MainWidget.modified:
+        if APP().MainWidget.modified:
             self.saveChangeFirst.exec()
 
             return
@@ -1499,18 +1437,16 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
             self.ScrollList.pop(takedRow)
 
             if not takedActivated and takedRow < self.activatedItemIndex:
-                QApplication.instance().ActivatedItemIndex = str(
-                    self.activatedItemIndex - 1
-                )
+                APP().ActivatedItemIndex = str(self.activatedItemIndex - 1)
 
         # Sync it
-        Storage.sync()
+        ServerStorage.sync()
 
         if takedActivated:
-            if QApplication.instance().tray.ConnectAction.isConnected():
+            if APP().tray.ConnectAction.isConnected():
                 # Trigger disconnect
-                QApplication.instance().tray.ConnectAction.trigger()
-            QApplication.instance().ActivatedItemIndex = str(-1)
+                APP().tray.ConnectAction.trigger()
+            APP().ActivatedItemIndex = str(-1)
 
         # Don't use setCurrentItemXXX since the
         # selection may not be changed. Just switch context
@@ -1563,15 +1499,12 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
 
         self.saveScrollBarValue(prevRow)
 
-        if (
-            QApplication.instance().MainWidget is not None
-            and QApplication.instance().MainWidget.modified
-        ):
+        if APP().MainWidget is not None and APP().MainWidget.modified:
             choice = self.questionSaveBox.exec()
 
             if choice == MessageBox.ButtonRole.AcceptRole.value:
                 # Save
-                if QApplication.instance().MainWidget.SaveAsServerAction.save(
+                if APP().MainWidget.SaveAsServerAction.save(
                     successCallback=lambda: self.switchContext(currRow),
                 ):
                     pass
@@ -1583,7 +1516,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
                 # Discard
                 self.switchContext(currRow)
 
-                QApplication.instance().MainWidget.markAsSaved()  # Fake saved
+                APP().MainWidget.markAsSaved()  # Fake saved
 
             elif choice == MessageBox.ButtonRole.RejectRole.value:
                 # Cancel. Do not switch
@@ -1606,15 +1539,12 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
             # Same item activated. Do nothing
             return
 
-        if (
-            QApplication.instance().MainWidget is not None
-            and QApplication.instance().MainWidget.modified
-        ):
+        if APP().MainWidget is not None and APP().MainWidget.modified:
             self.saveChangeFirst.exec()
 
             return
 
-        if QApplication.instance().tray.ConnectAction.isConnecting():
+        if APP().tray.ConnectAction.isConnecting():
             # Show the MessageBox asynchronously
             self.progressWaitBox.open()
 
@@ -1629,8 +1559,8 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, QTableWidget):
         # Activate
         self.activateItemByIndex(newIndex, activate=True)
 
-        if QApplication.instance().tray.ConnectAction.isConnected():
-            QApplication.instance().tray.ConnectAction.reconnectAction()
+        if APP().tray.ConnectAction.isConnected():
+            APP().tray.ConnectAction.reconnectAction()
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
@@ -1672,18 +1602,18 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
         self.restoreErrorBox = MessageBox(parent=self)
 
         try:
-            self.StorageObj = Storage.toObject(QApplication.instance().Configuration)
+            self.StorageObj = ServerStorage.toObject(APP().Configuration)
             # Check model. Shallow copy
             self.ServerList = self.StorageObj['model']
         except Exception:
             # Any non-exit exceptions
 
-            self.StorageObj = Storage.init()
+            self.StorageObj = ServerStorage.init()
             # Shallow copy
             self.ServerList = self.StorageObj['model']
 
             # Clear it
-            Storage.clear()
+            ServerStorage.clear()
 
             Configuration.corruptedError(self.restoreErrorBox)
 
@@ -1722,7 +1652,7 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
         self.plainTextEdit.setStyleSheet(
             DraculaTheme.getStyleSheet(
                 widgetName='QPlainTextEdit',
-                fontFamily=QApplication.instance().customFontName,
+                fontFamily=APP().customFontName,
             )
         )
 
@@ -1730,7 +1660,7 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
 
         try:
             font = self.plainTextEdit.font()
-            font.setPointSize(int(QApplication.instance().EditorWidgetPointSize))
+            font.setPointSize(int(APP().EditorWidgetPointSize))
 
             self.plainTextEdit.setFont(font)
         except Exception:
@@ -1849,6 +1779,13 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
             ],
         }
 
+        routingMenu = {
+            'name': 'Routing',
+            'actions': [
+                RoutingAction(parent=self),
+            ],
+        }
+
         viewMenu = {
             'name': 'View',
             'actions': [
@@ -1868,13 +1805,16 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
         }
 
         # Menus
-        for menuDict in (fileMenu, editMenu, viewMenu, helpMenu):
+        for menuDict in (fileMenu, editMenu, routingMenu, viewMenu, helpMenu):
             menuName = menuDict['name']
             menuObjName = f'_{menuName}Menu'
             menu = Menu(*menuDict['actions'], title=_(menuName), parent=self.menuBar())
 
             for action in menuDict['actions']:
                 if isinstance(action, Action):
+                    if hasattr(self, f'{action}'):
+                        logger.warning(f'{self} already has action {action}')
+
                     setattr(self, f'{action}', action)
 
             # Set reference
@@ -1886,10 +1826,7 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
             self.setGeometry(
                 100,
                 100,
-                *list(
-                    int(size)
-                    for size in QApplication.instance().MainWidgetWindowSize.split(',')
-                ),
+                *list(int(size) for size in APP().MainWidgetWindowSize.split(',')),
             )
         except Exception:
             # Any non-exit exceptions
@@ -1905,7 +1842,7 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
 
         if syncStorage:
             # Sync it
-            Storage.sync()
+            ServerStorage.sync()
 
         row = self.normalServerWidget.rowCount()
 
@@ -1914,21 +1851,21 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
         self.normalServerWidget.flushRow(row, server)
 
         item = QTableWidgetItem(str(row + 1))
-        item.setFont(QFont(QApplication.instance().customFontName))
+        item.setFont(QFont(APP().customFontName))
 
         if len(self.ServerList) == 1:
             # The first one. Click it
             self.normalServerWidget.setCurrentItemByIndex(0)
 
             # Try to be user-friendly in some extreme cases
-            if not QApplication.instance().tray.ConnectAction.isConnected():
+            if not APP().tray.ConnectAction.isConnected():
                 # Activate automatically
                 self.normalServerWidget.activateItemByIndex(0)
 
     def showTabAndSpacesIfNecessary(self):
         textOption = QTextOption()
 
-        if QApplication.instance().ShowTabAndSpacesInEditor == Switch.ON_:
+        if APP().ShowTabAndSpacesInEditor == Switch.ON_:
             textOption.setFlags(QTextOption.Flag.ShowTabsAndSpaces)
 
         self.plainTextEdit.document().setDefaultTextOption(textOption)
@@ -2009,17 +1946,15 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
         self.questionSave()
 
     def syncSettings(self):
-        QApplication.instance().MainWidgetWindowSize = (
+        APP().MainWidgetWindowSize = (
             f'{self.geometry().width()},{self.geometry().height()}'
         )
-        QApplication.instance().ServerWidgetSectionSizeTable = ujson.dumps(
+        APP().ServerWidgetSectionSizeTable = ujson.dumps(
             self.normalServerWidget.sectionSizeTable,
             ensure_ascii=False,
             escape_forward_slashes=False,
         )
-        QApplication.instance().EditorWidgetPointSize = str(
-            self.plainTextEdit.font().pointSize()
-        )
+        APP().EditorWidgetPointSize = str(self.plainTextEdit.font().pointSize())
 
     def connectedCallback(self):
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))

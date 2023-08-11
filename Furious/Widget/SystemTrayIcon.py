@@ -9,14 +9,23 @@ from Furious.Action import (
 )
 from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import Menu
-from Furious.Utility.Constants import APPLICATION_NAME, APPLICATION_VERSION, PLATFORM
+from Furious.Utility.Constants import (
+    APP,
+    APPLICATION_NAME,
+    APPLICATION_VERSION,
+    PLATFORM,
+)
 from Furious.Utility.Utility import bootstrapIcon, StateContext, Switch
 from Furious.Utility.Translator import Translatable, gettext as _
 from Furious.Utility.Proxy import Proxy
 from Furious.Utility.StartupOnBoot import StartupOnBoot
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import QApplication, QSystemTrayIcon
+from PySide6.QtWidgets import QSystemTrayIcon
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SystemTrayIcon(Translatable, QSystemTrayIcon):
@@ -41,6 +50,9 @@ class SystemTrayIcon(Translatable, QSystemTrayIcon):
 
         for action in actions:
             if isinstance(action, Action):
+                if hasattr(self, f'{action}'):
+                    logger.warning(f'{self} already has action {action}')
+
                 setattr(self, f'{action}', action)
 
         self._menu = Menu(*actions)
@@ -48,11 +60,11 @@ class SystemTrayIcon(Translatable, QSystemTrayIcon):
         self.setContextMenu(self._menu)
 
     def bootstrap(self):
-        if QApplication.instance().StartupOnBoot == Switch.ON_:
+        if APP().StartupOnBoot == Switch.ON_:
             # Rrefresh startup application location
             StartupOnBoot.on_()
 
-        if QApplication.instance().Connect == Switch.ON_:
+        if APP().Connect == Switch.ON_:
             # Trigger connect action
             self.ConnectAction.trigger()
 
@@ -77,7 +89,7 @@ class SystemTrayIcon(Translatable, QSystemTrayIcon):
     @QtCore.Slot(QSystemTrayIcon.ActivationReason)
     def handleActivated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            QApplication.instance().MainWidget.show()
+            APP().MainWidget.show()
 
     def setApplicationToolTip(self):
         self.setToolTip(f'{_(APPLICATION_NAME)} {APPLICATION_VERSION}')

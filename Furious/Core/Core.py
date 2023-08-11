@@ -142,32 +142,38 @@ class Hysteria(Core):
         super().__init__(*args, **kwargs)
 
     @staticmethod
-    def rule(rulePath=''):
-        if rulePath == '':
-            path = DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl'
-        else:
-            path = getAbsolutePath(rulePath)
+    def rule(rulePath):
+        path = getAbsolutePath(str(rulePath))
 
         try:
             with open(path, 'rb') as file:
-                return file.read()
-        except Exception:
+                data = file.read()
+
+            logger.info(f'hysteria rule \'{path}\' load success')
+
+            return data
+        except Exception as ex:
             # Any non-exit exceptions
+
+            logger.error(f'hysteria rule \'{path}\' load failed. {ex}')
 
             return ''
 
     @staticmethod
-    def mmdb(mmdbPath=''):
-        if mmdbPath == '':
-            path = DATA_DIR / 'hysteria' / 'country.mmdb'
-        else:
-            path = getAbsolutePath(mmdbPath)
+    def mmdb(mmdbPath):
+        path = getAbsolutePath(str(mmdbPath))
 
         try:
             with open(path, 'rb') as file:
-                return file.read()
-        except Exception:
+                data = file.read()
+
+            logger.info(f'hysteria mmdb \'{path}\' load success')
+
+            return data
+        except Exception as ex:
             # Any non-exit exceptions
+
+            logger.error(f'hysteria mmdb \'{path}\' load failed. {ex}')
 
             return ''
 

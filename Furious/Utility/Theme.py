@@ -40,6 +40,8 @@ class DraculaTheme(Theme):
             HighlightRules(r'"[^"\\]*(\\.[^"\\]*)*"', '#F1FA8C'),
             # JSON keys. Green
             HighlightRules(r'"([^"\\]*(\\.[^"\\]*)*)"\s*:', '#50FA7B', isJSONKey=True),
+            # Comments(only for hints on display). Grey
+            HighlightRules(r'^#.*', '#6272a4'),
         ]
 
     def highlightBlock(self, text):

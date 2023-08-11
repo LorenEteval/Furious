@@ -1,5 +1,6 @@
 from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import Menu, MessageBox, ZoomableTextBrowser
+from Furious.Utility.Constants import APP
 from Furious.Utility.Utility import (
     StateContext,
     SupportConnectedCallback,
@@ -9,7 +10,11 @@ from Furious.Utility.Translator import Translatable, gettext as _
 from Furious.Utility.Theme import DraculaTheme
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QTextBrowser
+from PySide6.QtWidgets import QFileDialog, QMainWindow, QTextBrowser
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SaveErrorBox(MessageBox):
@@ -141,14 +146,14 @@ class LogViewerWidget(Translatable, SupportConnectedCallback, QMainWindow):
         self.textBrowser.setStyleSheet(
             DraculaTheme.getStyleSheet(
                 widgetName='QTextBrowser',
-                fontFamily=QApplication.instance().customFontName,
+                fontFamily=APP().customFontName,
             )
         )
 
         try:
             # Restore point size
             font = self.textBrowser.font()
-            font.setPointSize(int(QApplication.instance().ViewerWidgetPointSize))
+            font.setPointSize(int(APP().ViewerWidgetPointSize))
 
             self.textBrowser.setFont(font)
         except Exception:
@@ -178,6 +183,9 @@ class LogViewerWidget(Translatable, SupportConnectedCallback, QMainWindow):
         for menu in (fileMenuActions, editMenuActions, viewMenuActions):
             for action in menu:
                 if isinstance(action, Action):
+                    if hasattr(self, f'{action}'):
+                        logger.warning(f'{self} already has action {action}')
+
                     setattr(self, f'{action}', action)
 
         self._fileMenu = Menu(*fileMenuActions, title=_('File'), parent=self)
@@ -192,9 +200,7 @@ class LogViewerWidget(Translatable, SupportConnectedCallback, QMainWindow):
         return self.textBrowser.toPlainText()
 
     def syncSettings(self):
-        QApplication.instance().ViewerWidgetPointSize = str(
-            self.textBrowser.font().pointSize()
-        )
+        APP().ViewerWidgetPointSize = str(self.textBrowser.font().pointSize())
 
     def closeEvent(self, event):
         event.ignore()
