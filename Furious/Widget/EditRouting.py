@@ -306,7 +306,7 @@ class ImportAssetFileAction(Action):
         super().__init__(_('Import Asset File...'), **kwargs)
 
     def triggeredCallback(self, checked):
-        self.parent().assetViewer.show()
+        APP().editRoutingWidget.assetViewer.show()
 
 
 def questionFastReconnect(saveConfInfo):
@@ -527,8 +527,6 @@ class RoutingEditor(Translatable, SupportConnectedCallback, QMainWindow):
             self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
         else:
             self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-
-        self.assetViewer = AssetViewerWidget()
 
         # MessageBox
         self.questionSaveBox = QuestionSaveBox(
