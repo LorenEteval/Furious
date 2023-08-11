@@ -112,7 +112,11 @@ class MessageBox(Translatable, SupportConnectedCallback, QMessageBox):
                 pass
 
             for button in self.buttons():
-                button.setText(_(button.text()))
+                if button.text().count('OK') > 0:
+                    # &OK...
+                    pass
+                else:
+                    button.setText(_(button.text()))
 
             self.moveToCenter()
 
