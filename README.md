@@ -175,6 +175,8 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 运行Furious需要**Python 3.8及以上**版本。
 
+> 注意：推荐在Python虚拟环境(i.e. venv)中安装Furious。
+
 ```
 pip install Furious-GUI
 ```
@@ -192,6 +194,8 @@ Furious
 ## 从源码运行
 
 克隆该仓库并进入项目文件夹。安装所需依赖包：
+
+> 注意：推荐在Python虚拟环境(i.e. venv)中安装依赖。
 
 > 注意：为了安装依赖包成功，你仍然需要准备好上文中的Core编译工具。
 
