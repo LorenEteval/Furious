@@ -26,7 +26,6 @@ setup(
         'pybase64',
         'pyqrcode',
         'pypng',
-        'watchfiles',
         'sysproxy; sys_platform == "win32"',
         'darkdetect; sys_platform != "darwin"',
         'darkdetect[macos-listener]; sys_platform == "darwin"',
