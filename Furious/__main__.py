@@ -25,12 +25,6 @@ def main():
 
         exitcode = process.exitcode
 
-        if exitcode == -6:
-            # On Linux platform, daemon thread(filesystem events listener thread)
-            # terminated and result in application exitcode -6. Make it as exit
-            # success thus error window won't show.
-            exitcode = 0
-
         if exitcode == 0:
             sys.exit(exitcode)
 
