@@ -177,6 +177,8 @@ class AssetViewerWidget(
         self.flushItem()
         self.setCentralWidget(self.listWidget)
 
+        logger.info(f'asset dir is \'{AssetViewerWidget.AssetDir}\'')
+
         # Check filesystem events
         self.watchFiles = WatchFiles()
         self.watchFiles.filesChanged.connect(lambda: self.flushItem())
