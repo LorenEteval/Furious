@@ -19,17 +19,9 @@ from PySide6.QtWidgets import QFileDialog, QListWidget, QListWidgetItem, QMainWi
 import os
 import shutil
 import logging
-import threading
-import watchfiles
 import darkdetect
 
 logger = logging.getLogger(__name__)
-
-
-def watchFileChanges(callback):
-    for changes in watchfiles.watch(AssetViewerWidget.AssetDir):
-        if callable(callback):
-            callback()
 
 
 class QuestionDeleteBox(MessageBox):
@@ -127,6 +119,8 @@ class ImportAction(Action):
                 # Show the MessageBox and wait for user to close it
                 self.importErrorBox.exec()
             else:
+                self.parent().flushItem()
+
                 self.importSuccessBox.setWindowTitle(_('Import'))
                 self.importSuccessBox.setText(_('Import asset file success.'))
 
@@ -140,13 +134,6 @@ class ExitAction(Action):
 
     def triggeredCallback(self, checked):
         self.parent().hide()
-
-
-class WatchFiles(QtCore.QObject):
-    filesChanged = QtCore.Signal()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
 
 class AssetViewerWidget(
@@ -178,17 +165,6 @@ class AssetViewerWidget(
         self.setCentralWidget(self.listWidget)
 
         logger.info(f'asset dir is \'{AssetViewerWidget.AssetDir}\'')
-
-        # Check filesystem events
-        self.watchFiles = WatchFiles()
-        self.watchFiles.filesChanged.connect(lambda: self.flushItem())
-
-        self.watchFilesListenerThread = threading.Thread(
-            target=watchFileChanges,
-            args=(self.watchFiles.filesChanged.emit,),
-            daemon=True,
-        )
-        self.watchFilesListenerThread.start()
 
         contextMenuActions = [
             Action(
@@ -245,6 +221,8 @@ class AssetViewerWidget(
 
         for index in indexes:
             os.remove(AssetViewerWidget.AssetDir / self.listWidget.item(index).text())
+
+        self.flushItem()
 
     def flushItemByTheme(self, theme):
         self.listWidget.clear()
