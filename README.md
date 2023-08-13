@@ -74,9 +74,9 @@ must have tools ready for building these bindings for your current platform firs
 
 ### Install Furious
 
-> Note: Install Furious in a Python virtual environment(i.e. venv) is recommended.
-
 Furious requires **Python 3.8 and above**.
+
+> Note: Install Furious in a Python virtual environment(i.e. venv) is recommended.
 
 ```
 pip install Furious-GUI
