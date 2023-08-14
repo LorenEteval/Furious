@@ -1,5 +1,5 @@
 from Furious.Gui.Action import Action, Seperator
-from Furious.Widget.Widget import Menu, MessageBox, ZoomableTextBrowser
+from Furious.Widget.Widget import MainWindow, Menu, MessageBox, ZoomableTextBrowser
 from Furious.Utility.Constants import APP
 from Furious.Utility.Utility import (
     StateContext,
@@ -10,7 +10,7 @@ from Furious.Utility.Translator import Translatable, gettext as _
 from Furious.Utility.Theme import DraculaTheme
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import QFileDialog, QMainWindow, QTextBrowser
+from PySide6.QtWidgets import QFileDialog, QTextBrowser
 
 import logging
 
@@ -134,7 +134,7 @@ class ZoomOutAction(Action):
         self.parent().textBrowser.zoomOut()
 
 
-class LogViewerWidget(Translatable, SupportConnectedCallback, QMainWindow):
+class LogViewerWidget(MainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -201,19 +201,3 @@ class LogViewerWidget(Translatable, SupportConnectedCallback, QMainWindow):
 
     def syncSettings(self):
         APP().ViewerWidgetPointSize = str(self.textBrowser.font().pointSize())
-
-    def closeEvent(self, event):
-        event.ignore()
-
-        self.syncSettings()
-        self.hide()
-
-    def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-    def disconnectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-
-    def retranslate(self):
-        with StateContext(self):
-            self.setWindowTitle(_(self.windowTitle()))

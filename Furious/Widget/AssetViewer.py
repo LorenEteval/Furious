@@ -1,5 +1,5 @@
 from Furious.Gui.Action import Action, Seperator
-from Furious.Widget.Widget import ListWidget, Menu, MessageBox
+from Furious.Widget.Widget import ListWidget, MainWindow, Menu, MessageBox
 from Furious.Utility.Constants import APPLICATION_NAME, PLATFORM, GOLDEN_RATIO, ROOT_DIR
 from Furious.Utility.Utility import (
     StateContext,
@@ -14,7 +14,7 @@ from Furious.Utility.Translator import Translatable, gettext as _
 
 from PySide6 import QtCore
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QFileDialog, QListWidget, QListWidgetItem, QMainWindow
+from PySide6.QtWidgets import QFileDialog, QListWidget, QListWidgetItem
 
 import os
 import shutil
@@ -136,9 +136,7 @@ class ExitAction(Action):
         self.parent().hide()
 
 
-class AssetViewerWidget(
-    Translatable, SupportConnectedCallback, SupportThemeChangedCallback, QMainWindow
-):
+class AssetViewerWidget(SupportThemeChangedCallback, MainWindow):
     AssetDir = ROOT_DIR / APPLICATION_NAME / 'Data' / 'xray'
 
     def __init__(self, *args, **kwargs):
@@ -251,17 +249,6 @@ class AssetViewerWidget(
         else:
             self.flushItemByTheme(darkdetect.theme())
 
-    def closeEvent(self, event):
-        event.ignore()
-
-        self.hide()
-
-    def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-    def disconnectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-
     def themeChangedCallback(self, theme):
         if PLATFORM == 'Linux' and getUbuntuRelease() == '20.04':
             # Ubuntu 20.04 system dark theme does not
@@ -269,7 +256,3 @@ class AssetViewerWidget(
             pass
         else:
             self.flushItemByTheme(theme)
-
-    def retranslate(self):
-        with StateContext(self):
-            self.setWindowTitle(_(self.windowTitle()))
