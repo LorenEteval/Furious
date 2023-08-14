@@ -3,6 +3,7 @@ from Furious.Utility.Constants import APP
 from Furious.Utility.Utility import (
     StateContext,
     SupportConnectedCallback,
+    NeedSyncSettings,
     bootstrapIcon,
     moveToCenter,
 )
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLineEdit,
     QListWidget,
+    QMainWindow,
     QMenu,
     QMessageBox,
     QPlainTextEdit,
@@ -54,6 +56,31 @@ class ListWidget(QListWidget):
     @property
     def selectedIndex(self):
         return sorted(list(set(index.row() for index in self.selectedIndexes())))
+
+
+class MainWindow(Translatable, SupportConnectedCallback, NeedSyncSettings, QMainWindow):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def syncSettings(self):
+        pass
+
+    def closeEvent(self, event):
+        event.ignore()
+
+        # Sync partial
+        self.syncSettings()
+        self.hide()
+
+    def connectedCallback(self):
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+
+    def disconnectedCallback(self):
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+
+    def retranslate(self):
+        with StateContext(self):
+            self.setWindowTitle(_(self.windowTitle()))
 
 
 class Menu(Translatable, QMenu):

@@ -5,6 +5,7 @@ from Furious.Core.Configuration import Configuration
 from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import (
     HeaderView,
+    MainWindow,
     Menu,
     MessageBox,
     PushButton,
@@ -47,10 +48,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QMainWindow,
     QPlainTextEdit,
     QSplitter,
     QStyledItemDelegate,
@@ -1607,7 +1606,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         )
 
 
-class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindow):
+class EditConfigurationWidget(MainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -1974,12 +1973,6 @@ class EditConfigurationWidget(Translatable, SupportConnectedCallback, QMainWindo
             escape_forward_slashes=False,
         )
         APP().EditorWidgetPointSize = str(self.plainTextEdit.font().pointSize())
-
-    def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-    def disconnectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
     def retranslate(self):
         with StateContext(self):

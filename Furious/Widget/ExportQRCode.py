@@ -1,16 +1,18 @@
+from Furious.Widget.Widget import MainWindow
+
 from Furious.Utility.Constants import APPLICATION_NAME
 from Furious.Utility.Utility import SupportConnectedCallback, bootstrapIcon
 from Furious.Utility.Translator import gettext as _
 
 from PySide6 import QtCore
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QLabel, QMainWindow, QTabWidget
+from PySide6.QtWidgets import QLabel, QTabWidget
 
 import io
 import pyqrcode
 
 
-class ExportQRCode(SupportConnectedCallback, QMainWindow):
+class ExportQRCode(MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -47,9 +49,3 @@ class ExportQRCode(SupportConnectedCallback, QMainWindow):
 
         if self.editorTab.count() == 0:
             self.hide()
-
-    def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-    def disconnectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))

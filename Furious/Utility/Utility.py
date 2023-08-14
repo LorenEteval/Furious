@@ -156,6 +156,25 @@ class SupportConnectedCallback:
             ob.disconnectedCallback()
 
 
+class NeedSyncSettings:
+    Object = list()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        NeedSyncSettings.Object.append(self)
+
+    def syncSettings(self):
+        raise NotImplementedError
+
+    @staticmethod
+    def syncAll():
+        for ob in NeedSyncSettings.Object:
+            assert isinstance(ob, NeedSyncSettings)
+
+            ob.syncSettings()
+
+
 class SupportThemeChangedCallback:
     Object = list()
 

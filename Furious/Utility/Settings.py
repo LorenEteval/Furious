@@ -66,8 +66,6 @@ SUPPORTED_SETTINGS = (
     Settings('MainWidgetWindowSize'),
     # Edit Routing Widget Window Size
     Settings('RoutesWidgetWindowSize'),
-    # Edit Routing Widget Editor Window Size
-    Settings('RoutesEditorWindowSize'),
     # Main Widget Section Size
     Settings('ServerWidgetSectionSizeTable'),
     # Edit Routing Widget Section Size

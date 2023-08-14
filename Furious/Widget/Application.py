@@ -12,7 +12,7 @@ from Furious.Utility.Constants import (
     SYSTEM_LANGUAGE,
     DATA_DIR,
 )
-from Furious.Utility.Utility import SupportThemeChangedCallback
+from Furious.Utility.Utility import SupportThemeChangedCallback, NeedSyncSettings
 from Furious.Utility.Proxy import Proxy
 from Furious.Utility.Settings import Settings
 from Furious.Utility.Translator import gettext as _
@@ -265,14 +265,7 @@ class Application(SingletonApplication):
         # if self.tray is not None:
         #     self.tray.ConnectAction.stopCore()
 
-        if self.MainWidget is not None:
-            self.MainWidget.syncSettings()
-
-        if self.editRoutingWidget is not None:
-            self.editRoutingWidget.syncSettings()
-
-        if self.logViewerWidget is not None:
-            self.logViewerWidget.syncSettings()
+        NeedSyncSettings.syncAll()
 
     def exit(self, exitcode=0):
         if self.MainWidget is not None:

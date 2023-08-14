@@ -9,6 +9,7 @@ from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import (
     HeaderView,
     Menu,
+    MainWindow,
     MessageBox,
     PushButton,
     StyledItemDelegate,
@@ -39,14 +40,15 @@ from PySide6 import QtCore
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
+    QFormLayout,
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
-    QInputDialog,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QPlainTextEdit,
     QSplitter,
     QStyledItemDelegate,
@@ -204,7 +206,7 @@ BUILTIN_ROUTING_TEXT = {
             f'# \n'
             f'# This rule is read-only.\n'
             f'# \n'
-            f'# If no rule file or mmdb file is provided, hysteria\n'
+            f'# If no rule file or mmdb file is provided, {APPLICATION_NAME}\n'
             f'# will fall back to proxy all traffic.\n\n'
         )
         + ujson.dumps(
@@ -289,7 +291,7 @@ USER_ROUTING_TEXT = {
         f'# by {APPLICATION_NAME} forever.\n'
         f'# \n'
         f'# Note: If any one of filepath is given but\n'
-        f'# does not exist, hysteria will fall back to\n'
+        f'# does not exist, {APPLICATION_NAME} will fall back to\n'
         f'# proxy all traffic.\n\n'
     )
     + ujson.dumps(
@@ -515,7 +517,7 @@ class RoutingPlainTextEdit(ZoomablePlainTextEdit):
             super().wheelEvent(event)
 
 
-class RoutingEditor(Translatable, SupportConnectedCallback, QMainWindow):
+class RoutingEditor(MainWindow):
     def __init__(self, isBuiltin, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -668,12 +670,6 @@ class RoutingEditor(Translatable, SupportConnectedCallback, QMainWindow):
         event.ignore()
 
         self.questionSave()
-
-    def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-    def disconnectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
     def retranslate(self):
         if self.isBuiltin:
@@ -852,17 +848,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
         routingEditor = RoutingEditor(isBuiltin)
         routingEditor.title = title
         routingEditor.setWindowTitle(title)
-
-        try:
-            routingEditor.setGeometry(
-                100,
-                100,
-                *list(int(size) for size in APP().RoutesEditorWindowSize.split(',')),
-            )
-        except Exception:
-            # Any non-exit exceptions
-
-            routingEditor.setGeometry(100, 100, 728 * GOLDEN_RATIO, 728)
+        routingEditor.setGeometry(100, 100, 656, 856)
 
         moveToCenter(routingEditor)
 
@@ -970,7 +956,52 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
                         item.setText(_(item.text()))
 
 
-class EditRoutingWidget(Translatable, SupportConnectedCallback, QMainWindow):
+class AddRoutingDialog(Translatable, SupportConnectedCallback, QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle(_('Add routing'))
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+
+        self.remarkText = QLabel(_('Enter routing remark:'))
+        self.remarkEdit = QLineEdit()
+
+        self.dialogBtns = QDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
+
+        self.dialogBtns.addButton(_('OK'), QDialogButtonBox.ButtonRole.AcceptRole)
+        self.dialogBtns.addButton(_('Cancel'), QDialogButtonBox.ButtonRole.RejectRole)
+        self.dialogBtns.accepted.connect(self.accept)
+        self.dialogBtns.rejected.connect(self.reject)
+
+        layout = QFormLayout()
+
+        layout.addRow(self.remarkText)
+        layout.addRow(self.remarkEdit)
+        layout.addRow(self.dialogBtns)
+        layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        self.setLayout(layout)
+
+    def routingRemark(self):
+        return self.remarkEdit.text()
+
+    def connectedCallback(self):
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+
+    def disconnectedCallback(self):
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+
+    def retranslate(self):
+        with StateContext(self):
+            self.setWindowTitle(_(self.windowTitle()))
+
+            self.remarkText.setText(_(self.remarkText.text()))
+
+            for button in self.dialogBtns.buttons():
+                button.setText(_(button.text()))
+
+
+class EditRoutingWidget(MainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -978,6 +1009,7 @@ class EditRoutingWidget(Translatable, SupportConnectedCallback, QMainWindow):
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
         self.assetViewer = AssetViewerWidget()
+        self.addRoutingDialog = AddRoutingDialog()
 
         try:
             self.StorageObj = RoutesStorage.toObject(APP().CustomRouting)
@@ -1048,36 +1080,44 @@ class EditRoutingWidget(Translatable, SupportConnectedCallback, QMainWindow):
         moveToCenter(self)
 
     def addRoute(self):
-        # Get text for a new item from the user
-        text, ok = QInputDialog.getText(
-            self, _('Add routing'), _('Enter routing remark:')
-        )
+        choice = self.addRoutingDialog.exec()
 
-        if text and ok:
-            self.editRoutingTableWidget.appendDataByColumn(
-                lambda column: EditRoutingTableWidget.USER_ITEM_GET_FUNC[column](text)
-            )
+        if choice == QDialog.DialogCode.Accepted.value:
+            routingRemark = self.addRoutingDialog.routingRemark()
 
-            routingEditor = self.editRoutingTableWidget.appendRoutingEditor(
-                text, isBuiltin=False
-            )
-
-            for core in [XrayCore.name(), Hysteria.name()]:
-                routingEditor.addTabWithData(
-                    core,
-                    USER_ROUTING_TEXT[core],
+            if routingRemark:
+                self.editRoutingTableWidget.appendDataByColumn(
+                    lambda column: EditRoutingTableWidget.USER_ITEM_GET_FUNC[column](
+                        routingRemark
+                    )
                 )
 
-            self.RoutesList.append({'remark': text, **DEFAULT_USER_ROUTING})
+                routingEditor = self.editRoutingTableWidget.appendRoutingEditor(
+                    routingRemark, isBuiltin=False
+                )
 
-            # Sync it
-            RoutesStorage.sync()
+                for core in [XrayCore.name(), Hysteria.name()]:
+                    routingEditor.addTabWithData(
+                        core,
+                        USER_ROUTING_TEXT[core],
+                    )
 
-            routingAction = APP().tray.RoutingAction
-            # Add entry in routing menu
-            routingAction.addAction(
-                RoutingChildAction(text, checkable=True, checked=False)
-            )
+                self.RoutesList.append(
+                    {'remark': routingRemark, **DEFAULT_USER_ROUTING}
+                )
+
+                # Sync it
+                RoutesStorage.sync()
+
+                routingAction = APP().tray.RoutingAction
+                # Add entry in routing menu
+                routingAction.addAction(
+                    RoutingChildAction(routingRemark, checkable=True, checked=False)
+                )
+
+        else:
+            # Do nothing
+            pass
 
     def deleteSelectedItem(self):
         self.editRoutingTableWidget.deleteSelectedItem()
@@ -1090,12 +1130,6 @@ class EditRoutingWidget(Translatable, SupportConnectedCallback, QMainWindow):
             f'{self.geometry().width()},{self.geometry().height()}'
         )
 
-        if len(self.editRoutingTableWidget.routingEditorRef):
-            APP().RoutesEditorWindowSize = (
-                f'{self.editRoutingTableWidget.routingEditorRef[0].geometry().width()},'
-                f'{self.editRoutingTableWidget.routingEditorRef[0].geometry().height()}'
-            )
-
         APP().RoutesWidgetSectionSizeTable = ujson.dumps(
             self.editRoutingTableWidget.sectionSizeTable,
             ensure_ascii=False,
@@ -1107,19 +1141,3 @@ class EditRoutingWidget(Translatable, SupportConnectedCallback, QMainWindow):
             self.deleteSelectedItem()
         else:
             super().keyPressEvent(event)
-
-    def closeEvent(self, event):
-        event.ignore()
-
-        self.syncSettings()
-        self.hide()
-
-    def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-    def disconnectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-
-    def retranslate(self):
-        with StateContext(self):
-            self.setWindowTitle(_(self.windowTitle()))
