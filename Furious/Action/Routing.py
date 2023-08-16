@@ -130,6 +130,10 @@ def routingToIndex():
                 return i
 
         return -1
+    except Exception:
+        # Any non-exit exceptions
+
+        return -1
     else:
         return index + len(BUILTIN_ROUTING)
 
