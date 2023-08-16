@@ -1,4 +1,5 @@
 from Furious.Action.Language import SUPPORTED_LANGUAGE
+from Furious.Action.Routing import BUILTIN_ROUTING
 from Furious.Utility.Constants import SYSTEM_LANGUAGE
 from Furious.Utility.Utility import Switch
 
@@ -22,7 +23,9 @@ class Settings:
 
             value = QtCore.QSettings().value(settings.name)
 
-            if settings.protectedRange is None or value in settings.protectedRange:
+            if value is not None and (
+                settings.protectedRange is None or value in settings.protectedRange
+            ):
                 return value
 
             # Value not in protected range. Set to default
@@ -55,7 +58,7 @@ SUPPORTED_SETTINGS = (
     # Connected last time or not
     Settings('Connect', Switch.RANGE),
     # User Routing option
-    Settings('Routing'),
+    Settings('Routing', default=BUILTIN_ROUTING[0]),
     # User Custom Routing object
     Settings('CustomRouting'),
     # User Configuration
