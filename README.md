@@ -1,5 +1,7 @@
 # Furious
 
+[![Build Furious](https://github.com/LorenEteval/Furious/actions/workflows/wheels.yml/badge.svg?branch=main)](https://github.com/LorenEteval/Furious/actions/workflows/wheels.yml)
+
 A PySide6-based cross platform GUI client that launches your beloved GFW to outer space.
 Support [Xray-core](https://github.com/XTLS/Xray-core)
 and [hysteria](https://github.com/apernet/hysteria).
@@ -113,6 +115,20 @@ python -m Furious
 ```
 
 > Note: Furious will ignore current startup on boot request if it's lauched from source.
+
+## Build Status
+
+See the build result in [github actions](https://github.com/LorenEteval/Furious/actions).
+
+| Platform     | Python 3.8-Python 3.11 |
+|--------------|:----------------------:|
+| ubuntu 20.04 |   :heavy_check_mark:   |
+| ubuntu 22.04 |   :heavy_check_mark:   |
+| windows-2019 |   :heavy_check_mark:   |
+| windows-2022 |   :heavy_check_mark:   |
+| macos-11     |   :heavy_check_mark:   |
+| macos-12     |   :heavy_check_mark:   |
+| macos-13     |   :heavy_check_mark:   |
 
 ## Core Installation Script
 
