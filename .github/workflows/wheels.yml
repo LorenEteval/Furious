@@ -1,0 +1,43 @@
+name: Build Furious
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: ${{ matrix.os }} Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macos-11, macos-12, macos-13]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.20.0"
+      - run: go version
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python --version
+
+      - name: Update pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install wheel
+        run: python -m pip install wheel
+
+      - name: Install requirements.txt
+        run: python -m pip install -r requirements.txt
+
+      - name: Generate source distribution
+        run: python setup.py sdist
+
+      - name: Generate wheel distribution
+        run: python setup.py bdist_wheel
+
+      - name: Install from source
+        run: python setup.py install
