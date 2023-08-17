@@ -31,18 +31,7 @@ class ConnectingProgressBar(Translatable, SupportConnectedCallback, QWidget):
         # Create a progress bar widget
         self.progressBar = QProgressBar(self)
         self.progressBar.setRange(0, 100)
-        self.progressBar.setStyleSheet(
-            f'QProgressBar {{'
-            f'    border-radius: 2px;'
-            f'    text-align: center;'
-            f'}}'
-            f''
-            f'QProgressBar::chunk {{'
-            f'    background-color: #43ACED;'
-            f'      width: 10px;'
-            f'      margin: 0.5px;'
-            f'}}'
-        )
+        self.progressBar.setStyleSheet(self.getStyleSheet('#43ACED'))
 
         # create a timer to update the progress bar
         self.timer = QtCore.QTimer(self)
@@ -53,6 +42,21 @@ class ConnectingProgressBar(Translatable, SupportConnectedCallback, QWidget):
 
         self.setLayout(self.layout)
 
+    @staticmethod
+    def getStyleSheet(color):
+        return (
+            f'QProgressBar {{'
+            f'    border-radius: 2px;'
+            f'    text-align: center;'
+            f'}}'
+            f''
+            f'QProgressBar::chunk {{'
+            f'    background-color: {color};'
+            f'    width: 10px;'
+            f'    margin: 0.5px;'
+            f'}}'
+        )
+
     def closeEvent(self, event):
         event.ignore()
 
@@ -60,35 +64,11 @@ class ConnectingProgressBar(Translatable, SupportConnectedCallback, QWidget):
 
     def connectedCallback(self):
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-        self.progressBar.setStyleSheet(
-            f'QProgressBar {{'
-            f'    border-radius: 2px;'
-            f'    text-align: center;'
-            f'}}'
-            f''
-            f'QProgressBar::chunk {{'
-            f'    background-color: #EB212E;'
-            f'      width: 10px;'
-            f'      margin: 0.5px;'
-            f'}}'
-        )
+        self.progressBar.setStyleSheet(self.getStyleSheet('#F4364C'))
 
     def disconnectedCallback(self):
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-
-        self.progressBar.setStyleSheet(
-            f'QProgressBar {{'
-            f'    border-radius: 2px;'
-            f'    text-align: center;'
-            f'}}'
-            f''
-            f'QProgressBar::chunk {{'
-            f'    background-color: #43ACED;'
-            f'      width: 10px;'
-            f'      margin: 0.5px;'
-            f'}}'
-        )
+        self.progressBar.setStyleSheet(self.getStyleSheet('#43ACED'))
 
     def retranslate(self):
         with StateContext(self):

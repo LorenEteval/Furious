@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMainWindow,
     QMenu,
+    QMenuBar,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
@@ -35,32 +36,54 @@ class HeaderView(SupportConnectedCallback, QHeaderView):
         self.setSectionsClickable(True)
 
         self.setStyleSheet(
-            f'QHeaderView::section:hover {{ background-color: #008AE1; }}'
+            f'QHeaderView::section:hover {{ background-color: #43ACED; }}'
         )
 
     def connectedCallback(self):
         self.setStyleSheet(
-            f'QHeaderView::section:hover {{ background-color: #EB212E; }}'
+            f'QHeaderView::section:hover {{ background-color: #F4364C; }}'
         )
 
     def disconnectedCallback(self):
         self.setStyleSheet(
-            f'QHeaderView::section:hover {{ background-color: #008AE1; }}'
+            f'QHeaderView::section:hover {{ background-color: #43ACED; }}'
         )
 
 
-class ListWidget(QListWidget):
+class ListWidget(SupportConnectedCallback, QListWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.setSelectionColor('#43ACED')
+
+    def setSelectionColor(self, color):
+        self.setStyleSheet(
+            f'QListWidget::item:selected {{'
+            f'    background: {color};'
+            f'}}'
+            f''
+            f'QListWidget::item:hover {{'
+            f'    background: {color};'
+            f'}}'
+        )
 
     @property
     def selectedIndex(self):
         return sorted(list(set(index.row() for index in self.selectedIndexes())))
 
+    def connectedCallback(self):
+        self.setSelectionColor('#F4364C')
+
+    def disconnectedCallback(self):
+        self.setSelectionColor('#43ACED')
+
 
 class MainWindow(Translatable, SupportConnectedCallback, NeedSyncSettings, QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self._menuBar = MenuBar(parent=self)
+        self.setMenuBar(self._menuBar)
 
     def syncSettings(self):
         pass
@@ -83,7 +106,7 @@ class MainWindow(Translatable, SupportConnectedCallback, NeedSyncSettings, QMain
             self.setWindowTitle(_(self.windowTitle()))
 
 
-class Menu(Translatable, QMenu):
+class Menu(Translatable, SupportConnectedCallback, QMenu):
     def __init__(self, *actions, **kwargs):
         super().__init__(**kwargs)
 
@@ -95,19 +118,53 @@ class Menu(Translatable, QMenu):
 
                 self.addAction(action)
 
-        self.setStyleSheet(
+        self.setStyleSheet(self.getStyleSheet('#43ACED'))
+
+    @staticmethod
+    def getStyleSheet(color):
+        return (
             f'QMenu::item {{'
             f'    background-color: solid;'
             f'}}'
             f''
             f'QMenu::item:selected {{'
-            f'    background-color: #43ACED;'
+            f'    background-color: {color};'
             f'}}'
         )
+
+    def connectedCallback(self):
+        self.setStyleSheet(self.getStyleSheet('#F4364C'))
+
+    def disconnectedCallback(self):
+        self.setStyleSheet(self.getStyleSheet('#43ACED'))
 
     def retranslate(self):
         with StateContext(self):
             self.setTitle(_(self.title()))
+
+
+class MenuBar(SupportConnectedCallback, QMenuBar):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setSelectionColor('#43ACED')
+
+    def setSelectionColor(self, color):
+        self.setStyleSheet(
+            f'QMenuBar::item:selected {{'
+            f'    background: {color};'
+            f'}}'
+            f''
+            f'QMenuBar::item:hover {{'
+            f'    background: {color};'
+            f'}}'
+        )
+
+    def connectedCallback(self):
+        self.setSelectionColor('#F4364C')
+
+    def disconnectedCallback(self):
+        self.setSelectionColor('#43ACED')
 
 
 class MessageBox(Translatable, SupportConnectedCallback, QMessageBox):
@@ -206,12 +263,12 @@ class TableWidget(QTableWidget):
 
                 if APP().tray is None:
                     # Initializing
-                    item.setForeground(QColor('#008AE1'))
+                    item.setForeground(QColor('#43ACED'))
                 else:
                     if APP().tray.ConnectAction.isConnected():
-                        item.setForeground(QColor('#EB212E'))
+                        item.setForeground(QColor('#F4364C'))
                     else:
-                        item.setForeground(QColor('#008AE1'))
+                        item.setForeground(QColor('#43ACED'))
         else:
             for column in range(self.columnCount()):
                 item = self.item(int(index), column)

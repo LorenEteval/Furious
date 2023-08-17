@@ -784,7 +784,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
         self.setVerticalHeader(EditRoutingTableVerticalHeader(self))
 
         # Selection
-        self.setSelectionColor('#008AE1')
+        self.setSelectionColor('#43ACED')
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
 
@@ -927,12 +927,12 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
             self.setItem(row, column, item)
 
     def connectedCallback(self):
-        self.setSelectionColor('#EB212E')
+        self.setSelectionColor('#F4364C')
         # Reactivate with possible color
         self.activateItemByIndex(routingToIndex(), activate=True)
 
     def disconnectedCallback(self):
-        self.setSelectionColor('#008AE1')
+        self.setSelectionColor('#43ACED')
         # Reactivate with possible color
         self.activateItemByIndex(routingToIndex(), activate=True)
 

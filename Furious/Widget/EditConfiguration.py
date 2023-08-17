@@ -1088,7 +1088,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         self.setVerticalHeader(NormalServerVerticalHeader(self))
 
         # Selection
-        self.setSelectionColor('#008AE1')
+        self.setSelectionColor('#43ACED')
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
 
@@ -1591,12 +1591,12 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             super().keyPressEvent(event)
 
     def connectedCallback(self):
-        self.setSelectionColor('#EB212E')
+        self.setSelectionColor('#F4364C')
         # Reactivate with possible color
         self.activateItemByIndex(self.activatedItemIndex)
 
     def disconnectedCallback(self):
-        self.setSelectionColor('#008AE1')
+        self.setSelectionColor('#43ACED')
         # Reactivate with possible color
         self.activateItemByIndex(self.activatedItemIndex)
 
