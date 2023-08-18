@@ -25,7 +25,13 @@ from Furious.Widget.EditConfiguration import (
     QuestionDeleteBox,
 )
 from Furious.Widget.AssetViewer import AssetViewerWidget
-from Furious.Utility.Constants import APP, APPLICATION_NAME, GOLDEN_RATIO, DATA_DIR
+from Furious.Utility.Constants import (
+    APP,
+    APPLICATION_NAME,
+    GOLDEN_RATIO,
+    DATA_DIR,
+    Color,
+)
 from Furious.Utility.Utility import (
     RoutesStorage,
     StateContext,
@@ -784,7 +790,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
         self.setVerticalHeader(EditRoutingTableVerticalHeader(self))
 
         # Selection
-        self.setSelectionColor('#43ACED')
+        self.setSelectionColor(Color.LIGHT_BLUE)
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
 
@@ -927,12 +933,12 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
             self.setItem(row, column, item)
 
     def connectedCallback(self):
-        self.setSelectionColor('#F4364C')
+        self.setSelectionColor(Color.LIGHT_RED_)
         # Reactivate with possible color
         self.activateItemByIndex(routingToIndex(), activate=True)
 
     def disconnectedCallback(self):
-        self.setSelectionColor('#43ACED')
+        self.setSelectionColor(Color.LIGHT_BLUE)
         # Reactivate with possible color
         self.activateItemByIndex(routingToIndex(), activate=True)
 

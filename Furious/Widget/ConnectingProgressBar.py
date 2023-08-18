@@ -1,4 +1,4 @@
-from Furious.Utility.Constants import APPLICATION_NAME, GOLDEN_RATIO
+from Furious.Utility.Constants import APPLICATION_NAME, GOLDEN_RATIO, Color
 from Furious.Utility.Utility import (
     bootstrapIcon,
     StateContext,
@@ -31,7 +31,7 @@ class ConnectingProgressBar(Translatable, SupportConnectedCallback, QWidget):
         # Create a progress bar widget
         self.progressBar = QProgressBar(self)
         self.progressBar.setRange(0, 100)
-        self.progressBar.setStyleSheet(self.getStyleSheet('#43ACED'))
+        self.progressBar.setStyleSheet(self.getStyleSheet(Color.LIGHT_BLUE))
 
         # create a timer to update the progress bar
         self.timer = QtCore.QTimer(self)
@@ -64,11 +64,11 @@ class ConnectingProgressBar(Translatable, SupportConnectedCallback, QWidget):
 
     def connectedCallback(self):
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-        self.progressBar.setStyleSheet(self.getStyleSheet('#F4364C'))
+        self.progressBar.setStyleSheet(self.getStyleSheet(Color.LIGHT_RED_))
 
     def disconnectedCallback(self):
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-        self.progressBar.setStyleSheet(self.getStyleSheet('#43ACED'))
+        self.progressBar.setStyleSheet(self.getStyleSheet(Color.LIGHT_BLUE))
 
     def retranslate(self):
         with StateContext(self):

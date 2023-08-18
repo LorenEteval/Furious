@@ -1,5 +1,5 @@
 from Furious.Gui.Action import Action, Seperator
-from Furious.Utility.Constants import APP
+from Furious.Utility.Constants import APP, Color
 from Furious.Utility.Utility import (
     StateContext,
     SupportConnectedCallback,
@@ -36,17 +36,17 @@ class HeaderView(SupportConnectedCallback, QHeaderView):
         self.setSectionsClickable(True)
 
         self.setStyleSheet(
-            f'QHeaderView::section:hover {{ background-color: #43ACED; }}'
+            f'QHeaderView::section:hover {{ background-color: {Color.LIGHT_BLUE}; }}'
         )
 
     def connectedCallback(self):
         self.setStyleSheet(
-            f'QHeaderView::section:hover {{ background-color: #F4364C; }}'
+            f'QHeaderView::section:hover {{ background-color: {Color.LIGHT_RED_}; }}'
         )
 
     def disconnectedCallback(self):
         self.setStyleSheet(
-            f'QHeaderView::section:hover {{ background-color: #43ACED; }}'
+            f'QHeaderView::section:hover {{ background-color: {Color.LIGHT_BLUE}; }}'
         )
 
 
@@ -54,7 +54,7 @@ class ListWidget(SupportConnectedCallback, QListWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setSelectionColor('#43ACED')
+        self.setSelectionColor(Color.LIGHT_BLUE)
 
     def setSelectionColor(self, color):
         self.setStyleSheet(
@@ -72,10 +72,10 @@ class ListWidget(SupportConnectedCallback, QListWidget):
         return sorted(list(set(index.row() for index in self.selectedIndexes())))
 
     def connectedCallback(self):
-        self.setSelectionColor('#F4364C')
+        self.setSelectionColor(Color.LIGHT_RED_)
 
     def disconnectedCallback(self):
-        self.setSelectionColor('#43ACED')
+        self.setSelectionColor(Color.LIGHT_BLUE)
 
 
 class MainWindow(Translatable, SupportConnectedCallback, NeedSyncSettings, QMainWindow):
@@ -118,7 +118,7 @@ class Menu(Translatable, SupportConnectedCallback, QMenu):
 
                 self.addAction(action)
 
-        self.setStyleSheet(self.getStyleSheet('#43ACED'))
+        self.setStyleSheet(self.getStyleSheet(Color.LIGHT_BLUE))
 
     @staticmethod
     def getStyleSheet(color):
@@ -133,10 +133,10 @@ class Menu(Translatable, SupportConnectedCallback, QMenu):
         )
 
     def connectedCallback(self):
-        self.setStyleSheet(self.getStyleSheet('#F4364C'))
+        self.setStyleSheet(self.getStyleSheet(Color.LIGHT_RED_))
 
     def disconnectedCallback(self):
-        self.setStyleSheet(self.getStyleSheet('#43ACED'))
+        self.setStyleSheet(self.getStyleSheet(Color.LIGHT_BLUE))
 
     def retranslate(self):
         with StateContext(self):
@@ -147,7 +147,7 @@ class MenuBar(SupportConnectedCallback, QMenuBar):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setSelectionColor('#43ACED')
+        self.setSelectionColor(Color.LIGHT_BLUE)
 
     def setSelectionColor(self, color):
         self.setStyleSheet(
@@ -161,10 +161,10 @@ class MenuBar(SupportConnectedCallback, QMenuBar):
         )
 
     def connectedCallback(self):
-        self.setSelectionColor('#F4364C')
+        self.setSelectionColor(Color.LIGHT_RED_)
 
     def disconnectedCallback(self):
-        self.setSelectionColor('#43ACED')
+        self.setSelectionColor(Color.LIGHT_BLUE)
 
 
 class MessageBox(Translatable, SupportConnectedCallback, QMessageBox):
@@ -263,12 +263,12 @@ class TableWidget(QTableWidget):
 
                 if APP().tray is None:
                     # Initializing
-                    item.setForeground(QColor('#43ACED'))
+                    item.setForeground(QColor(Color.LIGHT_BLUE))
                 else:
                     if APP().tray.ConnectAction.isConnected():
-                        item.setForeground(QColor('#F4364C'))
+                        item.setForeground(QColor(Color.LIGHT_RED_))
                     else:
-                        item.setForeground(QColor('#43ACED'))
+                        item.setForeground(QColor(Color.LIGHT_BLUE))
         else:
             for column in range(self.columnCount()):
                 item = self.item(int(index), column)
