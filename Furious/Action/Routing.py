@@ -46,8 +46,8 @@ BUILTIN_ROUTING_TABLE = {
             ],
         },
         Hysteria.name(): {
-            'acl': str(DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl'),
-            'mmdb': str(DATA_DIR / 'hysteria' / 'country.mmdb'),
+            'acl': (DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl').as_posix(),
+            'mmdb': (DATA_DIR / 'hysteria' / 'country.mmdb').as_posix(),
         },
     },
     'Bypass Iran': {
@@ -91,8 +91,8 @@ BUILTIN_ROUTING_TABLE = {
             ],
         },
         Hysteria.name(): {
-            'acl': str(DATA_DIR / 'hysteria' / 'bypass-Iran.acl'),
-            'mmdb': str(DATA_DIR / 'hysteria' / 'country.mmdb'),
+            'acl': (DATA_DIR / 'hysteria' / 'bypass-Iran.acl').as_posix(),
+            'mmdb': (DATA_DIR / 'hysteria' / 'country.mmdb').as_posix(),
         },
     },
     'Global': {

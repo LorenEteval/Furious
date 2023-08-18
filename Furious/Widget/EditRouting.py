@@ -56,6 +56,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPlainTextEdit,
+    QPushButton,
     QSplitter,
     QStyledItemDelegate,
     QTableWidget,
@@ -105,28 +106,6 @@ BUILTIN_ROUTING_TEXT = {
             ensure_ascii=False,
             escape_forward_slashes=False,
         ),
-        Hysteria.name(): (
-            f'# Hysteria Routing rules\n'
-            f'# \n'
-            f'# This rule is read-only.\n'
-            f'# \n'
-            f'# Hysteria will use rule file defined in "acl"\n'
-            f'# key and database file defined in "mmdb" key.\n'
-            f'# \n'
-            f'# "bypass-mainland-China.acl" and "country.mmdb"\n'
-            f'# are shipped with {APPLICATION_NAME} by default.\n'
-            f'# Their locations are listed below.\n'
-            f'# \n'
-            f'# See more information:\n'
-            f'# \n'
-            f'# https://hysteria.network/docs/acl/\n\n'
-        )
-        + ujson.dumps(
-            BUILTIN_ROUTING_TABLE['Bypass Mainland China'][Hysteria.name()],
-            indent=2,
-            ensure_ascii=False,
-            escape_forward_slashes=False,
-        ),
     },
     'Bypass Iran': {
         XrayCore.name(): (
@@ -160,28 +139,6 @@ BUILTIN_ROUTING_TEXT = {
             ensure_ascii=False,
             escape_forward_slashes=False,
         ),
-        Hysteria.name(): (
-            f'# Hysteria Routing rules\n'
-            f'# \n'
-            f'# This rule is read-only.\n'
-            f'# \n'
-            f'# Hysteria will use rule file defined in "acl"\n'
-            f'# key and database file defined in "mmdb" key.\n'
-            f'# \n'
-            f'# "bypass-Iran.acl" and "country.mmdb" are\n'
-            f'# shipped with {APPLICATION_NAME} by default.\n'
-            f'# Their locations are listed below.\n'
-            f'# \n'
-            f'# See more information:\n'
-            f'# \n'
-            f'# https://hysteria.network/docs/acl/\n\n'
-        )
-        + ujson.dumps(
-            BUILTIN_ROUTING_TABLE['Bypass Iran'][Hysteria.name()],
-            indent=2,
-            ensure_ascii=False,
-            escape_forward_slashes=False,
-        ),
     },
     'Global': {
         XrayCore.name(): (
@@ -207,20 +164,6 @@ BUILTIN_ROUTING_TEXT = {
             ensure_ascii=False,
             escape_forward_slashes=False,
         ),
-        Hysteria.name(): (
-            f'# Hysteria Routing rules\n'
-            f'# \n'
-            f'# This rule is read-only.\n'
-            f'# \n'
-            f'# If no rule file or mmdb file is provided, {APPLICATION_NAME}\n'
-            f'# will fall back to proxy all traffic.\n\n'
-        )
-        + ujson.dumps(
-            BUILTIN_ROUTING_TABLE['Global'][Hysteria.name()],
-            indent=2,
-            ensure_ascii=False,
-            escape_forward_slashes=False,
-        ),
     },
     'Custom': {
         XrayCore.name(): (
@@ -231,13 +174,26 @@ BUILTIN_ROUTING_TEXT = {
             f'# "Custom" will use RoutingObject defined\n'
             f'# in current user configuration.\n\n'
         ),
-        Hysteria.name(): (
-            f'# Hysteria Routing rules\n'
-            f'# \n'
-            f'# This rule is read-only.\n'
-            f'# \n'
-            f'# "Custom" will use rule file and mmdb file\n'
-            f'# defined in current user configuration.\n\n'
+    },
+}
+
+
+ROUTING_HINT = {
+    'Bypass Mainland China': {
+        XrayCore.name(): '',
+    },
+    'Bypass Iran': {
+        XrayCore.name(): '',
+    },
+    'Global': {
+        XrayCore.name(): (
+            f'Note: If acl is empty or does not exist, {APPLICATION_NAME} '
+            f'will fall back to proxy all traffic.'
+        ),
+    },
+    'Custom': {
+        XrayCore.name(): (
+            f'Note: "Custom" will use acl and mmdb defined in current user configuration.'
         ),
     },
 }
@@ -258,7 +214,7 @@ DEFAULT_USER_ROUTING = {
     },
     Hysteria.name(): {
         'acl': '',
-        'mmdb': str(DATA_DIR / 'hysteria' / 'country.mmdb'),
+        'mmdb': (DATA_DIR / 'hysteria' / 'country.mmdb').as_posix(),
     },
 }
 
@@ -278,30 +234,6 @@ USER_ROUTING_TEXT = {
     )
     + ujson.dumps(
         DEFAULT_USER_ROUTING[XrayCore.name()],
-        indent=2,
-        ensure_ascii=False,
-        escape_forward_slashes=False,
-    ),
-    Hysteria.name(): (
-        f'# Hysteria Routing rules\n'
-        f'# \n'
-        f'# Define your own routing rules here.\n'
-        f'# A built-in mmdb filepath is defined\n'
-        f'# for convenience.\n'
-        f'# \n'
-        f'# Need any help? You can check those built-in\n'
-        f'# routing rules shipped with {APPLICATION_NAME} first.\n'
-        f'# \n'
-        f'# Note: JSON does not support comments. Any\n'
-        f'# lines starting with "#" will be discarded\n'
-        f'# by {APPLICATION_NAME} forever.\n'
-        f'# \n'
-        f'# Note: If any one of filepath is given but\n'
-        f'# does not exist, {APPLICATION_NAME} will fall back to\n'
-        f'# proxy all traffic.\n\n'
-    )
-    + ujson.dumps(
-        DEFAULT_USER_ROUTING[Hysteria.name()],
         indent=2,
         ensure_ascii=False,
         escape_forward_slashes=False,
@@ -483,6 +415,65 @@ class ZoomOutAction(Action):
             editor.zoomOut()
 
 
+class EditRoutingAction(Action):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.saveConfInfo = SaveConfInfo(icon=MessageBox.Icon.Information)
+
+        self.RoutesList = self.parent().RoutesList
+
+        self.routingEditorRef = self.parent().routingEditorRef
+        self.routingDialogRef = self.parent().routingDialogRef
+
+    def triggeredCallback(self, checked):
+        if self.textCompare(f'Edit {XrayCore.name()} Routing Rules'):
+            for index in self.parent().selectedIndex:
+                self.routingEditorRef[index].show()
+
+        if self.textCompare(f'Edit {Hysteria.name()} Routing Rules'):
+            for index in self.parent().selectedIndex:
+                dialog = self.routingDialogRef[index]
+                choice = dialog.exec()
+
+                if dialog.isBuiltin:
+                    # Built-in. Nothing to do
+                    logger.info(
+                        f'built-in routing dialog {BUILTIN_ROUTING[index]} called exec. Nothing to do'
+                    )
+
+                    continue
+
+                assert index >= len(BUILTIN_ROUTING)
+
+                parentIndex = index - len(BUILTIN_ROUTING)
+
+                if choice == QDialog.DialogCode.Accepted.value:
+                    ruleValue = dialog.ruleValue()
+                    mmdbValue = dialog.mmdbValue()
+
+                    self.RoutesList[parentIndex][Hysteria.name()] = {
+                        'acl': ruleValue,
+                        'mmdb': mmdbValue,
+                    }
+
+                    # Sync it
+                    RoutesStorage.sync()
+
+                    if parentIndex == routingToIndex() - len(BUILTIN_ROUTING):
+                        # Activated routing modified
+
+                        if APP().tray.ConnectAction.isConnected():
+                            questionFastReconnect(self.saveConfInfo)
+                else:
+                    # Restore
+
+                    routingObject = self.RoutesList[parentIndex][Hysteria.name()]
+
+                    dialog.setRuleValue(routingObject.get('acl', ''))
+                    dialog.setMmdbValue(routingObject.get('mmdb', ''))
+
+
 class RoutingTextBrowser(ZoomableTextBrowser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -528,8 +519,7 @@ class RoutingEditor(MainWindow):
         super().__init__(*args, **kwargs)
 
         self.isBuiltin = isBuiltin
-
-        self.setWindowTitle(_('Edit Routing'))
+        self.title = ''
 
         if APP().tray is not None and APP().tray.ConnectAction.isConnected():
             self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
@@ -540,8 +530,6 @@ class RoutingEditor(MainWindow):
         self.questionSaveBox = QuestionSaveBox(
             icon=MessageBox.Icon.Question, parent=self
         )
-
-        self.title = ''
 
         # Modified flag
         self.modified = False
@@ -625,7 +613,7 @@ class RoutingEditor(MainWindow):
 
         self.editorRef.append(editor)
         self.editorLastSavedText.append(text)
-        self.editorTab.addTab(editor, core)
+        self.editorTab.addTab(editor, _(f'{core} Routing Rules'))
 
     def markAsModified(self):
         # Built-in is read-only. Should not be modified
@@ -684,6 +672,116 @@ class RoutingEditor(MainWindow):
                 self.setWindowTitle(_(self.windowTitle()))
 
 
+class RoutingDialog(Translatable, SupportConnectedCallback, QDialog):
+    def __init__(self, isBuiltin, hint='', *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.isBuiltin = isBuiltin
+
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+
+        self.ruleText = QLabel(f'{Hysteria.name()} acl:')
+
+        self.ruleEdit = QLineEdit()
+        self.ruleEdit.setFixedWidth(500)
+
+        self.ruleFile = QPushButton('...')
+        self.ruleFile.setFixedWidth(30)
+
+        self.ruleHBox = QHBoxLayout()
+        self.ruleHBox.addWidget(self.ruleEdit)
+        self.ruleHBox.addWidget(self.ruleFile)
+
+        self.mmdbText = QLabel(f'{Hysteria.name()} mmdb:')
+
+        self.mmdbEdit = QLineEdit()
+        self.mmdbEdit.setFixedWidth(500)
+
+        self.mmdbFile = QPushButton('...')
+        self.mmdbFile.setFixedWidth(30)
+
+        self.mmdbHBox = QHBoxLayout()
+        self.mmdbHBox.addWidget(self.mmdbEdit)
+        self.mmdbHBox.addWidget(self.mmdbFile)
+
+        self.ruleFile.clicked.connect(self.handleRuleFileClicked)
+        self.mmdbFile.clicked.connect(self.handleMmdbFileClicked)
+
+        if self.isBuiltin:
+            self.ruleEdit.setReadOnly(True)
+            self.mmdbEdit.setReadOnly(True)
+
+        self.dialogBtns = QDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
+
+        self.dialogBtns.addButton(_('OK'), QDialogButtonBox.ButtonRole.AcceptRole)
+        self.dialogBtns.addButton(_('Cancel'), QDialogButtonBox.ButtonRole.RejectRole)
+        self.dialogBtns.accepted.connect(self.accept)
+        self.dialogBtns.rejected.connect(self.reject)
+
+        layout = QFormLayout()
+
+        if hint:
+            self.hint = QLabel(hint)
+
+            layout.addRow(self.hint)
+        else:
+            self.hint = None
+
+        layout.addRow(self.ruleText, self.ruleHBox)
+        layout.addRow(self.mmdbText, self.mmdbHBox)
+        layout.addRow(self.dialogBtns)
+        layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        self.setLayout(layout)
+
+    @QtCore.Slot()
+    def handleRuleFileClicked(self):
+        filename, selectedFilter = QFileDialog.getOpenFileName(
+            self.parent(), _('Import File'), filter=_('All files (*)')
+        )
+
+        if not self.isBuiltin and filename:
+            self.ruleEdit.setText(filename)
+
+    @QtCore.Slot()
+    def handleMmdbFileClicked(self):
+        filename, selectedFilter = QFileDialog.getOpenFileName(
+            self.parent(), _('Import File'), filter=_('All files (*)')
+        )
+
+        if not self.isBuiltin and filename:
+            self.mmdbEdit.setText(filename)
+
+    def setRuleValue(self, text):
+        self.ruleEdit.setText(text)
+
+    def setMmdbValue(self, text):
+        self.mmdbEdit.setText(text)
+
+    def ruleValue(self):
+        return self.ruleEdit.text()
+
+    def mmdbValue(self):
+        return self.mmdbEdit.text()
+
+    def connectedCallback(self):
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+
+    def disconnectedCallback(self):
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+
+    def retranslate(self):
+        with StateContext(self):
+            if self.isBuiltin:
+                self.setWindowTitle(_(self.windowTitle()))
+
+            if self.hint is not None:
+                self.hint.setText(_(self.hint.text()))
+
+            for button in self.dialogBtns.buttons():
+                button.setText(_(button.text()))
+
+
 class EditRoutingTableHorizontalHeader(HeaderView):
     def __init__(self, *args, **kwargs):
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
@@ -731,7 +829,10 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
         # Handy reference
         self.RoutesList = self.editRoutingWidget.RoutesList
 
+        # Currently only has Xray-Core
         self.routingEditorRef = []
+        # Currently only has Hysteria
+        self.routingDialogRef = []
 
         # Column count
         self.setColumnCount(len(EditRoutingTableWidget.HEADER_LABEL))
@@ -800,24 +901,43 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
         self.setDropIndicatorShown(False)
         self.setDefaultDropAction(QtCore.Qt.DropAction.IgnoreAction)
 
+        contextMenuActions = [
+            EditRoutingAction(_(f'Edit {XrayCore.name()} Routing Rules'), parent=self),
+            EditRoutingAction(_(f'Edit {Hysteria.name()} Routing Rules'), parent=self),
+        ]
+
+        self.contextMenu = Menu(*contextMenuActions)
+        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+
         # Signals
-        self.itemActivated.connect(self.handleItemActivated)
+        self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
 
     def initTableFromData(self):
-        for row in range(len(BUILTIN_ROUTING)):
+        for row, routing in enumerate(BUILTIN_ROUTING):
             self.appendDataByColumn(
                 lambda column: EditRoutingTableWidget.BUILTIN_ITEM_GET_FUNC[column](row)
             )
 
-            routingEditor = self.appendRoutingEditor(
-                self.item(row, 0).text(), isBuiltin=True
-            )
+            text = self.item(row, 0).text()
 
-            for core in [XrayCore.name(), Hysteria.name()]:
+            routingEditor = self.appendRoutingEditor(text, isBuiltin=True)
+
+            for core in [XrayCore.name()]:
                 routingEditor.addTabWithData(
                     core,
                     BUILTIN_ROUTING_TEXT[BUILTIN_ROUTING[row]][core],
                 )
+
+            routingDialog = self.appendRoutingDialog(
+                text, hint=_(ROUTING_HINT[routing][XrayCore.name()]), isBuiltin=True
+            )
+
+            routingDialog.ruleEdit.setText(
+                BUILTIN_ROUTING_TABLE[routing][Hysteria.name()].get('acl', '')
+            )
+            routingDialog.mmdbEdit.setText(
+                BUILTIN_ROUTING_TABLE[routing][Hysteria.name()].get('mmdb', '')
+            )
 
         for row in range(
             len(BUILTIN_ROUTING),
@@ -831,11 +951,11 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
                 lambda column: EditRoutingTableWidget.USER_ITEM_GET_FUNC[column](remark)
             )
 
-            routingEditor = self.appendRoutingEditor(
-                self.item(row, 0).text(), isBuiltin=False
-            )
+            text = self.item(row, 0).text()
 
-            for core in [XrayCore.name(), Hysteria.name()]:
+            routingEditor = self.appendRoutingEditor(text, isBuiltin=False)
+
+            for core in [XrayCore.name()]:
                 routingEditor.addTabWithData(
                     core,
                     ujson.dumps(
@@ -846,9 +966,18 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
                     ),
                 )
 
-    @QtCore.Slot(QTableWidgetItem)
-    def handleItemActivated(self, item):
-        self.routingEditorRef[item.row()].show()
+            routingDialog = self.appendRoutingDialog(text, isBuiltin=False)
+
+            routingDialog.ruleEdit.setText(
+                self.RoutesList[routesIndex][Hysteria.name()].get('acl', '')
+            )
+            routingDialog.mmdbEdit.setText(
+                self.RoutesList[routesIndex][Hysteria.name()].get('mmdb', '')
+            )
+
+    @QtCore.Slot(QtCore.QPoint)
+    def handleCustomContextMenuRequested(self, point):
+        self.contextMenu.exec(self.mapToGlobal(point))
 
     def appendRoutingEditor(self, title, isBuiltin=False):
         routingEditor = RoutingEditor(isBuiltin)
@@ -861,6 +990,14 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
         self.routingEditorRef.append(routingEditor)
 
         return routingEditor
+
+    def appendRoutingDialog(self, title, hint='', isBuiltin=False):
+        routingDialog = RoutingDialog(isBuiltin, hint)
+        routingDialog.setWindowTitle(title)
+
+        self.routingDialogRef.append(routingDialog)
+
+        return routingDialog
 
     def deleteSelectedItem(self):
         # Builtin routing cannot be deleted
@@ -896,6 +1033,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
 
             self.removeRow(takedRow)
             self.routingEditorRef.pop(takedRow)
+            self.routingDialogRef.pop(takedRow)
             self.RoutesList.pop(takedRow - len(BUILTIN_ROUTING))
 
             # Remove entry from routing menu
@@ -1102,11 +1240,18 @@ class EditRoutingWidget(MainWindow):
                     routingRemark, isBuiltin=False
                 )
 
-                for core in [XrayCore.name(), Hysteria.name()]:
+                for core in [XrayCore.name()]:
                     routingEditor.addTabWithData(
                         core,
                         USER_ROUTING_TEXT[core],
                     )
+
+                routingDialog = self.editRoutingTableWidget.appendRoutingDialog(
+                    routingRemark, isBuiltin=False
+                )
+                routingDialog.mmdbEdit.setText(
+                    (DATA_DIR / 'hysteria' / 'country.mmdb').as_posix()
+                )
 
                 self.RoutesList.append(
                     {'remark': routingRemark, **DEFAULT_USER_ROUTING}
@@ -1120,7 +1265,6 @@ class EditRoutingWidget(MainWindow):
                 routingAction.addAction(
                     RoutingChildAction(routingRemark, checkable=True, checked=False)
                 )
-
         else:
             # Do nothing
             pass

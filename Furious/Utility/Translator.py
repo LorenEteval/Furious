@@ -702,6 +702,33 @@ TRANSLATION = {
         'ZH': '保存路由配置时出错',
         'TW': '保存路由配置時出錯',
     },
+    f'Edit {XrayCore.name()} Routing Rules': {
+        'ES': f'Editar Reglas de Enrutamiento de {XrayCore.name()}',
+        'ZH': f'编辑{XrayCore.name()}路由规则',
+        'TW': f'編輯{XrayCore.name()}路由規則',
+    },
+    f'Edit {Hysteria.name()} Routing Rules': {
+        'ES': f'Editar Reglas de Enrutamiento de {Hysteria.name()}',
+        'ZH': f'编辑{Hysteria.name()}路由规则',
+        'TW': f'編輯{Hysteria.name()}路由規則',
+    },
+    f'{XrayCore.name()} Routing Rules': {
+        'ES': f'Reglas de Enrutamiento de {XrayCore.name()}',
+        'ZH': f'{XrayCore.name()}路由规则',
+        'TW': f'{XrayCore.name()}路由規則',
+    },
+    f'Note: If acl is empty or does not exist, {APPLICATION_NAME} '
+    f'will fall back to proxy all traffic.': {
+        'ES': f'NOTA: Si la ACL está vacía o no existe, '
+        f'{APPLICATION_NAME} volverá a utilizar proxy para todo el tráfico.',
+        'ZH': f'注意：如果acl为空或不存在，{APPLICATION_NAME}将回落到代理所有流量。',
+        'TW': f'注意：如果acl為空或不存在，{APPLICATION_NAME}將回落到代理所有流量。',
+    },
+    f'Note: "Custom" will use acl and mmdb defined in current user configuration.': {
+        'ES': f'NOTA: "Personalizado" utilizará la acl y mmdb definidas en la configuración de usuario actual',
+        'ZH': f'注意："自定义"将使用当前用户配置中定义的acl和mmdb。',
+        'TW': f'注意："自定義"將使用當前用戶配置中定義的acl和mmdb。',
+    },
     # Asset Viewer
     'Asset File': {
         'ES': 'Activos',
