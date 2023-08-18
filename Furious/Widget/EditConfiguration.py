@@ -24,6 +24,7 @@ from Furious.Utility.Constants import (
     APPLICATION_REPO_NAME,
     PLATFORM,
     GOLDEN_RATIO,
+    Color,
 )
 from Furious.Utility.Utility import (
     Base64Encoder,
@@ -1088,7 +1089,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         self.setVerticalHeader(NormalServerVerticalHeader(self))
 
         # Selection
-        self.setSelectionColor('#43ACED')
+        self.setSelectionColor(Color.LIGHT_BLUE)
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
 
@@ -1591,12 +1592,12 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             super().keyPressEvent(event)
 
     def connectedCallback(self):
-        self.setSelectionColor('#F4364C')
+        self.setSelectionColor(Color.LIGHT_RED_)
         # Reactivate with possible color
         self.activateItemByIndex(self.activatedItemIndex)
 
     def disconnectedCallback(self):
-        self.setSelectionColor('#43ACED')
+        self.setSelectionColor(Color.LIGHT_BLUE)
         # Reactivate with possible color
         self.activateItemByIndex(self.activatedItemIndex)
 
