@@ -68,6 +68,7 @@ from PySide6.QtWidgets import (
 
 import ujson
 import logging
+import operator
 import functools
 
 logger = logging.getLogger(__name__)
@@ -312,7 +313,7 @@ class SaveAction(Action):
             core = editorTab.tabText(index)
             plainText = editorTab.widget(index).toPlainText()
             text = functools.reduce(
-                lambda x, y: x + y,
+                operator.add,
                 list(
                     filter(
                         # Discard any comments
