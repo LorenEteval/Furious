@@ -181,19 +181,19 @@ BUILTIN_ROUTING_TEXT = {
 
 ROUTING_HINT = {
     'Bypass Mainland China': {
-        XrayCore.name(): '',
+        Hysteria.name(): '',
     },
     'Bypass Iran': {
-        XrayCore.name(): '',
+        Hysteria.name(): '',
     },
     'Global': {
-        XrayCore.name(): (
+        Hysteria.name(): (
             f'Note: If acl is empty or does not exist, {APPLICATION_NAME} '
             f'will fall back to proxy all traffic.'
         ),
     },
     'Custom': {
-        XrayCore.name(): (
+        Hysteria.name(): (
             f'Note: "Custom" will use acl and mmdb defined in current user configuration.'
         ),
     },
@@ -453,10 +453,9 @@ class EditRoutingAction(Action):
                     ruleValue = dialog.ruleValue()
                     mmdbValue = dialog.mmdbValue()
 
-                    self.RoutesList[parentIndex][Hysteria.name()] = {
-                        'acl': ruleValue,
-                        'mmdb': mmdbValue,
-                    }
+                    self.RoutesList[parentIndex][Hysteria.name()].update(
+                        {'acl': ruleValue, 'mmdb': mmdbValue}
+                    )
 
                     # Sync it
                     RoutesStorage.sync()
@@ -674,20 +673,26 @@ class RoutingEditor(MainWindow):
 
 
 class RoutingDialog(Translatable, SupportConnectedCallback, QDialog):
+    LINE_EDIT_FIXED_WIDTH = 500
+    BUTTON_FIXED_WIDTH = 30
+
     def __init__(self, isBuiltin, hint='', *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.isBuiltin = isBuiltin
 
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+        if APP().tray is not None and APP().tray.ConnectAction.isConnected():
+            self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+        else:
+            self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
         self.ruleText = QLabel(f'{Hysteria.name()} acl:')
 
         self.ruleEdit = QLineEdit()
-        self.ruleEdit.setFixedWidth(500)
+        self.ruleEdit.setFixedWidth(RoutingDialog.LINE_EDIT_FIXED_WIDTH)
 
         self.ruleFile = QPushButton('...')
-        self.ruleFile.setFixedWidth(30)
+        self.ruleFile.setFixedWidth(RoutingDialog.BUTTON_FIXED_WIDTH)
 
         self.ruleHBox = QHBoxLayout()
         self.ruleHBox.addWidget(self.ruleEdit)
@@ -696,10 +701,10 @@ class RoutingDialog(Translatable, SupportConnectedCallback, QDialog):
         self.mmdbText = QLabel(f'{Hysteria.name()} mmdb:')
 
         self.mmdbEdit = QLineEdit()
-        self.mmdbEdit.setFixedWidth(500)
+        self.mmdbEdit.setFixedWidth(RoutingDialog.LINE_EDIT_FIXED_WIDTH)
 
         self.mmdbFile = QPushButton('...')
-        self.mmdbFile.setFixedWidth(30)
+        self.mmdbFile.setFixedWidth(RoutingDialog.BUTTON_FIXED_WIDTH)
 
         self.mmdbHBox = QHBoxLayout()
         self.mmdbHBox.addWidget(self.mmdbEdit)
@@ -774,6 +779,7 @@ class RoutingDialog(Translatable, SupportConnectedCallback, QDialog):
     def retranslate(self):
         with StateContext(self):
             if self.isBuiltin:
+                # Built-in window title is translatable
                 self.setWindowTitle(_(self.windowTitle()))
 
             if self.hint is not None:
@@ -930,7 +936,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
                 )
 
             routingDialog = self.appendRoutingDialog(
-                text, hint=_(ROUTING_HINT[routing][XrayCore.name()]), isBuiltin=True
+                text, hint=_(ROUTING_HINT[routing][Hysteria.name()]), isBuiltin=True
             )
 
             routingDialog.ruleEdit.setText(
@@ -967,7 +973,9 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
                     ),
                 )
 
-            routingDialog = self.appendRoutingDialog(text, isBuiltin=False)
+            routingDialog = self.appendRoutingDialog(
+                text, hint=_(ROUTING_HINT['Global'][Hysteria.name()]), isBuiltin=False
+            )
 
             routingDialog.ruleEdit.setText(
                 self.RoutesList[routesIndex][Hysteria.name()].get('acl', '')
@@ -1248,10 +1256,17 @@ class EditRoutingWidget(MainWindow):
                     )
 
                 routingDialog = self.editRoutingTableWidget.appendRoutingDialog(
-                    routingRemark, isBuiltin=False
+                    routingRemark,
+                    hint=_(ROUTING_HINT['Global'][Hysteria.name()]),
+                    isBuiltin=False,
+                )
+
+                # Set default value
+                routingDialog.ruleEdit.setText(
+                    DEFAULT_USER_ROUTING[Hysteria.name()].get('acl', '')
                 )
                 routingDialog.mmdbEdit.setText(
-                    (DATA_DIR / 'hysteria' / 'country.mmdb').as_posix()
+                    DEFAULT_USER_ROUTING[Hysteria.name()].get('mmdb', '')
                 )
 
                 self.RoutesList.append(
