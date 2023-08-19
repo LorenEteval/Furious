@@ -71,6 +71,7 @@ import os
 import copy
 import ujson
 import logging
+import operator
 import functools
 
 logger = logging.getLogger(__name__)
@@ -638,7 +639,7 @@ def versionToNumber(version):
     patch_weight = 1
 
     return functools.reduce(
-        lambda x, y: x + y,
+        operator.add,
         list(
             int(ver) * weight
             for ver, weight in zip(

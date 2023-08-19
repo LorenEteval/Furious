@@ -5,6 +5,7 @@ import os
 import sys
 import logging
 import datetime
+import operator
 import traceback
 import functools
 import multiprocessing
@@ -57,7 +58,7 @@ class Process(ProcessContext.Process):
 
         try:
             stackLog = functools.reduce(
-                lambda x, y: x + y,
+                operator.add,
                 traceback.format_exception(exceptionType, exceptionValue, tb),
             )
 
