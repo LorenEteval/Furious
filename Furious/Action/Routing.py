@@ -159,6 +159,8 @@ class BuiltinRoutingChildAction(Action):
                 APP().tray.ConnectAction.connectingAction(
                     showProgressBar=True,
                     showRoutingChangedMessage=True,
+                    currentRouting=textEnglish,
+                    isBuiltinRouting=True,
                 )
 
 
@@ -179,6 +181,8 @@ class RoutingChildAction(Action):
                 # Found action
 
                 if APP().Routing != str(index):
+                    route = APP().editRoutingWidget.RoutesList[index]
+
                     # De-activate
                     APP().editRoutingWidget.activateItemByIndex(
                         routingToIndex(), activate=False
@@ -194,6 +198,8 @@ class RoutingChildAction(Action):
                         APP().tray.ConnectAction.connectingAction(
                             showProgressBar=True,
                             showRoutingChangedMessage=True,
+                            currentRouting=route['remark'],
+                            isBuiltinRouting=False,
                         )
 
                 # Select routing action done

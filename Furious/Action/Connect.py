@@ -219,8 +219,6 @@ class ConnectAction(Action):
         self.setText(_('Connecting'))
         self.setIcon(bootstrapIcon('lock-fill.svg'))
 
-        APP().tray.setPlainIcon()
-
     def setConnectedStatus(self):
         self.hideConnectingProgressBar(done=True)
         self.setDisabledAction(False)
@@ -425,7 +423,9 @@ class ConnectAction(Action):
                     fixLoggingRelativePath('error')
 
                     # Filter Custom
-                    if routing in BUILTIN_ROUTING[:-1]:
+                    if routing in list(
+                        filter(lambda x: x != 'Custom', BUILTIN_ROUTING)
+                    ):
                         routingObject = BUILTIN_ROUTING_TABLE[routing][XrayCore.name()]
 
                         logger.info(f'routing is {routing}')
@@ -483,7 +483,11 @@ class ConnectAction(Action):
                     logger.info(f'core {Hysteria.name()} configured')
 
                     # Filter Global, Custom
-                    if routing in BUILTIN_ROUTING[:-2]:
+                    if routing in list(
+                        filter(
+                            lambda x: x != 'Global' and x != 'Custom', BUILTIN_ROUTING
+                        )
+                    ):
                         logger.info(f'routing is {routing}')
 
                         routingObject = BUILTIN_ROUTING_TABLE[routing][Hysteria.name()]
@@ -530,7 +534,9 @@ class ConnectAction(Action):
         # No matching core
         return ''
 
-    def startConnectionTest(self, showRoutingChangedMessage=False):
+    def startConnectionTest(
+        self, showRoutingChangedMessage=False, currentRouting='', isBuiltinRouting=False
+    ):
         selected = self.testPool[self.testTime]
 
         self.testTime += 1
@@ -560,7 +566,9 @@ class ConnectAction(Action):
 
                 if self.testTime < len(self.testPool) and self.coreRunning:
                     # Try next
-                    self.startConnectionTest(showRoutingChangedMessage)
+                    self.startConnectionTest(
+                        showRoutingChangedMessage, currentRouting, isBuiltinRouting
+                    )
                 else:
                     if self.disconnectReason:
                         self.disconnectAction(self.disconnectReason)
@@ -578,18 +586,12 @@ class ConnectAction(Action):
 
                 if showRoutingChangedMessage:
                     # Routing changed
-                    try:
-                        routingWidget = APP().editRoutingWidget
-
-                        route = routingWidget.RoutesList[int(APP().Routing)]
-
+                    if isBuiltinRouting:
                         APP().tray.showMessage(
-                            _('Routing changed: ') + f'{route["remark"]}'
+                            _('Routing changed: ') + _(currentRouting)
                         )
-                    except ValueError:
-                        APP().tray.showMessage(
-                            _('Routing changed: ') + _(f'{APP().Routing}')
-                        )
+                    else:
+                        APP().tray.showMessage(_('Routing changed: ') + currentRouting)
                 else:
                     # Connected
                     APP().tray.showMessage(f'{self.coreName}: {_("Connected")}')
@@ -656,7 +658,14 @@ class ConnectAction(Action):
 
             self.connectingAction()
 
-    def connectingAction(self, showProgressBar=True, showRoutingChangedMessage=False):
+    def connectingAction(
+        self,
+        showProgressBar=True,
+        showRoutingChangedMessage=False,
+        currentRouting='',
+        isBuiltinRouting=False,
+        **kwargs,
+    ):
         # Connecting. Redefined
         self.connectingFlag = True
 
@@ -697,7 +706,9 @@ class ConnectAction(Action):
             self.moveConnectingProgressBar()
             # Reset try time
             self.testTime = 0
-            self.startConnectionTest(showRoutingChangedMessage)
+            self.startConnectionTest(
+                showRoutingChangedMessage, currentRouting, isBuiltinRouting
+            )
 
     def disconnectAction(self, reason=''):
         Proxy.off()
