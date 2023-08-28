@@ -321,23 +321,58 @@ class ZoomablePlainTextEdit(QPlainTextEdit):
 
         self.setTextCursor(cursor)
 
-    def smartQuotes(self, event):
+    def smartSymbolPair(self, event, pair):
+        plainText = self.toPlainText()
+
         cursor = self.textCursor()
 
-        if cursor.block().text().endswith('"'):
-            # Do quote action
+        if (
+            cursor.position() < len(plainText)
+            and plainText[cursor.position()] == pair[0]
+        ):
+            # Do pair0 action
             super().keyPressEvent(event)
         else:
-            # Do quote action
+            # Do pair0 action
             super().keyPressEvent(event)
 
-            # Add the other quote
-            cursor.insertText('"')
-
+            # Do pair1 action
+            cursor.insertText(pair[1])
             # Move to middle
             cursor.movePosition(QTextCursor.MoveOperation.Left)
 
             self.setTextCursor(cursor)
+
+    def smartBackspace(self, event):
+        plainText = self.toPlainText()
+
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.Left)
+
+        try:
+            prevChar = self.toPlainText()[cursor.position()]
+        except Exception:
+            # Any non-exit exceptions
+
+            prevChar = ''
+
+        # Move the cursor to the next character position
+        cursor.movePosition(QTextCursor.MoveOperation.Right)
+
+        try:
+            nextChar = self.toPlainText()[cursor.position()]
+        except Exception:
+            # Any non-exit exceptions
+
+            nextChar = ''
+
+        pair = prevChar + nextChar
+
+        if pair == '""' or pair == '{}' or pair == '[]':
+            cursor.deleteChar()
+            cursor.deletePreviousChar()
+        else:
+            super().keyPressEvent(event)
 
     def keyPressEvent(self, event):
         if (
@@ -345,8 +380,14 @@ class ZoomablePlainTextEdit(QPlainTextEdit):
             or event.key() == QtCore.Qt.Key.Key_Enter
         ):
             self.smartIndent(event)
+        elif event.key() == QtCore.Qt.Key.Key_Backspace:
+            self.smartBackspace(event)
         elif event.key() == QtCore.Qt.Key.Key_QuoteDbl:
-            self.smartQuotes(event)
+            self.smartSymbolPair(event, '""')
+        elif event.key() == QtCore.Qt.Key.Key_BraceLeft:
+            self.smartSymbolPair(event, '{}')
+        elif event.key() == QtCore.Qt.Key.Key_BracketLeft:
+            self.smartSymbolPair(event, '[]')
         else:
             super().keyPressEvent(event)
 
