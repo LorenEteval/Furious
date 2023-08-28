@@ -10,7 +10,7 @@ from Furious.Utility.Utility import (
 from Furious.Utility.Translator import Translatable, gettext as _
 
 from PySide6 import QtCore
-from PySide6.QtGui import QBrush, QColor, QFont
+from PySide6.QtGui import QBrush, QColor, QFont, QTextCursor
 from PySide6.QtWidgets import (
     QHeaderView,
     QInputDialog,
@@ -321,12 +321,32 @@ class ZoomablePlainTextEdit(QPlainTextEdit):
 
         self.setTextCursor(cursor)
 
+    def smartQuotes(self, event):
+        cursor = self.textCursor()
+
+        if cursor.block().text().endswith('"'):
+            # Do quote action
+            super().keyPressEvent(event)
+        else:
+            # Do quote action
+            super().keyPressEvent(event)
+
+            # Add the other quote
+            cursor.insertText('"')
+
+            # Move to middle
+            cursor.movePosition(QTextCursor.MoveOperation.Left)
+
+            self.setTextCursor(cursor)
+
     def keyPressEvent(self, event):
         if (
             event.key() == QtCore.Qt.Key.Key_Return
             or event.key() == QtCore.Qt.Key.Key_Enter
         ):
             self.smartIndent(event)
+        elif event.key() == QtCore.Qt.Key.Key_QuoteDbl:
+            self.smartQuotes(event)
         else:
             super().keyPressEvent(event)
 
