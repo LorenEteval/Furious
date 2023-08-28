@@ -19,9 +19,9 @@ def linuxProxyConfig(proxy_args, arg0, arg1):
             arg0,
             arg1,
         ],
-        check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        check=True,
     )
 
 
@@ -29,9 +29,9 @@ def darwinProxyConfig(operation, *args):
     def getNetworkServices():
         command = runCommand(
             ['networksetup', '-listallnetworkservices'],
-            check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            check=True,
         )
 
         service = list(filter(lambda x: x != '', command.stdout.decode().split('\n')))
