@@ -1202,23 +1202,6 @@ class EditRoutingWidget(MainWindow):
 
         self.setCentralWidget(self.fakeCentralWidget)
 
-        fileMenuActions = [
-            ImportAssetFileAction(parent=self),
-            Seperator(),
-            ExitAction(parent=self),
-        ]
-
-        for menu in (fileMenuActions,):
-            for action in menu:
-                if isinstance(action, Action):
-                    if hasattr(self, f'{action}'):
-                        logger.warning(f'{self} already has action {action}')
-
-                    setattr(self, f'{action}', action)
-
-        self._fileMenu = Menu(*fileMenuActions, title=_('File'), parent=self)
-        self.menuBar().addMenu(self._fileMenu)
-
         try:
             self.setGeometry(
                 100,
