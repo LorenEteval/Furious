@@ -174,9 +174,14 @@ class ConnectAction(Action):
             )
 
     def stopCore(self):
+        self.XrayCore.registerExitCallback(None)
+        self.Hysteria.registerExitCallback(None)
+
         # Stop any potentially running core
         self.XrayCore.stop()
         self.Hysteria.stop()
+
+        self.coreRunning = False
 
     def showConnectingProgressBar(self):
         if APP().ShowProgressBarWhenConnecting == Switch.ON_:
@@ -241,9 +246,6 @@ class ConnectAction(Action):
 
     def reset(self):
         # Reset everything
-
-        self.XrayCore.registerExitCallback(None)
-        self.Hysteria.registerExitCallback(None)
 
         self.stopCore()
 
@@ -448,8 +450,12 @@ class ConnectAction(Action):
                             logger.info(f'RoutingObject: {route[XrayCore.name()]}')
 
                             self.coreJSON['routing'] = route[XrayCore.name()]
-                        except Exception:
+                        except Exception as ex:
                             # Any non-exit exceptions
+
+                            logger.error(
+                                f'get custom routing object failed: {ex}. Fast fail'
+                            )
 
                             # Fast fail
                             self.coreJSON = {}
@@ -523,8 +529,12 @@ class ConnectAction(Action):
                                 Hysteria.rule(route[Hysteria.name()].get('acl')),
                                 Hysteria.mmdb(route[Hysteria.name()].get('mmdb')),
                             )
-                        except Exception:
+                        except Exception as ex:
                             # Any non-exit exceptions
+
+                            logger.error(
+                                f'get custom routing object failed: {ex}. Fast fail'
+                            )
 
                             # Fast fail
                             self.Hysteria.start('', '', '')
@@ -686,8 +696,7 @@ class ConnectAction(Action):
             # 1. No valid HTTP proxy endpoint. reset / disconnect has been called
 
             if self.isConnecting():
-                # 2. Core has exited. disconnectReason must not be empty
-                assert self.disconnectReason
+                # 2. Core has exited
 
                 self.disconnectAction(self.disconnectReason)
 
