@@ -179,6 +179,12 @@ BUILTIN_ROUTING_TEXT = {
 }
 
 
+HYSTERIA_ROUTING_HINT = (
+    f'Note: If acl is empty or does not exist, {APPLICATION_NAME} '
+    f'will fall back to proxy all traffic.'
+)
+
+
 ROUTING_HINT = {
     'Bypass Mainland China': {
         Hysteria.name(): '',
@@ -187,10 +193,7 @@ ROUTING_HINT = {
         Hysteria.name(): '',
     },
     'Global': {
-        Hysteria.name(): (
-            f'Note: If acl is empty or does not exist, {APPLICATION_NAME} '
-            f'will fall back to proxy all traffic.'
-        ),
+        Hysteria.name(): HYSTERIA_ROUTING_HINT,
     },
     'Custom': {
         Hysteria.name(): (
@@ -974,7 +977,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
                 )
 
             routingDialog = self.appendRoutingDialog(
-                text, hint=_(ROUTING_HINT['Global'][Hysteria.name()]), isBuiltin=False
+                text, hint=_(HYSTERIA_ROUTING_HINT), isBuiltin=False
             )
 
             routingDialog.ruleEdit.setText(
@@ -1239,9 +1242,7 @@ class EditRoutingWidget(MainWindow):
                     )
 
                 routingDialog = self.editRoutingTableWidget.appendRoutingDialog(
-                    routingRemark,
-                    hint=_(ROUTING_HINT['Global'][Hysteria.name()]),
-                    isBuiltin=False,
+                    routingRemark, hint=_(HYSTERIA_ROUTING_HINT), isBuiltin=False
                 )
 
                 # Set default value
