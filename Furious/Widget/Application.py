@@ -261,9 +261,8 @@ class Application(SingletonApplication):
         Proxy.off()
         Proxy.daemonOff()
 
-        # Avoid calling core exit callback. Cores are cleaned by OS.
-        # if self.tray is not None:
-        #     self.tray.ConnectAction.stopCore()
+        if self.tray is not None:
+            self.tray.ConnectAction.stopCore()
 
         NeedSyncSettings.syncAll()
 
