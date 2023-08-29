@@ -141,8 +141,6 @@ class Application(SingletonApplication):
         self.customFontEnabled = False
         self.customFontName = ''
 
-        self.editRoutingWidget = None
-
         self.logViewerWidget = None
         self.logViewerHandle = None
         self.logStreamHandle = None
@@ -150,7 +148,8 @@ class Application(SingletonApplication):
         self.themeDetector = None
         self.themeListenerThread = None
 
-        self.MainWidget = None
+        self.ServerWidget = None
+        self.RoutesWidget = None
 
     def __getattr__(self, key):
         try:
@@ -246,8 +245,8 @@ class Application(SingletonApplication):
 
         self.aboutToQuit.connect(self.cleanup)
 
-        self.MainWidget = EditConfigurationWidget()
-        self.editRoutingWidget = EditRoutingWidget()
+        self.ServerWidget = EditConfigurationWidget()
+        self.RoutesWidget = EditRoutingWidget()
 
         self.tray = SystemTrayIcon()
         self.tray.show()
@@ -267,8 +266,8 @@ class Application(SingletonApplication):
         NeedSyncSettings.syncAll()
 
     def exit(self, exitcode=0):
-        if self.MainWidget is not None:
-            if self.MainWidget.questionSave():
+        if self.ServerWidget is not None:
+            if self.ServerWidget.questionSave():
                 super().exit(exitcode)
         else:
             super().exit(exitcode)

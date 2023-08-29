@@ -111,7 +111,7 @@ class ExportJSONResultBox(MessageBox):
 
 
 def exportLink(selectedIndex):
-    serverList = APP().MainWidget.ServerList
+    serverList = APP().ServerWidget.ServerList
     serverLink = []
     successStr = []
     failureStr = []
@@ -141,7 +141,7 @@ class ExportLinkAction(Action):
         self.exportLinkResult = ExportLinkResultBox('', '', isQRCodeExport=False)
 
     def triggeredCallback(self, checked):
-        selectedIndex = APP().MainWidget.selectedIndex
+        selectedIndex = APP().ServerWidget.selectedIndex
 
         if len(selectedIndex) == 0:
             # Nothing selected. Do nothing
@@ -167,7 +167,7 @@ class ExportQRCodeAction(Action):
         self.exportLinkResult = ExportLinkResultBox('', '', isQRCodeExport=True)
 
     def triggeredCallback(self, checked):
-        selectedIndex = APP().MainWidget.selectedIndex
+        selectedIndex = APP().ServerWidget.selectedIndex
 
         if len(selectedIndex) == 0:
             # Nothing selected. Do nothing
@@ -195,7 +195,7 @@ class ExportJSONAction(Action):
         self.exportJSONResult = ExportJSONResultBox()
 
     def triggeredCallback(self, checked):
-        selectedIndex = APP().MainWidget.selectedIndex
+        selectedIndex = APP().ServerWidget.selectedIndex
 
         if len(selectedIndex) == 0:
             # Nothing selected. Do nothing
@@ -204,7 +204,7 @@ class ExportJSONAction(Action):
         try:
             QApplication.clipboard().setText(
                 '\n'.join(
-                    APP().MainWidget.ServerList[index]['config']
+                    APP().ServerWidget.ServerList[index]['config']
                     for index in selectedIndex
                 )
             )

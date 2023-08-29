@@ -147,12 +147,10 @@ class BuiltinRoutingChildAction(Action):
 
         if APP().Routing != textEnglish:
             # De-activate
-            APP().editRoutingWidget.activateItemByIndex(
-                routingToIndex(), activate=False
-            )
+            APP().RoutesWidget.activateItemByIndex(routingToIndex(), activate=False)
             APP().Routing = textEnglish
             # Activate
-            APP().editRoutingWidget.activateItemByIndex(routingToIndex(), activate=True)
+            APP().RoutesWidget.activateItemByIndex(routingToIndex(), activate=True)
 
             if APP().tray.ConnectAction.isConnected():
                 # Connected. Re-configure connection
@@ -181,15 +179,15 @@ class RoutingChildAction(Action):
                 # Found action
 
                 if APP().Routing != str(index):
-                    route = APP().editRoutingWidget.RoutesList[index]
+                    route = APP().RoutesWidget.RoutesList[index]
 
                     # De-activate
-                    APP().editRoutingWidget.activateItemByIndex(
+                    APP().RoutesWidget.activateItemByIndex(
                         routingToIndex(), activate=False
                     )
                     APP().Routing = str(index)
                     # Activate
-                    APP().editRoutingWidget.activateItemByIndex(
+                    APP().RoutesWidget.activateItemByIndex(
                         routingToIndex(), activate=True
                     )
 
@@ -236,7 +234,7 @@ class RoutingAction(Action):
                         checkable=True,
                         checked=APP().Routing == str(index),
                     )
-                    for index, route in enumerate(APP().editRoutingWidget.RoutesList)
+                    for index, route in enumerate(APP().RoutesWidget.RoutesList)
                 ),
             ),
         )

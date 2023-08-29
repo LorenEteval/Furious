@@ -89,7 +89,7 @@ class SystemTrayIcon(Translatable, QSystemTrayIcon):
     @QtCore.Slot(QSystemTrayIcon.ActivationReason)
     def handleActivated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            APP().MainWidget.show()
+            APP().ServerWidget.show()
 
     def setApplicationToolTip(self):
         self.setToolTip(f'{_(APPLICATION_NAME)} {APPLICATION_VERSION}')

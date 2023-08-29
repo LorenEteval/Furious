@@ -273,11 +273,6 @@ class ConnectAction(Action):
         self.connectingFlag = False
 
     @property
-    def MainWidget(self):
-        # Handy reference
-        return APP().MainWidget
-
-    @property
     def activatedServer(self):
         try:
             activatedIndex = int(APP().ActivatedItemIndex)
@@ -285,7 +280,7 @@ class ConnectAction(Action):
             if activatedIndex < 0:
                 return None
             else:
-                return self.MainWidget.ServerList[activatedIndex]['config']
+                return APP().ServerWidget.ServerList[activatedIndex]['config']
 
         except Exception:
             # Any non-exit exceptions
@@ -442,9 +437,9 @@ class ConnectAction(Action):
                         self.coreJSON['routing'] = self.XrayRouting
                     else:
                         try:
-                            routingWidget = APP().editRoutingWidget
+                            routesWidget = APP().RoutesWidget
 
-                            route = routingWidget.RoutesList[int(routing)]
+                            route = routesWidget.RoutesList[int(routing)]
 
                             logger.info(f'routing is {route["remark"]}')
                             logger.info(f'RoutingObject: {route[XrayCore.name()]}')
@@ -517,9 +512,9 @@ class ConnectAction(Action):
                         )
                     else:
                         try:
-                            routingWidget = APP().editRoutingWidget
+                            routesWidget = APP().RoutesWidget
 
-                            route = routingWidget.RoutesList[int(routing)]
+                            route = routesWidget.RoutesList[int(routing)]
 
                             logger.info(f'routing is {route["remark"]}')
                             logger.info(f'RoutingObject: {route[Hysteria.name()]}')
@@ -615,7 +610,7 @@ class ConnectAction(Action):
         # Connecting
         self.connectingFlag = True
 
-        if not APP().Configuration or len(self.MainWidget.ServerList) == 0:
+        if not APP().Configuration or len(APP().ServerWidget.ServerList) == 0:
             APP().Connect = Switch.OFF
 
             self.setChecked(False)

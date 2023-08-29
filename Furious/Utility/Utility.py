@@ -57,7 +57,7 @@ class ServerStorage:
     def sync(ob=None):
         if ob is None:
             # Object is up-to-date
-            APP().Configuration = ServerStorage.toStorage(APP().MainWidget.StorageObj)
+            APP().Configuration = ServerStorage.toStorage(APP().ServerWidget.StorageObj)
         else:
             # Object is up-to-date
             APP().Configuration = ServerStorage.toStorage(ob)
@@ -94,9 +94,7 @@ class RoutesStorage:
     def sync(ob=None):
         if ob is None:
             # Object is up-to-date
-            APP().CustomRouting = RoutesStorage.toStorage(
-                APP().editRoutingWidget.StorageObj
-            )
+            APP().CustomRouting = RoutesStorage.toStorage(APP().RoutesWidget.StorageObj)
         else:
             # Object is up-to-date
             APP().CustomRouting = RoutesStorage.toStorage(ob)

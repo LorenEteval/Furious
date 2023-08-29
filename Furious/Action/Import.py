@@ -146,7 +146,7 @@ class ImportLinkAction(Action):
 
         if choice == MessageBox.ButtonRole.AcceptRole.value:
             # Go to edit
-            APP().MainWidget.show()
+            APP().ServerWidget.show()
         else:
             # OK. Do nothing
             pass
@@ -187,7 +187,7 @@ class ImportLinkAction(Action):
 
                 remark = urllib.parse.unquote(getOrDefault('ps'))
 
-                APP().MainWidget.importServer(
+                APP().ServerWidget.importServer(
                     remark,
                     ujson.dumps(
                         myJSON,
@@ -247,7 +247,7 @@ class ImportLinkAction(Action):
                 )
             )
 
-            APP().MainWidget.importServer(
+            APP().ServerWidget.importServer(
                 remark,
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
@@ -298,7 +298,7 @@ class ImportLinkAction(Action):
                 )
             )
 
-            APP().MainWidget.importServer(
+            APP().ServerWidget.importServer(
                 remark,
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
@@ -324,7 +324,7 @@ class ImportLinkAction(Action):
                 ProxyOutboundObjectSS(*re.split(r'[@:]', myData))
             )
 
-            APP().MainWidget.importServer(
+            APP().ServerWidget.importServer(
                 'sslegacy',
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
@@ -389,7 +389,7 @@ class ImportLinkAction(Action):
         else:
             successRemark = []
 
-            rowCount = APP().MainWidget.rowCount
+            rowCount = APP().ServerWidget.rowCount
 
             for shareLink in splitByNewLine:
                 remark, result = self.parseShareLink(shareLink)
@@ -446,7 +446,7 @@ class ImportJSONAction(Action):
 
         if choice == MessageBox.ButtonRole.AcceptRole.value:
             # Go to edit
-            APP().MainWidget.show()
+            APP().ServerWidget.show()
         else:
             # OK. Do nothing
             pass
@@ -461,7 +461,7 @@ class ImportJSONAction(Action):
 
             self.showJSONErrorBox()
         else:
-            APP().MainWidget.importServer(
+            APP().ServerWidget.importServer(
                 _('Untitled'), self.clipboard, syncStorage=True
             )
 

@@ -150,16 +150,7 @@ class LogViewerWidget(MainWindow):
             )
         )
 
-        try:
-            # Restore point size
-            font = self.textBrowser.font()
-            font.setPointSize(int(APP().ViewerWidgetPointSize))
-
-            self.textBrowser.setFont(font)
-        except Exception:
-            # Any non-exit exceptions
-
-            pass
+        self.restorePointSize()
 
         self.setCentralWidget(self.textBrowser)
 
@@ -199,5 +190,27 @@ class LogViewerWidget(MainWindow):
     def log(self):
         return self.textBrowser.toPlainText()
 
+    def pointSizeSetting(self):
+        return f'{self.__class__.__name__}PointSize'
+
+    def restorePointSize(self):
+        try:
+            # Restore point size
+            font = self.textBrowser.font()
+            font.setPointSize(int(getattr(APP(), self.pointSizeSetting())))
+
+            self.textBrowser.setFont(font)
+        except Exception:
+            # Any non-exit exceptions
+
+            pass
+
     def syncSettings(self):
-        APP().ViewerWidgetPointSize = str(self.textBrowser.font().pointSize())
+        setattr(
+            APP(), self.pointSizeSetting(), str(self.textBrowser.font().pointSize())
+        )
+
+
+class TorViewerWidget(LogViewerWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
