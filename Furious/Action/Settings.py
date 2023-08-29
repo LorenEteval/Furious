@@ -31,7 +31,7 @@ class SettingsChildAction(Action):
             else:
                 APP().ShowTabAndSpacesInEditor = Switch.OFF
 
-            APP().MainWidget.showTabAndSpacesIfNecessary()
+            APP().ServerWidget.showTabAndSpacesIfNecessary()
 
 
 class SettingsAction(Action):

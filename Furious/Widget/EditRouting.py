@@ -250,7 +250,7 @@ class ImportAssetFileAction(Action):
         super().__init__(_('Import Asset File...'), **kwargs)
 
     def triggeredCallback(self, checked):
-        APP().editRoutingWidget.assetViewer.show()
+        APP().RoutesWidget.assetViewer.show()
 
 
 def questionFastReconnect(saveConfInfo):
@@ -291,9 +291,7 @@ class SaveAction(Action):
 
     def getParentIndex(self):
         routingEditor = self.parent()
-        routingEditorRef = (
-            APP().editRoutingWidget.editRoutingTableWidget.routingEditorRef
-        )
+        routingEditorRef = APP().RoutesWidget.editRoutingTableWidget.routingEditorRef
 
         for index, editor in enumerate(routingEditorRef[len(BUILTIN_ROUTING) :]):
             if id(routingEditor) == id(editor):
@@ -349,7 +347,7 @@ class SaveAction(Action):
 
         if parentIndex >= 0:
             for core, json in zip(coreList, jsonList):
-                APP().editRoutingWidget.RoutesList[parentIndex][core] = json
+                APP().RoutesWidget.RoutesList[parentIndex][core] = json
 
             # Sync it
             RoutesStorage.sync()
@@ -830,14 +828,14 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.editRoutingWidget = kwargs.get('parent')
+        self.RoutesWidget = kwargs.get('parent')
 
         self.questionDeleteBox = QuestionDeleteBox(
             icon=MessageBox.Icon.Question, parent=self.parent()
         )
 
         # Handy reference
-        self.RoutesList = self.editRoutingWidget.RoutesList
+        self.RoutesList = self.RoutesWidget.RoutesList
 
         # Currently only has Xray-Core
         self.routingEditorRef = []

@@ -224,7 +224,7 @@ class ScrollToActivatedServerAction(Action):
         )
 
     def triggeredCallback(self, checked):
-        if APP().MainWidget.modified:
+        if APP().ServerWidget.modified:
             self.parent().saveChangeFirst.exec()
 
             return
@@ -605,7 +605,7 @@ class RoutingAction(Action):
         super().__init__(_('Edit Routing...'), **kwargs)
 
     def triggeredCallback(self, checked):
-        APP().editRoutingWidget.show()
+        APP().RoutesWidget.show()
 
 
 class ShowLogAction(Action):
@@ -878,7 +878,7 @@ class NormalServerHorizontalHeader(HeaderView):
 
     @QtCore.Slot(int)
     def handleSectionClicked(self, clickedIndex):
-        if APP().MainWidget.modified:
+        if APP().ServerWidget.modified:
             self.parent().saveChangeFirst.exec()
 
             return
@@ -1322,7 +1322,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         self.swapItem(index, index - 1)
 
     def moveUpSelectedItem(self):
-        if APP().MainWidget.modified:
+        if APP().ServerWidget.modified:
             self.saveChangeFirst.exec()
 
             return
@@ -1365,7 +1365,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         self.swapItem(index, index + 1)
 
     def moveDownSelectedItem(self):
-        if APP().MainWidget.modified:
+        if APP().ServerWidget.modified:
             self.saveChangeFirst.exec()
 
             return
@@ -1401,7 +1401,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         )
 
     def duplicateSelectedItem(self):
-        if APP().MainWidget.modified:
+        if APP().ServerWidget.modified:
             self.saveChangeFirst.exec()
 
             return
@@ -1414,13 +1414,13 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
 
         for index in indexes:
             if 0 <= index < len(self.ServerList):
-                APP().MainWidget.importServer(**self.ServerList[index])
+                APP().ServerWidget.importServer(**self.ServerList[index])
 
         # Sync it
         ServerStorage.sync()
 
     def deleteSelectedItem(self):
-        if APP().MainWidget.modified:
+        if APP().ServerWidget.modified:
             self.saveChangeFirst.exec()
 
             return
@@ -1519,12 +1519,12 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
 
         self.saveScrollBarValue(prevRow)
 
-        if APP().MainWidget is not None and APP().MainWidget.modified:
+        if APP().ServerWidget is not None and APP().ServerWidget.modified:
             choice = self.questionSaveBox.exec()
 
             if choice == MessageBox.ButtonRole.AcceptRole.value:
                 # Save
-                if APP().MainWidget.SaveAsServerAction.save(
+                if APP().ServerWidget.SaveAsServerAction.save(
                     successCallback=lambda: self.switchContext(currRow),
                 ):
                     pass
@@ -1536,7 +1536,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
                 # Discard
                 self.switchContext(currRow)
 
-                APP().MainWidget.markAsSaved()  # Fake saved
+                APP().ServerWidget.markAsSaved()  # Fake saved
 
             elif choice == MessageBox.ButtonRole.RejectRole.value:
                 # Cancel. Do not switch
@@ -1559,7 +1559,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             # Same item activated. Do nothing
             return
 
-        if APP().MainWidget is not None and APP().MainWidget.modified:
+        if APP().ServerWidget is not None and APP().ServerWidget.modified:
             self.saveChangeFirst.exec()
 
             return
@@ -1680,7 +1680,7 @@ class EditConfigurationWidget(MainWindow):
 
         try:
             font = self.plainTextEdit.font()
-            font.setPointSize(int(APP().EditorWidgetPointSize))
+            font.setPointSize(int(APP().ServerWidgetPointSize))
 
             self.plainTextEdit.setFont(font)
         except Exception:
@@ -1846,7 +1846,7 @@ class EditConfigurationWidget(MainWindow):
             self.setGeometry(
                 100,
                 100,
-                *list(int(size) for size in APP().MainWidgetWindowSize.split(',')),
+                *list(int(size) for size in APP().ServerWidgetWindowSize.split(',')),
             )
         except Exception:
             # Any non-exit exceptions
@@ -1966,7 +1966,7 @@ class EditConfigurationWidget(MainWindow):
         self.questionSave()
 
     def syncSettings(self):
-        APP().MainWidgetWindowSize = (
+        APP().ServerWidgetWindowSize = (
             f'{self.geometry().width()},{self.geometry().height()}'
         )
         APP().ServerWidgetSectionSizeTable = ujson.dumps(
@@ -1974,7 +1974,7 @@ class EditConfigurationWidget(MainWindow):
             ensure_ascii=False,
             escape_forward_slashes=False,
         )
-        APP().EditorWidgetPointSize = str(self.plainTextEdit.font().pointSize())
+        APP().ServerWidgetPointSize = str(self.plainTextEdit.font().pointSize())
 
     def retranslate(self):
         with StateContext(self):

@@ -12,4 +12,4 @@ class EditConfigurationAction(Action):
         )
 
     def triggeredCallback(self, checked):
-        APP().MainWidget.show()
+        APP().ServerWidget.show()

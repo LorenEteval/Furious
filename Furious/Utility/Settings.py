@@ -65,18 +65,20 @@ SUPPORTED_SETTINGS = (
     Settings('Configuration'),
     # User Activated Server Index
     Settings('ActivatedItemIndex'),
-    # Main Widget Window Size
-    Settings('MainWidgetWindowSize'),
-    # Edit Routing Widget Window Size
+    # Server Widget Window Size
+    Settings('ServerWidgetWindowSize'),
+    # Routes Widget Window Size
     Settings('RoutesWidgetWindowSize'),
-    # Main Widget Section Size
+    # Server Widget Section Size
     Settings('ServerWidgetSectionSizeTable'),
-    # Edit Routing Widget Section Size
+    # Routes Widget Section Size
     Settings('RoutesWidgetSectionSizeTable'),
-    # Main Widget Font Point Size
-    Settings('EditorWidgetPointSize'),
+    # Server Widget Font Point Size
+    Settings('ServerWidgetPointSize'),
     # Log Viewer Widget Font Point Size
-    Settings('ViewerWidgetPointSize'),
+    Settings('LogViewerWidgetPointSize'),
+    # Tor Viewer Widget Font Point Size
+    Settings('TorViewerWidgetPointSize'),
     # User selected language
     Settings('Language', SUPPORTED_LANGUAGE, SMART_CHOSEN_LANGUAGE),
     # Startup On Boot
