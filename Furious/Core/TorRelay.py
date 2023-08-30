@@ -41,6 +41,7 @@ class TorRelayStarter(AsyncSubprocessMessage):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         )
 
         torConfig = (
@@ -81,6 +82,27 @@ class TorRelayStarter(AsyncSubprocessMessage):
                 logger.info(f'{TorRelay.name()} bootstrapped {percentage}%')
 
 
+def getTorRelayVersion():
+    try:
+        result = subprocess.run(
+            ['tor', '--version'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+
+        # First line, 3rd param...
+        return result.stdout.decode().split('\n')[0].split()[2]
+    except Exception:
+        # Any non-exit exceptions
+
+        return '0.0.0'
+
+
+CACHED_VERSION = getTorRelayVersion()
+
+
 class TorRelay(Core):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -89,19 +111,7 @@ class TorRelay(Core):
 
     @staticmethod
     def checkIfExists():
-        try:
-            subprocess.run(
-                ['tor', '--version'],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-            )
-        except Exception:
-            # Any non-exit exceptions
-
-            return False
-        else:
-            return True
+        return CACHED_VERSION != '0.0.0'
 
     @staticmethod
     def name():
@@ -109,20 +119,7 @@ class TorRelay(Core):
 
     @staticmethod
     def version():
-        try:
-            result = subprocess.run(
-                ['tor', '--version'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=True,
-            )
-
-            # First line, 3rd param...
-            return result.stdout.decode().split('\n')[0].split()[2]
-        except Exception:
-            # Any non-exit exceptions
-
-            return '0.0.0'
+        return CACHED_VERSION
 
     @property
     def bootstrapPercentage(self):
