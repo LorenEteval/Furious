@@ -38,6 +38,13 @@ PROXY_SERVER_BYPASS = (
     '172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'
 )
 
+TOR_FAQ_URL = 'https://support.torproject.org/faq/'
+TOR_FAQ_LABEL = f'Tor FAQ: <a href=\"{TOR_FAQ_URL}\">{TOR_FAQ_URL}</a>'
+
+# Avoid standard Tor port in case of running Tor services
+DEFAULT_TOR_SOCKS_PORT = 9048
+DEFAULT_TOR_HTTPS_PORT = 9047
+
 
 class Color:
     LIGHT_RED_ = '#FF7276'

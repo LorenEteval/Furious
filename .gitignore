@@ -160,3 +160,6 @@ cython_debug/
 .idea/
 
 .DS_Store
+
+# Tor data
+Furious/Data/tordata

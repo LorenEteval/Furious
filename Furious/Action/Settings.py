@@ -1,4 +1,4 @@
-from Furious.Gui.Action import Action
+from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import Menu
 from Furious.Utility.Constants import APP
 from Furious.Utility.Utility import bootstrapIcon, Switch
@@ -34,6 +34,22 @@ class SettingsChildAction(Action):
             APP().ServerWidget.showTabAndSpacesIfNecessary()
 
 
+class RoutingChildAction(Action):
+    def __init__(self, **kwargs):
+        super().__init__(_('Routing Settings...'), **kwargs)
+
+    def triggeredCallback(self, checked):
+        APP().RoutesWidget.show()
+
+
+class TorRelaySettingsChildAction(Action):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def triggeredCallback(self, checked):
+        APP().torRelaySettingsWidget.open()
+
+
 class SettingsAction(Action):
     def __init__(self):
         super().__init__(
@@ -55,6 +71,10 @@ class SettingsAction(Action):
                     checkable=True,
                     checked=APP().ShowTabAndSpacesInEditor == Switch.ON_,
                 ),
+                Seperator(),
+                RoutingChildAction(),
+                Seperator(),
+                TorRelaySettingsChildAction(_('Tor Relay Settings...')),
             ),
             useActionGroup=False,
         )

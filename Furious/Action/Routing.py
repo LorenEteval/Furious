@@ -95,6 +95,10 @@ BUILTIN_ROUTING_TABLE = {
             'mmdb': (DATA_DIR / 'hysteria' / 'country.mmdb').as_posix(),
         },
     },
+    'Route My Traffic Through Tor': {
+        XrayCore.name(): {},
+        Hysteria.name(): {},
+    },
     'Global': {
         XrayCore.name(): {
             'domainStrategy': 'IPIfNonMatch',

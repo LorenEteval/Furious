@@ -1,7 +1,8 @@
 from Furious.Widget.SystemTrayIcon import SystemTrayIcon
 from Furious.Widget.EditConfiguration import EditConfigurationWidget
 from Furious.Widget.EditRouting import EditRoutingWidget
-from Furious.Widget.LogViewer import LogViewerWidget
+from Furious.Widget.LogViewer import LogViewerWidget, TorViewerWidget
+from Furious.Widget.TorRelaySettings import TorRelaySettingsWidget
 from Furious.Utility.Constants import (
     APPLICATION_NAME,
     APPLICATION_VERSION,
@@ -142,6 +143,8 @@ class Application(SingletonApplication):
         self.customFontName = ''
 
         self.logViewerWidget = None
+        self.torViewerWidget = None
+
         self.logViewerHandle = None
         self.logStreamHandle = None
 
@@ -150,6 +153,7 @@ class Application(SingletonApplication):
 
         self.ServerWidget = None
         self.RoutesWidget = None
+        self.torRelaySettingsWidget = None
 
     def __getattr__(self, key):
         try:
@@ -178,6 +182,8 @@ class Application(SingletonApplication):
 
     def configureLogging(self):
         self.logViewerWidget = LogViewerWidget()
+        self.torViewerWidget = TorViewerWidget()
+
         self.logViewerHandle = LogViewerHandle(self.logViewerWidget.textBrowser)
         self.logStreamHandle = logging.StreamHandler()
 
@@ -247,6 +253,7 @@ class Application(SingletonApplication):
 
         self.ServerWidget = EditConfigurationWidget()
         self.RoutesWidget = EditRoutingWidget()
+        self.torRelaySettingsWidget = TorRelaySettingsWidget()
 
         self.tray = SystemTrayIcon()
         self.tray.show()

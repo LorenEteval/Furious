@@ -65,6 +65,8 @@ SUPPORTED_SETTINGS = (
     Settings('Configuration'),
     # User Activated Server Index
     Settings('ActivatedItemIndex'),
+    # User Tor Relay Settings,
+    Settings('TorRelaySettings'),
     # Server Widget Window Size
     Settings('ServerWidgetWindowSize'),
     # Routes Widget Window Size

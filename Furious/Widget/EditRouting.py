@@ -30,6 +30,8 @@ from Furious.Utility.Constants import (
     APPLICATION_NAME,
     GOLDEN_RATIO,
     DATA_DIR,
+    TOR_FAQ_URL,
+    TOR_FAQ_LABEL,
     Color,
 )
 from Furious.Utility.Utility import (
@@ -141,6 +143,20 @@ BUILTIN_ROUTING_TEXT = {
             escape_forward_slashes=False,
         ),
     },
+    'Route My Traffic Through Tor': {
+        XrayCore.name(): (
+            f'# Xray-core Routing rules\n'
+            f'# \n'
+            f'# This rule is read-only.\n'
+            f'# \n'
+            f'# Use Tor to achieve better anonymity, but {APPLICATION_NAME}\n'
+            f'# never claims nor guarantees *FULL* anonymity.\n'
+            f'# \n'
+            f'# See more information:\n'
+            f'# \n'
+            f'# {TOR_FAQ_URL}\n\n'
+        ),
+    },
     'Global': {
         XrayCore.name(): (
             f'# Xray-core Routing rules\n'
@@ -191,6 +207,9 @@ ROUTING_HINT = {
     },
     'Bypass Iran': {
         Hysteria.name(): '',
+    },
+    'Route My Traffic Through Tor': {
+        Hysteria.name(): TOR_FAQ_LABEL,
     },
     'Global': {
         Hysteria.name(): HYSTERIA_ROUTING_HINT,
@@ -441,7 +460,7 @@ class EditRoutingAction(Action):
                 if dialog.isBuiltin:
                     # Built-in. Nothing to do
                     logger.info(
-                        f'built-in routing dialog {BUILTIN_ROUTING[index]} called exec. Nothing to do'
+                        f'built-in routing dialog \'{BUILTIN_ROUTING[index]}\' called exec. Nothing to do'
                     )
 
                     continue
@@ -729,6 +748,11 @@ class RoutingDialog(Translatable, SupportConnectedCallback, QDialog):
 
         if hint:
             self.hint = QLabel(hint)
+            self.hint.setTextFormat(QtCore.Qt.TextFormat.RichText)
+            self.hint.setTextInteractionFlags(
+                QtCore.Qt.TextInteractionFlag.TextBrowserInteraction
+            )
+            self.hint.setOpenExternalLinks(True)
 
             layout.addRow(self.hint)
         else:
