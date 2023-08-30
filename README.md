@@ -18,8 +18,9 @@ and [hysteria](https://github.com/apernet/hysteria).
 * Support import from JSON or share link(`vmess://...`, `vless://...` or `ss://`, including the
   newest [REALITY](https://github.com/XTLS/REALITY) share standard).
 * Support export to JSON, share link or QRCode.
-* Built-in routing mode support: Bypass Mainland China(with Ads filter), Bypass Iran(with Ads filter) and Global. You
-  can also choose to customize your own routing rules.
+* Built-in routing mode support: `Bypass Mainland China(with Ads filter)`, `Bypass Iran(with Ads filter)`,
+  [`Route My Traffic Through Tor`](https://github.com/LorenEteval/Furious/wiki/Route-My-Traffic-Through-Tor)
+  and `Global`. You can also choose to customize your own routing rules.
 * Built-in editor support.
 * VPN-client user experience.
 * Support system theme detection and switch to dark/light theme automatically.
@@ -156,7 +157,9 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 * 支持从JSON或分享链接导入（`vmess://...`，`vless://...`或`ss://`，包括最新的[REALITY](https://github.com/XTLS/REALITY)
   分享标准）。
 * 支持导出为JSON、分享链接或二维码。
-* 内置两种路由模式的支持：绕过中国大陆（带广告过滤）和全球。也可选择使用自己的路由规则。
+* 内置路由模式支持：`绕过中国大陆（带广告过滤）`、`绕过伊朗（带广告过滤）`、
+  [`通过Tor路由我的流量`](https://github.com/LorenEteval/Furious/wiki/Route-My-Traffic-Through-Tor)
+  和`全球`。也可选择使用自己的路由规则。
 * 内置编辑器支持。
 * VPN客户端的使用体验。
 * 支持系统主题检测并自动切换深色/浅色主题。
