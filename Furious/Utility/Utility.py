@@ -1,5 +1,11 @@
 from Furious.Gui.Icon import Icon
-from Furious.Utility.Constants import APP, PLATFORM, ROOT_DIR
+from Furious.Utility.Constants import (
+    APP,
+    PLATFORM,
+    ROOT_DIR,
+    DEFAULT_TOR_SOCKS_PORT,
+    DEFAULT_TOR_HTTPS_PORT,
+)
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import QApplication
@@ -123,8 +129,8 @@ class RoutesStorage:
 
 class TorRelaySettingsStorage:
     EMPTY_OBJECT = {
-        'socksTunnelPort': 9050,
-        'httpsTunnelPort': 9049,
+        'socksTunnelPort': DEFAULT_TOR_SOCKS_PORT,
+        'httpsTunnelPort': DEFAULT_TOR_HTTPS_PORT,
         'useProxy': True,
         'logLevel': 'notice',
         'relayEstablishTimeout': 15,
