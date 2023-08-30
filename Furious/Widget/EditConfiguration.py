@@ -1,3 +1,4 @@
+from Furious.Core.TorRelay import TorRelay
 from Furious.Action.Import import ImportLinkAction, ImportJSONAction
 from Furious.Action.Export import ExportLinkAction, ExportJSONAction, ExportQRCodeAction
 from Furious.Core.Intellisense import Intellisense
@@ -600,20 +601,20 @@ class ZoomOutAction(Action):
         self.parent().plainTextEdit.zoomOut()
 
 
-class RoutingAction(Action):
-    def __init__(self, **kwargs):
-        super().__init__(_('Edit Routing...'), **kwargs)
-
-    def triggeredCallback(self, checked):
-        APP().RoutesWidget.show()
-
-
 class ShowLogAction(Action):
     def __init__(self, **kwargs):
-        super().__init__(_('Show Log...'), **kwargs)
+        super().__init__(_(f'Show {APPLICATION_NAME} Log...'), **kwargs)
 
     def triggeredCallback(self, checked):
         APP().logViewerWidget.showMaximized()
+
+
+class ShowTorRelayLogAction(Action):
+    def __init__(self, **kwargs):
+        super().__init__(_(f'Show {TorRelay.name()} Log...'), **kwargs)
+
+    def triggeredCallback(self, checked):
+        APP().torViewerWidget.showMaximized()
 
 
 class WhetherToUpdateInfoBox(MessageBox):
@@ -1799,13 +1800,6 @@ class EditConfigurationWidget(MainWindow):
             ],
         }
 
-        routingMenu = {
-            'name': 'Routing',
-            'actions': [
-                RoutingAction(parent=self),
-            ],
-        }
-
         viewMenu = {
             'name': 'View',
             'actions': [
@@ -1818,6 +1812,7 @@ class EditConfigurationWidget(MainWindow):
             'name': 'Help',
             'actions': [
                 ShowLogAction(parent=self),
+                ShowTorRelayLogAction(parent=self),
                 Seperator(),
                 CheckForUpdatesAction(parent=self),
                 AboutAction(parent=self),
@@ -1825,7 +1820,7 @@ class EditConfigurationWidget(MainWindow):
         }
 
         # Menus
-        for menuDict in (fileMenu, editMenu, routingMenu, viewMenu, helpMenu):
+        for menuDict in (fileMenu, editMenu, viewMenu, helpMenu):
             menuName = menuDict['name']
             menuObjName = f'_{menuName}Menu'
             menu = Menu(*menuDict['actions'], title=_(menuName), parent=self.menuBar())

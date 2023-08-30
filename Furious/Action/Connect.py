@@ -1,4 +1,5 @@
 from Furious.Core.Core import XrayCore, Hysteria
+from Furious.Core.TorRelay import TorRelay
 from Furious.Core.Intellisense import Intellisense
 from Furious.Core.Configuration import Configuration
 from Furious.Action.Routing import BUILTIN_ROUTING_TABLE, BUILTIN_ROUTING
@@ -16,6 +17,7 @@ from Furious.Utility.Translator import gettext as _
 from Furious.Utility.Proxy import Proxy
 
 from PySide6 import QtCore
+from PySide6.QtTest import QTest
 from PySide6.QtNetwork import (
     QNetworkAccessManager,
     QNetworkReply,
@@ -82,6 +84,7 @@ class ConnectAction(Action):
 
         self.XrayCore = XrayCore()
         self.Hysteria = Hysteria()
+        self.TorRelay = TorRelay()
 
     def XrayCoreExitCallback(self, exitcode):
         if self.coreName:
@@ -180,6 +183,8 @@ class ConnectAction(Action):
         # Stop any potentially running core
         self.XrayCore.stop()
         self.Hysteria.stop()
+
+        self.TorRelay.stop()
 
         self.coreRunning = False
 
@@ -331,6 +336,11 @@ class ConnectAction(Action):
         # Show the MessageBox and wait for user to close it
         self.httpProxyConfErrorBox.exec()
 
+    @property
+    def torRelayStorageObj(self):
+        # Handy reference
+        return APP().torRelaySettingsWidget.StorageObj
+
     def configureCore(self):
         def validateProxyServer(server):
             # Validate proxy server
@@ -387,8 +397,6 @@ class ConnectAction(Action):
                 self.errorHttpProxyConf()
             else:
                 if validateProxyServer(proxyServer):
-                    self.coreRunning = True
-
                     routing = APP().Routing
 
                     logger.info(f'core {XrayCore.name()} configured')
@@ -419,9 +427,13 @@ class ConnectAction(Action):
                     fixLoggingRelativePath('access')
                     fixLoggingRelativePath('error')
 
-                    # Filter Custom
+                    # Filter Route My Traffic Through Tor, Custom
                     if routing in list(
-                        filter(lambda x: x != 'Custom', BUILTIN_ROUTING)
+                        filter(
+                            lambda x: x != 'Route My Traffic Through Tor'
+                            and x != 'Custom',
+                            BUILTIN_ROUTING,
+                        )
                     ):
                         routingObject = BUILTIN_ROUTING_TABLE[routing][XrayCore.name()]
 
@@ -429,6 +441,29 @@ class ConnectAction(Action):
                         logger.info(f'RoutingObject: {routingObject}')
 
                         self.coreJSON['routing'] = routingObject
+                    elif routing == 'Route My Traffic Through Tor':
+                        logger.info(f'routing is {routing}')
+
+                        if TorRelay.checkIfExists():
+                            logger.info(
+                                f'find Tor CLI in path success. Version: {TorRelay.version()}'
+                            )
+
+                            routingObject = {}
+
+                            logger.info(f'RoutingObject: {routingObject}')
+
+                            self.coreJSON['routing'] = routingObject
+                        else:
+                            logger.error('find Tor CLI in path failed')
+
+                            self.coreRunning = False
+
+                            self.disconnectReason = (
+                                f'{XrayCore.name()}: {_("Cannot find Tor CLI in PATH")}'
+                            )
+
+                            return XrayCore.name()
                     elif routing == 'Custom':
                         logger.info(f'routing is {routing}')
                         logger.info(f'RoutingObject: {self.XrayRouting}')
@@ -455,12 +490,17 @@ class ConnectAction(Action):
                             # Fast fail
                             self.coreJSON = {}
 
+                    self.coreRunning = True
+
                     # Refresh configuration modified before. User cannot feel
                     self.coreText = ujson.dumps(
                         self.coreJSON, ensure_ascii=False, escape_forward_slashes=False
                     )
                     # Start core
                     self.XrayCore.start(self.coreText)
+
+                    if routing == 'Route My Traffic Through Tor':
+                        self.startTorRelay(XrayCore.name(), proxyServer)
 
             return XrayCore.name()
 
@@ -483,10 +523,13 @@ class ConnectAction(Action):
 
                     logger.info(f'core {Hysteria.name()} configured')
 
-                    # Filter Global, Custom
+                    # Filter Route My Traffic Through Tor, Global, Custom
                     if routing in list(
                         filter(
-                            lambda x: x != 'Global' and x != 'Custom', BUILTIN_ROUTING
+                            lambda x: x != 'Route My Traffic Through Tor'
+                            and x != 'Global'
+                            and x != 'Custom',
+                            BUILTIN_ROUTING,
                         )
                     ):
                         logger.info(f'routing is {routing}')
@@ -498,6 +541,27 @@ class ConnectAction(Action):
                             Hysteria.rule(routingObject.get('acl')),
                             Hysteria.mmdb(routingObject.get('mmdb')),
                         )
+                    elif routing == 'Route My Traffic Through Tor':
+                        logger.info(f'routing is {routing}')
+
+                        if TorRelay.checkIfExists():
+                            logger.info(
+                                f'find Tor CLI in path success. Version: {TorRelay.version()}'
+                            )
+
+                            self.Hysteria.start(self.coreText, '', '')
+
+                            self.startTorRelay(Hysteria.name(), proxyServer)
+                        else:
+                            logger.error('find Tor CLI in path failed')
+
+                            self.coreRunning = False
+
+                            self.disconnectReason = (
+                                f'{Hysteria.name()}: {_("Cannot find Tor CLI in PATH")}'
+                            )
+
+                            return Hysteria.name()
                     elif routing == 'Global':
                         logger.info(f'routing is {routing}')
 
@@ -538,6 +602,57 @@ class ConnectAction(Action):
 
         # No matching core
         return ''
+
+    def startTorRelay(self, core, proxyServer, startCounter=0, step=1):
+        # Redirect Proxy
+        self.proxyServer = (
+            f'127.0.0.1:{self.torRelayStorageObj.get("httpsTunnelPort", 9049)}'
+        )
+
+        try:
+            timeout = 1000 * int(
+                self.torRelayStorageObj.get('relayEstablishTimeout', 15)
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            # 15s
+            timeout = 1000 * 15
+
+        logger.info(f'{TorRelay.name()} bootstrap timeout is {timeout // 1000}s')
+
+        # Start Tor Relay
+        if self.torRelayStorageObj.get('useProxy', True):
+            # Use proxy
+            self.TorRelay.start(proxyServer=proxyServer)
+        else:
+            # Do not use proxy
+            self.TorRelay.start()
+
+        while (
+            self.coreRunning
+            and startCounter < timeout
+            and self.TorRelay.bootstrapPercentage != 100
+        ):
+            QTest.qWait(step)
+
+            startCounter += step
+
+        if not self.coreRunning:
+            # Interrupted externally. Return
+            return
+
+        if self.TorRelay.bootstrapPercentage != 100:
+            # bootstrap timeout
+            self.stopCore()
+            # Assign disconnect reason
+            self.disconnectReason = (
+                f'{core}: {_(f"{TorRelay.name()} establish timeout")}'
+            )
+
+            logger.error(f'{TorRelay.name()} establish failed')
+        else:
+            logger.info(f'{TorRelay.name()} establish success')
 
     def startConnectionTest(
         self, showRoutingChangedMessage=False, currentRouting='', isBuiltinRouting=False

@@ -12,8 +12,10 @@ from Furious.Utility.Translator import Translatable, gettext as _
 from PySide6 import QtCore
 from PySide6.QtGui import QBrush, QColor, QFont, QTextCursor
 from PySide6.QtWidgets import (
+    QGroupBox,
     QHeaderView,
     QInputDialog,
+    QLabel,
     QLineEdit,
     QListWidget,
     QMainWindow,
@@ -27,6 +29,15 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QTextBrowser,
 )
+
+
+class GroupBox(Translatable, QGroupBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def retranslate(self):
+        with StateContext(self):
+            self.setTitle(_(self.title()))
 
 
 class HeaderView(SupportConnectedCallback, QHeaderView):
@@ -48,6 +59,15 @@ class HeaderView(SupportConnectedCallback, QHeaderView):
         self.setStyleSheet(
             f'QHeaderView::section:hover {{ background-color: {Color.LIGHT_BLUE}; }}'
         )
+
+
+class Label(Translatable, QLabel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def retranslate(self):
+        with StateContext(self):
+            self.setText(_(self.text()))
 
 
 class ListWidget(SupportConnectedCallback, QListWidget):

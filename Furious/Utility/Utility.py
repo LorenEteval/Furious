@@ -1,13 +1,16 @@
 from Furious.Gui.Icon import Icon
 from Furious.Utility.Constants import APP, PLATFORM, ROOT_DIR
 
+from PySide6 import QtCore
 from PySide6.QtWidgets import QApplication
 
 import os
 import copy
 import ujson
+import queue
 import logging
 import pybase64
+import threading
 import functools
 import subprocess
 
@@ -116,6 +119,87 @@ class RoutesStorage:
     @staticmethod
     def clear():
         APP().CustomRouting = ''
+
+
+class TorRelaySettingsStorage:
+    EMPTY_OBJECT = {
+        'socksTunnelPort': 9050,
+        'httpsTunnelPort': 9049,
+        'useProxy': True,
+        'logLevel': 'notice',
+        'relayEstablishTimeout': 15,
+    }
+
+    @staticmethod
+    def init():
+        return copy.deepcopy(TorRelaySettingsStorage.EMPTY_OBJECT)
+
+    @staticmethod
+    def sync(ob=None):
+        if ob is None:
+            # Object is up-to-date
+            APP().TorRelaySettings = TorRelaySettingsStorage.toStorage(
+                APP().torRelaySettingsWidget.StorageObj
+            )
+        else:
+            # Object is up-to-date
+            APP().TorRelaySettings = TorRelaySettingsStorage.toStorage(ob)
+
+    @staticmethod
+    def toObject(st):
+        if not st:
+            # Server storage does not exist, or is empty
+            return TorRelaySettingsStorage.init()
+
+        return ujson.loads(Base64Encoder.decode(st))
+
+    @staticmethod
+    def toStorage(ob):
+        return Base64Encoder.encode(
+            ujson.dumps(ob, ensure_ascii=False, escape_forward_slashes=False).encode()
+        )
+
+    @staticmethod
+    def clear():
+        APP().TorRelaySettings = ''
+
+
+class AsyncSubprocessMessage:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.msgQueue = queue.Queue()
+        self.msgTimer = QtCore.QTimer()
+
+        self.daemonThread = None
+
+    def connectTimeoutCallback(self, callback):
+        self.msgTimer.timeout.connect(callback)
+
+    def startDaemonThread(self, stdout):
+        def enqueue(msgQueue):
+            for line in iter(stdout.readline, b''):
+                msgQueue.put(line.decode('utf-8', 'replace').strip())
+
+            stdout.close()
+
+        self.daemonThread = threading.Thread(
+            target=enqueue, args=(self.msgQueue,), daemon=True
+        )
+        self.daemonThread.start()
+
+    def startTimer(self, msec=1):
+        self.msgTimer.start(msec)
+
+    def stopTimer(self):
+        self.msgTimer.stop()
+
+    def getLineNoWait(self):
+        try:
+            return self.msgQueue.get_nowait()
+        except queue.Empty:
+            # Queue is empty
+            return ''
 
 
 class Switch:

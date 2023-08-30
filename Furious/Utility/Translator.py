@@ -1,5 +1,6 @@
 from Furious.Core.Core import XrayCore, Hysteria
-from Furious.Utility.Constants import APP, APPLICATION_NAME
+from Furious.Core.TorRelay import TorRelay
+from Furious.Utility.Constants import APP, APPLICATION_NAME, TOR_FAQ_LABEL
 
 
 class Translatable:
@@ -87,6 +88,9 @@ NO_TRANSLATION = [
     'TLS',
     XrayCore.name(),
     Hysteria.name(),
+    TOR_FAQ_LABEL,
+    'socks',
+    'http',
 ]
 
 NO_TRANSLATION_DICT = {key: True for key in NO_TRANSLATION}
@@ -133,6 +137,11 @@ TRANSLATION = {
         'ZH': '绕过伊朗',
         'TW': '繞過伊朗',
     },
+    'Route My Traffic Through Tor': {
+        'ES': 'Enrutar Mi Tráfico a Través de Tor',
+        'ZH': '通过Tor路由我的流量',
+        'TW': '通過Tor路由我的流量',
+    },
     'Global': {
         'ES': 'Global',
         'ZH': '全球',
@@ -142,11 +151,6 @@ TRANSLATION = {
         'ES': 'Personalizado',
         'ZH': '自定义',
         'TW': '自定義',
-    },
-    'Edit Routing...': {
-        'ES': 'Editar Enrutamiento...',
-        'ZH': '编辑路由...',
-        'TW': '編輯路由...',
     },
     'Import': {
         'ES': 'Importar',
@@ -193,15 +197,30 @@ TRANSLATION = {
         'ZH': '在编辑器中显示制表符和空格',
         'TW': '在編輯器中顯示制表符和空格',
     },
+    'Routing Settings...': {
+        'ES': 'Ajustes de Enrutamiento...',
+        'ZH': '路由设置...',
+        'TW': '路由設置...',
+    },
+    'Tor Relay Settings...': {
+        'ES': 'Ajustes de Tor Relay...',
+        'ZH': 'Tor Relay设置...',
+        'TW': 'Tor Relay設置...',
+    },
     'Help': {
         'ES': 'Ayuda',
         'ZH': '帮助',
         'TW': '幫助',
     },
-    'Show Log...': {
-        'ES': 'Mostrar Registro...',
-        'ZH': '显示日志...',
-        'TW': '顯示日志...',
+    f'Show {APPLICATION_NAME} Log...': {
+        'ES': f'Mostrar Registro de {APPLICATION_NAME}...',
+        'ZH': f'显示{APPLICATION_NAME}日志...',
+        'TW': f'顯示{APPLICATION_NAME}日志...',
+    },
+    f'Show {TorRelay.name()} Log...': {
+        'ES': f'Mostrar Registro de {TorRelay.name()}...',
+        'ZH': f'显示{TorRelay.name()}日志...',
+        'TW': f'顯示{TorRelay.name()}日志...',
     },
     'Check For Updates': {
         'ES': 'Comprobar Actualizaciones',
@@ -771,6 +790,42 @@ TRANSLATION = {
         'ZH': '日志查看器',
         'TW': '日志查看器',
     },
+    # Tor Relay Settings
+    'Tor Relay Settings': {
+        'ES': 'Ajustes de Tor Relay',
+        'ZH': 'Tor Relay设置',
+        'TW': 'Tor Relay設置',
+    },
+    'Tunnel Port': {
+        'ES': 'Puerto de Túnel',
+        'ZH': '隧道端口',
+        'TW': '隧道端口',
+    },
+    'Proxy': {
+        'ES': 'Proxy',
+        'ZH': '代理',
+        'TW': '代理',
+    },
+    'Other': {
+        'ES': 'Otro',
+        'ZH': '其它',
+        'TW': '其它',
+    },
+    'Use Proxy': {
+        'ES': 'Usa Proxy',
+        'ZH': '使用代理',
+        'TW': '使用代理',
+    },
+    'Log Level': {
+        'ES': 'Nivel de Registro',
+        'ZH': '日志级别',
+        'TW': '日志級別',
+    },
+    'Relay Establish Timeout(seconds)': {
+        'ES': 'Establecer Tiempo de Espera de Relay(segundos)',
+        'ZH': 'Relay建立超时（秒）',
+        'TW': 'Relay建立超時（秒）',
+    },
     # Check For Updates
     'Check for updates failed.': {
         'ES': 'Error al comprobar actualizaciones.',
@@ -837,6 +892,16 @@ TRANSLATION = {
         'ES': 'Ruta cambiada: ',
         'ZH': '路由已更改：',
         'TW': '路由已更改：',
+    },
+    f'{TorRelay.name()} establish timeout': {
+        'ES': f'Establecer tiempo de espera de {TorRelay.name()}',
+        'ZH': f'{TorRelay.name()}建立超时',
+        'TW': f'{TorRelay.name()}建立超時',
+    },
+    'Cannot find Tor CLI in PATH': {
+        'ES': 'No se puede encontrar Tor CLI en PATH',
+        'ZH': '在PATH中找不到Tor CLI',
+        'TW': '在PATH中找不到Tor CLI',
     },
     # Errors
     f'{APPLICATION_NAME} is not be able to run on this operating system.': {
