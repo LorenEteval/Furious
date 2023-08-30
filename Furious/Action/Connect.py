@@ -6,7 +6,12 @@ from Furious.Action.Routing import BUILTIN_ROUTING_TABLE, BUILTIN_ROUTING
 from Furious.Gui.Action import Action
 from Furious.Widget.ConnectingProgressBar import ConnectingProgressBar
 from Furious.Widget.Widget import MessageBox
-from Furious.Utility.Constants import APP, APPLICATION_NAME, PROXY_SERVER_BYPASS
+from Furious.Utility.Constants import (
+    APP,
+    APPLICATION_NAME,
+    PROXY_SERVER_BYPASS,
+    DEFAULT_TOR_HTTPS_PORT,
+)
 from Furious.Utility.Utility import (
     Switch,
     SupportConnectedCallback,
@@ -605,9 +610,7 @@ class ConnectAction(Action):
 
     def startTorRelay(self, core, proxyServer, startCounter=0, step=1):
         # Redirect Proxy
-        self.proxyServer = (
-            f'127.0.0.1:{self.torRelayStorageObj.get("httpsTunnelPort", 9049)}'
-        )
+        self.proxyServer = f'127.0.0.1:{self.torRelayStorageObj.get("httpsTunnelPort", DEFAULT_TOR_HTTPS_PORT)}'
 
         try:
             timeout = 1000 * int(
