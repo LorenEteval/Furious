@@ -138,7 +138,10 @@ class Menu(Translatable, SupportConnectedCallback, QMenu):
 
                 self.addAction(action)
 
-        self.setStyleSheet(self.getStyleSheet(Color.LIGHT_BLUE))
+        if APP().tray is not None and APP().tray.ConnectAction.isConnected():
+            self.setStyleSheet(self.getStyleSheet(Color.LIGHT_RED_))
+        else:
+            self.setStyleSheet(self.getStyleSheet(Color.LIGHT_BLUE))
 
     @staticmethod
     def getStyleSheet(color):
@@ -167,7 +170,10 @@ class MenuBar(SupportConnectedCallback, QMenuBar):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setSelectionColor(Color.LIGHT_BLUE)
+        if APP().tray is not None and APP().tray.ConnectAction.isConnected():
+            self.setSelectionColor(Color.LIGHT_RED_)
+        else:
+            self.setSelectionColor(Color.LIGHT_BLUE)
 
     def setSelectionColor(self, color):
         self.setStyleSheet(
