@@ -27,6 +27,7 @@ from Furious.Widget.EditConfiguration import (
 from Furious.Widget.AssetViewer import AssetViewerWidget
 from Furious.Utility.Constants import (
     APP,
+    PLATFORM,
     APPLICATION_NAME,
     GOLDEN_RATIO,
     DATA_DIR,
@@ -596,6 +597,20 @@ class RoutingEditor(MainWindow):
         self.menuBar().addMenu(self._fileMenu)
         self.menuBar().addMenu(self._viewMenu)
 
+        if PLATFORM != 'Darwin':
+            self.setWidthAndHeight()
+
+    def show(self):
+        super().show()
+
+        if PLATFORM == 'Darwin':
+            self.setWidthAndHeight()
+
+    def setWidthAndHeight(self):
+        self.setGeometry(100, 100, 656, 856)
+
+        moveToCenter(self)
+
     def addTabWithData(self, core, text):
         if self.isBuiltin:
             editor = RoutingTextBrowser(parent=self)
@@ -1017,7 +1032,6 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
         routingEditor = RoutingEditor(isBuiltin)
         routingEditor.title = title
         routingEditor.setWindowTitle(title)
-        routingEditor.setGeometry(100, 100, 656, 856)
 
         moveToCenter(routingEditor)
 
@@ -1227,6 +1241,16 @@ class EditRoutingWidget(MainWindow):
 
         self.setCentralWidget(self.fakeCentralWidget)
 
+        if PLATFORM != 'Darwin':
+            self.setWidthAndHeight()
+
+    def show(self):
+        super().show()
+
+        if PLATFORM == 'Darwin':
+            self.setWidthAndHeight()
+
+    def setWidthAndHeight(self):
         try:
             self.setGeometry(
                 100,
