@@ -1837,6 +1837,16 @@ class EditConfigurationWidget(MainWindow):
 
             self.menuBar().addMenu(menu)
 
+        if PLATFORM != 'Darwin':
+            self.setWidthAndHeight()
+
+    def show(self):
+        super().show()
+
+        if PLATFORM == 'Darwin':
+            self.setWidthAndHeight()
+
+    def setWidthAndHeight(self):
         try:
             self.setGeometry(
                 100,
@@ -1846,7 +1856,7 @@ class EditConfigurationWidget(MainWindow):
         except Exception:
             # Any non-exit exceptions
 
-            self.setGeometry(100, 100, 1440, 1440 * GOLDEN_RATIO)
+            self.setGeometry(100, 100, 1568, 1568 * GOLDEN_RATIO)
 
         moveToCenter(self)
 
