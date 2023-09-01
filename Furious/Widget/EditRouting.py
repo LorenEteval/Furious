@@ -60,8 +60,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
-    QSplitter,
-    QStyledItemDelegate,
     QTableWidget,
     QTableWidgetItem,
     QTextBrowser,
