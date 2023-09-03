@@ -1,4 +1,4 @@
-from Furious.Utility.Constants import PLATFORM, ROOT_DIR, DATA_DIR
+from Furious.Utility.Constants import PLATFORM
 from Furious.Utility.Utility import getAbsolutePath
 
 from PySide6 import QtCore
@@ -96,6 +96,8 @@ class XrayCore(Core):
         ConfigurationError = 23
         # Windows: 4294967295. Darwin, Linux: 255 (-1)
         ServerStartFailure = 4294967295 if PLATFORM == 'Windows' else 255
+        # Windows shutting down
+        SystemShuttingDown = 0x40010004
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -137,6 +139,8 @@ class Hysteria(Core):
     class ExitCode:
         ConfigurationError = 23
         RemoteNetworkError = 3
+        # Windows shutting down
+        SystemShuttingDown = 0x40010004
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
