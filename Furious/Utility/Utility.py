@@ -14,6 +14,7 @@ import os
 import copy
 import ujson
 import queue
+import ctypes
 import logging
 import pybase64
 import threading
@@ -296,6 +297,7 @@ bootstrapIcon = functools.partial(icon, 'bootstrap')
 bootstrapIconWhite = functools.partial(icon, 'bootstrap/white')
 
 
+@functools.lru_cache(None)
 def protocolRepr(protocol):
     if protocol.lower() == 'vmess':
         return Protocol.VMess
@@ -313,6 +315,7 @@ def getAbsolutePath(path):
     return path if os.path.isabs(path) else str(ROOT_DIR / path)
 
 
+@functools.lru_cache(None)
 def getUbuntuRelease():
     try:
         result = subprocess.run(

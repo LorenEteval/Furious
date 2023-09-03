@@ -13,6 +13,7 @@ import re
 import signal
 import logging
 import threading
+import functools
 import subprocess
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ class TorRelayStarter(AsyncSubprocessMessage):
                 logger.info(f'{TorRelay.name()} bootstrapped {percentage}%')
 
 
+@functools.lru_cache(None)
 def getTorRelayVersion():
     try:
         result = subprocess.run(
@@ -97,13 +99,12 @@ def getTorRelayVersion():
     except Exception:
         # Any non-exit exceptions
 
-        return '0.0.0'
-
-
-CACHED_VERSION = getTorRelayVersion()
+        return TorRelay.VERSION_NOT_FOUND
 
 
 class TorRelay(Core):
+    VERSION_NOT_FOUND = '0.0.0'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -111,7 +112,7 @@ class TorRelay(Core):
 
     @staticmethod
     def checkIfExists():
-        return CACHED_VERSION != '0.0.0'
+        return TorRelay.version() != TorRelay.VERSION_NOT_FOUND
 
     @staticmethod
     def name():
@@ -119,7 +120,7 @@ class TorRelay(Core):
 
     @staticmethod
     def version():
-        return CACHED_VERSION
+        return getTorRelayVersion()
 
     @property
     def bootstrapPercentage(self):
