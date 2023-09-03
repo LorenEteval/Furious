@@ -97,6 +97,10 @@ class ConnectAction(Action):
             assert self.coreRunning
             assert self.coreName == XrayCore.name()
 
+        if exitcode == XrayCore.ExitCode.SystemShuttingDown:
+            # System shutting down. Do nothing
+            return
+
         if exitcode == XrayCore.ExitCode.ConfigurationError:
             if not self.isConnecting():
                 # Protect connecting action. Mandatory
@@ -142,6 +146,10 @@ class ConnectAction(Action):
             assert self.coreRunning
             assert self.coreName == Hysteria.name()
 
+        if exitcode == Hysteria.ExitCode.SystemShuttingDown:
+            # System shutting down. Do nothing
+            return
+
         if exitcode == Hysteria.ExitCode.ConfigurationError:
             if not self.isConnecting():
                 # Protect connecting action. Mandatory
@@ -182,14 +190,14 @@ class ConnectAction(Action):
             )
 
     def stopCore(self):
+        self.TorRelay.stop()
+
         self.XrayCore.registerExitCallback(None)
         self.Hysteria.registerExitCallback(None)
 
         # Stop any potentially running core
         self.XrayCore.stop()
         self.Hysteria.stop()
-
-        self.TorRelay.stop()
 
         self.coreRunning = False
 
