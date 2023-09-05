@@ -666,7 +666,11 @@ def versionToNumber(version):
 
 class CheckForUpdatesAction(Action):
     def __init__(self, **kwargs):
-        super().__init__(_('Check For Updates'), **kwargs)
+        super().__init__(
+            _('Check For Updates'),
+            icon=bootstrapIcon('download.svg'),
+            **kwargs,
+        )
 
         self.networkAccessManager = QNetworkAccessManager(parent=self)
         self.networkReply = None
@@ -682,7 +686,7 @@ class CheckForUpdatesAction(Action):
         )
 
     def triggeredCallback(self, checked):
-        proxyServer = APP().tray.ConnectAction.proxyServer
+        proxyServer = APP().tray.ConnectAction.httpsProxyServer
 
         if proxyServer:
             logger.info(f'check for updates uses proxy server {proxyServer}')
@@ -697,8 +701,10 @@ class CheckForUpdatesAction(Action):
                 )
             )
         else:
+            logger.info(f'check for updates uses no proxy')
+
             self.networkAccessManager.setProxy(
-                QNetworkProxy(QNetworkProxy.ProxyType.DefaultProxy)
+                QNetworkProxy(QNetworkProxy.ProxyType.NoProxy)
             )
 
         apiUrl = (
@@ -725,14 +731,7 @@ class CheckForUpdatesAction(Action):
             else:
                 logger.info('check for updates success')
 
-                # b'...'
-                data = (
-                    str(self.networkReply.readAll())[2:-1]
-                    .encode('utf-8')
-                    .decode('unicode_escape')
-                )
-
-                info = ujson.loads(data)
+                info = ujson.loads(self.networkReply.readAll().data())
 
                 if versionToNumber(info['tag_name']) > versionToNumber(
                     APPLICATION_VERSION
