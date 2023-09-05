@@ -178,7 +178,11 @@ class ExportLinkAction(Action):
 
 class ExportQRCodeAction(Action):
     def __init__(self, **kwargs):
-        super().__init__(_('Export As QR Code'), **kwargs)
+        super().__init__(
+            _('Export As QR Code'),
+            icon=bootstrapIcon('qr-code.svg'),
+            **kwargs,
+        )
 
         self.exportQRCode = ExportQRCode()
         self.exportLinkResult = ExportLinkResultBox('', '', isQRCodeExport=True)
