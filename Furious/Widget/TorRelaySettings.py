@@ -21,6 +21,7 @@ from Furious.Utility.Constants import (
     PLATFORM,
     DEFAULT_TOR_SOCKS_PORT,
     DEFAULT_TOR_HTTPS_PORT,
+    DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT,
 )
 from Furious.Utility.Utility import (
     StateContext,
@@ -215,7 +216,9 @@ class TorRelaySettingsWidget(Translatable, SupportConnectedCallback, QDialog):
             self.StorageObj.get('logLevel', 'notice')
         )
         self.torRelayTimeoutSpinBox.setValue(
-            self.StorageObj.get('relayEstablishTimeout', 15)
+            self.StorageObj.get(
+                'relayEstablishTimeout', DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT
+            )
         )
 
     def closeEvent(self, event):

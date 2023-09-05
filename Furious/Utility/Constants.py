@@ -76,6 +76,8 @@ TOR_FAQ_LABEL = f'Tor FAQ: <a href=\"{TOR_FAQ_URL}\">{TOR_FAQ_URL}</a>'
 # Avoid standard Tor port in case of running Tor services
 DEFAULT_TOR_SOCKS_PORT = 9048
 DEFAULT_TOR_HTTPS_PORT = 9047
+# 20s
+DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT = 20
 
 ADMINISTRATOR_NAME = 'Administrator' if PLATFORM == 'Windows' else 'root'
 
