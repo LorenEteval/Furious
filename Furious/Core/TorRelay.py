@@ -22,7 +22,7 @@ from Furious.Utility.Constants import (
     DEFAULT_TOR_SOCKS_PORT,
     DEFAULT_TOR_HTTPS_PORT,
 )
-from Furious.Utility.Utility import AsyncSubprocessMessage
+from Furious.Utility.Utility import AsyncSubprocessMessage, runCommand
 
 from PySide6 import QtCore
 
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 class TorRelayStarter(AsyncSubprocessMessage):
-    BOOTSTRAP_STATUS = re.compile('Bootstrapped ([0-9]+)%')
+    BOOTSTRAP_STATUS = re.compile(r'Bootstrapped ([0-9]+)%')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -103,12 +103,11 @@ class TorRelayStarter(AsyncSubprocessMessage):
 @functools.lru_cache(None)
 def getTorRelayVersion():
     try:
-        result = subprocess.run(
+        result = runCommand(
             ['tor', '--version'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             check=True,
-            creationflags=subprocess.CREATE_NO_WINDOW,
         )
 
         # First line, 3rd param...
