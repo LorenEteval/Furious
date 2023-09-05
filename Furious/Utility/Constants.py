@@ -55,12 +55,29 @@ PROXY_SERVER_BYPASS = (
     '172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'
 )
 
+if PLATFORM == 'Windows':
+    APPLICATION_TUN_DEVICE_NAME = APPLICATION_NAME
+elif PLATFORM == 'Darwin':
+    APPLICATION_TUN_DEVICE_NAME = 'utun777'
+else:
+    APPLICATION_TUN_DEVICE_NAME = ''
+
+APPLICATION_TUN_NETWORK_INTERFACE_NAME = 'en0' if PLATFORM == 'Darwin' else ''
+APPLICATION_TUN_GATEWAY_ADDRESS = '10.0.68.1'
+
+if PLATFORM == 'Windows':
+    APPLICATION_TUN_IP_ADDRESS = '10.0.68.10'
+else:
+    APPLICATION_TUN_IP_ADDRESS = APPLICATION_TUN_GATEWAY_ADDRESS
+
 TOR_FAQ_URL = 'https://support.torproject.org/faq/'
 TOR_FAQ_LABEL = f'Tor FAQ: <a href=\"{TOR_FAQ_URL}\">{TOR_FAQ_URL}</a>'
 
 # Avoid standard Tor port in case of running Tor services
 DEFAULT_TOR_SOCKS_PORT = 9048
 DEFAULT_TOR_HTTPS_PORT = 9047
+
+ADMINISTRATOR_NAME = 'Administrator' if PLATFORM == 'Windows' else 'root'
 
 
 class Color:

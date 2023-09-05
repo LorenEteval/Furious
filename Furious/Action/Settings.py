@@ -17,8 +17,8 @@
 
 from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import Menu
-from Furious.Utility.Constants import APP
-from Furious.Utility.Utility import bootstrapIcon, Switch
+from Furious.Utility.Constants import APP, PLATFORM, ADMINISTRATOR_NAME
+from Furious.Utility.Utility import Switch, bootstrapIcon, isAdministrator, isVPNMode
 from Furious.Utility.Translator import gettext as _
 from Furious.Utility.StartupOnBoot import StartupOnBoot
 
@@ -59,6 +59,41 @@ class RoutingChildAction(Action):
         APP().RoutesWidget.show()
 
 
+class VPNModeAction(Action):
+    def __init__(self, **kwargs):
+        super().__init__(
+            _('VPN Mode')
+            if isAdministrator()
+            else _(f'VPN Mode Disabled ({ADMINISTRATOR_NAME})'),
+            **kwargs,
+        )
+
+        if not isAdministrator():
+            self.setDisabled(True)
+
+    def triggeredCallback(self, checked):
+        assert isAdministrator()
+
+        # TODO: Tray messages?
+
+        if checked:
+            APP().VPNMode = Switch.ON_
+
+            if APP().tray.ConnectAction.isConnected():
+                if isVPNMode():
+                    if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
+                        # Currently VPN Mode is only supported on Windows and macOS
+                        APP().tray.ConnectAction.startTun2socks()
+        else:
+            if APP().tray.ConnectAction.isConnected():
+                if isVPNMode():
+                    if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
+                        # Currently VPN Mode is only supported on Windows and macOS
+                        APP().tray.ConnectAction.stopTun2socks()
+
+            APP().VPNMode = Switch.OFF
+
+
 class TorRelaySettingsChildAction(Action):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -88,10 +123,25 @@ class SettingsAction(Action):
                     checkable=True,
                     checked=APP().ShowTabAndSpacesInEditor == Switch.ON_,
                 ),
+                VPNModeAction(
+                    checkable=True,
+                    checked=APP().VPNMode == Switch.ON_,
+                )
+                if PLATFORM == 'Windows' or PLATFORM == 'Darwin'
+                else None,
                 Seperator(),
                 RoutingChildAction(),
                 Seperator(),
-                TorRelaySettingsChildAction(_('Tor Relay Settings...')),
+                TorRelaySettingsChildAction(
+                    _('Tor Relay Settings...'), icon=bootstrapIcon('incognito.svg')
+                ),
             ),
             useActionGroup=False,
         )
+
+    def getVPNModeAction(self):
+        if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
+            # 3rd action
+            return self._menu.actions()[3]
+        else:
+            return None
