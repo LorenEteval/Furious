@@ -72,11 +72,15 @@ class Core:
     def start(self, *args, **kwargs):
         logger.info(f'{self.name()} {self.version()} started')
 
-        self._process = multiprocessing.Process(*args, **kwargs, daemon=True)
+        waitCore = kwargs.pop('waitCore', True)
+        waitTime = kwargs.pop('waitTime', 2000)
+
+        self._process = multiprocessing.Process(**kwargs, daemon=True)
         self._process.start()
 
-        # Wait for the core to start up completely
-        QTest.qWait(2000)
+        if waitCore:
+            # Wait for the core to start up completely
+            QTest.qWait(waitTime)
 
         if self.checkAlive():
             # Start core daemon
@@ -134,11 +138,8 @@ class XrayCore(Core):
 
             return '0.0.0'
 
-    def start(self, json):
-        super().start(
-            target=startXrayCore,
-            args=(json,),
-        )
+    def start(self, json, **kwargs):
+        super().start(target=startXrayCore, args=(json,), **kwargs)
 
 
 def startHysteria(json, rule, mmdb):
@@ -213,8 +214,5 @@ class Hysteria(Core):
 
             return '0.0.0'
 
-    def start(self, json, rule, mmdb):
-        super().start(
-            target=startHysteria,
-            args=(json, rule, mmdb),
-        )
+    def start(self, json, rule, mmdb, **kwargs):
+        super().start(target=startHysteria, args=(json, rule, mmdb), **kwargs)
