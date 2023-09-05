@@ -284,10 +284,10 @@ class Application(SingletonApplication):
         Proxy.off()
         Proxy.daemonOff()
 
+        NeedSyncSettings.syncAll()
+
         if self.tray is not None:
             self.tray.ConnectAction.stopCore()
-
-        NeedSyncSettings.syncAll()
 
     def exit(self, exitcode=0):
         if self.ServerWidget is not None:
