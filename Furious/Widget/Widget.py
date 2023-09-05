@@ -149,10 +149,11 @@ class Menu(Translatable, SupportConnectedCallback, QMenu):
         for action in actions:
             if isinstance(action, Seperator):
                 self.addSeparator()
-            else:
-                assert isinstance(action, Action)
-
+            elif isinstance(action, Action):
                 self.addAction(action)
+            else:
+                # Do nothing
+                pass
 
         if APP().tray is not None and APP().tray.ConnectAction.isConnected():
             self.setStyleSheet(self.getStyleSheet(Color.LIGHT_RED_))
