@@ -22,6 +22,7 @@ from Furious.Utility.Constants import (
     ROOT_DIR,
     DEFAULT_TOR_SOCKS_PORT,
     DEFAULT_TOR_HTTPS_PORT,
+    DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT,
 )
 
 from PySide6 import QtCore
@@ -152,7 +153,7 @@ class TorRelaySettingsStorage:
         'httpsTunnelPort': DEFAULT_TOR_HTTPS_PORT,
         'useProxy': True,
         'logLevel': 'notice',
-        'relayEstablishTimeout': 15,
+        'relayEstablishTimeout': DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT,
     }
 
     @staticmethod
@@ -341,7 +342,12 @@ def isValidIPAddress(address):
 
 
 def runCommand(*args, **kwargs):
-    return subprocess.run(*args, creationflags=subprocess.CREATE_NO_WINDOW, **kwargs)
+    if PLATFORM == 'Windows':
+        return subprocess.run(
+            *args, creationflags=subprocess.CREATE_NO_WINDOW, **kwargs
+        )
+    else:
+        return subprocess.run(*args, **kwargs)
 
 
 def getAbsolutePath(path):
