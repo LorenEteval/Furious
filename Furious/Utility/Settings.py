@@ -76,6 +76,8 @@ SUPPORTED_SETTINGS = (
     Settings('Connect', Switch.RANGE),
     # User Routing option
     Settings('Routing', default=BUILTIN_ROUTING[0]),
+    # User VPN Mode
+    Settings('VPNMode', Switch.RANGE),
     # User Custom Routing object
     Settings('CustomRouting'),
     # User Configuration
