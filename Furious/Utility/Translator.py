@@ -169,6 +169,21 @@ TRANSLATION = {
         'ZH': '自定义',
         'TW': '自定義',
     },
+    'VPN Mode': {
+        'ES': 'Modo VPN',
+        'ZH': 'VPN模式',
+        'TW': 'VPN模式',
+    },
+    'VPN Mode Disabled (Administrator)': {
+        'ES': 'Modo VPN Deshabilitado (Administrador)',
+        'ZH': 'VPN模式已禁用（管理员）',
+        'TW': 'VPN模式已禁用（管理員）',
+    },
+    'VPN Mode Disabled (root)': {
+        'ES': 'Modo VPN Deshabilitado (root)',
+        'ZH': 'VPN模式已禁用（root）',
+        'TW': 'VPN模式已禁用（root）',
+    },
     'Import': {
         'ES': 'Importar',
         'ZH': '导入',
@@ -277,6 +292,14 @@ TRANSLATION = {
         f'proxy http válido en la configuración de su servidor.',
         'ZH': f'{APPLICATION_NAME}在您的服务器配置中找不到任何有效的http代理端点。',
         'TW': f'{APPLICATION_NAME}在您的服務器配置中找不到任何有效的http代理端點。',
+    },
+    # Socks Proxy Configuration Error
+    f'{APPLICATION_NAME} cannot find any valid socks proxy '
+    f'endpoint in your server configuration.': {
+        'ES': f'{APPLICATION_NAME} no puede encontrar ningún extremo de '
+        f'proxy socks válido en la configuración de su servidor.',
+        'ZH': f'{APPLICATION_NAME}在您的服务器配置中找不到任何有效的socks代理端点。',
+        'TW': f'{APPLICATION_NAME}在您的服務器配置中找不到任何有效的socks代理端點。',
     },
     'Please complete your server configuration.': {
         'ES': 'Complete la configuración de su servidor.',
@@ -738,16 +761,19 @@ TRANSLATION = {
         'ZH': '保存路由配置时出错',
         'TW': '保存路由配置時出錯',
     },
-    f'Edit {XrayCore.name()} Routing Rules': {
-        'ES': f'Editar Reglas de Enrutamiento de {XrayCore.name()}',
-        'ZH': f'编辑{XrayCore.name()}路由规则',
-        'TW': f'編輯{XrayCore.name()}路由規則',
-    },
-    f'Edit {Hysteria.name()} Routing Rules': {
-        'ES': f'Editar Reglas de Enrutamiento de {Hysteria.name()}',
-        'ZH': f'编辑{Hysteria.name()}路由规则',
-        'TW': f'編輯{Hysteria.name()}路由規則',
-    },
+    **dict(
+        list(
+            [
+                f'Edit {coreName} Routing Rules',
+                {
+                    'ES': f'Editar Reglas de Enrutamiento de {coreName}',
+                    'ZH': f'编辑{coreName}路由规则',
+                    'TW': f'編輯{coreName}路由規則',
+                },
+            ]
+        )
+        for coreName in [XrayCore.name(), Hysteria.name()]
+    ),
     f'{XrayCore.name()} Routing Rules': {
         'ES': f'Reglas de Enrutamiento de {XrayCore.name()}',
         'ZH': f'{XrayCore.name()}路由规则',
@@ -838,8 +864,8 @@ TRANSLATION = {
         'ZH': '日志级别',
         'TW': '日志級別',
     },
-    'Relay Establish Timeout(seconds)': {
-        'ES': 'Establecer Tiempo de Espera de Relay(segundos)',
+    'Relay Establish Timeout (seconds)': {
+        'ES': 'Establecer Tiempo de Espera de Relay (segundos)',
         'ZH': 'Relay建立超时（秒）',
         'TW': 'Relay建立超時（秒）',
     },
