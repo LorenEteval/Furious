@@ -36,6 +36,7 @@ import logging
 import pybase64
 import threading
 import functools
+import ipaddress
 import subprocess
 
 logger = logging.getLogger(__name__)
@@ -328,6 +329,21 @@ def protocolRepr(protocol):
     return protocol
 
 
+def isValidIPAddress(address):
+    try:
+        ipaddress.ip_address(address)
+    except Exception:
+        # Any non-exita exceptions
+
+        return False
+    else:
+        return True
+
+
+def runCommand(*args, **kwargs):
+    return subprocess.run(*args, creationflags=subprocess.CREATE_NO_WINDOW, **kwargs)
+
+
 def getAbsolutePath(path):
     return path if os.path.isabs(path) else str(ROOT_DIR / path)
 
@@ -335,7 +351,7 @@ def getAbsolutePath(path):
 @functools.lru_cache(None)
 def getUbuntuRelease():
     try:
-        result = subprocess.run(
+        result = runCommand(
             ['cat', '/etc/lsb-release'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -362,6 +378,18 @@ def swapListItem(listOrTuple, index0, index1):
 
     listOrTuple[index0] = listOrTuple[index1]
     listOrTuple[index1] = swap
+
+
+@functools.lru_cache(None)
+def isAdministrator():
+    if PLATFORM == 'Windows':
+        return ctypes.windll.shell32.IsUserAnAdmin() == 1
+    else:
+        return os.geteuid() == 0
+
+
+def isVPNMode():
+    return isAdministrator() and APP().VPNMode == Switch.ON_
 
 
 def moveToCenter(widget, parent=None):

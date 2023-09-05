@@ -17,6 +17,7 @@
 
 from Furious.Core.Core import XrayCore, Hysteria
 from Furious.Core.TorRelay import TorRelay
+from Furious.Core.Tun2socks import Tun2socks
 from Furious.Core.Intellisense import Intellisense
 from Furious.Core.Configuration import Configuration
 from Furious.Action.Routing import BUILTIN_ROUTING_TABLE, BUILTIN_ROUTING
@@ -25,18 +26,28 @@ from Furious.Widget.ConnectingProgressBar import ConnectingProgressBar
 from Furious.Widget.Widget import MessageBox
 from Furious.Utility.Constants import (
     APP,
+    PLATFORM,
     APPLICATION_NAME,
     PROXY_SERVER_BYPASS,
+    APPLICATION_TUN_DEVICE_NAME,
+    APPLICATION_TUN_NETWORK_INTERFACE_NAME,
+    APPLICATION_TUN_IP_ADDRESS,
+    APPLICATION_TUN_GATEWAY_ADDRESS,
     DEFAULT_TOR_HTTPS_PORT,
+    DEFAULT_TOR_SOCKS_PORT,
 )
 from Furious.Utility.Utility import (
     Switch,
     SupportConnectedCallback,
     bootstrapIcon,
     getAbsolutePath,
+    isValidIPAddress,
+    isAdministrator,
+    isVPNMode,
 )
 from Furious.Utility.Translator import gettext as _
 from Furious.Utility.Proxy import Proxy
+from Furious.Utility.RoutingTable import RoutingTable
 
 from PySide6 import QtCore
 from PySide6.QtTest import QTest
@@ -54,7 +65,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class HttpProxyServerError(Exception):
+class HttpsProxyServerError(Exception):
+    pass
+
+
+class SocksProxyServerError(Exception):
     pass
 
 
@@ -72,9 +87,10 @@ class ConnectAction(Action):
         self.configurationIcingBox = MessageBox()
         self.configurationErrorBox = MessageBox()
         self.configurationTampered = MessageBox()
-        self.httpProxyConfErrorBox = MessageBox()
+        self.configurationProxyErr = MessageBox()
 
-        self.proxyServer = ''
+        self.httpsProxyServer = ''
+        self.socksProxyServer = ''
 
         self.networkAccessManager = QNetworkAccessManager(parent=self)
         self.networkReply = None
@@ -106,6 +122,7 @@ class ConnectAction(Action):
 
         self.XrayCore = XrayCore()
         self.Hysteria = Hysteria()
+        self.Tun2socks = Tun2socks()
         self.TorRelay = TorRelay()
 
     def XrayCoreExitCallback(self, exitcode):
@@ -206,7 +223,39 @@ class ConnectAction(Action):
                 f'{Hysteria.name()}: {_("Core terminated unexpectedly")}'
             )
 
+    def Tun2socksExitCallback(self, exitcode):
+        if exitcode == Tun2socks.ExitCode.SystemShuttingDown:
+            # System shutting down. Do nothing
+            return
+
+        if exitcode == Tun2socks.ExitCode.TunnelStartFailure:
+            if not self.isConnecting():
+                # Protect connecting action. Mandatory
+                return self.disconnectAction(
+                    f'{Hysteria.name()}: {_("Connection to server has been lost")}'
+                )
+            else:
+                self.coreRunning = False
+                self.disconnectReason = (
+                    f'{Hysteria.name()}: {_("Connection to server has been lost")}'
+                )
+
+                return
+
+        if not self.isConnecting():
+            # Protect connecting action. Mandatory
+            self.disconnectAction(
+                f'{Hysteria.name()}: {_("Core terminated unexpectedly")}'
+            )
+        else:
+            self.coreRunning = False
+            self.disconnectReason = (
+                f'{Hysteria.name()}: {_("Core terminated unexpectedly")}'
+            )
+
     def stopCore(self):
+        self.stopTun2socks()
+
         self.TorRelay.stop()
 
         self.XrayCore.registerExitCallback(None)
@@ -250,6 +299,13 @@ class ConnectAction(Action):
 
         APP().tray.RoutingAction.setDisabled(value)
 
+        if (PLATFORM == 'Windows' or PLATFORM == 'Darwin') and isAdministrator():
+            VPNModeAction = APP().tray.SettingsAction.getVPNModeAction()
+
+            assert VPNModeAction is not None
+
+            VPNModeAction.setDisabled(value)
+
     def setConnectingStatus(self, showProgressBar=True):
         if showProgressBar:
             self.showConnectingProgressBar()
@@ -292,7 +348,8 @@ class ConnectAction(Action):
         APP().Connect = Switch.OFF
         APP().tray.setPlainIcon()
 
-        self.proxyServer = ''
+        self.httpsProxyServer = ''
+        self.socksProxyServer = ''
 
         self.coreName = ''
         self.coreText = ''
@@ -350,21 +407,29 @@ class ConnectAction(Action):
         # Show the MessageBox and wait for user to close it
         self.configurationIcingBox.exec()
 
-    def errorHttpProxyConf(self):
-        self.httpProxyConfErrorBox.setIcon(MessageBox.Icon.Critical)
-        self.httpProxyConfErrorBox.setWindowTitle(_('Unable to connect'))
-        self.httpProxyConfErrorBox.setText(
+    def errorProxyConf(self, proxyType):
+        assert proxyType == 'http' or proxyType == 'socks'
+
+        self.configurationProxyErr.setIcon(MessageBox.Icon.Critical)
+        self.configurationProxyErr.setWindowTitle(_('Unable to connect'))
+        self.configurationProxyErr.setText(
             _(
-                f'{APPLICATION_NAME} cannot find any valid http proxy '
+                f'{APPLICATION_NAME} cannot find any valid {proxyType} proxy '
                 f'endpoint in your server configuration.'
             )
         )
-        self.httpProxyConfErrorBox.setInformativeText(
+        self.configurationProxyErr.setInformativeText(
             _('Please complete your server configuration.')
         )
 
         # Show the MessageBox and wait for user to close it
-        self.httpProxyConfErrorBox.exec()
+        self.configurationProxyErr.exec()
+
+    def errorHttpsProxyConf(self):
+        self.errorProxyConf('http')
+
+    def errorSocksProxyConf(self):
+        self.errorProxyConf('socks')
 
     @property
     def torRelayStorageObj(self):
@@ -372,8 +437,8 @@ class ConnectAction(Action):
         return APP().torRelaySettingsWidget.StorageObj
 
     def configureCore(self):
-        def validateProxyServer(server):
-            # Validate proxy server
+        def validateHttpsProxyServer(server):
+            # Validate https proxy server
             try:
                 host, port = server.split(':')
 
@@ -383,11 +448,30 @@ class ConnectAction(Action):
                 # Any non-exit exceptions
 
                 self.reset()
-                self.errorHttpProxyConf()
+                self.errorHttpsProxyConf()
 
                 return False
             else:
-                self.proxyServer = server
+                self.httpsProxyServer = server
+
+                return True
+
+        def validateSocksProxyServer(server):
+            # Validate socks proxy server
+            try:
+                host, port = server.split(':')
+
+                if int(port) < 0 or int(port) > 65535:
+                    raise ValueError
+            except Exception:
+                # Any non-exit exceptions
+
+                self.reset()
+                self.errorSocksProxyConf()
+
+                return False
+            else:
+                self.socksProxyServer = server
 
                 return True
 
@@ -399,34 +483,69 @@ class ConnectAction(Action):
         self.Hysteria.registerExitCallback(
             lambda exitcode: self.HysteriaExitCallback(exitcode)
         )
+        self.Tun2socks.registerExitCallback(
+            lambda exitcode: self.Tun2socksExitCallback(exitcode)
+        )
 
-        proxyServer = None
+        httpsProxyServer = None
+        socksProxyServer = None
 
         if Intellisense.getCoreType(self.coreJSON) == XrayCore.name():
             # Assuming is XrayCore configuration
-            proxyHost = None
-            proxyPort = None
+            httpsProxyHost = None
+            httpsProxyPort = None
+            socksProxyHost = None
+            socksProxyPort = None
+
+            if isVPNMode():
+                # Check socks inbound is valid
+                try:
+                    for inbound in self.coreJSON['inbounds']:
+                        if inbound['protocol'] == 'socks':
+                            socksProxyHost = inbound['listen']
+                            socksProxyPort = inbound['port']
+
+                            # Note: If there are multiple socks inbounds
+                            # satisfied, the first one will be chosen.
+                            break
+
+                    if socksProxyHost is None or socksProxyPort is None:
+                        # No HTTP proxy endpoint configured
+                        raise SocksProxyServerError
+
+                    socksProxyServer = f'{socksProxyHost}:{socksProxyPort}'
+                except (KeyError, SocksProxyServerError):
+                    self.reset()
+                    self.errorSocksProxyConf()
+
+                    # Return to caller
+                    return XrayCore.name()
+                else:
+                    # Validate socks proxy server
+                    if not validateSocksProxyServer(socksProxyServer):
+                        # Return to caller
+                        return XrayCore.name()
 
             try:
                 for inbound in self.coreJSON['inbounds']:
                     if inbound['protocol'] == 'http':
-                        proxyHost = inbound['listen']
-                        proxyPort = inbound['port']
+                        httpsProxyHost = inbound['listen']
+                        httpsProxyPort = inbound['port']
 
                         # Note: If there are multiple http inbounds
                         # satisfied, the first one will be chosen.
                         break
 
-                if proxyHost is None or proxyPort is None:
+                if httpsProxyHost is None or httpsProxyPort is None:
                     # No HTTP proxy endpoint configured
-                    raise HttpProxyServerError
+                    raise HttpsProxyServerError
 
-                proxyServer = f'{proxyHost}:{proxyPort}'
-            except (KeyError, HttpProxyServerError):
+                httpsProxyServer = f'{httpsProxyHost}:{httpsProxyPort}'
+            except (KeyError, HttpsProxyServerError):
                 self.reset()
-                self.errorHttpProxyConf()
+                self.errorHttpsProxyConf()
             else:
-                if validateProxyServer(proxyServer):
+                if validateHttpsProxyServer(httpsProxyServer):
                     routing = APP().Routing
 
                     logger.info(f'core {XrayCore.name()} configured')
@@ -527,26 +646,57 @@ class ConnectAction(Action):
                         self.coreJSON, ensure_ascii=False, escape_forward_slashes=False
                     )
                     # Start core
-                    self.XrayCore.start(self.coreText)
+                    if self.coreJSON:
+                        self.XrayCore.start(self.coreText)
 
-                    if routing == 'Route My Traffic Through Tor':
-                        self.startTorRelay(XrayCore.name(), proxyServer)
+                        if routing == 'Route My Traffic Through Tor':
+                            # Must start Tor Relay first since it will redirect proxy for us
+                            self.startTorRelay(XrayCore.name(), httpsProxyServer)
+
+                        if isVPNMode():
+                            if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
+                                # Currently VPN Mode is only supported on Windows and macOS
+                                self.startTun2socks()
+                    else:
+                        # Fast fail
+                        self.XrayCore.start(self.coreText, waitTime=1000)
 
             return XrayCore.name()
 
         if Intellisense.getCoreType(self.coreJSON) == Hysteria.name():
             # Assuming is Hysteria configuration
-            try:
-                proxyServer = self.coreJSON['http']['listen']
 
-                if proxyServer is None:
+            if isVPNMode():
+                # Check socks inbound is valid
+                try:
+                    socksProxyServer = self.coreJSON['socks5']['listen']
+
+                    if socksProxyServer is None:
+                        # No SOCKS proxy endpoint configured
+                        raise SocksProxyServerError
+                except (KeyError, SocksProxyServerError):
+                    self.reset()
+                    self.errorSocksProxyConf()
+
+                    # Return to caller
+                    return Hysteria.name()
+                else:
+                    # Validate socks proxy server
+                    if not validateSocksProxyServer(socksProxyServer):
+                        # Return to caller
+                        return Hysteria.name()
+
+            try:
+                httpsProxyServer = self.coreJSON['http']['listen']
+
+                if httpsProxyServer is None:
                     # No HTTP proxy endpoint configured
-                    raise HttpProxyServerError
-            except (KeyError, HttpProxyServerError):
+                    raise HttpsProxyServerError
+            except (KeyError, HttpsProxyServerError):
                 self.reset()
-                self.errorHttpProxyConf()
+                self.errorHttpsProxyConf()
             else:
-                if validateProxyServer(proxyServer):
+                if validateHttpsProxyServer(httpsProxyServer):
                     self.coreRunning = True
 
                     routing = APP().Routing
@@ -581,7 +731,7 @@ class ConnectAction(Action):
 
                             self.Hysteria.start(self.coreText, '', '')
 
-                            self.startTorRelay(Hysteria.name(), proxyServer)
+                            self.startTorRelay(Hysteria.name(), httpsProxyServer)
                         else:
                             logger.error('find Tor CLI in path failed')
 
@@ -626,16 +776,162 @@ class ConnectAction(Action):
                             )
 
                             # Fast fail
-                            self.Hysteria.start('', '', '')
+                            self.coreJSON = {}
+                            self.coreText = ''
+
+                            self.Hysteria.start(self.coreText, '', '', waitTime=1000)
+
+                    if self.coreJSON:
+                        if isVPNMode():
+                            if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
+                                # Currently VPN Mode is only supported on Windows and macOS
+                                self.startTun2socks()
 
             return Hysteria.name()
 
         # No matching core
         return ''
 
+    def startTun2socks(self):
+        if not self.coreRunning:
+            # Core has exited. Do nothing
+            return
+
+        defaultGateway = list(
+            # Filter TUN Gateway
+            filter(
+                lambda x: x != APPLICATION_TUN_GATEWAY_ADDRESS,
+                RoutingTable.getDefaultGatewayAddress(),
+            )
+        )
+
+        if len(defaultGateway) != 1:
+            # TODO: Error handling
+            print('Fall in error handling default gateway!!!')
+
+        coreAddr = Intellisense.getCoreAddr(self.coreJSON)
+
+        if not coreAddr:
+            # TODO: Error handling
+            print('Fall in error handling coreAddr!!!')
+
+        def start():
+            self.Tun2socks.start(
+                APPLICATION_TUN_DEVICE_NAME,
+                APPLICATION_TUN_NETWORK_INTERFACE_NAME,
+                'silent',
+                f'socks5://{self.socksProxyServer}',
+                '',
+            )
+
+            RoutingTable.addRelations()
+            RoutingTable.setDeviceGatewayAddress(
+                APPLICATION_TUN_DEVICE_NAME,
+                APPLICATION_TUN_IP_ADDRESS,
+                APPLICATION_TUN_GATEWAY_ADDRESS,
+            )
+
+        if not isValidIPAddress(coreAddr):
+            logger.info(f'dns resolve uses proxy server {self.httpsProxyServer}')
+
+            # Checked. split should not throw exceptions
+            proxyHost, proxyPort = self.httpsProxyServer.split(':')
+
+            # Checked. int(proxyPort) should not throw exceptions
+            self.networkAccessManager.setProxy(
+                QNetworkProxy(
+                    QNetworkProxy.ProxyType.HttpProxy, proxyHost, int(proxyPort)
+                )
+            )
+
+            request = QNetworkRequest(
+                QtCore.QUrl(f'https://cloudflare-dns.com/dns-query?name={coreAddr}')
+            )
+            request.setRawHeader('accept'.encode(), 'application/dns-json'.encode())
+
+            self.networkReply = self.networkAccessManager.get(request)
+
+            @QtCore.Slot()
+            def finishedCallback():
+                if self.networkReply is None:
+                    # Interrupted externally. Do nothing
+                    logger.info(f'dns resolve for {coreAddr} interrupted externally')
+
+                    return
+
+                assert isinstance(self.networkReply, QNetworkReply)
+
+                if self.networkReply.error() != QNetworkReply.NetworkError.NoError:
+                    logger.error(
+                        f'dns resolve for {coreAddr} failed. {self.networkReply.errorString()}'
+                    )
+
+                    self.coreRunning = False
+                    # TODO
+                    self.disconnectReason = ''
+                    # Reset reply
+                    self.networkReply = None
+                else:
+                    logger.info(f'dns resolve for {coreAddr} success')
+
+                    replyObject = ujson.loads(self.networkReply.readAll().data())
+
+                    # Reset reply
+                    self.networkReply = None
+
+                    for record in replyObject['Answer']:
+                        address = record['data']
+
+                        logger.info(f'{coreAddr} resolved to {address}')
+
+                        RoutingTable.Relations.append([address, defaultGateway[0]])
+
+                    start()
+
+            self.networkReply.finished.connect(finishedCallback)
+        else:
+            # Reset reply
+            self.networkReply = None
+
+            RoutingTable.Relations.append([coreAddr, defaultGateway[0]])
+
+            start()
+
+        self.waitForDNSResolveIfNecessary()
+
+    def stopTun2socks(self):
+        self.Tun2socks.registerExitCallback(None)
+        self.Tun2socks.stop()
+
+    def waitForDNSResolveIfNecessary(self, startCounter=0, timeout=10000, step=1):
+        # Wait for potentially DNS resolve in VPN Mode
+        if self.coreRunning and self.networkReply is not None:
+            logger.info('dns resolve in progress. Wait')
+        else:
+            return
+
+        while (
+            self.coreRunning
+            and startCounter < timeout
+            and self.networkReply is not None
+        ):
+            QTest.qWait(step)
+
+            startCounter += step
+
+        if self.networkReply is not None:
+            if self.coreRunning:
+                logger.error('dns resolve timeout')
+
+            # TODO: Error
+
+            # Reset reply
+            self.networkReply = None
+
     def startTorRelay(self, core, proxyServer, startCounter=0, step=1):
         # Redirect Proxy
-        self.proxyServer = f'127.0.0.1:{self.torRelayStorageObj.get("httpsTunnelPort", DEFAULT_TOR_HTTPS_PORT)}'
+        self.httpsProxyServer = f'127.0.0.1:{self.torRelayStorageObj.get("httpsTunnelPort", DEFAULT_TOR_HTTPS_PORT)}'
+        self.socksProxyServer = f'127.0.0.1:{self.torRelayStorageObj.get("socksTunnelPort", DEFAULT_TOR_SOCKS_PORT)}'
 
         try:
             timeout = 1000 * int(
@@ -690,9 +986,10 @@ class ConnectAction(Action):
         self.testTime += 1
 
         logger.info(f'start connection test. Try: {selected}')
+        logger.info(f'connection test uses proxy server {self.httpsProxyServer}')
 
         # Checked. split should not throw exceptions
-        proxyHost, proxyPort = self.proxyServer.split(':')
+        proxyHost, proxyPort = self.httpsProxyServer.split(':')
 
         # Checked. int(proxyPort) should not throw exceptions
         self.networkAccessManager.setProxy(
@@ -820,6 +1117,9 @@ class ConnectAction(Action):
         # Connecting status
         self.setConnectingStatus(showProgressBar)
 
+        # Reset reply. Mandatory
+        self.networkReply = None
+
         # Configure connect
         self.coreName = self.configureCore()
 
@@ -831,7 +1131,7 @@ class ConnectAction(Action):
             return
 
         if not self.coreRunning:
-            # 1. No valid HTTP proxy endpoint. reset / disconnect has been called
+            # 1. No valid HTTP/Socks proxy endpoint. reset / disconnect has been called
 
             if self.isConnecting():
                 # 2. Core has exited
@@ -841,7 +1141,7 @@ class ConnectAction(Action):
             return
 
         try:
-            Proxy.set(self.proxyServer, PROXY_SERVER_BYPASS)
+            Proxy.set(self.httpsProxyServer, PROXY_SERVER_BYPASS)
         except Exception:
             # Any non-exit exceptions
 
