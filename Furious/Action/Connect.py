@@ -35,6 +35,7 @@ from Furious.Utility.Constants import (
     APPLICATION_TUN_GATEWAY_ADDRESS,
     DEFAULT_TOR_HTTPS_PORT,
     DEFAULT_TOR_SOCKS_PORT,
+    DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT,
 )
 from Furious.Utility.Utility import (
     Switch,
@@ -935,13 +936,14 @@ class ConnectAction(Action):
 
         try:
             timeout = 1000 * int(
-                self.torRelayStorageObj.get('relayEstablishTimeout', 15)
+                self.torRelayStorageObj.get(
+                    'relayEstablishTimeout', DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT
+                )
             )
         except Exception:
             # Any non-exit exceptions
 
-            # 15s
-            timeout = 1000 * 15
+            timeout = 1000 * DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT
 
         logger.info(f'{TorRelay.name()} bootstrap timeout is {timeout // 1000}s')
 

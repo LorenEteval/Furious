@@ -18,6 +18,7 @@
 from Furious.Core.Core import Core
 from Furious.Utility.Constants import (
     APP,
+    PLATFORM,
     DATA_DIR,
     DEFAULT_TOR_SOCKS_PORT,
     DEFAULT_TOR_HTTPS_PORT,
@@ -54,13 +55,21 @@ class TorRelayStarter(AsyncSubprocessMessage):
         return APP().torRelaySettingsWidget.StorageObj
 
     def launch(self, proxyServer):
-        self.torRelay = subprocess.Popen(
-            ['tor', '-f', '-'],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            creationflags=subprocess.CREATE_NO_WINDOW,
-        )
+        if PLATFORM == 'Windows':
+            self.torRelay = subprocess.Popen(
+                ['tor', '-f', '-'],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+        else:
+            self.torRelay = subprocess.Popen(
+                ['tor', '-f', '-'],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
         torConfig = (
             f'SocksPort {self.torRelayStorageObj.get("socksTunnelPort", DEFAULT_TOR_SOCKS_PORT)}\n'
