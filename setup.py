@@ -39,6 +39,7 @@ setup(
         'PySide6-Essentials',
         'Xray-core',
         'hysteria',
+        'tun2socks > 2.5.1',
         'ujson',
         'pybase64',
         'pyqrcode',
