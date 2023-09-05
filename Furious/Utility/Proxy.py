@@ -16,15 +16,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Utility.Constants import PLATFORM
+from Furious.Utility.Utility import runCommand
 
 import logging
 import subprocess
 
 logger = logging.getLogger(__name__)
-
-
-def runCommand(*args, **kwargs):
-    return subprocess.run(*args, **kwargs)
 
 
 def linuxProxyConfig(proxy_args, arg0, arg1):
@@ -51,6 +48,7 @@ def darwinProxyConfig(operation, *args):
             check=True,
         )
 
+        # Replace with command.stdout.decode('utf-8', 'replace')...?
         service = list(filter(lambda x: x != '', command.stdout.decode().split('\n')))
 
         return service[1:]
