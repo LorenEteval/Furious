@@ -17,9 +17,9 @@
 
 from Furious.Action import (
     ConnectAction,
-    EditConfigurationAction,
     RoutingAction,
     ImportAction,
+    EditConfigurationAction,
     LanguageAction,
     SettingsAction,
     ExitAction,
