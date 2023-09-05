@@ -127,7 +127,7 @@ class TorRelaySettingsWidget(Translatable, SupportConnectedCallback, QDialog):
         self.torLogLevelComboBox.addItems(TorRelaySettingsWidget.TOR_LOG_LEVEL)
 
         self.torRelayTimeoutLabel = Label(
-            _('Relay Establish Timeout(seconds)'), parent=self
+            _('Relay Establish Timeout (seconds)'), parent=self
         )
 
         self.torRelayTimeoutSpinBox = QSpinBox(parent=self)
