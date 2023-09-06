@@ -46,6 +46,6 @@ class Tun2socks(Core):
         )
 
     def stop(self):
-        super().stop()
-
         RoutingTable.deleteRelations()
+
+        super().stop()
