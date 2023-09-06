@@ -15,7 +15,6 @@ def startTun2socks(*args, **kwargs):
 
 class Tun2socks(Core):
     class ExitCode:
-        TunnelStartFailure = 1
         # Windows shutting down
         SystemShuttingDown = 0x40010004
 

@@ -229,29 +229,15 @@ class ConnectAction(Action):
             # System shutting down. Do nothing
             return
 
-        if exitcode == Tun2socks.ExitCode.TunnelStartFailure:
-            if not self.isConnecting():
-                # Protect connecting action. Mandatory
-                return self.disconnectAction(
-                    f'{Hysteria.name()}: {_("Connection to server has been lost")}'
-                )
-            else:
-                self.coreRunning = False
-                self.disconnectReason = (
-                    f'{Hysteria.name()}: {_("Connection to server has been lost")}'
-                )
-
-                return
-
         if not self.isConnecting():
             # Protect connecting action. Mandatory
             self.disconnectAction(
-                f'{Hysteria.name()}: {_("Core terminated unexpectedly")}'
+                f'{Tun2socks.name()}: {_("Core terminated unexpectedly")}'
             )
         else:
             self.coreRunning = False
             self.disconnectReason = (
-                f'{Hysteria.name()}: {_("Core terminated unexpectedly")}'
+                f'{Tun2socks.name()}: {_("Core terminated unexpectedly")}'
             )
 
     def stopCore(self):
