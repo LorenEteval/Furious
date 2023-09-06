@@ -48,7 +48,18 @@ class SettingsChildAction(Action):
             else:
                 APP().ShowTabAndSpacesInEditor = Switch.OFF
 
-            APP().ServerWidget.showTabAndSpacesIfNecessary()
+            # Reference
+            ServerWidget = APP().ServerWidget
+
+            currentFocus = ServerWidget.currentFocus
+
+            if currentFocus >= 0:
+                ServerWidget.saveScrollBarValue(currentFocus)
+
+            ServerWidget.showTabAndSpacesIfNecessary()
+
+            if currentFocus >= 0:
+                ServerWidget.restoreScrollBarValue(currentFocus)
 
 
 class RoutingChildAction(Action):
