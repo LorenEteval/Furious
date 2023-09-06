@@ -16,10 +16,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Core.TorRelay import TorRelay
+from Furious.Core.Configuration import Configuration
+from Furious.Core.Intellisense import Intellisense
 from Furious.Action.Import import ImportLinkAction, ImportJSONAction
 from Furious.Action.Export import ExportLinkAction, ExportJSONAction, ExportQRCodeAction
-from Furious.Core.Intellisense import Intellisense
-from Furious.Core.Configuration import Configuration
 from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import (
     HeaderView,
