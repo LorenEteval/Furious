@@ -557,6 +557,11 @@ class IndentAction(Action):
                 # Empty. Do nothing
                 return
 
+            currentFocus = self.parent().currentFocus
+
+            if currentFocus >= 0:
+                self.parent().saveScrollBarValue(currentFocus)
+
             try:
                 myJSON = ujson.loads(myText)
                 myText = ujson.dumps(
@@ -582,6 +587,9 @@ class IndentAction(Action):
                 self.indentFailure.exec()
             else:
                 self.parent().plainTextEdit.setPlainText(myText)
+
+                if currentFocus >= 0:
+                    self.parent().restoreScrollBarValue(currentFocus)
         else:
             # Do nothing
             pass
