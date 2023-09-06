@@ -608,7 +608,6 @@ class ConnectAction(Action):
                             logger.error('find Tor CLI in path failed')
 
                             self.coreRunning = False
-
                             self.disconnectReason = (
                                 f'{XrayCore.name()}: {_("Cannot find Tor CLI in PATH")}'
                             )
@@ -737,7 +736,6 @@ class ConnectAction(Action):
                             logger.error('find Tor CLI in path failed')
 
                             self.coreRunning = False
-
                             self.disconnectReason = (
                                 f'{Hysteria.name()}: {_("Cannot find Tor CLI in PATH")}'
                             )
@@ -793,7 +791,7 @@ class ConnectAction(Action):
         # No matching core
         return ''
 
-    def startTun2socks(self):
+    def startTun2socks(self, successCallback=None):
         if not self.coreRunning:
             # Core has exited. Do nothing
             return
@@ -807,28 +805,31 @@ class ConnectAction(Action):
         )
 
         if len(defaultGateway) != 1:
-            # TODO: Error handling
-            print('Fall in error handling default gateway!!!')
+            logger.error(f'found multiple gateway addresses: {defaultGateway}')
+
+            self.coreRunning = False
+            self.disconnectReason = (
+                _('Unable to connect') + ': ' + _('Multiple gateway addresses found')
+            )
+
+            return
 
         coreAddr = Intellisense.getCoreAddr(self.coreJSON)
 
         if not coreAddr:
-            # TODO: Error handling
-            print('Fall in error handling coreAddr!!!')
+            logger.error(f'invalid server address: {coreAddr}')
+
+            self.coreRunning = False
+            self.disconnectReason = _('Server address invalid') + f': {coreAddr}'
+
+            return
 
         def start():
             assert RoutingTable.Relations
 
             if PLATFORM == 'Darwin':
                 for source in [
-                    '1.0.0.0/8',
-                    '2.0.0.0/7',
-                    '4.0.0.0/6',
-                    '8.0.0.0/5',
-                    '16.0.0.0/4',
-                    '32.0.0.0/3',
-                    '64.0.0.0/2',
-                    '128.0.0.0/1',
+                    *list(f'{2 ** (8 - x)}.0.0.0/{x}' for x in range(8, 0, -1)),
                     '198.18.0.0/15',
                 ]:
                     RoutingTable.Relations.append(
@@ -849,6 +850,9 @@ class ConnectAction(Action):
                 APPLICATION_TUN_GATEWAY_ADDRESS,
             )
             RoutingTable.addRelations()
+
+            if callable(successCallback):
+                successCallback()
 
         if not isValidIPAddress(coreAddr):
             logger.info(f'dns resolve uses proxy server {self.httpsProxyServer}')
@@ -882,12 +886,11 @@ class ConnectAction(Action):
 
                 if self.networkReply.error() != QNetworkReply.NetworkError.NoError:
                     logger.error(
-                        f'dns resolve for {coreAddr} failed. {self.networkReply.errorString()}'
+                        f'DNS resolution for {coreAddr} failed. {self.networkReply.errorString()}'
                     )
 
                     self.coreRunning = False
-                    # TODO
-                    self.disconnectReason = ''
+                    self.disconnectReason = _('DNS resolution failed') + f': {coreAddr}'
                     # Reset reply
                     self.networkReply = None
                 else:
@@ -940,9 +943,10 @@ class ConnectAction(Action):
 
         if self.networkReply is not None:
             if self.coreRunning:
-                logger.error('dns resolve timeout')
+                logger.error('DNS resolution timeout')
 
-            # TODO: Error
+                self.coreRunning = False
+                self.disconnectReason = _('DNS resolution timeout')
 
             # Reset reply
             self.networkReply = None

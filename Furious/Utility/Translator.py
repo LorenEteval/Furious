@@ -946,6 +946,36 @@ TRANSLATION = {
         'ZH': '在PATH中找不到Tor CLI',
         'TW': '在PATH中找不到Tor CLI',
     },
+    'VPN mode started': {
+        'ES': 'Modo VPN detenido',
+        'ZH': 'VPN模式已启动',
+        'TW': 'VPN模式已啓動',
+    },
+    'VPN mode stopped': {
+        'ES': 'Modo VPN iniciado',
+        'ZH': 'VPN模式已停止',
+        'TW': 'VPN模式已停止',
+    },
+    'Multiple gateway addresses found': {
+        'ES': 'Se encontraron varias direcciones de puerta de enlace',
+        'ZH': '找到多个网关地址',
+        'TW': '找到多個網關地址',
+    },
+    'Server address invalid': {
+        'ES': 'Dirección del servidor no válida',
+        'ZH': '服务器地址无效',
+        'TW': '服務器地址無效',
+    },
+    'DNS resolution failed': {
+        'ES': 'La resolución DNS falló',
+        'ZH': 'DNS解析失败',
+        'TW': 'DNS解析失敗',
+    },
+    'DNS resolution timeout': {
+        'ES': 'Tiempo de espera de resolución DNS',
+        'ZH': 'DNS解析超时',
+        'TW': 'DNS解析超時',
+    },
     # Errors
     f'{APPLICATION_NAME} is not be able to run on this operating system.': {
         'ES': f'{APPLICATION_NAME} no puede ejecutarse en este sistema operativo.',
