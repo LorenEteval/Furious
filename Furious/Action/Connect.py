@@ -830,12 +830,21 @@ class ConnectAction(Action):
                 '',
             )
 
-            RoutingTable.setDeviceGatewayAddress(
-                APPLICATION_TUN_DEVICE_NAME,
-                APPLICATION_TUN_IP_ADDRESS,
-                APPLICATION_TUN_GATEWAY_ADDRESS,
-            )
-            RoutingTable.addRelations()
+            if PLATFORM == 'Windows':
+                RoutingTable.addRelations()
+                RoutingTable.setDeviceGatewayAddress(
+                    APPLICATION_TUN_DEVICE_NAME,
+                    APPLICATION_TUN_IP_ADDRESS,
+                    APPLICATION_TUN_GATEWAY_ADDRESS,
+                )
+
+            if PLATFORM == 'Darwin':
+                RoutingTable.setDeviceGatewayAddress(
+                    APPLICATION_TUN_DEVICE_NAME,
+                    APPLICATION_TUN_IP_ADDRESS,
+                    APPLICATION_TUN_GATEWAY_ADDRESS,
+                )
+                RoutingTable.addRelations()
 
             if callable(successCallback):
                 successCallback()
@@ -905,13 +914,13 @@ class ConnectAction(Action):
 
             start()
 
-        self.waitForDNSResolveIfNecessary()
+        self.waitForDNSResolutionIfNecessary()
 
     def stopTun2socks(self):
         self.Tun2socks.registerExitCallback(None)
         self.Tun2socks.stop()
 
-    def waitForDNSResolveIfNecessary(self, startCounter=0, timeout=10000, step=1):
+    def waitForDNSResolutionIfNecessary(self, startCounter=0, timeout=10000, step=1):
         # Wait for potentially DNS resolve in VPN Mode
         if self.coreRunning and self.networkReply is not None:
             logger.info('dns resolve in progress. Wait')
