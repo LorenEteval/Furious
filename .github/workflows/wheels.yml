@@ -46,7 +46,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022]
+        os: [ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macos-11, macos-12, macos-13]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
@@ -74,8 +74,5 @@ jobs:
       - name: Install requirements.txt
         run: python -m pip install -r requirements.txt
 
-      - name: Compile to console binaries
-        run: python -m nuitka --standalone --plugin-enable=pyside6 --assume-yes-for-downloads --include-package-data=Furious Furious --output-dir=consoleBinaries
-
       - name: Compile to gui binaries
-        run: python -m nuitka --standalone --plugin-enable=pyside6 --disable-console --assume-yes-for-downloads --include-package-data=Furious Furious --output-dir=guiBinaries
+        run: python -m nuitka --standalone --plugin-enable=pyside6 --disable-console --assume-yes-for-downloads --macos-create-app-bundle --include-package-data=Furious Furious/__main__.py --output-dir=guiBinaries
