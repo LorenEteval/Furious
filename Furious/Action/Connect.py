@@ -817,6 +817,24 @@ class ConnectAction(Action):
             print('Fall in error handling coreAddr!!!')
 
         def start():
+            assert RoutingTable.Relations
+
+            if PLATFORM == 'Darwin':
+                for source in [
+                    '1.0.0.0/8',
+                    '2.0.0.0/7',
+                    '4.0.0.0/6',
+                    '8.0.0.0/5',
+                    '16.0.0.0/4',
+                    '32.0.0.0/3',
+                    '64.0.0.0/2',
+                    '128.0.0.0/1',
+                    '198.18.0.0/15',
+                ]:
+                    RoutingTable.Relations.append(
+                        [source, APPLICATION_TUN_GATEWAY_ADDRESS]
+                    )
+
             self.Tun2socks.start(
                 APPLICATION_TUN_DEVICE_NAME,
                 APPLICATION_TUN_NETWORK_INTERFACE_NAME,
@@ -825,12 +843,12 @@ class ConnectAction(Action):
                 '',
             )
 
-            RoutingTable.addRelations()
             RoutingTable.setDeviceGatewayAddress(
                 APPLICATION_TUN_DEVICE_NAME,
                 APPLICATION_TUN_IP_ADDRESS,
                 APPLICATION_TUN_GATEWAY_ADDRESS,
             )
+            RoutingTable.addRelations()
 
         if not isValidIPAddress(coreAddr):
             logger.info(f'dns resolve uses proxy server {self.httpsProxyServer}')
