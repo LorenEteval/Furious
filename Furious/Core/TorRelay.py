@@ -19,7 +19,7 @@ from Furious.Core.Core import Core
 from Furious.Utility.Constants import (
     APP,
     PLATFORM,
-    DATA_DIR,
+    APPLICATION_NAME,
     DEFAULT_TOR_SOCKS_PORT,
     DEFAULT_TOR_HTTPS_PORT,
 )
@@ -27,9 +27,11 @@ from Furious.Utility.Utility import AsyncSubprocessMessage, runCommand
 
 from PySide6 import QtCore
 
+import os
 import re
 import signal
 import logging
+import tempfile
 import threading
 import functools
 import subprocess
@@ -39,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 class TorRelayStarter(AsyncSubprocessMessage):
     BOOTSTRAP_STATUS = re.compile(r'Bootstrapped ([0-9]+)%')
+    TORDATA_TEMP_DIR = QtCore.QTemporaryDir()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,6 +56,14 @@ class TorRelayStarter(AsyncSubprocessMessage):
     def torRelayStorageObj(self):
         # Handy reference
         return APP().torRelaySettingsWidget.StorageObj
+
+    @staticmethod
+    @functools.lru_cache(None)
+    def getTorDataTempFilepath():
+        if TorRelayStarter.TORDATA_TEMP_DIR.isValid():
+            return TorRelayStarter.TORDATA_TEMP_DIR.path()
+        else:
+            return os.path.join(tempfile.gettempdir(), APPLICATION_NAME, 'tordata')
 
     def launch(self, proxyServer):
         if PLATFORM == 'Windows':
@@ -71,11 +82,15 @@ class TorRelayStarter(AsyncSubprocessMessage):
                 stderr=subprocess.PIPE,
             )
 
+        torDataTempFilepath = TorRelayStarter.getTorDataTempFilepath()
+
+        logger.info(f'Tor CLI data directory is {torDataTempFilepath}')
+
         torConfig = (
             f'SocksPort {self.torRelayStorageObj.get("socksTunnelPort", DEFAULT_TOR_SOCKS_PORT)}\n'
             f'HTTPTunnelPort {self.torRelayStorageObj.get("httpsTunnelPort", DEFAULT_TOR_HTTPS_PORT)}\n'
             f'Log {self.torRelayStorageObj.get("logLevel", "notice")} stdout\n'
-            f'DataDirectory {DATA_DIR / "tordata"}\n'
+            f'DataDirectory {torDataTempFilepath}\n'
         )
 
         if proxyServer:
