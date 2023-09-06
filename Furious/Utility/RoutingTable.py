@@ -12,7 +12,10 @@ class RoutingTable:
     Relations = list()
 
     DEFAULT_GATEWAY_WINDOWS = re.compile(
-        r'0\.0\.0\.0.*?0\.0\.0\.0.*?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
+        r'0\.0\.0\.0.*?0\.0\.0\.0.*?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})',
+    )
+    DEFAULT_GATEWAY_DARWIN = re.compile(
+        r'gateway:\s*(\S+)',
     )
 
     @staticmethod
@@ -35,8 +38,12 @@ class RoutingTable:
 
             if PLATFORM == 'Darwin':
                 try:
-                    # TODO: using networksetup
-                    pass
+                    runCommand(
+                        ['route', 'add', '-net', source, destination],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        check=True,
+                    )
                 except Exception:
                     # Any non-exit exceptions
 
@@ -79,8 +86,21 @@ class RoutingTable:
                     return []
 
             if PLATFORM == 'Darwin':
-                # TODO
-                pass
+                try:
+                    result = runCommand(
+                        'route get default'.split(),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        check=True,
+                    )
+
+                    return RoutingTable.DEFAULT_GATEWAY_DARWIN.findall(
+                        result.stdout.decode('utf-8', 'replace')
+                    )
+                except Exception:
+                    # Any non-exit exceptions
+
+                    return []
 
         defaultGateway = _get()
 
@@ -167,8 +187,12 @@ class RoutingTable:
 
             if PLATFORM == 'Darwin':
                 try:
-                    # TODO: using networksetup
-                    pass
+                    runCommand(
+                        ['route', 'delete', '-net', source, destination],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        check=True,
+                    )
                 except Exception:
                     # Any non-exit exceptions
 
@@ -191,7 +215,7 @@ class RoutingTable:
             if len(RoutingTable.Relations):
                 RoutingTable.delete('0.0.0.0', APPLICATION_TUN_GATEWAY_ADDRESS)
 
-        for source, destination in RoutingTable.Relations:
+        for source, destination in RoutingTable.Relations[::-1]:
             RoutingTable.delete(source, destination)
 
         if clear:
