@@ -10,12 +10,13 @@ and [hysteria](https://github.com/apernet/hysteria).
 
 ## Features
 
-* Runs seamlessly on Windows, macOS and Linux(see the screenshot below).
+* Runs on Windows, macOS and Linux.
 * Built-in support for [Xray-core](https://github.com/XTLS/Xray-core)
   and [hysteria](https://github.com/apernet/hysteria). Cores are actually Python bindings that shipped with the source
   code. See more information: [Xray-core-python](https://github.com/LorenEteval/Xray-core-python)
   and [hysteria-python](https://github.com/LorenEteval/hysteria-python).
-* Support import from JSON or share link(`vmess://...`, `vless://...` or `ss://`, including the
+* Support TUN mode on Windows and macOS. (experimental, requires administrator/root privilege)
+* Support import from JSON or share link (`vmess://...`, `vless://...` or `ss://`, including the
   newest [REALITY](https://github.com/XTLS/REALITY) share standard).
 * Support export to JSON, share link or QRCode.
 * Built-in routing mode support: `Bypass Mainland China(with Ads filter)`, `Bypass Iran(with Ads filter)`,
@@ -28,41 +29,23 @@ and [hysteria](https://github.com/apernet/hysteria).
 * Built-in user-friendly feature such as startup on boot.
 * ...
 
-## Sreenshot
-
-### Windows
-
-![Windows-Light-EN](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/Windows-Light-EN.png)
-
-![Windows-Light-CN](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/Windows-Light-CN.png)
-
-### macOS
-
-![macOS-Light](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/macOS-Light.png)
-
-![macOS-Dark](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/macOS-Dark.png)
-
-### Ubuntu
-
-![Ubuntu-Light](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/Ubuntu-Light.png)
-
-![Ubuntu-Dark](https://raw.githubusercontent.com/LorenEteval/Furious/main/Screenshot/Ubuntu-Dark.png)
-
 ## Install
 
-> Note: Due to better binary files compatibility on Windows platform, Windows users can skip this section and
-> download zip file in the [release](https://github.com/LorenEteval/Furious/releases) page that contains
-> pre-built binaries. Otherwise you need to follow the instructions below.
+There are **two** ways of installing Furious:
+
+* Download zip file in the [release](https://github.com/LorenEteval/Furious/releases) page that contains pre-built
+  binaries. In this case there is no dependency required. (only for **Windows** users)
+* Install via `pip` (requires **Python 3.8 and above**). You need to follow instructions below. (available for **all** platform)
 
 ### Core Building Tools
 
 > Note: These steps are the same in [Xray-core-python](https://github.com/LorenEteval/Xray-core-python)
 > or [hysteria-python](https://github.com/LorenEteval/hysteria-python) *Core Building Tools* steps.
 
-As mentioned above, cores are shipped as Python bindings to support cross-platform running. So to install Furious you
-must have tools ready for building these bindings for your current platform first. Core building requires:
+As mentioned above, cores are shipped as Python bindings to support cross-platform running. So to install Furious
+via `pip` you must have tools ready for building these bindings for your current platform first. Core building requires:
 
-* [go](https://go.dev/doc/install) in your PATH. go 1.20.0 and above is recommended. To check go is ready,
+* [go](https://go.dev/doc/install) `1.20.x` in your PATH. To check go is ready,
   type `go version`. Also, if google service is blocked in your region(such as Mainland China), you have to configure
   your GOPROXY to be able to pull go packages. For Chinese users, refer to [goproxy.cn](https://goproxy.cn/) for more
   information.
@@ -75,9 +58,9 @@ must have tools ready for building these bindings for your current platform firs
     * For Windows users: install [MinGW-w64](https://sourceforge.net/projects/mingw-w64/files/mingw-w64/)
       or [Cygwin](https://www.cygwin.com/) and make sure you have add them to PATH.
 
-### Install Furious
+These tools should be installed easily using `brew install` on macOS, or using `sudo apt install` on Linux.
 
-Furious requires **Python 3.8 and above**.
+### Install Furious
 
 > Note: Install Furious in a Python virtual environment(i.e. venv) is recommended.
 
@@ -85,16 +68,11 @@ Furious requires **Python 3.8 and above**.
 pip install Furious-GUI
 ```
 
-If the installation is successful, you will have a executable script(or `.exe` on Windows) in your PATH(if it's not in
-the PATH, you can always add the script location to the PATH later). That's Furious's application entry point.
-
-Any time you want to launch Furious, type:
+Launch Furious, type:
 
 ```
 Furious
 ```
-
-Furious will enable startup on boot by default if it's launched for the first time. Happy browsing!
 
 ## Run From Source
 
@@ -116,6 +94,11 @@ python -m Furious
 ```
 
 > Note: Furious will ignore current startup on boot request if it's lauched from source.
+
+## Wiki
+
+* [Route My Traffic Through Tor](https://github.com/LorenEteval/Furious/wiki/Route-My-Traffic-Through-Tor)
+* [TUN Mode](https://github.com/LorenEteval/Furious/wiki/TUN-Mode)
 
 ## Build Status
 
@@ -151,9 +134,10 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 ## 功能
 
-* 可在Windows、macOS和Linux上运行（见上文运行截图）。
+* 在Windows、macOS和Linux上运行。
 * 内置对[Xray-core](https://github.com/XTLS/Xray-core)和[hysteria](https://github.com/apernet/hysteria)的支持。
   Core实际是与源代码一起发行的Python绑定。更多信息: [Xray-core-python](https://github.com/LorenEteval/Xray-core-python), [hysteria-python](https://github.com/LorenEteval/hysteria-python)。
+* 在Windows和macOS上支持TUN模式。（实验性功能，需要管理员/root权限）
 * 支持从JSON或分享链接导入（`vmess://...`，`vless://...`或`ss://`，包括最新的[REALITY](https://github.com/XTLS/REALITY)
   分享标准）。
 * 支持导出为JSON、分享链接或二维码。
@@ -169,30 +153,32 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 ## 安装
 
-> 注意：由于Windows有更好的二进制文件兼容性，Windows用户可以跳过本节并在
-[release](https://github.com/LorenEteval/Furious/releases)页面中下载打包好的zip文件。否则安装过程需要按照以下步骤进行。
+有**两种**安装Furious的方式：
+
+* 在[release](https://github.com/LorenEteval/Furious/releases)界面下载打包好的二进制文件。不需要任何依赖。（仅适用于**Windows**用户）
+* 通过`pip`安装（需要**Python 3.8及以上**），且需要按照以下步骤进行操作。（适用于**所有**平台）
 
 ### Core编译工具
 
 > 注意: 这些步骤与[Xray-core-python](https://github.com/LorenEteval/Xray-core-python)
 > 和[hysteria-python](https://github.com/LorenEteval/hysteria-python)中*Core Building Tools*一节的步骤一样。
 
-根据上文所述，Core是对应的Python绑定以支持跨平台运行。所以要安装Furious你首先得准备好当前平台的Core编译工具。编译Core需要：
+根据上文所述，Core是对应的Python绑定以支持跨平台运行。所以通过`pip`安装Furious首先得准备好当前平台的Core编译工具。编译Core需要：
 
 * [go](https://go.dev/doc/install)在PATH中。建议使用go 1.20.0及以上版本。要检查go是否就绪，输入`go version`
-  。另外，如果你当前所在地区（例如中国大陆）屏蔽了google服务，还需要配置GOPROXY才能拉取go包。对于中国用户，请访问[goproxy.cn](https://goproxy.cn/)
+  。另外，如果当前所在地区（例如中国大陆）屏蔽了google服务，还需要配置GOPROXY才能拉取go包。对于中国用户，请访问[goproxy.cn](https://goproxy.cn/)
   了解更多信息。
 * [cmake](https://cmake.org/download/)在PATH中. 要检查cmake是否就绪，输入`cmake --version`。
 * GNU C++编译器（即GNU C++工具链）。要检查GNU C++编译器是否准备就绪，输入`g++ --version`
-  。默认情况下，这些工具应该已安装在Linux或macOS中。如果你仍然没有GNU C++工具链（特别是对于Windows用户）：
+  。默认情况下，这些工具应该已安装在Linux或macOS中。如果仍然没有GNU C++工具链（特别是对于Windows用户）：
 
     * 对于Linux用户：输入`sudo apt update && sudo apt install g++`。
     * 对于Windows用户：安装[MinGW-w64](https://sourceforge.net/projects/mingw-w64/files/mingw-w64/)
       或[Cygwin](https://www.cygwin.com/)并确保已将它们添加至PATH。
 
-### 安装Furious
+这些工具可用`brew install`在macOS上安装，或者用`sudo apt install`在Linux上安装。
 
-运行Furious需要**Python 3.8及以上**版本。
+### 安装Furious
 
 > 注意：推荐在Python虚拟环境(i.e. venv)中安装Furious。
 
@@ -200,15 +186,11 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 pip install Furious-GUI
 ```
 
-如果安装成功，PATH中将有一个可执行脚本（在Windows上是.exe）（如果它不在PATH中，可以稍后将脚本路径添加至PATH），这是Furious的应用程序入口点。
-
-要启动Furious，输入：
+启动Furious，输入：
 
 ```
 Furious
 ```
-
-如果是首次运行，Furious将默认启用开机启动。Happy browsing!
 
 ## 从源码运行
 
@@ -216,7 +198,7 @@ Furious
 
 > 注意：推荐在Python虚拟环境(i.e. venv)中安装依赖。
 
-> 注意：为了安装依赖包成功，你仍然需要准备好上文中的Core编译工具。
+> 注意：为了安装依赖包成功，仍然需要准备好上文中的Core编译工具。
 
 ```
 pip install -r requirements.txt
