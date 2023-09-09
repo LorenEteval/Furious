@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Widget.Widget import MainWindow
-
 from Furious.Utility.Constants import APPLICATION_NAME
 from Furious.Utility.Utility import SupportConnectedCallback, bootstrapIcon
 from Furious.Utility.Translator import gettext as _
