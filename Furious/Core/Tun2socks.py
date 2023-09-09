@@ -57,7 +57,6 @@ class Tun2socks(Core):
         super().start(
             target=startTun2socks,
             args=(device, networkInterface, logLevel, proxy, restAPI),
-            waitTime=1000,
             **kwargs,
         )
 
