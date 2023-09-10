@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Core.Core import XrayCore, Hysteria
+from Furious.Core.Core import XrayCore, Hysteria1
 from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import Menu
 from Furious.Utility.Constants import APP, DATA_DIR
@@ -62,7 +62,7 @@ BUILTIN_ROUTING_TABLE = {
                 },
             ],
         },
-        Hysteria.name(): {
+        Hysteria1.name(): {
             'acl': (DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl').as_posix(),
             'mmdb': (DATA_DIR / 'hysteria' / 'country.mmdb').as_posix(),
         },
@@ -107,14 +107,14 @@ BUILTIN_ROUTING_TABLE = {
                 },
             ],
         },
-        Hysteria.name(): {
+        Hysteria1.name(): {
             'acl': (DATA_DIR / 'hysteria' / 'bypass-Iran.acl').as_posix(),
             'mmdb': (DATA_DIR / 'hysteria' / 'country.mmdb').as_posix(),
         },
     },
     'Route My Traffic Through Tor': {
         XrayCore.name(): {},
-        Hysteria.name(): {},
+        Hysteria1.name(): {},
     },
     'Global': {
         XrayCore.name(): {
@@ -129,11 +129,11 @@ BUILTIN_ROUTING_TABLE = {
                 },
             ],
         },
-        Hysteria.name(): {},
+        Hysteria1.name(): {},
     },
     'Custom': {
         XrayCore.name(): {},
-        Hysteria.name(): {},
+        Hysteria1.name(): {},
     },
 }
 

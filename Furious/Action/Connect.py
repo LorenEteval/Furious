@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Core.Core import XrayCore, Hysteria
+from Furious.Core.Core import XrayCore, Hysteria1
 from Furious.Core.TorRelay import TorRelay
 from Furious.Core.Tun2socks import Tun2socks
 from Furious.Core.Intellisense import Intellisense
@@ -122,7 +122,7 @@ class ConnectAction(Action):
         self.testTime = 0
 
         self.XrayCore = XrayCore()
-        self.Hysteria = Hysteria()
+        self.Hysteria1 = Hysteria1()
         self.Tun2socks = Tun2socks()
         self.TorRelay = TorRelay()
 
@@ -175,40 +175,40 @@ class ConnectAction(Action):
                 f'{XrayCore.name()}: {_("Core terminated unexpectedly")}'
             )
 
-    def HysteriaExitCallback(self, exitcode):
+    def Hysteria1ExitCallback(self, exitcode):
         if self.coreName:
             # If core is running
             assert self.coreRunning
-            assert self.coreName == Hysteria.name()
+            assert self.coreName == Hysteria1.name()
 
-        if exitcode == Hysteria.ExitCode.SystemShuttingDown:
+        if exitcode == Hysteria1.ExitCode.SystemShuttingDown:
             # System shutting down. Do nothing
             return
 
-        if exitcode == Hysteria.ExitCode.ConfigurationError:
+        if exitcode == Hysteria1.ExitCode.ConfigurationError:
             if not self.isConnecting():
                 # Protect connecting action. Mandatory
                 return self.disconnectAction(
-                    f'{Hysteria.name()}: {_("Invalid server configuration")}'
+                    f'{Hysteria1.name()}: {_("Invalid server configuration")}'
                 )
             else:
                 self.coreRunning = False
                 self.disconnectReason = (
-                    f'{Hysteria.name()}: {_("Invalid server configuration")}'
+                    f'{Hysteria1.name()}: {_("Invalid server configuration")}'
                 )
 
                 return
 
-        if exitcode == Hysteria.ExitCode.RemoteNetworkError:
+        if exitcode == Hysteria1.ExitCode.RemoteNetworkError:
             if not self.isConnecting():
                 # Protect connecting action. Mandatory
                 return self.disconnectAction(
-                    f'{Hysteria.name()}: {_("Connection to server has been lost")}'
+                    f'{Hysteria1.name()}: {_("Connection to server has been lost")}'
                 )
             else:
                 self.coreRunning = False
                 self.disconnectReason = (
-                    f'{Hysteria.name()}: {_("Connection to server has been lost")}'
+                    f'{Hysteria1.name()}: {_("Connection to server has been lost")}'
                 )
 
                 return
@@ -216,12 +216,12 @@ class ConnectAction(Action):
         if not self.isConnecting():
             # Protect connecting action. Mandatory
             self.disconnectAction(
-                f'{Hysteria.name()}: {_("Core terminated unexpectedly")}'
+                f'{Hysteria1.name()}: {_("Core terminated unexpectedly")}'
             )
         else:
             self.coreRunning = False
             self.disconnectReason = (
-                f'{Hysteria.name()}: {_("Core terminated unexpectedly")}'
+                f'{Hysteria1.name()}: {_("Core terminated unexpectedly")}'
             )
 
     def Tun2socksExitCallback(self, exitcode):
@@ -246,11 +246,11 @@ class ConnectAction(Action):
         self.TorRelay.stop()
 
         self.XrayCore.registerExitCallback(None)
-        self.Hysteria.registerExitCallback(None)
+        self.Hysteria1.registerExitCallback(None)
 
         # Stop any potentially running core
         self.XrayCore.stop()
-        self.Hysteria.stop()
+        self.Hysteria1.stop()
 
         self.coreRunning = False
 
@@ -467,8 +467,8 @@ class ConnectAction(Action):
         self.XrayCore.registerExitCallback(
             lambda exitcode: self.XrayCoreExitCallback(exitcode)
         )
-        self.Hysteria.registerExitCallback(
-            lambda exitcode: self.HysteriaExitCallback(exitcode)
+        self.Hysteria1.registerExitCallback(
+            lambda exitcode: self.Hysteria1ExitCallback(exitcode)
         )
         self.Tun2socks.registerExitCallback(
             lambda exitcode: self.Tun2socksExitCallback(exitcode)
@@ -649,8 +649,8 @@ class ConnectAction(Action):
 
             return XrayCore.name()
 
-        if Intellisense.getCoreType(self.coreJSON) == Hysteria.name():
-            # Assuming is Hysteria configuration
+        if Intellisense.getCoreType(self.coreJSON) == Hysteria1.name():
+            # Assuming is Hysteria1 configuration
 
             if isVPNMode():
                 # Check socks inbound is valid
@@ -665,12 +665,12 @@ class ConnectAction(Action):
                     self.errorSocksProxyConf()
 
                     # Return to caller
-                    return Hysteria.name()
+                    return Hysteria1.name()
                 else:
                     # Validate socks proxy server
                     if not validateSocksProxyServer(socksProxyServer):
                         # Return to caller
-                        return Hysteria.name()
+                        return Hysteria1.name()
 
             try:
                 httpsProxyServer = self.coreJSON['http']['listen']
@@ -687,7 +687,7 @@ class ConnectAction(Action):
 
                     routing = APP().Routing
 
-                    logger.info(f'core {Hysteria.name()} configured')
+                    logger.info(f'core {Hysteria1.name()} configured')
 
                     # Filter Route My Traffic Through Tor, Global, Custom
                     if routing in list(
@@ -700,12 +700,12 @@ class ConnectAction(Action):
                     ):
                         logger.info(f'routing is {routing}')
 
-                        routingObject = BUILTIN_ROUTING_TABLE[routing][Hysteria.name()]
+                        routingObject = BUILTIN_ROUTING_TABLE[routing][Hysteria1.name()]
 
-                        self.Hysteria.start(
+                        self.Hysteria1.start(
                             self.coreText,
-                            Hysteria.rule(routingObject.get('acl')),
-                            Hysteria.mmdb(routingObject.get('mmdb')),
+                            Hysteria1.rule(routingObject.get('acl')),
+                            Hysteria1.mmdb(routingObject.get('mmdb')),
                         )
                     elif routing == 'Route My Traffic Through Tor':
                         logger.info(f'routing is {routing}')
@@ -715,29 +715,27 @@ class ConnectAction(Action):
                                 f'find Tor CLI in path success. Version: {TorRelay.version()}'
                             )
 
-                            self.Hysteria.start(self.coreText, '', '')
+                            self.Hysteria1.start(self.coreText, '', '')
 
-                            self.startTorRelay(Hysteria.name(), httpsProxyServer)
+                            self.startTorRelay(Hysteria1.name(), httpsProxyServer)
                         else:
                             logger.error('find Tor CLI in path failed')
 
                             self.coreRunning = False
-                            self.disconnectReason = (
-                                f'{Hysteria.name()}: {_("Cannot find Tor CLI in PATH")}'
-                            )
+                            self.disconnectReason = f'{Hysteria1.name()}: {_("Cannot find Tor CLI in PATH")}'
 
-                            return Hysteria.name()
+                            return Hysteria1.name()
                     elif routing == 'Global':
                         logger.info(f'routing is {routing}')
 
-                        self.Hysteria.start(self.coreText, '', '')
+                        self.Hysteria1.start(self.coreText, '', '')
                     elif routing == 'Custom':
                         logger.info(f'routing is {routing}')
 
-                        self.Hysteria.start(
+                        self.Hysteria1.start(
                             self.coreText,
-                            Hysteria.rule(self.coreJSON.get('acl')),
-                            Hysteria.mmdb(self.coreJSON.get('mmdb')),
+                            Hysteria1.rule(self.coreJSON.get('acl')),
+                            Hysteria1.mmdb(self.coreJSON.get('mmdb')),
                         )
                     else:
                         try:
@@ -746,12 +744,12 @@ class ConnectAction(Action):
                             route = routesWidget.RoutesList[int(routing)]
 
                             logger.info(f'routing is {route["remark"]}')
-                            logger.info(f'RoutingObject: {route[Hysteria.name()]}')
+                            logger.info(f'RoutingObject: {route[Hysteria1.name()]}')
 
-                            self.Hysteria.start(
+                            self.Hysteria1.start(
                                 self.coreText,
-                                Hysteria.rule(route[Hysteria.name()].get('acl')),
-                                Hysteria.mmdb(route[Hysteria.name()].get('mmdb')),
+                                Hysteria1.rule(route[Hysteria1.name()].get('acl')),
+                                Hysteria1.mmdb(route[Hysteria1.name()].get('mmdb')),
                             )
                         except Exception as ex:
                             # Any non-exit exceptions
@@ -764,7 +762,7 @@ class ConnectAction(Action):
                             self.coreJSON = {}
                             self.coreText = ''
 
-                            self.Hysteria.start(self.coreText, '', '', waitTime=1000)
+                            self.Hysteria1.start(self.coreText, '', '', waitTime=1000)
 
                     if self.coreJSON:
                         if isVPNMode():
@@ -772,7 +770,7 @@ class ConnectAction(Action):
                                 # Currently VPN Mode is only supported on Windows and macOS
                                 self.startTun2socks()
 
-            return Hysteria.name()
+            return Hysteria1.name()
 
         # No matching core
         return ''

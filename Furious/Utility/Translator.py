@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Core.Core import XrayCore, Hysteria
+from Furious.Core.Core import XrayCore, Hysteria1
 from Furious.Core.TorRelay import TorRelay
 from Furious.Utility.Constants import APP, APPLICATION_NAME, TOR_FAQ_LABEL
 
@@ -104,7 +104,7 @@ NO_TRANSLATION = [
     *LANGUAGE_TO_ABBR.keys(),
     'TLS',
     XrayCore.name(),
-    Hysteria.name(),
+    Hysteria1.name(),
     TOR_FAQ_LABEL,
     'socks',
     'http',
@@ -772,7 +772,7 @@ TRANSLATION = {
                 },
             ]
         )
-        for coreName in [XrayCore.name(), Hysteria.name()]
+        for coreName in [XrayCore.name(), Hysteria1.name()]
     ),
     f'{XrayCore.name()} Routing Rules': {
         'ES': f'Reglas de Enrutamiento de {XrayCore.name()}',

@@ -21,7 +21,7 @@ from Furious.Action.Routing import (
     RoutingChildAction,
     routingToIndex,
 )
-from Furious.Core.Core import XrayCore, Hysteria
+from Furious.Core.Core import XrayCore, Hysteria1
 from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import (
     HeaderView,
@@ -219,19 +219,19 @@ HYSTERIA_ROUTING_HINT = (
 
 ROUTING_HINT = {
     'Bypass Mainland China': {
-        Hysteria.name(): '',
+        Hysteria1.name(): '',
     },
     'Bypass Iran': {
-        Hysteria.name(): '',
+        Hysteria1.name(): '',
     },
     'Route My Traffic Through Tor': {
-        Hysteria.name(): TOR_FAQ_LABEL,
+        Hysteria1.name(): TOR_FAQ_LABEL,
     },
     'Global': {
-        Hysteria.name(): HYSTERIA_ROUTING_HINT,
+        Hysteria1.name(): HYSTERIA_ROUTING_HINT,
     },
     'Custom': {
-        Hysteria.name(): (
+        Hysteria1.name(): (
             f'Note: "Custom" will use acl and mmdb defined in current user configuration.'
         ),
     },
@@ -251,7 +251,7 @@ DEFAULT_USER_ROUTING = {
             },
         ],
     },
-    Hysteria.name(): {
+    Hysteria1.name(): {
         'acl': '',
         'mmdb': (DATA_DIR / 'hysteria' / 'country.mmdb').as_posix(),
     },
@@ -468,7 +468,7 @@ class EditRoutingAction(Action):
             for index in self.parent().selectedIndex:
                 self.routingEditorRef[index].show()
 
-        if self.textCompare(f'Edit {Hysteria.name()} Routing Rules'):
+        if self.textCompare(f'Edit {Hysteria1.name()} Routing Rules'):
             for index in self.parent().selectedIndex:
                 dialog = self.routingDialogRef[index]
                 choice = dialog.exec()
@@ -489,7 +489,7 @@ class EditRoutingAction(Action):
                     ruleValue = dialog.ruleValue()
                     mmdbValue = dialog.mmdbValue()
 
-                    self.RoutesList[parentIndex][Hysteria.name()].update(
+                    self.RoutesList[parentIndex][Hysteria1.name()].update(
                         {'acl': ruleValue, 'mmdb': mmdbValue}
                     )
 
@@ -504,7 +504,7 @@ class EditRoutingAction(Action):
                 else:
                     # Restore
 
-                    routingObject = self.RoutesList[parentIndex][Hysteria.name()]
+                    routingObject = self.RoutesList[parentIndex][Hysteria1.name()]
 
                     dialog.setRuleValue(routingObject.get('acl', ''))
                     dialog.setMmdbValue(routingObject.get('mmdb', ''))
@@ -736,7 +736,7 @@ class RoutingDialog(Translatable, SupportConnectedCallback, QDialog):
         else:
             self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
-        self.ruleText = QLabel(f'{Hysteria.name()} acl:')
+        self.ruleText = QLabel(f'{Hysteria1.name()} acl:')
 
         self.ruleEdit = QLineEdit()
         self.ruleEdit.setFixedWidth(RoutingDialog.LINE_EDIT_FIXED_WIDTH)
@@ -748,7 +748,7 @@ class RoutingDialog(Translatable, SupportConnectedCallback, QDialog):
         self.ruleHBox.addWidget(self.ruleEdit)
         self.ruleHBox.addWidget(self.ruleFile)
 
-        self.mmdbText = QLabel(f'{Hysteria.name()} mmdb:')
+        self.mmdbText = QLabel(f'{Hysteria1.name()} mmdb:')
 
         self.mmdbEdit = QLineEdit()
         self.mmdbEdit.setFixedWidth(RoutingDialog.LINE_EDIT_FIXED_WIDTH)
@@ -893,7 +893,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
 
         # Currently only has Xray-Core
         self.routingEditorRef = []
-        # Currently only has Hysteria
+        # Currently only has Hysteria1
         self.routingDialogRef = []
 
         # Column count
@@ -965,7 +965,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
 
         contextMenuActions = [
             EditRoutingAction(_(f'Edit {XrayCore.name()} Routing Rules'), parent=self),
-            EditRoutingAction(_(f'Edit {Hysteria.name()} Routing Rules'), parent=self),
+            EditRoutingAction(_(f'Edit {Hysteria1.name()} Routing Rules'), parent=self),
         ]
 
         self.contextMenu = Menu(*contextMenuActions)
@@ -991,14 +991,14 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
                 )
 
             routingDialog = self.appendRoutingDialog(
-                text, hint=_(ROUTING_HINT[routing][Hysteria.name()]), isBuiltin=True
+                text, hint=_(ROUTING_HINT[routing][Hysteria1.name()]), isBuiltin=True
             )
 
             routingDialog.ruleEdit.setText(
-                BUILTIN_ROUTING_TABLE[routing][Hysteria.name()].get('acl', '')
+                BUILTIN_ROUTING_TABLE[routing][Hysteria1.name()].get('acl', '')
             )
             routingDialog.mmdbEdit.setText(
-                BUILTIN_ROUTING_TABLE[routing][Hysteria.name()].get('mmdb', '')
+                BUILTIN_ROUTING_TABLE[routing][Hysteria1.name()].get('mmdb', '')
             )
 
         for row in range(
@@ -1033,10 +1033,10 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
             )
 
             routingDialog.ruleEdit.setText(
-                self.RoutesList[routesIndex][Hysteria.name()].get('acl', '')
+                self.RoutesList[routesIndex][Hysteria1.name()].get('acl', '')
             )
             routingDialog.mmdbEdit.setText(
-                self.RoutesList[routesIndex][Hysteria.name()].get('mmdb', '')
+                self.RoutesList[routesIndex][Hysteria1.name()].get('mmdb', '')
             )
 
     @QtCore.Slot(QtCore.QPoint)
@@ -1308,10 +1308,10 @@ class EditRoutingWidget(MainWindow):
 
                 # Set default value
                 routingDialog.ruleEdit.setText(
-                    DEFAULT_USER_ROUTING[Hysteria.name()].get('acl', '')
+                    DEFAULT_USER_ROUTING[Hysteria1.name()].get('acl', '')
                 )
                 routingDialog.mmdbEdit.setText(
-                    DEFAULT_USER_ROUTING[Hysteria.name()].get('mmdb', '')
+                    DEFAULT_USER_ROUTING[Hysteria1.name()].get('mmdb', '')
                 )
 
                 self.RoutesList.append(
