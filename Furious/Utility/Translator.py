@@ -956,6 +956,11 @@ TRANSLATION = {
         'ZH': 'VPN模式已停止',
         'TW': 'VPN模式已停止',
     },
+    'No gateway address found': {
+        'ES': 'No se encontró ninguna dirección de puerta de enlace',
+        'ZH': '找不到网关地址',
+        'TW': '找不到網關地址',
+    },
     'Multiple gateway addresses found': {
         'ES': 'Se encontraron varias direcciones de puerta de enlace',
         'ZH': '找到多个网关地址',
