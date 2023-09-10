@@ -2,6 +2,8 @@
 
 [![Build Furious](https://github.com/LorenEteval/Furious/actions/workflows/wheels.yml/badge.svg?branch=main)](https://github.com/LorenEteval/Furious/actions/workflows/wheels.yml)
 
+[简体中文](https://github.com/LorenEteval/Furious#%E5%8A%9F%E8%83%BD)
+
 A PySide6-based cross platform GUI client that launches your beloved GFW to outer space.
 Support [Xray-core](https://github.com/XTLS/Xray-core)
 and [hysteria](https://github.com/apernet/hysteria).
@@ -12,9 +14,10 @@ and [hysteria](https://github.com/apernet/hysteria).
 
 * Runs on Windows, macOS and Linux.
 * Built-in support for [Xray-core](https://github.com/XTLS/Xray-core)
-  and [hysteria](https://github.com/apernet/hysteria). Cores are actually Python bindings that shipped with the source
-  code. See more information: [Xray-core-python](https://github.com/LorenEteval/Xray-core-python)
-  and [hysteria-python](https://github.com/LorenEteval/hysteria-python).
+  and [hysteria](https://github.com/apernet/hysteria)(compatible with hy1 and hy2). Cores are actually Python bindings
+  that shipped with the source code. See more
+  information: [Xray-core-python](https://github.com/LorenEteval/Xray-core-python), [hysteria-python](https://github.com/LorenEteval/hysteria-python)
+  and [hysteria2-python](https://github.com/LorenEteval/hysteria2-python).
 * Support TUN mode on Windows and macOS. (experimental, requires administrator/root privilege)
 * Support import from JSON or share link (`vmess://...`, `vless://...` or `ss://`, including the
   newest [REALITY](https://github.com/XTLS/REALITY) share standard).
@@ -33,9 +36,13 @@ and [hysteria](https://github.com/apernet/hysteria).
 
 There are **two** ways of installing Furious:
 
-* Download zip file in the [release](https://github.com/LorenEteval/Furious/releases) page that contains pre-built
-  binaries. In this case there is no dependency required. (only for **Windows** users)
-* Install via `pip` (requires **Python 3.8 and above**). You need to follow instructions below. (available for **all** platform)
+1. Download pre-built binary release. In this case there is no dependency required:
+    * For Windows users: Download zip file in the [release](https://github.com/LorenEteval/Furious/releases) page that
+      contains pre-built binaries.
+    * For macOS users: Download dmg file in the [release](https://github.com/LorenEteval/Furious/releases) page.
+      (currently only supports **arm64 macOS 12.0+**).
+2. Install via `pip` (requires **Python 3.8 and above**). You need to follow instructions below. (available for **all**
+   platform)
 
 ### Core Building Tools
 
@@ -135,8 +142,10 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 ## 功能
 
 * 在Windows、macOS和Linux上运行。
-* 内置对[Xray-core](https://github.com/XTLS/Xray-core)和[hysteria](https://github.com/apernet/hysteria)的支持。
-  Core实际是与源代码一起发行的Python绑定。更多信息: [Xray-core-python](https://github.com/LorenEteval/Xray-core-python), [hysteria-python](https://github.com/LorenEteval/hysteria-python)。
+* 内置对[Xray-core](https://github.com/XTLS/Xray-core)和[hysteria](https://github.com/apernet/hysteria)
+  的支持（对于hysteria，兼容hy1和hy2）。Core实际是与源代码一起发行的Python绑定。更多信息: [Xray-core-python](https://github.com/LorenEteval/Xray-core-python),
+  [hysteria-python](https://github.com/LorenEteval/hysteria-python)
+  和[hysteria2-python](https://github.com/LorenEteval/hysteria2-python)。
 * 在Windows和macOS上支持TUN模式。（实验性功能，需要管理员/root权限）
 * 支持从JSON或分享链接导入（`vmess://...`，`vless://...`或`ss://`，包括最新的[REALITY](https://github.com/XTLS/REALITY)
   分享标准）。
@@ -155,8 +164,11 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 有**两种**安装Furious的方式：
 
-* 在[release](https://github.com/LorenEteval/Furious/releases)界面下载打包好的二进制文件。不需要任何依赖。（仅适用于**Windows**用户）
-* 通过`pip`安装（需要**Python 3.8及以上**），且需要按照以下步骤进行操作。（适用于**所有**平台）
+1. 下载打包好的二进制版本，无需其它依赖：
+    * Windows用户：在[release](https://github.com/LorenEteval/Furious/releases)界面下载打包好的zip文件。
+    * macOS用户：在[release](https://github.com/LorenEteval/Furious/releases)界面下载dmg文件。
+      （当前仅支持**arm64 macOS 12.0+**）
+2. 通过`pip`安装（需要**Python 3.8及以上**），且需要按照以下步骤进行操作。（适用于**所有**平台）
 
 ### Core编译工具
 
