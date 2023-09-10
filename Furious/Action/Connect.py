@@ -909,6 +909,16 @@ class ConnectAction(Action):
             )
         )
 
+        if len(defaultGateway) == 0:
+            logger.error(f'no gateway address found')
+
+            self.coreRunning = False
+            self.disconnectReason = (
+                _('Unable to connect') + ': ' + _('No gateway address found')
+            )
+
+            return
+
         if len(defaultGateway) != 1:
             logger.error(f'found multiple gateway addresses: {defaultGateway}')
 
