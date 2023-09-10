@@ -216,3 +216,44 @@ class Hysteria1(Core):
 
     def start(self, json, rule, mmdb, **kwargs):
         super().start(target=startHysteria1, args=(json, rule, mmdb), **kwargs)
+
+
+def startHysteria2(json):
+    try:
+        import hysteria2
+    except ImportError:
+        # Fake running process
+        while True:
+            pass
+    else:
+        hysteria2.startFromJSON(json)
+
+
+class Hysteria2(Core):
+    class ExitCode:
+        ConfigurationError = 23
+        # Windows: 4294967295. Darwin, Linux: 255 (-1)
+        ServerStartFailure = 4294967295 if PLATFORM == 'Windows' else 255
+        # Windows shutting down
+        SystemShuttingDown = 0x40010004
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def name():
+        return 'Hysteria2'
+
+    @staticmethod
+    def version():
+        try:
+            import hysteria2
+
+            return hysteria2.__version__
+        except Exception:
+            # Any non-exit exceptions
+
+            return '0.0.0'
+
+    def start(self, json, **kwargs):
+        super().start(target=startHysteria2, args=(json,), **kwargs)

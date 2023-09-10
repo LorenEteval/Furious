@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Core.Core import XrayCore, Hysteria1
+from Furious.Core.Core import XrayCore, Hysteria1, Hysteria2
 from Furious.Core.TorRelay import TorRelay
 from Furious.Core.Tun2socks import Tun2socks
 from Furious.Core.Intellisense import Intellisense
@@ -123,6 +123,7 @@ class ConnectAction(Action):
 
         self.XrayCore = XrayCore()
         self.Hysteria1 = Hysteria1()
+        self.Hysteria2 = Hysteria2()
         self.Tun2socks = Tun2socks()
         self.TorRelay = TorRelay()
 
@@ -224,6 +225,55 @@ class ConnectAction(Action):
                 f'{Hysteria1.name()}: {_("Core terminated unexpectedly")}'
             )
 
+    def Hysteria2ExitCallback(self, exitcode):
+        if self.coreName:
+            # If core is running
+            assert self.coreRunning
+            assert self.coreName == Hysteria2.name()
+
+        if exitcode == Hysteria2.ExitCode.SystemShuttingDown:
+            # System shutting down. Do nothing
+            return
+
+        if exitcode == Hysteria2.ExitCode.ConfigurationError:
+            if not self.isConnecting():
+                # Protect connecting action. Mandatory
+                return self.disconnectAction(
+                    f'{Hysteria2.name()}: {_("Invalid server configuration")}'
+                )
+            else:
+                self.coreRunning = False
+                self.disconnectReason = (
+                    f'{Hysteria2.name()}: {_("Invalid server configuration")}'
+                )
+
+                return
+
+        if exitcode == Hysteria2.ExitCode.ServerStartFailure:
+            if not self.isConnecting():
+                # Protect connecting action. Mandatory
+                return self.disconnectAction(
+                    f'{Hysteria2.name()}: {_("Failed to start core")}'
+                )
+            else:
+                self.coreRunning = False
+                self.disconnectReason = (
+                    f'{Hysteria2.name()}: {_("Failed to start core")}'
+                )
+
+                return
+
+        if not self.isConnecting():
+            # Protect connecting action. Mandatory
+            self.disconnectAction(
+                f'{Hysteria2.name()}: {_("Core terminated unexpectedly")}'
+            )
+        else:
+            self.coreRunning = False
+            self.disconnectReason = (
+                f'{Hysteria2.name()}: {_("Core terminated unexpectedly")}'
+            )
+
     def Tun2socksExitCallback(self, exitcode):
         if exitcode == Tun2socks.ExitCode.SystemShuttingDown:
             # System shutting down. Do nothing
@@ -247,10 +297,12 @@ class ConnectAction(Action):
 
         self.XrayCore.registerExitCallback(None)
         self.Hysteria1.registerExitCallback(None)
+        self.Hysteria2.registerExitCallback(None)
 
         # Stop any potentially running core
         self.XrayCore.stop()
         self.Hysteria1.stop()
+        self.Hysteria2.stop()
 
         self.coreRunning = False
 
@@ -470,6 +522,9 @@ class ConnectAction(Action):
         self.Hysteria1.registerExitCallback(
             lambda exitcode: self.Hysteria1ExitCallback(exitcode)
         )
+        self.Hysteria2.registerExitCallback(
+            lambda exitcode: self.Hysteria2ExitCallback(exitcode)
+        )
         self.Tun2socks.registerExitCallback(
             lambda exitcode: self.Tun2socksExitCallback(exitcode)
         )
@@ -533,9 +588,6 @@ class ConnectAction(Action):
                 self.errorHttpsProxyConf()
             else:
                 if validateHttpsProxyServer(httpsProxyServer):
-                    routing = APP().Routing
-
-                    logger.info(f'core {XrayCore.name()} configured')
 
                     def fixLoggingRelativePath(attr):
                         # Relative path fails if booting on start up
@@ -560,8 +612,12 @@ class ConnectAction(Action):
 
                                 self.coreJSON['log'][attr] = fix
 
+                    logger.info(f'core {XrayCore.name()} configured')
+
                     fixLoggingRelativePath('access')
                     fixLoggingRelativePath('error')
+
+                    routing = APP().Routing
 
                     # Filter Route My Traffic Through Tor, Custom
                     if routing in list(
@@ -683,11 +739,11 @@ class ConnectAction(Action):
                 self.errorHttpsProxyConf()
             else:
                 if validateHttpsProxyServer(httpsProxyServer):
+                    logger.info(f'core {Hysteria1.name()} configured')
+
                     self.coreRunning = True
 
                     routing = APP().Routing
-
-                    logger.info(f'core {Hysteria1.name()} configured')
 
                     # Filter Route My Traffic Through Tor, Global, Custom
                     if routing in list(
@@ -771,6 +827,71 @@ class ConnectAction(Action):
                                 self.startTun2socks()
 
             return Hysteria1.name()
+
+        if Intellisense.getCoreType(self.coreJSON) == Hysteria2.name():
+            # Assuming is Hysteria2 configuration
+
+            if isVPNMode():
+                # Check socks inbound is valid
+                try:
+                    socksProxyServer = self.coreJSON['socks5']['listen']
+
+                    if socksProxyServer is None:
+                        # No SOCKS proxy endpoint configured
+                        raise SocksProxyServerError
+                except (KeyError, SocksProxyServerError):
+                    self.reset()
+                    self.errorSocksProxyConf()
+
+                    # Return to caller
+                    return Hysteria2.name()
+                else:
+                    # Validate socks proxy server
+                    if not validateSocksProxyServer(socksProxyServer):
+                        # Return to caller
+                        return Hysteria2.name()
+
+            try:
+                httpsProxyServer = self.coreJSON['http']['listen']
+
+                if httpsProxyServer is None:
+                    # No HTTP proxy endpoint configured
+                    raise HttpsProxyServerError
+            except (KeyError, HttpsProxyServerError):
+                self.reset()
+                self.errorHttpsProxyConf()
+            else:
+                if validateHttpsProxyServer(httpsProxyServer):
+                    logger.info(f'core {Hysteria2.name()} configured')
+
+                    self.coreRunning = True
+
+                    routing = APP().Routing
+
+                    if routing == 'Route My Traffic Through Tor':
+                        logger.info(f'routing is {routing}')
+
+                        if TorRelay.checkIfExists():
+                            logger.info(
+                                f'find Tor CLI in path success. Version: {TorRelay.version()}'
+                            )
+
+                            self.Hysteria2.start(self.coreText)
+
+                            self.startTorRelay(Hysteria2.name(), httpsProxyServer)
+                        else:
+                            logger.error('find Tor CLI in path failed')
+
+                            self.coreRunning = False
+                            self.disconnectReason = f'{Hysteria2.name()}: {_("Cannot find Tor CLI in PATH")}'
+
+                            return Hysteria2.name()
+                    else:
+                        logger.info(f'routing is {routing}')
+
+                        self.Hysteria2.start(self.coreText)
+
+            return Hysteria2.name()
 
         # No matching core
         return ''
