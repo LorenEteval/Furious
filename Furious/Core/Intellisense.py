@@ -15,20 +15,50 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Core.Core import XrayCore, Hysteria1
+from Furious.Core.Core import XrayCore, Hysteria1, Hysteria2
 from Furious.Utility.Utility import Protocol, protocolRepr
 
 
 class Intellisense:
     @staticmethod
     def getCoreType(ob):
-        if ob.get('inbounds') is not None or ob.get('outbounds') is not None:
+        def hasField(field):
+            return ob.get(field) is not None
+
+        if hasField('inbounds') or hasField('outbounds'):
             # Assuming is XrayCore
             return XrayCore.name()
 
-        if ob.get('server') is not None:
-            # Assuming is Hysteria1. This behavior might be changed in the future
-            return Hysteria1.name()
+        if hasField('server'):
+            if (
+                hasField('protocol')
+                or hasField('up_mbps')
+                or hasField('down_mbps')
+                or hasField('auth_str')
+                or hasField('alpn')
+                or hasField('server_name')
+                or hasField('insecure')
+                or hasField('recv_window_conn')
+                or hasField('recv_window')
+                or isinstance(ob.get('obfs'), str)
+                or hasField('fast_open')
+                or hasField('lazy_start')
+            ):
+                return Hysteria1.name()
+            elif (
+                hasField('tls')
+                or hasField('transport')
+                or hasField('quic')
+                or hasField('bandwidth')
+                or hasField('tcpForwarding')
+                or hasField('udpForwarding')
+                or hasField('tcpTProxy')
+                or hasField('udpTProxy')
+                or isinstance(ob.get('obfs'), dict)
+                or hasField('fastOpen')
+                or hasField('lazy')
+            ):
+                return Hysteria2.name()
 
         return ''
 
@@ -42,6 +72,9 @@ class Intellisense:
 
             if Intellisense.getCoreType(ob) == Hysteria1.name():
                 return Protocol.Hysteria1
+
+            if Intellisense.getCoreType(ob) == Hysteria2.name():
+                return Protocol.Hysteria2
 
             return ''
         except Exception:
@@ -74,6 +107,9 @@ class Intellisense:
                             )
 
             if Intellisense.getCoreType(ob) == Hysteria1.name():
+                return ob['server'].split(':')[0]
+
+            if Intellisense.getCoreType(ob) == Hysteria2.name():
                 return ob['server'].split(':')[0]
 
             return ''
@@ -109,6 +145,9 @@ class Intellisense:
             if Intellisense.getCoreType(ob) == Hysteria1.name():
                 return ob['server'].split(':')[1]
 
+            if Intellisense.getCoreType(ob) == Hysteria2.name():
+                return ob['server'].split(':')[1]
+
             return ''
         except Exception:
             # Any non-exit exceptions
@@ -123,9 +162,6 @@ class Intellisense:
                     if outbound['tag'] == 'proxy':
                         return outbound['streamSettings']['network']
 
-            if Intellisense.getCoreType(ob) == Hysteria1.name():
-                return ''
-
             return ''
         except Exception:
             # Any non-exit exceptions
@@ -139,9 +175,6 @@ class Intellisense:
                 for outbound in ob['outbounds']:
                     if outbound['tag'] == 'proxy':
                         return outbound['streamSettings']['security']
-
-            if Intellisense.getCoreType(ob) == Hysteria1.name():
-                return ''
 
             return ''
         except Exception:
