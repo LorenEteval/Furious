@@ -891,6 +891,12 @@ class ConnectAction(Action):
 
                         self.Hysteria2.start(self.coreText)
 
+                    if self.coreJSON:
+                        if isVPNMode():
+                            if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
+                                # Currently VPN Mode is only supported on Windows and macOS
+                                self.startTun2socks()
+
             return Hysteria2.name()
 
         # No matching core
