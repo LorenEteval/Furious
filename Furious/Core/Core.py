@@ -142,7 +142,7 @@ class XrayCore(Core):
         super().start(target=startXrayCore, args=(json,), **kwargs)
 
 
-def startHysteria(json, rule, mmdb):
+def startHysteria1(json, rule, mmdb):
     try:
         import hysteria
     except ImportError:
@@ -153,7 +153,7 @@ def startHysteria(json, rule, mmdb):
         hysteria.startFromJSON(json, rule, mmdb)
 
 
-class Hysteria(Core):
+class Hysteria1(Core):
     class ExitCode:
         ConfigurationError = 23
         RemoteNetworkError = 3
@@ -171,13 +171,13 @@ class Hysteria(Core):
             with open(path, 'rb') as file:
                 data = file.read()
 
-            logger.info(f'hysteria rule \'{path}\' load success')
+            logger.info(f'hysteria1 rule \'{path}\' load success')
 
             return data
         except Exception as ex:
             # Any non-exit exceptions
 
-            logger.error(f'hysteria rule \'{path}\' load failed. {ex}')
+            logger.error(f'hysteria1 rule \'{path}\' load failed. {ex}')
 
             return ''
 
@@ -189,19 +189,19 @@ class Hysteria(Core):
             with open(path, 'rb') as file:
                 data = file.read()
 
-            logger.info(f'hysteria mmdb \'{path}\' load success')
+            logger.info(f'hysteria1 mmdb \'{path}\' load success')
 
             return data
         except Exception as ex:
             # Any non-exit exceptions
 
-            logger.error(f'hysteria mmdb \'{path}\' load failed. {ex}')
+            logger.error(f'hysteria1 mmdb \'{path}\' load failed. {ex}')
 
             return ''
 
     @staticmethod
     def name():
-        return 'Hysteria'
+        return 'Hysteria1'
 
     @staticmethod
     def version():
@@ -215,4 +215,4 @@ class Hysteria(Core):
             return '0.0.0'
 
     def start(self, json, rule, mmdb, **kwargs):
-        super().start(target=startHysteria, args=(json, rule, mmdb), **kwargs)
+        super().start(target=startHysteria1, args=(json, rule, mmdb), **kwargs)

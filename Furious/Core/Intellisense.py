@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Core.Core import XrayCore, Hysteria
+from Furious.Core.Core import XrayCore, Hysteria1
 from Furious.Utility.Utility import Protocol, protocolRepr
 
 
@@ -27,8 +27,8 @@ class Intellisense:
             return XrayCore.name()
 
         if ob.get('server') is not None:
-            # Assuming is Hysteria. This behavior might be changed in the future
-            return Hysteria.name()
+            # Assuming is Hysteria1. This behavior might be changed in the future
+            return Hysteria1.name()
 
         return ''
 
@@ -40,8 +40,8 @@ class Intellisense:
                     if outbound['tag'] == 'proxy':
                         return protocolRepr(outbound['protocol'])
 
-            if Intellisense.getCoreType(ob) == Hysteria.name():
-                return Protocol.Hysteria
+            if Intellisense.getCoreType(ob) == Hysteria1.name():
+                return Protocol.Hysteria1
 
             return ''
         except Exception:
@@ -73,7 +73,7 @@ class Intellisense:
                                 )
                             )
 
-            if Intellisense.getCoreType(ob) == Hysteria.name():
+            if Intellisense.getCoreType(ob) == Hysteria1.name():
                 return ob['server'].split(':')[0]
 
             return ''
@@ -106,7 +106,7 @@ class Intellisense:
                                 )
                             )
 
-            if Intellisense.getCoreType(ob) == Hysteria.name():
+            if Intellisense.getCoreType(ob) == Hysteria1.name():
                 return ob['server'].split(':')[1]
 
             return ''
@@ -123,7 +123,7 @@ class Intellisense:
                     if outbound['tag'] == 'proxy':
                         return outbound['streamSettings']['network']
 
-            if Intellisense.getCoreType(ob) == Hysteria.name():
+            if Intellisense.getCoreType(ob) == Hysteria1.name():
                 return ''
 
             return ''
@@ -140,7 +140,7 @@ class Intellisense:
                     if outbound['tag'] == 'proxy':
                         return outbound['streamSettings']['security']
 
-            if Intellisense.getCoreType(ob) == Hysteria.name():
+            if Intellisense.getCoreType(ob) == Hysteria1.name():
                 return ''
 
             return ''

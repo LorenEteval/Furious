@@ -57,7 +57,7 @@ class Protocol:
     VMess = 'VMess'
     VLESS = 'VLESS'
     Shadowsocks = 'shadowsocks'
-    Hysteria = 'hysteria'
+    Hysteria1 = 'hysteria1'
 
 
 class StateContext:
