@@ -1531,13 +1531,13 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         currRow = -1 if currItem is None else currItem.row()
         prevRow = -1 if prevItem is None else prevItem.row()
 
-        def doNotSwitchCallback():
+        def doNotSwitchCallback(tableWidgetItem):
             self.blockSignals(True)
-            self.setCurrentIndex(self.indexFromItem(prevItem))
+            self.setCurrentIndex(self.indexFromItem(tableWidgetItem))
             self.blockSignals(False)
 
         def doNotSwitch():
-            self.doNotSwitchCallback = doNotSwitchCallback
+            self.doNotSwitchCallback = functools.partial(doNotSwitchCallback, prevItem)
 
         self.saveScrollBarValue(prevRow)
 
