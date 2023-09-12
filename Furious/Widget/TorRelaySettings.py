@@ -92,6 +92,9 @@ class TorRelaySettingsWidget(Translatable, SupportConnectedCallback, QDialog):
 
         self.endpointGroupBoxLayout = QGridLayout(parent=self.endpointGroupBox)
 
+        if PLATFORM == 'Darwin':
+            self.endpointGroupBoxLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+
         self.endpointGroupBoxLayout.addWidget(self.socksTunnelWidget, 0, 0)
         self.endpointGroupBoxLayout.addWidget(self.httpsTunnelWidget, 0, 1)
 
@@ -145,6 +148,9 @@ class TorRelaySettingsWidget(Translatable, SupportConnectedCallback, QDialog):
         self.torRelayTimeoutWidget.setLayout(self.torRelayTimeoutLayout)
 
         self.torOtherGroupBoxLayout = QGridLayout(parent=self.torOtherGroupBox)
+
+        if PLATFORM == 'Darwin':
+            self.torOtherGroupBoxLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
 
         self.torOtherGroupBoxLayout.addWidget(self.torLogLevelWidget, 0, 0)
         self.torOtherGroupBoxLayout.addWidget(self.torRelayTimeoutWidget, 0, 1)
