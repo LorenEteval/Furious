@@ -38,12 +38,33 @@ class ExportLinkResultBox(MessageBox):
 
         self.setWindowTitle(_('Export'))
 
-        if len(self.failureStr):
-            self.setIcon(MessageBox.Icon.Critical)
-        else:
-            self.setIcon(MessageBox.Icon.Information)
-
     def getText(self):
+        text = self.getTextAll()
+
+        if len(text) <= 1000:
+            return text
+        else:
+            # Limited
+            if len(self.successStr) == 0:
+                return (
+                    _('Export as QR code failed:')
+                    if self.isQRCodeExport
+                    else _('Export share link to clipboard failed:')
+                ) + f'\n\n...'
+            elif len(self.failureStr) == 0:
+                return (
+                    _('Export as QR code success:')
+                    if self.isQRCodeExport
+                    else _('Export share link to clipboard success:')
+                ) + f'\n\n...'
+            else:
+                return (
+                    _('Export as QR code partially success:')
+                    if self.isQRCodeExport
+                    else _('Export share link to clipboard partially success:')
+                ) + f'\n\n...'
+
+    def getTextAll(self):
         if len(self.successStr) == 0:
             return (
                 (
@@ -151,6 +172,20 @@ def exportLink(selectedIndex):
     return serverLink, successStr, failureStr
 
 
+def showExportLinkResult(resultBox, successStr, failureStr):
+    resultBox.successStr = successStr
+    resultBox.failureStr = failureStr
+    resultBox.setText(resultBox.getText())
+
+    if len(successStr) == 0:
+        resultBox.setIcon(MessageBox.Icon.Critical)
+    else:
+        resultBox.setIcon(MessageBox.Icon.Information)
+
+    # Show the MessageBox and wait for user to close it
+    resultBox.exec()
+
+
 class ExportLinkAction(Action):
     def __init__(self, **kwargs):
         super().__init__(_('Export Share Link To Clipboard'), **kwargs)
@@ -168,12 +203,7 @@ class ExportLinkAction(Action):
 
         QApplication.clipboard().setText('\n'.join(serverLink))
 
-        self.exportLinkResult.successStr = successStr
-        self.exportLinkResult.failureStr = failureStr
-        self.exportLinkResult.setText(self.exportLinkResult.getText())
-
-        # Show the MessageBox and wait for user to close it
-        self.exportLinkResult.exec()
+        showExportLinkResult(self.exportLinkResult, successStr, failureStr)
 
 
 class ExportQRCodeAction(Action):
@@ -201,12 +231,7 @@ class ExportQRCodeAction(Action):
             self.exportQRCode.initTabWithData(list(zip(successStr, serverLink)))
             self.exportQRCode.show()
 
-        self.exportLinkResult.successStr = successStr
-        self.exportLinkResult.failureStr = failureStr
-        self.exportLinkResult.setText(self.exportLinkResult.getText())
-
-        # Show the MessageBox and wait for user to close it
-        self.exportLinkResult.exec()
+        showExportLinkResult(self.exportLinkResult, successStr, failureStr)
 
 
 class ExportJSONAction(Action):

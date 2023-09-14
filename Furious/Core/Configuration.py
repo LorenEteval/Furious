@@ -18,7 +18,7 @@
 from Furious.Core.Core import XrayCore
 from Furious.Core.Intellisense import Intellisense
 from Furious.Widget.Widget import MessageBox
-from Furious.Utility.Constants import APPLICATION_NAME
+from Furious.Utility.Constants import APPLICATION_NAME, PROXY_OUTBOUND_USER_EMAIL
 from Furious.Utility.Utility import Base64Encoder, Protocol, bootstrapIcon
 from Furious.Utility.Translator import gettext as _
 
@@ -42,6 +42,7 @@ class Configuration:
         super().__init__(*args, **kwargs)
 
     @staticmethod
+    @functools.lru_cache(32)
     def toJSON(text):
         return ujson.loads(text)
 
@@ -72,23 +73,20 @@ class Configuration:
     def export(remark, ob):
         if Intellisense.getCoreType(ob) == XrayCore.name():
 
-            def hasKey(obj, key):
-                return obj.get(key) is not None
-
-            def getStreamNetSettings(protocol, streamObject, netType):
+            def streamNetSettingsVMess(streamObject, netType):
                 kwargs = {}
 
-                netobj = streamObject[
-                    ProxyOutboundObject.getStreamNetworkSettingsName(netType)
-                ]
+                netobj = streamObject.get(ProxyOutboundObject.streamNetworkKey(netType))
+
+                if netobj is None:
+                    return kwargs
+
+                def hasKey(key):
+                    return netobj.get(key) is not None
 
                 if netType == 'tcp':
                     try:
-                        if protocol == Protocol.VMess:
-                            kwargs['type'] = netobj['header']['type']
-
-                        if protocol == Protocol.VLESS:
-                            kwargs['headerType'] = netobj['header']['type']
+                        kwargs['type'] = netobj['header']['type']
                     except Exception:
                         # Any non-exit exceptions
 
@@ -97,17 +95,10 @@ class Configuration:
                 elif netType == 'kcp':
                     try:
                         # Get order matters here
-                        if protocol == Protocol.VMess:
-                            if hasKey(netobj, 'seed'):
-                                kwargs['path'] = netobj['seed']
+                        if hasKey('seed'):
+                            kwargs['path'] = netobj['seed']
 
-                            kwargs['type'] = netobj['header']['type']
-
-                        if protocol == Protocol.VLESS:
-                            if hasKey(netobj, 'seed'):
-                                kwargs['seed'] = netobj['seed']
-
-                            kwargs['headerType'] = netobj['header']['type']
+                        kwargs['type'] = netobj['header']['type']
                     except Exception:
                         # Any non-exit exceptions
 
@@ -116,7 +107,7 @@ class Configuration:
                 elif netType == 'ws':
                     try:
                         # Get order matters here
-                        if hasKey(netobj, 'path'):
+                        if hasKey('path'):
                             kwargs['path'] = quote(netobj['path'])
 
                         if netobj['headers']['Host']:
@@ -129,7 +120,7 @@ class Configuration:
                 elif netType == 'h2' or netType == 'http':
                     try:
                         # Get order matters here
-                        if hasKey(netobj, 'path'):
+                        if hasKey('path'):
                             kwargs['path'] = quote(netobj['path'])
 
                         kwargs['host'] = quote(','.join(netobj['host']))
@@ -141,48 +132,108 @@ class Configuration:
                 elif netType == 'quic':
                     try:
                         # Get order matters here
-                        if protocol == Protocol.VMess:
-                            if hasKey(netobj, 'security'):
-                                kwargs['host'] = netobj['security']
+                        if hasKey('security'):
+                            kwargs['host'] = netobj['security']
 
-                            if hasKey(netobj, 'key'):
-                                kwargs['path'] = quote(netobj['key'])
+                        if hasKey('key'):
+                            kwargs['path'] = quote(netobj['key'])
 
-                            kwargs['type'] = netobj['header']['type']
-
-                        if protocol == Protocol.VLESS:
-                            if hasKey(netobj, 'security'):
-                                kwargs['quicSecurity'] = netobj['security']
-
-                            if hasKey(netobj, 'key'):
-                                kwargs['path'] = quote(netobj['key'])
-
-                            kwargs['headerType'] = netobj['header']['type']
+                        kwargs['type'] = netobj['header']['type']
                     except Exception:
                         # Any non-exit exceptions
 
                         pass
 
                 elif netType == 'grpc':
-                    if protocol == Protocol.VMess:
-                        if hasKey(netobj, 'serviceName'):
-                            kwargs['path'] = netobj['serviceName']
-
-                    if protocol == Protocol.VLESS:
-                        if hasKey(netobj, 'serviceName'):
-                            kwargs['serviceName'] = netobj['serviceName']
+                    if hasKey('serviceName'):
+                        kwargs['path'] = netobj['serviceName']
 
                 return kwargs
 
-            def getStreamTLSSettings(streamObject, tlsType):
-                if tlsType == 'none':
-                    return {}
-
+            def streamNetSettingsVLESS(streamObject, netType):
                 kwargs = {}
 
-                tlsobj = streamObject[
-                    ProxyOutboundObject.getStreamTLSSettingsName(tlsType)
-                ]
+                netobj = streamObject.get(ProxyOutboundObject.streamNetworkKey(netType))
+
+                if netobj is None:
+                    return kwargs
+
+                def hasKey(key):
+                    return netobj.get(key) is not None
+
+                if netType == 'tcp':
+                    try:
+                        kwargs['headerType'] = netobj['header']['type']
+                    except Exception:
+                        # Any non-exit exceptions
+
+                        pass
+
+                elif netType == 'kcp':
+                    try:
+                        # Get order matters here
+                        if hasKey('seed'):
+                            kwargs['seed'] = netobj['seed']
+
+                        kwargs['headerType'] = netobj['header']['type']
+                    except Exception:
+                        # Any non-exit exceptions
+
+                        pass
+
+                elif netType == 'ws':
+                    try:
+                        # Get order matters here
+                        if hasKey('path'):
+                            kwargs['path'] = quote(netobj['path'])
+
+                        if netobj['headers']['Host']:
+                            kwargs['host'] = quote(netobj['headers']['Host'])
+                    except Exception:
+                        # Any non-exit exceptions
+
+                        pass
+
+                elif netType == 'h2' or netType == 'http':
+                    try:
+                        # Get order matters here
+                        if hasKey('path'):
+                            kwargs['path'] = quote(netobj['path'])
+
+                        kwargs['host'] = quote(','.join(netobj['host']))
+                    except Exception:
+                        # Any non-exit exceptions
+
+                        pass
+
+                elif netType == 'quic':
+                    try:
+                        # Get order matters here
+                        if hasKey('security'):
+                            kwargs['quicSecurity'] = netobj['security']
+
+                        if hasKey('key'):
+                            kwargs['path'] = quote(netobj['key'])
+
+                        kwargs['headerType'] = netobj['header']['type']
+                    except Exception:
+                        # Any non-exit exceptions
+
+                        pass
+
+                elif netType == 'grpc':
+                    if hasKey('serviceName'):
+                        kwargs['serviceName'] = netobj['serviceName']
+
+                return kwargs
+
+            def streamTLSSettings(streamObject, tlsType):
+                kwargs = {}
+
+                if tlsType == 'none':
+                    return kwargs
+
+                tlsobj = streamObject[ProxyOutboundObject.streamTLSKey(tlsType)]
 
                 if tlsType == 'reality' or tlsType == 'tls':
                     if tlsobj.get('fingerprint'):
@@ -207,109 +258,142 @@ class Configuration:
 
                 return kwargs
 
+            def getProxyOutboundObject():
+                for outboundObject in ob['outbounds']:
+                    if outboundObject['tag'] == 'proxy':
+                        return outboundObject
+
+                raise Exception('No proxy outbound found')
+
             # Begin export
-            coreProtocol = Intellisense.getCoreProtocol(ob)
 
-            if coreProtocol == Protocol.VMess or coreProtocol == Protocol.VLESS:
-                proxyOutbound = None
+            outbound = getProxyOutboundObject()
 
-                for outbound in ob['outbounds']:
-                    if outbound['tag'] == 'proxy':
-                        proxyOutbound = outbound
-
-                        break
-
-                if proxyOutbound is None:
-                    raise Exception('No proxy outbound found')
-
-                proxyServer = proxyOutbound['settings']['vnext'][0]
+            def exportVMess():
+                proxyServer = outbound['settings']['vnext'][0]
                 proxyServerUser = proxyServer['users'][0]
 
-                proxyStream = proxyOutbound['streamSettings']
-                proxyStreamNet = proxyStream['network']
-                proxyStreamTLS = proxyStream['security']
+                proxyStream, proxyStreamNet, proxyStreamTLS = (
+                    outbound['streamSettings'],
+                    outbound['streamSettings']['network'],
+                    outbound['streamSettings']['security'],
+                )
 
-                if coreProtocol == Protocol.VMess:
-                    return (
-                        'vmess://'
-                        + Base64Encoder.encode(
-                            ujson.dumps(
-                                {
-                                    'v': '2',
-                                    'ps': quote(remark),
-                                    'add': proxyServer['address'],
-                                    'port': proxyServer['port'],
-                                    'id': proxyServerUser['id'],
-                                    'aid': proxyServerUser['alterId'],
-                                    'scy': proxyServerUser['security'],
-                                    'net': proxyStreamNet,
-                                    'tls': proxyStreamTLS,
-                                    # kwargs
-                                    **getStreamNetSettings(
-                                        coreProtocol, proxyStream, proxyStreamNet
-                                    ),
-                                    **getStreamTLSSettings(proxyStream, proxyStreamTLS),
-                                },
-                                ensure_ascii=False,
-                                escape_forward_slashes=False,
-                            ).encode()
-                        ).decode()
-                    )
+                return (
+                    'vmess://'
+                    + Base64Encoder.encode(
+                        ujson.dumps(
+                            {
+                                'v': '2',
+                                'ps': quote(remark),
+                                'add': proxyServer['address'],
+                                'port': proxyServer['port'],
+                                'id': proxyServerUser['id'],
+                                'aid': proxyServerUser['alterId'],
+                                'scy': proxyServerUser['security'],
+                                'net': proxyStreamNet,
+                                'tls': proxyStreamTLS,
+                                # kwargs
+                                **streamNetSettingsVMess(proxyStream, proxyStreamNet),
+                                **streamTLSSettings(proxyStream, proxyStreamTLS),
+                            },
+                            ensure_ascii=False,
+                            escape_forward_slashes=False,
+                        ).encode()
+                    ).decode()
+                )
 
-                if coreProtocol == Protocol.VLESS:
-                    flowArg = {}
+            def exportVLESS():
+                proxyServer = outbound['settings']['vnext'][0]
+                proxyServerUser = proxyServer['users'][0]
 
-                    if proxyServerUser.get('flow'):
-                        flowArg['flow'] = proxyServerUser['flow']
+                proxyStream, proxyStreamNet, proxyStreamTLS = (
+                    outbound['streamSettings'],
+                    outbound['streamSettings']['network'],
+                    outbound['streamSettings']['security'],
+                )
 
-                    netloc = f'{proxyServerUser["id"]}@{proxyServer["address"]}:{proxyServer["port"]}'
+                flowArg = {}
 
-                    query = '&'.join(
-                        f'{key}={value}'
-                        for key, value in {
-                            'encryption': proxyServerUser['encryption'],
-                            'type': proxyStreamNet,
-                            'security': proxyStreamTLS,
-                            # kwargs
-                            **flowArg,
-                            **getStreamNetSettings(
-                                coreProtocol, proxyStream, proxyStreamNet
-                            ),
-                            **getStreamTLSSettings(proxyStream, proxyStreamTLS),
-                        }.items()
-                    )
+                if proxyServerUser.get('flow'):
+                    flowArg['flow'] = proxyServerUser['flow']
 
-                    return urlunparse(['vless', netloc, '', '', query, quote(remark)])
+                netloc = f'{proxyServerUser["id"]}@{proxyServer["address"]}:{proxyServer["port"]}'
 
-            if coreProtocol == Protocol.Shadowsocks:
-                proxyOutbound = None
+                query = '&'.join(
+                    f'{key}={value}'
+                    for key, value in {
+                        'encryption': proxyServerUser['encryption'],
+                        'type': proxyStreamNet,
+                        'security': proxyStreamTLS,
+                        # kwargs
+                        **flowArg,
+                        **streamNetSettingsVLESS(proxyStream, proxyStreamNet),
+                        **streamTLSSettings(proxyStream, proxyStreamTLS),
+                    }.items()
+                )
 
-                for outbound in ob['outbounds']:
-                    if outbound['tag'] == 'proxy':
-                        proxyOutbound = outbound
+                return urlunparse(['vless', netloc, '', '', query, quote(remark)])
 
-                        break
+            def exportSS():
+                proxyServer = outbound['settings']['servers'][0]
 
-                if proxyOutbound is None:
-                    raise Exception('No proxy outbound found')
-
-                proxyServer = proxyOutbound['settings']['servers'][0]
-
-                method = proxyServer['method']
-                password = proxyServer['password']
-                address = proxyServer['address']
-                port = proxyServer['port']
+                method, password, address, port = (
+                    proxyServer['method'],
+                    proxyServer['password'],
+                    proxyServer['address'],
+                    proxyServer['port'],
+                )
 
                 netloc = f'{quote(method)}:{quote(password)}@{address}:{port}'
 
                 return urlunparse(['ss', netloc, '', '', '', quote(remark)])
-        else:
-            raise UnsupportedServerExport('Unsupported core protocol export')
+
+            def exportTrojan():
+                proxyServer = outbound['settings']['servers'][0]
+
+                password, address, port = (
+                    proxyServer['password'],
+                    proxyServer['address'],
+                    proxyServer['port'],
+                )
+
+                proxyStream, proxyStreamNet, proxyStreamTLS = (
+                    outbound['streamSettings'],
+                    outbound['streamSettings']['network'],
+                    outbound['streamSettings']['security'],
+                )
+
+                netloc = f'{quote(password)}@{address}:{port}'
+
+                query = '&'.join(
+                    f'{key}={value}'
+                    for key, value in {
+                        'type': proxyStreamNet,
+                        'security': proxyStreamTLS,
+                        # kwargs
+                        **streamNetSettingsVLESS(proxyStream, proxyStreamNet),
+                        **streamTLSSettings(proxyStream, proxyStreamTLS),
+                    }.items()
+                )
+
+                return urlunparse(['trojan', netloc, '', '', query, quote(remark)])
+
+            exportFuncMap = {
+                Protocol.VMess: exportVMess,
+                Protocol.VLESS: exportVLESS,
+                Protocol.Shadowsocks: exportSS,
+                Protocol.Trojan: exportTrojan,
+            }
+
+            return exportFuncMap[Intellisense.getCoreProtocol(ob)]()
+
+        raise UnsupportedServerExport('Unsupported core protocol export')
 
 
 class OutboundObject:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self):
+        super().__init__()
 
     def build(self):
         raise NotImplementedError
@@ -377,12 +461,13 @@ class ProxyOutboundObject(OutboundObject):
         return TLSObject
 
     @staticmethod
-    def getStreamTLSSettingsName(security):
+    def streamTLSKey(security):
         # tlsSettings, realitySettings
         return f'{security}Settings'
 
     @staticmethod
-    def getStreamNetworkSettingsName(type_):
+    @functools.lru_cache(None)
+    def streamNetworkKey(type_):
         if type_ == 'h2':
             return 'httpSettings'
         else:
@@ -483,7 +568,7 @@ class ProxyOutboundObject(OutboundObject):
                 'id': self.uuid_,
                 'security': self.encryption,
                 # Extension
-                'email': 'user@Furious.GUI',
+                'email': PROXY_OUTBOUND_USER_EMAIL,
             }
 
             # For VMess(V2rayN share standard) only.
@@ -497,7 +582,7 @@ class ProxyOutboundObject(OutboundObject):
                 'id': self.uuid_,
                 'encryption': self.encryption,
                 # Extension
-                'email': 'user@Furious.GUI',
+                'email': PROXY_OUTBOUND_USER_EMAIL,
             }
 
             if self.kwargs.get('flow'):
@@ -508,14 +593,15 @@ class ProxyOutboundObject(OutboundObject):
 
         return {}
 
-    def build(self):
-        myJSON = {
+    def getDefaultJSON(self):
+        return {
             'tag': 'proxy',
             'protocol': self.protocol,
             'settings': {
                 'vnext': [
                     {
                         'address': self.remote_host,
+                        # self.remote_port is already an integer
                         'port': self.remote_port,
                         'users': [
                             self.getUserObject(),
@@ -533,40 +619,41 @@ class ProxyOutboundObject(OutboundObject):
             },
         }
 
+    def build(self):
+        myJSON = self.getDefaultJSON()
+
         if self.security != 'none':
             # tlsSettings, realitySettings
             myJSON['streamSettings'][
-                ProxyOutboundObject.getStreamTLSSettingsName(self.security)
+                ProxyOutboundObject.streamTLSKey(self.security)
             ] = self.getTLSSettings(self.security)
 
         # Stream network settings
         myJSON['streamSettings'][
-            ProxyOutboundObject.getStreamNetworkSettingsName(self.type_)
+            ProxyOutboundObject.streamNetworkKey(self.type_)
         ] = self.getStreamNetworkSettings()
 
         return myJSON
 
 
-class ProxyOutboundObjectSS(OutboundObject):
-    def __init__(self, method, password, address, port, **kwargs):
-        super().__init__(**kwargs)
+class ProxyOutboundObjectSS(ProxyOutboundObject):
+    def __init__(self, method, password, address, port):
+        super().__init__('shadowsocks', address, port, password, '', 'tcp', '')
 
         self.method = method
-        self.password = password
-        self.address = address
-        self.port = int(port)
 
-    def build(self):
-        myJSON = {
+    def getDefaultJSON(self):
+        return {
             'tag': 'proxy',
-            'protocol': 'shadowsocks',
+            'protocol': self.protocol,
             'settings': {
                 'servers': [
                     {
-                        'address': self.address,
-                        'port': self.port,
+                        'address': self.remote_host,
+                        'port': int(self.remote_port),
                         'method': self.method,
-                        'password': self.password,
+                        'password': self.uuid_,
+                        'email': PROXY_OUTBOUND_USER_EMAIL,
                         'ota': False,
                     },
                 ]
@@ -580,7 +667,39 @@ class ProxyOutboundObjectSS(OutboundObject):
             },
         }
 
-        return myJSON
+    def build(self):
+        return self.getDefaultJSON()
+
+
+class ProxyOutboundObjectTrojan(ProxyOutboundObject):
+    def __init__(self, password, address, port, type_, security, **kwargs):
+        super().__init__(
+            'trojan', address, port, password, '', type_, security, **kwargs
+        )
+
+    def getDefaultJSON(self):
+        return {
+            'tag': 'proxy',
+            'protocol': self.protocol,
+            'settings': {
+                'servers': [
+                    {
+                        'address': self.remote_host,
+                        'port': int(self.remote_port),
+                        'password': self.uuid_,
+                        'email': PROXY_OUTBOUND_USER_EMAIL,
+                    },
+                ]
+            },
+            'streamSettings': {
+                'network': self.type_,
+                'security': self.security,
+            },
+            'mux': {
+                'enabled': False,
+                'concurrency': -1,
+            },
+        }
 
 
 class Outbounds:
