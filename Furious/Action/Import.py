@@ -226,7 +226,7 @@ class ImportLinkAction(Action):
                     ),
                 )
 
-                logger.info(
+                logger.debug(
                     'import share link from clipboard success. '
                     f'Remark: {remark}. Protocol: VMess. (V2rayN share standard)'
                 )
@@ -283,7 +283,7 @@ class ImportLinkAction(Action):
                 ),
             )
 
-            logger.info(
+            logger.debug(
                 f'import share link from clipboard success. '
                 f'Remark: {remark}. Protocol: {protocolRepr(protocol)}'
             )
@@ -334,7 +334,7 @@ class ImportLinkAction(Action):
                 ),
             )
 
-            logger.info(
+            logger.debug(
                 f'import share link from clipboard success. '
                 f'Remark: {remark}. Protocol: {Protocol.Shadowsocks}'
             )
@@ -360,7 +360,7 @@ class ImportLinkAction(Action):
                 ),
             )
 
-            logger.info(
+            logger.debug(
                 f'import share link from clipboard success. '
                 f'Remark: sslegacy. Protocol: {Protocol.Shadowsocks}'
             )
@@ -410,7 +410,7 @@ class ImportLinkAction(Action):
                 ),
             )
 
-            logger.info(
+            logger.debug(
                 f'import share link from clipboard success. '
                 f'Remark: {remark}. Protocol: {Protocol.Trojan}'
             )
@@ -549,7 +549,7 @@ class ImportJSONAction(Action):
                 _('Untitled'), self.clipboard, syncStorage=True
             )
 
-            logger.info('import JSON configuration from clipboard success')
+            logger.debug('import JSON configuration from clipboard success')
 
             self.showJSONImportOK()
 
