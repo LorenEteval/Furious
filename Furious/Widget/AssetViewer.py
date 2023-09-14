@@ -219,7 +219,7 @@ class AssetViewerWidget(SupportThemeChangedCallback, MainWindow):
             self.setWidthAndHeight()
 
     def setWidthAndHeight(self):
-        self.setGeometry(100, 100, 512 * GOLDEN_RATIO, 512)
+        self.setGeometry(100, 100, 360, 360 * GOLDEN_RATIO)
 
         moveToCenter(self)
 

@@ -41,7 +41,6 @@ from Furious.Utility.Constants import (
     APPLICATION_REPO_OWNER_NAME,
     APPLICATION_REPO_NAME,
     PLATFORM,
-    GOLDEN_RATIO,
     Color,
 )
 from Furious.Utility.Utility import (
@@ -1767,8 +1766,8 @@ class EditConfigurationWidget(MainWindow):
         self.splitter = QSplitter(QtCore.Qt.Orientation.Horizontal)
         self.splitter.addWidget(self.serverTab)
         self.splitter.addWidget(self.editorTab)
-        self.splitter.setStretchFactor(0, 1)
-        self.splitter.setStretchFactor(1, 1)
+        self.splitter.setStretchFactor(0, 8)
+        self.splitter.setStretchFactor(1, 5)
 
         self.fakeCentralWidget = QWidget()
 
@@ -1877,7 +1876,7 @@ class EditConfigurationWidget(MainWindow):
         except Exception:
             # Any non-exit exceptions
 
-            self.setGeometry(100, 100, 1568, 1568 * GOLDEN_RATIO)
+            self.setGeometry(100, 100, 1800, 960)
 
         moveToCenter(self)
 

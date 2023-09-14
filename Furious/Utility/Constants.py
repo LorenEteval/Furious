@@ -43,7 +43,7 @@ PLATFORM = platform.system()
 
 LOCAL_SERVER_NAME = '891ad49d-8996-43cb-820c-d9baf42a04de'
 
-GOLDEN_RATIO = (math.sqrt(5) - 1) / 2
+GOLDEN_RATIO = (math.sqrt(5) + 1) / 2
 
 SYSTEM_LANGUAGE = QtCore.QLocale().name()[:2].upper()
 

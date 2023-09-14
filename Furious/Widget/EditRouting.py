@@ -1275,7 +1275,7 @@ class EditRoutingWidget(MainWindow):
         except Exception:
             # Any non-exit exceptions
 
-            self.setGeometry(100, 100, 640, 640 * GOLDEN_RATIO)
+            self.setGeometry(100, 100, 360 * GOLDEN_RATIO, 360)
 
         moveToCenter(self)
 
