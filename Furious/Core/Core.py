@@ -22,6 +22,7 @@ from PySide6 import QtCore
 from PySide6.QtTest import QTest
 
 import logging
+import functools
 import multiprocessing
 
 logger = logging.getLogger(__name__)
@@ -128,6 +129,7 @@ class XrayCore(Core):
         return 'Xray-core'
 
     @staticmethod
+    @functools.lru_cache(None)
     def version():
         try:
             import xray
@@ -204,6 +206,7 @@ class Hysteria1(Core):
         return 'Hysteria1'
 
     @staticmethod
+    @functools.lru_cache(None)
     def version():
         try:
             import hysteria
@@ -245,6 +248,7 @@ class Hysteria2(Core):
         return 'Hysteria2'
 
     @staticmethod
+    @functools.lru_cache(None)
     def version():
         try:
             import hysteria2

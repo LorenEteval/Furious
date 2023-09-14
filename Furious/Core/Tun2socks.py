@@ -18,6 +18,8 @@
 from Furious.Core.Core import Core
 from Furious.Utility.RoutingTable import RoutingTable
 
+import functools
+
 
 def startTun2socks(*args, **kwargs):
     try:
@@ -43,6 +45,7 @@ class Tun2socks(Core):
         return 'Tun2socks'
 
     @staticmethod
+    @functools.lru_cache(None)
     def version():
         try:
             import tun2socks
