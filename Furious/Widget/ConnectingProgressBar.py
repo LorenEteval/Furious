@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Utility.Constants import APPLICATION_NAME, GOLDEN_RATIO, Color
+from Furious.Utility.Constants import APPLICATION_NAME, Color
 from Furious.Utility.Utility import (
     bootstrapIcon,
     StateContext,
@@ -33,7 +33,7 @@ class ConnectingProgressBar(Translatable, SupportConnectedCallback, QWidget):
 
         self.setWindowTitle(_(APPLICATION_NAME))
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-        self.setFixedSize(280, int(100 * GOLDEN_RATIO))
+        self.setFixedSize(280, 61)
 
         @QtCore.Slot()
         def updateProgressBar():
