@@ -151,6 +151,7 @@ class TorRelay(Core):
         self.starter = TorRelayStarter()
 
     @staticmethod
+    @functools.lru_cache(None)
     def checkIfExists():
         return TorRelay.version() != TorRelay.VERSION_NOT_FOUND
 

@@ -46,6 +46,8 @@ from PySide6.QtWidgets import (
     QTextBrowser,
 )
 
+import functools
+
 
 class GroupBox(Translatable, QGroupBox):
     def __init__(self, *args, **kwargs):
@@ -341,6 +343,7 @@ class ZoomablePlainTextEdit(QPlainTextEdit):
         super().__init__(*args, **kwargs)
 
     @staticmethod
+    @functools.lru_cache(32)
     def getIndent(line):
         indent = ''
 

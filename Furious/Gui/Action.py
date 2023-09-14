@@ -28,6 +28,7 @@ from PySide6 import QtCore
 from PySide6.QtGui import QAction, QActionGroup
 
 import logging
+import functools
 import darkdetect
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,7 @@ class Action(Translatable, SupportThemeChangedCallback, QAction):
         return self.textEnglish == compare
 
     @staticmethod
+    @functools.lru_cache(None)
     def getIconFileName(fileName):
         try:
             return fileName.split('/')[-1]
