@@ -20,6 +20,7 @@ from Furious.Core.Configuration import (
     XrayCoreConfiguration,
     ProxyOutboundObject,
     ProxyOutboundObjectSS,
+    ProxyOutboundObjectTrojan,
 )
 from Furious.Gui.Action import Action
 from Furious.Widget.Widget import Menu, MessageBox
@@ -110,6 +111,15 @@ class ImportLinkResultBox(MessageBox):
         self.setText(self.getText())
 
     def getText(self):
+        text = self.getTextAll()
+
+        if len(text) <= 1000:
+            return text
+        else:
+            # Limited
+            return _('Import share link success: ') + f'\n\n...'
+
+    def getTextAll(self):
         return (
             _('Import share link success: ')
             + f'\n\n'
@@ -142,7 +152,9 @@ class ImportLinkAction(Action):
 
     def showLinkErrorBox(self):
         self.linkErrorBox.setWindowTitle(_('Import'))
+
         if len(self.clipboard) > 1000:
+            # Limited
             self.linkErrorBox.setText(_('Invalid share link.'))
             self.linkErrorBox.setInformativeText('')
         else:
@@ -359,6 +371,56 @@ class ImportLinkAction(Action):
 
             return self.parseShareLinkSIP002(data)
 
+    @staticmethod
+    def parseShareLinkTrojan(data):
+        try:
+            parseResult = urllib.parse.urlparse(data)
+
+            queryObject = {
+                key: value for key, value in urllib.parse.parse_qsl(parseResult.query)
+            }
+
+            remark = urllib.parse.unquote(parseResult.fragment)
+
+            password, address, port = re.split(r'[@:]', parseResult.netloc)
+
+            type_ = queryObject.get('type', 'tcp')
+            security = queryObject.get('security', 'none')
+
+            # Remove redundant items
+            queryObject.pop('type', '')
+            queryObject.pop('security', '')
+
+            myJSON = XrayCoreConfiguration.build(
+                ProxyOutboundObjectTrojan(
+                    password,
+                    address,
+                    int(port),
+                    type_,
+                    security,
+                    # kwargs
+                    **queryObject,
+                )
+            )
+
+            APP().ServerWidget.importServer(
+                remark,
+                ujson.dumps(
+                    myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
+                ),
+            )
+
+            logger.info(
+                f'import share link from clipboard success. '
+                f'Remark: {remark}. Protocol: {Protocol.Trojan}'
+            )
+
+            return remark, True
+        except Exception:
+            # Any non-exit exceptions
+
+            return '', False
+
     def parseShareLink(self, shareLink):
         try:
             myHead, myBody = shareLink.split('://')
@@ -378,13 +440,17 @@ class ImportLinkAction(Action):
                 else:
                     return self.parseShareLinkVMess(myJSON, isV2rayN=True)
 
-            if myHead.lower() == 'vless':
+            elif myHead.lower() == 'vless':
                 return self.parseShareLinkStandard('vless', shareLink)
 
-            if myHead.lower() == 'ss':
+            elif myHead.lower() == 'ss':
                 return self.parseShareLinkSS(shareLink)
 
-            return '', False
+            elif myHead.lower() == 'trojan':
+                return self.parseShareLinkTrojan(shareLink)
+
+            else:
+                return '', False
 
     def triggeredCallback(self, checked):
         self.clipboard = QApplication.clipboard().text().strip()
@@ -446,6 +512,7 @@ class ImportJSONAction(Action):
         self.jsonErrorBox.setWindowTitle(_('Import'))
 
         if len(self.clipboard) > 1000:
+            # Limited
             self.jsonErrorBox.setText(_('Invalid JSON data.'))
             self.jsonErrorBox.setInformativeText('')
         else:

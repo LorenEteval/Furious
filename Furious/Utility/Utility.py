@@ -45,10 +45,12 @@ logger = logging.getLogger(__name__)
 
 class Base64Encoder:
     @staticmethod
+    @functools.lru_cache(32)
     def encode(text):
         return pybase64.b64encode(text)
 
     @staticmethod
+    @functools.lru_cache(32)
     def decode(text):
         return pybase64.b64decode(text, validate=False)
 
@@ -56,7 +58,8 @@ class Base64Encoder:
 class Protocol:
     VMess = 'VMess'
     VLESS = 'VLESS'
-    Shadowsocks = 'shadowsocks'
+    Shadowsocks = 'Shadowsocks'
+    Trojan = 'Trojan'
     Hysteria1 = 'hysteria1'
     Hysteria2 = 'hysteria2'
 
@@ -226,6 +229,7 @@ class AsyncSubprocessMessage:
             return self.msgQueue.get_nowait()
         except queue.Empty:
             # Queue is empty
+
             return ''
 
 
@@ -328,9 +332,13 @@ def protocolRepr(protocol):
     if protocol.lower() == 'shadowsocks':
         return Protocol.Shadowsocks
 
+    if protocol.lower() == 'trojan':
+        return Protocol.Trojan
+
     return protocol
 
 
+@functools.lru_cache(None)
 def isValidIPAddress(address):
     try:
         ipaddress.ip_address(address)
