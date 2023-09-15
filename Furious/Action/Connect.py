@@ -120,6 +120,7 @@ class ConnectAction(Action):
             'https://www.youtube.com/',
         ]
         self.testTime = 0
+        self.testFinished = True
 
         self.XrayCore = XrayCore()
         self.Hysteria1 = Hysteria1()
@@ -1169,6 +1170,8 @@ class ConnectAction(Action):
                         showRoutingChangedMessage, currentRouting, isBuiltinRouting
                     )
                 else:
+                    self.testFinished = True
+
                     if self.disconnectReason:
                         self.disconnectAction(self.disconnectReason)
                     else:
@@ -1178,10 +1181,11 @@ class ConnectAction(Action):
             else:
                 logger.info(f'{self.coreName}: connection test success. Connected')
 
-                APP().Connect = Switch.ON_
-
+                self.testFinished = True
                 # Connected status
                 self.setConnectedStatus()
+
+                APP().Connect = Switch.ON_
 
                 if showRoutingChangedMessage:
                     # Routing changed
@@ -1257,6 +1261,21 @@ class ConnectAction(Action):
 
             self.connectingAction()
 
+    def waitForConnectionTest(self, startCounter=0, timeout=30000, step=1):
+        while self.coreRunning and not self.testFinished and startCounter < timeout:
+            QTest.qWait(step)
+
+            startCounter += step
+
+        if self.coreRunning and not self.testFinished:
+            # Timeout
+            logger.error('connection test timeout. Abort')
+
+            assert isinstance(self.networkReply, QNetworkReply)
+
+            self.coreRunning = False
+            self.networkReply.abort()
+
     def connectingAction(
         self,
         showProgressBar=True,
@@ -1305,11 +1324,14 @@ class ConnectAction(Action):
             self.errorConfiguration()
         else:
             self.moveConnectingProgressBar()
-            # Reset try time
+            # Reset test time
             self.testTime = 0
+            # Reset test finished
+            self.testFinished = False
             self.startConnectionTest(
                 showRoutingChangedMessage, currentRouting, isBuiltinRouting
             )
+            self.waitForConnectionTest()
 
     def disconnectAction(self, reason=''):
         Proxy.off()
