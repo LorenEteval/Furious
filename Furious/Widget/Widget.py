@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Gui.Action import Action, Seperator
-from Furious.Utility.Constants import APP, Color
+from Furious.Utility.Constants import APP, PLATFORM, Color
 from Furious.Utility.Utility import (
     StateContext,
     SupportConnectedCallback,
@@ -29,6 +29,7 @@ from Furious.Utility.Translator import Translatable, gettext as _
 from PySide6 import QtCore
 from PySide6.QtGui import QBrush, QColor, QFont, QTextCursor
 from PySide6.QtWidgets import (
+    QDialog,
     QGroupBox,
     QHeaderView,
     QLabel,
@@ -47,6 +48,44 @@ from PySide6.QtWidgets import (
 )
 
 import functools
+
+
+class Dialog(Translatable, SupportConnectedCallback, QDialog):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if PLATFORM != 'Darwin':
+            self.setWidthAndHeight()
+
+    def setWidthAndHeight(self):
+        pass
+
+    def exec(self):
+        self.show()
+
+        return super().exec()
+
+    def open(self):
+        self.show()
+
+        return super().open()
+
+    def show(self):
+        super().show()
+
+        if PLATFORM == 'Darwin':
+            self.setWidthAndHeight()
+
+        moveToCenter(self)
+
+    def connectedCallback(self):
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+
+    def disconnectedCallback(self):
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+
+    def retranslate(self):
+        pass
 
 
 class GroupBox(Translatable, QGroupBox):
@@ -123,8 +162,22 @@ class MainWindow(Translatable, SupportConnectedCallback, NeedSyncSettings, QMain
         self._menuBar = MenuBar(parent=self)
         self.setMenuBar(self._menuBar)
 
+        if PLATFORM != 'Darwin':
+            self.setWidthAndHeight()
+
     def syncSettings(self):
         pass
+
+    def setWidthAndHeight(self):
+        pass
+
+    def show(self):
+        super().show()
+
+        if PLATFORM == 'Darwin':
+            self.setWidthAndHeight()
+
+        moveToCenter(self)
 
     def closeEvent(self, event):
         event.ignore()

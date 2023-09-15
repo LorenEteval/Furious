@@ -209,19 +209,8 @@ class AssetViewerWidget(SupportThemeChangedCallback, MainWindow):
         self._fileMenu = Menu(*fileMenuActions, title=_('File'), parent=self)
         self.menuBar().addMenu(self._fileMenu)
 
-        if PLATFORM != 'Darwin':
-            self.setWidthAndHeight()
-
-    def show(self):
-        super().show()
-
-        if PLATFORM == 'Darwin':
-            self.setWidthAndHeight()
-
     def setWidthAndHeight(self):
         self.setGeometry(100, 100, 360, 360 * GOLDEN_RATIO)
-
-        moveToCenter(self)
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):

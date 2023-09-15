@@ -622,6 +622,23 @@ class ZoomOutAction(Action):
         self.parent().plainTextEdit.zoomOut()
 
 
+class UpdateSubscriptionAction(Action):
+    def __init__(self, **kwargs):
+        super().__init__(_('Update Subscription'), **kwargs)
+
+
+class EditSubscriptionAction(Action):
+    def __init__(self, **kwargs):
+        super().__init__(
+            _('Edit Subscription...'),
+            icon=bootstrapIcon('star.svg'),
+            **kwargs,
+        )
+
+    def triggeredCallback(self, checked):
+        APP().SubscriptionWidget.show()
+
+
 class ShowLogAction(Action):
     def __init__(self, **kwargs):
         super().__init__(_(f'Show {APPLICATION_NAME} Log...'), **kwargs)
@@ -1827,6 +1844,15 @@ class EditConfigurationWidget(MainWindow):
             ],
         }
 
+        subsMenu = {
+            'name': 'Subscription',
+            'actions': [
+                UpdateSubscriptionAction(parent=self),
+                Seperator(),
+                EditSubscriptionAction(parent=self),
+            ],
+        }
+
         helpMenu = {
             'name': 'Help',
             'actions': [
@@ -1839,7 +1865,7 @@ class EditConfigurationWidget(MainWindow):
         }
 
         # Menus
-        for menuDict in (fileMenu, editMenu, viewMenu, helpMenu):
+        for menuDict in (fileMenu, editMenu, viewMenu, subsMenu, helpMenu):
             menuName = menuDict['name']
             menuObjName = f'_{menuName}Menu'
             menu = Menu(*menuDict['actions'], title=_(menuName), parent=self.menuBar())
@@ -1856,15 +1882,6 @@ class EditConfigurationWidget(MainWindow):
 
             self.menuBar().addMenu(menu)
 
-        if PLATFORM != 'Darwin':
-            self.setWidthAndHeight()
-
-    def show(self):
-        super().show()
-
-        if PLATFORM == 'Darwin':
-            self.setWidthAndHeight()
-
     def setWidthAndHeight(self):
         try:
             self.setGeometry(
@@ -1876,8 +1893,6 @@ class EditConfigurationWidget(MainWindow):
             # Any non-exit exceptions
 
             self.setGeometry(100, 100, 1800, 960)
-
-        moveToCenter(self)
 
     def importServer(self, remark, config, syncStorage=False):
         server = {'remark': remark, 'config': config}

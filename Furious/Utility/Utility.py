@@ -152,6 +152,44 @@ class RoutesStorage:
         APP().CustomRouting = ''
 
 
+class SubscriptionStorage:
+    # remark, webURL, unique
+    EMPTY_OBJECT = {'model': []}
+
+    @staticmethod
+    def init():
+        return copy.deepcopy(SubscriptionStorage.EMPTY_OBJECT)
+
+    @staticmethod
+    def sync(ob=None):
+        if ob is None:
+            # Object is up-to-date
+            APP().CustomSubscription = SubscriptionStorage.toStorage(
+                APP().SubscriptionWidget.StorageObj
+            )
+        else:
+            # Object is up-to-date
+            APP().CustomSubscription = SubscriptionStorage.toStorage(ob)
+
+    @staticmethod
+    def toObject(st):
+        if not st:
+            # Server storage does not exist, or is empty
+            return SubscriptionStorage.init()
+
+        return ujson.loads(Base64Encoder.decode(st))
+
+    @staticmethod
+    def toStorage(ob):
+        return Base64Encoder.encode(
+            ujson.dumps(ob, ensure_ascii=False, escape_forward_slashes=False).encode()
+        )
+
+    @staticmethod
+    def clear():
+        APP().CustomSubscription = ''
+
+
 class TorRelaySettingsStorage:
     EMPTY_OBJECT = {
         'socksTunnelPort': DEFAULT_TOR_SOCKS_PORT,
