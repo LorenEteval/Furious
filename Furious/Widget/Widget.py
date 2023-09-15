@@ -285,6 +285,8 @@ class TableWidget(QTableWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.setWordWrap(False)
+
     @property
     def selectedIndex(self):
         return sorted(list(set(index.row() for index in self.selectedIndexes())))
