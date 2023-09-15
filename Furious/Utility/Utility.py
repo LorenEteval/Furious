@@ -29,6 +29,7 @@ from PySide6 import QtCore
 from PySide6.QtWidgets import QApplication
 
 import os
+import sys
 import copy
 import ujson
 import queue
@@ -405,6 +406,10 @@ def isAdministrator():
 
 def isVPNMode():
     return isAdministrator() and APP().VPNMode == Switch.ON_
+
+
+def isScriptMode():
+    return sys.argv[0].endswith('.py')
 
 
 def moveToCenter(widget, parent=None):
