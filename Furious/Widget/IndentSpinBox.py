@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from Furious.Widget.Widget import Dialog
 from Furious.Utility.Utility import (
     StateContext,
     SupportConnectedCallback,
@@ -24,7 +25,6 @@ from Furious.Utility.Translator import Translatable, gettext as _
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import (
-    QDialog,
     QDialogButtonBox,
     QFormLayout,
     QLabel,
@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 
-class IndentSpinBox(Translatable, SupportConnectedCallback, QDialog):
+class IndentSpinBox(Dialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -62,12 +62,6 @@ class IndentSpinBox(Translatable, SupportConnectedCallback, QDialog):
 
     def value(self):
         return self.indentSpin.value()
-
-    def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-    def disconnectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
     def retranslate(self):
         with StateContext(self):

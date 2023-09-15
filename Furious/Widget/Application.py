@@ -18,6 +18,7 @@
 from Furious.Widget.SystemTrayIcon import SystemTrayIcon
 from Furious.Widget.EditConfiguration import EditConfigurationWidget
 from Furious.Widget.EditRouting import EditRoutingWidget
+from Furious.Widget.EditSubscription import EditSubscriptionWidget
 from Furious.Widget.LogViewer import LogViewerWidget, TorViewerWidget
 from Furious.Widget.TorRelaySettings import TorRelaySettingsWidget
 from Furious.Utility.Constants import (
@@ -170,6 +171,7 @@ class Application(SingletonApplication):
 
         self.ServerWidget = None
         self.RoutesWidget = None
+        self.SubscriptionWidget = None
         self.torRelaySettingsWidget = None
 
     def __getattr__(self, key):
@@ -270,6 +272,7 @@ class Application(SingletonApplication):
 
         self.ServerWidget = EditConfigurationWidget()
         self.RoutesWidget = EditRoutingWidget()
+        self.SubscriptionWidget = EditSubscriptionWidget()
         self.torRelaySettingsWidget = TorRelaySettingsWidget()
 
         self.tray = SystemTrayIcon()

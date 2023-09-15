@@ -108,6 +108,7 @@ NO_TRANSLATION = [
     TOR_FAQ_LABEL,
     'socks',
     'http',
+    'URL',
 ]
 
 NO_TRANSLATION_DICT = {key: True for key in NO_TRANSLATION}
@@ -169,20 +170,20 @@ TRANSLATION = {
         'ZH': '自定义',
         'TW': '自定義',
     },
-    'VPN Mode': {
-        'ES': 'Modo VPN',
-        'ZH': 'VPN模式',
-        'TW': 'VPN模式',
+    'Subscription': {
+        'ES': 'Suscripción',
+        'ZH': '订阅',
+        'TW': '訂閲',
     },
-    'VPN Mode Disabled (Administrator)': {
-        'ES': 'Modo VPN Deshabilitado (Administrador)',
-        'ZH': 'VPN模式已禁用（管理员）',
-        'TW': 'VPN模式已禁用（管理員）',
+    'Update Subscription': {
+        'ES': 'Actualizar Suscripción',
+        'ZH': '更新订阅',
+        'TW': '更新訂閲',
     },
-    'VPN Mode Disabled (root)': {
-        'ES': 'Modo VPN Deshabilitado (root)',
-        'ZH': 'VPN模式已禁用（root）',
-        'TW': 'VPN模式已禁用（root）',
+    'Edit Subscription...': {
+        'ES': 'Editar Suscripción...',
+        'ZH': '编辑订阅...',
+        'TW': '編輯訂閲...',
     },
     'Import': {
         'ES': 'Importar',
@@ -228,6 +229,21 @@ TRANSLATION = {
         'ES': 'Mostrar Pestaña y Espacios en el Editor',
         'ZH': '在编辑器中显示制表符和空格',
         'TW': '在編輯器中顯示制表符和空格',
+    },
+    'VPN Mode': {
+        'ES': 'Modo VPN',
+        'ZH': 'VPN模式',
+        'TW': 'VPN模式',
+    },
+    'VPN Mode Disabled (Administrator)': {
+        'ES': 'Modo VPN Deshabilitado (Administrador)',
+        'ZH': 'VPN模式已禁用（管理员）',
+        'TW': 'VPN模式已禁用（管理員）',
+    },
+    'VPN Mode Disabled (root)': {
+        'ES': 'Modo VPN Deshabilitado (root)',
+        'ZH': 'VPN模式已禁用（root）',
+        'TW': 'VPN模式已禁用（root）',
     },
     'Routing Settings...': {
         'ES': 'Ajustes de Enrutamiento...',
@@ -790,6 +806,32 @@ TRANSLATION = {
         'ES': f'NOTA: "Personalizado" utilizará la acl y mmdb definidas en la configuración de usuario actual',
         'ZH': f'注意："自定义"将使用当前用户配置中定义的acl和mmdb。',
         'TW': f'注意："自定義"將使用當前用戶配置中定義的acl和mmdb。',
+    },
+    # Edit Subscription Widget
+    'Edit Subscription': {
+        'ES': 'Editar Suscripción',
+        'ZH': '编辑订阅',
+        'TW': '編輯訂閲',
+    },
+    'Subscription List': {
+        'ES': 'Lista de Suscripción',
+        'ZH': '订阅列表',
+        'TW': '訂閲列表',
+    },
+    'Add subscription': {
+        'ES': 'Agregar suscripción',
+        'ZH': '添加订阅',
+        'TW': '添加訂閲',
+    },
+    'Enter subscription remark:': {
+        'ES': 'Introducir comentario de suscripción:',
+        'ZH': '输入订阅名称：',
+        'TW': '輸入訂閲名稱：',
+    },
+    'Enter subscription URL:': {
+        'ES': 'Introducir URL de suscripción:',
+        'ZH': '输入订阅URL：',
+        'TW': '輸入訂閲URL：',
     },
     # Asset Viewer
     'Asset File': {

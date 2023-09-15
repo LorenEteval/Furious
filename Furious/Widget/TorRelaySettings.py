@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Widget.Widget import GroupBox, Label
+from Furious.Widget.Widget import Dialog, GroupBox, Label
 from Furious.Utility.Constants import (
     APP,
     PLATFORM,
@@ -36,7 +36,6 @@ from PySide6 import QtCore
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDialog,
     QDialogButtonBox,
     QFormLayout,
     QGridLayout,
@@ -45,7 +44,7 @@ from PySide6.QtWidgets import (
 )
 
 
-class TorRelaySettingsWidget(Translatable, SupportConnectedCallback, QDialog):
+class TorRelaySettingsWidget(Dialog):
     TOR_LOG_LEVEL = ['err', 'warn', 'notice', 'info', 'debug']
 
     def __init__(self, *args, **kwargs):
@@ -226,12 +225,6 @@ class TorRelaySettingsWidget(Translatable, SupportConnectedCallback, QDialog):
 
         self.restoreValueFromObject()
         self.hide()
-
-    def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-    def disconnectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
     def retranslate(self):
         with StateContext(self):

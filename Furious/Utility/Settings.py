@@ -82,6 +82,8 @@ SUPPORTED_SETTINGS = (
     Settings('CustomRouting'),
     # User Configuration
     Settings('Configuration'),
+    # User Custom Subscription object
+    Settings('CustomSubscription'),
     # User Activated Server Index
     Settings('ActivatedItemIndex'),
     # User Tor Relay Settings,
@@ -90,10 +92,14 @@ SUPPORTED_SETTINGS = (
     Settings('ServerWidgetWindowSize'),
     # Routes Widget Window Size
     Settings('RoutesWidgetWindowSize'),
+    # Subscription Widget Window Size
+    Settings('SubscriptionWidgetWindowSize'),
     # Server Widget Section Size
     Settings('ServerWidgetSectionSizeTable'),
     # Routes Widget Section Size
     Settings('RoutesWidgetSectionSizeTable'),
+    # Subscription Widget Section Size
+    Settings('SubscriptionWidgetSectionSizeTable'),
     # Server Widget Font Point Size
     Settings('ServerWidgetPointSize'),
     # Log Viewer Widget Font Point Size

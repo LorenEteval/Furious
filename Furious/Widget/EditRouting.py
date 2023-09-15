@@ -24,6 +24,7 @@ from Furious.Action.Routing import (
 from Furious.Core.Core import XrayCore, Hysteria1
 from Furious.Gui.Action import Action, Seperator
 from Furious.Widget.Widget import (
+    Dialog,
     HeaderView,
     Menu,
     MainWindow,
@@ -612,19 +613,8 @@ class RoutingEditor(MainWindow):
         self.menuBar().addMenu(self._fileMenu)
         self.menuBar().addMenu(self._viewMenu)
 
-        if PLATFORM != 'Darwin':
-            self.setWidthAndHeight()
-
-    def show(self):
-        super().show()
-
-        if PLATFORM == 'Darwin':
-            self.setWidthAndHeight()
-
     def setWidthAndHeight(self):
         self.setGeometry(100, 100, 656, 856)
-
-        moveToCenter(self)
 
     def addTabWithData(self, core, text):
         if self.isBuiltin:
@@ -722,7 +712,7 @@ class RoutingEditor(MainWindow):
                 self.setWindowTitle(_(self.windowTitle()))
 
 
-class RoutingDialog(Translatable, SupportConnectedCallback, QDialog):
+class RoutingDialog(Dialog):
     LINE_EDIT_FIXED_WIDTH = 500
     BUTTON_FIXED_WIDTH = 30
 
@@ -825,12 +815,6 @@ class RoutingDialog(Translatable, SupportConnectedCallback, QDialog):
     def mmdbValue(self):
         return self.mmdbEdit.text()
 
-    def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-    def disconnectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-
     def retranslate(self):
         with StateContext(self):
             if self.isBuiltin:
@@ -923,6 +907,13 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
         try:
             # Restore horizontal section size
             self.sectionSizeTable = ujson.loads(APP().RoutesWidgetSectionSizeTable)
+
+            # Fill missing value
+            for column in range(self.columnCount()):
+                if self.sectionSizeTable.get(str(column)) is None:
+                    self.sectionSizeTable[
+                        str(column)
+                    ] = self.horizontalHeader().defaultSectionSize()
 
             # Block resize callback
             self.horizontalHeader().blockSignals(True)
@@ -1163,7 +1154,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
                         item.setText(_(item.text()))
 
 
-class AddRoutingDialog(Translatable, SupportConnectedCallback, QDialog):
+class AddRoutingDialog(Dialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -1189,14 +1180,11 @@ class AddRoutingDialog(Translatable, SupportConnectedCallback, QDialog):
 
         self.setLayout(layout)
 
+    def setWidthAndHeight(self):
+        self.setGeometry(100, 100, 276, 80)
+
     def routingRemark(self):
         return self.remarkEdit.text()
-
-    def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-
-    def disconnectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
     def retranslate(self):
         with StateContext(self):
@@ -1206,6 +1194,8 @@ class AddRoutingDialog(Translatable, SupportConnectedCallback, QDialog):
 
             for button in self.dialogBtns.buttons():
                 button.setText(_(button.text()))
+
+            moveToCenter(self)
 
 
 class EditRoutingWidget(MainWindow):
@@ -1256,15 +1246,6 @@ class EditRoutingWidget(MainWindow):
 
         self.setCentralWidget(self.fakeCentralWidget)
 
-        if PLATFORM != 'Darwin':
-            self.setWidthAndHeight()
-
-    def show(self):
-        super().show()
-
-        if PLATFORM == 'Darwin':
-            self.setWidthAndHeight()
-
     def setWidthAndHeight(self):
         try:
             self.setGeometry(
@@ -1276,8 +1257,6 @@ class EditRoutingWidget(MainWindow):
             # Any non-exit exceptions
 
             self.setGeometry(100, 100, 360 * GOLDEN_RATIO, 360)
-
-        moveToCenter(self)
 
     def addRoute(self):
         choice = self.addRoutingDialog.exec()
