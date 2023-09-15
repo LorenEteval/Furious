@@ -323,7 +323,7 @@ class SaveAsServerAction(Action):
             # Unchecked?
             myServerList[myFocusIndex]['config'] = server
             # Flush row
-            self.parent().normalServerWidget.flushRow(
+            self.parent().serverWidget.flushRow(
                 myFocusIndex, myServerList[myFocusIndex]
             )
 
@@ -881,7 +881,7 @@ class SaveChangeFirst(MessageBox):
             self.moveToCenter()
 
 
-class NormalServerHorizontalHeader(HeaderView):
+class ServerWidgetHorizontalHeader(HeaderView):
     class SortOrder:
         Ascending_ = False
         Descending = True
@@ -893,7 +893,7 @@ class NormalServerHorizontalHeader(HeaderView):
         self.sectionResized.connect(self.handleSectionResized)
 
         self.sortOrderTable = list(
-            NormalServerHorizontalHeader.SortOrder.Ascending_
+            ServerWidgetHorizontalHeader.SortOrder.Ascending_
             for i in range(self.parent().columnCount())
         )
 
@@ -936,7 +936,7 @@ class NormalServerHorizontalHeader(HeaderView):
 
         # Sort it
         self.parent().ServerList.sort(
-            key=lambda x: NormalServerWidget.HEADER_LABEL_GET_FUNC[clickedIndex](x),
+            key=lambda x: ServerWidget.HEADER_LABEL_GET_FUNC[clickedIndex](x),
             reverse=self.sortOrderTable[clickedIndex],
         )
 
@@ -987,7 +987,7 @@ class NormalServerHorizontalHeader(HeaderView):
         self.parent().sectionSizeTable[str(index)] = newSize
 
 
-class NormalServerVerticalHeader(HeaderView):
+class ServerWidgetVerticalHeader(HeaderView):
     def __init__(self, *args, **kwargs):
         super().__init__(QtCore.Qt.Orientation.Vertical, *args, **kwargs)
 
@@ -1001,7 +1001,7 @@ def toJSONMayBeNull(text):
         return {}
 
 
-class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
+class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
     # Might be extended in the future
     HEADER_LABEL = [
         'Remark',
@@ -1059,13 +1059,13 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         self.ScrollList = list([0, 0] for i in range(len(self.ServerList)))
 
         # Must set before flush all
-        self.setColumnCount(len(NormalServerWidget.HEADER_LABEL))
+        self.setColumnCount(len(ServerWidget.HEADER_LABEL))
 
         # Flush all data to table
         self.flushAll()
 
         # Install custom header
-        self.setHorizontalHeader(NormalServerHorizontalHeader(self))
+        self.setHorizontalHeader(ServerWidgetHorizontalHeader(self))
 
         # Horizontal header resize mode
         for index in range(self.columnCount()):
@@ -1082,6 +1082,13 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             # Restore horizontal section size
             self.sectionSizeTable = ujson.loads(APP().ServerWidgetSectionSizeTable)
 
+            # Fill missing value
+            for column in range(self.columnCount()):
+                if self.sectionSizeTable.get(str(column)) is None:
+                    self.sectionSizeTable[
+                        str(column)
+                    ] = self.horizontalHeader().defaultSectionSize()
+
             # Block resize callback
             self.horizontalHeader().blockSignals(True)
 
@@ -1096,19 +1103,19 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             # Leave keys as strings since they will be
             # loaded as string from json
             self.sectionSizeTable = {
-                str(row): self.horizontalHeader().defaultSectionSize()
-                for row in range(self.columnCount())
+                str(column): self.horizontalHeader().defaultSectionSize()
+                for column in range(self.columnCount())
             }
 
         self.setHorizontalHeaderLabels(
-            list(_(label) for label in NormalServerWidget.HEADER_LABEL)
+            list(_(label) for label in ServerWidget.HEADER_LABEL)
         )
 
         for column in range(self.horizontalHeader().count()):
             self.horizontalHeaderItem(column).setFont(QFont(APP().customFontName))
 
         # Install custom header
-        self.setVerticalHeader(NormalServerVerticalHeader(self))
+        self.setVerticalHeader(ServerWidgetVerticalHeader(self))
 
         # Selection
         self.setSelectionColor(Color.LIGHT_BLUE)
@@ -1204,7 +1211,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         for column in range(self.columnCount()):
             oldItem = self.item(row, column)
             newItem = QTableWidgetItem(
-                NormalServerWidget.HEADER_LABEL_GET_FUNC[column](server)
+                ServerWidget.HEADER_LABEL_GET_FUNC[column](server)
             )
 
             if oldItem is None:
@@ -1215,7 +1222,10 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
                 newItem.setFont(oldItem.font())
                 newItem.setForeground(oldItem.foreground())
 
-            if column == 0:
+                if oldItem.textAlignment() != 0:
+                    newItem.setTextAlignment(oldItem.textAlignment())
+
+            if ServerWidget.HEADER_LABEL[column] == 'Remark':
                 # Remark is editable
                 newItem.setFlags(
                     QtCore.Qt.ItemFlag.ItemIsEnabled
@@ -1232,15 +1242,13 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
 
     def flushAll(self):
         if self.rowCount() == 0:
-            shouldInsertRow = True
-        else:
-            shouldInsertRow = False
-
-        for row, server in enumerate(self.ServerList):
-            if shouldInsertRow:
+            # Should insert row
+            for row, server in enumerate(self.ServerList):
                 self.insertRow(row)
-
-            self.flushRow(row, server)
+                self.flushRow(row, server)
+        else:
+            for row, server in enumerate(self.ServerList):
+                self.flushRow(row, server)
 
     def saveScrollBarValue(self, index):
         assert len(self.ScrollList) == len(self.ServerList)
@@ -1625,7 +1633,7 @@ class NormalServerWidget(Translatable, SupportConnectedCallback, TableWidget):
 
     def retranslate(self):
         self.setHorizontalHeaderLabels(
-            list(_(label) for label in NormalServerWidget.HEADER_LABEL)
+            list(_(label) for label in ServerWidget.HEADER_LABEL)
         )
 
 
@@ -1713,29 +1721,29 @@ class EditConfigurationWidget(MainWindow):
         self.serverEditorTabWidgetLayout = QVBoxLayout(self.serverEditorTabWidget)
         self.serverEditorTabWidgetLayout.addWidget(self.plainTextEdit)
 
-        # Advance for Normal Server Widget
+        # Advance for self.serverWidget
         self.editorTab = QTabWidget(self)
         # Note: Set tab text later
         self.editorTab.addTab(self.serverEditorTabWidget, '')
 
-        self.normalServerWidget = NormalServerWidget(parent=self)
+        self.serverWidget = ServerWidget(parent=self)
 
         # Buttons
         self.moveUpButton = PushButton(_('Move Up'))
         self.moveUpButton.clicked.connect(
-            lambda: self.normalServerWidget.moveUpSelectedItem()
+            lambda: self.serverWidget.moveUpSelectedItem()
         )
         self.moveDownButton = PushButton(_('Move Down'))
         self.moveDownButton.clicked.connect(
-            lambda: self.normalServerWidget.moveDownSelectedItem()
+            lambda: self.serverWidget.moveDownSelectedItem()
         )
         self.duplicateButton = PushButton(_('Duplicate'))
         self.duplicateButton.clicked.connect(
-            lambda: self.normalServerWidget.duplicateSelectedItem()
+            lambda: self.serverWidget.duplicateSelectedItem()
         )
         self.deleteButton = PushButton(_('Delete'))
         self.deleteButton.clicked.connect(
-            lambda: self.normalServerWidget.deleteSelectedItem()
+            lambda: self.serverWidget.deleteSelectedItem()
         )
 
         # Button Layout
@@ -1746,22 +1754,13 @@ class EditConfigurationWidget(MainWindow):
         self.buttonWidgetLayout.addWidget(self.duplicateButton, 1, 0)
         self.buttonWidgetLayout.addWidget(self.deleteButton, 1, 1)
 
-        self.normalServerTabWidget = QWidget()
-        self.normalServerTabWidgetLayout = QVBoxLayout(self.normalServerTabWidget)
-        self.normalServerTabWidgetLayout.addWidget(self.normalServerWidget)
-        self.normalServerTabWidgetLayout.addWidget(self.buttonWidget)
-
-        # Note: Reserved for future extension
-        # self.subscriptionWidget = QWidget(parent=self)
-        #
-        # self.subscriptionTabWidget = QWidget()
-        # self.subscriptionTabWidgetLayout = QVBoxLayout(self.subscriptionTabWidget)
-        # self.subscriptionTabWidgetLayout.addWidget(self.subscriptionWidget)
+        self.serverTabWidget = QWidget()
+        self.serverTabWidgetLayout = QVBoxLayout(self.serverTabWidget)
+        self.serverTabWidgetLayout.addWidget(self.serverWidget)
+        self.serverTabWidgetLayout.addWidget(self.buttonWidget)
 
         self.serverTab = TabWidget(self)
-        self.serverTab.addTab(self.normalServerTabWidget, _('Server'))
-        # Note: Reserved for future extension
-        # self.serverTab.addTab(self.subscriptionTabWidget, '')
+        self.serverTab.addTab(self.serverTabWidget, _('Server'))
 
         self.splitter = QSplitter(QtCore.Qt.Orientation.Horizontal)
         self.splitter.addWidget(self.serverTab)
@@ -1783,11 +1782,11 @@ class EditConfigurationWidget(MainWindow):
                 NewBlankServerAction(parent=self),
                 Seperator(),
                 SelectAllServerAction(
-                    callback=lambda: self.normalServerWidget.selectAll(),
+                    callback=lambda: self.serverWidget.selectAll(),
                     parent=self,
                 ),
                 Seperator(),
-                ScrollToActivatedServerAction(parent=self.normalServerWidget),
+                ScrollToActivatedServerAction(parent=self.serverWidget),
                 Seperator(),
                 ImportFileAction(parent=self),
                 ImportLinkActionWithHotKey(parent=self),
@@ -1889,23 +1888,23 @@ class EditConfigurationWidget(MainWindow):
             # Sync it
             ServerStorage.sync()
 
-        row = self.normalServerWidget.rowCount()
+        row = self.serverWidget.rowCount()
 
-        self.normalServerWidget.insertRow(row)
-        self.normalServerWidget.appendScrollBarEntry()
-        self.normalServerWidget.flushRow(row, server)
+        self.serverWidget.insertRow(row)
+        self.serverWidget.appendScrollBarEntry()
+        self.serverWidget.flushRow(row, server)
 
         item = QTableWidgetItem(str(row + 1))
         item.setFont(QFont(APP().customFontName))
 
         if len(self.ServerList) == 1:
             # The first one. Click it
-            self.normalServerWidget.setCurrentItemByIndex(0)
+            self.serverWidget.setCurrentItemByIndex(0)
 
             # Try to be user-friendly in some extreme cases
             if not APP().tray.ConnectAction.isConnected():
                 # Activate automatically
-                self.normalServerWidget.activateItemByIndex(0)
+                self.serverWidget.activateItemByIndex(0)
 
     def showTabAndSpacesIfNecessary(self):
         textOption = QTextOption()
@@ -1920,25 +1919,25 @@ class EditConfigurationWidget(MainWindow):
 
     @property
     def activatedItemIndex(self):
-        return self.normalServerWidget.activatedItemIndex
+        return self.serverWidget.activatedItemIndex
 
     @property
     def selectedIndex(self):
-        return self.normalServerWidget.selectedIndex
+        return self.serverWidget.selectedIndex
 
     @property
     def rowCount(self):
-        return self.normalServerWidget.rowCount()
+        return self.serverWidget.rowCount()
 
     @property
     def currentFocus(self):
-        return self.normalServerWidget.currentFocus
+        return self.serverWidget.currentFocus
 
     def saveScrollBarValue(self, index):
-        self.normalServerWidget.saveScrollBarValue(index)
+        self.serverWidget.saveScrollBarValue(index)
 
     def restoreScrollBarValue(self, index):
-        self.normalServerWidget.restoreScrollBarValue(index)
+        self.serverWidget.restoreScrollBarValue(index)
 
     def questionSave(self):
         # Save current scroll bar value
@@ -1961,7 +1960,7 @@ class EditConfigurationWidget(MainWindow):
             if choice == MessageBox.ButtonRole.DestructiveRole.value:
                 # Discard
                 self.hide()
-                self.normalServerWidget.setEmptyItem()
+                self.serverWidget.setEmptyItem()
                 self.markAsSaved()  # Fake saved
 
                 return True
@@ -1995,7 +1994,7 @@ class EditConfigurationWidget(MainWindow):
             f'{self.geometry().width()},{self.geometry().height()}'
         )
         APP().ServerWidgetSectionSizeTable = ujson.dumps(
-            self.normalServerWidget.sectionSizeTable,
+            self.serverWidget.sectionSizeTable,
             ensure_ascii=False,
             escape_forward_slashes=False,
         )
