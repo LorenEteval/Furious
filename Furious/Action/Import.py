@@ -440,17 +440,16 @@ class ImportLinkAction(Action):
                 else:
                     return self.parseShareLinkVMess(myJSON, isV2rayN=True)
 
-            elif myHead.lower() == 'vless':
+            if myHead.lower() == 'vless':
                 return self.parseShareLinkStandard('vless', shareLink)
 
-            elif myHead.lower() == 'ss':
+            if myHead.lower() == 'ss':
                 return self.parseShareLinkSS(shareLink)
 
-            elif myHead.lower() == 'trojan':
+            if myHead.lower() == 'trojan':
                 return self.parseShareLinkTrojan(shareLink)
 
-            else:
-                return '', False
+            return '', False
 
     def triggeredCallback(self, checked):
         self.clipboard = QApplication.clipboard().text().strip()
