@@ -21,6 +21,7 @@ from Furious.Utility.Constants import (
     APPLICATION_MACOS_SIGNATURE,
     PLATFORM,
 )
+from Furious.Utility.Utility import isScriptMode
 
 from PySide6 import QtCore
 
@@ -39,7 +40,7 @@ class StartupOnBoot:
     @staticmethod
     def on_():
         def _on():
-            if sys.argv[0].endswith('.py'):
+            if isScriptMode():
                 # Script mode
                 logger.info('ignore turn on StartupOnBoot in script mode')
 
