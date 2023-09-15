@@ -23,6 +23,7 @@
         <file alias="save.svg">Icons/bootstrap/save.svg</file>
         <file alias="scissors.svg">Icons/bootstrap/scissors.svg</file>
         <file alias="shuffle.svg">Icons/bootstrap/shuffle.svg</file>
+        <file alias="star.svg">Icons/bootstrap/star.svg</file>
         <file alias="unlock-fill.svg">Icons/bootstrap/unlock-fill.svg</file>
     </qresource>
     <qresource prefix="Icons/bootstrap/white">
@@ -43,6 +44,7 @@
         <file alias="save.svg">Icons/bootstrap/white/save.svg</file>
         <file alias="scissors.svg">Icons/bootstrap/white/scissors.svg</file>
         <file alias="shuffle.svg">Icons/bootstrap/white/shuffle.svg</file>
+        <file alias="star.svg">Icons/bootstrap/white/star.svg</file>
         <file alias="unlock-fill.svg">Icons/bootstrap/white/unlock-fill.svg</file>
     </qresource>
 </RCC>
