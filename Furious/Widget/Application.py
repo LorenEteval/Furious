@@ -172,7 +172,7 @@ class Application(SingletonApplication):
         self.ServerWidget = None
         self.RoutesWidget = None
         self.SubscriptionWidget = None
-        self.torRelaySettingsWidget = None
+        self.TorRelayWidget = None
 
     def __getattr__(self, key):
         try:
@@ -273,7 +273,7 @@ class Application(SingletonApplication):
         self.ServerWidget = EditConfigurationWidget()
         self.RoutesWidget = EditRoutingWidget()
         self.SubscriptionWidget = EditSubscriptionWidget()
-        self.torRelaySettingsWidget = TorRelaySettingsWidget()
+        self.TorRelayWidget = TorRelaySettingsWidget()
 
         self.tray = SystemTrayIcon()
         self.tray.show()
