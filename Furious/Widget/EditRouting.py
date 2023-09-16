@@ -108,8 +108,8 @@ BUILTIN_ROUTING_TEXT = {
             f'#     1. Block ads.(geosite:category-ads-all)\n'
             f'#     2. Bypass China site.(geosite:cn)\n'
             f'#     3. Bypass private and China IP.(geoip:private, geoip:cn)\n'
-            f'#     4. Proxy traffic sent from port 0-65535, in this\n'
-            f'#   case meaning any other unmatched traffic.\n'
+            f'#     4. Proxy traffic send to destination port 0-65535, in\n'
+            f'#   this case meaning any other unmatched traffic.\n'
             f'# respectively.\n'
             f'# \n'
             f'# "geoip.dat" and "geosite.dat" are shipped with\n'
@@ -141,8 +141,8 @@ BUILTIN_ROUTING_TEXT = {
             f'#     1. Block ads.(geosite:category-ads-all, iran:ads)\n'
             f'#     2. Bypass Iran site.(iran:ir, iran:other)\n'
             f'#     3. Bypass private and Iran IP.(geoip:private, geoip:ir)\n'
-            f'#     4. Proxy traffic sent from port 0-65535, in this\n'
-            f'#   case meaning any other unmatched traffic.\n'
+            f'#     4. Proxy traffic send to destination port 0-65535, in\n'
+            f'#   this case meaning any other unmatched traffic.\n'
             f'# respectively.\n'
             f'# \n'
             f'# "geoip.dat", "geosite.dat" and "iran.dat" are shipped\n'
@@ -185,8 +185,8 @@ BUILTIN_ROUTING_TEXT = {
             f'# \n'
             f'# There is only one RuleObject(rules)\n'
             f'# which implements:\n'
-            f'#     1. Proxy traffic sent from port 0-65535, in this\n'
-            f'#   case meaning all traffic.\n'
+            f'#     1. Proxy traffic send to destination port 0-65535, in\n'
+            f'#   this case meaning all traffic.\n'
             f'# \n'
             f'# See more information:\n'
             f'# \n'
@@ -251,6 +251,7 @@ DEFAULT_USER_ROUTING = {
                 'outboundTag': 'proxy',
             },
         ],
+        'balancers': [],
     },
     Hysteria1.name(): {
         'acl': '',
