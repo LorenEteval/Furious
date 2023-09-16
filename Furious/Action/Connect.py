@@ -474,7 +474,7 @@ class ConnectAction(Action):
     @property
     def torRelayStorageObj(self):
         # Handy reference
-        return APP().torRelaySettingsWidget.StorageObj
+        return APP().TorRelayWidget.StorageObj
 
     def configureCore(self):
         def validateHttpsProxyServer(server):

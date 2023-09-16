@@ -117,7 +117,7 @@ class TorRelaySettingsChildAction(Action):
         super().__init__(*args, **kwargs)
 
     def triggeredCallback(self, checked):
-        APP().torRelaySettingsWidget.open()
+        APP().TorRelayWidget.open()
 
 
 class SettingsAction(Action):

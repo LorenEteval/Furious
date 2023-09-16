@@ -55,7 +55,7 @@ class TorRelayStarter(AsyncSubprocessMessage):
     @property
     def torRelayStorageObj(self):
         # Handy reference
-        return APP().torRelaySettingsWidget.StorageObj
+        return APP().TorRelayWidget.StorageObj
 
     @staticmethod
     @functools.lru_cache(None)

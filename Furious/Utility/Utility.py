@@ -208,7 +208,7 @@ class TorRelaySettingsStorage:
         if ob is None:
             # Object is up-to-date
             APP().TorRelaySettings = TorRelaySettingsStorage.toStorage(
-                APP().torRelaySettingsWidget.StorageObj
+                APP().TorRelayWidget.StorageObj
             )
         else:
             # Object is up-to-date
