@@ -228,6 +228,7 @@ class ExportQRCodeAction(Action):
 
         if len(successStr) > 0:
             self.exportQRCode.editorTab.clear()
+            self.exportQRCode.labelList.clear()
             self.exportQRCode.initTabWithData(list(zip(successStr, serverLink)))
             self.exportQRCode.show()
 
