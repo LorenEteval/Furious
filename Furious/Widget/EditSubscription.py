@@ -15,10 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from Furious.Gui.Action import Action
 from Furious.Widget.Widget import (
     Dialog,
     HeaderView,
     MainWindow,
+    Menu,
     MessageBox,
     PushButton,
     StyledItemDelegate,
@@ -33,6 +35,7 @@ from Furious.Utility.Constants import (
     Color,
 )
 from Furious.Utility.Utility import (
+    ServerStorage,
     SubscriptionStorage,
     StateContext,
     SupportConnectedCallback,
@@ -105,7 +108,7 @@ class EditSubsTableWidget(Translatable, SupportConnectedCallback, TableWidget):
         )
 
         # Handy reference
-        self.SubscriptionList = self.SubscriptionWidget.SubscriptionList
+        self.SubscriptionDict = self.SubscriptionWidget.SubscriptionDict
 
         # Column count
         self.setColumnCount(len(EditSubsTableWidget.HEADER_LABEL))
@@ -182,12 +185,45 @@ class EditSubsTableWidget(Translatable, SupportConnectedCallback, TableWidget):
         self.setDropIndicatorShown(False)
         self.setDefaultDropAction(QtCore.Qt.DropAction.IgnoreAction)
 
+        contextMenuActions = [
+            Action(
+                _('Delete'),
+                callback=lambda: self.deleteSelectedItem(),
+                parent=self,
+            ),
+        ]
+
+        self.contextMenu = Menu(*contextMenuActions)
+        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+
+        # Signals
+        self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
+        self.itemChanged.connect(self.handleItemChanged)
+
+    @QtCore.Slot(QTableWidgetItem)
+    def handleItemChanged(self, item):
+        unique = self.getUniqueByIndex(item.row())
+
+        keyMap = ['remark', 'webURL']
+
+        if self.SubscriptionDict[unique][keyMap[item.column()]] != item.text():
+            # Modified. Update value
+            self.SubscriptionDict[unique][keyMap[item.column()]] = item.text()
+
+            # Sync it
+            SubscriptionStorage.sync()
+
+    @QtCore.Slot(QtCore.QPoint)
+    def handleCustomContextMenuRequested(self, point):
+        self.contextMenu.exec(self.mapToGlobal(point))
+
+    def getUniqueByIndex(self, index):
+        return list(self.SubscriptionDict.keys())[index]
+
     def initTableFromData(self):
-        for subscription in self.SubscriptionList:
+        for key, value in self.SubscriptionDict.items():
             self.appendDataByColumn(
-                lambda column: EditSubsTableWidget.HEADER_LABEL_GET_FUNC[column](
-                    subscription
-                )
+                lambda column: EditSubsTableWidget.HEADER_LABEL_GET_FUNC[column](value)
             )
 
     def deleteSelectedItem(self):
@@ -197,21 +233,35 @@ class EditSubsTableWidget(Translatable, SupportConnectedCallback, TableWidget):
             # Nothing to do
             return
 
+        if APP().ServerWidget is not None and APP().ServerWidget.modified:
+            APP().ServerWidget.saveChangeFirst.exec()
+
+            return
+
         self.questionDeleteBox.isMulti = bool(len(indexes) > 1)
-        self.questionDeleteBox.possibleRemark = f'{self.item(indexes[0], 0).text()}'
+        self.questionDeleteBox.possibleRemark = self.item(indexes[0], 0).text()
         self.questionDeleteBox.setText(self.questionDeleteBox.getText())
 
         if self.questionDeleteBox.exec() == MessageBox.StandardButton.No.value:
             # Do not delete
             return
 
+        deleted = 0
+
         for i in range(len(indexes)):
             takedRow = indexes[i] - i
+            takedUnique = self.getUniqueByIndex(takedRow)
 
             self.removeRow(takedRow)
-            self.SubscriptionList.pop(takedRow)
+            self.SubscriptionDict.pop(takedUnique)
 
-            # TODO: Remove related server
+            deleted += APP().ServerWidget.deleteItemByUnique(
+                takedUnique, syncStorage=False
+            )
+
+        if deleted:
+            # At least on server has been deleted. Sync it
+            ServerStorage.sync()
 
         # Sync it
         SubscriptionStorage.sync()
@@ -226,7 +276,9 @@ class EditSubsTableWidget(Translatable, SupportConnectedCallback, TableWidget):
 
             item.setFont(QFont(APP().customFontName))
             item.setFlags(
-                QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
+                QtCore.Qt.ItemFlag.ItemIsEnabled
+                | QtCore.Qt.ItemFlag.ItemIsSelectable
+                | QtCore.Qt.ItemFlag.ItemIsEditable
             )
 
             self.setItem(row, column, item)
@@ -307,14 +359,14 @@ class EditSubscriptionWidget(MainWindow):
 
         try:
             self.StorageObj = SubscriptionStorage.toObject(APP().CustomSubscription)
-            # Check model. Shallow copy
-            self.SubscriptionList = self.StorageObj['model']
+            # Shallow copy
+            self.SubscriptionDict = self.StorageObj
         except Exception:
             # Any non-exit exceptions
 
             self.StorageObj = SubscriptionStorage.init()
             # Shallow copy
-            self.SubscriptionList = self.StorageObj['model']
+            self.SubscriptionDict = self.StorageObj
 
             # Clear it
             SubscriptionStorage.clear()
@@ -365,20 +417,23 @@ class EditSubscriptionWidget(MainWindow):
             subscriptionWebURL = self.addSubsDialog.subscriptionWebURL()
 
             if subscriptionRemark:
+                # Unique id. Used by display and deletion
+                unique = str(uuid.uuid4())
+
                 subscription = {
-                    'remark': subscriptionRemark,
-                    'webURL': subscriptionWebURL,
-                    # Unique id. Used by display and deletion
-                    'unique': str(uuid.uuid4()),
+                    unique: {
+                        'remark': subscriptionRemark,
+                        'webURL': subscriptionWebURL,
+                    }
                 }
+
+                self.SubscriptionDict.update(subscription)
 
                 self.appendDataByColumn(
                     lambda column: EditSubsTableWidget.HEADER_LABEL_GET_FUNC[column](
-                        subscription
+                        subscription[unique]
                     )
                 )
-
-                self.SubscriptionList.append(subscription)
 
                 # Sync it
                 SubscriptionStorage.sync()
@@ -402,3 +457,9 @@ class EditSubscriptionWidget(MainWindow):
             ensure_ascii=False,
             escape_forward_slashes=False,
         )
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key.Key_Delete:
+            self.deleteSelectedItem()
+        else:
+            super().keyPressEvent(event)

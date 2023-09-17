@@ -156,22 +156,27 @@ class Application(SingletonApplication):
 
         self.tray = None
 
+        # Font
         self.customFontLoadMsg = ''
         self.customFontEnabled = False
         self.customFontName = ''
 
+        # Log Viewer Widget
         self.logViewerWidget = None
         self.torViewerWidget = None
 
+        # Log Handle
         self.logViewerHandle = None
         self.logStreamHandle = None
 
+        # Theme Detect
         self.themeDetector = None
         self.themeListenerThread = None
 
+        # Main Widget
+        self.SubscriptionWidget = None
         self.ServerWidget = None
         self.RoutesWidget = None
-        self.SubscriptionWidget = None
         self.TorRelayWidget = None
 
     def __getattr__(self, key):
@@ -270,9 +275,9 @@ class Application(SingletonApplication):
 
         self.aboutToQuit.connect(self.cleanup)
 
+        self.SubscriptionWidget = EditSubscriptionWidget()
         self.ServerWidget = EditConfigurationWidget()
         self.RoutesWidget = EditRoutingWidget()
-        self.SubscriptionWidget = EditSubscriptionWidget()
         self.TorRelayWidget = TorRelaySettingsWidget()
 
         self.tray = SystemTrayIcon()

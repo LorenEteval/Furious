@@ -80,29 +80,29 @@ class StateContext:
         self._ob.setDisabled(False)
 
 
-class ServerStorage:
-    EMPTY_OBJECT = {'model': []}
+class Storage:
+    def __init__(self, emptyObject, getObjectFn, settingName):
+        self.emptyObject = emptyObject
+        self.getObjectFn = getObjectFn
+        self.settingName = settingName
 
-    @staticmethod
-    def init():
-        return copy.deepcopy(ServerStorage.EMPTY_OBJECT)
+    def init(self):
+        return copy.deepcopy(self.emptyObject)
 
-    @staticmethod
-    def sync(ob=None):
+    def sync(self, ob=None):
         if ob is None:
             # Object is up-to-date
-            APP().Configuration = ServerStorage.toStorage(APP().ServerWidget.StorageObj)
+            setattr(APP(), self.settingName, Storage.toStorage(self.getObjectFn()))
         else:
             # Object is up-to-date
-            APP().Configuration = ServerStorage.toStorage(ob)
+            setattr(APP(), self.settingName, Storage.toStorage(ob))
 
-    @staticmethod
-    def toObject(st):
-        if not st:
-            # Server storage does not exist, or is empty
-            return ServerStorage.init()
+    def toObject(self, storage):
+        if not storage:
+            # Storage does not exist, or is empty
+            return self.init()
 
-        return ujson.loads(Base64Encoder.decode(st))
+        return ujson.loads(Base64Encoder.decode(storage))
 
     @staticmethod
     def toStorage(ob):
@@ -110,87 +110,52 @@ class ServerStorage:
             ujson.dumps(ob, ensure_ascii=False, escape_forward_slashes=False).encode()
         )
 
-    @staticmethod
-    def clear():
-        APP().Configuration = ''
+    def clear(self):
+        setattr(APP(), self.settingName, '')
+
+
+class _ServerStorage(Storage):
+    # remark, config, subsId. (subsId corresponds to unique in Subscription Object)
+    EMPTY_OBJECT = {'model': []}
+
+    def __init__(self):
+        super().__init__(
+            _ServerStorage.EMPTY_OBJECT,
+            lambda: APP().ServerWidget.StorageObj,
+            'Configuration',
+        )
+
+    def clear(self):
+        super().clear()
+
         APP().ActivatedItemIndex = str(-1)
 
 
-class RoutesStorage:
+class _RoutesStorage(Storage):
     # remark, corename, routes
     EMPTY_OBJECT = {'model': []}
 
-    @staticmethod
-    def init():
-        return copy.deepcopy(RoutesStorage.EMPTY_OBJECT)
-
-    @staticmethod
-    def sync(ob=None):
-        if ob is None:
-            # Object is up-to-date
-            APP().CustomRouting = RoutesStorage.toStorage(APP().RoutesWidget.StorageObj)
-        else:
-            # Object is up-to-date
-            APP().CustomRouting = RoutesStorage.toStorage(ob)
-
-    @staticmethod
-    def toObject(st):
-        if not st:
-            # Server storage does not exist, or is empty
-            return RoutesStorage.init()
-
-        return ujson.loads(Base64Encoder.decode(st))
-
-    @staticmethod
-    def toStorage(ob):
-        return Base64Encoder.encode(
-            ujson.dumps(ob, ensure_ascii=False, escape_forward_slashes=False).encode()
+    def __init__(self):
+        super().__init__(
+            _RoutesStorage.EMPTY_OBJECT,
+            lambda: APP().RoutesWidget.StorageObj,
+            'CustomRouting',
         )
 
-    @staticmethod
-    def clear():
-        APP().CustomRouting = ''
 
+class _SubscriptionStorage(Storage):
+    # unique: remark, webURL
+    EMPTY_OBJECT = {}
 
-class SubscriptionStorage:
-    # remark, webURL, unique
-    EMPTY_OBJECT = {'model': []}
-
-    @staticmethod
-    def init():
-        return copy.deepcopy(SubscriptionStorage.EMPTY_OBJECT)
-
-    @staticmethod
-    def sync(ob=None):
-        if ob is None:
-            # Object is up-to-date
-            APP().CustomSubscription = SubscriptionStorage.toStorage(
-                APP().SubscriptionWidget.StorageObj
-            )
-        else:
-            # Object is up-to-date
-            APP().CustomSubscription = SubscriptionStorage.toStorage(ob)
-
-    @staticmethod
-    def toObject(st):
-        if not st:
-            # Server storage does not exist, or is empty
-            return SubscriptionStorage.init()
-
-        return ujson.loads(Base64Encoder.decode(st))
-
-    @staticmethod
-    def toStorage(ob):
-        return Base64Encoder.encode(
-            ujson.dumps(ob, ensure_ascii=False, escape_forward_slashes=False).encode()
+    def __init__(self):
+        super().__init__(
+            _SubscriptionStorage.EMPTY_OBJECT,
+            lambda: APP().SubscriptionWidget.StorageObj,
+            'CustomSubscription',
         )
 
-    @staticmethod
-    def clear():
-        APP().CustomSubscription = ''
 
-
-class TorRelaySettingsStorage:
+class _TorRelaySettingsStorage(Storage):
     EMPTY_OBJECT = {
         'socksTunnelPort': DEFAULT_TOR_SOCKS_PORT,
         'httpsTunnelPort': DEFAULT_TOR_HTTPS_PORT,
@@ -199,38 +164,18 @@ class TorRelaySettingsStorage:
         'relayEstablishTimeout': DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT,
     }
 
-    @staticmethod
-    def init():
-        return copy.deepcopy(TorRelaySettingsStorage.EMPTY_OBJECT)
-
-    @staticmethod
-    def sync(ob=None):
-        if ob is None:
-            # Object is up-to-date
-            APP().TorRelaySettings = TorRelaySettingsStorage.toStorage(
-                APP().TorRelayWidget.StorageObj
-            )
-        else:
-            # Object is up-to-date
-            APP().TorRelaySettings = TorRelaySettingsStorage.toStorage(ob)
-
-    @staticmethod
-    def toObject(st):
-        if not st:
-            # Server storage does not exist, or is empty
-            return TorRelaySettingsStorage.init()
-
-        return ujson.loads(Base64Encoder.decode(st))
-
-    @staticmethod
-    def toStorage(ob):
-        return Base64Encoder.encode(
-            ujson.dumps(ob, ensure_ascii=False, escape_forward_slashes=False).encode()
+    def __init__(self):
+        super().__init__(
+            _TorRelaySettingsStorage.EMPTY_OBJECT,
+            lambda: APP().TorRelayWidget.StorageObj,
+            'TorRelaySettings',
         )
 
-    @staticmethod
-    def clear():
-        APP().TorRelaySettings = ''
+
+ServerStorage = _ServerStorage()
+RoutesStorage = _RoutesStorage()
+SubscriptionStorage = _SubscriptionStorage()
+TorRelaySettingsStorage = _TorRelaySettingsStorage()
 
 
 class AsyncSubprocessMessage:

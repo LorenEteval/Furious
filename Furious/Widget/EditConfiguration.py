@@ -91,6 +91,20 @@ import functools
 logger = logging.getLogger(__name__)
 
 
+def needSaveChanges(func):
+    def decorator(*args, **kwargs):
+        if APP().ServerWidget is not None and APP().ServerWidget.modified:
+            # Need save changes
+            APP().ServerWidget.saveChangeFirst.exec()
+
+            return
+
+        # Call the actual function
+        func(*args, **kwargs)
+
+    return decorator
+
+
 class NewBlankServerAction(Action):
     def __init__(self, **kwargs):
         super().__init__(_('New...'), **kwargs)
@@ -237,12 +251,8 @@ class ScrollToActivatedServerAction(Action):
             )
         )
 
+    @needSaveChanges
     def triggeredCallback(self, checked):
-        if APP().ServerWidget.modified:
-            self.parent().saveChangeFirst.exec()
-
-            return
-
         activatedItem = self.parent().activatedItem
 
         self.parent().setCurrentItem(activatedItem)
@@ -622,9 +632,103 @@ class ZoomOutAction(Action):
         self.parent().plainTextEdit.zoomOut()
 
 
+def useProxyServerIfPossible(manager, loggerAction):
+    proxyServer = APP().tray.ConnectAction.httpsProxyServer
+
+    if proxyServer:
+        logger.info(f'{loggerAction} uses proxy server {proxyServer}')
+
+        # Checked. split should not throw exceptions
+        proxyHost, proxyPort = proxyServer.split(':')
+
+        # Checked. int(proxyPort) should not throw exceptions
+        manager.setProxy(
+            QNetworkProxy(QNetworkProxy.ProxyType.HttpProxy, proxyHost, int(proxyPort))
+        )
+    else:
+        logger.info(f'{loggerAction} uses no proxy')
+
+        manager.setProxy(QNetworkProxy(QNetworkProxy.ProxyType.NoProxy))
+
+    return proxyServer
+
+
 class UpdateSubscriptionAction(Action):
     def __init__(self, **kwargs):
         super().__init__(_('Update Subscription'), **kwargs)
+
+        self.networkAccessManager = QNetworkAccessManager(parent=self)
+
+        self.networkReplyTable = {}
+
+    @QtCore.Slot()
+    def handleFinished(self):
+        networkReply = self.sender()
+
+        unique, remark, webURL = (
+            self.networkReplyTable[networkReply]['unique'],
+            self.networkReplyTable[networkReply]['remark'],
+            self.networkReplyTable[networkReply]['webURL'],
+        )
+
+        if networkReply.error() != QNetworkReply.NetworkError.NoError:
+            logger.error(f'update subs {webURL} failed. {networkReply.errorString()}')
+        else:
+            logger.info(f'update subs {webURL} success')
+
+            try:
+                shareLinks = list(
+                    filter(
+                        lambda x: x != '',
+                        Base64Encoder.decode(networkReply.readAll().data())
+                        .decode()
+                        .split('\n'),
+                    )
+                )
+            except Exception as ex:
+                # Any non-exit exceptions
+
+                logger.error(f'parse share link failed: {ex}')
+            else:
+                # Delete old subscription by unique(subsId)
+                deletedNum = APP().ServerWidget.deleteItemByUnique(
+                    unique, syncStorage=False
+                )
+
+                # Append subscription
+                for shareLink in shareLinks:
+                    ImportLinkAction.parseShareLink(shareLink, {'subsId': unique})
+
+                if deletedNum or shareLinks:
+                    # Deleted or imported. Sync it
+                    ServerStorage.sync()
+
+        # Done. Remove entry
+        self.networkReplyTable.pop(networkReply)
+
+    @needSaveChanges
+    def triggeredCallback(self, checked):
+        # Reference
+        subscriptionDict = APP().SubscriptionWidget.SubscriptionDict
+
+        if not subscriptionDict:
+            # Empty. Nothing to do
+            return
+
+        useProxyServerIfPossible(self.networkAccessManager, 'update subscription')
+
+        for key, value in subscriptionDict.items():
+            networkReply = self.networkAccessManager.get(
+                QNetworkRequest(QtCore.QUrl(value['webURL']))
+            )
+
+            self.networkReplyTable[networkReply] = {
+                'unique': key,
+                'remark': value['remark'],
+                'webURL': value['webURL'],
+            }
+
+            networkReply.finished.connect(self.handleFinished)
 
 
 class EditSubscriptionAction(Action):
@@ -655,7 +759,7 @@ class ShowTorRelayLogAction(Action):
         APP().torViewerWidget.showMaximized()
 
 
-class WhetherToUpdateInfoBox(MessageBox):
+class WhetherUpdateInfoBox(MessageBox):
     def __init__(self, version='0.0.0', *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -689,6 +793,11 @@ def versionToNumber(version):
 
 
 class CheckForUpdatesAction(Action):
+    API_URL = (
+        f'https://api.github.com/repos/'
+        f'{APPLICATION_REPO_OWNER_NAME}/{APPLICATION_REPO_NAME}/releases/latest'
+    )
+
     def __init__(self, **kwargs):
         super().__init__(
             _('Check For Updates'),
@@ -697,106 +806,78 @@ class CheckForUpdatesAction(Action):
         )
 
         self.networkAccessManager = QNetworkAccessManager(parent=self)
-        self.networkReply = None
 
-        self.checkForUpdateErrorBox = MessageBox(
+        self.checkForUpdatesError = MessageBox(
             icon=MessageBox.Icon.Critical, parent=self.parent()
         )
-        self.whetherToUpdateInfoBox = WhetherToUpdateInfoBox(
+        self.whetherUpdateInfoBox = WhetherUpdateInfoBox(
             icon=MessageBox.Icon.Information, parent=self.parent()
         )
-        self.isLatestVersionInfoBox = MessageBox(
+        self.latestVersionInfoBox = MessageBox(
             icon=MessageBox.Icon.Information, parent=self.parent()
         )
 
-    def triggeredCallback(self, checked):
-        proxyServer = APP().tray.ConnectAction.httpsProxyServer
+    @QtCore.Slot()
+    def handleFinished(self):
+        networkReply = self.sender()
 
-        if proxyServer:
-            logger.info(f'check for updates uses proxy server {proxyServer}')
+        if networkReply.error() != QNetworkReply.NetworkError.NoError:
+            logger.error(f'check for updates failed. {networkReply.errorString()}')
 
-            # Checked. split should not throw exceptions
-            proxyHost, proxyPort = proxyServer.split(':')
+            self.checkForUpdatesError.setWindowTitle(_(APPLICATION_NAME))
+            self.checkForUpdatesError.setText(_('Check for updates failed.'))
 
-            # Checked. int(proxyPort) should not throw exceptions
-            self.networkAccessManager.setProxy(
-                QNetworkProxy(
-                    QNetworkProxy.ProxyType.HttpProxy, proxyHost, int(proxyPort)
-                )
-            )
+            # Show the MessageBox and wait for user to close it
+            self.checkForUpdatesError.exec()
         else:
-            logger.info(f'check for updates uses no proxy')
+            logger.info('check for updates success')
 
-            self.networkAccessManager.setProxy(
-                QNetworkProxy(QNetworkProxy.ProxyType.NoProxy)
-            )
+            # Unchecked?
+            info = ujson.loads(networkReply.readAll().data())
 
-        apiUrl = (
-            f'https://api.github.com/repos/'
-            f'{APPLICATION_REPO_OWNER_NAME}/{APPLICATION_REPO_NAME}/releases/latest'
-        )
-
-        self.networkReply = self.networkAccessManager.get(
-            QNetworkRequest(QtCore.QUrl(apiUrl))
-        )
-
-        @QtCore.Slot()
-        def finishedCallback():
-            if self.networkReply.error() != QNetworkReply.NetworkError.NoError:
-                logger.error(
-                    f'check for updates failed. {self.networkReply.errorString()}'
+            if versionToNumber(info['tag_name']) > versionToNumber(APPLICATION_VERSION):
+                self.whetherUpdateInfoBox.version = info['tag_name']
+                self.whetherUpdateInfoBox.setWindowTitle(_(APPLICATION_NAME))
+                self.whetherUpdateInfoBox.setStandardButtons(
+                    MessageBox.StandardButton.Yes | MessageBox.StandardButton.No
                 )
-
-                self.checkForUpdateErrorBox.setWindowTitle(_(APPLICATION_NAME))
-                self.checkForUpdateErrorBox.setText(_('Check for updates failed.'))
+                self.whetherUpdateInfoBox.setText(
+                    _('New version available: ') + info['tag_name']
+                )
+                self.whetherUpdateInfoBox.setInformativeText(_('Go to download page?'))
 
                 # Show the MessageBox and wait for user to close it
-                self.checkForUpdateErrorBox.exec()
-            else:
-                logger.info('check for updates success')
-
-                info = ujson.loads(self.networkReply.readAll().data())
-
-                if versionToNumber(info['tag_name']) > versionToNumber(
-                    APPLICATION_VERSION
+                if (
+                    self.whetherUpdateInfoBox.exec()
+                    == MessageBox.StandardButton.Yes.value
                 ):
-                    self.whetherToUpdateInfoBox.version = info['tag_name']
-                    self.whetherToUpdateInfoBox.setWindowTitle(_(APPLICATION_NAME))
-                    self.whetherToUpdateInfoBox.setStandardButtons(
-                        MessageBox.StandardButton.Yes | MessageBox.StandardButton.No
-                    )
-                    self.whetherToUpdateInfoBox.setText(
-                        _('New version available: ') + info['tag_name']
-                    )
-                    self.whetherToUpdateInfoBox.setInformativeText(
-                        _('Go to download page?')
-                    )
-
-                    # Show the MessageBox and wait for user to close it
-                    if (
-                        self.whetherToUpdateInfoBox.exec()
-                        == MessageBox.StandardButton.Yes.value
-                    ):
-                        if QDesktopServices.openUrl(QtCore.QUrl(info['html_url'])):
-                            logger.info('open download page success')
-                        else:
-                            logger.error('open download page failed')
+                    if QDesktopServices.openUrl(QtCore.QUrl(info['html_url'])):
+                        logger.info('open download page success')
                     else:
-                        # Do nothing
-                        pass
+                        logger.error('open download page failed')
                 else:
-                    self.isLatestVersionInfoBox.setWindowTitle(_(APPLICATION_NAME))
-                    self.isLatestVersionInfoBox.setText(
-                        _(f'{APPLICATION_NAME} is already the latest version.')
-                    )
-                    self.isLatestVersionInfoBox.setInformativeText(
-                        _(f'Thank you for using {APPLICATION_NAME}.')
-                    )
+                    # Do nothing
+                    pass
+            else:
+                self.latestVersionInfoBox.setWindowTitle(_(APPLICATION_NAME))
+                self.latestVersionInfoBox.setText(
+                    _(f'{APPLICATION_NAME} is already the latest version.')
+                )
+                self.latestVersionInfoBox.setInformativeText(
+                    _(f'Thank you for using {APPLICATION_NAME}.')
+                )
 
-                    # Show the MessageBox and wait for user to close it
-                    self.isLatestVersionInfoBox.exec()
+                # Show the MessageBox and wait for user to close it
+                self.latestVersionInfoBox.exec()
 
-        self.networkReply.finished.connect(finishedCallback)
+    def triggeredCallback(self, checked):
+        useProxyServerIfPossible(self.networkAccessManager, 'check for updates')
+
+        networkReply = self.networkAccessManager.get(
+            QNetworkRequest(QtCore.QUrl(CheckForUpdatesAction.API_URL))
+        )
+
+        networkReply.finished.connect(self.handleFinished)
 
 
 class AboutAction(Action):
@@ -914,13 +995,9 @@ class ServerWidgetHorizontalHeader(HeaderView):
             for i in range(self.parent().columnCount())
         )
 
+    @needSaveChanges
     @QtCore.Slot(int)
     def handleSectionClicked(self, clickedIndex):
-        if APP().ServerWidget.modified:
-            self.parent().saveChangeFirst.exec()
-
-            return
-
         activatedIndex = self.parent().activatedItemIndex
 
         if activatedIndex < 0:
@@ -1018,6 +1095,16 @@ def toJSONMayBeNull(text):
         return {}
 
 
+def getSubsRemarkFromUnique(server):
+    try:
+        # SubscriptionWidget must be initialized before ServerWidget
+        return APP().SubscriptionWidget.SubscriptionDict[server['subsId']]['remark']
+    except Exception:
+        # Any non-exit exceptions
+
+        return ''
+
+
 class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
     # Might be extended in the future
     HEADER_LABEL = [
@@ -1027,6 +1114,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         'Port',
         'Transport',
         'TLS',
+        'Subscription',
     ]
 
     # Corresponds to header label
@@ -1037,6 +1125,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         lambda server: Intellisense.getCorePort(toJSONMayBeNull(server['config'])),
         lambda server: Intellisense.getCoreTransport(toJSONMayBeNull(server['config'])),
         lambda server: Intellisense.getCoreTLS(toJSONMayBeNull(server['config'])),
+        lambda server: getSubsRemarkFromUnique(server),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -1046,7 +1135,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         self.questionSaveBox = QuestionSaveBox(
             icon=MessageBox.Icon.Question, parent=self.parent()
         )
-        self.questionDel0Box = QuestionDeleteBox(
+        self.questionDelete_ = QuestionDeleteBox(
             icon=MessageBox.Icon.Question, parent=self.parent()
         )
         self.saveConfInfoBox = SaveConfInfo(
@@ -1056,7 +1145,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             icon=MessageBox.Icon.Information, parent=self.parent()
         )
         self.saveChangeFirst = SaveChangeFirst(
-            icon=MessageBox.Icon.Information, parent=self.parent()
+            icon=MessageBox.Icon.Information, parent=None
         )
 
         # Shallow copy. Checked
@@ -1367,12 +1456,8 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
 
         self.swapItem(index, index - 1)
 
+    @needSaveChanges
     def moveUpSelectedItem(self):
-        if APP().ServerWidget.modified:
-            self.saveChangeFirst.exec()
-
-            return
-
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -1410,12 +1495,8 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
 
         self.swapItem(index, index + 1)
 
+    @needSaveChanges
     def moveDownSelectedItem(self):
-        if APP().ServerWidget.modified:
-            self.saveChangeFirst.exec()
-
-            return
-
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -1446,12 +1527,8 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             list(index + 1 for index in indexes), clearCurrentSelection=True
         )
 
+    @needSaveChanges
     def duplicateSelectedItem(self):
-        if APP().ServerWidget.modified:
-            self.saveChangeFirst.exec()
-
-            return
-
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -1460,32 +1537,19 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
 
         for index in indexes:
             if 0 <= index < len(self.ServerList):
-                APP().ServerWidget.importServer(**self.ServerList[index])
+                # Do not clone subsId
+                APP().ServerWidget.importServer(
+                    self.ServerList[index]['remark'],
+                    self.ServerList[index]['config'],
+                )
 
         # Sync it
         ServerStorage.sync()
 
-    def deleteSelectedItem(self):
-        if APP().ServerWidget.modified:
-            self.saveChangeFirst.exec()
-
-            return
-
-        indexes = self.selectedIndex
-
+    def deleteItemByIndex(self, indexes, syncStorage=False):
         if len(indexes) == 0:
             # Nothing selected. Do nothing
-            return
-
-        self.questionDel0Box.isMulti = bool(len(indexes) > 1)
-        self.questionDel0Box.possibleRemark = (
-            f'{indexes[0] + 1} - {self.ServerList[indexes[0]]["remark"]}'
-        )
-        self.questionDel0Box.setText(self.questionDel0Box.getText())
-
-        if self.questionDel0Box.exec() == MessageBox.StandardButton.No.value:
-            # Do not delete
-            return
+            return 0
 
         if self.activatedItemIndex in indexes:
             takedActivated = True
@@ -1505,8 +1569,9 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             if not takedActivated and takedRow < self.activatedItemIndex:
                 APP().ActivatedItemIndex = str(self.activatedItemIndex - 1)
 
-        # Sync it
-        ServerStorage.sync()
+        if syncStorage:
+            # Sync it
+            ServerStorage.sync()
 
         if takedActivated:
             if APP().tray.ConnectAction.isConnected():
@@ -1525,6 +1590,28 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         self.blockSignals(True)
         self.setCurrentIndex(self.indexFromItem(self.item(self.currentRow(), 0)))
         self.blockSignals(False)
+
+        return len(indexes)
+
+    @needSaveChanges
+    def deleteSelectedItem(self):
+        indexes = self.selectedIndex
+
+        if len(indexes) == 0:
+            # Nothing selected. Do nothing
+            return
+
+        self.questionDelete_.isMulti = bool(len(indexes) > 1)
+        self.questionDelete_.possibleRemark = (
+            f'{indexes[0] + 1} - {self.ServerList[indexes[0]]["remark"]}'
+        )
+        self.questionDelete_.setText(self.questionDelete_.getText())
+
+        if self.questionDelete_.exec() == MessageBox.StandardButton.No.value:
+            # Do not delete
+            return
+
+        self.deleteItemByIndex(indexes, syncStorage=True)
 
     def setEmptyItem(self):
         # Click empty.
@@ -1894,8 +1981,24 @@ class EditConfigurationWidget(MainWindow):
 
             self.setGeometry(100, 100, 1800, 960)
 
-    def importServer(self, remark, config, syncStorage=False):
-        server = {'remark': remark, 'config': config}
+    def deleteItemByIndex(self, indexes, syncStorage=False):
+        return self.serverWidget.deleteItemByIndex(indexes, syncStorage)
+
+    def deleteItemByUnique(self, unique, syncStorage=False):
+        indexes = []
+
+        for index, server in enumerate(self.ServerList):
+            if server.get('subsId', '') == unique:
+                indexes.append(index)
+
+        return self.deleteItemByIndex(indexes, syncStorage=syncStorage)
+
+    def importServer(self, remark, config, subsId='', syncStorage=False):
+        server = {
+            'remark': remark,
+            'config': config,
+            'subsId': subsId,
+        }
 
         self.ServerList.append(server)
 
@@ -1908,9 +2011,6 @@ class EditConfigurationWidget(MainWindow):
         self.serverWidget.insertRow(row)
         self.serverWidget.appendScrollBarEntry()
         self.serverWidget.flushRow(row, server)
-
-        item = QTableWidgetItem(str(row + 1))
-        item.setFont(QFont(APP().customFontName))
 
         if len(self.ServerList) == 1:
             # The first one. Click it
@@ -1947,6 +2047,10 @@ class EditConfigurationWidget(MainWindow):
     @property
     def currentFocus(self):
         return self.serverWidget.currentFocus
+
+    @property
+    def saveChangeFirst(self):
+        return self.serverWidget.saveChangeFirst
 
     def saveScrollBarValue(self, index):
         self.serverWidget.saveScrollBarValue(index)
