@@ -553,7 +553,7 @@ class ConnectAction(Action):
                             break
 
                     if socksProxyHost is None or socksProxyPort is None:
-                        # No HTTP proxy endpoint configured
+                        # No SOCKS proxy endpoint configured
                         raise SocksProxyServerError
 
                     socksProxyServer = f'{socksProxyHost}:{socksProxyPort}'
