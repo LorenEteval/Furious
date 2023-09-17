@@ -180,7 +180,11 @@ class ImportLinkAction(Action):
             # OK. Do nothing
             pass
 
-    def parseShareLinkVMess(self, data, isV2rayN):
+    @staticmethod
+    def parseShareLinkVMess(data, isV2rayN, importServerArgs=None):
+        if importServerArgs is None:
+            importServerArgs = {}
+
         if isV2rayN:
 
             def getOrDefault(key, default=''):
@@ -224,10 +228,11 @@ class ImportLinkAction(Action):
                         ensure_ascii=False,
                         escape_forward_slashes=False,
                     ),
+                    **importServerArgs,
                 )
 
                 logger.debug(
-                    'import share link from clipboard success. '
+                    'import share link success. '
                     f'Remark: {remark}. Protocol: VMess. (V2rayN share standard)'
                 )
 
@@ -238,10 +243,15 @@ class ImportLinkAction(Action):
 
                 return '', False
         else:
-            return self.parseShareLinkStandard('vmess', data)
+            return ImportLinkAction.parseShareLinkStandard(
+                'vmess', data, importServerArgs
+            )
 
     @staticmethod
-    def parseShareLinkStandard(protocol, data):
+    def parseShareLinkStandard(protocol, data, importServerArgs=None):
+        if importServerArgs is None:
+            importServerArgs = {}
+
         try:
             parseResult = urllib.parse.urlparse(data)
 
@@ -281,10 +291,11 @@ class ImportLinkAction(Action):
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
                 ),
+                **importServerArgs,
             )
 
             logger.debug(
-                f'import share link from clipboard success. '
+                f'import share link success. '
                 f'Remark: {remark}. Protocol: {protocolRepr(protocol)}'
             )
 
@@ -295,7 +306,10 @@ class ImportLinkAction(Action):
             return '', False
 
     @staticmethod
-    def parseShareLinkSIP002(data):
+    def parseShareLinkSIP002(data, importServerArgs=None):
+        if importServerArgs is None:
+            importServerArgs = {}
+
         try:
             result = urllib.parse.urlparse(data)
             remark = urllib.parse.unquote(result.fragment)
@@ -332,10 +346,11 @@ class ImportLinkAction(Action):
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
                 ),
+                **importServerArgs,
             )
 
             logger.debug(
-                f'import share link from clipboard success. '
+                f'import share link success. '
                 f'Remark: {remark}. Protocol: {Protocol.Shadowsocks}'
             )
 
@@ -345,7 +360,11 @@ class ImportLinkAction(Action):
 
             return '', False
 
-    def parseShareLinkSS(self, data):
+    @staticmethod
+    def parseShareLinkSS(data, importServerArgs=None):
+        if importServerArgs is None:
+            importServerArgs = {}
+
         try:
             # ss://base64...
             myData = Base64Encoder.decode(data[5:]).decode()
@@ -358,10 +377,11 @@ class ImportLinkAction(Action):
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
                 ),
+                **importServerArgs,
             )
 
             logger.debug(
-                f'import share link from clipboard success. '
+                f'import share link success. '
                 f'Remark: sslegacy. Protocol: {Protocol.Shadowsocks}'
             )
 
@@ -369,10 +389,13 @@ class ImportLinkAction(Action):
         except Exception:
             # Any non-exit exceptions
 
-            return self.parseShareLinkSIP002(data)
+            return ImportLinkAction.parseShareLinkSIP002(data, importServerArgs)
 
     @staticmethod
-    def parseShareLinkTrojan(data):
+    def parseShareLinkTrojan(data, importServerArgs=None):
+        if importServerArgs is None:
+            importServerArgs = {}
+
         try:
             parseResult = urllib.parse.urlparse(data)
 
@@ -408,10 +431,11 @@ class ImportLinkAction(Action):
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
                 ),
+                **importServerArgs,
             )
 
             logger.debug(
-                f'import share link from clipboard success. '
+                f'import share link success. '
                 f'Remark: {remark}. Protocol: {Protocol.Trojan}'
             )
 
@@ -421,7 +445,11 @@ class ImportLinkAction(Action):
 
             return '', False
 
-    def parseShareLink(self, shareLink):
+    @staticmethod
+    def parseShareLink(shareLink, importServerArgs=None):
+        if importServerArgs is None:
+            importServerArgs = {}
+
         try:
             myHead, myBody = shareLink.split('://')
         except Exception:
@@ -436,18 +464,36 @@ class ImportLinkAction(Action):
                 except Exception:
                     # Any non-exit exceptions
 
-                    return self.parseShareLinkVMess(shareLink, isV2rayN=False)
+                    return ImportLinkAction.parseShareLinkVMess(
+                        shareLink,
+                        isV2rayN=False,
+                        importServerArgs=importServerArgs,
+                    )
                 else:
-                    return self.parseShareLinkVMess(myJSON, isV2rayN=True)
+                    return ImportLinkAction.parseShareLinkVMess(
+                        myJSON,
+                        isV2rayN=True,
+                        importServerArgs=importServerArgs,
+                    )
 
             if myHead.lower() == 'vless':
-                return self.parseShareLinkStandard('vless', shareLink)
+                return ImportLinkAction.parseShareLinkStandard(
+                    'vless',
+                    shareLink,
+                    importServerArgs,
+                )
 
             if myHead.lower() == 'ss':
-                return self.parseShareLinkSS(shareLink)
+                return ImportLinkAction.parseShareLinkSS(
+                    shareLink,
+                    importServerArgs,
+                )
 
             if myHead.lower() == 'trojan':
-                return self.parseShareLinkTrojan(shareLink)
+                return ImportLinkAction.parseShareLinkTrojan(
+                    shareLink,
+                    importServerArgs,
+                )
 
             return '', False
 
@@ -459,7 +505,7 @@ class ImportLinkAction(Action):
         except Exception:
             # Any non-exit exceptions
 
-            remark, result = self.parseShareLink(self.clipboard)
+            remark, result = ImportLinkAction.parseShareLink(self.clipboard)
 
             if result:
                 # Sync it
@@ -474,7 +520,7 @@ class ImportLinkAction(Action):
             rowCount = APP().ServerWidget.rowCount
 
             for shareLink in splitByNewLine:
-                remark, result = self.parseShareLink(shareLink)
+                remark, result = ImportLinkAction.parseShareLink(shareLink)
 
                 if result:
                     successRemark.append(remark)

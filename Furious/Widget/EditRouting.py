@@ -1063,7 +1063,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
             return
 
         self.questionDeleteBox.isMulti = bool(len(indexes) > 1)
-        self.questionDeleteBox.possibleRemark = f'{self.item(indexes[0], 0).text()}'
+        self.questionDeleteBox.possibleRemark = self.item(indexes[0], 0).text()
         self.questionDeleteBox.setText(self.questionDeleteBox.getText())
 
         if self.questionDeleteBox.exec() == MessageBox.StandardButton.No.value:
