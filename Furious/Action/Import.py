@@ -408,7 +408,8 @@ class ImportLinkAction(Action):
             password, address, port = re.split(r'[@:]', parseResult.netloc)
 
             type_ = queryObject.get('type', 'tcp')
-            security = queryObject.get('security', 'none')
+            # For Trojan: Assign tls by default
+            security = queryObject.get('security', 'tls')
 
             # Remove redundant items
             queryObject.pop('type', '')
