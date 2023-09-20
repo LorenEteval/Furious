@@ -30,8 +30,6 @@ logger = logging.getLogger(__name__)
 
 class Core:
     def __init__(self, *args, exitCallback=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
         self._process = None
         self._exitCallback = exitCallback
 
@@ -85,7 +83,7 @@ class Core:
 
         if self.checkAlive():
             # Start core daemon
-            self._daemonTimer.start(1)
+            self._daemonTimer.start(100)
 
     def stop(self):
         if (
