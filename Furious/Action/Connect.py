@@ -114,6 +114,8 @@ class ConnectAction(Action):
         self.testPool = [
             # Messaging
             'https://telegram.org/',
+            # Search
+            'https://www.google.com/',
             # Social media
             'https://twitter.com/',
             # Videos
@@ -121,6 +123,8 @@ class ConnectAction(Action):
         ]
         self.testTime = 0
         self.testFinished = True
+        self.testTimeoutTimer = QtCore.QTimer()
+        self.testTimeoutTimer.setSingleShot(True)
 
         self.XrayCore = XrayCore()
         self.Hysteria1 = Hysteria1()
@@ -1056,7 +1060,7 @@ class ConnectAction(Action):
         self.Tun2socks.registerExitCallback(None)
         self.Tun2socks.stop()
 
-    def waitForDNSResolutionIfNecessary(self, startCounter=0, timeout=10000, step=1):
+    def waitForDNSResolutionIfNecessary(self, startCounter=0, timeout=10000, step=100):
         # Wait for potentially DNS resolve in VPN Mode
         if self.coreRunning and self.networkReply is not None:
             logger.info('dns resolve in progress. Wait')
@@ -1082,7 +1086,7 @@ class ConnectAction(Action):
             # Reset reply
             self.networkReply = None
 
-    def startTorRelay(self, core, proxyServer, startCounter=0, step=1):
+    def startTorRelay(self, core, proxyServer, startCounter=0, step=100):
         # Redirect Proxy
         self.httpsProxyServer = f'127.0.0.1:{self.torRelayStorageObj.get("httpsTunnelPort", DEFAULT_TOR_HTTPS_PORT)}'
         self.socksProxyServer = f'127.0.0.1:{self.torRelayStorageObj.get("socksTunnelPort", DEFAULT_TOR_SOCKS_PORT)}'
@@ -1171,6 +1175,7 @@ class ConnectAction(Action):
                     )
                 else:
                     self.testFinished = True
+                    self.testTimeoutTimer.stop()
 
                     if self.disconnectReason:
                         self.disconnectAction(self.disconnectReason)
@@ -1182,6 +1187,7 @@ class ConnectAction(Action):
                 logger.info(f'{self.coreName}: connection test success. Connected')
 
                 self.testFinished = True
+                self.testTimeoutTimer.stop()
                 # Connected status
                 self.setConnectedStatus()
 
@@ -1261,20 +1267,22 @@ class ConnectAction(Action):
 
             self.connectingAction()
 
-    def waitForConnectionTest(self, startCounter=0, timeout=30000, step=1):
-        while self.coreRunning and not self.testFinished and startCounter < timeout:
-            QTest.qWait(step)
+    def checkConnectionTestTimeout(self, timeout=30000):
+        logger.info(f'connection test timeout is {timeout // 1000}s')
 
-            startCounter += step
+        def handleTimeout():
+            if self.coreRunning and not self.testFinished:
+                # Timeout
+                logger.error('connection test timeout. Abort')
 
-        if self.coreRunning and not self.testFinished:
-            # Timeout
-            logger.error('connection test timeout. Abort')
+                assert isinstance(self.networkReply, QNetworkReply)
 
-            assert isinstance(self.networkReply, QNetworkReply)
+                self.coreRunning = False
+                self.networkReply.abort()
 
-            self.coreRunning = False
-            self.networkReply.abort()
+        # Check is done by timer
+        self.testTimeoutTimer.timeout.connect(handleTimeout)
+        self.testTimeoutTimer.start(timeout)
 
     def connectingAction(
         self,
@@ -1331,7 +1339,7 @@ class ConnectAction(Action):
             self.startConnectionTest(
                 showRoutingChangedMessage, currentRouting, isBuiltinRouting
             )
-            self.waitForConnectionTest()
+            self.checkConnectionTestTimeout()
 
     def disconnectAction(self, reason=''):
         Proxy.off()
