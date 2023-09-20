@@ -46,12 +46,12 @@ logger = logging.getLogger(__name__)
 
 class Base64Encoder:
     @staticmethod
-    @functools.lru_cache(32)
+    @functools.lru_cache(128)
     def encode(text):
         return pybase64.b64encode(text)
 
     @staticmethod
-    @functools.lru_cache(32)
+    @functools.lru_cache(128)
     def decode(text):
         return pybase64.b64decode(text, validate=False)
 

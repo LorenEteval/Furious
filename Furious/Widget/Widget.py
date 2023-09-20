@@ -398,7 +398,7 @@ class ZoomablePlainTextEdit(QPlainTextEdit):
         super().__init__(*args, **kwargs)
 
     @staticmethod
-    @functools.lru_cache(32)
+    @functools.lru_cache(128)
     def getIndent(line):
         indent = ''
 
