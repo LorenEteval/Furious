@@ -35,6 +35,7 @@ from Furious.Utility.Utility import (
     ServerStorage,
     SupportThemeChangedCallback,
     NeedSyncSettings,
+    isScriptMode,
 )
 from Furious.Utility.Proxy import Proxy
 from Furious.Utility.Settings import Settings
@@ -179,6 +180,8 @@ class Application(SingletonApplication):
         self.logStreamHandle = None
 
         # Theme Detect
+        self.currentTheme = None
+        self.themeDetectTimer = None
         self.themeDetector = None
         self.themeListenerThread = None
 
@@ -256,18 +259,6 @@ class Application(SingletonApplication):
         self.addCustomFont()
         self.configureLogging()
 
-        self.themeDetector = ApplicationThemeDetector()
-        self.themeDetector.themeChanged.connect(
-            SupportThemeChangedCallback.callThemeChangedCallback
-        )
-
-        self.themeListenerThread = threading.Thread(
-            target=darkdetect.listener,
-            args=(self.themeDetector.themeChanged.emit,),
-            daemon=True,
-        )
-        self.themeListenerThread.start()
-
         import PySide6
 
         logger.info(f'application version: {APPLICATION_VERSION}')
@@ -281,6 +272,37 @@ class Application(SingletonApplication):
         logger.info(f'appFilePath: {self.applicationFilePath()}')
         logger.info(f'system language is {SYSTEM_LANGUAGE}')
         logger.info(self.customFontLoadMsg)
+
+        if PLATFORM != 'Windows' and not isScriptMode():
+            logger.info('theme detect method uses timer implementation')
+
+            @QtCore.Slot()
+            def handleTimeout():
+                currentTheme = darkdetect.theme()
+
+                if self.currentTheme != currentTheme:
+                    self.currentTheme = currentTheme
+
+                    SupportThemeChangedCallback.callThemeChangedCallback(currentTheme)
+
+            self.currentTheme = darkdetect.theme()
+            self.themeDetectTimer = QtCore.QTimer()
+            self.themeDetectTimer.timeout.connect(handleTimeout)
+            self.themeDetectTimer.start(1)
+        else:
+            logger.info('theme detect method uses listener implementation')
+
+            self.themeDetector = ApplicationThemeDetector()
+            self.themeDetector.themeChanged.connect(
+                SupportThemeChangedCallback.callThemeChangedCallback
+            )
+
+            self.themeListenerThread = threading.Thread(
+                target=darkdetect.listener,
+                args=(self.themeDetector.themeChanged.emit,),
+                daemon=True,
+            )
+            self.themeListenerThread.start()
 
         # Mandatory
         self.setQuitOnLastWindowClosed(False)
