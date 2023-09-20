@@ -42,7 +42,6 @@ class Configuration:
         super().__init__(*args, **kwargs)
 
     @staticmethod
-    @functools.lru_cache(32)
     def toJSON(text):
         return ujson.loads(text)
 
