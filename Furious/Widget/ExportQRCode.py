@@ -34,6 +34,7 @@ class ExportQRCode(MainWindow):
 
         self.setWindowTitle(_(APPLICATION_NAME))
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+        self.setFixedSize(640, 640)
 
         self.labelList = []
 
