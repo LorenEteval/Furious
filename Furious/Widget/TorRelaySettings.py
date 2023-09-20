@@ -18,7 +18,6 @@
 from Furious.Widget.Widget import Dialog, GroupBox, Label
 from Furious.Utility.Constants import (
     APP,
-    PLATFORM,
     DEFAULT_TOR_SOCKS_PORT,
     DEFAULT_TOR_HTTPS_PORT,
     DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT,
@@ -90,10 +89,6 @@ class TorRelaySettingsWidget(Dialog):
         self.httpsTunnelWidget.setLayout(self.httpsTunnelLayout)
 
         self.endpointGroupBoxLayout = QGridLayout(parent=self.endpointGroupBox)
-
-        if PLATFORM == 'Darwin':
-            self.endpointGroupBoxLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-
         self.endpointGroupBoxLayout.addWidget(self.socksTunnelWidget, 0, 0)
         self.endpointGroupBoxLayout.addWidget(self.httpsTunnelWidget, 0, 1)
 
@@ -111,10 +106,6 @@ class TorRelaySettingsWidget(Dialog):
         self.useProxyWidget.setLayout(self.useProxyLayout)
 
         self.useProxyGroupBoxLayout = QGridLayout(parent=self.useProxyGroupBox)
-
-        if PLATFORM == 'Darwin':
-            self.useProxyGroupBoxLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-
         self.useProxyGroupBoxLayout.addWidget(self.useProxyWidget, 0, 0)
 
         self.useProxyGroupBox.setLayout(self.useProxyGroupBoxLayout)
@@ -147,10 +138,6 @@ class TorRelaySettingsWidget(Dialog):
         self.torRelayTimeoutWidget.setLayout(self.torRelayTimeoutLayout)
 
         self.torOtherGroupBoxLayout = QGridLayout(parent=self.torOtherGroupBox)
-
-        if PLATFORM == 'Darwin':
-            self.torOtherGroupBoxLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-
         self.torOtherGroupBoxLayout.addWidget(self.torLogLevelWidget, 0, 0)
         self.torOtherGroupBoxLayout.addWidget(self.torRelayTimeoutWidget, 0, 1)
 
