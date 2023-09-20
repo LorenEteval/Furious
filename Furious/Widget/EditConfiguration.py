@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from Furious.Core.Core import XrayCore, Hysteria1, Hysteria2
 from Furious.Core.TorRelay import TorRelay
 from Furious.Core.Configuration import Configuration
 from Furious.Core.Intellisense import Intellisense
@@ -57,6 +58,7 @@ from Furious.Utility.Translator import Translatable, gettext as _
 from Furious.Utility.Theme import DraculaTheme
 
 from PySide6 import QtCore
+from PySide6.QtTest import QTest
 from PySide6.QtGui import QDesktopServices, QFont, QTextOption
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -83,10 +85,13 @@ from PySide6.QtNetwork import (
 
 import os
 import copy
+import queue
 import ujson
+import ping3
 import logging
 import operator
 import functools
+import multiprocessing
 
 logger = logging.getLogger(__name__)
 
@@ -238,6 +243,51 @@ class SelectAllServerAction(Action):
                 QtCore.Qt.Key.Key_A,
             )
         )
+
+
+class TestPingLatencyAction(Action):
+    def __init__(self, **kwargs):
+        super().__init__(_('Test Ping Latency'), **kwargs)
+
+        self.setShortcut(
+            QtCore.QKeyCombination(
+                QtCore.Qt.KeyboardModifier.ControlModifier,
+                QtCore.Qt.Key.Key_P,
+            )
+        )
+
+    def triggeredCallback(self, checked):
+        self.parent().testSelectedItemDelay()
+
+
+class TestDownloadSpeedAction(Action):
+    def __init__(self, **kwargs):
+        super().__init__(_('Test Download Speed'), **kwargs)
+
+        self.setShortcut(
+            QtCore.QKeyCombination(
+                QtCore.Qt.KeyboardModifier.ControlModifier,
+                QtCore.Qt.Key.Key_T,
+            )
+        )
+
+    def triggeredCallback(self, checked):
+        self.parent().testSelectedItemSpeed()
+
+
+class ClearTestResultsAction(Action):
+    def __init__(self, **kwargs):
+        super().__init__(_('Clear Test Results'), **kwargs)
+
+        self.setShortcut(
+            QtCore.QKeyCombination(
+                QtCore.Qt.KeyboardModifier.ControlModifier,
+                QtCore.Qt.Key.Key_R,
+            )
+        )
+
+    def triggeredCallback(self, checked):
+        self.parent().clearSelectedItemTestResults()
 
 
 class ScrollToActivatedServerAction(Action):
@@ -572,7 +622,7 @@ class IndentAction(Action):
                 self.parent().saveScrollBarValue(currentFocus)
 
             try:
-                myJSON = ujson.loads(myText)
+                myJSON = Configuration.toJSON(myText)
                 myText = ujson.dumps(
                     myJSON,
                     indent=self.indentSpinBox.value(),
@@ -648,14 +698,14 @@ def useProxyServerIfPossible(manager, loggerAction):
     else:
         logger.info(f'{loggerAction} uses no proxy')
 
-        manager.setProxy(QNetworkProxy(QNetworkProxy.ProxyType.NoProxy))
+        manager.setProxy(QNetworkProxy.ProxyType.NoProxy)
 
     return proxyServer
 
 
-class UpdateSubscriptionAction(Action):
-    def __init__(self, **kwargs):
-        super().__init__(_('Update Subscription'), **kwargs)
+class UpdateSubsAction(Action):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.networkAccessManager = QNetworkAccessManager(parent=self)
 
@@ -703,8 +753,11 @@ class UpdateSubscriptionAction(Action):
                     # Deleted or imported. Sync it
                     ServerStorage.sync()
 
-        # Done. Remove entry
-        self.networkReplyTable.pop(networkReply)
+        # Done. Remove entry. Key should be found, but protect it anyway
+        self.networkReplyTable.pop(networkReply, None)
+
+    def configureProxy(self):
+        raise NotImplementedError
 
     @needSaveChanges
     def triggeredCallback(self, checked):
@@ -715,7 +768,7 @@ class UpdateSubscriptionAction(Action):
             # Empty. Nothing to do
             return
 
-        useProxyServerIfPossible(self.networkAccessManager, 'update subscription')
+        self.configureProxy()
 
         for key, value in subscriptionDict.items():
             networkReply = self.networkAccessManager.get(
@@ -729,6 +782,45 @@ class UpdateSubscriptionAction(Action):
             }
 
             networkReply.finished.connect(self.handleFinished)
+
+
+class UpdateSubsUseCurrentProxyAction(UpdateSubsAction):
+    def __init__(self, **kwargs):
+        super().__init__(_('Update Subscription (Use Current Proxy)'), **kwargs)
+
+    def configureProxy(self):
+        useProxyServerIfPossible(self.networkAccessManager, 'update subscription')
+
+
+class UpdateSubsForceProxyAction(UpdateSubsAction):
+    FORCE_PROXY_HOST = '127.0.0.1'
+    FORCE_PROXY_PORT = 10809
+
+    FORCE_PROXY = f'{FORCE_PROXY_HOST}:{FORCE_PROXY_PORT}'
+
+    def __init__(self, **kwargs):
+        super().__init__(_('Update Subscription (Force Proxy)'), **kwargs)
+
+    def configureProxy(self):
+        logger.info(
+            f'update subscription uses proxy server {UpdateSubsForceProxyAction.FORCE_PROXY}'
+        )
+
+        self.networkAccessManager.setProxy(
+            QNetworkProxy(
+                QNetworkProxy.ProxyType.HttpProxy,
+                UpdateSubsForceProxyAction.FORCE_PROXY_HOST,
+                UpdateSubsForceProxyAction.FORCE_PROXY_PORT,
+            )
+        )
+
+
+class UpdateSubsNoProxyAction(UpdateSubsAction):
+    def __init__(self, **kwargs):
+        super().__init__(_('Update Subscription (No Proxy)'), **kwargs)
+
+    def configureProxy(self):
+        self.networkAccessManager.setProxy(QNetworkProxy.ProxyType.NoProxy)
 
 
 class EditSubscriptionAction(Action):
@@ -1088,7 +1180,7 @@ class ServerWidgetVerticalHeader(HeaderView):
 
 def toJSONMayBeNull(text):
     try:
-        return ujson.loads(text)
+        return Configuration.toJSON(text)
     except Exception:
         # Any non-exit exceptions
 
@@ -1105,6 +1197,278 @@ def getSubsRemarkFromUnique(server):
         return ''
 
 
+class Worker:
+    def __init__(self, serverIdx, serverObj, updateCallback=None):
+        self.serverIdx = serverIdx
+        self.serverObj = serverObj
+
+        # Reference
+        self.serverRef = APP().ServerWidget.ServerList
+        self.deletedId = APP().ServerWidget.deletedServerId
+
+        self.updateCallback = updateCallback
+
+    def serverDeleted(self):
+        if (
+            # Fast search for deletion
+            id(self.serverObj) in self.deletedId
+            or self.serverIdx < 0
+            or self.serverIdx >= len(self.serverRef)
+        ):
+            # Deleted
+            return True
+        else:
+            return False
+
+    def update(self):
+        if not callable(self.updateCallback):
+            return
+
+        if self.serverDeleted():
+            # Deleted. Do nothing
+            return
+
+        if id(self.serverRef[self.serverIdx]) == id(self.serverObj):
+            # Quick update
+            self.updateCallback(self.serverIdx, self.serverObj)
+        else:
+            # Linear find and update
+            for index, server in enumerate(self.serverRef):
+                if id(server) == id(self.serverObj):
+                    # Found. Refresh index
+                    self.serverIdx = index
+                    self.updateCallback(self.serverIdx, self.serverObj)
+
+                    # Updated
+                    return
+
+            # Should not reach here.
+            self.serverIdx = -1
+
+
+class PingDelayWorker(Worker, QtCore.QObject, QtCore.QRunnable):
+    updateTable = QtCore.Signal(int, dict)
+
+    def __init__(self, serverIdx, serverObj):
+        super().__init__(serverIdx, serverObj, updateCallback=self.updateTable.emit)
+
+        # Explictly called __init__
+        QtCore.QObject.__init__(self)
+        QtCore.QRunnable.__init__(self)
+
+    def run(self):
+        if self.serverDeleted():
+            # Deleted. Do nothing
+            return
+
+        try:
+            result = ping3.ping(
+                Intellisense.getCoreAddr(
+                    Configuration.toJSON(self.serverObj['config'])
+                ),
+                timeout=1,
+                unit='ms',
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            self.serverObj['delayResult'] = 'Timeout'
+            self.update()
+
+            return
+
+        if result is False or result is None:
+            self.serverObj['delayResult'] = 'Timeout'
+        else:
+            self.serverObj['delayResult'] = f'{int(result)}ms'
+
+        self.update()
+
+
+class DownSpeedWorker(Worker):
+    def __init__(self, serverIdx, serverObj, updateCallback):
+        super().__init__(serverIdx, serverObj, updateCallback=updateCallback)
+
+        self.core = None
+
+        self.speedValue = False
+        self.totalBytes = 0
+
+        self.testFinished = False
+        self.elapsedTimer = QtCore.QElapsedTimer()
+
+        self.networkReply = None
+        self.networkAccessManager = QNetworkAccessManager()
+
+    def abort(self):
+        if self.networkReply is not None:
+            self.networkReply.abort()
+        else:
+            self.testFinished = True
+
+        if self.core is not None:
+            self.core.stop()
+
+    def cancelTest(self):
+        self.serverObj['speedResult'] = 'Canceled'
+        self.update()
+        self.testFinished = True
+
+    def isFinished(self):
+        return self.testFinished
+
+    def run(self):
+        if self.serverDeleted():
+            self.testFinished = True
+
+            # Deleted. Do nothing
+            return
+
+        config = self.serverObj.get('config', '')
+
+        if not config:
+            self.cancelTest()
+
+            return
+
+        self.serverObj['speedResult'] = '0.00 M/s'
+        self.update()
+
+        try:
+            coreJSON = Configuration.toJSON(config)
+            coreType = Intellisense.getCoreType(coreJSON)
+        except Exception:
+            # Any non-exit exceptions
+
+            self.cancelTest()
+
+            return
+
+        def coreExitCallback(exitcode):
+            self.serverObj['speedResult'] = 'Canceled'
+            self.update()
+
+        if coreType == XrayCore.name():
+            # Force redirect
+            coreJSON['inbounds'] = [
+                {
+                    'tag': 'http',
+                    'port': 20809,
+                    'listen': '127.0.0.1',
+                    'protocol': 'http',
+                    'sniffing': {
+                        'enabled': True,
+                        'destOverride': [
+                            'http',
+                            'tls',
+                        ],
+                    },
+                    'settings': {
+                        'auth': 'noauth',
+                        'udp': True,
+                        'allowTransparent': False,
+                    },
+                },
+            ]
+            # No routing
+            coreJSON['routing'] = {}
+
+            self.core = XrayCore(waitCore=False)
+            self.core.registerExitCallback(coreExitCallback)
+            self.core.start(
+                ujson.dumps(
+                    coreJSON,
+                    ensure_ascii=False,
+                    escape_forward_slashes=False,
+                )
+            )
+        elif coreType == Hysteria1.name() or coreType == Hysteria2.name():
+            # Force redirect
+            coreJSON['http'] = {
+                'listen': '127.0.0.1:20809',
+                'timeout': 300,
+                'disable_udp': False,
+            }
+
+            # No socks inbounds
+            coreJSON.pop('socks5', '')
+
+            if coreType == Hysteria1.name():
+                # User acl and mmdb already ignored
+
+                self.core = Hysteria1(waitCore=False)
+                self.core.registerExitCallback(coreExitCallback)
+                self.core.start(
+                    ujson.dumps(
+                        coreJSON,
+                        ensure_ascii=False,
+                        escape_forward_slashes=False,
+                    ),
+                    '',
+                    '',
+                )
+            else:
+                self.core = Hysteria2(waitCore=False)
+                self.core.registerExitCallback(coreExitCallback)
+                self.core.start(
+                    ujson.dumps(
+                        coreJSON,
+                        ensure_ascii=False,
+                        escape_forward_slashes=False,
+                    )
+                )
+        else:
+            self.cancelTest()
+
+            return
+
+        if self.core.checkAlive():
+            self.networkAccessManager.setProxy(
+                QNetworkProxy(QNetworkProxy.ProxyType.HttpProxy, '127.0.0.1', 20809)
+            )
+
+            self.networkReply = self.networkAccessManager.get(
+                QNetworkRequest(QtCore.QUrl('http://cachefly.cachefly.net/10mb.test'))
+            )
+            self.networkReply.readyRead.connect(self.handleReadyRead)
+            self.networkReply.finished.connect(self.handleFinished)
+
+            self.elapsedTimer.start()
+        else:
+            self.testFinished = True
+
+    @QtCore.Slot()
+    def handleReadyRead(self):
+        self.totalBytes += self.networkReply.readAll().length()
+
+        # Convert to seconds
+        elapsedSecond = self.elapsedTimer.elapsed() / 1000
+        downloadSpeed = self.totalBytes / elapsedSecond / 1024 / 1024
+
+        # Has speed value
+        self.speedValue = True
+        self.serverObj['speedResult'] = f'{downloadSpeed:.2f} M/s'
+        self.update()
+
+    @QtCore.Slot()
+    def handleFinished(self):
+        self.core.stop()
+
+        if self.networkReply.error() != QNetworkReply.NetworkError.NoError:
+            if not self.speedValue:
+                self.serverObj['speedResult'] = 'Canceled'
+        else:
+            # Convert to seconds
+            elapsedSecond = self.elapsedTimer.elapsed() / 1000
+            # Got 10mb
+            downloadSpeed = 10 / elapsedSecond
+
+            self.serverObj['speedResult'] = f'{downloadSpeed:.2f} M/s'
+
+        self.update()
+        self.testFinished = True
+
+
 class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
     # Might be extended in the future
     HEADER_LABEL = [
@@ -1115,7 +1479,12 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         'Transport',
         'TLS',
         'Subscription',
+        'Latency',
+        'Speed',
     ]
+
+    DELAY_INDEX = HEADER_LABEL.index('Latency')
+    SPEED_INDEX = HEADER_LABEL.index('Speed')
 
     # Corresponds to header label
     HEADER_LABEL_GET_FUNC = [
@@ -1126,6 +1495,8 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         lambda server: Intellisense.getCoreTransport(toJSONMayBeNull(server['config'])),
         lambda server: Intellisense.getCoreTLS(toJSONMayBeNull(server['config'])),
         lambda server: getSubsRemarkFromUnique(server),
+        lambda server: server.get('delayResult', ''),
+        lambda server: server.get('speedResult', ''),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -1151,11 +1522,23 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         # Shallow copy. Checked
         self.ServerList = self.parent().ServerList
 
+        # Quick delete search
+        self.deletedServerOb = []
+        self.deletedServerId = {}
+
         # Handy reference
         self.plainTextEdit = self.parent().plainTextEdit
 
         # Handy reference
         self.editorTab = self.parent().editorTab
+
+        # Ping Thread Pool
+        self.pingThreadPool = QtCore.QThreadPool()
+        self.downSpeedQueue = queue.Queue()
+
+        self.downSpeedTimer = QtCore.QTimer()
+        self.downSpeedTimer.timeout.connect(self.downSpeedTimeoutCallback)
+        self.downSpeedTimer.start(1)
 
         # Delegate
         self.delegate = StyledItemDelegate(parent=self)
@@ -1263,6 +1646,10 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             Seperator(),
             ScrollToActivatedServerAction(parent=self),
             Seperator(),
+            TestPingLatencyAction(parent=self),
+            TestDownloadSpeedAction(parent=self),
+            ClearTestResultsAction(parent=self),
+            Seperator(),
             ImportFileAction(parent=self),
             ImportLinkActionWithHotKey(parent=self),
             ImportJSONActionWithHotKey(parent=self),
@@ -1323,6 +1710,16 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             if oldItem is None:
                 # Item does not exists
                 newItem.setFont(QFont(APP().customFontName))
+
+                if (
+                    ServerWidget.HEADER_LABEL[column] == 'Latency'
+                    or ServerWidget.HEADER_LABEL[column] == 'Speed'
+                ):
+                    # Test results. Align right and vcenter
+                    newItem.setTextAlignment(
+                        QtCore.Qt.AlignmentFlag.AlignRight
+                        | QtCore.Qt.AlignmentFlag.AlignVCenter
+                    )
             else:
                 # Use existing
                 newItem.setFont(oldItem.font())
@@ -1387,6 +1784,9 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
 
     def syncRemarkByIndex(self, index):
         assert self.rowCount() == len(self.ServerList)
+
+        if self.item(index, 0) is None:
+            return
 
         if self.ServerList[index]['remark'] != self.item(index, 0).text():
             self.ServerList[index]['remark'] = self.item(index, 0).text()
@@ -1563,6 +1963,10 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             self.removeRow(takedRow)
             self.blockSignals(False)
 
+            # Added for deletion search
+            self.deletedServerOb.append(self.ServerList[takedRow])
+            self.deletedServerId[id(self.ServerList[takedRow])] = True
+
             self.ServerList.pop(takedRow)
             self.ScrollList.pop(takedRow)
 
@@ -1574,10 +1978,12 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             ServerStorage.sync()
 
         if takedActivated:
+            # Set invalid first
+            APP().ActivatedItemIndex = str(-1)
+
             if APP().tray.ConnectAction.isConnected():
                 # Trigger disconnect
                 APP().tray.ConnectAction.trigger()
-            APP().ActivatedItemIndex = str(-1)
 
         # Don't use setCurrentItemXXX since the
         # selection may not be changed. Just switch context
@@ -1612,6 +2018,145 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             return
 
         self.deleteItemByIndex(indexes, syncStorage=True)
+
+    def flushServerResultByColumn(self, row, column, server):
+        oldItem = self.item(row, column)
+        newItem = QTableWidgetItem(ServerWidget.HEADER_LABEL_GET_FUNC[column](server))
+
+        if oldItem is None:
+            # Item does not exists
+            newItem.setFont(QFont(APP().customFontName))
+            # Test results. Align right and vcenter
+            newItem.setTextAlignment(
+                QtCore.Qt.AlignmentFlag.AlignRight
+                | QtCore.Qt.AlignmentFlag.AlignVCenter
+            )
+        else:
+            # Use existing
+            newItem.setFont(oldItem.font())
+            newItem.setForeground(oldItem.foreground())
+
+            if oldItem.textAlignment() != 0:
+                newItem.setTextAlignment(oldItem.textAlignment())
+
+        newItem.setFlags(
+            QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
+        )
+
+        self.setItem(row, column, newItem)
+
+    def flushServerDelayResult(self, row, server):
+        self.flushServerResultByColumn(row, ServerWidget.DELAY_INDEX, server)
+
+    def flushServerSpeedResult(self, row, server):
+        self.flushServerResultByColumn(row, ServerWidget.SPEED_INDEX, server)
+
+    def testPingDelayByReference(self, indexes, references):
+        for index, server in enumerate(references):
+            worker = PingDelayWorker(indexes[index], server)
+            worker.setAutoDelete(True)
+            worker.updateTable.connect(self.flushServerDelayResult)
+
+            # Note: During testing, the thread pool seemed to
+            # occupy memory infinitely. This appears to be a
+            # PySide6 memory leak bug. Not sure if PyQt6 has this problem.
+            #
+            # Furious should have set up all the necessary flags.
+            self.pingThreadPool.start(worker)
+
+    @QtCore.Slot()
+    def downSpeedTimeoutCallback(self):
+        try:
+            index, server = self.downSpeedQueue.get_nowait()
+        except queue.Empty:
+            # Queue is empty
+
+            return
+
+        def testDownloadSpeed(counter=0, timeout=5000, step=100):
+            worker = DownSpeedWorker(index, server, self.flushServerSpeedResult)
+            worker.run()
+
+            while not APP().exiting and not worker.isFinished() and counter < timeout:
+                QTest.qWait(step)
+
+                counter += step
+
+            if not worker.isFinished():
+                worker.abort()
+
+                while not worker.isFinished():
+                    QTest.qWait(step)
+
+            if APP().exiting:
+                # Stop timer
+                self.downSpeedTimer.stop()
+
+        testDownloadSpeed()
+
+    def testDownSpeedByReference(self, indexes, references):
+        for index, server in enumerate(references):
+            # Served by FIFO
+            try:
+                self.downSpeedQueue.put_nowait((indexes[index], server))
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+    def testItemDelayByIndex(self, indexes):
+        references = list(self.ServerList[index] for index in indexes)
+
+        self.testPingDelayByReference(indexes, references)
+
+    def testItemSpeedByIndex(self, indexes):
+        references = list(self.ServerList[index] for index in indexes)
+
+        self.testDownSpeedByReference(indexes, references)
+
+    def testSelectedItemDelay(self):
+        indexes = self.selectedIndex
+
+        if len(indexes) == 0:
+            # Nothing selected. Do nothing
+            return
+
+        APP().testPerformed = True
+
+        self.testItemDelayByIndex(indexes)
+
+    def testSelectedItemSpeed(self):
+        indexes = self.selectedIndex
+
+        if len(indexes) == 0:
+            # Nothing selected. Do nothing
+            return
+
+        APP().testPerformed = True
+
+        self.testItemSpeedByIndex(indexes)
+
+    def clearSelectedItemTestResultsByIndex(self, indexes):
+        for index in indexes:
+            server = self.ServerList[index]
+
+            server['delayResult'] = ''
+            server['speedResult'] = ''
+
+            self.flushServerDelayResult(index, server)
+            self.flushServerSpeedResult(index, server)
+
+    def clearSelectedItemTestResults(self):
+        indexes = self.selectedIndex
+
+        if len(indexes) == 0:
+            # Nothing selected. Do nothing
+            return
+
+        self.clearSelectedItemTestResultsByIndex(indexes)
+
+        # Sync it
+        ServerStorage.sync()
 
     def setEmptyItem(self):
         # Click empty.
@@ -1892,6 +2437,10 @@ class EditConfigurationWidget(MainWindow):
                 Seperator(),
                 ScrollToActivatedServerAction(parent=self.serverWidget),
                 Seperator(),
+                TestPingLatencyAction(parent=self.serverWidget),
+                TestDownloadSpeedAction(parent=self.serverWidget),
+                ClearTestResultsAction(parent=self.serverWidget),
+                Seperator(),
                 ImportFileAction(parent=self),
                 ImportLinkActionWithHotKey(parent=self),
                 ImportJSONActionWithHotKey(parent=self),
@@ -1934,7 +2483,9 @@ class EditConfigurationWidget(MainWindow):
         subsMenu = {
             'name': 'Subscription',
             'actions': [
-                UpdateSubscriptionAction(parent=self),
+                UpdateSubsUseCurrentProxyAction(parent=self),
+                UpdateSubsForceProxyAction(parent=self),
+                UpdateSubsNoProxyAction(parent=self),
                 Seperator(),
                 EditSubscriptionAction(parent=self),
             ],
@@ -1985,13 +2536,14 @@ class EditConfigurationWidget(MainWindow):
         return self.serverWidget.deleteItemByIndex(indexes, syncStorage)
 
     def deleteItemByUnique(self, unique, syncStorage=False):
-        indexes = []
-
-        for index, server in enumerate(self.ServerList):
-            if server.get('subsId', '') == unique:
-                indexes.append(index)
-
-        return self.deleteItemByIndex(indexes, syncStorage=syncStorage)
+        return self.deleteItemByIndex(
+            list(
+                index
+                for index, server in enumerate(self.ServerList)
+                if server.get('subsId', '') == unique
+            ),
+            syncStorage=syncStorage,
+        )
 
     def importServer(self, remark, config, subsId='', syncStorage=False):
         server = {
@@ -2051,6 +2603,14 @@ class EditConfigurationWidget(MainWindow):
     @property
     def saveChangeFirst(self):
         return self.serverWidget.saveChangeFirst
+
+    @property
+    def deletedServerId(self):
+        return self.serverWidget.deletedServerId
+
+    @property
+    def pingThreadPool(self):
+        return self.serverWidget.pingThreadPool
 
     def saveScrollBarValue(self, index):
         self.serverWidget.saveScrollBarValue(index)

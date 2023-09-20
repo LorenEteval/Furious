@@ -175,10 +175,20 @@ TRANSLATION = {
         'ZH': '订阅',
         'TW': '訂閲',
     },
-    'Update Subscription': {
-        'ES': 'Actualizar Suscripción',
-        'ZH': '更新订阅',
-        'TW': '更新訂閲',
+    'Update Subscription (Use Current Proxy)': {
+        'ES': 'Actualizar Suscripción (Usar Proxy Actual)',
+        'ZH': '更新订阅（使用当前代理）',
+        'TW': '更新訂閲（使用當前代理）',
+    },
+    'Update Subscription (Force Proxy)': {
+        'ES': 'Actualizar Suscripción (Forzar Proxy)',
+        'ZH': '更新订阅（强制代理）',
+        'TW': '更新訂閲（强制代理）',
+    },
+    'Update Subscription (No Proxy)': {
+        'ES': 'Actualizar Suscripción (Sin Proxy)',
+        'ZH': '更新订阅（无代理）',
+        'TW': '更新訂閲（無代理）',
     },
     'Edit Subscription...': {
         'ES': 'Editar Suscripción...',
@@ -704,6 +714,31 @@ TRANSLATION = {
         'ES': 'Servidor',
         'ZH': '服务器',
         'TW': '服務器',
+    },
+    'Latency': {
+        'ES': 'Latencia',
+        'ZH': '延迟',
+        'TW': '延遲',
+    },
+    'Speed': {
+        'ES': 'Velocidad',
+        'ZH': '速度',
+        'TW': '速度',
+    },
+    'Test Ping Latency': {
+        'ES': 'Probar La Latencia de Ping',
+        'ZH': '测试Ping延迟',
+        'TW': '測試Ping延遲',
+    },
+    'Test Download Speed': {
+        'ES': 'Probar La Velocidad de Descarga',
+        'ZH': '测试下行速度',
+        'TW': '測試下行速度',
+    },
+    'Clear Test Results': {
+        'ES': 'Resultados Claros de La Prueba',
+        'ZH': '清除测试结果',
+        'TW': '清除測試結果',
     },
     # Server Widget buttons
     'Move Up': {

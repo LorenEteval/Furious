@@ -31,7 +31,11 @@ from Furious.Utility.Constants import (
     SYSTEM_LANGUAGE,
     DATA_DIR,
 )
-from Furious.Utility.Utility import SupportThemeChangedCallback, NeedSyncSettings
+from Furious.Utility.Utility import (
+    ServerStorage,
+    SupportThemeChangedCallback,
+    NeedSyncSettings,
+)
 from Furious.Utility.Proxy import Proxy
 from Furious.Utility.Settings import Settings
 from Furious.Utility.Translator import gettext as _
@@ -102,6 +106,8 @@ class SingletonApplication(QApplication):
     def __init__(self, argv):
         super().__init__(argv)
 
+        # Exiting flag
+        self.exiting = False
         self.serverName = LOCAL_SERVER_NAME
 
         self.socket = QLocalSocket(self)
@@ -155,6 +161,9 @@ class Application(SingletonApplication):
         self.setOrganizationDomain(ORGANIZATION_DOMAIN)
 
         self.tray = None
+
+        # Whether server test has been performed
+        self.testPerformed = False
 
         # Font
         self.customFontLoadMsg = ''
@@ -223,11 +232,13 @@ class Application(SingletonApplication):
         fontName = 'Cascadia Mono'
 
         if QFontDatabase.addApplicationFont(fontFile) != -1:
+            # Delayed
             self.customFontLoadMsg = f'custom font {fontName} load success'
 
             self.customFontEnabled = True
             self.customFontName = fontName
         else:
+            # Delayed
             self.customFontLoadMsg = f'custom font {fontName} load failed'
 
     @staticmethod
@@ -257,7 +268,12 @@ class Application(SingletonApplication):
         )
         self.themeListenerThread.start()
 
+        import PySide6
+
         logger.info(f'application version: {APPLICATION_VERSION}')
+        logger.info(
+            f'Qt version: {QtCore.qVersion()}. PySide6 version: {PySide6.__version__}'
+        )
         logger.info(f'python version: {getPythonVersion()}. Platform: {PLATFORM}')
         logger.info(f'system version: {sys.version}')
         logger.info(f'sys.executable: {sys.executable}')
@@ -292,6 +308,11 @@ class Application(SingletonApplication):
         Proxy.off()
         Proxy.daemonOff()
 
+        # Try to avoid unnecessary storage sync.
+        # Better way to do this?
+        if self.testPerformed:
+            ServerStorage.sync()
+
         NeedSyncSettings.syncAll()
 
         if self.tray is not None:
@@ -300,8 +321,14 @@ class Application(SingletonApplication):
     def exit(self, exitcode=0):
         if self.ServerWidget is not None:
             if self.ServerWidget.questionSave():
+                # Changes handled. Exit
+                self.ServerWidget.pingThreadPool.clear()
+                self.exiting = True
+
                 super().exit(exitcode)
         else:
+            self.exiting = True
+
             super().exit(exitcode)
 
     def log(self):
