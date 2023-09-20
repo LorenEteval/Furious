@@ -230,7 +230,7 @@ class Configuration:
             def streamTLSSettings(streamObject, tlsType):
                 kwargs = {}
 
-                if tlsType == 'none':
+                if tlsType == '' or tlsType == 'none':
                     return kwargs
 
                 tlsobj = streamObject[ProxyOutboundObject.streamTLSKey(tlsType)]
@@ -276,7 +276,7 @@ class Configuration:
                 proxyStream, proxyStreamNet, proxyStreamTLS = (
                     outbound['streamSettings'],
                     outbound['streamSettings']['network'],
-                    outbound['streamSettings']['security'],
+                    outbound['streamSettings'].get('security', 'none'),
                 )
 
                 return (
@@ -310,7 +310,7 @@ class Configuration:
                 proxyStream, proxyStreamNet, proxyStreamTLS = (
                     outbound['streamSettings'],
                     outbound['streamSettings']['network'],
-                    outbound['streamSettings']['security'],
+                    outbound['streamSettings'].get('security', 'none'),
                 )
 
                 flowArg = {}
@@ -361,7 +361,7 @@ class Configuration:
                 proxyStream, proxyStreamNet, proxyStreamTLS = (
                     outbound['streamSettings'],
                     outbound['streamSettings']['network'],
-                    outbound['streamSettings']['security'],
+                    outbound['streamSettings'].get('security', 'none'),
                 )
 
                 netloc = f'{quote(password)}@{address}:{port}'
@@ -482,9 +482,13 @@ class ProxyOutboundObject(OutboundObject):
             TcpObject = {}
 
             if self.kwargs.get('headerType', 'none'):
-                TcpObject['header'] = {
-                    'type': self.kwargs.get('headerType', 'none'),
-                }
+                headerType = self.kwargs.get('headerType', 'none')
+
+                # Some dumb share link set this value to 'auto'. Protect it
+                if headerType != 'auto':
+                    TcpObject['header'] = {
+                        'type': headerType,
+                    }
 
             return TcpObject
 
@@ -496,9 +500,13 @@ class ProxyOutboundObject(OutboundObject):
             }
 
             if self.kwargs.get('headerType', 'none'):
-                KcpObject['header'] = {
-                    'type': self.kwargs.get('headerType', 'none'),
-                }
+                headerType = self.kwargs.get('headerType', 'none')
+
+                # Some dumb share link set this value to 'auto'. Protect it
+                if headerType != 'auto':
+                    KcpObject['header'] = {
+                        'type': headerType,
+                    }
 
             if self.kwargs.get('seed'):
                 KcpObject['seed'] = self.kwargs.get('seed')
@@ -545,9 +553,13 @@ class ProxyOutboundObject(OutboundObject):
                 QuicObject['key'] = unquote(self.kwargs.get('key'))
 
             if self.kwargs.get('headerType', 'none'):
-                QuicObject['header'] = {
-                    'type': self.kwargs.get('headerType', 'none'),
-                }
+                headerType = self.kwargs.get('headerType', 'none')
+
+                # Some dumb share link set this value to 'auto'. Protect it
+                if headerType != 'auto':
+                    QuicObject['header'] = {
+                        'type': headerType,
+                    }
 
             return QuicObject
 
@@ -594,6 +606,11 @@ class ProxyOutboundObject(OutboundObject):
         return {}
 
     def getDefaultJSON(self):
+        securityArgs = {}
+
+        if self.security:
+            securityArgs['security'] = self.security
+
         return {
             'tag': 'proxy',
             'protocol': self.protocol,
@@ -611,7 +628,7 @@ class ProxyOutboundObject(OutboundObject):
             },
             'streamSettings': {
                 'network': self.type_,
-                'security': self.security,
+                **securityArgs,
             },
             'mux': {
                 'enabled': False,
@@ -622,7 +639,7 @@ class ProxyOutboundObject(OutboundObject):
     def build(self):
         myJSON = self.getDefaultJSON()
 
-        if self.security != 'none':
+        if self.security and self.security != 'none':
             # tlsSettings, realitySettings
             myJSON['streamSettings'][
                 ProxyOutboundObject.streamTLSKey(self.security)
@@ -678,6 +695,11 @@ class ProxyOutboundObjectTrojan(ProxyOutboundObject):
         )
 
     def getDefaultJSON(self):
+        securityArgs = {}
+
+        if self.security:
+            securityArgs['security'] = self.security
+
         return {
             'tag': 'proxy',
             'protocol': self.protocol,
@@ -693,7 +715,7 @@ class ProxyOutboundObjectTrojan(ProxyOutboundObject):
             },
             'streamSettings': {
                 'network': self.type_,
-                'security': self.security,
+                **securityArgs,
             },
             'mux': {
                 'enabled': False,
