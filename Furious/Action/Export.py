@@ -25,8 +25,6 @@ from Furious.Utility.Translator import gettext as _
 
 from PySide6.QtWidgets import QApplication
 
-import ujson
-
 
 class ExportLinkResultBox(MessageBox):
     def __init__(self, successStr, failureStr, isQRCodeExport, *args, **kwargs):
@@ -159,7 +157,7 @@ def exportLink(selectedIndex):
             serverLink.append(
                 Configuration.export(
                     serverList[index]['remark'],
-                    ujson.loads(serverList[index]['config']),
+                    Configuration.toJSON(serverList[index]['config']),
                 )
             )
 
