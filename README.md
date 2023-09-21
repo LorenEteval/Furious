@@ -19,8 +19,13 @@ and [hysteria](https://github.com/apernet/hysteria).
   information: [Xray-core-python](https://github.com/LorenEteval/Xray-core-python), [hysteria-python](https://github.com/LorenEteval/hysteria-python)
   and [hysteria2-python](https://github.com/LorenEteval/hysteria2-python).
 * Support TUN mode on Windows and macOS. (experimental, requires administrator/root privilege)
-* Support import from JSON or share link (`vmess://...`, `vless://...` or `ss://`, including the
-  newest [REALITY](https://github.com/XTLS/REALITY) share standard).
+* Support subscription.
+* Support import from JSON.
+* Support import from share link:
+    * VMess
+    * VLESS, including [REALITY](https://github.com/XTLS/REALITY)
+    * Shadowsocks
+    * Trojan
 * Support export to JSON, share link or QRCode.
 * Built-in routing mode support: `Bypass Mainland China(with Ads filter)`, `Bypass Iran(with Ads filter)`,
   [`Route My Traffic Through Tor`](https://github.com/LorenEteval/Furious/wiki/Route-My-Traffic-Through-Tor)
@@ -39,8 +44,8 @@ There are **two** ways of installing Furious:
 1. Download pre-built binary release. In this case there is no dependency required:
     * For Windows users: Download zip file in the [release](https://github.com/LorenEteval/Furious/releases) page that
       contains pre-built binaries.
-    * For macOS users: Download dmg file in the [release](https://github.com/LorenEteval/Furious/releases) page.
-      (currently only supports **arm64 macOS 12.0+**).
+    * For macOS users: Download dmg file in the [release](https://github.com/LorenEteval/Furious/releases) page. Support
+      Apple Silicon(arm64) and Intel Chip(x86_64).
 2. Install via `pip` (requires **Python 3.8 and above**). You need to follow instructions below. (available for **all**
    platform)
 
@@ -75,7 +80,7 @@ These tools should be installed easily using `brew install` on macOS, or using `
 pip install Furious-GUI
 ```
 
-Launch Furious, type:
+To launch Furious, type:
 
 ```
 Furious
@@ -147,8 +152,13 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
   [hysteria-python](https://github.com/LorenEteval/hysteria-python)
   和[hysteria2-python](https://github.com/LorenEteval/hysteria2-python)。
 * 在Windows和macOS上支持TUN模式。（实验性功能，需要管理员/root权限）
-* 支持从JSON或分享链接导入（`vmess://...`，`vless://...`或`ss://`，包括最新的[REALITY](https://github.com/XTLS/REALITY)
-  分享标准）。
+* 支持订阅。
+* 支持从JSON导入。
+* 支持从分享链接导入：
+    * VMess
+    * VLESS，包括[REALITY](https://github.com/XTLS/REALITY)
+    * Shadowsocks
+    * Trojan
 * 支持导出为JSON、分享链接或二维码。
 * 内置路由模式支持：`绕过中国大陆（带广告过滤）`、`绕过伊朗（带广告过滤）`、
   [`通过Tor路由我的流量`](https://github.com/LorenEteval/Furious/wiki/Route-My-Traffic-Through-Tor)
@@ -166,8 +176,7 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 1. 下载打包好的二进制版本，无需其它依赖：
     * Windows用户：在[release](https://github.com/LorenEteval/Furious/releases)界面下载打包好的zip文件。
-    * macOS用户：在[release](https://github.com/LorenEteval/Furious/releases)界面下载dmg文件。
-      （当前仅支持**arm64 macOS 12.0+**）
+    * macOS用户：在[release](https://github.com/LorenEteval/Furious/releases)界面下载dmg文件。支持苹果芯片（arm64）和Intel芯片（x86_64）
 2. 通过`pip`安装（需要**Python 3.8及以上**），且需要按照以下步骤进行操作。（适用于**所有**平台）
 
 ### Core编译工具
@@ -177,7 +186,7 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 根据上文所述，Core是对应的Python绑定以支持跨平台运行。所以通过`pip`安装Furious首先得准备好当前平台的Core编译工具。编译Core需要：
 
-* [go](https://go.dev/doc/install)在PATH中。建议使用go 1.20.0及以上版本。要检查go是否就绪，输入`go version`
+* [go](https://go.dev/doc/install) `1.20.x` 在PATH中。要检查go是否就绪，输入`go version`
   。另外，如果当前所在地区（例如中国大陆）屏蔽了google服务，还需要配置GOPROXY才能拉取go包。对于中国用户，请访问[goproxy.cn](https://goproxy.cn/)
   了解更多信息。
 * [cmake](https://cmake.org/download/)在PATH中. 要检查cmake是否就绪，输入`cmake --version`。
@@ -192,7 +201,7 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 ### 安装Furious
 
-> 注意：推荐在Python虚拟环境(i.e. venv)中安装Furious。
+> 注意：推荐在Python虚拟环境(i.e. venv)中安装。
 
 ```
 pip install Furious-GUI
