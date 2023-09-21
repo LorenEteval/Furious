@@ -1024,6 +1024,10 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
                 text, hint=_(HYSTERIA_ROUTING_HINT), isBuiltin=False
             )
 
+            # Added for backward compatibility
+            if self.RoutesList[routesIndex].get(Hysteria1.name()) is None:
+                self.RoutesList[routesIndex][Hysteria1.name()] = {'acl': '', 'mmdb': ''}
+
             routingDialog.ruleEdit.setText(
                 self.RoutesList[routesIndex][Hysteria1.name()].get('acl', '')
             )
