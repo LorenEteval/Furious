@@ -11,6 +11,7 @@
         <file alias="gear-wide-connected.svg">Icons/bootstrap/gear-wide-connected.svg</file>
         <file alias="globe2.svg">Icons/bootstrap/globe2.svg</file>
         <file alias="incognito.svg">Icons/bootstrap/incognito.svg</file>
+        <file alias="layout-text-sidebar-reverse.svg">Icons/bootstrap/layout-text-sidebar-reverse.svg</file>
         <file alias="lightning-charge.svg">Icons/bootstrap/lightning-charge.svg</file>
         <file alias="lock-fill.svg">Icons/bootstrap/lock-fill.svg</file>
         <file alias="pencil-square.svg">Icons/bootstrap/pencil-square.svg</file>
@@ -37,6 +38,7 @@
         <file alias="gear-wide-connected.svg">Icons/bootstrap/white/gear-wide-connected.svg</file>
         <file alias="globe2.svg">Icons/bootstrap/white/globe2.svg</file>
         <file alias="incognito.svg">Icons/bootstrap/white/incognito.svg</file>
+        <file alias="layout-text-sidebar-reverse.svg">Icons/bootstrap/white/layout-text-sidebar-reverse.svg</file>
         <file alias="lightning-charge.svg">Icons/bootstrap/white/lightning-charge.svg</file>
         <file alias="lock-fill.svg">Icons/bootstrap/white/lock-fill.svg</file>
         <file alias="pencil-square.svg">Icons/bootstrap/white/pencil-square.svg</file>
