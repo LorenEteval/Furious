@@ -516,6 +516,9 @@ class UndoAction(Action):
         )
 
     def triggeredCallback(self, checked):
+        if self.parent().editorTab.isHidden():
+            return
+
         self.parent().plainTextEdit.undo()
 
 
@@ -536,6 +539,9 @@ class RedoAction(Action):
         )
 
     def triggeredCallback(self, checked):
+        if self.parent().editorTab.isHidden():
+            return
+
         self.parent().plainTextEdit.redo()
 
 
@@ -551,6 +557,9 @@ class CutAction(Action):
         )
 
     def triggeredCallback(self, checked):
+        if self.parent().editorTab.isHidden():
+            return
+
         self.parent().plainTextEdit.cut()
 
 
@@ -566,6 +575,9 @@ class CopyAction(Action):
         )
 
     def triggeredCallback(self, checked):
+        if self.parent().editorTab.isHidden():
+            return
+
         self.parent().plainTextEdit.copy()
 
 
@@ -581,6 +593,9 @@ class PasteAction(Action):
         )
 
     def triggeredCallback(self, checked):
+        if self.parent().editorTab.isHidden():
+            return
+
         self.parent().plainTextEdit.paste()
 
 
@@ -596,6 +611,9 @@ class SelectAllTextAction(Action):
         )
 
     def triggeredCallback(self, checked):
+        if self.parent().editorTab.isHidden():
+            return
+
         self.parent().plainTextEdit.selectAll()
 
 
@@ -607,6 +625,9 @@ class IndentAction(Action):
         self.indentFailure = JSONErrorBox(icon=MessageBox.Icon.Critical)
 
     def triggeredCallback(self, checked):
+        if self.parent().editorTab.isHidden():
+            return
+
         choice = self.indentSpinBox.exec()
 
         if choice == QDialog.DialogCode.Accepted.value:
@@ -680,6 +701,43 @@ class ZoomOutAction(Action):
 
     def triggeredCallback(self, checked):
         self.parent().plainTextEdit.zoomOut()
+
+
+class ShowHideEditorAction(Action):
+    def __init__(self, **kwargs):
+        super().__init__(
+            _('Show/Hide Editor'),
+            icon=bootstrapIcon('layout-text-sidebar-reverse.svg'),
+            **kwargs,
+        )
+
+        # Reference
+        self.serverTab = self.parent().serverTab
+        self.editorTab = self.parent().editorTab
+
+        self.setShortcut(
+            QtCore.QKeyCombination(
+                QtCore.Qt.KeyboardModifier.ControlModifier, QtCore.Qt.Key.Key_E
+            )
+        )
+
+    def triggeredCallback(self, checked):
+        oldSize = self.serverTab.width()
+
+        if APP().HideEditor == Switch.OFF:
+            self.editorTab.hide()
+
+            APP().HideEditor = Switch.ON_
+        else:
+            self.editorTab.show()
+
+            APP().HideEditor = Switch.OFF
+
+        APP().processEvents()
+
+        newSize = self.serverTab.width()
+
+        APP().ServerWidget.resizeHorizontalHeaderSection(oldSize, newSize)
 
 
 def useProxyServerIfPossible(manager, loggerAction):
@@ -1280,7 +1338,7 @@ class PingDelayWorker(Worker, QtCore.QObject, QtCore.QRunnable):
         if result is False or result is None:
             self.serverObj['delayResult'] = 'Timeout'
         else:
-            self.serverObj['delayResult'] = f'{int(result)}ms'
+            self.serverObj['delayResult'] = f'{round(result)}ms'
 
         self.update()
 
@@ -1699,6 +1757,14 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             # Any non-exit exceptions
 
             return -1
+
+    def resizeHorizontalHeaderSection(self, oldSize, newSize):
+        factor = newSize / oldSize
+
+        for index in range(self.columnCount()):
+            self.horizontalHeader().resizeSection(
+                index, round(self.horizontalHeader().sectionSize(index) * factor)
+            )
 
     def flushRow(self, row, server):
         for column in range(self.columnCount()):
@@ -2375,6 +2441,9 @@ class EditConfigurationWidget(MainWindow):
         # Note: Set tab text later
         self.editorTab.addTab(self.serverEditorTabWidget, '')
 
+        if APP().HideEditor == Switch.ON_:
+            self.editorTab.hide()
+
         self.serverWidget = ServerWidget(parent=self)
 
         # Buttons
@@ -2477,6 +2546,8 @@ class EditConfigurationWidget(MainWindow):
             'actions': [
                 ZoomInAction(parent=self),
                 ZoomOutAction(parent=self),
+                Seperator(),
+                ShowHideEditorAction(parent=self),
             ],
         }
 
@@ -2617,6 +2688,9 @@ class EditConfigurationWidget(MainWindow):
 
     def restoreScrollBarValue(self, index):
         self.serverWidget.restoreScrollBarValue(index)
+
+    def resizeHorizontalHeaderSection(self, oldSize, newSize):
+        self.serverWidget.resizeHorizontalHeaderSection(oldSize, newSize)
 
     def questionSave(self):
         # Save current scroll bar value

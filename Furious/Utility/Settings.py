@@ -78,6 +78,8 @@ SUPPORTED_SETTINGS = (
     Settings('Routing', default=BUILTIN_ROUTING[0]),
     # User VPN Mode
     Settings('VPNMode', Switch.RANGE),
+    # Hide editor or not
+    Settings('HideEditor', Switch.RANGE),
     # User Custom Routing object
     Settings('CustomRouting'),
     # User Configuration
