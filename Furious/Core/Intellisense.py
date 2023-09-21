@@ -45,7 +45,7 @@ class Intellisense:
                 or hasField('lazy_start')
             ):
                 return Hysteria1.name()
-            elif (
+            if (
                 hasField('tls')
                 or hasField('transport')
                 or hasField('quic')
