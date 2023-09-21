@@ -685,6 +685,11 @@ TRANSLATION = {
         'ZH': '变小',
         'TW': '變小',
     },
+    'Show/Hide Editor': {
+        'ES': 'Mostrar/Ocultar Editor',
+        'ZH': '显示/隐藏编辑器',
+        'TW': '顯示/隱藏編輯器',
+    },
     'Remark': {
         'ES': 'Observación',
         'ZH': '别名',
