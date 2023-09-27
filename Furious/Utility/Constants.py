@@ -20,6 +20,8 @@ from Furious.Version import __version__
 from PySide6 import QtCore
 from PySide6.QtWidgets import QApplication
 
+import PySide6
+
 import math
 import pathlib
 import platform
@@ -37,15 +39,17 @@ APPLICATION_REPO_NAME = 'Furious'
 ORGANIZATION_NAME = 'Furious'
 ORGANIZATION_DOMAIN = 'Furious.GUI'
 
-PROXY_OUTBOUND_USER_EMAIL = f'user@{ORGANIZATION_DOMAIN}'
+PYSIDE6_VERSION = PySide6.__version__
 
 PLATFORM = platform.system()
 
 LOCAL_SERVER_NAME = '891ad49d-8996-43cb-820c-d9baf42a04de'
 
+SYSTEM_LANGUAGE = QtCore.QLocale().name()[:2].upper()
+
 GOLDEN_RATIO = (math.sqrt(5) + 1) / 2
 
-SYSTEM_LANGUAGE = QtCore.QLocale().name()[:2].upper()
+PROXY_OUTBOUND_USER_EMAIL = f'user@{ORGANIZATION_DOMAIN}'
 
 ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT_DIR / APPLICATION_NAME / 'Data'
