@@ -26,6 +26,7 @@ from Furious.Utility.Constants import (
     APPLICATION_VERSION,
     ORGANIZATION_NAME,
     ORGANIZATION_DOMAIN,
+    PYSIDE6_VERSION,
     PLATFORM,
     LOCAL_SERVER_NAME,
     SYSTEM_LANGUAGE,
@@ -259,11 +260,9 @@ class Application(SingletonApplication):
         self.addCustomFont()
         self.configureLogging()
 
-        import PySide6
-
         logger.info(f'application version: {APPLICATION_VERSION}')
         logger.info(
-            f'Qt version: {QtCore.qVersion()}. PySide6 version: {PySide6.__version__}'
+            f'Qt version: {QtCore.qVersion()}. PySide6 version: {PYSIDE6_VERSION}'
         )
         logger.info(f'python version: {getPythonVersion()}. Platform: {PLATFORM}')
         logger.info(f'system version: {sys.version}')
@@ -272,6 +271,7 @@ class Application(SingletonApplication):
         logger.info(f'appFilePath: {self.applicationFilePath()}')
         logger.info(f'system language is {SYSTEM_LANGUAGE}')
         logger.info(self.customFontLoadMsg)
+        logger.info(f'current theme is {darkdetect.theme()}')
 
         if PLATFORM != 'Windows' and not isScriptMode():
             logger.info('theme detect method uses timer implementation')
@@ -292,13 +292,25 @@ class Application(SingletonApplication):
         else:
             logger.info('theme detect method uses listener implementation')
 
+            def listener(*args, **kwargs):
+                try:
+                    darkdetect.listener(*args, **kwargs)
+                except NotImplementedError:
+                    # Not supported by darkdetect. Ignore
+
+                    logger.error(
+                        'darkdetect listener is not implemented on this platform'
+                    )
+
+                    pass
+
             self.themeDetector = ApplicationThemeDetector()
             self.themeDetector.themeChanged.connect(
                 SupportThemeChangedCallback.callThemeChangedCallback
             )
 
             self.themeListenerThread = threading.Thread(
-                target=darkdetect.listener,
+                target=listener,
                 args=(self.themeDetector.themeChanged.emit,),
                 daemon=True,
             )
