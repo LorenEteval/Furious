@@ -83,7 +83,7 @@ class Core:
 
         if self.checkAlive():
             # Start core daemon
-            self._daemonTimer.start(100)
+            self._daemonTimer.start(1)
 
     def stop(self):
         if (
