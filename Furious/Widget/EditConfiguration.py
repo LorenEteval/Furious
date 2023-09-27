@@ -1256,15 +1256,13 @@ def getSubsRemarkFromUnique(server):
 
 
 class Worker:
-    def __init__(self, serverIdx, serverObj, updateCallback=None):
+    def __init__(self, serverIdx, serverObj):
         self.serverIdx = serverIdx
         self.serverObj = serverObj
 
         # Reference
         self.serverRef = APP().ServerWidget.ServerList
         self.deletedId = APP().ServerWidget.deletedServerId
-
-        self.updateCallback = updateCallback
 
     def serverDeleted(self):
         if (
@@ -1278,10 +1276,10 @@ class Worker:
         else:
             return False
 
-    def update(self):
-        if not callable(self.updateCallback):
-            return
+    def updateCallback(self, index, reference):
+        raise NotImplementedError
 
+    def updateResult(self):
         if self.serverDeleted():
             # Deleted. Do nothing
             return
@@ -1308,11 +1306,14 @@ class PingDelayWorker(Worker, QtCore.QObject, QtCore.QRunnable):
     updateTable = QtCore.Signal(int, dict)
 
     def __init__(self, serverIdx, serverObj):
-        super().__init__(serverIdx, serverObj, updateCallback=self.updateTable.emit)
+        super().__init__(serverIdx, serverObj)
 
         # Explictly called __init__
         QtCore.QObject.__init__(self)
         QtCore.QRunnable.__init__(self)
+
+    def updateCallback(self, index, reference):
+        self.updateTable.emit(index, reference)
 
     def run(self):
         if self.serverDeleted():
@@ -1331,7 +1332,7 @@ class PingDelayWorker(Worker, QtCore.QObject, QtCore.QRunnable):
             # Any non-exit exceptions
 
             self.serverObj['delayResult'] = 'Timeout'
-            self.update()
+            self.updateResult()
 
             return
 
@@ -1340,12 +1341,12 @@ class PingDelayWorker(Worker, QtCore.QObject, QtCore.QRunnable):
         else:
             self.serverObj['delayResult'] = f'{round(result)}ms'
 
-        self.update()
+        self.updateResult()
 
 
 class DownSpeedWorker(Worker):
-    def __init__(self, serverIdx, serverObj, updateCallback):
-        super().__init__(serverIdx, serverObj, updateCallback=updateCallback)
+    def __init__(self, serverIdx, serverObj):
+        super().__init__(serverIdx, serverObj)
 
         self.core = None
 
@@ -1358,6 +1359,9 @@ class DownSpeedWorker(Worker):
         self.networkReply = None
         self.networkAccessManager = QNetworkAccessManager()
 
+    def updateCallback(self, index, reference):
+        APP().ServerWidget.flushServerSpeedResult(index, reference)
+
     def abort(self):
         if self.networkReply is not None:
             self.networkReply.abort()
@@ -1369,7 +1373,7 @@ class DownSpeedWorker(Worker):
 
     def cancelTest(self):
         self.serverObj['speedResult'] = 'Canceled'
-        self.update()
+        self.updateResult()
         self.testFinished = True
 
     def isFinished(self):
@@ -1390,7 +1394,7 @@ class DownSpeedWorker(Worker):
             return
 
         self.serverObj['speedResult'] = '0.00 M/s'
-        self.update()
+        self.updateResult()
 
         try:
             coreJSON = Configuration.toJSON(config)
@@ -1404,7 +1408,7 @@ class DownSpeedWorker(Worker):
 
         def coreExitCallback(exitcode):
             self.serverObj['speedResult'] = 'Canceled'
-            self.update()
+            self.updateResult()
 
         if coreType == XrayCore.name():
             # Force redirect
@@ -1506,7 +1510,7 @@ class DownSpeedWorker(Worker):
         # Has speed value
         self.speedValue = True
         self.serverObj['speedResult'] = f'{downloadSpeed:.2f} M/s'
-        self.update()
+        self.updateResult()
 
     @QtCore.Slot()
     def handleFinished(self):
@@ -1523,7 +1527,7 @@ class DownSpeedWorker(Worker):
 
             self.serverObj['speedResult'] = f'{downloadSpeed:.2f} M/s'
 
-        self.update()
+        self.updateResult()
         self.testFinished = True
 
 
@@ -2118,16 +2122,11 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         self.flushServerResultByColumn(row, ServerWidget.SPEED_INDEX, server)
 
     def testPingDelayByReference(self, indexes, references):
-        for index, server in enumerate(references):
-            worker = PingDelayWorker(indexes[index], server)
+        for index, reference in zip(indexes, references):
+            worker = PingDelayWorker(index, reference)
             worker.setAutoDelete(True)
             worker.updateTable.connect(self.flushServerDelayResult)
 
-            # Note: During testing, the thread pool seemed to
-            # occupy memory infinitely. This appears to be a
-            # PySide6 memory leak bug. Not sure if PyQt6 has this problem.
-            #
-            # Furious should have set up all the necessary flags.
             self.pingThreadPool.start(worker)
 
     @QtCore.Slot()
@@ -2140,7 +2139,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             return
 
         def testDownloadSpeed(counter=0, timeout=5000, step=100):
-            worker = DownSpeedWorker(index, server, self.flushServerSpeedResult)
+            worker = DownSpeedWorker(index, server)
             worker.run()
 
             while not APP().exiting and not worker.isFinished() and counter < timeout:
@@ -2161,10 +2160,10 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         testDownloadSpeed()
 
     def testDownSpeedByReference(self, indexes, references):
-        for index, server in enumerate(references):
+        for index, reference in zip(indexes, references):
             # Served by FIFO
             try:
-                self.downSpeedQueue.put_nowait((indexes[index], server))
+                self.downSpeedQueue.put_nowait((index, reference))
             except Exception:
                 # Any non-exit exceptions
 
@@ -2682,6 +2681,9 @@ class EditConfigurationWidget(MainWindow):
     @property
     def pingThreadPool(self):
         return self.serverWidget.pingThreadPool
+
+    def flushServerSpeedResult(self, row, server):
+        self.serverWidget.flushServerSpeedResult(row, server)
 
     def saveScrollBarValue(self, index):
         self.serverWidget.saveScrollBarValue(index)
