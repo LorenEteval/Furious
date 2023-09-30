@@ -769,10 +769,7 @@ class UpdateSubsAction(Action):
 
         self.networkReplyTable = {}
 
-    @QtCore.Slot()
-    def handleFinished(self):
-        networkReply = self.sender()
-
+    def handleFinishedByNetworkReply(self, networkReply):
         unique, remark, webURL = (
             self.networkReplyTable[networkReply]['unique'],
             self.networkReplyTable[networkReply]['remark'],
@@ -814,6 +811,12 @@ class UpdateSubsAction(Action):
         # Done. Remove entry. Key should be found, but protect it anyway
         self.networkReplyTable.pop(networkReply, None)
 
+    @QtCore.Slot()
+    def handleFinished(self):
+        networkReply = self.sender()
+
+        self.handleFinishedByNetworkReply(networkReply)
+
     def configureProxy(self):
         raise NotImplementedError
 
@@ -839,7 +842,11 @@ class UpdateSubsAction(Action):
                 'webURL': value['webURL'],
             }
 
-            networkReply.finished.connect(self.handleFinished)
+            networkReply.finished.connect(
+                functools.partial(self.handleFinishedByNetworkReply, networkReply)
+            )
+
+            # networkReply.finished.connect(self.handleFinished)
 
 
 class UpdateSubsUseCurrentProxyAction(UpdateSubsAction):
@@ -967,10 +974,7 @@ class CheckForUpdatesAction(Action):
             icon=MessageBox.Icon.Information, parent=self.parent()
         )
 
-    @QtCore.Slot()
-    def handleFinished(self):
-        networkReply = self.sender()
-
+    def handleFinishedByNetworkReply(self, networkReply):
         if networkReply.error() != QNetworkReply.NetworkError.NoError:
             logger.error(f'check for updates failed. {networkReply.errorString()}')
 
@@ -1020,6 +1024,12 @@ class CheckForUpdatesAction(Action):
                 # Show the MessageBox and wait for user to close it
                 self.latestVersionInfoBox.exec()
 
+    @QtCore.Slot()
+    def handleFinished(self):
+        networkReply = self.sender()
+
+        self.handleFinishedByNetworkReply(networkReply)
+
     def triggeredCallback(self, checked):
         useProxyServerIfPossible(self.networkAccessManager, 'check for updates')
 
@@ -1027,7 +1037,11 @@ class CheckForUpdatesAction(Action):
             QNetworkRequest(QtCore.QUrl(CheckForUpdatesAction.API_URL))
         )
 
-        networkReply.finished.connect(self.handleFinished)
+        networkReply.finished.connect(
+            functools.partial(self.handleFinishedByNetworkReply, networkReply)
+        )
+
+        # networkReply.finished.connect(self.handleFinished)
 
 
 class AboutAction(Action):
