@@ -2322,8 +2322,12 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             return
 
         if APP().tray.ConnectAction.isConnecting():
-            # Show the MessageBox asynchronously
-            self.progressWaitBox.open()
+            if PLATFORM != 'Darwin':
+                # Show the MessageBox asynchronously
+                self.progressWaitBox.open()
+            else:
+                # Show the MessageBox and wait for user to close it
+                self.progressWaitBox.exec()
 
             return
 
@@ -2454,9 +2458,6 @@ class EditConfigurationWidget(MainWindow):
         # Note: Set tab text later
         self.editorTab.addTab(self.serverEditorTabWidget, '')
 
-        if APP().HideEditor == Switch.ON_:
-            self.editorTab.hide()
-
         self.serverWidget = ServerWidget(parent=self)
 
         # Buttons
@@ -2498,6 +2499,11 @@ class EditConfigurationWidget(MainWindow):
         self.splitter.addWidget(self.editorTab)
         self.splitter.setStretchFactor(0, 8)
         self.splitter.setStretchFactor(1, 5)
+
+        if APP().HideEditor == Switch.ON_:
+            APP().processEvents()
+
+            self.editorTab.hide()
 
         self.fakeCentralWidget = QWidget()
 
