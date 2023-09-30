@@ -1504,7 +1504,7 @@ class DownSpeedWorker(Worker):
             )
 
             self.networkReply = self.networkAccessManager.get(
-                QNetworkRequest(QtCore.QUrl('http://cachefly.cachefly.net/10mb.test'))
+                QNetworkRequest(QtCore.QUrl('http://cachefly.cachefly.net/100mb.test'))
             )
             self.networkReply.readyRead.connect(self.handleReadyRead)
             self.networkReply.finished.connect(self.handleFinished)
@@ -1534,10 +1534,11 @@ class DownSpeedWorker(Worker):
             if not self.speedValue:
                 self.serverObj['speedResult'] = 'Canceled'
         else:
+            self.totalBytes += self.networkReply.readAll().length()
+
             # Convert to seconds
             elapsedSecond = self.elapsedTimer.elapsed() / 1000
-            # Got 10mb
-            downloadSpeed = 10 / elapsedSecond
+            downloadSpeed = self.totalBytes / elapsedSecond / 1024 / 1024
 
             self.serverObj['speedResult'] = f'{downloadSpeed:.2f} M/s'
 
