@@ -175,6 +175,8 @@ class MainWindow(Translatable, SupportConnectedCallback, NeedSyncSettings, QMain
         super().show()
 
         if PLATFORM == 'Darwin':
+            APP().processEvents()
+
             self.setWidthAndHeight()
 
         moveToCenter(self)
