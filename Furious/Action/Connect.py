@@ -343,12 +343,11 @@ class ConnectAction(Action):
 
         APP().tray.RoutingAction.setDisabled(value)
 
-        if (PLATFORM == 'Windows' or PLATFORM == 'Darwin') and isAdministrator():
+        if isAdministrator():
             VPNModeAction = APP().tray.SettingsAction.getVPNModeAction()
 
-            assert VPNModeAction is not None
-
-            VPNModeAction.setDisabled(value)
+            if VPNModeAction is not None:
+                VPNModeAction.setDisabled(value)
 
     def setConnectingStatus(self, showProgressBar=True):
         if showProgressBar:
