@@ -111,15 +111,20 @@ class ConnectAction(Action):
         # connected action will be executed.
 
         # "Popular" sites that's been endorsed by some government.
+        # self.testPool = [
+        #     # Messaging
+        #     'https://telegram.org/',
+        #     # Search
+        #     'https://www.google.com/',
+        #     # Social media
+        #     'https://twitter.com/',
+        #     # Videos
+        #     'https://www.youtube.com/',
+        # ]
         self.testPool = [
-            # Messaging
-            'https://telegram.org/',
-            # Search
-            'https://www.google.com/',
-            # Social media
-            'https://twitter.com/',
-            # Videos
-            'https://www.youtube.com/',
+            'http://captive.apple.com/',
+            'http://cp.cloudflare.com/',
+            'https://www.apple.com/library/test/success.html',
         ]
         self.testTime = 0
         self.testFinished = True
