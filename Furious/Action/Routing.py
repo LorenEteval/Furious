@@ -173,7 +173,7 @@ class BuiltinRoutingChildAction(Action):
             # Activate
             APP().RoutesWidget.activateItemByIndex(routingToIndex(), activate=True)
 
-            if APP().tray.ConnectAction.isConnected():
+            if APP().isConnected():
                 # Connected. Re-configure connection
                 APP().tray.ConnectAction.connectingAction(
                     showProgressBar=True,
@@ -212,7 +212,7 @@ class RoutingChildAction(Action):
                         routingToIndex(), activate=True
                     )
 
-                    if APP().tray.ConnectAction.isConnected():
+                    if APP().isConnected():
                         # Connected. Re-configure connection
                         APP().tray.ConnectAction.connectingAction(
                             showProgressBar=True,

@@ -399,7 +399,7 @@ class SaveAction(Action):
             if parentIndex == routingToIndex() - len(BUILTIN_ROUTING):
                 # Activated routing modified
 
-                if APP().tray.ConnectAction.isConnected():
+                if APP().isConnected():
                     questionFastReconnect(self.saveConfInfo)
         else:
             # Corresponding routing option has been deleted. Fake saved
@@ -501,7 +501,7 @@ class EditRoutingAction(Action):
                     if parentIndex == routingToIndex() - len(BUILTIN_ROUTING):
                         # Activated routing modified
 
-                        if APP().tray.ConnectAction.isConnected():
+                        if APP().isConnected():
                             questionFastReconnect(self.saveConfInfo)
                 else:
                     # Restore
@@ -559,7 +559,7 @@ class RoutingEditor(MainWindow):
         self.isBuiltin = isBuiltin
         self.title = ''
 
-        if APP().tray is not None and APP().tray.ConnectAction.isConnected():
+        if APP().isConnected():
             self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
         else:
             self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
@@ -722,7 +722,7 @@ class RoutingDialog(Dialog):
 
         self.isBuiltin = isBuiltin
 
-        if APP().tray is not None and APP().tray.ConnectAction.isConnected():
+        if APP().isConnected():
             self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
         else:
             self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
