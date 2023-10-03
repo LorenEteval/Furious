@@ -85,28 +85,24 @@ class VPNModeAction(Action):
     def triggeredCallback(self, checked):
         assert isAdministrator()
 
-        # Reference
-        ConnectAction = APP().tray.ConnectAction
-
         if checked:
             APP().VPNMode = Switch.ON_
 
-            if ConnectAction.isConnected():
+            if APP().isConnected():
                 if isVPNMode():
                     if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
                         # Currently VPN Mode is only supported on Windows and macOS
-                        ConnectAction.startTun2socks(
+                        APP().tray.ConnectAction.startTun2socks(
                             successCallback=lambda: APP().tray.showMessage(
                                 _('VPN mode started')
                             )
                         )
         else:
-            if ConnectAction.isConnected():
+            if APP().isConnected():
                 if isVPNMode():
                     if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
                         # Currently VPN Mode is only supported on Windows and macOS
-                        ConnectAction.stopTun2socks()
-
+                        APP().tray.ConnectAction.stopTun2socks()
                         APP().tray.showMessage(_('VPN mode stopped'))
 
             APP().VPNMode = Switch.OFF

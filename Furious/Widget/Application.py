@@ -337,6 +337,9 @@ class Application(SingletonApplication):
 
         return self
 
+    def isConnected(self):
+        return self.tray is not None and self.tray.ConnectAction.isConnected()
+
     @QtCore.Slot()
     def cleanup(self):
         Proxy.off()

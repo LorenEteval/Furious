@@ -212,7 +212,7 @@ class Menu(Translatable, SupportConnectedCallback, QMenu):
                 # Do nothing
                 pass
 
-        if APP().tray is not None and APP().tray.ConnectAction.isConnected():
+        if APP().isConnected():
             self.setStyleSheet(self.getStyleSheet(Color.LIGHT_RED_))
         else:
             self.setStyleSheet(self.getStyleSheet(Color.LIGHT_BLUE))
@@ -244,7 +244,7 @@ class MenuBar(SupportConnectedCallback, QMenuBar):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if APP().tray is not None and APP().tray.ConnectAction.isConnected():
+        if APP().isConnected():
             self.setSelectionColor(Color.LIGHT_RED_)
         else:
             self.setSelectionColor(Color.LIGHT_BLUE)
@@ -363,14 +363,10 @@ class TableWidget(QTableWidget):
 
                 item.setFont(font)
 
-                if APP().tray is None:
-                    # Initializing
-                    item.setForeground(QColor(Color.LIGHT_BLUE))
+                if APP().isConnected():
+                    item.setForeground(QColor(Color.LIGHT_RED_))
                 else:
-                    if APP().tray.ConnectAction.isConnected():
-                        item.setForeground(QColor(Color.LIGHT_RED_))
-                    else:
-                        item.setForeground(QColor(Color.LIGHT_BLUE))
+                    item.setForeground(QColor(Color.LIGHT_BLUE))
         else:
             for column in range(self.columnCount()):
                 item = self.item(int(index), column)

@@ -398,7 +398,7 @@ class SaveAsServerAction(Action):
             if myFocusIndex == self.parent().activatedItemIndex:
                 # Activated configuration modified
 
-                if server and APP().tray.ConnectAction.isConnected():
+                if server and APP().isConnected():
                     questionReconnect(self.saveConfInfo)
 
             return True
@@ -2066,7 +2066,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             # Set invalid first
             APP().ActivatedItemIndex = str(-1)
 
-            if APP().tray.ConnectAction.isConnected():
+            if APP().isConnected():
                 # Trigger disconnect
                 APP().tray.ConnectAction.trigger()
 
@@ -2341,7 +2341,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         # Activate
         self.activateItemByIndex(newIndex, activate=True)
 
-        if APP().tray.ConnectAction.isConnected():
+        if APP().isConnected():
             APP().tray.ConnectAction.reconnectAction()
 
     @QtCore.Slot(QtCore.QPoint)
@@ -2660,7 +2660,7 @@ class EditConfigurationWidget(MainWindow):
             self.serverWidget.setCurrentItemByIndex(0)
 
             # Try to be user-friendly in some extreme cases
-            if not APP().tray.ConnectAction.isConnected():
+            if not APP().isConnected():
                 # Activate automatically
                 self.serverWidget.activateItemByIndex(0)
 
