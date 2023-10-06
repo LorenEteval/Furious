@@ -19,7 +19,7 @@ from Furious.Widget.SystemTrayIcon import SystemTrayIcon
 from Furious.Widget.EditConfiguration import EditConfigurationWidget
 from Furious.Widget.EditRouting import EditRoutingWidget
 from Furious.Widget.EditSubscription import EditSubscriptionWidget
-from Furious.Widget.LogViewer import LogViewerWidget, TorViewerWidget
+from Furious.Widget.LogViewer import LogViewerWidget
 from Furious.Widget.TorRelaySettings import TorRelaySettingsWidget
 from Furious.Utility.Constants import (
     APPLICATION_NAME,
@@ -31,6 +31,7 @@ from Furious.Utility.Constants import (
     LOCAL_SERVER_NAME,
     SYSTEM_LANGUAGE,
     DATA_DIR,
+    LogType,
 )
 from Furious.Utility.Utility import (
     ServerStorage,
@@ -94,7 +95,7 @@ class SystemTrayUnavailable(Exception):
     pass
 
 
-class LogViewerHandle(logging.Handler):
+class AppLogViewerHandle(logging.Handler):
     def __init__(self, textBrowser):
         super().__init__()
 
@@ -174,11 +175,9 @@ class Application(SingletonApplication):
 
         # Log Viewer Widget
         self.logViewerWidget = None
-        self.torViewerWidget = None
-
         # Log Handle
-        self.logViewerHandle = None
-        self.logStreamHandle = None
+        self.appLogViewerHandle = None
+        self.appLogStreamHandle = None
 
         # Theme Detect
         self.currentTheme = None
@@ -219,15 +218,15 @@ class Application(SingletonApplication):
 
     def configureLogging(self):
         self.logViewerWidget = LogViewerWidget()
-        self.torViewerWidget = TorViewerWidget()
-
-        self.logViewerHandle = LogViewerHandle(self.logViewerWidget.textBrowser)
-        self.logStreamHandle = logging.StreamHandler()
+        self.appLogViewerHandle = AppLogViewerHandle(
+            self.logViewerWidget.textBrowser(LogType.App)
+        )
+        self.appLogStreamHandle = logging.StreamHandler()
 
         logging.basicConfig(
             format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
             level=logging.INFO,
-            handlers=(self.logViewerHandle, self.logStreamHandle),
+            handlers=(self.appLogViewerHandle, self.appLogStreamHandle),
         )
         logging.raiseExceptions = False
 
@@ -370,7 +369,7 @@ class Application(SingletonApplication):
 
     def log(self):
         if self.logViewerWidget is not None:
-            return self.logViewerWidget.log()
+            return self.logViewerWidget.log(LogType.App)
         else:
             return ''
 
