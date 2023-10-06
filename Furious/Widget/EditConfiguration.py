@@ -902,18 +902,10 @@ class EditSubscriptionAction(Action):
 
 class ShowLogAction(Action):
     def __init__(self, **kwargs):
-        super().__init__(_(f'Show {APPLICATION_NAME} Log...'), **kwargs)
+        super().__init__(_('Show Log...'), **kwargs)
 
     def triggeredCallback(self, checked):
         APP().logViewerWidget.showMaximized()
-
-
-class ShowTorRelayLogAction(Action):
-    def __init__(self, **kwargs):
-        super().__init__(_(f'Show {TorRelay.name()} Log...'), **kwargs)
-
-    def triggeredCallback(self, checked):
-        APP().torViewerWidget.showMaximized()
 
 
 class WhetherUpdateInfoBox(MessageBox):
@@ -1425,6 +1417,11 @@ class DownSpeedWorker(Worker):
             self.updateResult()
 
         if coreType == XrayCore.name():
+            coreJSON['log'] = {
+                'access': '',
+                'error': '',
+                'loglevel': 'warning',
+            }
             # Force redirect
             coreJSON['inbounds'] = [
                 {
@@ -2586,7 +2583,6 @@ class EditConfigurationWidget(MainWindow):
             'name': 'Help',
             'actions': [
                 ShowLogAction(parent=self),
-                ShowTorRelayLogAction(parent=self),
                 Seperator(),
                 CheckForUpdatesAction(parent=self),
                 AboutAction(parent=self),
