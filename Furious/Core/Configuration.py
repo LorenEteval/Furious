@@ -429,7 +429,7 @@ class ProxyOutboundObject(OutboundObject):
             # Note: If specify default value 'chrome', some share link fails.
             # Leave default value as empty
             fp = self.kwargs.get('fp')
-            sni = self.kwargs.get('sni', self.remote_host)
+            sni = self.kwargs.get('sni')
             # Protect "xxx," format
             alpn = list(
                 filter(
@@ -440,8 +440,21 @@ class ProxyOutboundObject(OutboundObject):
 
             if fp:
                 TLSObject['fingerprint'] = fp
+
             if sni:
                 TLSObject['serverName'] = sni
+            else:
+                host = ''
+
+                if self.protocol == 'vmess':
+                    host = self.kwargs.get('host')
+
+                if self.protocol == 'vless':
+                    host = self.remote_host
+
+                if host:
+                    TLSObject['serverName'] = host
+
             if alpn:
                 TLSObject['alpn'] = alpn
 
