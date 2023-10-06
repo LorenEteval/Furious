@@ -104,10 +104,12 @@ SUPPORTED_SETTINGS = (
     Settings('SubscriptionWidgetSectionSizeTable'),
     # Server Widget Font Point Size
     Settings('ServerWidgetPointSize'),
-    # Log Viewer Widget Font Point Size
-    Settings('LogViewerWidgetPointSize'),
-    # Tor Viewer Widget Font Point Size
-    Settings('TorViewerWidgetPointSize'),
+    # App Log Viewer Widget Font Point Size
+    Settings('AppLogViewerWidgetPointSize'),
+    # Core Log Viewer Widget Font Point Size
+    Settings('CoreLogViewerWidgetPointSize'),
+    # Tor Log Viewer Widget Font Point Size
+    Settings('TorLogViewerWidgetPointSize'),
     # User selected language
     Settings('Language', SUPPORTED_LANGUAGE, SMART_CHOSEN_LANGUAGE),
     # Startup On Boot
