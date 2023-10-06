@@ -16,8 +16,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Gui.Action import Action, Seperator
-from Furious.Widget.Widget import MainWindow, Menu, MessageBox, ZoomableTextBrowser
-from Furious.Utility.Constants import APP
+from Furious.Widget.Widget import (
+    MainWindow,
+    Menu,
+    MessageBox,
+    TabWidget,
+    ZoomableTextBrowser,
+)
+from Furious.Utility.Constants import APP, APPLICATION_NAME, LogType
 from Furious.Utility.Utility import (
     StateContext,
     SupportConnectedCallback,
@@ -27,7 +33,7 @@ from Furious.Utility.Translator import Translatable, gettext as _
 from Furious.Utility.Theme import DraculaTheme
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import QFileDialog, QTextBrowser
+from PySide6.QtWidgets import QFileDialog, QTextBrowser, QVBoxLayout, QWidget
 
 import logging
 
@@ -72,7 +78,7 @@ class SaveAsFileAction(Action):
         if filename:
             try:
                 with open(filename, 'w', encoding='utf-8') as file:
-                    file.write(self.parent().textBrowser.toPlainText())
+                    file.write(self.parent().currentTextBrowser().toPlainText())
             except Exception as ex:
                 # Any non-exit exceptions
 
@@ -105,7 +111,7 @@ class CopyAction(Action):
         )
 
     def triggeredCallback(self, checked):
-        self.parent().textBrowser.copy()
+        self.parent().currentTextBrowser().copy()
 
 
 class SelectAllAction(Action):
@@ -120,7 +126,7 @@ class SelectAllAction(Action):
         )
 
     def triggeredCallback(self, checked):
-        self.parent().textBrowser.selectAll()
+        self.parent().currentTextBrowser().selectAll()
 
 
 class ZoomInAction(Action):
@@ -134,7 +140,7 @@ class ZoomInAction(Action):
         )
 
     def triggeredCallback(self, checked):
-        self.parent().textBrowser.zoomIn()
+        self.parent().currentTextBrowser().zoomIn()
 
 
 class ZoomOutAction(Action):
@@ -148,15 +154,12 @@ class ZoomOutAction(Action):
         )
 
     def triggeredCallback(self, checked):
-        self.parent().textBrowser.zoomOut()
+        self.parent().currentTextBrowser().zoomOut()
 
 
-class LogViewerWidget(MainWindow):
+class AppLogViewerWidget(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.setWindowTitle(_('Log Viewer'))
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
         self.textBrowser = ZoomableTextBrowser(parent=self)
         self.textBrowser.setLineWrapMode(QTextBrowser.LineWrapMode.NoWrap)
@@ -169,7 +172,65 @@ class LogViewerWidget(MainWindow):
 
         self.restorePointSize()
 
-        self.setCentralWidget(self.textBrowser)
+        self.widgetLayout = QVBoxLayout()
+        self.widgetLayout.addWidget(self.textBrowser)
+
+        self.setLayout(self.widgetLayout)
+
+    def pointSizeSetting(self):
+        return f'{self.__class__.__name__}PointSize'
+
+    def restorePointSize(self):
+        try:
+            # Restore point size
+            font = self.textBrowser.font()
+            font.setPointSize(int(getattr(APP(), self.pointSizeSetting())))
+
+            self.textBrowser.setFont(font)
+        except Exception:
+            # Any non-exit exceptions
+
+            pass
+
+    def syncSettings(self):
+        setattr(
+            APP(), self.pointSizeSetting(), str(self.textBrowser.font().pointSize())
+        )
+
+
+class CoreLogViewerWidget(AppLogViewerWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class TorLogViewerWidget(AppLogViewerWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class LogViewerWidget(MainWindow):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setWindowTitle(_('Log Viewer'))
+        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+
+        self.coreLogViewerWidget = CoreLogViewerWidget()
+        self.appLogViewerWidget = AppLogViewerWidget()
+        self.torLogViewerWidget = TorLogViewerWidget()
+
+        self.tabWidget = TabWidget()
+        self.tabWidget.addTab(self.coreLogViewerWidget, _('Core Log'))
+        self.tabWidget.addTab(self.appLogViewerWidget, _(f'{APPLICATION_NAME} Log'))
+        self.tabWidget.addTab(self.torLogViewerWidget, _('Tor Log'))
+
+        self.textBrowserMap = {
+            LogType.Core: self.coreLogViewerWidget.textBrowser,
+            LogType.App: self.appLogViewerWidget.textBrowser,
+            LogType.Tor: self.torLogViewerWidget.textBrowser,
+        }
+
+        self.setCentralWidget(self.tabWidget)
 
         fileMenuActions = [
             SaveAsFileAction(parent=self),
@@ -204,30 +265,34 @@ class LogViewerWidget(MainWindow):
         self.menuBar().addMenu(self._editMenu)
         self.menuBar().addMenu(self._viewMenu)
 
-    def log(self):
-        return self.textBrowser.toPlainText()
+    def currentTextBrowser(self):
+        return self.tabWidget.currentWidget().textBrowser
 
-    def pointSizeSetting(self):
-        return f'{self.__class__.__name__}PointSize'
+    def textBrowser(self, logType):
+        return self.textBrowserMap[logType]
 
-    def restorePointSize(self):
-        try:
-            # Restore point size
-            font = self.textBrowser.font()
-            font.setPointSize(int(getattr(APP(), self.pointSizeSetting())))
+    def log(self, logType):
+        return self.textBrowser(logType).toPlainText()
 
-            self.textBrowser.setFont(font)
-        except Exception:
-            # Any non-exit exceptions
+    def appendLog(self, logType, line):
+        textBrowser = self.textBrowser(logType)
 
-            pass
+        hScrollBar = textBrowser.horizontalScrollBar()
+        vScrollBar = textBrowser.verticalScrollBar()
+        scrollEnds = vScrollBar.maximum() - vScrollBar.value() <= 10
+
+        if line.endswith('\n'):
+            textBrowser.insertPlainText(line)
+        else:
+            textBrowser.append(line)
+
+        if scrollEnds:
+            vScrollBar.setValue(vScrollBar.maximum())  # Scrolls to the bottom
+            hScrollBar.setValue(0)  # scroll to the left
+
+    def clear(self, logType):
+        self.textBrowser(logType).clear()
 
     def syncSettings(self):
-        setattr(
-            APP(), self.pointSizeSetting(), str(self.textBrowser.font().pointSize())
-        )
-
-
-class TorViewerWidget(LogViewerWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        for index in range(self.tabWidget.count()):
+            self.tabWidget.widget(index).syncSettings()
