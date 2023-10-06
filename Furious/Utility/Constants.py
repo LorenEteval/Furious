@@ -88,6 +88,12 @@ DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT = 20
 ADMINISTRATOR_NAME = 'Administrator' if PLATFORM == 'Windows' else 'root'
 
 
+class LogType:
+    Core = 'Core'
+    App = 'App'
+    Tor = 'Tor'
+
+
 class Color:
     LIGHT_RED_ = '#FF7276'
     LIGHT_BLUE = '#43ACED'
