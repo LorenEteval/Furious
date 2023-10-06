@@ -22,6 +22,7 @@ from Furious.Utility.Constants import (
     APPLICATION_NAME,
     DEFAULT_TOR_SOCKS_PORT,
     DEFAULT_TOR_HTTPS_PORT,
+    LogType,
 )
 from Furious.Utility.Utility import AsyncSubprocessMessage, runCommand
 
@@ -112,7 +113,7 @@ class TorRelayStarter(AsyncSubprocessMessage):
         line = self.getLineNoWait()
 
         if line:
-            APP().torViewerWidget.textBrowser.append(line)
+            APP().logViewerWidget.appendLog(LogType.Tor, line)
 
             match = TorRelayStarter.BOOTSTRAP_STATUS.search(line)
 
