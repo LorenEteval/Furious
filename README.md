@@ -54,6 +54,8 @@ There are **two** ways of installing Furious:
 > Note: These steps are the same in [Xray-core-python](https://github.com/LorenEteval/Xray-core-python)
 > or [hysteria-python](https://github.com/LorenEteval/hysteria-python) *Core Building Tools* steps.
 
+> Note: hysteria requires go 1.21+ to build since v2.0.3
+
 As mentioned above, cores are shipped as Python bindings to support cross-platform running. So to install Furious
 via `pip` you must have tools ready for building these bindings for your current platform first. Core building requires:
 
@@ -130,12 +132,14 @@ See the build result in [github actions](https://github.com/LorenEteval/Furious/
 
 Below are some one-click/automatic installation script that's been tested to work in Furious.
 
+(`XXX Support` is referring to Furious)
+
 | Project Address                                                   |  Supported Core Installation  | Share Link Import Support? | JSON Import Support? |
 |-------------------------------------------------------------------|:-----------------------------:|:--------------------------:|:--------------------:|
 | [233boy/v2ray](https://github.com/233boy/v2ray)                   |          v2ray-core           |            Yes             |          /           |
 | [mack-a/v2ray-agent](https://github.com/mack-a/v2ray-agent)       | v2ray-core/Xray-core/hysteria |            Yes             |         Yes          |
 | [zxcvos/Xray-script](https://github.com/zxcvos/Xray-script)       |           Xray-core           |            Yes             |          /           |
-| [aleskxyz/reality-ezpz](https://github.com/aleskxyz/reality-ezpz) |           Xray-core           |            Yes             |          /           |
+| [aleskxyz/reality-ezpz](https://github.com/aleskxyz/reality-ezpz) |      Xray-core/hysteria       |            Yes             |         Yes          |
 | [emptysuns/Hi_Hysteria](https://github.com/emptysuns/Hi_Hysteria) |           hysteria            |             No             |         Yes          |
 
 ## License
@@ -183,6 +187,8 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 > 注意: 这些步骤与[Xray-core-python](https://github.com/LorenEteval/Xray-core-python)
 > 和[hysteria-python](https://github.com/LorenEteval/hysteria-python)中*Core Building Tools*一节的步骤一样。
+
+> 注意: hysteria从v2.0.3开始需要go 1.21+编译
 
 根据上文所述，Core是对应的Python绑定以支持跨平台运行。所以通过`pip`安装Furious首先得准备好当前平台的Core编译工具。编译Core需要：
 
