@@ -38,7 +38,7 @@ setup(
     install_requires=[
         'PySide6-Essentials',
         'Xray-core',
-        'hysteria',
+        'hysteria > 1.3.5',
         'hysteria2 > 2.0.0',
         'tun2socks > 2.5.1',
         'ujson',
