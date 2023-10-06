@@ -270,15 +270,25 @@ TRANSLATION = {
         'ZH': '帮助',
         'TW': '幫助',
     },
-    f'Show {APPLICATION_NAME} Log...': {
-        'ES': f'Mostrar Registro de {APPLICATION_NAME}...',
-        'ZH': f'显示{APPLICATION_NAME}日志...',
-        'TW': f'顯示{APPLICATION_NAME}日志...',
+    'Show Log...': {
+        'ES': f'Mostrar Registro...',
+        'ZH': f'显示日志...',
+        'TW': f'顯示日志...',
     },
-    f'Show {TorRelay.name()} Log...': {
-        'ES': f'Mostrar Registro de {TorRelay.name()}...',
-        'ZH': f'显示{TorRelay.name()}日志...',
-        'TW': f'顯示{TorRelay.name()}日志...',
+    'Core Log': {
+        'ES': 'Registro de Núcleo',
+        'ZH': '内核日志',
+        'TW': '内核日志',
+    },
+    f'{APPLICATION_NAME} Log': {
+        'ES': f'Registro de {APPLICATION_NAME}',
+        'ZH': f'{APPLICATION_NAME}日志',
+        'TW': f'{APPLICATION_NAME}日志',
+    },
+    'Tor Log': {
+        'ES': 'Registro de Tor',
+        'ZH': 'Tor日志',
+        'TW': 'Tor日志',
     },
     'Check For Updates': {
         'ES': 'Comprobar Actualizaciones',
