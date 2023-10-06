@@ -26,7 +26,7 @@ class Intellisense:
             return ob.get(field) is not None
 
         if hasField('inbounds') or hasField('outbounds'):
-            # Assuming is XrayCore
+            # Assuming is Xray-Core
             return XrayCore.name()
 
         if hasField('server'):
