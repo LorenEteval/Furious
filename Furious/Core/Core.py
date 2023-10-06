@@ -15,14 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Utility.Constants import PLATFORM
+from Furious.Utility.Constants import APP, PLATFORM, LogType
 from Furious.Utility.Utility import getAbsolutePath
 
 from PySide6 import QtCore
 from PySide6.QtTest import QTest
 
+import os
+import sys
+import uuid
 import logging
 import functools
+import threading
 import multiprocessing
 
 logger = logging.getLogger(__name__)
@@ -32,6 +36,17 @@ class Core:
     def __init__(self, *args, exitCallback=None, **kwargs):
         self._process = None
         self._exitCallback = exitCallback
+        self._msgQueue = multiprocessing.Queue()
+
+        @QtCore.Slot()
+        def appendCoreLog():
+            line = self.getLineNoWait()
+
+            if line and not line.isspace():
+                APP().logViewerWidget.appendLog(LogType.Core, line)
+
+        self._stdoutTimer = QtCore.QTimer()
+        self._stdoutTimer.timeout.connect(appendCoreLog)
 
         @QtCore.Slot()
         def timeoutCallback():
@@ -61,6 +76,7 @@ class Core:
                 f'{self.name()} stopped unexpectedly with exitcode {self._process.exitcode}'
             )
 
+            self._stdoutTimer.stop()
             self._daemonTimer.stop()
 
             if callable(self._exitCallback):
@@ -83,13 +99,15 @@ class Core:
 
         if self.checkAlive():
             # Start core daemon
-            self._daemonTimer.start(1)
+            self._stdoutTimer.start()
+            self._daemonTimer.start()
 
     def stop(self):
         if (
             isinstance(self._process, multiprocessing.Process)
             and self._process.is_alive()
         ):
+            self._stdoutTimer.stop()
             self._daemonTimer.stop()
 
             self._process.terminate()
@@ -99,8 +117,64 @@ class Core:
                 f'{self.name()} terminated with exitcode {self._process.exitcode}'
             )
 
+    def getLineNoWait(self):
+        try:
+            return self._msgQueue.get_nowait()
+        except Exception:
+            # Any non-exit exceptions
 
-def startXrayCore(json):
+            return ''
+
+
+class StdoutRedirectHelper:
+    TemporaryDir = QtCore.QTemporaryDir()
+
+    @staticmethod
+    def launch(msgQueue, entrypoint):
+        if not callable(entrypoint):
+            return
+
+        if not StdoutRedirectHelper.TemporaryDir.isValid():
+            # Call entrypoint directly
+            entrypoint()
+
+            return
+
+        temporaryFile = StdoutRedirectHelper.TemporaryDir.filePath(str(uuid.uuid4()))
+        tmpFileStream = open(temporaryFile, 'w+b')
+        stdoutFileno_ = sys.stdout.fileno()
+        stderrFileno_ = sys.stderr.fileno()
+
+        sys.stdout.close()
+        sys.stderr.close()
+
+        # Redirect
+        os.dup2(tmpFileStream.fileno(), stdoutFileno_)
+        os.dup2(tmpFileStream.fileno(), stderrFileno_)
+
+        sys.stdout = tmpFileStream
+        sys.stderr = tmpFileStream
+
+        def produceMsg():
+            with open(temporaryFile, 'rb') as file:
+                while True:
+                    for line in iter(file.readline, b''):
+                        if line and not line.isspace():
+                            try:
+                                msgQueue.put_nowait(line.decode('utf-8', 'replace'))
+                            except Exception:
+                                # Any non-exit exceptions
+
+                                pass
+
+        msgThread = threading.Thread(target=produceMsg, daemon=True)
+        msgThread.start()
+
+        with tmpFileStream:
+            entrypoint()
+
+
+def startXrayCore(json, msgQueue):
     try:
         import xray
     except ImportError:
@@ -108,7 +182,7 @@ def startXrayCore(json):
         while True:
             pass
     else:
-        xray.startFromJSON(json)
+        StdoutRedirectHelper.launch(msgQueue, lambda: xray.startFromJSON(json))
 
 
 class XrayCore(Core):
@@ -139,10 +213,10 @@ class XrayCore(Core):
             return '0.0.0'
 
     def start(self, json, **kwargs):
-        super().start(target=startXrayCore, args=(json,), **kwargs)
+        super().start(target=startXrayCore, args=(json, self._msgQueue), **kwargs)
 
 
-def startHysteria1(json, rule, mmdb):
+def startHysteria1(json, rule, mmdb, msgQueue):
     try:
         import hysteria
     except ImportError:
@@ -150,7 +224,10 @@ def startHysteria1(json, rule, mmdb):
         while True:
             pass
     else:
-        hysteria.startFromJSON(json, rule, mmdb)
+        # hysteria.startFromJSON(json, rule, mmdb)
+        StdoutRedirectHelper.launch(
+            msgQueue, lambda: hysteria.startFromJSON(json, rule, mmdb)
+        )
 
 
 class Hysteria1(Core):
@@ -216,10 +293,12 @@ class Hysteria1(Core):
             return '0.0.0'
 
     def start(self, json, rule, mmdb, **kwargs):
-        super().start(target=startHysteria1, args=(json, rule, mmdb), **kwargs)
+        super().start(
+            target=startHysteria1, args=(json, rule, mmdb, self._msgQueue), **kwargs
+        )
 
 
-def startHysteria2(json):
+def startHysteria2(json, msgQueue):
     try:
         import hysteria2
     except ImportError:
@@ -227,7 +306,8 @@ def startHysteria2(json):
         while True:
             pass
     else:
-        hysteria2.startFromJSON(json)
+        # hysteria2.startFromJSON(json)
+        StdoutRedirectHelper.launch(msgQueue, lambda: hysteria2.startFromJSON(json))
 
 
 class Hysteria2(Core):
@@ -258,4 +338,4 @@ class Hysteria2(Core):
             return '0.0.0'
 
     def start(self, json, **kwargs):
-        super().start(target=startHysteria2, args=(json,), **kwargs)
+        super().start(target=startHysteria2, args=(json, self._msgQueue), **kwargs)
