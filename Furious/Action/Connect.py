@@ -36,6 +36,7 @@ from Furious.Utility.Constants import (
     DEFAULT_TOR_HTTPS_PORT,
     DEFAULT_TOR_SOCKS_PORT,
     DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT,
+    LogType,
 )
 from Furious.Utility.Utility import (
     Switch,
@@ -122,9 +123,9 @@ class ConnectAction(Action):
         #     'https://www.youtube.com/',
         # ]
         self.testPool = [
-            'http://captive.apple.com/',
             'http://cp.cloudflare.com/',
-            'https://www.apple.com/library/test/success.html',
+            'http://www.gstatic.com/generate_204',
+            'http://captive.apple.com/',
         ]
         self.testTime = 0
         self.testFinished = True
@@ -308,7 +309,6 @@ class ConnectAction(Action):
         self.XrayCore.registerExitCallback(None)
         self.Hysteria1.registerExitCallback(None)
         self.Hysteria2.registerExitCallback(None)
-
         # Stop any potentially running core
         self.XrayCore.stop()
         self.Hysteria1.stop()
@@ -523,26 +523,21 @@ class ConnectAction(Action):
 
                 return True
 
+        # Clear log
+        APP().logViewerWidget.clear(LogType.Core)
+
         self.stopCore()
 
-        self.XrayCore.registerExitCallback(
-            lambda exitcode: self.XrayCoreExitCallback(exitcode)
-        )
-        self.Hysteria1.registerExitCallback(
-            lambda exitcode: self.Hysteria1ExitCallback(exitcode)
-        )
-        self.Hysteria2.registerExitCallback(
-            lambda exitcode: self.Hysteria2ExitCallback(exitcode)
-        )
-        self.Tun2socks.registerExitCallback(
-            lambda exitcode: self.Tun2socksExitCallback(exitcode)
-        )
+        self.XrayCore.registerExitCallback(self.XrayCoreExitCallback)
+        self.Hysteria1.registerExitCallback(self.Hysteria1ExitCallback)
+        self.Hysteria2.registerExitCallback(self.Hysteria2ExitCallback)
+        self.Tun2socks.registerExitCallback(self.Tun2socksExitCallback)
 
         httpsProxyServer = None
         socksProxyServer = None
 
         if Intellisense.getCoreType(self.coreJSON) == XrayCore.name():
-            # Assuming is XrayCore configuration
+            # Assuming is Xray-Core configuration
             httpsProxyHost = None
             httpsProxyPort = None
             socksProxyHost = None
@@ -672,9 +667,7 @@ class ConnectAction(Action):
                         self.coreJSON['routing'] = self.XrayRouting
                     else:
                         try:
-                            routesWidget = APP().RoutesWidget
-
-                            route = routesWidget.RoutesList[int(routing)]
+                            route = APP().RoutesWidget.RoutesList[int(routing)]
 
                             logger.info(f'routing is {route["remark"]}')
                             logger.info(f'RoutingObject: {route[XrayCore.name()]}')
@@ -804,9 +797,7 @@ class ConnectAction(Action):
                         )
                     else:
                         try:
-                            routesWidget = APP().RoutesWidget
-
-                            route = routesWidget.RoutesList[int(routing)]
+                            route = APP().RoutesWidget.RoutesList[int(routing)]
 
                             logger.info(f'routing is {route["remark"]}')
                             logger.info(f'RoutingObject: {route[Hysteria1.name()]}')
@@ -1192,22 +1183,9 @@ class ConnectAction(Action):
 
                 self.testFinished = True
                 self.testTimeoutTimer.stop()
-                # Connected status
-                self.setConnectedStatus()
-
-                APP().Connect = Switch.ON_
-
-                if showRoutingChangedMessage:
-                    # Routing changed
-                    if isBuiltinRouting:
-                        APP().tray.showMessage(
-                            _('Routing changed: ') + _(currentRouting)
-                        )
-                    else:
-                        APP().tray.showMessage(_('Routing changed: ') + currentRouting)
-                else:
-                    # Connected
-                    APP().tray.showMessage(f'{self.coreName}: {_("Connected")}')
+                self.connectedAction(
+                    showRoutingChangedMessage, currentRouting, isBuiltinRouting
+                )
 
         self.networkReply.finished.connect(finishedCallback)
 
@@ -1336,14 +1314,37 @@ class ConnectAction(Action):
             self.errorConfiguration()
         else:
             self.moveConnectingProgressBar()
-            # Reset test time
-            self.testTime = 0
-            # Reset test finished
-            self.testFinished = False
-            self.startConnectionTest(
+
+            # # Reset test time
+            # self.testTime = 0
+            # # Reset test finished
+            # self.testFinished = False
+            # self.startConnectionTest(
+            #     showRoutingChangedMessage, currentRouting, isBuiltinRouting
+            # )
+            # self.checkConnectionTestTimeout()
+
+            self.connectedAction(
                 showRoutingChangedMessage, currentRouting, isBuiltinRouting
             )
-            self.checkConnectionTestTimeout()
+
+    def connectedAction(
+        self, showRoutingChangedMessage, currentRouting, isBuiltinRouting
+    ):
+        # Connected status
+        self.setConnectedStatus()
+
+        APP().Connect = Switch.ON_
+
+        if showRoutingChangedMessage:
+            # Routing changed
+            if isBuiltinRouting:
+                APP().tray.showMessage(_('Routing changed: ') + _(currentRouting))
+            else:
+                APP().tray.showMessage(_('Routing changed: ') + currentRouting)
+        else:
+            # Connected
+            APP().tray.showMessage(f'{self.coreName}: {_("Connected")}')
 
     def disconnectAction(self, reason=''):
         Proxy.off()
