@@ -130,11 +130,32 @@ class StdoutRedirectHelper:
     TemporaryDir = QtCore.QTemporaryDir()
 
     @staticmethod
+    def isRealFile(file):
+        if not hasattr(file, 'fileno'):
+            return False
+
+        try:
+            tmp = os.dup(file.fileno())
+        except Exception:
+            # Any non-exit exceptions
+
+            return False
+        else:
+            os.close(tmp)
+
+            return True
+
+    @staticmethod
     def launch(msgQueue, entrypoint):
         if not callable(entrypoint):
             return
 
-        if not StdoutRedirectHelper.TemporaryDir.isValid():
+        if (
+            not StdoutRedirectHelper.TemporaryDir.isValid()
+            # pythonw.exe
+            or not StdoutRedirectHelper.isRealFile(sys.__stdout__)
+            or not StdoutRedirectHelper.isRealFile(sys.__stderr__)
+        ):
             # Call entrypoint directly
             entrypoint()
 
