@@ -146,12 +146,13 @@ class StdoutRedirectHelper:
             return True
 
     @staticmethod
-    def launch(msgQueue, entrypoint):
+    def launch(msgQueue, entrypoint, redirect):
         if not callable(entrypoint):
             return
 
         if (
             not StdoutRedirectHelper.TemporaryDir.isValid()
+            or not redirect
             # pythonw.exe
             or not StdoutRedirectHelper.isRealFile(sys.__stdout__)
             or not StdoutRedirectHelper.isRealFile(sys.__stderr__)
@@ -203,7 +204,14 @@ def startXrayCore(json, msgQueue):
         while True:
             pass
     else:
-        StdoutRedirectHelper.launch(msgQueue, lambda: xray.startFromJSON(json))
+        redirect = True
+
+        if xray.__version__ <= '1.8.4':
+            redirect = False
+
+        StdoutRedirectHelper.launch(
+            msgQueue, lambda: xray.startFromJSON(json), redirect
+        )
 
 
 class XrayCore(Core):
@@ -245,9 +253,13 @@ def startHysteria1(json, rule, mmdb, msgQueue):
         while True:
             pass
     else:
-        # hysteria.startFromJSON(json, rule, mmdb)
+        redirect = True
+
+        if hysteria.__version__ <= '1.3.5':
+            redirect = False
+
         StdoutRedirectHelper.launch(
-            msgQueue, lambda: hysteria.startFromJSON(json, rule, mmdb)
+            msgQueue, lambda: hysteria.startFromJSON(json, rule, mmdb), redirect
         )
 
 
@@ -327,8 +339,14 @@ def startHysteria2(json, msgQueue):
         while True:
             pass
     else:
-        # hysteria2.startFromJSON(json)
-        StdoutRedirectHelper.launch(msgQueue, lambda: hysteria2.startFromJSON(json))
+        redirect = True
+
+        if hysteria2.__version__ <= '2.0.0.1':
+            redirect = False
+
+        StdoutRedirectHelper.launch(
+            msgQueue, lambda: hysteria2.startFromJSON(json), redirect
+        )
 
 
 class Hysteria2(Core):
