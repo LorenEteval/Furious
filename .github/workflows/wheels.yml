@@ -30,6 +30,9 @@ jobs:
       - name: Install wheel
         run: python -m pip install wheel
 
+      - name: Install go 1.20 hysteria2
+        run: python -m pip install hysteria2==2.0.0.1
+
       - name: Install requirements.txt
         run: python -m pip install -r requirements.txt
 
@@ -70,6 +73,9 @@ jobs:
 
       - name: Install nuitka
         run: python -m pip install nuitka
+
+      - name: Install go 1.20 hysteria2
+        run: python -m pip install hysteria2==2.0.0.1
 
       - name: Install requirements.txt
         run: python -m pip install -r requirements.txt
