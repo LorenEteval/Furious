@@ -395,6 +395,27 @@ def isScriptMode():
     return sys.argv[0].endswith('.py')
 
 
+def isRealFile(file):
+    if not hasattr(file, 'fileno'):
+        return False
+
+    try:
+        tmp = os.dup(file.fileno())
+    except Exception:
+        # Any non-exit exceptions
+
+        return False
+    else:
+        os.close(tmp)
+
+        return True
+
+
+def isPythonw():
+    # pythonw.exe. Also applies to packed GUI application on Windows
+    return not isRealFile(sys.__stdout__) or not isRealFile(sys.__stderr__)
+
+
 def moveToCenter(widget, parent=None):
     geometry = widget.geometry()
 
