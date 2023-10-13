@@ -38,6 +38,7 @@ from Furious.Utility.Utility import (
     SupportThemeChangedCallback,
     NeedSyncSettings,
     isScriptMode,
+    isPythonw,
 )
 from Furious.Utility.Proxy import Proxy
 from Furious.Utility.Settings import Settings
@@ -268,6 +269,7 @@ class Application(SingletonApplication):
         logger.info(f'sys.executable: {sys.executable}')
         logger.info(f'sys.argv: {sys.argv}')
         logger.info(f'appFilePath: {self.applicationFilePath()}')
+        logger.info(f'isPythonw: {isPythonw()}')
         logger.info(f'system language is {SYSTEM_LANGUAGE}')
         logger.info(self.customFontLoadMsg)
         logger.info(f'current theme is {darkdetect.theme()}')
