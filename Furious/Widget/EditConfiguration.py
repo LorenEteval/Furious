@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Core.Core import XrayCore, Hysteria1, Hysteria2
+from Furious.Core.Core import Core, XrayCore, Hysteria1, Hysteria2
 from Furious.Core.TorRelay import TorRelay
 from Furious.Core.Configuration import Configuration
 from Furious.Core.Intellisense import Intellisense
@@ -1399,7 +1399,7 @@ class DownSpeedWorker(Worker):
 
             return
 
-        self.serverObj['speedResult'] = '0.00 M/s'
+        self.serverObj['speedResult'] = 'Starting'
         self.updateResult()
 
         try:
@@ -1413,15 +1413,16 @@ class DownSpeedWorker(Worker):
             return
 
         def coreExitCallback(exitcode):
-            self.serverObj['speedResult'] = 'Canceled'
+            if exitcode == Core.ExitCode.ConfigurationError:
+                self.serverObj['speedResult'] = 'Invalid'
+            elif exitcode == Core.ExitCode.ServerStartFailure:
+                self.serverObj['speedResult'] = 'Start failed'
+            else:
+                self.serverObj['speedResult'] = 'Canceled'
+
             self.updateResult()
 
         if coreType == XrayCore.name():
-            coreJSON['log'] = {
-                'access': '',
-                'error': '',
-                'loglevel': 'warning',
-            }
             # Force redirect
             coreJSON['inbounds'] = [
                 {
@@ -1512,33 +1513,54 @@ class DownSpeedWorker(Worker):
 
     @QtCore.Slot()
     def handleReadyRead(self):
-        self.totalBytes += self.networkReply.readAll().length()
-
-        # Convert to seconds
-        elapsedSecond = self.elapsedTimer.elapsed() / 1000
-        downloadSpeed = self.totalBytes / elapsedSecond / 1024 / 1024
-
-        # Has speed value
-        self.speedValue = True
-        self.serverObj['speedResult'] = f'{downloadSpeed:.2f} M/s'
-        self.updateResult()
-
-    @QtCore.Slot()
-    def handleFinished(self):
-        self.core.stop()
-
-        if self.networkReply.error() != QNetworkReply.NetworkError.NoError:
-            if not self.speedValue:
-                self.serverObj['speedResult'] = 'Canceled'
-        else:
+        if self.core.isAlive():
             self.totalBytes += self.networkReply.readAll().length()
 
             # Convert to seconds
             elapsedSecond = self.elapsedTimer.elapsed() / 1000
             downloadSpeed = self.totalBytes / elapsedSecond / 1024 / 1024
 
+            # Has speed value
+            self.speedValue = True
             self.serverObj['speedResult'] = f'{downloadSpeed:.2f} M/s'
+            self.updateResult()
 
+    @QtCore.Slot()
+    def handleFinished(self):
+        if self.networkReply.error() != QNetworkReply.NetworkError.NoError:
+            if not self.speedValue:
+                if self.core.isAlive():
+                    if (
+                        self.networkReply.error()
+                        == QNetworkReply.NetworkError.OperationCanceledError
+                    ):
+                        # Canceled by application
+                        self.serverObj['speedResult'] = 'Canceled'
+                    else:
+                        errorString = self.networkReply.error().name
+
+                        if errorString.endswith('Error'):
+                            self.serverObj['speedResult'] = errorString[:-5]
+                        else:
+                            self.serverObj['speedResult'] = errorString
+                else:
+                    # Core ExitCallback has been called
+                    self.testFinished = True
+
+                    return
+        else:
+            if self.core.isAlive():
+                self.totalBytes += self.networkReply.readAll().length()
+
+                # Convert to seconds
+                elapsedSecond = self.elapsedTimer.elapsed() / 1000
+                downloadSpeed = self.totalBytes / elapsedSecond / 1024 / 1024
+
+                self.serverObj['speedResult'] = f'{downloadSpeed:.2f} M/s'
+            else:
+                self.serverObj['speedResult'] = 'Start failed'
+
+        self.core.stop()
         self.updateResult()
         self.testFinished = True
 
