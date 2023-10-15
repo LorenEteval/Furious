@@ -408,6 +408,30 @@ class ZoomablePlainTextEdit(QPlainTextEdit):
 
         return indent
 
+    def getPrevAndNextChar(self, cursor):
+        plainText = self.toPlainText()
+
+        cursor.movePosition(QTextCursor.MoveOperation.Left)
+
+        try:
+            prevChar = plainText[cursor.position()]
+        except Exception:
+            # Any non-exit exceptions
+
+            prevChar = ''
+
+        # Move the cursor to the next character position
+        cursor.movePosition(QTextCursor.MoveOperation.Right)
+
+        try:
+            nextChar = plainText[cursor.position()]
+        except Exception:
+            # Any non-exit exceptions
+
+            nextChar = ''
+
+        return prevChar + nextChar
+
     def smartIndent(self, event):
         cursor = self.textCursor()
         indent = self.getIndent(cursor.block().text())
@@ -443,31 +467,10 @@ class ZoomablePlainTextEdit(QPlainTextEdit):
             self.setTextCursor(cursor)
 
     def smartBackspace(self, event):
-        plainText = self.toPlainText()
-
         cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.Left)
+        chPair = self.getPrevAndNextChar(cursor)
 
-        try:
-            prevChar = self.toPlainText()[cursor.position()]
-        except Exception:
-            # Any non-exit exceptions
-
-            prevChar = ''
-
-        # Move the cursor to the next character position
-        cursor.movePosition(QTextCursor.MoveOperation.Right)
-
-        try:
-            nextChar = self.toPlainText()[cursor.position()]
-        except Exception:
-            # Any non-exit exceptions
-
-            nextChar = ''
-
-        pair = prevChar + nextChar
-
-        if pair == '""' or pair == '{}' or pair == '[]':
+        if chPair == '""' or chPair == '{}' or chPair == '[]':
             cursor.deleteChar()
             cursor.deletePreviousChar()
         else:
