@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Core.Core import XrayCore, Hysteria1, Hysteria2
+from Furious.Core.Core import XrayCore, Hysteria1, Hysteria2, StdoutRedirectHelper
 from Furious.Core.TorRelay import TorRelay
 from Furious.Core.Tun2socks import Tun2socks
 from Furious.Core.Intellisense import Intellisense
@@ -46,6 +46,7 @@ from Furious.Utility.Utility import (
     isValidIPAddress,
     isAdministrator,
     isVPNMode,
+    isPythonw,
 )
 from Furious.Utility.Translator import gettext as _
 from Furious.Utility.Proxy import Proxy
@@ -60,9 +61,11 @@ from PySide6.QtNetwork import (
     QNetworkProxy,
 )
 
+import uuid
 import ujson
 import random
 import logging
+import pathlib
 
 logger = logging.getLogger(__name__)
 
@@ -592,34 +595,68 @@ class ConnectAction(Action):
                 self.errorHttpsProxyConf()
             else:
                 if validateHttpsProxyServer(httpsProxyServer):
-
-                    def fixLoggingRelativePath(attr):
-                        # Relative path fails if booting on start up
-                        # on Windows, when packed using nuitka...
-
-                        # Fix relative path if needed. User cannot feel this operation.
-
-                        try:
-                            path = self.coreJSON['log'][attr]
-                        except KeyError:
-                            pass
-                        else:
-                            if path and (
-                                isinstance(path, str) or isinstance(path, bytes)
-                            ):
-                                fix = getAbsolutePath(path)
-
-                                logger.info(
-                                    f'{XrayCore.name()}: {attr} log is specified as \'{path}\'. '
-                                    f'Fixed to \'{fix}\''
-                                )
-
-                                self.coreJSON['log'][attr] = fix
-
                     logger.info(f'core {XrayCore.name()} configured')
 
-                    fixLoggingRelativePath('access')
-                    fixLoggingRelativePath('error')
+                    if self.coreJSON.get('log') is None or not isinstance(
+                        self.coreJSON['log'], dict
+                    ):
+                        self.coreJSON['log'] = {
+                            'access': '',
+                            'error': '',
+                            'loglevel': 'warning',
+                        }
+
+                    redirect = str(uuid.uuid4())
+
+                    def fixLogObjectPath(logAttr):
+                        try:
+                            path = self.coreJSON['log'][logAttr]
+                        except Exception:
+                            # Any non-exit exceptions
+
+                            self.coreJSON['log'][logAttr] = path = ''
+
+                        if not isinstance(path, str) and not isinstance(path, bytes):
+                            self.coreJSON['log'][logAttr] = path = ''
+
+                        if path == '':
+                            if (
+                                isPythonw()
+                                and StdoutRedirectHelper.TemporaryDir.isValid()
+                            ):
+                                # Redirect implementation
+                                self.coreJSON['log'][
+                                    logAttr
+                                ] = StdoutRedirectHelper.TemporaryDir.filePath(redirect)
+                        else:
+                            # Relative path fails if booting on start up
+                            # on Windows, when packed using nuitka...
+
+                            # Fix relative path if needed. User cannot feel this operation.
+                            self.coreJSON['log'][logAttr] = getAbsolutePath(path)
+
+                        result = self.coreJSON['log'][logAttr]
+
+                        if result:
+                            try:
+                                # Create a new file
+                                with open(result, 'x'):
+                                    pass
+                            except FileExistsError:
+                                pass
+                            except Exception:
+                                # Any non-exit exceptions
+
+                                pass
+
+                        logger.info(
+                            f'{XrayCore.name()}: {logAttr} log is specified as \'{path}\'. '
+                            f'Fixed to \'{result}\''
+                        )
+
+                    # Fix logObject
+                    for attr in ['access', 'error']:
+                        fixLogObjectPath(attr)
 
                     routing = APP().Routing
 

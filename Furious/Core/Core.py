@@ -16,14 +16,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Utility.Constants import APP, PLATFORM, LogType
-from Furious.Utility.Utility import getAbsolutePath
+from Furious.Utility.Utility import getAbsolutePath, isPythonw
 
 from PySide6 import QtCore
 from PySide6.QtTest import QTest
 
+import io
 import os
 import sys
 import uuid
+import ujson
 import logging
 import functools
 import threading
@@ -33,6 +35,13 @@ logger = logging.getLogger(__name__)
 
 
 class Core:
+    class ExitCode:
+        ConfigurationError = 23
+        # Windows: 4294967295. Darwin, Linux: 255 (-1)
+        ServerStartFailure = 4294967295 if PLATFORM == 'Windows' else 255
+        # Windows shutting down
+        SystemShuttingDown = 0x40010004
+
     def __init__(self, *args, exitCallback=None, **kwargs):
         self._process = None
         self._exitCallback = exitCallback
@@ -65,6 +74,12 @@ class Core:
 
     def registerExitCallback(self, exitCallback):
         self._exitCallback = exitCallback
+
+    def isAlive(self):
+        if isinstance(self._process, multiprocessing.Process):
+            return self._process.is_alive()
+        else:
+            return False
 
     def checkAlive(self):
         assert isinstance(self._process, multiprocessing.Process)
@@ -103,10 +118,7 @@ class Core:
             self._daemonTimer.start()
 
     def stop(self):
-        if (
-            isinstance(self._process, multiprocessing.Process)
-            and self._process.is_alive()
-        ):
+        if self.isAlive():
             self._stdoutTimer.stop()
             self._daemonTimer.stop()
 
@@ -130,22 +142,6 @@ class StdoutRedirectHelper:
     TemporaryDir = QtCore.QTemporaryDir()
 
     @staticmethod
-    def isRealFile(file):
-        if not hasattr(file, 'fileno'):
-            return False
-
-        try:
-            tmp = os.dup(file.fileno())
-        except Exception:
-            # Any non-exit exceptions
-
-            return False
-        else:
-            os.close(tmp)
-
-            return True
-
-    @staticmethod
     def launch(msgQueue, entrypoint, redirect):
         if not callable(entrypoint):
             return
@@ -154,8 +150,7 @@ class StdoutRedirectHelper:
             not StdoutRedirectHelper.TemporaryDir.isValid()
             or not redirect
             # pythonw.exe
-            or not StdoutRedirectHelper.isRealFile(sys.__stdout__)
-            or not StdoutRedirectHelper.isRealFile(sys.__stderr__)
+            or isPythonw()
         ):
             # Call entrypoint directly
             entrypoint()
@@ -204,14 +199,82 @@ def startXrayCore(json, msgQueue):
         while True:
             pass
     else:
-        redirect = True
-
         if xray.__version__ <= '1.8.4':
             redirect = False
+        else:
+            redirect = True
 
-        StdoutRedirectHelper.launch(
-            msgQueue, lambda: xray.startFromJSON(json), redirect
-        )
+        # Can be redirected
+
+        if not isPythonw():
+            StdoutRedirectHelper.launch(
+                msgQueue, lambda: xray.startFromJSON(json), redirect
+            )
+
+            return
+
+        if not redirect:
+            xray.startFromJSON(json)
+
+            return
+
+        def xrayPythonwProduceMsg():
+            try:
+                jsonObject = ujson.loads(json)
+            except Exception:
+                # Any non-exit exceptions
+
+                xray.startFromJSON(json)
+
+                return
+
+            loggerPath = []
+            fileStream = []
+
+            for attr in ['access', 'error']:
+                try:
+                    path = jsonObject['log'][attr]
+                except Exception:
+                    # Any non-exit exceptions
+
+                    continue
+
+                if path not in loggerPath:
+                    loggerPath.append(path)
+
+                    try:
+                        stream = open(path, 'rb')
+                    except Exception:
+                        # Any non-exit exceptions
+
+                        pass
+                    else:
+                        stream.seek(0, io.SEEK_END)
+
+                        fileStream.append(stream)
+
+            def produceMsg():
+                while True:
+                    for file in fileStream:
+                        for line in iter(file.readline, b''):
+                            if line and not line.isspace():
+                                try:
+                                    msgQueue.put_nowait(line.decode('utf-8', 'replace'))
+                                except Exception:
+                                    # Any non-exit exceptions
+
+                                    pass
+
+            try:
+                msgThread = threading.Thread(target=produceMsg, daemon=True)
+                msgThread.start()
+
+                xray.startFromJSON(json)
+            finally:
+                for stream in fileStream:
+                    stream.close()
+
+        xrayPythonwProduceMsg()
 
 
 class XrayCore(Core):
@@ -253,10 +316,10 @@ def startHysteria1(json, rule, mmdb, msgQueue):
         while True:
             pass
     else:
-        redirect = True
-
         if hysteria.__version__ <= '1.3.5':
             redirect = False
+        else:
+            redirect = True
 
         StdoutRedirectHelper.launch(
             msgQueue, lambda: hysteria.startFromJSON(json, rule, mmdb), redirect
@@ -339,10 +402,10 @@ def startHysteria2(json, msgQueue):
         while True:
             pass
     else:
-        redirect = True
-
         if hysteria2.__version__ <= '2.0.0.1':
             redirect = False
+        else:
+            redirect = True
 
         StdoutRedirectHelper.launch(
             msgQueue, lambda: hysteria2.startFromJSON(json), redirect
