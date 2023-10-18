@@ -83,21 +83,25 @@ class Core:
             return False
 
     def checkAlive(self):
-        assert isinstance(self._process, multiprocessing.Process)
+        if isinstance(self._process, multiprocessing.Process):
+            if self._process.is_alive():
+                return True
+            else:
+                logger.error(
+                    f'{self.name()} stopped unexpectedly with exitcode {self._process.exitcode}'
+                )
 
-        if self._process.is_alive():
-            return True
+                self._stdoutTimer.stop()
+                self._daemonTimer.stop()
+
+                if callable(self._exitCallback):
+                    self._exitCallback(self._process.exitcode)
+
+                # Reset internal process
+                self._process = None
+
+                return False
         else:
-            logger.error(
-                f'{self.name()} stopped unexpectedly with exitcode {self._process.exitcode}'
-            )
-
-            self._stdoutTimer.stop()
-            self._daemonTimer.stop()
-
-            if callable(self._exitCallback):
-                self._exitCallback(self._process.exitcode)
-
             return False
 
     def start(self, *args, **kwargs):
