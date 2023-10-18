@@ -25,6 +25,7 @@ import io
 import os
 import sys
 import uuid
+import time
 import ujson
 import logging
 import functools
@@ -184,6 +185,8 @@ class StdoutRedirectHelper:
 
                                 pass
 
+                    time.sleep(1 / 1000)
+
         msgThread = threading.Thread(target=produceMsg, daemon=True)
         msgThread.start()
 
@@ -264,6 +267,8 @@ def startXrayCore(json, msgQueue):
                                     # Any non-exit exceptions
 
                                     pass
+
+                    time.sleep(1 / 1000)
 
             try:
                 msgThread = threading.Thread(target=produceMsg, daemon=True)
