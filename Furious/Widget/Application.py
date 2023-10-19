@@ -28,6 +28,7 @@ from Furious.Utility.Constants import (
     ORGANIZATION_DOMAIN,
     PYSIDE6_VERSION,
     PLATFORM,
+    PLATFORM_RELEASE,
     LOCAL_SERVER_NAME,
     SYSTEM_LANGUAGE,
     DATA_DIR,
@@ -264,7 +265,10 @@ class Application(SingletonApplication):
         logger.info(
             f'Qt version: {QtCore.qVersion()}. PySide6 version: {PYSIDE6_VERSION}'
         )
-        logger.info(f'python version: {getPythonVersion()}. Platform: {PLATFORM}')
+        logger.info(
+            f'python version: {getPythonVersion()}. Platform: {PLATFORM}. '
+            f'Platform release: {PLATFORM_RELEASE}'
+        )
         logger.info(f'system version: {sys.version}')
         logger.info(f'sys.executable: {sys.executable}')
         logger.info(f'sys.argv: {sys.argv}')
