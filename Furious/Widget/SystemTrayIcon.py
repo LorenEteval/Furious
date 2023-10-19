@@ -32,7 +32,7 @@ from Furious.Utility.Constants import (
     APPLICATION_VERSION,
     PLATFORM,
 )
-from Furious.Utility.Utility import bootstrapIcon, StateContext, Switch
+from Furious.Utility.Utility import bootstrapIcon, StateContext, Switch, isWindows7
 from Furious.Utility.Translator import Translatable, gettext as _
 from Furious.Utility.Proxy import Proxy
 from Furious.Utility.StartupOnBoot import StartupOnBoot
@@ -119,14 +119,14 @@ class SystemTrayIcon(Translatable, QSystemTrayIcon):
             super().showMessage(_(APPLICATION_NAME), msg, *args, **kwargs)
 
     def setPlainIcon(self):
-        if PLATFORM == 'Darwin':
+        if PLATFORM == 'Darwin' or isWindows7():
             # Darker
             self.setIcon(bootstrapIcon('rocket-takeoff-dark.svg'))
         else:
             self.setIcon(bootstrapIcon('rocket-takeoff.svg'))
 
     def setConnectedIcon(self):
-        if PLATFORM == 'Darwin':
+        if PLATFORM == 'Darwin' or isWindows7():
             # Darker
             self.setIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
         else:
