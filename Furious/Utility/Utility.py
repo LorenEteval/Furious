@@ -19,6 +19,7 @@ from Furious.Gui.Icon import Icon
 from Furious.Utility.Constants import (
     APP,
     PLATFORM,
+    PLATFORM_RELEASE,
     ROOT_DIR,
     PYSIDE6_VERSION,
     DEFAULT_TOR_SOCKS_PORT,
@@ -442,6 +443,10 @@ def isRealFile(file):
 def isPythonw():
     # pythonw.exe. Also applies to packed GUI application on Windows
     return not isRealFile(sys.__stdout__) or not isRealFile(sys.__stderr__)
+
+
+def isWindows7():
+    return PLATFORM == 'Windows' and PLATFORM_RELEASE == '7'
 
 
 def moveToCenter(widget, parent=None):
