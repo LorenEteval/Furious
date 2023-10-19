@@ -43,6 +43,7 @@ ORGANIZATION_DOMAIN = 'Furious.GUI'
 PYSIDE6_VERSION = PySide6.__version__
 
 PLATFORM = platform.system()
+PLATFORM_RELEASE = platform.release()
 
 LOCAL_SERVER_NAME = '891ad49d-8996-43cb-820c-d9baf42a04de'
 
