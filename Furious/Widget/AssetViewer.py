@@ -24,6 +24,7 @@ from Furious.Utility.Utility import (
     SupportThemeChangedCallback,
     bootstrapIcon,
     bootstrapIconWhite,
+    enumValueWrapper,
     getUbuntuRelease,
     moveToCenter,
 )
@@ -117,7 +118,9 @@ class ImportAction(Action):
                 self.assetExistsBox.setText(_('Asset file already exists. Overwrite?'))
                 self.assetExistsBox.setInformativeText(basename)
 
-                if self.assetExistsBox.exec() == MessageBox.StandardButton.No.value:
+                if self.assetExistsBox.exec() == enumValueWrapper(
+                    MessageBox.StandardButton.No
+                ):
                     # Do not overwrite
                     return
 
@@ -229,7 +232,9 @@ class AssetViewerWidget(SupportThemeChangedCallback, MainWindow):
         )
         self.questionDeleteBox.setText(self.questionDeleteBox.getText())
 
-        if self.questionDeleteBox.exec() == MessageBox.StandardButton.No.value:
+        if self.questionDeleteBox.exec() == enumValueWrapper(
+            MessageBox.StandardButton.No
+        ):
             # Do not delete
             return
 

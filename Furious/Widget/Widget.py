@@ -203,10 +203,17 @@ class Menu(Translatable, SupportConnectedCallback, QMenu):
     def __init__(self, *actions, **kwargs):
         super().__init__(**kwargs)
 
+        # In some old version PySide6, the self.actions() method
+        # does not return with seperators. _actions list append
+        # them all
+        self._actions = []
+
         for action in actions:
             if isinstance(action, Seperator):
+                self._actions.append(action)
                 self.addSeparator()
             elif isinstance(action, Action):
+                self._actions.append(action)
                 self.addAction(action)
             else:
                 # Do nothing

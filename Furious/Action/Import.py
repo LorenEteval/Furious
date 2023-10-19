@@ -31,6 +31,7 @@ from Furious.Utility.Utility import (
     StateContext,
     ServerStorage,
     bootstrapIcon,
+    enumValueWrapper,
     protocolRepr,
 )
 from Furious.Utility.Translator import gettext as _
@@ -173,7 +174,7 @@ class ImportLinkAction(Action):
         # Show the MessageBox and wait for user to close it
         choice = self.linkImportOK.exec()
 
-        if choice == MessageBox.ButtonRole.AcceptRole.value:
+        if choice == enumValueWrapper(MessageBox.ButtonRole.AcceptRole):
             # Go to edit
             APP().ServerWidget.show()
         else:
@@ -574,7 +575,7 @@ class ImportJSONAction(Action):
         # Show the MessageBox and wait for user to close it
         choice = self.jsonImportOK.exec()
 
-        if choice == MessageBox.ButtonRole.AcceptRole.value:
+        if choice == enumValueWrapper(MessageBox.ButtonRole.AcceptRole):
             # Go to edit
             APP().ServerWidget.show()
         else:

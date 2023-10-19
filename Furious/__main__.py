@@ -18,7 +18,7 @@
 from Furious.Widget.Application import Application
 from Furious.Widget.Widget import MessageBox
 from Furious.Utility.Constants import APPLICATION_NAME, CRASH_LOG_DIR
-from Furious.Utility.Utility import bootstrapIcon
+from Furious.Utility.Utility import bootstrapIcon, enumValueWrapper
 from Furious.Utility.Process import Process
 from Furious.Utility.Translator import gettext as _
 
@@ -113,7 +113,7 @@ def main():
                 # Show the MessageBox and wait for user to close it
                 choice = messageBox.exec()
 
-                if choice == MessageBox.ButtonRole.AcceptRole.value:
+                if choice == enumValueWrapper(MessageBox.ButtonRole.AcceptRole):
                     # Open
                     if QDesktopServices.openUrl(
                         QtCore.QUrl.fromLocalFile(crashLogFile)

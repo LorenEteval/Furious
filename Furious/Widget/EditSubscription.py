@@ -40,6 +40,7 @@ from Furious.Utility.Utility import (
     StateContext,
     SupportConnectedCallback,
     bootstrapIcon,
+    enumValueWrapper,
     moveToCenter,
 )
 from Furious.Utility.Translator import Translatable, gettext as _
@@ -242,7 +243,9 @@ class EditSubsTableWidget(Translatable, SupportConnectedCallback, TableWidget):
         self.questionDeleteBox.possibleRemark = self.item(indexes[0], 0).text()
         self.questionDeleteBox.setText(self.questionDeleteBox.getText())
 
-        if self.questionDeleteBox.exec() == MessageBox.StandardButton.No.value:
+        if self.questionDeleteBox.exec() == enumValueWrapper(
+            MessageBox.StandardButton.No
+        ):
             # Do not delete
             return
 
@@ -412,7 +415,7 @@ class EditSubscriptionWidget(MainWindow):
     def addSubscription(self):
         choice = self.addSubsDialog.exec()
 
-        if choice == QDialog.DialogCode.Accepted.value:
+        if choice == enumValueWrapper(QDialog.DialogCode.Accepted):
             subscriptionRemark = self.addSubsDialog.subscriptionRemark()
             subscriptionWebURL = self.addSubsDialog.subscriptionWebURL()
 

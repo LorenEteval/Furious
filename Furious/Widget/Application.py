@@ -327,8 +327,8 @@ class Application(SingletonApplication):
         self.aboutToQuit.connect(self.cleanup)
 
         self.SubscriptionWidget = EditSubscriptionWidget()
-        self.ServerWidget = EditConfigurationWidget()
         self.RoutesWidget = EditRoutingWidget()
+        self.ServerWidget = EditConfigurationWidget()
         self.TorRelayWidget = TorRelaySettingsWidget()
 
         self.tray = SystemTrayIcon()

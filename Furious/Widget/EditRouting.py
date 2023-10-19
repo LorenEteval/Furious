@@ -58,6 +58,7 @@ from Furious.Utility.Utility import (
     StateContext,
     SupportConnectedCallback,
     bootstrapIcon,
+    enumValueWrapper,
     moveToCenter,
 )
 from Furious.Utility.Translator import Translatable, gettext as _
@@ -302,7 +303,7 @@ def questionFastReconnect(saveConfInfo):
     # Show the MessageBox and wait for user to close it
     choice = saveConfInfo.exec()
 
-    if choice == MessageBox.ButtonRole.AcceptRole.value:
+    if choice == enumValueWrapper(MessageBox.ButtonRole.AcceptRole):
         # Reconnect
         APP().tray.ConnectAction.connectingAction(
             showProgressBar=True,
@@ -487,7 +488,7 @@ class EditRoutingAction(Action):
 
                 parentIndex = index - len(BUILTIN_ROUTING)
 
-                if choice == QDialog.DialogCode.Accepted.value:
+                if choice == enumValueWrapper(QDialog.DialogCode.Accepted):
                     ruleValue = dialog.ruleValue()
                     mmdbValue = dialog.mmdbValue()
 
@@ -674,12 +675,12 @@ class RoutingEditor(MainWindow):
         if self.modified:
             choice = self.questionSaveBox.exec()
 
-            if choice == MessageBox.ButtonRole.AcceptRole.value:
+            if choice == enumValueWrapper(MessageBox.ButtonRole.AcceptRole):
                 # Save
                 # If save success, close the window.
                 return self.SaveAction.save(successCallback=lambda: self.hide())
 
-            if choice == MessageBox.ButtonRole.DestructiveRole.value:
+            if choice == enumValueWrapper(MessageBox.ButtonRole.DestructiveRole):
                 # Discard
                 self.hide()
 
@@ -693,7 +694,7 @@ class RoutingEditor(MainWindow):
 
                 return True
 
-            if choice == MessageBox.ButtonRole.RejectRole.value:
+            if choice == enumValueWrapper(MessageBox.ButtonRole.RejectRole):
                 # Cancel. Do nothing
                 return False
         else:
@@ -1070,7 +1071,9 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
         self.questionDeleteBox.possibleRemark = self.item(indexes[0], 0).text()
         self.questionDeleteBox.setText(self.questionDeleteBox.getText())
 
-        if self.questionDeleteBox.exec() == MessageBox.StandardButton.No.value:
+        if self.questionDeleteBox.exec() == enumValueWrapper(
+            MessageBox.StandardButton.No
+        ):
             # Do not delete
             return
 
@@ -1266,7 +1269,7 @@ class EditRoutingWidget(MainWindow):
     def addRoute(self):
         choice = self.addRoutingDialog.exec()
 
-        if choice == QDialog.DialogCode.Accepted.value:
+        if choice == enumValueWrapper(QDialog.DialogCode.Accepted):
             routingRemark = self.addRoutingDialog.routingRemark()
 
             if routingRemark:

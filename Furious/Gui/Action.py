@@ -57,7 +57,10 @@ class Action(Translatable, SupportThemeChangedCallback, QAction):
             # Create reference
             self._menu = menu
 
-            self.setMenu(menu)
+            # Some old version PySide6 does not have setMenu method
+            # for QAction. Protect it. Currently only used in SystemTrayIcon
+            if hasattr(self, 'setMenu'):
+                self.setMenu(menu)
 
             if useActionGroup:
                 # Create reference
@@ -169,9 +172,12 @@ class Action(Translatable, SupportThemeChangedCallback, QAction):
 
             memo[action] = True
 
-            if action.menu() is not None:
-                for childAction in action.menu().actions():
-                    recursiveTranslate(childAction, memo)
+            # Some old version PySide6 does not have menu() method
+            # for QAction. Protect it
+            if hasattr(action, 'menu'):
+                if action.menu() is not None:
+                    for childAction in action.menu().actions():
+                        recursiveTranslate(childAction, memo)
 
         # Do not use StateContext because it's been managed somewhere else!!!
         recursiveTranslate(self, dict())

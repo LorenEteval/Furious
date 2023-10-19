@@ -16,10 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Utility.Constants import APP, PLATFORM, LogType
-from Furious.Utility.Utility import getAbsolutePath, isPythonw
+from Furious.Utility.Utility import getAbsolutePath, eventLoopWait, isPythonw
 
 from PySide6 import QtCore
-from PySide6.QtTest import QTest
 
 import io
 import os
@@ -115,7 +114,7 @@ class Core:
 
         if waitCore:
             # Wait for the core to start up completely
-            QTest.qWait(waitTime)
+            eventLoopWait(waitTime)
 
         if self.checkAlive():
             # Start core daemon

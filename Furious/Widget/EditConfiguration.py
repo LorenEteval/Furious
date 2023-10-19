@@ -51,6 +51,8 @@ from Furious.Utility.Utility import (
     Switch,
     SupportConnectedCallback,
     bootstrapIcon,
+    enumValueWrapper,
+    eventLoopWait,
     swapListItem,
     moveToCenter,
 )
@@ -58,7 +60,6 @@ from Furious.Utility.Translator import Translatable, gettext as _
 from Furious.Utility.Theme import DraculaTheme
 
 from PySide6 import QtCore
-from PySide6.QtTest import QTest
 from PySide6.QtGui import QDesktopServices, QFont, QTextOption
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -351,7 +352,7 @@ def questionReconnect(saveConfInfo):
     # Show the MessageBox and wait for user to close it
     choice = saveConfInfo.exec()
 
-    if choice == MessageBox.ButtonRole.AcceptRole.value:
+    if choice == enumValueWrapper(MessageBox.ButtonRole.AcceptRole):
         # Reconnect
         APP().tray.ConnectAction.reconnectAction()
     else:
@@ -630,7 +631,7 @@ class IndentAction(Action):
 
         choice = self.indentSpinBox.exec()
 
-        if choice == QDialog.DialogCode.Accepted.value:
+        if choice == enumValueWrapper(QDialog.DialogCode.Accepted):
             myText = self.parent().plainTextEdit.toPlainText()
 
             if myText == '':
@@ -993,9 +994,8 @@ class CheckForUpdatesAction(Action):
                 self.whetherUpdateInfoBox.setInformativeText(_('Go to download page?'))
 
                 # Show the MessageBox and wait for user to close it
-                if (
-                    self.whetherUpdateInfoBox.exec()
-                    == MessageBox.StandardButton.Yes.value
+                if self.whetherUpdateInfoBox.exec() == enumValueWrapper(
+                    MessageBox.StandardButton.Yes
                 ):
                     if QDesktopServices.openUrl(QtCore.QUrl(info['html_url'])):
                         logger.info('open download page success')
@@ -1537,7 +1537,21 @@ class DownSpeedWorker(Worker):
                         # Canceled by application
                         self.serverObj['speedResult'] = 'Canceled'
                     else:
-                        errorString = self.networkReply.error().name
+                        try:
+                            error = self.networkReply.error().name
+                        except Exception:
+                            # Any non-exit exceptions
+
+                            error = 'Unknown Error'
+
+                        if isinstance(error, bytes):
+                            # Some old version PySide6 returns it as bytes.
+                            # Protect it.
+                            errorString = error.decode()
+                        elif isinstance(error, str):
+                            errorString = error
+                        else:
+                            errorString = 'Unknown Error'
 
                         if errorString.endswith('Error'):
                             self.serverObj['speedResult'] = errorString[:-5]
@@ -2117,7 +2131,9 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         )
         self.questionDelete_.setText(self.questionDelete_.getText())
 
-        if self.questionDelete_.exec() == MessageBox.StandardButton.No.value:
+        if self.questionDelete_.exec() == enumValueWrapper(
+            MessageBox.StandardButton.No
+        ):
             # Do not delete
             return
 
@@ -2177,7 +2193,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             worker.run()
 
             while not APP().exiting and not worker.isFinished() and counter < timeout:
-                QTest.qWait(step)
+                eventLoopWait(step)
 
                 counter += step
 
@@ -2185,7 +2201,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
                 worker.abort()
 
                 while not worker.isFinished():
-                    QTest.qWait(step)
+                    eventLoopWait(step)
 
             if APP().exiting:
                 # Stop timer
@@ -2299,7 +2315,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
         if APP().ServerWidget is not None and APP().ServerWidget.modified:
             choice = self.questionSaveBox.exec()
 
-            if choice == MessageBox.ButtonRole.AcceptRole.value:
+            if choice == enumValueWrapper(MessageBox.ButtonRole.AcceptRole):
                 # Save
                 if APP().ServerWidget.SaveAsServerAction.save(
                     successCallback=lambda: self.switchContext(currRow),
@@ -2309,13 +2325,13 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
                     # Do not switch
                     doNotSwitch()
 
-            elif choice == MessageBox.ButtonRole.DestructiveRole.value:
+            elif choice == enumValueWrapper(MessageBox.ButtonRole.DestructiveRole):
                 # Discard
                 self.switchContext(currRow)
 
                 APP().ServerWidget.markAsSaved()  # Fake saved
 
-            elif choice == MessageBox.ButtonRole.RejectRole.value:
+            elif choice == enumValueWrapper(MessageBox.ButtonRole.RejectRole):
                 # Cancel. Do not switch
                 doNotSwitch()
         else:
@@ -2746,12 +2762,12 @@ class EditConfigurationWidget(MainWindow):
         if self.modified:
             choice = self.questionSaveBox.exec()
 
-            if choice == MessageBox.ButtonRole.AcceptRole.value:
+            if choice == enumValueWrapper(MessageBox.ButtonRole.AcceptRole):
                 # Save
                 # If save success, close the window.
                 return self.SaveAsServerAction.save(successCallback=lambda: self.hide())
 
-            if choice == MessageBox.ButtonRole.DestructiveRole.value:
+            if choice == enumValueWrapper(MessageBox.ButtonRole.DestructiveRole):
                 # Discard
                 self.hide()
                 self.serverWidget.setEmptyItem()
@@ -2759,7 +2775,7 @@ class EditConfigurationWidget(MainWindow):
 
                 return True
 
-            if choice == MessageBox.ButtonRole.RejectRole.value:
+            if choice == enumValueWrapper(MessageBox.ButtonRole.RejectRole):
                 # Cancel. Do nothing
                 return False
         else:
