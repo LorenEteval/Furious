@@ -43,6 +43,7 @@ from Furious.Utility.Utility import (
     SupportConnectedCallback,
     bootstrapIcon,
     getAbsolutePath,
+    eventLoopWait,
     isValidIPAddress,
     isAdministrator,
     isVPNMode,
@@ -53,7 +54,6 @@ from Furious.Utility.Proxy import Proxy
 from Furious.Utility.RoutingTable import RoutingTable
 
 from PySide6 import QtCore
-from PySide6.QtTest import QTest
 from PySide6.QtNetwork import (
     QNetworkAccessManager,
     QNetworkReply,
@@ -1104,7 +1104,7 @@ class ConnectAction(Action):
             and startCounter < timeout
             and self.networkReply is not None
         ):
-            QTest.qWait(step)
+            eventLoopWait(step)
 
             startCounter += step
 
@@ -1149,7 +1149,7 @@ class ConnectAction(Action):
             and startCounter < timeout
             and self.TorRelay.bootstrapPercentage != 100
         ):
-            QTest.qWait(step)
+            eventLoopWait(step)
 
             startCounter += step
 

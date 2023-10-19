@@ -39,6 +39,7 @@ APPLICATION_REPO_NAME = 'Furious'
 ORGANIZATION_NAME = 'Furious'
 ORGANIZATION_DOMAIN = 'Furious.GUI'
 
+# Tested: Furious supports minimum PySide6 version 6.1.0
 PYSIDE6_VERSION = PySide6.__version__
 
 PLATFORM = platform.system()

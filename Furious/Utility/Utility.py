@@ -20,6 +20,7 @@ from Furious.Utility.Constants import (
     APP,
     PLATFORM,
     ROOT_DIR,
+    PYSIDE6_VERSION,
     DEFAULT_TOR_SOCKS_PORT,
     DEFAULT_TOR_HTTPS_PORT,
     DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT,
@@ -30,6 +31,7 @@ from PySide6.QtWidgets import QApplication
 
 import os
 import sys
+import time
 import copy
 import ujson
 import queue
@@ -332,6 +334,32 @@ def isValidIPAddress(address):
         return False
     else:
         return True
+
+
+def enumValueWrapper(enum):
+    # Protect PySide6 enum wrapper behavior changes
+    if PYSIDE6_VERSION < '6.2.2':
+        return enum
+    else:
+        return enum.value
+
+
+def eventLoopWait(ms):
+    # Protect qWait method does not exist in some
+    # old PySide6 version
+    if PYSIDE6_VERSION < '6.3.1':
+        startCounter, step = 0, 1
+
+        while startCounter < ms:
+            time.sleep(step / 1000)
+
+            APP().processEvents()
+
+            startCounter += step
+    else:
+        from PySide6.QtTest import QTest
+
+        QTest.qWait(ms)
 
 
 def runCommand(*args, **kwargs):

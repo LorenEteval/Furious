@@ -65,16 +65,45 @@ class SystemTrayIcon(Translatable, QSystemTrayIcon):
             ExitAction(),
         ]
 
-        for action in actions:
-            if isinstance(action, Action):
-                if hasattr(self, f'{action}'):
-                    logger.warning(f'{self} already has action {action}')
+        # Some old version PySide6 does not have setMenu method
+        # for QAction. Protect it. Currently only used in SystemTrayIcon
+        if hasattr(Action, 'setMenu'):
+            logger.info('contextMenu uses setMenu implementation')
 
-                setattr(self, f'{action}', action)
+            for action in actions:
+                if isinstance(action, Action):
+                    if hasattr(self, f'{action}'):
+                        logger.warning(f'{self} already has action {action}')
 
-        self._menu = Menu(*actions)
+                    setattr(self, f'{action}', action)
 
-        self.setContextMenu(self._menu)
+            self._menu = Menu(*actions)
+            self.setContextMenu(self._menu)
+        else:
+            logger.info('contextMenu uses addMenu implementation')
+
+            self._refs = []
+            self._menu = Menu()
+
+            for action in actions:
+                if isinstance(action, Action):
+                    if hasattr(self, f'{action}'):
+                        logger.warning(f'{self} already has action {action}')
+
+                    setattr(self, f'{action}', action)
+
+                    if action._menu is None:
+                        self._menu.addAction(action)
+                    else:
+                        menu = Menu(*action._menu._actions, title=action.text())
+                        menu.setIcon(action.icon())
+
+                        self._refs.append(menu)
+                        self._menu.addMenu(menu)
+                else:
+                    self._menu.addSeparator()
+
+            self.setContextMenu(self._menu)
 
     def bootstrap(self):
         if APP().StartupOnBoot == Switch.ON_:
