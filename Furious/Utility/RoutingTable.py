@@ -15,7 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Utility.Constants import PLATFORM, APPLICATION_TUN_GATEWAY_ADDRESS
+from Furious.Utility.Constants import (
+    PLATFORM,
+    SYSTEM_LANGUAGE,
+    APPLICATION_TUN_GATEWAY_ADDRESS,
+)
 from Furious.Utility.Utility import runCommand
 
 import re
@@ -40,38 +44,64 @@ class RoutingTable:
         def _add():
             if PLATFORM == 'Windows':
                 try:
-                    runCommand(
+                    result = runCommand(
                         ['route', 'add', source, destination, 'metric', '5'],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
                     )
                 except Exception:
                     # Any non-exit exceptions
 
-                    return False
+                    return -1, '', ''
                 else:
-                    return True
+                    if SYSTEM_LANGUAGE == 'ZH':
+                        return (
+                            result.returncode,
+                            result.stdout.decode('gbk', 'replace').strip(),
+                            result.stderr.decode('gbk', 'replace').strip(),
+                        )
+                    else:
+                        return (
+                            result.returncode,
+                            result.stdout.decode('utf-8', 'replace').strip(),
+                            result.stderr.decode('utf-8', 'replace').strip(),
+                        )
 
             if PLATFORM == 'Darwin':
                 try:
-                    runCommand(
+                    result = runCommand(
                         ['route', 'add', '-net', source, destination],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
                     )
                 except Exception:
                     # Any non-exit exceptions
 
-                    return False
+                    return -1, '', ''
                 else:
-                    return True
+                    return (
+                        result.returncode,
+                        result.stdout.decode('utf-8', 'replace'),
+                        result.stderr.decode('utf-8', 'replace'),
+                    )
 
-        if _add():
-            logger.info(f'add rule {source}->{destination} to routing table success')
-        else:
+        try:
+            returncode, stdout, stderr = _add()
+        except Exception:
+            # Any non-exit exceptions
+
             logger.error(f'add rule {source}->{destination} to routing table failed')
+        else:
+            if returncode == 0:
+                logger.info(
+                    f'add rule {source}->{destination} to routing table success. '
+                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                )
+            else:
+                logger.error(
+                    f'add rule {source}->{destination} to routing table failed. '
+                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                )
 
     @staticmethod
     def addRelations():
@@ -133,7 +163,7 @@ class RoutingTable:
         def _set():
             if PLATFORM == 'Windows':
                 try:
-                    runCommand(
+                    result = runCommand(
                         'netsh interface ip set address'.split()
                         + [
                             deviceName,
@@ -143,20 +173,30 @@ class RoutingTable:
                             gatewayAddress,
                             '3',
                         ],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
                     )
                 except Exception:
                     # Any non-exit exceptions
 
-                    return False
+                    return -1, '', ''
                 else:
-                    return True
+                    if SYSTEM_LANGUAGE == 'ZH':
+                        return (
+                            result.returncode,
+                            result.stdout.decode('gbk', 'replace').strip(),
+                            result.stderr.decode('gbk', 'replace').strip(),
+                        )
+                    else:
+                        return (
+                            result.returncode,
+                            result.stdout.decode('utf-8', 'replace').strip(),
+                            result.stderr.decode('utf-8', 'replace').strip(),
+                        )
 
             if PLATFORM == 'Darwin':
                 try:
-                    runCommand(
+                    result = runCommand(
                         [
                             'ifconfig',
                             deviceName,
@@ -164,67 +204,105 @@ class RoutingTable:
                             gatewayAddress,
                             'up',
                         ],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
                     )
                 except Exception:
                     # Any non-exit exceptions
 
-                    return False
+                    return -1, '', ''
                 else:
-                    return True
+                    return (
+                        result.returncode,
+                        result.stdout.decode('utf-8', 'replace'),
+                        result.stderr.decode('utf-8', 'replace'),
+                    )
 
-        if _set():
-            logger.info(
-                f'set device \'{deviceName}\' gateway address \'{gatewayAddress}\' success'
-            )
-        else:
+        try:
+            returncode, stdout, stderr = _set()
+        except Exception:
+            # Any non-exit exceptions
+
             logger.error(
                 f'set device \'{deviceName}\' gateway address \'{gatewayAddress}\' failed'
             )
+        else:
+            if returncode == 0:
+                logger.info(
+                    f'set device \'{deviceName}\' gateway address \'{gatewayAddress}\' success. '
+                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                )
+            else:
+                logger.error(
+                    f'set device \'{deviceName}\' gateway address \'{gatewayAddress}\' failed. '
+                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                )
 
     @staticmethod
     def delete(source, destination):
         def _delete():
             if PLATFORM == 'Windows':
                 try:
-                    runCommand(
+                    result = runCommand(
                         ['route', 'delete', source, destination],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
                     )
                 except Exception:
                     # Any non-exit exceptions
 
-                    return False
+                    return -1, '', ''
                 else:
-                    return True
+                    if SYSTEM_LANGUAGE == 'ZH':
+                        return (
+                            result.returncode,
+                            result.stdout.decode('gbk', 'replace').strip(),
+                            result.stderr.decode('gbk', 'replace').strip(),
+                        )
+                    else:
+                        return (
+                            result.returncode,
+                            result.stdout.decode('utf-8', 'replace').strip(),
+                            result.stderr.decode('utf-8', 'replace').strip(),
+                        )
 
             if PLATFORM == 'Darwin':
                 try:
-                    runCommand(
+                    result = runCommand(
                         ['route', 'delete', '-net', source, destination],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
                     )
                 except Exception:
                     # Any non-exit exceptions
 
-                    return False
+                    return -1, '', ''
                 else:
-                    return True
+                    return (
+                        result.returncode,
+                        result.stdout.decode('utf-8', 'replace'),
+                        result.stderr.decode('utf-8', 'replace'),
+                    )
 
-        if _delete():
-            logger.info(
-                f'delete rule {source}->{destination} from routing table success'
-            )
-        else:
+        try:
+            returncode, stdout, stderr = _delete()
+        except Exception:
+            # Any non-exit exceptions
+
             logger.error(
                 f'delete rule {source}->{destination} from routing table failed'
             )
+        else:
+            if returncode == 0:
+                logger.info(
+                    f'delete rule {source}->{destination} from routing table success. '
+                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                )
+            else:
+                logger.error(
+                    f'delete rule {source}->{destination} from routing table failed. '
+                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                )
 
     @staticmethod
     def deleteRelations(clear=True):
