@@ -380,15 +380,26 @@ class ImportLinkAction(Action):
             importServerArgs = {}
 
         try:
-            # ss://base64...
-            myData = Base64Encoder.decode(data[5:]).decode()
+            # ss://base64...#fragment
+
+            result = urllib.parse.urlparse(data)
+            remark = urllib.parse.unquote(result.fragment)
+
+            if remark == '':
+                remark = 'sslegacy'
+
+            myData = Base64Encoder.decode(result.netloc).decode()
+
+            methodPassword, server = myData.split('@')
+
             myJSON = XrayCoreConfiguration.build(
-                # For sslegacy, we don't try to consider IPv6 case
-                ProxyOutboundObjectSS(*re.split(r'[@:]', myData))
+                ProxyOutboundObjectSS(
+                    *methodPassword.split(':'), *parseHostPort(server)
+                )
             )
 
             APP().ServerWidget.importServer(
-                'sslegacy',
+                remark,
                 ujson.dumps(
                     myJSON, indent=2, ensure_ascii=False, escape_forward_slashes=False
                 ),
@@ -397,10 +408,10 @@ class ImportLinkAction(Action):
 
             logger.debug(
                 f'import share link success. '
-                f'Remark: sslegacy. Protocol: {Protocol.Shadowsocks}'
+                f'Remark: {remark}. Protocol: {Protocol.Shadowsocks}'
             )
 
-            return 'sslegacy', True
+            return remark, True
         except Exception:
             # Any non-exit exceptions
 
