@@ -31,6 +31,7 @@ from Furious.Utility.Utility import (
     StateContext,
     ServerStorage,
     bootstrapIcon,
+    parseHostPort,
     enumValueWrapper,
     protocolRepr,
 )
@@ -262,7 +263,9 @@ class ImportLinkAction(Action):
 
             remark = urllib.parse.unquote(parseResult.fragment)
 
-            uuid_, remote_host, remote_port = re.split(r'[@:]', parseResult.netloc)
+            uuid_, server = parseResult.netloc.split('@')
+
+            remote_host, remote_port = parseHostPort(server)
 
             encryption = queryObject.get('encryption', 'none')
             type_ = queryObject.get('type', 'tcp')
@@ -301,8 +304,10 @@ class ImportLinkAction(Action):
             )
 
             return remark, True
-        except Exception:
+        except Exception as ex:
             # Any non-exit exceptions
+
+            logger.error(f'import share link failed: {data}. Exception: {ex}')
 
             return '', False
 
@@ -316,18 +321,24 @@ class ImportLinkAction(Action):
             remark = urllib.parse.unquote(result.fragment)
 
             try:
-                # Try pack with 3 element
-                userinfo, address, port = re.split(r'[@:]', result.netloc)
+                # Try pack with 4 element
+
+                methodPassword, server = result.netloc.split('@')
+
+                method, password = methodPassword.split(':')
+
+                address, port = parseHostPort(server)
+            except ValueError:
+                # Unpack error. Try pack with 3 element
+                userinfo, server = result.netloc.split('@')
+
+                address, port = parseHostPort(server)
 
                 # Some old SS share link doesn't add padding
                 # in base64 encoding. Add padding to userinfo
                 method, password = (
                     Base64Encoder.decode(userinfo + '===').decode().split(':')
                 )
-            except ValueError:
-                # Unpack error. Try pack with 4 element
-
-                method, password, address, port = re.split(r'[@:]', result.netloc)
             except Exception as ex:
                 # Any non-exit exceptions
 
@@ -359,6 +370,8 @@ class ImportLinkAction(Action):
         except Exception as ex:
             # Any non-exit exceptions
 
+            logger.error(f'import share link failed: {data}. Exception: {ex}')
+
             return '', False
 
     @staticmethod
@@ -370,6 +383,7 @@ class ImportLinkAction(Action):
             # ss://base64...
             myData = Base64Encoder.decode(data[5:]).decode()
             myJSON = XrayCoreConfiguration.build(
+                # For sslegacy, we don't try to consider IPv6 case
                 ProxyOutboundObjectSS(*re.split(r'[@:]', myData))
             )
 
@@ -406,7 +420,9 @@ class ImportLinkAction(Action):
 
             remark = urllib.parse.unquote(parseResult.fragment)
 
-            password, address, port = re.split(r'[@:]', parseResult.netloc)
+            password, server = parseResult.netloc.split('@')
+
+            address, port = parseHostPort(server)
 
             type_ = queryObject.get('type', 'tcp')
             # For Trojan: Assign tls by default
@@ -442,8 +458,10 @@ class ImportLinkAction(Action):
             )
 
             return remark, True
-        except Exception:
+        except Exception as ex:
             # Any non-exit exceptions
+
+            logger.error(f'import share link failed: {data}. Exception: {ex}')
 
             return '', False
 
@@ -496,6 +514,8 @@ class ImportLinkAction(Action):
                     shareLink,
                     importServerArgs,
                 )
+
+            logger.error(f'unsupported share link: {shareLink}')
 
             return '', False
 

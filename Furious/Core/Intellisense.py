@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Core.Core import XrayCore, Hysteria1, Hysteria2
-from Furious.Utility.Utility import Protocol, protocolRepr
+from Furious.Utility.Utility import Protocol, protocolRepr, parseHostPort
 
 
 class Intellisense:
@@ -113,11 +113,14 @@ class Intellisense:
 
                 return ''
 
-            if Intellisense.getCoreType(ob) == Hysteria1.name():
-                return ob['server'].split(':')[0]
-
-            if Intellisense.getCoreType(ob) == Hysteria2.name():
-                return ob['server'].split(':')[0]
+            if (
+                Intellisense.getCoreType(ob) == Hysteria1.name()
+                or Intellisense.getCoreType(ob) == Hysteria2.name()
+            ):
+                if ob['server'].count(',') == 0:
+                    return parseHostPort(ob['server'])[0]
+                else:
+                    return parseHostPort(ob['server'].split(',')[0])[0]
 
             return ''
         except Exception:
@@ -154,11 +157,16 @@ class Intellisense:
 
                 return ''
 
-            if Intellisense.getCoreType(ob) == Hysteria1.name():
-                return ob['server'].split(':')[1]
+            if (
+                Intellisense.getCoreType(ob) == Hysteria1.name()
+                or Intellisense.getCoreType(ob) == Hysteria2.name()
+            ):
+                if ob['server'].count(',') == 0:
+                    return parseHostPort(ob['server'])[1]
+                else:
+                    server, dynamicPort = ob['server'].split(',')
 
-            if Intellisense.getCoreType(ob) == Hysteria2.name():
-                return ob['server'].split(':')[1]
+                    return f'{parseHostPort(server)[1]},{dynamicPort}'
 
             return ''
         except Exception:

@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Utility.Constants import PLATFORM
-from Furious.Utility.Utility import runCommand
+from Furious.Utility.Utility import runCommand, parseHostPort
 
 import logging
 import subprocess
@@ -124,7 +124,7 @@ class _Proxy:
 
             if PLATFORM == 'Linux':
                 try:
-                    host, port = server.split(':')
+                    host, port = parseHostPort(server)
 
                     linuxProxyConfig('proxy.http', 'host', host)
                     linuxProxyConfig('proxy.http', 'port', port)
@@ -143,8 +143,8 @@ class _Proxy:
 
             if PLATFORM == 'Darwin':
                 try:
-                    darwinProxyConfig('setwebproxy', *server.split(':'))
-                    darwinProxyConfig('setsecurewebproxy', *server.split(':'))
+                    darwinProxyConfig('setwebproxy', *parseHostPort(server))
+                    darwinProxyConfig('setsecurewebproxy', *parseHostPort(server))
                     darwinProxyConfig('setproxybypassdomains', *bypass.split(';'))
                 except Exception:
                     # Any non-exit exceptions
