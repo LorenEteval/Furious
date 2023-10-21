@@ -52,6 +52,7 @@ from Furious.Utility.Utility import (
     SupportConnectedCallback,
     bootstrapIcon,
     enumValueWrapper,
+    parseHostPort,
     eventLoopWait,
     swapListItem,
     moveToCenter,
@@ -747,8 +748,8 @@ def useProxyServerIfPossible(manager, loggerAction):
     if proxyServer:
         logger.info(f'{loggerAction} uses proxy server {proxyServer}')
 
-        # Checked. split should not throw exceptions
-        proxyHost, proxyPort = proxyServer.split(':')
+        # Checked. Should not throw exceptions
+        proxyHost, proxyPort = parseHostPort(proxyServer)
 
         # Checked. int(proxyPort) should not throw exceptions
         manager.setProxy(
