@@ -29,6 +29,12 @@ from Furious.Utility.Constants import (
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import QApplication
+from PySide6.QtNetwork import (
+    QNetworkAccessManager,
+    QNetworkReply,
+    QNetworkRequest,
+    QNetworkProxy,
+)
 
 import os
 import sys
@@ -43,6 +49,7 @@ import threading
 import functools
 import ipaddress
 import subprocess
+import urllib.parse
 
 logger = logging.getLogger(__name__)
 
@@ -296,6 +303,133 @@ class SupportThemeChangedCallback:
             ob.themeChangedCallback(theme)
 
 
+class DNSResolver:
+    networkAccessManager = QNetworkAccessManager()
+
+    @staticmethod
+    def request(address):
+        request = QNetworkRequest(
+            QtCore.QUrl(f'https://cloudflare-dns.com/dns-query?name={address}')
+        )
+        request.setRawHeader('accept'.encode(), 'application/dns-json'.encode())
+
+        return request
+
+    @staticmethod
+    def handleFinishedByNetworkReply(networkReply, domain, resultMap):
+        assert isinstance(networkReply, QNetworkReply)
+
+        if networkReply.error() != QNetworkReply.NetworkError.NoError:
+            logger.error(
+                f'DNS resolution for \'{domain}\' failed. {networkReply.errorString()}'
+            )
+
+            resultMap['error'] = True
+        else:
+            logger.info(f'DNS resolution for \'{domain}\' success')
+
+            # Unchecked?
+            replyObject = ujson.loads(networkReply.readAll().data())
+
+            for record in replyObject['Answer']:
+                address = record['data']
+
+                logger.info(f'\'{domain}\' resolved to \'{address}\'')
+
+                if isValidIPAddress(address):
+                    resultMap['result'][address] = True
+                else:
+                    resultMap['depth'] += 1
+
+                    newNetworkReply = DNSResolver.networkAccessManager.get(
+                        DNSResolver.request(address)
+                    )
+                    newNetworkReply.finished.connect(
+                        functools.partial(
+                            DNSResolver.handleFinishedByNetworkReply,
+                            newNetworkReply,
+                            address,
+                            resultMap,
+                        )
+                    )
+
+                    resultMap['reference'].append(newNetworkReply)
+
+        resultMap['depth'] -= 1
+
+    @staticmethod
+    def resolve(domain, proxyHost=None, proxyPort=None):
+        if proxyHost is None or proxyPort is None:
+            DNSResolver.networkAccessManager.setProxy(QNetworkProxy.ProxyType.NoProxy)
+        else:
+            try:
+                DNSResolver.networkAccessManager.setProxy(
+                    QNetworkProxy(
+                        QNetworkProxy.ProxyType.HttpProxy, proxyHost, int(proxyPort)
+                    )
+                )
+
+                logger.info(f'DNS resolution uses proxy server {proxyHost}:{proxyPort}')
+            except Exception as ex:
+                # Any non-exit exceptions
+
+                logger.error(
+                    f'invalid proxy server {proxyHost}:{proxyPort}. {ex}. '
+                    'DNS resolution uses no proxy'
+                )
+
+                DNSResolver.networkAccessManager.setProxy(
+                    QNetworkProxy.ProxyType.NoProxy
+                )
+
+        resultMap = {
+            'depth': 0,
+            'error': False,
+            'reference': [],
+            'result': {},
+        }
+
+        resultMap['depth'] += 1
+
+        networkReply = DNSResolver.networkAccessManager.get(DNSResolver.request(domain))
+        networkReply.finished.connect(
+            functools.partial(
+                DNSResolver.handleFinishedByNetworkReply,
+                networkReply,
+                domain,
+                resultMap,
+            )
+        )
+
+        resultMap['reference'].append(networkReply)
+
+        DNSResolver.wait(resultMap)
+
+        return resultMap['error'], list(resultMap['result'].keys())
+
+    @staticmethod
+    def wait(resultMap, startCounter=0, timeout=30000, step=100):
+        if resultMap['depth'] != 0:
+            logger.info('DNS resolution in progress. Wait')
+        else:
+            return
+
+        while resultMap['depth'] != 0 and startCounter < timeout:
+            eventLoopWait(step)
+
+            startCounter += step
+
+        if resultMap['depth'] != 0:
+            logger.error('DNS resolution timeout')
+
+            for networkReply in resultMap['reference']:
+                if (
+                    isinstance(networkReply, QNetworkReply)
+                    and not networkReply.isFinished()
+                ):
+                    networkReply.abort()
+
+
 def icon(prefix, name):
     if name.startswith('rocket-takeoff'):
         # Colorful. Use default
@@ -337,6 +471,16 @@ def isValidIPAddress(address):
         return True
 
 
+# Can throw exceptions
+def parseHostPort(address):
+    if address.count('//') == 0:
+        result = urllib.parse.urlsplit('//' + address)
+    else:
+        result = urllib.parse.urlsplit(address)
+
+    return result.hostname, str(result.port)
+
+
 def enumValueWrapper(enum):
     # Protect PySide6 enum wrapper behavior changes
     if PYSIDE6_VERSION < '6.2.2':
@@ -349,18 +493,16 @@ def eventLoopWait(ms):
     # Protect qWait method does not exist in some
     # old PySide6 version
     if PYSIDE6_VERSION < '6.3.1':
-        startCounter, step = 0, 1
-
-        while startCounter < ms:
-            time.sleep(step / 1000)
+        for counter in range(0, ms, 1):
+            time.sleep(1 / 1000)
 
             APP().processEvents()
-
-            startCounter += step
     else:
         from PySide6.QtTest import QTest
 
         QTest.qWait(ms)
+
+        APP().processEvents()
 
 
 def runCommand(*args, **kwargs):
