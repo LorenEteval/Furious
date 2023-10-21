@@ -41,8 +41,11 @@ from Furious.Utility.Constants import (
 from Furious.Utility.Utility import (
     Switch,
     SupportConnectedCallback,
+    DNSResolver,
     bootstrapIcon,
     getAbsolutePath,
+    runCommand,
+    parseHostPort,
     eventLoopWait,
     isValidIPAddress,
     isAdministrator,
@@ -66,6 +69,7 @@ import ujson
 import random
 import logging
 import pathlib
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -491,7 +495,7 @@ class ConnectAction(Action):
         def validateHttpsProxyServer(server):
             # Validate https proxy server
             try:
-                host, port = server.split(':')
+                host, port = parseHostPort(server)
 
                 if int(port) < 0 or int(port) > 65535:
                     raise ValueError
@@ -510,7 +514,7 @@ class ConnectAction(Action):
         def validateSocksProxyServer(server):
             # Validate socks proxy server
             try:
-                host, port = server.split(':')
+                host, port = parseHostPort(server)
 
                 if int(port) < 0 or int(port) > 65535:
                     raise ValueError
@@ -1003,6 +1007,43 @@ class ConnectAction(Action):
             )
 
             if PLATFORM == 'Windows':
+                foundDevice = False
+
+                for counter in range(0, 10000, 100):
+                    try:
+                        result = runCommand(
+                            'ipconfig',
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            check=True,
+                        )
+                    except Exception:
+                        # Any non-exit exceptions
+
+                        break
+                    else:
+                        if (
+                            result.stdout.decode('utf-8', 'replace').count(
+                                APPLICATION_TUN_DEVICE_NAME
+                            )
+                            > 0
+                        ):
+                            foundDevice = True
+
+                            logger.info(
+                                f'find TUN device \'{APPLICATION_TUN_DEVICE_NAME}\' success. '
+                                f'Counter: {counter}'
+                            )
+
+                            break
+
+                    eventLoopWait(100)
+
+                if not foundDevice:
+                    logger.error(
+                        f'find TUN device \'{APPLICATION_TUN_DEVICE_NAME}\' failed'
+                    )
+
                 RoutingTable.addRelations()
                 RoutingTable.setDeviceGatewayAddress(
                     APPLICATION_TUN_DEVICE_NAME,
@@ -1022,101 +1063,30 @@ class ConnectAction(Action):
                 successCallback()
 
         if not isValidIPAddress(coreAddr):
-            logger.info(f'dns resolve uses proxy server {self.httpsProxyServer}')
-
-            # Checked. split should not throw exceptions
-            proxyHost, proxyPort = self.httpsProxyServer.split(':')
-
-            # Checked. int(proxyPort) should not throw exceptions
-            self.networkAccessManager.setProxy(
-                QNetworkProxy(
-                    QNetworkProxy.ProxyType.HttpProxy, proxyHost, int(proxyPort)
-                )
+            # Checked. Should not throw exceptions
+            error, resolved = DNSResolver.resolve(
+                coreAddr, *parseHostPort(self.httpsProxyServer)
             )
 
-            request = QNetworkRequest(
-                QtCore.QUrl(f'https://cloudflare-dns.com/dns-query?name={coreAddr}')
-            )
-            request.setRawHeader('accept'.encode(), 'application/dns-json'.encode())
-
-            self.networkReply = self.networkAccessManager.get(request)
-
-            @QtCore.Slot()
-            def finishedCallback():
-                if self.networkReply is None:
-                    # Interrupted externally. Do nothing
-                    logger.info(f'dns resolve for {coreAddr} interrupted externally')
-
-                    return
-
-                assert isinstance(self.networkReply, QNetworkReply)
-
-                if self.networkReply.error() != QNetworkReply.NetworkError.NoError:
-                    logger.error(
-                        f'DNS resolution for {coreAddr} failed. {self.networkReply.errorString()}'
-                    )
-
-                    self.coreRunning = False
-                    self.disconnectReason = _('DNS resolution failed') + f': {coreAddr}'
-                    # Reset reply
-                    self.networkReply = None
-                else:
-                    logger.info(f'dns resolve for {coreAddr} success')
-
-                    replyObject = ujson.loads(self.networkReply.readAll().data())
-
-                    # Reset reply
-                    self.networkReply = None
-
-                    for record in replyObject['Answer']:
-                        address = record['data']
-
-                        logger.info(f'{coreAddr} resolved to {address}')
-
-                        RoutingTable.Relations.append([address, defaultGateway[0]])
-
-                    start()
-
-            self.networkReply.finished.connect(finishedCallback)
+            if error:
+                self.coreRunning = False
+                self.disconnectReason = _('DNS resolution failed') + f': {coreAddr}'
+            else:
+                for address in resolved:
+                    RoutingTable.Relations.append([address, defaultGateway[0]])
         else:
-            # Reset reply
-            self.networkReply = None
-
             RoutingTable.Relations.append([coreAddr, defaultGateway[0]])
 
+        if RoutingTable.Relations:
             start()
-
-        self.waitForDNSResolutionIfNecessary()
+        else:
+            if self.coreRunning or not self.disconnectReason:
+                self.coreRunning = False
+                self.disconnectReason = _('DNS resolution timeout') + f': {coreAddr}'
 
     def stopTun2socks(self):
         self.Tun2socks.registerExitCallback(None)
         self.Tun2socks.stop()
-
-    def waitForDNSResolutionIfNecessary(self, startCounter=0, timeout=10000, step=100):
-        # Wait for potentially DNS resolve in VPN Mode
-        if self.coreRunning and self.networkReply is not None:
-            logger.info('dns resolve in progress. Wait')
-        else:
-            return
-
-        while (
-            self.coreRunning
-            and startCounter < timeout
-            and self.networkReply is not None
-        ):
-            eventLoopWait(step)
-
-            startCounter += step
-
-        if self.networkReply is not None:
-            if self.coreRunning:
-                logger.error('DNS resolution timeout')
-
-                self.coreRunning = False
-                self.disconnectReason = _('DNS resolution timeout')
-
-            # Reset reply
-            self.networkReply = None
 
     def startTorRelay(self, core, proxyServer, startCounter=0, step=100):
         # Redirect Proxy
@@ -1179,8 +1149,8 @@ class ConnectAction(Action):
         logger.info(f'start connection test. Try: {selected}')
         logger.info(f'connection test uses proxy server {self.httpsProxyServer}')
 
-        # Checked. split should not throw exceptions
-        proxyHost, proxyPort = self.httpsProxyServer.split(':')
+        # Checked. Should not throw exceptions
+        proxyHost, proxyPort = parseHostPort(self.httpsProxyServer)
 
         # Checked. int(proxyPort) should not throw exceptions
         self.networkAccessManager.setProxy(
