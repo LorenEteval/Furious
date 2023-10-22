@@ -117,10 +117,14 @@ class Intellisense:
                 Intellisense.getCoreType(ob) == Hysteria1.name()
                 or Intellisense.getCoreType(ob) == Hysteria2.name()
             ):
-                if ob['server'].count(',') == 0:
-                    return parseHostPort(ob['server'])[0]
+                server = ob['server']
+
+                pos = server.rfind(':')
+
+                if pos == -1:
+                    return server
                 else:
-                    return parseHostPort(ob['server'].split(',')[0])[0]
+                    return server[:pos]
 
             return ''
         except Exception:
@@ -161,12 +165,14 @@ class Intellisense:
                 Intellisense.getCoreType(ob) == Hysteria1.name()
                 or Intellisense.getCoreType(ob) == Hysteria2.name()
             ):
-                if ob['server'].count(',') == 0:
-                    return parseHostPort(ob['server'])[1]
-                else:
-                    server, dynamicPort = ob['server'].split(',')
+                server = ob['server']
 
-                    return f'{parseHostPort(server)[1]},{dynamicPort}'
+                pos = server.rfind(':')
+
+                if pos == -1:
+                    return ''
+                else:
+                    return server[pos + 1 :]
 
             return ''
         except Exception:
