@@ -78,6 +78,16 @@ These tools should be installed easily using `brew install` on macOS, or using `
 
 > Note: Install Furious in a Python virtual environment(i.e. venv) is recommended.
 
+> Note: Furious supports **minimum PySide6 version 6.1.0** since **version 0.2.11**.
+
+> Note: `PySide6-Essentials` is available [since Qt 6.3.0](https://pypi.org/project/PySide6-Essentials/#history).
+> If `PySide6-Essentials` is not found via `pip` on your platform then it means you have to install `PySide6` package
+> (i.e. Qt version < 6.3.0):
+>
+> ```
+> pip install PySide6
+> ```
+
 ```
 pip install Furious-GUI
 ```
@@ -208,6 +218,15 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 ### 安装Furious
 
 > 注意：推荐在Python虚拟环境(i.e. venv)中安装。
+
+> 注意：Furious从**0.2.11**起支持**最低PySide6版本6.1.0**。
+
+> 注意：`PySide6-Essentials`[从 Qt 6.3.0](https://pypi.org/project/PySide6-Essentials/#history)可用。
+> 如果`pip`找不到`PySide6-Essentials`，那么你应该安装`PySide6`（即Qt小于6.3.0的版本）:
+>
+> ```
+> pip install PySide6
+> ```
 
 ```
 pip install Furious-GUI
