@@ -21,6 +21,7 @@ from Furious.Core.Configuration import (
     ProxyOutboundObject,
     ProxyOutboundObjectSS,
     ProxyOutboundObjectTrojan,
+    Hysteria2Configuration,
 )
 from Furious.Gui.Action import Action
 from Furious.Widget.Widget import Menu, MessageBox
@@ -477,6 +478,53 @@ class ImportLinkAction(Action):
             return '', False
 
     @staticmethod
+    def parseShareLinkHysteria2(data, importServerArgs=None):
+        if importServerArgs is None:
+            importServerArgs = {}
+
+        try:
+            parseResult = urllib.parse.urlparse(data)
+
+            queryObject = {
+                key: value for key, value in urllib.parse.parse_qsl(parseResult.query)
+            }
+
+            remark = urllib.parse.unquote(parseResult.fragment)
+
+            if remark == '':
+                remark = _('Untitled')
+
+            auth, server = parseResult.netloc.split('@')
+
+            myJSON = Hysteria2Configuration(
+                server,
+                auth,
+                # kwargs
+                **queryObject,
+            ).build()
+
+            APP().ServerWidget.importServer(
+                remark,
+                ujson.dumps(
+                    myJSON, indent=4, ensure_ascii=False, escape_forward_slashes=False
+                ),
+                **importServerArgs,
+            )
+
+            logger.debug(
+                f'import share link success. '
+                f'Remark: {remark}. Protocol: {Protocol.Hysteria2}'
+            )
+
+            return remark, True
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'import share link failed: {data}. Exception: {ex}')
+
+            return '', False
+
+    @staticmethod
     def parseShareLink(shareLink, importServerArgs=None):
         if importServerArgs is None:
             importServerArgs = {}
@@ -522,6 +570,12 @@ class ImportLinkAction(Action):
 
             if myHead.lower() == 'trojan':
                 return ImportLinkAction.parseShareLinkTrojan(
+                    shareLink,
+                    importServerArgs,
+                )
+
+            if myHead.lower() == 'hysteria2' or myHead.lower() == 'hy2':
+                return ImportLinkAction.parseShareLinkHysteria2(
                     shareLink,
                     importServerArgs,
                 )
