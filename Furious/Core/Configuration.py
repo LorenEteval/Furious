@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Core.Core import XrayCore
+from Furious.Core.Core import XrayCore, Hysteria2
 from Furious.Core.Intellisense import Intellisense
 from Furious.Widget.Widget import MessageBox
 from Furious.Utility.Constants import APPLICATION_NAME, PROXY_OUTBOUND_USER_EMAIL
@@ -386,6 +386,39 @@ class Configuration:
             }
 
             return exportFuncMap[Intellisense.getCoreProtocol(ob)]()
+
+        if Intellisense.getCoreType(ob) == Hysteria2.name():
+            netloc = f'{ob["auth"]}@{ob["server"]}'
+
+            tlsArg, obfsArg = {}, {}
+
+            if ob.get('tls'):
+                if ob['tls'].get('sni'):
+                    tlsArg['sni'] = ob['tls']['sni']
+
+                if ob['tls'].get('insecure') is True:
+                    tlsArg['insecure'] = '1'
+                else:
+                    tlsArg['insecure'] = '0'
+
+                if ob['tls'].get('pinSHA256'):
+                    tlsArg['pinSHA256'] = ob['tls']['pinSHA256']
+
+            if ob.get('obfs'):
+                obfsType = ob['obfs'].get('type', 'salamander')
+
+                obfsArg['obfs'] = obfsType
+                obfsArg['obfs-password'] = ob['obfs'][obfsType]['password']
+
+            query = '&'.join(
+                f'{key}={value}'
+                for key, value in {
+                    **tlsArg,
+                    **obfsArg,
+                }.items()
+            )
+
+            return urlunparse(['hysteria2', netloc, '', '', query, quote(remark)])
 
         raise UnsupportedServerExport('Unsupported core protocol export')
 
@@ -828,3 +861,55 @@ class XrayCoreConfiguration:
         myJSON['routing'] = {}
 
         return myJSON
+
+
+class Hysteria2Configuration:
+    def __init__(self, server, auth, **kwargs):
+        self.server = server
+        self.auth = auth
+        self.obfs = kwargs.get('obfs', '')
+        self.obfsPassword = kwargs.get('obfs-password', '')
+        self.sni = kwargs.get('sni', '')
+
+        insecure = kwargs.get('insecure', False)
+
+        if isinstance(insecure, bool):
+            self.insecure = insecure
+        elif insecure == '1':
+            self.insecure = True
+        else:
+            self.insecure = False
+
+        self.pinSHA256 = kwargs.get('pinSHA256', '')
+
+    def build(self):
+        obfsArg = {}
+        pinSHA256Arg = {}
+
+        if self.obfs and self.obfsPassword:
+            obfsArg['obfs'] = {
+                'type': self.obfs,
+                self.obfs: {
+                    'password': self.obfsPassword,
+                },
+            }
+
+        if self.pinSHA256:
+            pinSHA256Arg['pinSHA256'] = self.pinSHA256
+
+        return {
+            'server': self.server,
+            'auth': self.auth,
+            'tls': {
+                'sni': self.sni,
+                'insecure': self.insecure,
+                **pinSHA256Arg,
+            },
+            **obfsArg,
+            'socks5': {
+                'listen': '127.0.0.1:10808',
+            },
+            'http': {
+                'listen': '127.0.0.1:10809',
+            },
+        }
