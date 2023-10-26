@@ -41,13 +41,14 @@ and [hysteria](https://github.com/apernet/hysteria).
 
 There are **two** ways of installing Furious:
 
-1. Download pre-built binary release. In this case there is no dependency required:
+1. Download pre-built binary release. In this case there is no dependency required
+   (***Furious will run with compiled code and DLLs***):
     * For Windows users: Download zip file in the [release](https://github.com/LorenEteval/Furious/releases) page that
       contains pre-built binaries.
     * For macOS users: Download dmg file in the [release](https://github.com/LorenEteval/Furious/releases) page. Support
       Apple Silicon(arm64) and Intel Chip(x86_64).
-2. Install via `pip` (requires **Python 3.8 and above**). You need to follow instructions below. (available for **all**
-   platform)
+2. Install via `pip` (requires **Python 3.8 and above**, ***Furious will run on native Python***). You need to follow
+   instructions below. (available for **all** platform)
 
 ### Core Building Tools
 
@@ -82,15 +83,16 @@ These tools should be installed easily using `brew install` on macOS, or using `
 
 > Note: `PySide6-Essentials` is available [since Qt 6.3.0](https://pypi.org/project/PySide6-Essentials/#history).
 > If `PySide6-Essentials` is not found via `pip` on your platform then it means you have to install `PySide6` package
-> (i.e. Qt version < 6.3.0):
->
-> ```
-> pip install PySide6
-> ```
+> (i.e. Qt version < 6.3.0): `pip install PySide6`
 
-```
-pip install Furious-GUI
-```
+***Hysteria core are now specified as extra dependencies to avoid build problems related to go version***.
+See [setup.py](https://github.com/LorenEteval/Furious/blob/main/setup.py#L25).
+Related: [issue #27](https://github.com/LorenEteval/Furious/issues/27). You can install them **depending on your current
+go version**:
+
+* `pip install Furious-GUI` will install necessary dependencies, including PySide6, Xray-core, etc.
+* `pip install "Furious-GUI[go1.20]"` will install extra: `hysteria == 1.3.5`, `hysteria2 == 2.0.0`
+* `pip install "Furious-GUI[go1.21]"` will install extra: **newest** hysteria2
 
 To launch Furious, type:
 
@@ -188,10 +190,11 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 有**两种**安装Furious的方式：
 
-1. 下载打包好的二进制版本，无需其它依赖：
+1. 下载打包好的二进制版本，无需其它依赖（***Furious将在编译过的代码和DLL上运行***）：
     * Windows用户：在[release](https://github.com/LorenEteval/Furious/releases)界面下载打包好的zip文件。
     * macOS用户：在[release](https://github.com/LorenEteval/Furious/releases)界面下载dmg文件。支持苹果芯片（arm64）和Intel芯片（x86_64）
-2. 通过`pip`安装（需要**Python 3.8及以上**），且需要按照以下步骤进行操作。（适用于**所有**平台）
+2. 通过`pip`安装（需要**Python 3.8及以上**，***Furious将在本地Python上运行***），且需要按照以下步骤进行操作。
+   （适用于**所有**平台）
 
 ### Core编译工具
 
@@ -222,15 +225,15 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 > 注意：Furious从**0.2.11**起支持**最低PySide6版本6.1.0**。
 
 > 注意：`PySide6-Essentials`[从 Qt 6.3.0](https://pypi.org/project/PySide6-Essentials/#history)可用。
-> 如果`pip`找不到`PySide6-Essentials`，那么你应该安装`PySide6`（即Qt小于6.3.0的版本）:
->
-> ```
-> pip install PySide6
-> ```
+> 如果`pip`找不到`PySide6-Essentials`，那么你应该安装`PySide6`（即Qt小于6.3.0的版本）：`pip install PySide6`
 
-```
-pip install Furious-GUI
-```
+***Hysteria现在被指定为额外的依赖项，以避免与go版本相关的编译问题***。
+见 [setup.py](https://github.com/LorenEteval/Furious/blob/main/setup.py#L25). [Issue #27](https://github.com/LorenEteval/Furious/issues/27).
+可以**根据当前go版本**安装额外依赖:
+
+* `pip install Furious-GUI`将安装必要的依赖, 包括PySide6, Xray-core, 等
+* `pip install "Furious-GUI[go1.20]"`将安装额外的依赖：`hysteria == 1.3.5`, `hysteria2 == 2.0.0`
+* `pip install "Furious-GUI[go1.21]"`将安装额外的依赖：**最新的**hysteria2
 
 启动Furious，输入：
 
