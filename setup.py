@@ -38,8 +38,6 @@ setup(
     install_requires=[
         'PySide6-Essentials',
         'Xray-core',
-        'hysteria > 1.3.5',
-        'hysteria2 > 2.0.0',
         'tun2socks > 2.5.1',
         'ujson',
         'pybase64',
@@ -50,6 +48,10 @@ setup(
         'darkdetect; sys_platform != "darwin"',
         'darkdetect[macos-listener]; sys_platform == "darwin"',
     ],
+    extras_require={
+        'go1.20': ['hysteria > 1.3.5', 'hysteria2 == 2.0.0.1'],
+        'go1.21': ['hysteria2 > 2.0.4'],
+    },
     entry_points={
         'gui_scripts': [
             'Furious = Furious.__main__:main',
