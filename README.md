@@ -26,6 +26,7 @@ and [hysteria](https://github.com/apernet/hysteria).
     * VLESS, including [REALITY](https://github.com/XTLS/REALITY)
     * Shadowsocks
     * Trojan
+    * Hysteria2
 * Support export to JSON, share link or QRCode.
 * Built-in routing mode support: `Bypass Mainland China(with Ads filter)`, `Bypass Iran(with Ads filter)`,
   [`Route My Traffic Through Tor`](https://github.com/LorenEteval/Furious/wiki/Route-My-Traffic-Through-Tor)
@@ -81,13 +82,8 @@ These tools should be installed easily using `brew install` on macOS, or using `
 
 > Note: Furious supports **minimum PySide6 version 6.1.0** since **version 0.2.11**.
 
-> Note: `PySide6-Essentials` is available [since Qt 6.3.0](https://pypi.org/project/PySide6-Essentials/#history).
-> If `PySide6-Essentials` is not found via `pip` on your platform then it means you have to install `PySide6` package
-> (i.e. Qt version < 6.3.0): `pip install PySide6`
-
 ***Hysteria core are now specified as extra dependencies to avoid build problems related to go version***.
-See [setup.py](https://github.com/LorenEteval/Furious/blob/main/setup.py#L25).
-Related: [issue #27](https://github.com/LorenEteval/Furious/issues/27). You can install them **depending on your current
+See [issue #27](https://github.com/LorenEteval/Furious/issues/27). You can install them **depending on your current
 go version**:
 
 * `pip install Furious-GUI` will install necessary dependencies, including PySide6, Xray-core, etc.
@@ -140,20 +136,6 @@ See the build result in [github actions](https://github.com/LorenEteval/Furious/
 | macos-12     |   :heavy_check_mark:   |
 | macos-13     |   :heavy_check_mark:   |
 
-## Core Installation Script
-
-Below are some one-click/automatic installation script that's been tested to work in Furious.
-
-(`XXX Support` is referring to Furious)
-
-| Project Address                                                   |  Supported Core Installation  | Share Link Import Support? | JSON Import Support? |
-|-------------------------------------------------------------------|:-----------------------------:|:--------------------------:|:--------------------:|
-| [233boy/v2ray](https://github.com/233boy/v2ray)                   |          v2ray-core           |            Yes             |          /           |
-| [mack-a/v2ray-agent](https://github.com/mack-a/v2ray-agent)       | v2ray-core/Xray-core/hysteria |            Yes             |         Yes          |
-| [zxcvos/Xray-script](https://github.com/zxcvos/Xray-script)       |           Xray-core           |            Yes             |          /           |
-| [aleskxyz/reality-ezpz](https://github.com/aleskxyz/reality-ezpz) |      Xray-core/hysteria       |            Yes             |         Yes          |
-| [emptysuns/Hi_Hysteria](https://github.com/emptysuns/Hi_Hysteria) |           hysteria            |             No             |         Yes          |
-
 ## License
 
 License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENSE).
@@ -175,6 +157,7 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
     * VLESS，包括[REALITY](https://github.com/XTLS/REALITY)
     * Shadowsocks
     * Trojan
+    * Hysteria2
 * 支持导出为JSON、分享链接或二维码。
 * 内置路由模式支持：`绕过中国大陆（带广告过滤）`、`绕过伊朗（带广告过滤）`、
   [`通过Tor路由我的流量`](https://github.com/LorenEteval/Furious/wiki/Route-My-Traffic-Through-Tor)
@@ -224,12 +207,8 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 > 注意：Furious从**0.2.11**起支持**最低PySide6版本6.1.0**。
 
-> 注意：`PySide6-Essentials`[从 Qt 6.3.0](https://pypi.org/project/PySide6-Essentials/#history)可用。
-> 如果`pip`找不到`PySide6-Essentials`，那么你应该安装`PySide6`（即Qt小于6.3.0的版本）：`pip install PySide6`
-
-***Hysteria现在被指定为额外的依赖项，以避免与go版本相关的编译问题***。
-见 [setup.py](https://github.com/LorenEteval/Furious/blob/main/setup.py#L25). [Issue #27](https://github.com/LorenEteval/Furious/issues/27).
-可以**根据当前go版本**安装额外依赖:
+***Hysteria现在被指定为额外的依赖项，以避免与go版本相关的编译问题***，见
+[Issue #27](https://github.com/LorenEteval/Furious/issues/27)。可以**根据当前go版本**安装额外依赖:
 
 * `pip install Furious-GUI`将安装必要的依赖, 包括PySide6, Xray-core, 等
 * `pip install "Furious-GUI[go1.20]"`将安装额外的依赖：`hysteria == 1.3.5`, `hysteria2 == 2.0.0`
