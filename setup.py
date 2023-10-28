@@ -36,7 +36,7 @@ setup(
     package_data={'Furious': ['Data/**']},
     include_package_data=True,
     install_requires=[
-        'PySide6-Essentials',
+        'PySide6',
         'Xray-core',
         'tun2socks > 2.5.1',
         'ujson',
