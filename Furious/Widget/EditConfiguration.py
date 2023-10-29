@@ -1343,7 +1343,9 @@ class PingDelayWorker(Worker, QtCore.QObject, QtCore.QRunnable):
 
             return
 
-        if result is False or result is None:
+        if result is False:
+            self.serverObj['delayResult'] = 'Error'
+        elif result is None:
             self.serverObj['delayResult'] = 'Timeout'
         else:
             self.serverObj['delayResult'] = f'{round(result)}ms'
@@ -1378,8 +1380,8 @@ class DownSpeedWorker(Worker):
         if self.core is not None:
             self.core.stop()
 
-    def cancelTest(self):
-        self.serverObj['speedResult'] = 'Canceled'
+    def invalidConfigCancelTest(self):
+        self.serverObj['speedResult'] = 'Invalid'
         self.updateResult()
         self.testFinished = True
 
@@ -1396,7 +1398,7 @@ class DownSpeedWorker(Worker):
         config = self.serverObj.get('config', '')
 
         if not config:
-            self.cancelTest()
+            self.invalidConfigCancelTest()
 
             return
 
@@ -1409,7 +1411,7 @@ class DownSpeedWorker(Worker):
         except Exception:
             # Any non-exit exceptions
 
-            self.cancelTest()
+            self.invalidConfigCancelTest()
 
             return
 
@@ -1419,7 +1421,7 @@ class DownSpeedWorker(Worker):
             elif exitcode == Core.ExitCode.ServerStartFailure:
                 self.serverObj['speedResult'] = 'Start failed'
             else:
-                self.serverObj['speedResult'] = 'Canceled'
+                self.serverObj['speedResult'] = f'Core exited {exitcode}'
 
             self.updateResult()
 
@@ -1493,7 +1495,7 @@ class DownSpeedWorker(Worker):
                     )
                 )
         else:
-            self.cancelTest()
+            self.invalidConfigCancelTest()
 
             return
 
@@ -1503,7 +1505,11 @@ class DownSpeedWorker(Worker):
             )
 
             self.networkReply = self.networkAccessManager.get(
-                QNetworkRequest(QtCore.QUrl('http://cachefly.cachefly.net/100mb.test'))
+                QNetworkRequest(
+                    QtCore.QUrl(
+                        'http://speed.cloudflare.com/__down?during=download&bytes=104857600'
+                    )
+                )
             )
             self.networkReply.readyRead.connect(self.handleReadyRead)
             self.networkReply.finished.connect(self.handleFinished)
