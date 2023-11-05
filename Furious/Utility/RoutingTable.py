@@ -29,11 +29,19 @@ import subprocess
 logger = logging.getLogger(__name__)
 
 
+def getDictTuple(returncode, stdout, stderr):
+    return {
+        'returncode': returncode,
+        'stdout': stdout,
+        'stderr': stderr,
+    }
+
+
 class RoutingTable:
     Relations = list()
 
     DEFAULT_GATEWAY_WINDOWS = re.compile(
-        r'0\.0\.0\.0.*?0\.0\.0\.0.*?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})',
+        r'0\.0\.0\.0.\s*0\.0\.0\.0.\s*(\S+)',
     )
     DEFAULT_GATEWAY_DARWIN = re.compile(
         r'gateway:\s*(\S+)',
@@ -95,12 +103,12 @@ class RoutingTable:
             if returncode == 0:
                 logger.info(
                     f'add rule {source}->{destination} to routing table success. '
-                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                    f'{getDictTuple(returncode, stdout, stderr)}'
                 )
             else:
                 logger.error(
                     f'add rule {source}->{destination} to routing table failed. '
-                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                    f'{getDictTuple(returncode, stdout, stderr)}'
                 )
 
     @staticmethod
@@ -230,12 +238,12 @@ class RoutingTable:
             if returncode == 0:
                 logger.info(
                     f'set device \'{deviceName}\' gateway address \'{gatewayAddress}\' success. '
-                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                    f'{getDictTuple(returncode, stdout, stderr)}'
                 )
             else:
                 logger.error(
                     f'set device \'{deviceName}\' gateway address \'{gatewayAddress}\' failed. '
-                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                    f'{getDictTuple(returncode, stdout, stderr)}'
                 )
 
     @staticmethod
@@ -296,12 +304,12 @@ class RoutingTable:
             if returncode == 0:
                 logger.info(
                     f'delete rule {source}->{destination} from routing table success. '
-                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                    f'{getDictTuple(returncode, stdout, stderr)}'
                 )
             else:
                 logger.error(
                     f'delete rule {source}->{destination} from routing table failed. '
-                    f'Returncode: {returncode}. Stdout: {stdout}. Stderr: {stderr}'
+                    f'{getDictTuple(returncode, stdout, stderr)}'
                 )
 
     @staticmethod
