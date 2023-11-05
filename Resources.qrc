@@ -17,6 +17,7 @@
         <file alias="pencil-square.svg">Icons/bootstrap/pencil-square.svg</file>
         <file alias="qr-code.svg">Icons/bootstrap/qr-code.svg</file>
         <file alias="rocket-takeoff.svg">Icons/bootstrap/rocket-takeoff.svg</file>
+        <file alias="rocket-takeoff-admin-connected.svg">Icons/bootstrap/rocket-takeoff-admin-connected.svg</file>
         <file alias="rocket-takeoff-connected.svg">Icons/bootstrap/rocket-takeoff-connected.svg</file>
         <file alias="rocket-takeoff-connected-dark.svg">Icons/bootstrap/rocket-takeoff-connected-dark.svg</file>
         <file alias="rocket-takeoff-dark.svg">Icons/bootstrap/rocket-takeoff-dark.svg</file>
