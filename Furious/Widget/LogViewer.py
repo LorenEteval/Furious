@@ -286,6 +286,8 @@ class LogViewerWidget(MainWindow):
         else:
             textBrowser.append(line)
 
+        APP().processEvents()
+
         if scrollEnds:
             vScrollBar.setValue(vScrollBar.maximum())  # Scrolls to the bottom
             hScrollBar.setValue(0)  # scroll to the left
