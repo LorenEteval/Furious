@@ -293,7 +293,7 @@ class Application(SingletonApplication):
             self.currentTheme = darkdetect.theme()
             self.themeDetectTimer = QtCore.QTimer()
             self.themeDetectTimer.timeout.connect(handleTimeout)
-            self.themeDetectTimer.start(1)
+            self.themeDetectTimer.start(1000)
         else:
             logger.info('theme detect method uses listener implementation')
 

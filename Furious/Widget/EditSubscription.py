@@ -42,6 +42,7 @@ from Furious.Utility.Utility import (
     bootstrapIcon,
     enumValueWrapper,
     moveToCenter,
+    getConnectedColor,
 )
 from Furious.Utility.Translator import Translatable, gettext as _
 
@@ -287,7 +288,7 @@ class EditSubsTableWidget(Translatable, SupportConnectedCallback, TableWidget):
             self.setItem(row, column, item)
 
     def connectedCallback(self):
-        self.setSelectionColor(Color.LIGHT_RED_)
+        self.setSelectionColor(getConnectedColor())
 
     def disconnectedCallback(self):
         self.setSelectionColor(Color.LIGHT_BLUE)

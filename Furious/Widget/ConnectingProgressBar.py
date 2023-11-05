@@ -20,6 +20,8 @@ from Furious.Utility.Utility import (
     bootstrapIcon,
     StateContext,
     SupportConnectedCallback,
+    getConnectedColor,
+    getConnectedWindowIcon,
 )
 from Furious.Utility.Translator import Translatable, gettext as _
 
@@ -80,8 +82,8 @@ class ConnectingProgressBar(Translatable, SupportConnectedCallback, QWidget):
         self.hide()
 
     def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
-        self.progressBar.setStyleSheet(self.getStyleSheet(Color.LIGHT_RED_))
+        self.setWindowIcon(getConnectedWindowIcon())
+        self.progressBar.setStyleSheet(self.getStyleSheet(getConnectedColor()))
 
     def disconnectedCallback(self):
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
