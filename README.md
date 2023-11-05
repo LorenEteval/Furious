@@ -61,7 +61,7 @@ There are **two** ways of installing Furious:
 As mentioned above, cores are shipped as Python bindings to support cross-platform running. So to install Furious
 via `pip` you must have tools ready for building these bindings for your current platform first. Core building requires:
 
-* [go](https://go.dev/doc/install) `1.20.x` in your PATH. To check go is ready,
+* [go](https://go.dev/doc/install) in your PATH. go 1.20.0 and above is recommended. To check go is ready,
   type `go version`. Also, if google service is blocked in your region(such as Mainland China), you have to configure
   your GOPROXY to be able to pull go packages. For Chinese users, refer to [goproxy.cn](https://goproxy.cn/) for more
   information.
@@ -188,8 +188,8 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 根据上文所述，Core是对应的Python绑定以支持跨平台运行。所以通过`pip`安装Furious首先得准备好当前平台的Core编译工具。编译Core需要：
 
-* [go](https://go.dev/doc/install) `1.20.x` 在PATH中。要检查go是否就绪，输入`go version`
-  。另外，如果当前所在地区（例如中国大陆）屏蔽了google服务，还需要配置GOPROXY才能拉取go包。对于中国用户，请访问[goproxy.cn](https://goproxy.cn/)
+* [go](https://go.dev/doc/install) 在PATH中。推荐go 1.20及以上的版本。要检查go是否就绪，输入`go version`。
+  另外，如果当前所在地区（例如中国大陆）屏蔽了google服务，还需要配置GOPROXY才能拉取go包。对于中国用户，请访问[goproxy.cn](https://goproxy.cn/)
   了解更多信息。
 * [cmake](https://cmake.org/download/)在PATH中. 要检查cmake是否就绪，输入`cmake --version`。
 * GNU C++编译器（即GNU C++工具链）。要检查GNU C++编译器是否准备就绪，输入`g++ --version`
