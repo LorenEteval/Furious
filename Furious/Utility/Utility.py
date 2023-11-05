@@ -494,8 +494,8 @@ def eventLoopWait(ms):
     # Protect qWait method does not exist in some
     # old PySide6 version
     if PYSIDE6_VERSION < '6.3.1':
-        for counter in range(0, ms, 1):
-            time.sleep(1 / 1000)
+        for counter in range(0, ms, 10):
+            time.sleep(10 / 1000)
 
             APP().processEvents()
     else:
@@ -546,14 +546,15 @@ def getUbuntuRelease():
 
 @functools.lru_cache(None)
 def getConnectedColor():
-    if not isVPNMode():
+    if not isAdministrator():
         return Color.LIGHT_RED_
     else:
         return Color.LIGHT_PURPLE
 
 
+@functools.lru_cache(None)
 def getConnectedWindowIcon():
-    if not isVPNMode():
+    if not isAdministrator():
         return bootstrapIcon('rocket-takeoff-connected-dark.svg')
     else:
         return bootstrapIcon('rocket-takeoff-admin-connected.svg')
