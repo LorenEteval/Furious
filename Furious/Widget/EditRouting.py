@@ -60,6 +60,8 @@ from Furious.Utility.Utility import (
     bootstrapIcon,
     enumValueWrapper,
     moveToCenter,
+    getConnectedColor,
+    getConnectedWindowIcon,
 )
 from Furious.Utility.Translator import Translatable, gettext as _
 from Furious.Utility.Theme import DraculaTheme
@@ -368,7 +370,7 @@ class SaveAction(Action):
             try:
                 jsonList.append(ujson.loads(text))
             except ujson.JSONDecodeError as decodeError:
-                self.saveErrorBox.decodeError = f'{core}: {decodeError}'
+                self.saveErrorBox.decodeError = f'{decodeError}'
                 self.saveErrorBox.setWindowTitle(
                     _('Error saving routing configuration')
                 )
@@ -385,6 +387,11 @@ class SaveAction(Action):
 
         if parentIndex >= 0:
             for core, json in zip(coreList, jsonList):
+                # TODO: Better way to do this.
+                #   Fix https://github.com/LorenEteval/Furious/issues/33
+                if core.count(XrayCore.name()) > 0:
+                    core = XrayCore.name()
+
                 APP().RoutesWidget.RoutesList[parentIndex][core] = json
 
             # Sync it
@@ -561,7 +568,7 @@ class RoutingEditor(MainWindow):
         self.title = ''
 
         if APP().isConnected():
-            self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+            self.setWindowIcon(getConnectedWindowIcon())
         else:
             self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
@@ -724,7 +731,7 @@ class RoutingDialog(Dialog):
         self.isBuiltin = isBuiltin
 
         if APP().isConnected():
-            self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+            self.setWindowIcon(getConnectedWindowIcon())
         else:
             self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
@@ -1133,7 +1140,7 @@ class EditRoutingTableWidget(Translatable, SupportConnectedCallback, TableWidget
             self.setItem(row, column, item)
 
     def connectedCallback(self):
-        self.setSelectionColor(Color.LIGHT_RED_)
+        self.setSelectionColor(getConnectedColor())
         # Reactivate with possible color
         self.activateItemByIndex(routingToIndex(), activate=True)
 

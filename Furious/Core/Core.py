@@ -118,8 +118,8 @@ class Core:
 
         if self.checkAlive():
             # Start core daemon
-            self._stdoutTimer.start()
-            self._daemonTimer.start()
+            self._stdoutTimer.start(100)
+            self._daemonTimer.start(1000)
 
     def stop(self):
         if self.isAlive():
@@ -188,7 +188,7 @@ class StdoutRedirectHelper:
 
                                 pass
 
-                    time.sleep(1 / 1000)
+                    time.sleep(1 / 10)
 
         msgThread = threading.Thread(target=produceMsg, daemon=True)
         msgThread.start()
@@ -271,7 +271,7 @@ def startXrayCore(json, msgQueue):
 
                                     pass
 
-                    time.sleep(1 / 1000)
+                    time.sleep(1 / 10)
 
             try:
                 msgThread = threading.Thread(target=produceMsg, daemon=True)

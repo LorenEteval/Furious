@@ -56,6 +56,7 @@ from Furious.Utility.Utility import (
     eventLoopWait,
     swapListItem,
     moveToCenter,
+    getConnectedColor,
 )
 from Furious.Utility.Translator import Translatable, gettext as _
 from Furious.Utility.Theme import DraculaTheme
@@ -1655,7 +1656,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
 
         self.downSpeedTimer = QtCore.QTimer()
         self.downSpeedTimer.timeout.connect(self.downSpeedTimeoutCallback)
-        self.downSpeedTimer.start(1)
+        self.downSpeedTimer.start(100)
 
         # Delegate
         self.delegate = StyledItemDelegate(parent=self)
@@ -2397,7 +2398,7 @@ class ServerWidget(Translatable, SupportConnectedCallback, TableWidget):
             super().keyPressEvent(event)
 
     def connectedCallback(self):
-        self.setSelectionColor(Color.LIGHT_RED_)
+        self.setSelectionColor(getConnectedColor())
         # Reactivate with possible color
         self.activateItemByIndex(self.activatedItemIndex)
 

@@ -25,6 +25,7 @@ from Furious.Utility.Constants import (
     DEFAULT_TOR_SOCKS_PORT,
     DEFAULT_TOR_HTTPS_PORT,
     DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT,
+    Color,
 )
 
 from PySide6 import QtCore
@@ -541,6 +542,21 @@ def getUbuntuRelease():
         # Any non-exit exceptions
 
         return ''
+
+
+@functools.lru_cache(None)
+def getConnectedColor():
+    if not isVPNMode():
+        return Color.LIGHT_RED_
+    else:
+        return Color.LIGHT_PURPLE
+
+
+def getConnectedWindowIcon():
+    if not isVPNMode():
+        return bootstrapIcon('rocket-takeoff-connected-dark.svg')
+    else:
+        return bootstrapIcon('rocket-takeoff-admin-connected.svg')
 
 
 def swapListItem(listOrTuple, index0, index1):

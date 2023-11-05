@@ -97,5 +97,6 @@ class LogType:
 
 
 class Color:
-    LIGHT_RED_ = '#FF7276'
     LIGHT_BLUE = '#43ACED'
+    LIGHT_RED_ = '#FF7276'
+    LIGHT_PURPLE = '#DA70D6'

@@ -23,6 +23,8 @@ from Furious.Utility.Utility import (
     NeedSyncSettings,
     bootstrapIcon,
     moveToCenter,
+    getConnectedColor,
+    getConnectedWindowIcon,
 )
 from Furious.Utility.Translator import Translatable, gettext as _
 
@@ -79,7 +81,7 @@ class Dialog(Translatable, SupportConnectedCallback, QDialog):
         moveToCenter(self)
 
     def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+        self.setWindowIcon(getConnectedWindowIcon())
 
     def disconnectedCallback(self):
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
@@ -109,7 +111,7 @@ class HeaderView(SupportConnectedCallback, QHeaderView):
 
     def connectedCallback(self):
         self.setStyleSheet(
-            f'QHeaderView::section:hover {{ background-color: {Color.LIGHT_RED_}; }}'
+            f'QHeaderView::section:hover {{ background-color: {getConnectedColor()}; }}'
         )
 
     def disconnectedCallback(self):
@@ -149,7 +151,7 @@ class ListWidget(SupportConnectedCallback, QListWidget):
         return sorted(list(set(index.row() for index in self.selectedIndexes())))
 
     def connectedCallback(self):
-        self.setSelectionColor(Color.LIGHT_RED_)
+        self.setSelectionColor(getConnectedColor())
 
     def disconnectedCallback(self):
         self.setSelectionColor(Color.LIGHT_BLUE)
@@ -189,7 +191,7 @@ class MainWindow(Translatable, SupportConnectedCallback, NeedSyncSettings, QMain
         self.hide()
 
     def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+        self.setWindowIcon(getConnectedWindowIcon())
 
     def disconnectedCallback(self):
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
@@ -220,7 +222,7 @@ class Menu(Translatable, SupportConnectedCallback, QMenu):
                 pass
 
         if APP().isConnected():
-            self.setStyleSheet(self.getStyleSheet(Color.LIGHT_RED_))
+            self.setStyleSheet(self.getStyleSheet(getConnectedColor()))
         else:
             self.setStyleSheet(self.getStyleSheet(Color.LIGHT_BLUE))
 
@@ -237,7 +239,7 @@ class Menu(Translatable, SupportConnectedCallback, QMenu):
         )
 
     def connectedCallback(self):
-        self.setStyleSheet(self.getStyleSheet(Color.LIGHT_RED_))
+        self.setStyleSheet(self.getStyleSheet(getConnectedColor()))
 
     def disconnectedCallback(self):
         self.setStyleSheet(self.getStyleSheet(Color.LIGHT_BLUE))
@@ -252,7 +254,7 @@ class MenuBar(SupportConnectedCallback, QMenuBar):
         super().__init__(*args, **kwargs)
 
         if APP().isConnected():
-            self.setSelectionColor(Color.LIGHT_RED_)
+            self.setSelectionColor(getConnectedColor())
         else:
             self.setSelectionColor(Color.LIGHT_BLUE)
 
@@ -268,7 +270,7 @@ class MenuBar(SupportConnectedCallback, QMenuBar):
         )
 
     def connectedCallback(self):
-        self.setSelectionColor(Color.LIGHT_RED_)
+        self.setSelectionColor(getConnectedColor())
 
     def disconnectedCallback(self):
         self.setSelectionColor(Color.LIGHT_BLUE)
@@ -286,7 +288,7 @@ class MessageBox(Translatable, SupportConnectedCallback, QMessageBox):
         return self
 
     def connectedCallback(self):
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
+        self.setWindowIcon(getConnectedWindowIcon())
 
     def disconnectedCallback(self):
         self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
@@ -371,7 +373,7 @@ class TableWidget(QTableWidget):
                 item.setFont(font)
 
                 if APP().isConnected():
-                    item.setForeground(QColor(Color.LIGHT_RED_))
+                    item.setForeground(QColor(getConnectedColor()))
                 else:
                     item.setForeground(QColor(Color.LIGHT_BLUE))
         else:
