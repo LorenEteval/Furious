@@ -1037,12 +1037,19 @@ class ConnectAction(Action):
 
                             break
 
-                    eventLoopWait(100)
+                    if not self.coreRunning:
+                        foundDevice = False
+
+                        break
+                    else:
+                        eventLoopWait(100)
 
                 if not foundDevice:
                     logger.error(
                         f'find TUN device \'{APPLICATION_TUN_DEVICE_NAME}\' failed'
                     )
+
+                    return
 
                 RoutingTable.addRelations()
                 RoutingTable.setDeviceGatewayAddress(
@@ -1071,6 +1078,8 @@ class ConnectAction(Action):
             if error:
                 self.coreRunning = False
                 self.disconnectReason = _('DNS resolution failed') + f': {coreAddr}'
+
+                RoutingTable.Relations.clear()
             else:
                 for address in resolved:
                     RoutingTable.Relations.append([address, defaultGateway[0]])
