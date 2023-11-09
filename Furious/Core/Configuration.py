@@ -535,6 +535,29 @@ class ProxyOutboundObject(OutboundObject):
                         'type': headerType,
                     }
 
+                # Request settings for HTTP
+                if self.kwargs.get('host'):
+                    TcpObject['header']['request'] = {}
+                    requestObject = TcpObject['header']['request']
+
+                    requestObject['version'] = "1.1"
+                    requestObject['method'] = "GET"
+                    requestObject['path'] = [self.kwargs.get('path', '/')]
+
+                    requestObject['headers'] = {
+                        'Host': [unquote(self.kwargs.get('host'))],
+                        'User-Agent': [
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
+                        ],
+                        "Accept-Encoding": [
+                            "gzip, deflate"
+                        ],
+                        "Connection": [
+                            "keep-alive"
+                        ],
+                        "Pragma": "no-cache"
+                    }
+
             return TcpObject
 
         elif self.type_ == 'kcp':
