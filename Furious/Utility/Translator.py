@@ -1074,7 +1074,7 @@ TRANSLATION = {
         'TW': 'DNS解析超時',
     },
     # Errors
-    f'{APPLICATION_NAME} is not be able to run on this operating system.': {
+    f'{APPLICATION_NAME} is not able to run on this operating system.': {
         'ES': f'{APPLICATION_NAME} no puede ejecutarse en este sistema operativo.',
         'ZH': f'{APPLICATION_NAME}无法在此操作系统上运行。',
         'TW': f'{APPLICATION_NAME}無法在此操作系統上運行。',
