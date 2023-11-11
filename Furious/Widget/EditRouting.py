@@ -247,11 +247,37 @@ DEFAULT_USER_ROUTING = {
         'domainStrategy': 'IPIfNonMatch',
         'domainMatcher': 'hybrid',
         'rules': [
+            # Example direct domain
+            {
+                'type': 'field',
+                'outboundTag': 'direct',
+                'domain': [
+                    'domain:example-direct1.suffix',
+                    'domain:example-direct2.suffix',
+                ],
+            },
+            # Example proxy domain
+            {
+                'type': 'field',
+                'outboundTag': 'proxy',
+                'domain': [
+                    'domain:example-proxy1.suffix',
+                    'domain:example-proxy2.suffix',
+                ],
+            },
+            # Example Ads
+            {
+                'type': 'field',
+                'outboundTag': 'block',
+                'domain': [
+                    'geosite:category-ads-all',
+                ],
+            },
             # Proxy everything
             {
                 'type': 'field',
-                'port': '0-65535',
                 'outboundTag': 'proxy',
+                'port': '0-65535',
             },
         ],
         'balancers': [],
