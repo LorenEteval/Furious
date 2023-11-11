@@ -69,41 +69,41 @@ BUILTIN_ROUTING_TABLE = {
     },
     'Bypass Iran': {
         XrayCore.name(): {
-            "domainStrategy": "IPIfNonMatch",
-            "domainMatcher": "hybrid",
-            "rules": [
+            'domainStrategy': 'IPIfNonMatch',
+            'domainMatcher': 'hybrid',
+            'rules': [
                 # ads
                 {
-                    "type": "field",
-                    "domain": [
-                        "geosite:category-ads-all",
-                        "iran:ads",
+                    'type': 'field',
+                    'domain': [
+                        'geosite:category-ads-all',
+                        'iran:ads',
                     ],
-                    "outboundTag": "block",
+                    'outboundTag': 'block',
                 },
                 # Iran sites
                 {
-                    "type": "field",
-                    "domain": [
-                        "iran:ir",
-                        "iran:other",
+                    'type': 'field',
+                    'domain': [
+                        'iran:ir',
+                        'iran:other',
                     ],
-                    "outboundTag": "direct",
+                    'outboundTag': 'direct',
                 },
                 # Iran IP
                 {
-                    "type": "field",
-                    "ip": [
-                        "geoip:private",
-                        "geoip:ir",
+                    'type': 'field',
+                    'ip': [
+                        'geoip:private',
+                        'geoip:ir',
                     ],
-                    "outboundTag": "direct",
+                    'outboundTag': 'direct',
                 },
                 # Proxy everything
                 {
-                    "type": "field",
-                    "port": "0-65535",
-                    "outboundTag": "proxy",
+                    'type': 'field',
+                    'port': '0-65535',
+                    'outboundTag': 'proxy',
                 },
             ],
         },
