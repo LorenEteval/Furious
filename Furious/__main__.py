@@ -54,7 +54,7 @@ def main():
             messageBox.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
             messageBox.setWindowTitle(_(APPLICATION_NAME))
             messageBox.setText(
-                _(f'{APPLICATION_NAME} is not be able to run on this operating system.')
+                _(f'{APPLICATION_NAME} is not able to run on this operating system.')
             )
 
             if hasattr(os, 'uname'):
