@@ -281,12 +281,8 @@ class LogViewerWidget(MainWindow):
         vScrollBar = textBrowser.verticalScrollBar()
         scrollEnds = vScrollBar.maximum() - vScrollBar.value() <= 10
 
-        if line.endswith('\n'):
-            textBrowser.insertPlainText(line)
-        else:
-            textBrowser.append(line)
-
-        APP().processEvents()
+        # Fix insertPlainText bug if user cursor is present
+        textBrowser.append(line.rstrip())
 
         if scrollEnds:
             vScrollBar.setValue(vScrollBar.maximum())  # Scrolls to the bottom
