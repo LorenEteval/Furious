@@ -845,7 +845,7 @@ class Outbounds:
 
 
 class XrayCoreConfiguration:
-    DEFAULT_CONF = {
+    DEFAULT_JSON = {
         # Default log configuration
         'log': {
             'access': '',
@@ -895,7 +895,7 @@ class XrayCoreConfiguration:
 
     @staticmethod
     def getDefaultJSON():
-        return copy.deepcopy(XrayCoreConfiguration.DEFAULT_CONF)
+        return copy.deepcopy(XrayCoreConfiguration.DEFAULT_JSON)
 
     @staticmethod
     def build(proxyOutboundObject):
