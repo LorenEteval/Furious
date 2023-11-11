@@ -34,6 +34,10 @@ import multiprocessing
 logger = logging.getLogger(__name__)
 
 
+# 300ms
+STDOUT_REDIRECT_THRESHOLD = 300
+
+
 class Core:
     class ExitCode:
         ConfigurationError = 23
@@ -118,8 +122,8 @@ class Core:
 
         if self.checkAlive():
             # Start core daemon
-            self._stdoutTimer.start(100)
-            self._daemonTimer.start(1000)
+            self._stdoutTimer.start(STDOUT_REDIRECT_THRESHOLD)
+            self._daemonTimer.start(2000)
 
     def stop(self):
         if self.isAlive():
@@ -188,7 +192,7 @@ class StdoutRedirectHelper:
 
                                 pass
 
-                    time.sleep(1 / 10)
+                    time.sleep(STDOUT_REDIRECT_THRESHOLD / 1000)
 
         msgThread = threading.Thread(target=produceMsg, daemon=True)
         msgThread.start()
@@ -271,7 +275,7 @@ def startXrayCore(json, msgQueue):
 
                                     pass
 
-                    time.sleep(1 / 10)
+                    time.sleep(STDOUT_REDIRECT_THRESHOLD / 1000)
 
             try:
                 msgThread = threading.Thread(target=produceMsg, daemon=True)
