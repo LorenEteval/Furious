@@ -1448,10 +1448,21 @@ class DownSpeedWorker(Worker):
                     },
                 },
             ]
+
+            try:
+                for outboundObject in coreJSON['outbounds']:
+                    if outboundObject['tag'] == 'proxy':
+                        # Avoid confusion with potentially existing 'proxy' tag
+                        outboundObject['tag'] = 'proxy20809'
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
             # No routing
             coreJSON['routing'] = {}
 
-            self.core = XrayCore(waitCore=False)
+            self.core = XrayCore()
             self.core.registerExitCallback(coreExitCallback)
             self.core.start(
                 ujson.dumps(
@@ -1474,7 +1485,7 @@ class DownSpeedWorker(Worker):
             if coreType == Hysteria1.name():
                 # User acl and mmdb already ignored
 
-                self.core = Hysteria1(waitCore=False)
+                self.core = Hysteria1()
                 self.core.registerExitCallback(coreExitCallback)
                 self.core.start(
                     ujson.dumps(
@@ -1486,7 +1497,7 @@ class DownSpeedWorker(Worker):
                     '',
                 )
             else:
-                self.core = Hysteria2(waitCore=False)
+                self.core = Hysteria2()
                 self.core.registerExitCallback(coreExitCallback)
                 self.core.start(
                     ujson.dumps(
