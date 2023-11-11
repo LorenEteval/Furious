@@ -37,7 +37,345 @@ class UnsupportedServerExport(Exception):
     pass
 
 
+class ExportFactory:
+    def export(self, remark, jsonObject):
+        raise NotImplementedError
+
+
+class XrayFactory:
+    @staticmethod
+    def streamTLSSettings(streamObject, tlsType):
+        kwargs = {}
+
+        if tlsType == '' or tlsType == 'none':
+            return kwargs
+
+        tlsobj = streamObject[ProxyOutboundObject.streamTLSKey(tlsType)]
+
+        if tlsType == 'reality' or tlsType == 'tls':
+            if tlsobj.get('fingerprint'):
+                kwargs['fp'] = tlsobj['fingerprint']
+
+            if tlsobj.get('serverName'):
+                kwargs['sni'] = tlsobj['serverName']
+
+            if tlsobj.get('alpn'):
+                kwargs['alpn'] = quote(','.join(tlsobj['alpn']))
+
+        if tlsType == 'reality':
+            # More kwargs for reality
+            if tlsobj.get('publicKey'):
+                kwargs['pbk'] = tlsobj['publicKey']
+
+            if tlsobj.get('shortId'):
+                kwargs['sid'] = tlsobj['shortId']
+
+            if tlsobj.get('spiderX'):
+                kwargs['spx'] = quote(tlsobj['spiderX'])
+
+        return kwargs
+
+    @staticmethod
+    def getProxyOutboundObject(jsonObject):
+        for outboundObject in jsonObject['outbounds']:
+            if outboundObject['tag'] == 'proxy':
+                return outboundObject
+
+        raise Exception('No proxy outbound found')
+
+
+class ExportVMess(ExportFactory):
+    @staticmethod
+    def streamNetSettings(streamObject, netType):
+        kwargs = {}
+
+        netobj = streamObject.get(ProxyOutboundObject.streamNetworkKey(netType))
+
+        if netobj is None:
+            return kwargs
+
+        def hasKey(key):
+            return netobj.get(key) is not None
+
+        if netType == 'tcp':
+            try:
+                kwargs['type'] = netobj['header']['type']
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif netType == 'kcp':
+            try:
+                # Get order matters here
+                if hasKey('seed'):
+                    kwargs['path'] = netobj['seed']
+
+                kwargs['type'] = netobj['header']['type']
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif netType == 'ws':
+            try:
+                # Get order matters here
+                if hasKey('path'):
+                    kwargs['path'] = quote(netobj['path'])
+
+                if netobj['headers']['Host']:
+                    kwargs['host'] = quote(netobj['headers']['Host'])
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif netType == 'h2' or netType == 'http':
+            try:
+                # Get order matters here
+                if hasKey('path'):
+                    kwargs['path'] = quote(netobj['path'])
+
+                kwargs['host'] = quote(','.join(netobj['host']))
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif netType == 'quic':
+            try:
+                # Get order matters here
+                if hasKey('security'):
+                    kwargs['host'] = netobj['security']
+
+                if hasKey('key'):
+                    kwargs['path'] = quote(netobj['key'])
+
+                kwargs['type'] = netobj['header']['type']
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif netType == 'grpc':
+            if hasKey('serviceName'):
+                kwargs['path'] = netobj['serviceName']
+
+        return kwargs
+
+    def export(self, remark, jsonObject):
+        proxyOutbound = XrayFactory.getProxyOutboundObject(jsonObject)
+
+        proxyServer = proxyOutbound['settings']['vnext'][0]
+        proxyServerUser = proxyServer['users'][0]
+
+        proxyStream, proxyStreamNet, proxyStreamTLS = (
+            proxyOutbound['streamSettings'],
+            proxyOutbound['streamSettings']['network'],
+            proxyOutbound['streamSettings'].get('security', 'none'),
+        )
+
+        return (
+            'vmess://'
+            + Base64Encoder.encode(
+                ujson.dumps(
+                    {
+                        'v': '2',
+                        'ps': quote(remark),
+                        'add': proxyServer['address'],
+                        'port': proxyServer['port'],
+                        'id': proxyServerUser['id'],
+                        'aid': proxyServerUser['alterId'],
+                        'scy': proxyServerUser['security'],
+                        'net': proxyStreamNet,
+                        'tls': proxyStreamTLS,
+                        # kwargs
+                        **ExportVMess.streamNetSettings(proxyStream, proxyStreamNet),
+                        **XrayFactory.streamTLSSettings(proxyStream, proxyStreamTLS),
+                    },
+                    ensure_ascii=False,
+                    escape_forward_slashes=False,
+                ).encode()
+            ).decode()
+        )
+
+
+class ExportVLESS(ExportFactory):
+    @staticmethod
+    def streamNetSettings(streamObject, netType):
+        kwargs = {}
+
+        netobj = streamObject.get(ProxyOutboundObject.streamNetworkKey(netType))
+
+        if netobj is None:
+            return kwargs
+
+        def hasKey(key):
+            return netobj.get(key) is not None
+
+        if netType == 'tcp':
+            try:
+                kwargs['headerType'] = netobj['header']['type']
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif netType == 'kcp':
+            try:
+                # Get order matters here
+                if hasKey('seed'):
+                    kwargs['seed'] = netobj['seed']
+
+                kwargs['headerType'] = netobj['header']['type']
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif netType == 'ws':
+            try:
+                # Get order matters here
+                if hasKey('path'):
+                    kwargs['path'] = quote(netobj['path'])
+
+                if netobj['headers']['Host']:
+                    kwargs['host'] = quote(netobj['headers']['Host'])
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif netType == 'h2' or netType == 'http':
+            try:
+                # Get order matters here
+                if hasKey('path'):
+                    kwargs['path'] = quote(netobj['path'])
+
+                kwargs['host'] = quote(','.join(netobj['host']))
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif netType == 'quic':
+            try:
+                # Get order matters here
+                if hasKey('security'):
+                    kwargs['quicSecurity'] = netobj['security']
+
+                if hasKey('key'):
+                    kwargs['path'] = quote(netobj['key'])
+
+                kwargs['headerType'] = netobj['header']['type']
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif netType == 'grpc':
+            if hasKey('serviceName'):
+                kwargs['serviceName'] = netobj['serviceName']
+
+        return kwargs
+
+    def export(self, remark, jsonObject):
+        proxyOutbound = XrayFactory.getProxyOutboundObject(jsonObject)
+
+        proxyServer = proxyOutbound['settings']['vnext'][0]
+        proxyServerUser = proxyServer['users'][0]
+
+        proxyStream, proxyStreamNet, proxyStreamTLS = (
+            proxyOutbound['streamSettings'],
+            proxyOutbound['streamSettings']['network'],
+            proxyOutbound['streamSettings'].get('security', 'none'),
+        )
+
+        flowArg = {}
+
+        if proxyServerUser.get('flow'):
+            flowArg['flow'] = proxyServerUser['flow']
+
+        netloc = (
+            f'{proxyServerUser["id"]}@{proxyServer["address"]}:{proxyServer["port"]}'
+        )
+
+        query = '&'.join(
+            f'{key}={value}'
+            for key, value in {
+                'encryption': proxyServerUser['encryption'],
+                'type': proxyStreamNet,
+                'security': proxyStreamTLS,
+                # kwargs
+                **flowArg,
+                **ExportVLESS.streamNetSettings(proxyStream, proxyStreamNet),
+                **XrayFactory.streamTLSSettings(proxyStream, proxyStreamTLS),
+            }.items()
+        )
+
+        return urlunparse(['vless', netloc, '', '', query, quote(remark)])
+
+
+class ExportSS(ExportVLESS):
+    def export(self, remark, jsonObject):
+        proxyOutbound = XrayFactory.getProxyOutboundObject(jsonObject)
+
+        proxyServer = proxyOutbound['settings']['servers'][0]
+
+        method, password, address, port = (
+            proxyServer['method'],
+            proxyServer['password'],
+            proxyServer['address'],
+            proxyServer['port'],
+        )
+
+        netloc = f'{quote(method)}:{quote(password)}@{address}:{port}'
+
+        return urlunparse(['ss', netloc, '', '', '', quote(remark)])
+
+
+class ExportTrojan(ExportVLESS):
+    def export(self, remark, jsonObject):
+        proxyOutbound = XrayFactory.getProxyOutboundObject(jsonObject)
+
+        proxyServer = proxyOutbound['settings']['servers'][0]
+
+        password, address, port = (
+            proxyServer['password'],
+            proxyServer['address'],
+            proxyServer['port'],
+        )
+
+        proxyStream, proxyStreamNet, proxyStreamTLS = (
+            proxyOutbound['streamSettings'],
+            proxyOutbound['streamSettings']['network'],
+            proxyOutbound['streamSettings'].get('security', 'none'),
+        )
+
+        netloc = f'{quote(password)}@{address}:{port}'
+
+        query = '&'.join(
+            f'{key}={value}'
+            for key, value in {
+                'type': proxyStreamNet,
+                'security': proxyStreamTLS,
+                # kwargs
+                **ExportVLESS.streamNetSettings(proxyStream, proxyStreamNet),
+                **XrayFactory.streamTLSSettings(proxyStream, proxyStreamTLS),
+            }.items()
+        )
+
+        return urlunparse(['trojan', netloc, '', '', query, quote(remark)])
+
+
 class Configuration:
+    ExportClassMap = {
+        Protocol.VMess: ExportVMess,
+        Protocol.VLESS: ExportVLESS,
+        Protocol.Shadowsocks: ExportSS,
+        Protocol.Trojan: ExportTrojan,
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -69,346 +407,38 @@ class Configuration:
             errorBox.exec()
 
     @staticmethod
-    def export(remark, ob):
-        if Intellisense.getCoreType(ob) == XrayCore.name():
+    def export(remark, jsonObject):
+        if Intellisense.getCoreType(jsonObject) == XrayCore.name():
 
-            def streamNetSettingsVMess(streamObject, netType):
-                kwargs = {}
+            def getExportObject():
+                protocol = Intellisense.getCoreProtocol(jsonObject)
 
-                netobj = streamObject.get(ProxyOutboundObject.streamNetworkKey(netType))
+                return Configuration.ExportClassMap[protocol]()
 
-                if netobj is None:
-                    return kwargs
+            return getExportObject().export(remark, jsonObject)
 
-                def hasKey(key):
-                    return netobj.get(key) is not None
-
-                if netType == 'tcp':
-                    try:
-                        kwargs['type'] = netobj['header']['type']
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-                elif netType == 'kcp':
-                    try:
-                        # Get order matters here
-                        if hasKey('seed'):
-                            kwargs['path'] = netobj['seed']
-
-                        kwargs['type'] = netobj['header']['type']
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-                elif netType == 'ws':
-                    try:
-                        # Get order matters here
-                        if hasKey('path'):
-                            kwargs['path'] = quote(netobj['path'])
-
-                        if netobj['headers']['Host']:
-                            kwargs['host'] = quote(netobj['headers']['Host'])
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-                elif netType == 'h2' or netType == 'http':
-                    try:
-                        # Get order matters here
-                        if hasKey('path'):
-                            kwargs['path'] = quote(netobj['path'])
-
-                        kwargs['host'] = quote(','.join(netobj['host']))
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-                elif netType == 'quic':
-                    try:
-                        # Get order matters here
-                        if hasKey('security'):
-                            kwargs['host'] = netobj['security']
-
-                        if hasKey('key'):
-                            kwargs['path'] = quote(netobj['key'])
-
-                        kwargs['type'] = netobj['header']['type']
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-                elif netType == 'grpc':
-                    if hasKey('serviceName'):
-                        kwargs['path'] = netobj['serviceName']
-
-                return kwargs
-
-            def streamNetSettingsVLESS(streamObject, netType):
-                kwargs = {}
-
-                netobj = streamObject.get(ProxyOutboundObject.streamNetworkKey(netType))
-
-                if netobj is None:
-                    return kwargs
-
-                def hasKey(key):
-                    return netobj.get(key) is not None
-
-                if netType == 'tcp':
-                    try:
-                        kwargs['headerType'] = netobj['header']['type']
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-                elif netType == 'kcp':
-                    try:
-                        # Get order matters here
-                        if hasKey('seed'):
-                            kwargs['seed'] = netobj['seed']
-
-                        kwargs['headerType'] = netobj['header']['type']
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-                elif netType == 'ws':
-                    try:
-                        # Get order matters here
-                        if hasKey('path'):
-                            kwargs['path'] = quote(netobj['path'])
-
-                        if netobj['headers']['Host']:
-                            kwargs['host'] = quote(netobj['headers']['Host'])
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-                elif netType == 'h2' or netType == 'http':
-                    try:
-                        # Get order matters here
-                        if hasKey('path'):
-                            kwargs['path'] = quote(netobj['path'])
-
-                        kwargs['host'] = quote(','.join(netobj['host']))
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-                elif netType == 'quic':
-                    try:
-                        # Get order matters here
-                        if hasKey('security'):
-                            kwargs['quicSecurity'] = netobj['security']
-
-                        if hasKey('key'):
-                            kwargs['path'] = quote(netobj['key'])
-
-                        kwargs['headerType'] = netobj['header']['type']
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-                elif netType == 'grpc':
-                    if hasKey('serviceName'):
-                        kwargs['serviceName'] = netobj['serviceName']
-
-                return kwargs
-
-            def streamTLSSettings(streamObject, tlsType):
-                kwargs = {}
-
-                if tlsType == '' or tlsType == 'none':
-                    return kwargs
-
-                tlsobj = streamObject[ProxyOutboundObject.streamTLSKey(tlsType)]
-
-                if tlsType == 'reality' or tlsType == 'tls':
-                    if tlsobj.get('fingerprint'):
-                        kwargs['fp'] = tlsobj['fingerprint']
-
-                    if tlsobj.get('serverName'):
-                        kwargs['sni'] = tlsobj['serverName']
-
-                    if tlsobj.get('alpn'):
-                        kwargs['alpn'] = quote(','.join(tlsobj['alpn']))
-
-                if tlsType == 'reality':
-                    # More kwargs for reality
-                    if tlsobj.get('publicKey'):
-                        kwargs['pbk'] = tlsobj['publicKey']
-
-                    if tlsobj.get('shortId'):
-                        kwargs['sid'] = tlsobj['shortId']
-
-                    if tlsobj.get('spiderX'):
-                        kwargs['spx'] = quote(tlsobj['spiderX'])
-
-                return kwargs
-
-            def getProxyOutboundObject():
-                for outboundObject in ob['outbounds']:
-                    if outboundObject['tag'] == 'proxy':
-                        return outboundObject
-
-                raise Exception('No proxy outbound found')
-
-            # Begin export
-
-            outbound = getProxyOutboundObject()
-
-            def exportVMess():
-                proxyServer = outbound['settings']['vnext'][0]
-                proxyServerUser = proxyServer['users'][0]
-
-                proxyStream, proxyStreamNet, proxyStreamTLS = (
-                    outbound['streamSettings'],
-                    outbound['streamSettings']['network'],
-                    outbound['streamSettings'].get('security', 'none'),
-                )
-
-                return (
-                    'vmess://'
-                    + Base64Encoder.encode(
-                        ujson.dumps(
-                            {
-                                'v': '2',
-                                'ps': quote(remark),
-                                'add': proxyServer['address'],
-                                'port': proxyServer['port'],
-                                'id': proxyServerUser['id'],
-                                'aid': proxyServerUser['alterId'],
-                                'scy': proxyServerUser['security'],
-                                'net': proxyStreamNet,
-                                'tls': proxyStreamTLS,
-                                # kwargs
-                                **streamNetSettingsVMess(proxyStream, proxyStreamNet),
-                                **streamTLSSettings(proxyStream, proxyStreamTLS),
-                            },
-                            ensure_ascii=False,
-                            escape_forward_slashes=False,
-                        ).encode()
-                    ).decode()
-                )
-
-            def exportVLESS():
-                proxyServer = outbound['settings']['vnext'][0]
-                proxyServerUser = proxyServer['users'][0]
-
-                proxyStream, proxyStreamNet, proxyStreamTLS = (
-                    outbound['streamSettings'],
-                    outbound['streamSettings']['network'],
-                    outbound['streamSettings'].get('security', 'none'),
-                )
-
-                flowArg = {}
-
-                if proxyServerUser.get('flow'):
-                    flowArg['flow'] = proxyServerUser['flow']
-
-                netloc = f'{proxyServerUser["id"]}@{proxyServer["address"]}:{proxyServer["port"]}'
-
-                query = '&'.join(
-                    f'{key}={value}'
-                    for key, value in {
-                        'encryption': proxyServerUser['encryption'],
-                        'type': proxyStreamNet,
-                        'security': proxyStreamTLS,
-                        # kwargs
-                        **flowArg,
-                        **streamNetSettingsVLESS(proxyStream, proxyStreamNet),
-                        **streamTLSSettings(proxyStream, proxyStreamTLS),
-                    }.items()
-                )
-
-                return urlunparse(['vless', netloc, '', '', query, quote(remark)])
-
-            def exportSS():
-                proxyServer = outbound['settings']['servers'][0]
-
-                method, password, address, port = (
-                    proxyServer['method'],
-                    proxyServer['password'],
-                    proxyServer['address'],
-                    proxyServer['port'],
-                )
-
-                netloc = f'{quote(method)}:{quote(password)}@{address}:{port}'
-
-                return urlunparse(['ss', netloc, '', '', '', quote(remark)])
-
-            def exportTrojan():
-                proxyServer = outbound['settings']['servers'][0]
-
-                password, address, port = (
-                    proxyServer['password'],
-                    proxyServer['address'],
-                    proxyServer['port'],
-                )
-
-                proxyStream, proxyStreamNet, proxyStreamTLS = (
-                    outbound['streamSettings'],
-                    outbound['streamSettings']['network'],
-                    outbound['streamSettings'].get('security', 'none'),
-                )
-
-                netloc = f'{quote(password)}@{address}:{port}'
-
-                query = '&'.join(
-                    f'{key}={value}'
-                    for key, value in {
-                        'type': proxyStreamNet,
-                        'security': proxyStreamTLS,
-                        # kwargs
-                        **streamNetSettingsVLESS(proxyStream, proxyStreamNet),
-                        **streamTLSSettings(proxyStream, proxyStreamTLS),
-                    }.items()
-                )
-
-                return urlunparse(['trojan', netloc, '', '', query, quote(remark)])
-
-            exportFuncMap = {
-                Protocol.VMess: exportVMess,
-                Protocol.VLESS: exportVLESS,
-                Protocol.Shadowsocks: exportSS,
-                Protocol.Trojan: exportTrojan,
-            }
-
-            return exportFuncMap[Intellisense.getCoreProtocol(ob)]()
-
-        if Intellisense.getCoreType(ob) == Hysteria2.name():
-            netloc = f'{ob["auth"]}@{ob["server"]}'
+        if Intellisense.getCoreType(jsonObject) == Hysteria2.name():
+            netloc = f'{jsonObject["auth"]}@{jsonObject["server"]}'
 
             tlsArg, obfsArg = {}, {}
 
-            if ob.get('tls'):
-                if ob['tls'].get('sni'):
-                    tlsArg['sni'] = ob['tls']['sni']
+            if jsonObject.get('tls'):
+                if jsonObject['tls'].get('sni'):
+                    tlsArg['sni'] = jsonObject['tls']['sni']
 
-                if ob['tls'].get('insecure') is True:
+                if jsonObject['tls'].get('insecure') is True:
                     tlsArg['insecure'] = '1'
                 else:
                     tlsArg['insecure'] = '0'
 
-                if ob['tls'].get('pinSHA256'):
-                    tlsArg['pinSHA256'] = ob['tls']['pinSHA256']
+                if jsonObject['tls'].get('pinSHA256'):
+                    tlsArg['pinSHA256'] = jsonObject['tls']['pinSHA256']
 
-            if ob.get('obfs'):
-                obfsType = ob['obfs'].get('type', 'salamander')
+            if jsonObject.get('obfs'):
+                obfsType = jsonObject['obfs'].get('type', 'salamander')
 
                 obfsArg['obfs'] = obfsType
-                obfsArg['obfs-password'] = ob['obfs'][obfsType]['password']
+                obfsArg['obfs-password'] = jsonObject['obfs'][obfsType]['password']
 
             query = '&'.join(
                 f'{key}={value}'
@@ -536,26 +566,21 @@ class ProxyOutboundObject(OutboundObject):
                     }
 
                 # Request settings for HTTP
-                if self.kwargs.get('host'):
-                    TcpObject['header']['request'] = {}
-                    requestObject = TcpObject['header']['request']
-
-                    requestObject['version'] = "1.1"
-                    requestObject['method'] = "GET"
-                    requestObject['path'] = [self.kwargs.get('path', '/')]
-
-                    requestObject['headers'] = {
-                        'Host': [unquote(self.kwargs.get('host'))],
-                        'User-Agent': [
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
-                        ],
-                        "Accept-Encoding": [
-                            "gzip, deflate"
-                        ],
-                        "Connection": [
-                            "keep-alive"
-                        ],
-                        "Pragma": "no-cache"
+                if headerType == 'http' and self.kwargs.get('host'):
+                    TcpObject['header']['request'] = {
+                        'version': '1.1',
+                        'method': 'GET',
+                        'path': [self.kwargs.get('path', '/')],
+                        'headers': {
+                            'Host': [unquote(self.kwargs.get('host'))],
+                            'User-Agent': [
+                                'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36',
+                                'Mozilla/5.0 (iPhone; CPU iPhone OS 10_0_2 like Mac OS X) AppleWebKit/601.1 (KHTML, like Gecko) CriOS/53.0.2785.109 Mobile/14A456 Safari/601.1.46',
+                            ],
+                            'Accept-Encoding': ['gzip, deflate'],
+                            'Connection': ['keep-alive'],
+                            'Pragma': 'no-cache',
+                        },
                     }
 
             return TcpObject
