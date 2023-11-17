@@ -529,60 +529,83 @@ class ImportLinkAction(Action):
         if importServerArgs is None:
             importServerArgs = {}
 
+        from Furious.Interface.ConfigurationFactory import ConfigurationXray
+        from Furious.Interface.Encoder import UJSONEncoder
+
         try:
-            myHead, myBody = shareLink.split('://')
+            print(ConfigurationXray(shareLink).toURI())
+
+            config = ConfigurationXray()
+
+            remark, success = config.fromURI(shareLink)
+
+            if success:
+                APP().ServerWidget.importServer(
+                    remark,
+                    UJSONEncoder.encode(config, indent=2),
+                    **importServerArgs,
+                )
+
+            return remark, success
         except Exception:
             # Any non-exit exceptions
 
             return '', False
-        else:
-            if myHead.lower() == 'vmess':
-                try:
-                    myData = Base64Encoder.decode(myBody).decode()
-                    myJSON = Configuration.toJSON(myData)
-                except Exception:
-                    # Any non-exit exceptions
 
-                    return ImportLinkAction.parseShareLinkVMess(
-                        shareLink,
-                        isV2rayN=False,
-                        importServerArgs=importServerArgs,
-                    )
-                else:
-                    return ImportLinkAction.parseShareLinkVMess(
-                        myJSON,
-                        isV2rayN=True,
-                        importServerArgs=importServerArgs,
-                    )
-
-            if myHead.lower() == 'vless':
-                return ImportLinkAction.parseShareLinkStandard(
-                    'vless',
-                    shareLink,
-                    importServerArgs,
-                )
-
-            if myHead.lower() == 'ss':
-                return ImportLinkAction.parseShareLinkSS(
-                    shareLink,
-                    importServerArgs,
-                )
-
-            if myHead.lower() == 'trojan':
-                return ImportLinkAction.parseShareLinkTrojan(
-                    shareLink,
-                    importServerArgs,
-                )
-
-            if myHead.lower() == 'hysteria2' or myHead.lower() == 'hy2':
-                return ImportLinkAction.parseShareLinkHysteria2(
-                    shareLink,
-                    importServerArgs,
-                )
-
-            logger.error(f'unsupported share link: {shareLink}')
-
-            return '', False
+        # try:
+        #     myHead, myBody = shareLink.split('://')
+        # except Exception:
+        #     # Any non-exit exceptions
+        #
+        #     return '', False
+        # else:
+        #     if myHead.lower() == 'vmess':
+        #         try:
+        #             myData = Base64Encoder.decode(myBody).decode()
+        #             myJSON = Configuration.toJSON(myData)
+        #         except Exception:
+        #             # Any non-exit exceptions
+        #
+        #             return ImportLinkAction.parseShareLinkVMess(
+        #                 shareLink,
+        #                 isV2rayN=False,
+        #                 importServerArgs=importServerArgs,
+        #             )
+        #         else:
+        #             return ImportLinkAction.parseShareLinkVMess(
+        #                 myJSON,
+        #                 isV2rayN=True,
+        #                 importServerArgs=importServerArgs,
+        #             )
+        #
+        #     if myHead.lower() == 'vless':
+        #         return ImportLinkAction.parseShareLinkStandard(
+        #             'vless',
+        #             shareLink,
+        #             importServerArgs,
+        #         )
+        #
+        #     if myHead.lower() == 'ss':
+        #         return ImportLinkAction.parseShareLinkSS(
+        #             shareLink,
+        #             importServerArgs,
+        #         )
+        #
+        #     if myHead.lower() == 'trojan':
+        #         return ImportLinkAction.parseShareLinkTrojan(
+        #             shareLink,
+        #             importServerArgs,
+        #         )
+        #
+        #     if myHead.lower() == 'hysteria2' or myHead.lower() == 'hy2':
+        #         return ImportLinkAction.parseShareLinkHysteria2(
+        #             shareLink,
+        #             importServerArgs,
+        #         )
+        #
+        #     logger.error(f'unsupported share link: {shareLink}')
+        #
+        #     return '', False
 
     def triggeredCallback(self, checked):
         self.clipboard = QApplication.clipboard().text().strip()

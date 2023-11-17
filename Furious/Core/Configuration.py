@@ -409,13 +409,14 @@ class Configuration:
     @staticmethod
     def export(remark, jsonObject):
         if Intellisense.getCoreType(jsonObject) == XrayCore.name():
+            # def getExportObject():
+            #     protocol = Intellisense.getCoreProtocol(jsonObject)
+            #
+            #     return Configuration.ExportClassMap[protocol]()
 
-            def getExportObject():
-                protocol = Intellisense.getCoreProtocol(jsonObject)
+            from Furious.Interface.ConfigurationFactory import ConfigurationXray
 
-                return Configuration.ExportClassMap[protocol]()
-
-            return getExportObject().export(remark, jsonObject)
+            return ConfigurationXray(jsonObject).toURI(remark)
 
         if Intellisense.getCoreType(jsonObject) == Hysteria2.name():
             netloc = f'{jsonObject["auth"]}@{jsonObject["server"]}'
