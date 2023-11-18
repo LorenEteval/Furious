@@ -9,7 +9,7 @@ solutions to provide a better Pythonic experience for both users and developers.
 
 ## TODO
 
-Example: [ConfigurationFactory.py](https://github.com/LorenEteval/Furious/blob/dev/Furious/Interface/ConfigurationFactory.py)
+Example: [Interface](https://github.com/LorenEteval/Furious/blob/dev/Furious/Interface), [Library](https://github.com/LorenEteval/Furious/blob/dev/Furious/Library)
 
 Basic idea:
 
@@ -20,6 +20,9 @@ Basic idea:
 3. (TODO can update streamObject/TLSObject so that it can be updated from the popup UI)
 4. More type annotations/docstrings in code
 5. ...
+
+For Python bindings repositories, a github bot is required to create binding PRs for review and automatic packaging
+Release. Binding template project in the future?
 
 ## Goal
 

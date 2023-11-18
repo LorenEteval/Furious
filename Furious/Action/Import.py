@@ -529,28 +529,31 @@ class ImportLinkAction(Action):
         if importServerArgs is None:
             importServerArgs = {}
 
-        from Furious.Interface.ConfigurationFactory import ConfigurationXray
         from Furious.Interface.Encoder import UJSONEncoder
+        from Furious.Library.Configuration import (
+            ConfigurationXray,
+            ConfigurationHysteria2,
+        )
 
-        try:
-            print(ConfigurationXray(shareLink).toURI())
+        for cls in [ConfigurationXray, ConfigurationHysteria2]:
+            try:
+                config = cls()
+                remark, success = config.fromURI(shareLink)
 
-            config = ConfigurationXray()
+                if success:
+                    APP().ServerWidget.importServer(
+                        remark,
+                        UJSONEncoder.encode(config, indent=2),
+                        **importServerArgs,
+                    )
 
-            remark, success = config.fromURI(shareLink)
+                    return remark, success
+            except Exception:
+                # Any non-exit exceptions
 
-            if success:
-                APP().ServerWidget.importServer(
-                    remark,
-                    UJSONEncoder.encode(config, indent=2),
-                    **importServerArgs,
-                )
+                pass
 
-            return remark, success
-        except Exception:
-            # Any non-exit exceptions
-
-            return '', False
+        return '', False
 
         # try:
         #     myHead, myBody = shareLink.split('://')

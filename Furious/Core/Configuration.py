@@ -414,42 +414,46 @@ class Configuration:
             #
             #     return Configuration.ExportClassMap[protocol]()
 
-            from Furious.Interface.ConfigurationFactory import ConfigurationXray
+            from Furious.Library.Configuration import ConfigurationXray
 
             return ConfigurationXray(jsonObject).toURI(remark)
 
         if Intellisense.getCoreType(jsonObject) == Hysteria2.name():
-            netloc = f'{jsonObject["auth"]}@{jsonObject["server"]}'
+            from Furious.Library.Configuration import ConfigurationHysteria2
 
-            tlsArg, obfsArg = {}, {}
+            return ConfigurationHysteria2(jsonObject).toURI(remark)
 
-            if jsonObject.get('tls'):
-                if jsonObject['tls'].get('sni'):
-                    tlsArg['sni'] = jsonObject['tls']['sni']
-
-                if jsonObject['tls'].get('insecure') is True:
-                    tlsArg['insecure'] = '1'
-                else:
-                    tlsArg['insecure'] = '0'
-
-                if jsonObject['tls'].get('pinSHA256'):
-                    tlsArg['pinSHA256'] = jsonObject['tls']['pinSHA256']
-
-            if jsonObject.get('obfs'):
-                obfsType = jsonObject['obfs'].get('type', 'salamander')
-
-                obfsArg['obfs'] = obfsType
-                obfsArg['obfs-password'] = jsonObject['obfs'][obfsType]['password']
-
-            query = '&'.join(
-                f'{key}={value}'
-                for key, value in {
-                    **tlsArg,
-                    **obfsArg,
-                }.items()
-            )
-
-            return urlunparse(['hysteria2', netloc, '', '', query, quote(remark)])
+            # netloc = f'{jsonObject["auth"]}@{jsonObject["server"]}'
+            #
+            # tlsArg, obfsArg = {}, {}
+            #
+            # if jsonObject.get('tls'):
+            #     if jsonObject['tls'].get('sni'):
+            #         tlsArg['sni'] = jsonObject['tls']['sni']
+            #
+            #     if jsonObject['tls'].get('insecure') is True:
+            #         tlsArg['insecure'] = '1'
+            #     else:
+            #         tlsArg['insecure'] = '0'
+            #
+            #     if jsonObject['tls'].get('pinSHA256'):
+            #         tlsArg['pinSHA256'] = jsonObject['tls']['pinSHA256']
+            #
+            # if jsonObject.get('obfs'):
+            #     obfsType = jsonObject['obfs'].get('type', 'salamander')
+            #
+            #     obfsArg['obfs'] = obfsType
+            #     obfsArg['obfs-password'] = jsonObject['obfs'][obfsType]['password']
+            #
+            # query = '&'.join(
+            #     f'{key}={value}'
+            #     for key, value in {
+            #         **tlsArg,
+            #         **obfsArg,
+            #     }.items()
+            # )
+            #
+            # return urlunparse(['hysteria2', netloc, '', '', query, quote(remark)])
 
         raise UnsupportedServerExport('Unsupported core protocol export')
 
