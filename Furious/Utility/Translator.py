@@ -847,7 +847,7 @@ TRANSLATION = {
         'ES': 'Transporte',
         'ZH': '传输方式',
         'TW': '傳輸方式',
-        'RU': 'Транспорт', 
+        'RU': 'Транспорт',
     },
     'Server': {
         'ES': 'Servidor',
