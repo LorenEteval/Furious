@@ -1,4 +1,5 @@
 PySide6
+qdarkstyle
 Xray-core
 hysteria > 1.3.5
 hysteria2 > 2.0.0
