@@ -1,4 +1,4 @@
-# Copyright (C) 2023  Loren Eteval <loren.eteval@proton.me>
+# Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>
 #
 # This file is part of Furious.
 #
@@ -15,3 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from .XrayCore import *
+from .Hysteria1 import *
+from .Hysteria2 import *
+from .Tun2socks import *
+from .CoreManager import *

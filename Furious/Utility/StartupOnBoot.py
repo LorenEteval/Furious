@@ -1,4 +1,4 @@
-# Copyright (C) 2023  Loren Eteval <loren.eteval@proton.me>
+# Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>
 #
 # This file is part of Furious.
 #
@@ -15,13 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Utility.Constants import (
-    APPLICATION_NAME,
-    APPLICATION_VERSION,
-    APPLICATION_MACOS_SIGNATURE,
-    PLATFORM,
-)
-from Furious.Utility.Utility import isScriptMode
+from Furious.Utility.Constants import *
+from Furious.Utility.AppSettings import *
+from Furious.Utility.SystemRuntime import isScriptMode
 
 from PySide6 import QtCore
 
@@ -30,16 +26,15 @@ import sys
 import logging
 import plistlib
 
+__all__ = ['StartupOnBoot']
+
 logger = logging.getLogger(__name__)
 
 
 class StartupOnBoot:
-    def __init__(self):
-        super().__init__()
-
     @staticmethod
     def on_():
-        def _on():
+        def _on_():
             if isScriptMode():
                 # Script mode
                 logger.info('ignore turn on StartupOnBoot in script mode')
@@ -135,7 +130,7 @@ class StartupOnBoot:
                 else:
                     return True
 
-        if _on():
+        if _on_():
             logger.info('turn on StartupOnBoot success')
         else:
             logger.error('turn on StartupOnBoot failed')

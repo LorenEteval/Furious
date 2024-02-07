@@ -1,4 +1,4 @@
-# Copyright (C) 2023  Loren Eteval <loren.eteval@proton.me>
+# Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>
 #
 # This file is part of Furious.
 #
@@ -17,10 +17,8 @@
 
 from Furious.Version import __version__
 
-from PySide6 import QtCore
+from PySide6 import QtCore, __version__ as _pyside6_version
 from PySide6.QtWidgets import QApplication
-
-import PySide6
 
 import math
 import pathlib
@@ -40,7 +38,7 @@ ORGANIZATION_NAME = 'Furious'
 ORGANIZATION_DOMAIN = 'Furious.GUI'
 
 # Tested: Furious supports minimum PySide6 version 6.1.0
-PYSIDE6_VERSION = PySide6.__version__
+PYSIDE6_VERSION = _pyside6_version
 
 PLATFORM = platform.system()
 PLATFORM_RELEASE = platform.release()
@@ -55,13 +53,17 @@ PROXY_OUTBOUND_USER_EMAIL = f'user@{ORGANIZATION_DOMAIN}'
 
 ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT_DIR / APPLICATION_NAME / 'Data'
+XRAY_ASSET_DIR = DATA_DIR / 'xray'
 CRASH_LOG_DIR = ROOT_DIR / APPLICATION_NAME / 'CrashLog'
+GEN_TRANSLATION_FILE = ROOT_DIR / APPLICATION_NAME / 'Externals' / 'GenTranslation.py'
 
 PROXY_SERVER_BYPASS = (
     'localhost;*.local;127.*;10.*;172.16.*;172.17.*;'
     '172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;'
     '172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'
 )
+
+CORE_CHECK_ALIVE_INTERVAL = 2000
 
 if PLATFORM == 'Windows':
     APPLICATION_TUN_DEVICE_NAME = APPLICATION_NAME
@@ -78,25 +80,10 @@ if PLATFORM == 'Windows':
 else:
     APPLICATION_TUN_IP_ADDRESS = APPLICATION_TUN_GATEWAY_ADDRESS
 
-TOR_FAQ_URL = 'https://support.torproject.org/faq/'
-TOR_FAQ_LABEL = f'Tor FAQ: <a href=\"{TOR_FAQ_URL}\">{TOR_FAQ_URL}</a>'
-
-# Avoid standard Tor port in case of running Tor services
-DEFAULT_TOR_SOCKS_PORT = 9048
-DEFAULT_TOR_HTTPS_PORT = 9047
-# 20s
-DEFAULT_TOR_RELAY_ESTABLISH_TIMEOUT = 20
-
 ADMINISTRATOR_NAME = 'Administrator' if PLATFORM == 'Windows' else 'root'
 
+NETWORK_STATE_TEST_URL = 'http://cp.cloudflare.com'
 
-class LogType:
-    Core = 'Core'
-    App = 'App'
-    Tor = 'Tor'
-
-
-class Color:
-    LIGHT_BLUE = '#43ACED'
-    LIGHT_RED_ = '#FF7276'
-    LIGHT_PURPLE = '#DA70D6'
+UNICODE_LARGE_RED_CIRCLE = u'\U0001F534'
+UNICODE_LARGE_GREEN_CIRCLE = u'\U0001F7E2'
+UNICODE_LARGE_ORANGE_CIRCLE = u'\U0001F7E0'

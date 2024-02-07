@@ -1,4 +1,4 @@
-# Copyright (C) 2023  Loren Eteval <loren.eteval@proton.me>
+# Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>
 #
 # This file is part of Furious.
 #
@@ -15,38 +15,53 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Core.Core import Core
-from Furious.Utility.RoutingTable import RoutingTable
+from __future__ import annotations
 
-import functools
+from Furious.Interface import *
+from Furious.QtFramework import *
+from Furious.Library import *
+from Furious.Utility import *
+
+import time
+import multiprocessing
+
+__all__ = ['Tun2socks']
 
 
-def startTun2socks(*args, **kwargs):
+def startTun2socks(msgQueue: multiprocessing.Queue, *args):
     try:
         import tun2socks
     except ImportError:
         # Fake running process
         while True:
-            pass
+            time.sleep(1)
     else:
-        tun2socks.startFromArgs(*args, **kwargs)
+        if tun2socks.__version__ <= '2.5.1.1':
+            redirect = False
+        else:
+            redirect = True
+
+        StdoutRedirectHelper.launch(
+            msgQueue, lambda: tun2socks.startFromArgs(*args), redirect
+        )
 
 
-class Tun2socks(Core):
+class Tun2socks(CoreProcess):
     class ExitCode:
         # Windows shutting down
         SystemShuttingDown = 0x40010004
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.cleanup = None
 
     @staticmethod
-    def name():
+    def name() -> str:
         return 'Tun2socks'
 
     @staticmethod
-    @functools.lru_cache(None)
-    def version():
+    def version() -> str:
         try:
             import tun2socks
 
@@ -56,14 +71,25 @@ class Tun2socks(Core):
 
             return '0.0.0'
 
-    def start(self, device, networkInterface, logLevel, proxy, restAPI, **kwargs):
-        super().start(
+    def start(
+        self,
+        device: str,
+        networkInterface: str,
+        logLevel: str,
+        proxy: str,
+        restAPI: str,
+        **kwargs,
+    ) -> bool:
+        return super().start(
             target=startTun2socks,
-            args=(device, networkInterface, logLevel, proxy, restAPI),
+            args=(self.msgQueue, device, networkInterface, logLevel, proxy, restAPI),
             **kwargs,
         )
 
     def stop(self):
-        RoutingTable.deleteRelations()
+        SystemRoutingTable.deleteRelations()
+
+        if callable(self.cleanup):
+            self.cleanup()
 
         super().stop()

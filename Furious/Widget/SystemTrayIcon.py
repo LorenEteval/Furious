@@ -1,4 +1,4 @@
-# Copyright (C) 2023  Loren Eteval <loren.eteval@proton.me>
+# Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>
 #
 # This file is part of Furious.
 #
@@ -15,33 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Action import (
-    ConnectAction,
-    RoutingAction,
-    ImportAction,
-    EditConfigurationAction,
-    LanguageAction,
-    SettingsAction,
-    ExitAction,
-)
-from Furious.Gui.Action import Action, Seperator
-from Furious.Widget.Widget import Menu
-from Furious.Utility.Constants import (
-    APP,
-    APPLICATION_NAME,
-    APPLICATION_VERSION,
-    PLATFORM,
-)
-from Furious.Utility.Utility import (
-    bootstrapIcon,
-    StateContext,
-    Switch,
-    isAdministrator,
-    isWindows7,
-)
-from Furious.Utility.Translator import Translatable, gettext as _
-from Furious.Utility.Proxy import Proxy
-from Furious.Utility.StartupOnBoot import StartupOnBoot
+from Furious.PyFramework import *
+from Furious.QtFramework import *
+from Furious.QtFramework import gettext as _
+from Furious.Utility import *
+from Furious.TrayActions import *
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import QSystemTrayIcon
@@ -50,49 +28,49 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+__all__ = ['SystemTrayIcon']
 
-class SystemTrayIcon(Translatable, QSystemTrayIcon):
+
+class SystemTrayIcon(QTranslatable, SupportConnectedCallback, QSystemTrayIcon):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.setPlainIcon()
-        self.activated.connect(self.handleActivated)
 
         actions = [
             ConnectAction(),
             RoutingAction(),
-            Seperator(),
+            SystemProxyAction(),
+            AppQSeperator(),
             ImportAction(),
             EditConfigurationAction(),
-            Seperator(),
+            AppQSeperator(),
             LanguageAction(),
             SettingsAction(),
-            Seperator(),
+            AppQSeperator(),
             ExitAction(),
         ]
 
         # Some old version PySide6 does not have setMenu method
         # for QAction. Protect it. Currently only used in SystemTrayIcon
-        if hasattr(Action, 'setMenu'):
+        if hasattr(AppQAction, 'setMenu'):
             logger.info('contextMenu uses setMenu implementation')
 
             for action in actions:
-                if isinstance(action, Action):
+                if isinstance(action, AppQAction):
                     if hasattr(self, f'{action}'):
                         logger.warning(f'{self} already has action {action}')
 
                     setattr(self, f'{action}', action)
 
-            self._menu = Menu(*actions)
+            self._menu = AppQMenu(*actions)
             self.setContextMenu(self._menu)
         else:
             logger.info('contextMenu uses addMenu implementation')
 
             self._refs = []
-            self._menu = Menu()
+            self._menu = AppQMenu()
 
             for action in actions:
-                if isinstance(action, Action):
+                if isinstance(action, AppQAction):
                     if hasattr(self, f'{action}'):
                         logger.warning(f'{self} already has action {action}')
 
@@ -101,7 +79,7 @@ class SystemTrayIcon(Translatable, QSystemTrayIcon):
                     if action._menu is None:
                         self._menu.addAction(action)
                     else:
-                        menu = Menu(*action._menu._actions, title=action.text())
+                        menu = AppQMenu(*action._menu._actions, title=action.text())
                         menu.setIcon(action.icon())
 
                         self._refs.append(menu)
@@ -111,20 +89,22 @@ class SystemTrayIcon(Translatable, QSystemTrayIcon):
 
             self.setContextMenu(self._menu)
 
+        self.setDisconnectedIcon()
+        self.activated.connect(self.handleActivated)
+
     def bootstrap(self):
-        if APP().StartupOnBoot == Switch.ON_:
+        if AppSettings.isStateON_('StartupOnBoot'):
             # Rrefresh startup application location
             StartupOnBoot.on_()
 
-        if APP().Connect == Switch.ON_:
-            # Trigger connect action
+        if AppSettings.isStateON_('Connect'):
             self.ConnectAction.trigger()
 
-    def showMessage(self, msg, *args, **kwargs):
-        if msg:
-            super().showMessage(_(APPLICATION_NAME), msg, *args, **kwargs)
+    def showMessage(self, message: str, *args, **kwargs):
+        if message:
+            super().showMessage(_(APPLICATION_NAME), message, *args, **kwargs)
 
-    def setPlainIcon(self):
+    def setDisconnectedIcon(self):
         if PLATFORM == 'Darwin' or isWindows7():
             # Darker
             self.setIcon(bootstrapIcon('rocket-takeoff-dark.svg'))
@@ -144,10 +124,16 @@ class SystemTrayIcon(Translatable, QSystemTrayIcon):
     @QtCore.Slot(QSystemTrayIcon.ActivationReason)
     def handleActivated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            APP().ServerWidget.show()
+            APP().mainWindow.show()
 
-    def setApplicationToolTip(self):
+    def setCustomToolTip(self):
         self.setToolTip(f'{_(APPLICATION_NAME)} {APPLICATION_VERSION}')
+
+    def disconnectedCallback(self):
+        self.setDisconnectedIcon()
+
+    def connectedCallback(self):
+        self.setConnectedIcon()
 
     def retranslate(self):
         # Nothing to do
