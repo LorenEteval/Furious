@@ -25,5 +25,6 @@ License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENS
 
 * [Xray-core](https://github.com/XTLS/Xray-core)
 * [hysteria](https://github.com/apernet/hysteria)
+* [tun2socks](https://github.com/xjasonlyu/tun2socks)
 * [v2rayN](https://github.com/2dust/v2rayN)
 * [QDarkStyleSheet](https://github.com/ColinDuquesnoy/QDarkStyleSheet)
