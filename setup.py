@@ -1,4 +1,4 @@
-# Copyright (C) 2023  Loren Eteval <loren.eteval@proton.me>
+# Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>
 #
 # This file is part of Furious.
 #
@@ -37,7 +37,6 @@ setup(
     include_package_data=True,
     install_requires=[
         'PySide6',
-        'Xray-core',
         'tun2socks > 2.5.1',
         'ujson',
         'pybase64',
@@ -49,8 +48,8 @@ setup(
         'darkdetect[macos-listener]; sys_platform == "darwin"',
     ],
     extras_require={
-        'go1.20': ['hysteria > 1.3.5', 'hysteria2 == 2.0.0.1'],
-        'go1.21': ['hysteria2 > 2.0.4'],
+        'go1.20': ['Xray-core < 1.8.5', 'hysteria > 1.3.5', 'hysteria2 == 2.0.0.1'],
+        'go1.21': ['Xray-core > 1.8.5', 'hysteria2 > 2.0.4'],
     },
     entry_points={
         'gui_scripts': [

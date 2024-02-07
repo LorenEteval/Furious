@@ -1,4 +1,4 @@
-# Copyright (C) 2023  Loren Eteval <loren.eteval@proton.me>
+# Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>
 #
 # This file is part of Furious.
 #
@@ -15,29 +15,32 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Widget.Widget import Dialog
-from Furious.Utility.Utility import (
-    StateContext,
-    SupportConnectedCallback,
-    bootstrapIcon,
+from __future__ import annotations
+
+from Furious.QtFramework import *
+from Furious.QtFramework import gettext as _
+from Furious.Utility import *
+
+from PySide6.QtWidgets import *
+
+import functools
+
+__all__ = ['IndentSpinBox']
+
+needTrans = functools.partial(needTransFn, source=__name__)
+
+needTrans(
+    'Set Indent',
+    'Indent:',
+    'Cancel',
 )
-from Furious.Utility.Translator import Translatable, gettext as _
-
-from PySide6 import QtCore
-from PySide6.QtWidgets import (
-    QDialogButtonBox,
-    QFormLayout,
-    QLabel,
-    QSpinBox,
-)
 
 
-class IndentSpinBox(Dialog):
+class IndentSpinBox(AppQDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle(_('Set Indent'))
-        self.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
 
         self.indentText = QLabel(_('Indent:'))
 
@@ -64,10 +67,9 @@ class IndentSpinBox(Dialog):
         return self.indentSpin.value()
 
     def retranslate(self):
-        with StateContext(self):
-            self.setWindowTitle(_(self.windowTitle()))
+        self.setWindowTitle(_(self.windowTitle()))
 
-            self.indentText.setText(_(self.indentText.text()))
+        self.indentText.setText(_(self.indentText.text()))
 
-            for button in self.dialogBtns.buttons():
-                button.setText(_(button.text()))
+        for button in self.dialogBtns.buttons():
+            button.setText(_(button.text()))
