@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class CoreProcess(CoreFactory, ABC):
-    MESG_PRODUCE_THRESHOLD = 250
+    MSG_PRODUCE_THRESHOLD = 250
 
     def __init__(self, **kwargs):
         exitCallback = kwargs.pop('exitCallback', None)
@@ -115,7 +115,7 @@ class CoreProcess(CoreFactory, ABC):
 
         logger.info(f'{self.name()} {self.version()} started')
 
-        self._msgTimer.start(self.MESG_PRODUCE_THRESHOLD)
+        self._msgTimer.start(self.MSG_PRODUCE_THRESHOLD)
 
         if waitCore:
             # Wait for the core to start up completely
@@ -198,7 +198,7 @@ class StdoutRedirectHelper:
 
                                 pass
 
-                    time.sleep(CoreProcess.MESG_PRODUCE_THRESHOLD / 1000)
+                    time.sleep(CoreProcess.MSG_PRODUCE_THRESHOLD / 1000)
 
         msgThread = threading.Thread(target=produceMsg, daemon=True)
         msgThread.start()
