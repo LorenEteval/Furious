@@ -237,7 +237,7 @@ class Application(ApplicationFactory, SingletonApplication):
     @staticmethod
     def addEnviron():
         # Xray environment variables
-        os.environ['XRAY_LOCATION_ASSET'] = str(DATA_DIR / 'xray')
+        os.environ['XRAY_LOCATION_ASSET'] = str(XRAY_ASSET_DIR)
 
     def isSystemTrayConnected(self):
         if isinstance(self.systemTray, SystemTrayIcon):

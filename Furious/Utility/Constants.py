@@ -63,6 +63,11 @@ PROXY_SERVER_BYPASS = (
     '172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'
 )
 
+if PLATFORM == 'Windows':
+    if PLATFORM_RELEASE != '7':
+        # https://github.com/2dust/v2rayN/issues/4334
+        PROXY_SERVER_BYPASS += ';<local>'
+
 CORE_CHECK_ALIVE_INTERVAL = 2000
 
 if PLATFORM == 'Windows':
@@ -86,4 +91,3 @@ NETWORK_STATE_TEST_URL = 'http://cp.cloudflare.com'
 
 UNICODE_LARGE_RED_CIRCLE = u'\U0001F534'
 UNICODE_LARGE_GREEN_CIRCLE = u'\U0001F7E2'
-UNICODE_LARGE_ORANGE_CIRCLE = u'\U0001F7E0'
