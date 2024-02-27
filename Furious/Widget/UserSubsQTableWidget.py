@@ -218,6 +218,7 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
         remark = kwargs.pop('remark', '')
         webURL = kwargs.pop('webURL', '')
 
+        # The internal subs object
         subs = {
             unique: {
                 'remark': remark,

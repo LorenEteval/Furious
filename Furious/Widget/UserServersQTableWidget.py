@@ -86,16 +86,43 @@ class SubscriptionManager(AppQNetworkAccessManager):
                 parent = self.parent()
 
                 if isinstance(parent, UserServersQTableWidget):
-                    parent.deleteItemByIndex(
-                        list(
-                            index
-                            for index, server in enumerate(AS_UserServers())
-                            if server.getExtras('subsId') == unique
-                        ),
+                    isConnected = APP().isSystemTrayConnected()
+
+                    subsIndexes = list(
+                        index
+                        for index, server in enumerate(AS_UserServers())
+                        if server.getExtras('subsId') == unique
                     )
+
+                    subsGroupIndex = -1
+                    activatedIndex = AS_UserActivatedItemIndex()
+
+                    if activatedIndex in subsIndexes:
+                        for index, server in enumerate(AS_UserServers()):
+                            if index <= activatedIndex:
+                                if server.getExtras('subsId') == unique:
+                                    subsGroupIndex += 1
+                            else:
+                                break
+
+                    parent.deleteItemByIndex(
+                        subsIndexes, showTrayMessage=bool(subsGroupIndex < 0)
+                    )
+
+                    remaining = len(AS_UserServers())
 
                     for uri in uris:
                         parent.appendNewItem(config=uri, subsId=unique)
+
+                    if isConnected and subsGroupIndex >= 0:
+                        newIndex = remaining + subsGroupIndex
+
+                        if newIndex < len(AS_UserServers()):
+                            parent.activateItemByIndex(newIndex, True)
+
+                            if not APP().isSystemTrayConnected():
+                                # Trigger connect
+                                APP().systemTray.ConnectAction.trigger()
 
         # Done. Remove entry. Key should be found, but protect it anyway
         self.networkReplyTable.pop(networkReply, None)
@@ -945,7 +972,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                     config=AS_UserServers()[index],
                 )
 
-    def deleteItemByIndex(self, indexes) -> int:
+    def deleteItemByIndex(self, indexes, showTrayMessage=True) -> int:
         if len(indexes) == 0:
             # Nothing selected. Do nothing
             return 0
@@ -975,8 +1002,12 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             AppSettings.set('ActivatedItemIndex', str(-1))
 
             if APP().isSystemTrayConnected():
-                # Trigger disconnect
-                APP().systemTray.ConnectAction.trigger()
+                if showTrayMessage:
+                    # Trigger disconnect
+                    APP().systemTray.ConnectAction.trigger()
+                else:
+                    # Trigger disconnect silently
+                    APP().systemTray.ConnectAction.doDisconnect()
 
         return len(indexes)
 
