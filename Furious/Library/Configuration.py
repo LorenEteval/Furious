@@ -1225,48 +1225,6 @@ class ConfigurationXray(ConfigurationFactory):
 
             return False
 
-    def logAccessPath(self) -> str:
-        try:
-            return self['log']['access']
-        except Exception:
-            # Any non-exit exceptions
-
-            return ''
-
-    def logErrorPath(self) -> str:
-        try:
-            return self['log']['error']
-        except Exception:
-            # Any non-exit exceptions
-
-            return ''
-
-    def setLogAccessPath(self, path) -> bool:
-        try:
-            if self.get('log') is None:
-                self['log'] = {}
-
-            self['log']['access'] = path
-
-            return True
-        except Exception:
-            # Any non-exit exceptions
-
-            return False
-
-    def setLogErrorPath(self, path) -> bool:
-        try:
-            if self.get('log') is None:
-                self['log'] = {}
-
-            self['log']['error'] = path
-
-            return True
-        except Exception:
-            # Any non-exit exceptions
-
-            return False
-
 
 class ConfigurationHysteria1(ConfigurationFactory):
     def __init__(self, config: Union[str, dict] = '', **kwargs):
@@ -1637,7 +1595,7 @@ def constructFromAny(config: Union[str, dict], **kwargs) -> ConfigurationFactory
             or config.startswith('trojan://')
         ):
             return ConfigurationXray(config, **kwargs)
-        if config.startswith('h2://') or config.startswith('hysteria2://'):
+        if config.startswith('hy2://') or config.startswith('hysteria2://'):
             return ConfigurationHysteria2(config, **kwargs)
 
         try:
