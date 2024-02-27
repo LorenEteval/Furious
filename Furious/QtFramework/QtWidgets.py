@@ -145,6 +145,10 @@ class AppQHeaderView(SupportExitCleanup, SupportConnectedCallback, QHeaderView):
             return
 
         try:
+            # https://bugreports.qt.io/browse/QTBUG-119862
+            # Affected: PySide6 6.6.1+
+            self.setDefaultSectionSize(self.defaultSectionSize())
+
             self.sectionSizeTable = UJSONEncoder.decode(
                 AppSettings.get(self.sectionSizeSettingsName)
             )
