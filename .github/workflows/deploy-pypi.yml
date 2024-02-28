@@ -1,4 +1,4 @@
-name: Publish Python 🐍 distribution 📦 to PyPI
+name: Deploy PyPI
 
 on: push
 
@@ -12,15 +12,27 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.x"
-      - name: Install pypa/build
+          python-version: "3.11"
+      - name: Set up Python venv
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python3 --version
+      - name: Install libegl1
+        run: |
+          sudo apt update && sudo apt install -y libegl1
+      - name: Install setuptools, wheel
         run: >-
           python3 -m
           pip install
-          build
-          --user
+          setuptools wheel
+      - name: Install requirements-nocore.txt
+        run: >-
+          python3 -m
+          pip install
+          -r requirements-nocore.txt
       - name: Build a binary wheel and a source tarball
-        run: python3 -m build
+        run: python3 setup.py sdist bdist_wheel
       - name: Store the distribution packages
         uses: actions/upload-artifact@v3
         with:
@@ -35,7 +47,7 @@ jobs:
       - build
     runs-on: ubuntu-latest
     environment:
-      name: pypi
+      name: deploy-pypi
       url: https://pypi.org/p/Furious-GUI
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
