@@ -1,6 +1,6 @@
 # Furious
 
-[![Build Furious](https://github.com/LorenEteval/Furious/actions/workflows/wheels.yml/badge.svg?branch=main)](https://github.com/LorenEteval/Furious/actions/workflows/wheels.yml)
+[![Deploy PyPI](https://github.com/LorenEteval/Furious/actions/workflows/deploy-pypi.yml/badge.svg?branch=main)](https://github.com/LorenEteval/Furious/actions/workflows/deploy-pypi.yml)
 
 ## Install
 
