@@ -163,3 +163,9 @@ cython_debug/
 
 # Any potential virtual environment folder
 venv*/
+
+# Furious deploy folders
+Furious-*/
+
+# zip files
+*.zip
