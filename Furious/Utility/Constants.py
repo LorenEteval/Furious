@@ -42,6 +42,7 @@ PYSIDE6_VERSION = _pyside6_version
 
 PLATFORM = platform.system()
 PLATFORM_RELEASE = platform.release()
+PLATFORM_MACHINE = platform.machine()
 
 LOCAL_SERVER_NAME = '891ad49d-8996-43cb-820c-d9baf42a04de'
 
