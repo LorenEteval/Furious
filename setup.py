@@ -38,7 +38,6 @@ setup(
     install_requires=[
         'PySide6',
         'qdarkstyle',
-        'tun2socks > 2.5.1; platform_system != "Linux"',
         'ujson',
         'pybase64',
         'pyqrcode',
@@ -49,8 +48,21 @@ setup(
         'darkdetect[macos-listener]; platform_system == "Darwin"',
     ],
     extras_require={
-        'go1.20': ['Xray-core < 1.8.5', 'hysteria > 1.3.5', 'hysteria2 == 2.0.0.1'],
-        'go1.21': ['Xray-core > 1.8.5', 'hysteria2 > 2.0.4'],
+        'go1.20': [
+            'Xray-core < 1.8.5',
+            'hysteria > 1.3.5',
+            'hysteria2 == 2.0.0.1',
+            'tun2socks > 2.5.1; platform_system != "Linux"',
+        ],
+        'go1.21': [
+            'Xray-core >= 1.8.5, < 1.8.8',
+            'hysteria2 >= 2.0.4',
+            'tun2socks > 2.5.1; platform_system != "Linux"',
+        ],
+        'go1.22': [
+            'Xray-core >= 1.8.8',
+            'hysteria2 >= 2.0.4',
+        ],
     },
     entry_points={
         'gui_scripts': [
