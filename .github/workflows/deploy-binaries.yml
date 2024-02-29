@@ -8,11 +8,11 @@ defaults:
 
 jobs:
   deploy:
-    name: Deploy ${{ matrix.os }}
+    name: Deploy on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-2022, macos-12, macos-14]
+        os: [windows-2022, macos-13, macos-14]
 
     steps:
       - uses: actions/checkout@v4
