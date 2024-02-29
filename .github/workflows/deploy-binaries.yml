@@ -47,11 +47,11 @@ jobs:
           pip install
           setuptools wheel
 
-      - name: Install PySide6 6.4.3
-        run: >-
-          python3 -m
-          pip install
-          pyside6==6.4.3
+      - name: Install PySide6 6.4.3 if on macOS
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            python3 -m pip install PySide6==6.4.3
+          fi
 
       - name: Install requirements-nocore.txt
         run: >-
@@ -98,11 +98,17 @@ jobs:
       - name: Run deploy script
         run: python3 Deploy.py
 
-      - name: Upgrade PySide6 to latest
-        run: python3 -m pip install --upgrade pyside6
+      - name: Upgrade PySide6 to latest if on macOS
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            python3 -m pip install --upgrade PySide6
+          fi
 
-      - name: Run deploy script
-        run: python3 Deploy.py
+      - name: Run deploy script again if on macOS
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            python3 Deploy.py
+          fi
 
       - name: Store the distribution packages
         uses: actions/upload-artifact@v3
@@ -111,3 +117,46 @@ jobs:
           path: |
             *.zip
             *.dmg
+
+  github-release:
+    name: >-
+      Upload to GitHub Release
+    if: startsWith(github.ref, 'refs/tags/')  # only upload on tag pushes
+    needs:
+      - deploy
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+      id-token: write  # IMPORTANT: mandatory for sigstore
+
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v3
+        with:
+          name: binary-distributions
+          path: dist/
+      - name: Sign the dists with Sigstore
+        uses: sigstore/gh-action-sigstore-python@v1.2.3
+        with:
+          inputs: >-
+            ./dist/*.zip
+            ./dist/*.dmg
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create
+          '${{ github.ref_name }}'
+          --repo '${{ github.repository }}'
+          --notes ""
+      - name: Upload artifact signatures to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        # Upload to GitHub Release using the `gh` CLI.
+        # `dist/` contains the built packages, and the
+        # sigstore-produced signatures and certificates.
+        run: >-
+          gh release upload
+          '${{ github.ref_name }}' dist/**
+          --repo '${{ github.repository }}'
