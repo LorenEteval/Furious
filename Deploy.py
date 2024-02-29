@@ -70,7 +70,7 @@ else:
 
 def printArtifactName():
     if PLATFORM == 'Windows':
-        print(f'{ARTIFACT_NAME}.zip')
+        print(f'{ARTIFACT_NAME}.zip', flush=True)
 
 
 def cleanup():
@@ -99,6 +99,21 @@ def cleanup():
             logger.error(f'remove potential unzipped dir failed: {ex}')
         else:
             logger.info(f'remove potential unzipped dir success')
+    elif PLATFORM == 'Darwin':
+        # More cleanup on Darwin
+        try:
+            os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.dmg')
+        except Exception as ex:
+            logger.error(f'remove artifact failed: {ex}')
+        else:
+            logger.info(f'remove artifact success')
+
+        try:
+            shutil.rmtree(ROOT_DIR / 'dmg')
+        except Exception as ex:
+            logger.error(f'remove dmg dir failed: {ex}')
+        else:
+            logger.info(f'remove dmg dir success')
 
 
 def main():
@@ -150,8 +165,11 @@ def main():
             'stdout:\n'
             + err.stdout.decode('utf-8', 'replace')
             + 'stderr:\n'
-            + err.stderr.decode('utf-8', 'replace')
+            + err.stderr.decode('utf-8', 'replace'),
+            flush=True,
         )
+
+        sys.exit(-1)
     else:
         logger.info(f'build success')
 
@@ -159,13 +177,14 @@ def main():
             'stdout:\n'
             + result.stdout.decode('utf-8', 'replace')
             + 'stderr:\n'
-            + result.stderr.decode('utf-8', 'replace')
+            + result.stderr.decode('utf-8', 'replace'),
+            flush=True,
         )
 
-    if PLATFORM == 'Windows':
-        # Sleep for a while for any running nuitka tasks
-        time.sleep(2)
+    # Sleep for a while for any running nuitka tasks
+    time.sleep(2)
 
+    if PLATFORM == 'Windows':
         foldername = (
             f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
             f'{PLATFORM.lower()}{PLATFORM_RELEASE}'
@@ -182,6 +201,79 @@ def main():
             foldername,
             logger=logger,
         )
+    elif PLATFORM == 'Darwin':
+        dmgDir = ROOT_DIR / 'dmg'
+        appDir = ROOT_DIR / 'dmg' / 'app'
+
+        try:
+            os.mkdir(dmgDir)
+        except FileExistsError:
+            pass
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        try:
+            os.mkdir(appDir)
+        except FileExistsError:
+            pass
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        shutil.copytree(
+            ROOT_DIR / DEPLOY_DIR_NAME / 'Furious-GUI.app',
+            appDir / 'Furious-GUI.app',
+        )
+
+        try:
+            logger.info('generate dmg')
+
+            dmgfile = f'{ARTIFACT_NAME}.dmg'
+
+            result = runExternalCommand(
+                (
+                    f'create-dmg '
+                    f'--volname \"Furious\" '
+                    f'--volicon \"Icons/png/rocket-takeoff-window.png\" '
+                    f'--window-pos 200 120 '
+                    f'--window-size 600 300 '
+                    f'--icon-size 100 '
+                    f'--icon \"Furious-GUI.app\" 175 120 '
+                    f'--hide-extension \"Furious-GUI.app\" '
+                    f'--app-drop-link 425 120 '
+                    f'\"{ROOT_DIR / dmgfile}\" '
+                    f'\"{appDir}\"'
+                ),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(f'generate dmg failed with returncode {err.returncode}')
+
+            print(
+                'stdout:\n'
+                + err.stdout.decode('utf-8', 'replace')
+                + 'stderr:\n'
+                + err.stderr.decode('utf-8', 'replace'),
+                flush=True,
+            )
+
+            sys.exit(-1)
+        else:
+            print(
+                'stdout:\n'
+                + result.stdout.decode('utf-8', 'replace')
+                + 'stderr:\n'
+                + result.stderr.decode('utf-8', 'replace'),
+                flush=True,
+            )
+
+            logger.info(f'generate dmg success: {dmgfile}')
 
 
 if __name__ == '__main__':
