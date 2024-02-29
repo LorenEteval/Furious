@@ -190,6 +190,13 @@ def main():
             f'{PLATFORM.lower()}{PLATFORM_RELEASE}'
         )
 
+        try:
+            shutil.rmtree(ROOT_DIR / DEPLOY_DIR_NAME / foldername)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            raise
+
         shutil.copytree(
             ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
             ROOT_DIR / DEPLOY_DIR_NAME / foldername,
@@ -221,6 +228,13 @@ def main():
         except Exception:
             # Any non-exit exceptions
 
+            raise
+
+        try:
+            shutil.rmtree(appDir / 'Furious-GUI.app')
+        except FileNotFoundError:
+            pass
+        except Exception:
             raise
 
         shutil.copytree(
