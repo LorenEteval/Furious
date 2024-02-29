@@ -8,8 +8,11 @@ defaults:
 
 jobs:
   deploy:
-    name: Deploy
-    runs-on: [windows-2022, macos-11, macos-14]
+    name: Deploy ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2022, macos-12, macos-14]
 
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +34,12 @@ jobs:
             exit 1
           fi
           python3 --version
+
+      - name: Install system dependencies
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            brew install create-dmg
+          fi
 
       - name: Install setuptools, wheel
         run: >-
@@ -54,7 +63,7 @@ jobs:
         run: >-
           python3 -m
           pip install
-          nuitka imageio
+          "nuitka==1.8.6" imageio
 
       - name: Set up go 1.20
         uses: actions/setup-go@v4
