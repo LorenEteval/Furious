@@ -182,7 +182,7 @@ def main():
         )
 
     # Sleep for a while for any running nuitka tasks
-    time.sleep(2)
+    time.sleep(5)
 
     if PLATFORM == 'Windows':
         foldername = (
@@ -209,32 +209,20 @@ def main():
             logger=logger,
         )
     elif PLATFORM == 'Darwin':
-        dmgDir = ROOT_DIR / 'dmg'
-        appDir = ROOT_DIR / 'dmg' / 'app'
+        appDir = ROOT_DIR / 'app'
 
         try:
-            os.mkdir(dmgDir)
-        except FileExistsError:
+            shutil.rmtree(appDir)
+        except FileNotFoundError:
             pass
         except Exception:
-            # Any non-exit exceptions
-
             raise
 
         try:
             os.mkdir(appDir)
-        except FileExistsError:
-            pass
         except Exception:
             # Any non-exit exceptions
 
-            raise
-
-        try:
-            shutil.rmtree(appDir / 'Furious-GUI.app')
-        except FileNotFoundError:
-            pass
-        except Exception:
             raise
 
         shutil.copytree(
@@ -243,9 +231,9 @@ def main():
         )
 
         try:
-            logger.info('generate dmg')
+            logger.info('generating dmg')
 
-            dmgfile = f'{ARTIFACT_NAME}.dmg'
+            output = f'{ARTIFACT_NAME}.dmg'
 
             result = runExternalCommand(
                 (
@@ -258,7 +246,7 @@ def main():
                     f'--icon \"Furious-GUI.app\" 175 120 '
                     f'--hide-extension \"Furious-GUI.app\" '
                     f'--app-drop-link 425 120 '
-                    f'\"{ROOT_DIR / dmgfile}\" '
+                    f'\"{ROOT_DIR / output}\" '
                     f'\"{appDir}\"'
                 ),
                 stdout=subprocess.PIPE,
@@ -287,7 +275,10 @@ def main():
                 flush=True,
             )
 
-            logger.info(f'generate dmg success: {dmgfile}')
+            logger.info(f'generate dmg success: {output}')
+
+    # Sleep for a while for any running tasks
+    time.sleep(5)
 
 
 if __name__ == '__main__':
