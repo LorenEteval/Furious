@@ -226,6 +226,9 @@ jobs:
           '${{ github.ref_name }}'
           --repo '${{ github.repository }}'
           --notes ""
+          --prerelease
+          --generate-notes
+          --title 'Furious ${{ github.ref_name }}'
       - name: Upload artifact signatures to GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
