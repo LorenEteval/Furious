@@ -2,10 +2,14 @@ name: Deploy Binaries
 
 on: [push, pull_request]
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  deploy-windows:
-    name: Deploy Windows
-    runs-on: windows-2022
+  deploy:
+    name: Deploy
+    runs-on: [windows-2022, macos-11, macos-14]
 
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +22,14 @@ jobs:
       - name: Set up Python venv
         run: |
           python3 -m venv .venv
-          .venv/Scripts/activate
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            source .venv/bin/activate
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            .venv/Scripts/activate
+          else
+            echo "$RUNNER_OS not supported"
+            exit 1
+          fi
           python3 --version
 
       - name: Install setuptools, wheel
@@ -26,6 +37,12 @@ jobs:
           python3 -m
           pip install
           setuptools wheel
+
+      - name: Install PySide6 6.4.3
+        run: >-
+          python3 -m
+          pip install
+          pyside6==6.4.3
 
       - name: Install requirements-nocore.txt
         run: >-
@@ -72,9 +89,16 @@ jobs:
       - name: Run deploy script
         run: python3 Deploy.py
 
+      - name: Upgrade PySide6 to latest
+        run: python3 -m pip install --upgrade pyside6
+
+      - name: Run deploy script
+        run: python3 Deploy.py
+
       - name: Store the distribution packages
         uses: actions/upload-artifact@v3
         with:
-          name: windows-distributions
+          name: binary-distributions
           path: |
             *.zip
+            *.dmg
