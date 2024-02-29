@@ -1,6 +1,10 @@
-name: Deploy PyPI
+name: Deploy Everything
 
 on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
@@ -70,11 +74,130 @@ jobs:
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
+  deploy:
+    name: Deploy on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ windows-2022, macos-13, macos-14 ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          check-latest: true
+
+      - name: Set up Python venv
+        run: |
+          python3 -m venv .venv
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            source .venv/bin/activate
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            .venv/Scripts/activate
+          else
+            echo "$RUNNER_OS not supported"
+            exit 1
+          fi
+          python3 --version
+
+      - name: Install system dependencies
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            brew install create-dmg
+          fi
+
+      - name: Install setuptools, wheel
+        run: >-
+          python3 -m
+          pip install
+          setuptools wheel
+
+      - name: Install specific PySide6-Essentials on OS
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            python3 -m pip install PySide6-Essentials==6.4.3
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            python3 -m pip install PySide6-Essentials==6.5.3
+          else
+            echo "$RUNNER_OS not supported"
+            exit 1
+          fi
+
+      - name: Install requirements-nocore.txt
+        run: >-
+          python3 -m
+          pip install
+          -r requirements-nocore.txt
+
+      - name: Install nuitka, imageio
+        run: >-
+          python3 -m
+          pip install
+          "nuitka==1.8.6" imageio
+
+      - name: Set up go 1.20
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
+
+      - name: Install go 1.20 dependencies
+        run: |
+          go version
+          python3 -m pip install "hysteria > 1.3.5"
+
+      - name: Set up go 1.21
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+
+      - name: Install go 1.21 dependencies
+        run: |
+          go version
+          python3 -m pip install "tun2socks > 2.5.1"
+
+      - name: Set up go 1.22
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.22"
+
+      - name: Install go 1.22 dependencies
+        run: |
+          go version
+          python3 -m pip install "Xray-core >= 1.8.8" "hysteria2 >= 2.0.4"
+
+      - name: Run deploy script
+        run: python3 Deploy.py
+
+      - name: Upgrade PySide6-Essentials to 6.5.3 if on macOS
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            python3 -m pip uninstall -y PySide6-Essentials shiboken6
+            python3 -m pip install PySide6-Essentials==6.5.3
+          fi
+
+      - name: Run deploy script again if on macOS
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            python3 Deploy.py
+          fi
+
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: binary-distributions
+          path: |
+            *.zip
+            *.dmg
+
   github-release:
     name: >-
       Sign the Python 🐍 distribution 📦 with Sigstore
       and upload them to GitHub Release
     needs:
+      - deploy
       - publish-to-pypi
     runs-on: ubuntu-latest
 
@@ -86,7 +209,6 @@ jobs:
       - name: Download all the dists
         uses: actions/download-artifact@v3
         with:
-          name: python-package-distributions
           path: dist/
       - name: Sign the dists with Sigstore
         uses: sigstore/gh-action-sigstore-python@v1.2.3
@@ -94,6 +216,8 @@ jobs:
           inputs: >-
             ./dist/*.tar.gz
             ./dist/*.whl
+            ./dist/*.zip
+            ./dist/*.dmg
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
