@@ -167,5 +167,11 @@ venv*/
 # Furious deploy folders
 Furious-*/
 
+# dmg folder
+dmg/
+
 # zip files
 *.zip
+
+# dmg files
+*.dmg
