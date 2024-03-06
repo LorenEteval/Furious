@@ -42,7 +42,7 @@ setup(
         'pybase64',
         'pyqrcode',
         'pypng',
-        'ping3',
+        'icmplib',
         'sysproxy; platform_system == "Windows"',
         'darkdetect; platform_system != "Darwin"',
         'darkdetect[macos-listener]; platform_system == "Darwin"',
