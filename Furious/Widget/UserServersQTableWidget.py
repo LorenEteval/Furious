@@ -35,9 +35,9 @@ from PySide6.QtNetwork import *
 
 from typing import Callable, Union, Sequence, MutableSequence
 
-import ping3
 import queue
 import logging
+import icmplib
 import functools
 
 __all__ = ['UserServersQTableWidget']
@@ -114,13 +114,13 @@ class SubscriptionManager(AppQNetworkAccessManager):
                     for uri in uris:
                         parent.appendNewItem(config=uri, subsId=unique)
 
-                    if isConnected and subsGroupIndex >= 0:
+                    if subsGroupIndex >= 0:
                         newIndex = remaining + subsGroupIndex
 
                         if newIndex < len(AS_UserServers()):
                             parent.activateItemByIndex(newIndex, True)
 
-                            if not APP().isSystemTrayConnected():
+                            if isConnected and not APP().isSystemTrayConnected():
                                 # Trigger connect
                                 APP().systemTray.ConnectAction.trigger()
 
@@ -186,19 +186,20 @@ class TestPingLatencyWorker(ItemUpdateProtocol, QtCore.QObject, QtCore.QRunnable
         assert isinstance(self.currentItem, ConfigurationFactory)
 
         try:
-            result = ping3.ping(self.currentItem.itemAddress, timeout=2, unit='ms')
-        except Exception:
+            result = icmplib.ping(self.currentItem.itemAddress, count=1)
+        except Exception as ex:
             # Any non-exit exceptions
 
-            self.currentItem.setExtras('delayResult', 'Timeout')
+            self.currentItem.setExtras('delayResult', str(ex))
             self.updateResult()
         else:
-            if result is False:
-                self.currentItem.setExtras('delayResult', 'Error')
-            elif result is None:
-                self.currentItem.setExtras('delayResult', 'Timeout')
+            if result.is_alive:
+                self.currentItem.setExtras('delayResult', f'{round(result.avg_rtt)}ms')
             else:
-                self.currentItem.setExtras('delayResult', f'{round(result)}ms')
+                if result.packet_loss == 1:
+                    self.currentItem.setExtras('delayResult', 'Timeout')
+                else:
+                    self.currentItem.setExtras('delayResult', 'Error')
 
             self.updateResult()
 
