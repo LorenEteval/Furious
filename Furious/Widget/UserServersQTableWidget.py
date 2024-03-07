@@ -1201,9 +1201,19 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             # Nothing selected. Do nothing
             return
 
+        def toURI(factory) -> str:
+            assert isinstance(factory, ConfigurationFactory)
+
+            try:
+                return factory.toURI()
+            except Exception:
+                # Any non-exit exceptions
+
+                return ''
+
         # TODO: MessageBox?
         QApplication.clipboard().setText(
-            '\n'.join(list(AS_UserServers()[index].toURI() for index in indexes))
+            '\n'.join(list(toURI(AS_UserServers()[index]) for index in indexes))
         )
 
     def exportSelectedItemQR(self):
