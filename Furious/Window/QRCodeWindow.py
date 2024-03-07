@@ -57,7 +57,12 @@ class QRCodeWindow(SupportImplicitReference, AppQMainWindow):
 
             config = AS_UserServers()[index]
 
-            uri = config.toURI()
+            try:
+                uri = config.toURI()
+            except Exception:
+                # Any non-exit exceptions
+
+                uri = ''
 
             if uri:
                 qrcode = pyqrcode.create(uri)
