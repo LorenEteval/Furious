@@ -1,4 +1,4 @@
-name: Deploy Everything
+name: Github Deploy
 
 on: [push, pull_request]
 
@@ -76,7 +76,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
   deploy-binaries:
-    name: Deploy binary distribution on ${{ matrix.os }}
+    name: Deploy binaries on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -226,8 +226,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         # Upload to GitHub Release using the `gh` CLI.
-        # `dist/` contains the built packages, and the
-        # sigstore-produced signatures and certificates.
         run: >-
           gh release upload
           '${{ github.ref_name }}' dist/**
