@@ -7,8 +7,8 @@ defaults:
     shell: bash
 
 jobs:
-  build:
-    name: Build distribution 📦
+  build-distribution:
+    name: Build distribution
     runs-on: ubuntu-latest
 
     steps:
@@ -54,11 +54,11 @@ jobs:
 
   publish-to-pypi:
     name: >-
-      Publish Python 🐍 distribution 📦 to PyPI
+      Publish Python distribution to PyPI
     if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
     needs:
-      - build
-      - deploy
+      - build-distribution
+      - deploy-binaries
     runs-on: ubuntu-latest
     environment:
       name: deploy-pypi
@@ -72,11 +72,11 @@ jobs:
         with:
           name: python-package-distributions
           path: dist/
-      - name: Publish distribution 📦 to PyPI
+      - name: Publish distribution to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
-  deploy:
-    name: Deploy on ${{ matrix.os }}
+  deploy-binaries:
+    name: Deploy binary distribution on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -195,10 +195,9 @@ jobs:
 
   github-release:
     name: >-
-      Sign the Python 🐍 distribution 📦 with Sigstore
-      and upload them to GitHub Release
+      Upload to GitHub Release
     needs:
-      - deploy
+      - deploy-binaries
       - publish-to-pypi
     runs-on: ubuntu-latest
 
