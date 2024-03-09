@@ -153,23 +153,14 @@ class SubscriptionManager(AppQNetworkAccessManager):
         )
 
 
-class TestPingLatencyWorker(ItemUpdateProtocol, QtCore.QObject, QtCore.QRunnable):
-    finished = QtCore.Signal(int, object)
-
+class WorkerSequence(ItemUpdateProtocol):
     def __init__(self, sequence: Sequence, index: int, item: ConfigurationFactory):
         super().__init__(sequence, index, item)
-
-        # Explictly called __init__
-        QtCore.QObject.__init__(self)
-        QtCore.QRunnable.__init__(self)
 
     def currentItemDeleted(self) -> bool:
         return super().currentItemDeleted() or FastItemDeletionSearch.isInTrash(
             self.currentItem
         )
-
-    def updateImpl(self):
-        self.finished.emit(self.currentIndex, self.currentItem)
 
     def updateResult(self):
         # Extra guard
@@ -177,6 +168,20 @@ class TestPingLatencyWorker(ItemUpdateProtocol, QtCore.QObject, QtCore.QRunnable
             return
 
         super().updateResult()
+
+
+class TestPingLatencyWorker(WorkerSequence, QtCore.QObject, QtCore.QRunnable):
+    finished = QtCore.Signal(int, object)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Explictly called __init__
+        QtCore.QObject.__init__(self)
+        QtCore.QRunnable.__init__(self)
+
+    def updateImpl(self):
+        self.finished.emit(self.currentIndex, self.currentItem)
 
     def run(self):
         if self.currentItemDeleted():
@@ -186,11 +191,19 @@ class TestPingLatencyWorker(ItemUpdateProtocol, QtCore.QObject, QtCore.QRunnable
         assert isinstance(self.currentItem, ConfigurationFactory)
 
         try:
-            result = icmplib.ping(self.currentItem.itemAddress, count=1)
+            result = icmplib.ping(
+                self.currentItem.itemAddress,
+                count=1,
+                timeout=2,
+                interval=1,
+            )
         except Exception as ex:
             # Any non-exit exceptions
 
-            self.currentItem.setExtras('delayResult', str(ex))
+            def classname(ob) -> str:
+                return ob.__class__.__name__
+
+            self.currentItem.setExtras('delayResult', classname(ex))
             self.updateResult()
         else:
             if result.is_alive:
@@ -204,11 +217,56 @@ class TestPingLatencyWorker(ItemUpdateProtocol, QtCore.QObject, QtCore.QRunnable
             self.updateResult()
 
 
-class TestDownloadSpeedWorker(ItemUpdateProtocol, QtCore.QObject):
+class TestTcpingLatencyWorker(WorkerSequence, QtCore.QObject, QtCore.QRunnable):
+    finished = QtCore.Signal(int, object)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Explictly called __init__
+        QtCore.QObject.__init__(self)
+        QtCore.QRunnable.__init__(self)
+
+    def updateImpl(self):
+        self.finished.emit(self.currentIndex, self.currentItem)
+
+    def run(self):
+        if self.currentItemDeleted():
+            # Deleted. Do nothing
+            return
+
+        assert isinstance(self.currentItem, ConfigurationFactory)
+
+        try:
+            sent, rtts = tcping(
+                self.currentItem.itemAddress,
+                int(self.currentItem.itemPort.split(',')[0]),
+                count=1,
+                timeout=2,
+                interval=1,
+            )
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            def classname(ob) -> str:
+                return ob.__class__.__name__
+
+            self.currentItem.setExtras('delayResult', classname(ex))
+            self.updateResult()
+        else:
+            if rtts:
+                self.currentItem.setExtras('delayResult', f'{round(rtts[0] * 1000)}ms')
+            else:
+                self.currentItem.setExtras('delayResult', 'Timeout')
+
+            self.updateResult()
+
+
+class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
     progressed = QtCore.Signal(int, object)
 
-    def __init__(self, sequence: Sequence, index: int, item: ConfigurationFactory):
-        super().__init__(sequence, index, item)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # Explictly called __init__
         QtCore.QObject.__init__(self)
@@ -232,20 +290,8 @@ class TestDownloadSpeedWorker(ItemUpdateProtocol, QtCore.QObject):
         if isinstance(self.networkReply, QNetworkReply):
             self.networkReply.abort()
 
-    def currentItemDeleted(self) -> bool:
-        return super().currentItemDeleted() or FastItemDeletionSearch.isInTrash(
-            self.currentItem
-        )
-
     def updateImpl(self):
         self.progressed.emit(self.currentIndex, self.currentItem)
-
-    def updateResult(self):
-        # Extra guard
-        if APP() is None or APP().isExiting():
-            return
-
-        super().updateResult()
 
     def run(self):
         if self.currentItemDeleted():
@@ -550,6 +596,7 @@ needTrans(
     'Select All',
     'Scroll To Activated Server',
     'Test Ping Latency',
+    'Test Tcping Latency',
     'Test Download Speed',
     'Clear Test Results',
     'New Empty Configuration',
@@ -679,6 +726,14 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier,
                     QtCore.Qt.Key.Key_P,
+                ),
+            ),
+            AppQAction(
+                _('Test Tcping Latency'),
+                callback=lambda: self.testSelectedItemTcpingLatency(),
+                shortcut=QtCore.QKeyCombination(
+                    QtCore.Qt.KeyboardModifier.ControlModifier,
+                    QtCore.Qt.Key.Key_O,
                 ),
             ),
             AppQAction(
@@ -1078,7 +1133,29 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 )
             )
 
-            QtCore.QThreadPool.globalInstance().start(worker)
+            APP().threadPool.start(worker)
+
+    def testSelectedItemTcpingLatency(self):
+        indexes = self.selectedIndex
+
+        if len(indexes) == 0:
+            # Nothing selected. Do nothing
+            return
+
+        # Real selected factory
+        references = list(AS_UserServers()[index] for index in indexes)
+
+        for index, reference in zip(indexes, references):
+            worker = TestTcpingLatencyWorker(AS_UserServers(), index, reference)
+
+            worker.setAutoDelete(True)
+            worker.finished.connect(
+                lambda paramIndex, paramFactory: self.flushItem(
+                    paramIndex, self.Headers.index('Latency'), paramFactory
+                )
+            )
+
+            APP().threadPool.start(worker)
 
     @QtCore.Slot()
     def handleTestDownloadSpeedJob(self):

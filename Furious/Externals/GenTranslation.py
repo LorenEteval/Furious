@@ -1021,5 +1021,12 @@ TRANSLATION = {
         ],
         "ZH": "帮助",
         "isReviewed": "True"
+    },
+    "Test Tcping Latency": {
+        "source": [
+            "Furious.Widget.UserServersQTableWidget"
+        ],
+        "ZH": "测试Tcping延迟",
+        "isReviewed": "True"
     }
 }

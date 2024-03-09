@@ -373,7 +373,9 @@ class CoreManager(SupportExitCleanup):
 
                     SystemRoutingTable.addRelations()
                     SystemRoutingTable.WIN32SetInterfaceDNS(
-                        APPLICATION_TUN_DEVICE_NAME, '8.8.8.8', False
+                        APPLICATION_TUN_DEVICE_NAME,
+                        APPLICATION_TUN_INTERFACE_DNS_ADDRESS,
+                        False,
                     )
                     SystemRoutingTable.setDeviceGateway(
                         APPLICATION_TUN_DEVICE_NAME,
@@ -400,7 +402,10 @@ class CoreManager(SupportExitCleanup):
                     tun.cleanup = functools.partial(_darwinCleanup, servers)
 
                     for service, dnsserver in servers:
-                        SystemRoutingTable.DarwinSetDNSServers(service, '8.8.8.8')
+                        SystemRoutingTable.DarwinSetDNSServers(
+                            service,
+                            APPLICATION_TUN_INTERFACE_DNS_ADDRESS,
+                        )
 
                     SystemRoutingTable.setDeviceGateway(
                         APPLICATION_TUN_DEVICE_NAME,
