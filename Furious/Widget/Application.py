@@ -181,6 +181,9 @@ class Application(ApplicationFactory, SingletonApplication):
         self.userServers = UserServers()
         self.userSubs = UserSubs()
 
+        # ThreadPool
+        self.threadPool = QtCore.QThreadPool()
+
     @rateLimited(maxCallPerSecond=2)
     @QtCore.Slot()
     def showExistingApp(self):
@@ -273,7 +276,7 @@ class Application(ApplicationFactory, SingletonApplication):
     def exit(self, exitcode=0):
         self.setExitingFlag(True)
 
-        QtCore.QThreadPool.globalInstance().clear()
+        self.threadPool.clear()
 
         super().exit(exitcode)
 
@@ -299,10 +302,10 @@ class Application(ApplicationFactory, SingletonApplication):
             logger.info(
                 f'Qt version: {QtCore.qVersion()}. PySide6 version: {PYSIDE6_VERSION}'
             )
-            logger.info(
-                f'python version: {getPythonVersion()}. Platform: {PLATFORM}. '
-                f'Platform release: {PLATFORM_RELEASE}'
-            )
+            logger.info(f'platform: {PLATFORM}')
+            logger.info(f'platform release: {PLATFORM_RELEASE}')
+            logger.info(f'platform machine: {PLATFORM_MACHINE}')
+            logger.info(f'python version: {getPythonVersion()}')
             logger.info(f'system version: {sys.version}')
             logger.info(f'sys.executable: {sys.executable}')
             logger.info(f'sys.argv: {sys.argv}')
