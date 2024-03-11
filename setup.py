@@ -52,16 +52,17 @@ setup(
             'Xray-core < 1.8.5',
             'hysteria > 1.3.5',
             'hysteria2 == 2.0.0.1',
-            'tun2socks > 2.5.1; platform_system != "Linux"',
+            'tun2socks > 2.5.1, <= 2.5.2; platform_system != "Linux"',
         ],
         'go1.21': [
             'Xray-core >= 1.8.5, < 1.8.8',
             'hysteria2 >= 2.0.4',
-            'tun2socks > 2.5.1; platform_system != "Linux"',
+            'tun2socks > 2.5.1, <= 2.5.2; platform_system != "Linux"',
         ],
         'go1.22': [
             'Xray-core >= 1.8.8',
             'hysteria2 >= 2.0.4',
+            'tun2socks > 2.5.2; platform_system != "Linux"',
         ],
     },
     entry_points={
