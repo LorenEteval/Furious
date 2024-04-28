@@ -15,11 +15,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .Encoder import *
-from .GuiEditorItemFactory import *
-from .UserServersTableItem import *
-from .ItemUpdateProtocol import *
-from .Storage import *
-from .Application import *
-from .ConfigurationFactory import *
-from .CoreFactory import *
+from __future__ import annotations
+
+from Furious.Interface.ConfigurationFactory import ConfigurationFactory
+
+from typing import Any
+
+__all__ = ['GuiEditorItemFactory', 'GuiEditorItemWidgetContainer']
+
+
+class GuiEditorItemFactory:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigurationFactory) -> Any:
+        raise NotImplementedError
+
+    def factoryToInput(self, config: ConfigurationFactory) -> Any:
+        raise NotImplementedError
+
+
+class GuiEditorItemWidgetContainer(GuiEditorItemFactory):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def widgets(self) -> Any:
+        raise NotImplementedError
