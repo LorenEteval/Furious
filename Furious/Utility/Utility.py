@@ -36,6 +36,8 @@ __all__ = [
     'parseHostPort',
     'runExternalCommand',
     'getAbsolutePath',
+    'getXrayProxyOutboundObject',
+    'getXrayProxyOutboundStream',
 ]
 
 
@@ -57,6 +59,9 @@ class BinarySettings:
 
 @functools.lru_cache(None)
 def protocolRepr(protocol: str) -> str:
+    if not isinstance(protocol, str):
+        return ''
+
     if protocol.lower() == 'vmess':
         return Protocol.VMess
 
@@ -105,3 +110,26 @@ def runExternalCommand(*args, **kwargs):
 
 def getAbsolutePath(path):
     return path if os.path.isabs(path) else str(ROOT_DIR / path)
+
+
+def getXrayProxyOutboundObject(config: dict) -> dict:
+    if not isinstance(config.get('outbounds'), list):
+        config['outbounds'] = []
+
+    for outbound in config['outbounds']:
+        if isinstance(outbound, dict):
+            tag = outbound.get('tag')
+
+            if isinstance(tag, str) and tag == 'proxy':
+                return outbound
+
+    return {}
+
+
+def getXrayProxyOutboundStream(config: dict) -> dict:
+    proxyOutboundObject = getXrayProxyOutboundObject(config)
+
+    if not isinstance(proxyOutboundObject.get('streamSettings'), dict):
+        proxyOutboundObject['streamSettings'] = {}
+
+    return proxyOutboundObject['streamSettings']
