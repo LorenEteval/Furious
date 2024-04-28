@@ -25,6 +25,12 @@ from Furious.Utility import *
 from Furious.Library import *
 from Furious.Core import *
 from Furious.TrayActions.Import import *
+from Furious.Widget.GuiHysteria1 import *
+from Furious.Widget.GuiHysteria2 import *
+from Furious.Widget.GuiShadowsocks import *
+from Furious.Widget.GuiTrojan import *
+from Furious.Widget.GuiVLESS import *
+from Furious.Widget.GuiVMess import *
 from Furious.Window.QRCodeWindow import *
 from Furious.Window.TextEditorWindow import *
 
@@ -206,7 +212,8 @@ class TestPingLatencyWorker(WorkerSequence, QtCore.QObject, QtCore.QRunnable):
             self.currentItem.setExtras('delayResult', classname(ex))
             self.updateResult()
         else:
-            if result.is_alive:
+            # Result address should not be empty
+            if result.address and result.is_alive:
                 self.currentItem.setExtras('delayResult', f'{round(result.avg_rtt)}ms')
             else:
                 if result.packet_loss == 1:
@@ -588,7 +595,7 @@ needTrans(
     'Subscription',
     'Latency',
     'Speed',
-    'Edit Configuration...',
+    'Customize JSON Configuration...',
     'Move Up',
     'Move Down',
     'Duplicate',
@@ -633,7 +640,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.testDownloadSpeedTimer.start(250)
 
         # Text Editor Window
-        self.textEditorWindow = TextEditorWindow()
+        self.textEditorWindow = TextEditorWindow(parent=self)
 
         # Delegate
         self._delegate = AppQStyledItemDelegate(parent=self)
@@ -673,7 +680,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.setDefaultDropAction(QtCore.Qt.DropAction.IgnoreAction)
 
         self.editConfigActionRef = AppQAction(
-            _('Edit Configuration...'),
+            _('Customize JSON Configuration...'),
             icon=bootstrapIcon('pencil-square.svg'),
             callback=lambda: self.editSelectedItemConfiguration(),
             shortcut=QtCore.QKeyCombination(
@@ -806,6 +813,8 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
 
+        # Distinguish double-click and activated
+        self.doubleClickedFlag = False
         # Signals
         self.itemChanged.connect(self.handleItemChanged)
         self.itemSelectionChanged.connect(self.handleItemSelectionChanged)
@@ -837,6 +846,12 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
     @QtCore.Slot(QTableWidgetItem)
     def handleItemActivated(self, item: QTableWidgetItem):
+        if self.doubleClickedFlag:
+            # Ignore double-click
+            self.doubleClickedFlag = False
+
+            return
+
         oldIndex = AS_UserActivatedItemIndex()
         newIndex = item.row()
 
@@ -867,18 +882,107 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             APP().systemTray.ConnectAction.doDisconnect()
             APP().systemTray.ConnectAction.trigger()
 
+    def getGuiEditorByFactory(self, factory, **kwargs):
+        if isinstance(factory, ConfigurationXray):
+            protocol = factory.proxyProtocol
+
+            if protocolRepr(protocol) == Protocol.VMess:
+                guiEditor = GuiVMess(parent=self, **kwargs)
+            elif protocolRepr(protocol) == Protocol.VLESS:
+                guiEditor = GuiVLESS(parent=self, **kwargs)
+            elif protocolRepr(protocol) == Protocol.Shadowsocks:
+                guiEditor = GuiShadowsocks(parent=self, **kwargs)
+            elif protocolRepr(protocol) == Protocol.Trojan:
+                guiEditor = GuiTrojan(parent=self, **kwargs)
+            else:
+                guiEditor = None
+        elif isinstance(factory, ConfigurationHysteria2):
+            guiEditor = GuiHysteria2(parent=self, **kwargs)
+        elif isinstance(factory, ConfigurationHysteria1):
+            guiEditor = GuiHysteria1(parent=self, **kwargs)
+        else:
+            guiEditor = None
+
+        return guiEditor
+
     @QtCore.Slot(QTableWidgetItem)
     def handleItemDoubleClicked(self, item: QTableWidgetItem):
-        pass
+        self.doubleClickedFlag = True
+
+        index = item.row()
+        factory = AS_UserServers()[index]
+
+        guiEditor = self.getGuiEditorByFactory(factory, translatable=False)
+
+        if guiEditor is None:
+            # Unrecognized. Do nothing
+            return
+
+        # Dummy ref
+        setattr(self, '_guiEditorRef0', guiEditor)
+
+        guiEditor.setWindowTitle(f'{index + 1} - ' + factory.getExtras('remark'))
+
+        try:
+            guiEditor.factoryToInput(factory)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'error while converting factory to input: {ex}')
+
+        def handleAccepted():
+            modified = guiEditor.inputToFactory(factory)
+
+            self.flushRow(index, factory)
+
+            if index == AS_UserActivatedItemIndex():
+                try:
+                    if modified and APP().isSystemTrayConnected():
+                        mbox = NewChangesNextTimeMBox()
+                        mbox.exec()
+                except Exception:
+                    # Any non-exit exceptions
+
+                    pass
+
+        guiEditor.connectAccepted(handleAccepted)
+        guiEditor.open()
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
         self.contextMenu.exec(self.mapToGlobal(point))
 
     def customSortFn(self, clickedIndex, **kwargs):
-        AS_UserServers().sort(
-            key=lambda server: self.Headers[clickedIndex](server), **kwargs
-        )
+        def keyFn(server):
+            data = self.Headers[clickedIndex](server)
+
+            if clickedIndex == self.Headers.index('Latency'):
+                if data.endswith('ms'):
+                    # Strip value
+                    data = data[:-2]
+
+                try:
+                    return float(data)
+                except Exception:
+                    # Any non-exit exceptions
+
+                    return abs(hash(data)) + 2**20
+
+            if clickedIndex == self.Headers.index('Speed'):
+                if data.endswith(' M/s'):
+                    # Strip value
+                    data = data[:-4]
+
+                try:
+                    return float(data)
+                except Exception:
+                    # Any non-exit exceptions
+
+                    return abs(hash(data)) + 2**20
+
+            return data
+
+        AS_UserServers().sort(key=keyFn, **kwargs)
 
         self.flushAll()
 
@@ -915,19 +1019,61 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             if oldItem.textAlignment() != 0:
                 newItem.setTextAlignment(oldItem.textAlignment())
 
-        if str(header) == 'Remark':
-            # Remark is editable
-            newItem.setFlags(
-                QtCore.Qt.ItemFlag.ItemIsEnabled
-                | QtCore.Qt.ItemFlag.ItemIsSelectable
-                | QtCore.Qt.ItemFlag.ItemIsEditable
-            )
-        else:
-            newItem.setFlags(
-                QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
-            )
+        #
+        # Legacy flags. Not used
+        #
+        # if str(header) == 'Remark':
+        #     # Remark is editable
+        #     newItem.setFlags(
+        #         QtCore.Qt.ItemFlag.ItemIsEnabled
+        #         | QtCore.Qt.ItemFlag.ItemIsSelectable
+        #         | QtCore.Qt.ItemFlag.ItemIsEditable
+        #     )
+        # else:
+        #     newItem.setFlags(
+        #         QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
+        #     )
+
+        # Remark is now editable via GUI window
+        newItem.setFlags(
+            QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
+        )
 
         self.setItem(row, column, newItem)
+
+    def addServerViaGui(
+        self,
+        protocol: str,
+        windowTitle: str = APPLICATION_NAME,
+        **kwargs,
+    ):
+        factory = getEmptyFactory(protocol)
+
+        guiEditor = self.getGuiEditorByFactory(factory, **kwargs)
+
+        if guiEditor is None:
+            # Unrecognized. Do nothing
+            return
+
+        # Dummy ref
+        setattr(self, '_guiEditorRef1', guiEditor)
+
+        guiEditor.setWindowTitle(windowTitle)
+
+        try:
+            guiEditor.factoryToInput(factory)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'error while converting factory to input: {ex}')
+
+        def handleAccepted():
+            guiEditor.inputToFactory(factory)
+
+            self.appendNewItemByFactory(factory)
+
+        guiEditor.connectAccepted(handleAccepted)
+        guiEditor.open()
 
     def flushRow(self, row: int, item: ConfigurationFactory):
         for column in list(range(self.columnCount())):
