@@ -170,6 +170,7 @@ TRANSLATION = {
     },
     "Cancel": {
         "source": [
+            "Furious.QtFramework.GuiEditorXXX",
             "Furious.Widget.IndentSpinBox",
             "Furious.Window.TextEditorWindow",
             "Furious.Window.UserSubsWindow"
@@ -362,6 +363,8 @@ TRANSLATION = {
     },
     "Remark": {
         "source": [
+            "Furious.Widget.GuiHysteria1",
+            "Furious.Widget.GuiHysteria2",
             "Furious.Widget.UserServersQTableWidget",
             "Furious.Widget.UserSubsQTableWidget"
         ],
@@ -370,6 +373,7 @@ TRANSLATION = {
     },
     "Protocol": {
         "source": [
+            "Furious.Widget.GuiHysteria1",
             "Furious.Widget.UserServersQTableWidget"
         ],
         "ZH": "协议",
@@ -377,6 +381,10 @@ TRANSLATION = {
     },
     "Address": {
         "source": [
+            "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiTrojan",
+            "Furious.Widget.GuiVLESS",
+            "Furious.Widget.GuiVMess",
             "Furious.Widget.UserServersQTableWidget"
         ],
         "ZH": "地址",
@@ -384,6 +392,10 @@ TRANSLATION = {
     },
     "Port": {
         "source": [
+            "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiTrojan",
+            "Furious.Widget.GuiVLESS",
+            "Furious.Widget.GuiVMess",
             "Furious.Widget.UserServersQTableWidget"
         ],
         "ZH": "端口",
@@ -391,6 +403,7 @@ TRANSLATION = {
     },
     "Transport": {
         "source": [
+            "Furious.Widget.GuiVTransport",
             "Furious.Widget.UserServersQTableWidget"
         ],
         "ZH": "传输方式",
@@ -420,6 +433,7 @@ TRANSLATION = {
     },
     "Speed": {
         "source": [
+            "Furious.Widget.GuiHysteria1",
             "Furious.Widget.UserServersQTableWidget"
         ],
         "ZH": "速度",
@@ -427,7 +441,6 @@ TRANSLATION = {
     },
     "Edit Configuration...": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget",
             "Furious.TrayActions.EditConfiguration"
         ],
         "ZH": "编辑配置...",
@@ -653,6 +666,8 @@ TRANSLATION = {
     },
     "Server": {
         "source": [
+            "Furious.Widget.GuiHysteria1",
+            "Furious.Widget.GuiHysteria2",
             "Furious.Window.AppMainWindow"
         ],
         "ZH": "服务器",
@@ -1027,6 +1042,125 @@ TRANSLATION = {
             "Furious.Widget.UserServersQTableWidget"
         ],
         "ZH": "测试Tcping延迟",
+        "isReviewed": "True"
+    },
+    "Basic Configuration": {
+        "source": [
+            "Furious.Widget.GuiHysteria1",
+            "Furious.Widget.GuiHysteria2",
+            "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiTrojan",
+            "Furious.Widget.GuiVLESS",
+            "Furious.Widget.GuiVMess"
+        ],
+        "ZH": "基本配置",
+        "isReviewed": "True"
+    },
+    "Proxy": {
+        "source": [
+            "Furious.Widget.GuiHysteria1",
+            "Furious.Widget.GuiHysteria2",
+            "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiTrojan",
+            "Furious.Widget.GuiVLESS",
+            "Furious.Widget.GuiVMess"
+        ],
+        "ZH": "代理",
+        "isReviewed": "True"
+    },
+    "Project Website": {
+        "source": [
+            "Furious.Widget.GuiHysteria1",
+            "Furious.Widget.GuiHysteria2"
+        ],
+        "ZH": "项目网站",
+        "isReviewed": "True"
+    },
+    "Other": {
+        "source": [
+            "Furious.Widget.GuiHysteria1",
+            "Furious.Widget.GuiHysteria2"
+        ],
+        "ZH": "其它",
+        "isReviewed": "True"
+    },
+    "Encryption": {
+        "source": [
+            "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiVLESS"
+        ],
+        "ZH": "加密",
+        "isReviewed": "True"
+    },
+    "Password": {
+        "source": [
+            "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiTrojan"
+        ],
+        "ZH": "密码",
+        "isReviewed": "True"
+    },
+    "Flow": {
+        "source": [
+            "Furious.Widget.GuiVLESS"
+        ],
+        "ZH": "流控",
+        "isReviewed": "True"
+    },
+    "Use Monochrome Tray Icon": {
+        "source": [
+            "Furious.TrayActions.Settings"
+        ],
+        "ZH": "使用单色托盘图标",
+        "isReviewed": "True"
+    },
+    "Customize JSON Configuration...": {
+        "source": [
+            "Furious.Widget.UserServersQTableWidget"
+        ],
+        "ZH": "自定义JSON配置...",
+        "isReviewed": "True"
+    },
+    "Add VMess Server...": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "ZH": "添加VMess服务器...",
+        "isReviewed": "True"
+    },
+    "Add VLESS Server...": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "ZH": "添加VLESS服务器...",
+        "isReviewed": "True"
+    },
+    "Add Shadowsocks Server...": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "ZH": "添加Shadowsocks服务器...",
+        "isReviewed": "True"
+    },
+    "Add Trojan Server...": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "ZH": "添加Trojan服务器...",
+        "isReviewed": "True"
+    },
+    "Add Hysteria1 Server...": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "ZH": "添加Hysteria1服务器...",
+        "isReviewed": "True"
+    },
+    "Add Hysteria2 Server...": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "ZH": "添加Hysteria2服务器...",
         "isReviewed": "True"
     }
 }
