@@ -55,7 +55,8 @@ def showImportErrorMBox(clipboard: str):
         mbox.setText(_('Invalid data. The content of the clipboard is:'))
         mbox.setInformativeText(clipboard)
 
-    mbox.exec()
+    # Show the MessageBox asynchronously
+    mbox.open()
 
 
 def importItemFromClipboard(clipboard: str):
@@ -69,7 +70,9 @@ def importItemFromClipboard(clipboard: str):
         mbox = ImportSuccessMBox(icon=AppQMessageBox.Icon.Information)
         mbox.remark = factory.getExtras('remark')
         mbox.setText(mbox.customText())
-        mbox.exec()
+
+        # Show the MessageBox asynchronously
+        mbox.open()
 
 
 needTrans('Import')
@@ -193,8 +196,8 @@ class ImportFromFileAction(AppQAction):
                 mbox.setText(_('Invalid configuration file'))
                 mbox.setInformativeText(str(ex))
 
-                # Show the MessageBox and wait for user to close it
-                mbox.exec()
+                # Show the MessageBox asynchronously
+                mbox.open()
             else:
                 factory = constructFromAny(plainText, remark=os.path.basename(filename))
 
@@ -204,12 +207,16 @@ class ImportFromFileAction(AppQAction):
                     mbox = ImportSuccessMBox(icon=AppQMessageBox.Icon.Information)
                     mbox.remark = factory.getExtras('remark')
                     mbox.setText(mbox.customText())
-                    mbox.exec()
+
+                    # Show the MessageBox asynchronously
+                    mbox.open()
                 else:
                     mbox = ImportErrorMBox(icon=AppQMessageBox.Icon.Critical)
                     mbox.setText(_('Invalid data'))
                     mbox.setInformativeText('')
-                    mbox.show()
+
+                    # Show the MessageBox asynchronously
+                    mbox.open()
 
 
 needTrans('Import Share Link From Clipboard')
@@ -248,13 +255,17 @@ class ImportURIFromClipboardAction(AppQAction):
                     mbox = ImportSuccessMBox(icon=AppQMessageBox.Icon.Information)
                     mbox.remark = imported[0]
                     mbox.setText(mbox.customText())
-                    mbox.exec()
+
+                    # Show the MessageBox asynchronously
+                    mbox.open()
                 else:
                     mbox = ImportMultiSuccessMBox(icon=AppQMessageBox.Icon.Information)
                     mbox.imported = imported
                     mbox.rowCount = rowCount
                     mbox.setText(mbox.customText())
-                    mbox.exec()
+
+                    # Show the MessageBox asynchronously
+                    mbox.open()
 
 
 needTrans('Import JSON Configuration From Clipboard')

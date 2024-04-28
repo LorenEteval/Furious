@@ -868,8 +868,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 # Show the MessageBox asynchronously
                 mbox.open()
             else:
-                # Show the MessageBox and wait for user to close it
-                mbox.exec()
+                # Show the MessageBox asynchronously
+                # TODO: Verify
+                mbox.open()
 
             return
 
@@ -939,7 +940,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 try:
                     if modified and APP().isSystemTrayConnected():
                         mbox = NewChangesNextTimeMBox()
-                        mbox.exec()
+
+                        # Show the MessageBox asynchronously
+                        mbox.open()
                 except Exception:
                     # Any non-exit exceptions
 
@@ -1220,18 +1223,23 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             # Nothing selected. Do nothing
             return
 
+        def handleResultCode(_indexes, code):
+            if code == PySide6LegacyEnumValueWrapper(AppQMessageBox.StandardButton.Yes):
+                self.deleteItemByIndex(_indexes)
+            else:
+                pass
+
         mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
         mbox.isMulti = bool(len(indexes) > 1)
         mbox.possibleRemark = f'{indexes[0] + 1} - {self.item(indexes[0], 0).text()}'
         mbox.setText(mbox.customText())
+        mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
-        if mbox.exec() == PySide6LegacyEnumValueWrapper(
-            AppQMessageBox.StandardButton.No
-        ):
-            # Do not delete
-            return
+        # dummy ref
+        setattr(self, '_questionDeleteMBox', mbox)
 
-        self.deleteItemByIndex(indexes)
+        # Show the MessageBox asynchronously
+        mbox.open()
 
     def editSelectedItemConfiguration(self):
         indexes = self.selectedIndex

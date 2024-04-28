@@ -98,8 +98,7 @@ class UpdatesManager(AppQNetworkAccessManager):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-    @staticmethod
-    def handleFinishedByNetworkReply(networkReply):
+    def handleFinishedByNetworkReply(self, networkReply):
         assert isinstance(networkReply, QNetworkReply)
 
         if networkReply.error() != QNetworkReply.NetworkError.NoError:
@@ -109,8 +108,8 @@ class UpdatesManager(AppQNetworkAccessManager):
             mbox.setWindowTitle(_(APPLICATION_NAME))
             mbox.setText(_('Check for updates failed'))
 
-            # Show the MessageBox and wait for user to close it
-            mbox.exec()
+            # Show the MessageBox asynchronously
+            mbox.open()
         else:
             logger.info('check for updates success')
 
@@ -118,29 +117,37 @@ class UpdatesManager(AppQNetworkAccessManager):
             info = UJSONEncoder.decode(networkReply.readAll().data())
 
             if versionToNumber(info['tag_name']) > versionToNumber(APPLICATION_VERSION):
+
+                def handleResultCode(code):
+                    if code == PySide6LegacyEnumValueWrapper(
+                        AppQMessageBox.StandardButton.Yes
+                    ):
+                        if QDesktopServices.openUrl(QtCore.QUrl(info['html_url'])):
+                            logger.info('open download page success')
+                        else:
+                            logger.error('open download page failed')
+                    else:
+                        # Do nothing
+                        pass
+
                 mbox = QuestionUpdateMBox(icon=AppQMessageBox.Icon.Information)
                 mbox.version = info['tag_name']
                 mbox.setText(mbox.customText())
                 mbox.setInformativeText(_('Go to download page?'))
+                mbox.finished.connect(functools.partial(handleResultCode))
 
-                # Show the MessageBox and wait for user to close it
-                if mbox.exec() == PySide6LegacyEnumValueWrapper(
-                    AppQMessageBox.StandardButton.Yes
-                ):
-                    if QDesktopServices.openUrl(QtCore.QUrl(info['html_url'])):
-                        logger.info('open download page success')
-                    else:
-                        logger.error('open download page failed')
-                else:
-                    # Do nothing
-                    pass
+                # dummy ref
+                setattr(self, '_questionUpdateMBox', mbox)
+
+                # Show the MessageBox asynchronously
+                mbox.open()
             else:
                 mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
                 mbox.setWindowTitle(_(APPLICATION_NAME))
                 mbox.setText(_(f'{APPLICATION_NAME} is already the latest version'))
 
-                # Show the MessageBox and wait for user to close it
-                mbox.exec()
+                # Show the MessageBox asynchronously
+                mbox.open()
 
     def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
         useProxy = super().configureHttpProxy(httpProxy)
