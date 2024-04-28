@@ -32,6 +32,7 @@ registerAppSettings(
     'ShowProgressBarWhenConnecting', isBinary=True, default=BinarySettings.ON_
 )
 registerAppSettings('ShowTabAndSpacesInEditor', isBinary=True)
+registerAppSettings('UseMonochromeTrayIcon', isBinary=True)
 
 needTrans = functools.partial(needTransFn, source=__name__)
 
@@ -117,6 +118,19 @@ class SettingsChildAction(AppQAction):
                 APP().mainWindow.hideTabAndSpaces()
 
                 AppSettings.turnOFF('ShowTabAndSpacesInEditor')
+        if self.textCompare('Use Monochrome Tray Icon'):
+            # Settings turn on/off order matters here
+            if checked:
+                AppSettings.turnON_('UseMonochromeTrayIcon')
+
+                APP().systemTray.setMonochromeIcon()
+            else:
+                AppSettings.turnOFF('UseMonochromeTrayIcon')
+
+                if APP().isSystemTrayConnected():
+                    APP().systemTray.setConnectedIcon()
+                else:
+                    APP().systemTray.setDisconnectedIcon()
 
 
 needTrans(
@@ -125,6 +139,7 @@ needTrans(
     'Startup On Boot',
     'Show Progress Bar When Connecting',
     'Show Tab And Spaces In Editor',
+    'Use Monochrome Tray Icon',
 )
 
 
@@ -150,6 +165,11 @@ class SettingsAction(AppQAction):
                     _('Dark Mode'),
                     checkable=True,
                     checked=AppSettings.isStateON_('DarkMode'),
+                ),
+                SettingsChildAction(
+                    _('Use Monochrome Tray Icon'),
+                    checkable=True,
+                    checked=AppSettings.isStateON_('UseMonochromeTrayIcon'),
                 ),
                 SettingsChildAction(
                     _('Startup On Boot'),
