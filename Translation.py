@@ -64,6 +64,10 @@ def main():
 
     translation = copy.deepcopy(TRANSLATION)
 
+    for key in translation.keys():
+        # Reset source
+        translation[key]['source'] = []
+
     for text, source in TranslationPool:
         if text not in translation:
             translation[text] = {'source': [source]}
