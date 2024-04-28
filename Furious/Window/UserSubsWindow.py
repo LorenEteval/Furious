@@ -49,15 +49,17 @@ class AddSubsDialog(AppQDialog):
 
         self.setWindowTitle(_('Add Subscription'))
 
-        self.remarkText = QLabel(_('Enter subscription remark:'))
+        self.remarkText = AppQLabel(_('Enter subscription remark:'))
         self.remarkEdit = QLineEdit()
 
-        self.webURLText = QLabel(_('Enter subscription URL:'))
+        self.webURLText = AppQLabel(_('Enter subscription URL:'))
         self.webURLEdit = QLineEdit()
 
-        self.dialogBtns = QDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
-        self.dialogBtns.addButton(_('OK'), QDialogButtonBox.ButtonRole.AcceptRole)
-        self.dialogBtns.addButton(_('Cancel'), QDialogButtonBox.ButtonRole.RejectRole)
+        self.dialogBtns = AppQDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
+        self.dialogBtns.addButton(_('OK'), AppQDialogButtonBox.ButtonRole.AcceptRole)
+        self.dialogBtns.addButton(
+            _('Cancel'), AppQDialogButtonBox.ButtonRole.RejectRole
+        )
         self.dialogBtns.accepted.connect(self.accept)
         self.dialogBtns.rejected.connect(self.reject)
 
@@ -79,17 +81,6 @@ class AddSubsDialog(AppQDialog):
 
     def subsWebURL(self):
         return self.webURLEdit.text()
-
-    def retranslate(self):
-        self.setWindowTitle(_(self.windowTitle()))
-
-        self.remarkText.setText(_(self.remarkText.text()))
-        self.webURLText.setText(_(self.webURLText.text()))
-
-        for button in self.dialogBtns.buttons():
-            button.setText(_(button.text()))
-
-        moveToCenter(self)
 
 
 needTrans(
@@ -144,9 +135,10 @@ class UserSubsWindow(AppQMainWindow):
             self.setGeometry(100, 100, 360 * GOLDEN_RATIO, 360)
 
     def addSubs(self):
-        choice = self.addSubsDialog.exec()
-
-        if choice == PySide6LegacyEnumValueWrapper(QDialog.DialogCode.Accepted):
+        # Show the Dialog and wait for user to close it
+        if self.addSubsDialog.exec() == PySide6LegacyEnumValueWrapper(
+            AppQDialog.DialogCode.Accepted
+        ):
             remark = self.addSubsDialog.subsRemark()
             webURL = self.addSubsDialog.subsWebURL()
 
