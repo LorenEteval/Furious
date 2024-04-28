@@ -25,13 +25,19 @@ from PySide6 import QtCore
 from PySide6.QtWidgets import QSystemTrayIcon
 
 import logging
+import darkdetect
 
 logger = logging.getLogger(__name__)
 
 __all__ = ['SystemTrayIcon']
 
 
-class SystemTrayIcon(QTranslatable, SupportConnectedCallback, QSystemTrayIcon):
+class SystemTrayIcon(
+    QTranslatable,
+    SupportConnectedCallback,
+    SupportThemeChangedCallback,
+    QSystemTrayIcon,
+):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -104,18 +110,45 @@ class SystemTrayIcon(QTranslatable, SupportConnectedCallback, QSystemTrayIcon):
         if message:
             super().showMessage(_(APPLICATION_NAME), message, *args, **kwargs)
 
+    def setMonochromeIconByTheme(self, theme):
+        if theme == 'Dark':
+            self.setIcon(bootstrapIconWhite('monochrome-rocket-takeoff.svg'))
+        else:
+            self.setIcon(bootstrapIcon('monochrome-rocket-takeoff.svg'))
+
+    def setMonochromeIcon(self):
+        self.setMonochromeIconByTheme(darkdetect.theme())
+
     def setDisconnectedIcon(self):
-        if PLATFORM == 'Darwin' or isWindows7():
+        if AppSettings.isStateON_('UseMonochromeTrayIcon'):
+            self.setMonochromeIcon()
+
+            return
+
+        if (
+            PLATFORM == 'Darwin'
+            or isWindows7()
+            or (PLATFORM == 'Windows' and darkdetect.theme() == 'Light')
+        ):
             # Darker
             self.setIcon(bootstrapIcon('rocket-takeoff-dark.svg'))
         else:
             self.setIcon(bootstrapIcon('rocket-takeoff.svg'))
 
     def setConnectedIcon(self):
+        if AppSettings.isStateON_('UseMonochromeTrayIcon'):
+            self.setMonochromeIcon()
+
+            return
+
         if isAdministrator():
             self.setIcon(bootstrapIcon('rocket-takeoff-admin-connected.svg'))
         else:
-            if PLATFORM == 'Darwin' or isWindows7():
+            if (
+                PLATFORM == 'Darwin'
+                or isWindows7()
+                or (PLATFORM == 'Windows' and darkdetect.theme() == 'Light')
+            ):
                 # Darker
                 self.setIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
             else:
@@ -134,6 +167,18 @@ class SystemTrayIcon(QTranslatable, SupportConnectedCallback, QSystemTrayIcon):
 
     def connectedCallback(self):
         self.setConnectedIcon()
+
+    def themeChangedCallback(self, theme):
+        if AppSettings.isStateON_('UseMonochromeTrayIcon'):
+            # 'theme' is not used. Instead, always query current theme
+            self.setMonochromeIconByTheme(darkdetect.theme())
+
+            return
+
+        if APP().isSystemTrayConnected():
+            self.setConnectedIcon()
+        else:
+            self.setDisconnectedIcon()
 
     def retranslate(self):
         # Nothing to do
