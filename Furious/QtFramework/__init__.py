@@ -27,3 +27,4 @@ from .UpdatesManager import *
 from .NetworkStateManager import *
 from .TextEditor import *
 from .TextEditorTheme import *
+from .GuiEditorXXX import *
