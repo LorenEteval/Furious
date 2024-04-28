@@ -33,7 +33,9 @@ import functools
 
 __all__ = [
     'moveToCenter',
+    'AppQCheckBox',
     'AppQDialog',
+    'AppQDialogButtonBox',
     'AppQGroupBox',
     'AppQHeaderView',
     'AppQLabel',
@@ -65,6 +67,14 @@ def moveToCenter(widget, parent=None):
     geometry.moveCenter(center)
 
     widget.move(geometry.topLeft())
+
+
+class AppQCheckBox(QTranslatable, QCheckBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def retranslate(self):
+        self.setText(_(self.text()))
 
 
 class AppQDialog(QTranslatable, SupportConnectedCallback, QDialog):
@@ -105,13 +115,22 @@ class AppQDialog(QTranslatable, SupportConnectedCallback, QDialog):
         moveToCenter(self)
 
     def retranslate(self):
-        pass
+        self.setWindowTitle(_(self.windowTitle()))
 
     def disconnectedCallback(self):
         self.setWindowIcon(AppHue.disconnectedWindowIcon())
 
     def connectedCallback(self):
         self.setWindowIcon(AppHue.connectedWindowIcon())
+
+
+class AppQDialogButtonBox(QTranslatable, QDialogButtonBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def retranslate(self):
+        for button in self.buttons():
+            button.setText(_(button.text()))
 
 
 class AppQGroupBox(QTranslatable, QGroupBox):
