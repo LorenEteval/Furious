@@ -97,9 +97,9 @@ class UserSubsWindow(AppQMainWindow):
 
         super().__init__(*args, **kwargs)
 
+        self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setWindowTitle(_('Edit Subscription'))
 
-        self.addSubsDialog = AddSubsDialog()
         self.userSubsQTableWidget = UserSubsQTableWidget(deleteUniqueCallback=callback)
 
         self.userSubsTab = AppQTabWidget(self)
@@ -135,23 +135,32 @@ class UserSubsWindow(AppQMainWindow):
             self.setGeometry(100, 100, 360 * GOLDEN_RATIO, 360)
 
     def addSubs(self):
-        # Show the Dialog and wait for user to close it
-        if self.addSubsDialog.exec() == PySide6LegacyEnumValueWrapper(
-            AppQDialog.DialogCode.Accepted
-        ):
-            remark = self.addSubsDialog.subsRemark()
-            webURL = self.addSubsDialog.subsWebURL()
+        def handleResultCode(_addSubsDialog, code):
+            if code == PySide6LegacyEnumValueWrapper(AppQDialog.DialogCode.Accepted):
+                remark = _addSubsDialog.subsRemark()
+                webURL = _addSubsDialog.subsWebURL()
 
-            if remark:
-                # Unique id. Used by display and deletion
-                unique = str(uuid.uuid4())
+                if remark:
+                    # Unique id. Used by display and deletion
+                    unique = str(uuid.uuid4())
 
-                self.userSubsQTableWidget.appendNewItem(
-                    unique=unique, remark=remark, webURL=webURL
-                )
-        else:
-            # Do nothing
-            pass
+                    self.userSubsQTableWidget.appendNewItem(
+                        unique=unique, remark=remark, webURL=webURL
+                    )
+            else:
+                # Do nothing
+                pass
+
+        addSubsDialog = AddSubsDialog(parent=self)
+        addSubsDialog.finished.connect(
+            functools.partial(handleResultCode, addSubsDialog)
+        )
+
+        # dummy ref
+        setattr(self, '_addSubsDialog', addSubsDialog)
+
+        # Show the MessageBox asynchronously
+        addSubsDialog.open()
 
     def deleteSelectedItem(self):
         self.userSubsQTableWidget.deleteSelectedItem()

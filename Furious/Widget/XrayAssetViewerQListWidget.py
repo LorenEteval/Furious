@@ -132,44 +132,58 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
             self.flushItemByTheme(darkdetect.theme())
 
     def appendNewItem(self, filename: str):
+        def append(_filename):
+            try:
+                shutil.copy(_filename, XRAY_ASSET_DIR)
+            except shutil.SameFileError:
+                # Same file imported. Do nothing
+                pass
+            except Exception as ex:
+                # Any non-exit exception
+
+                _mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+                _mbox.setWindowTitle(_('Import'))
+                _mbox.setText(_('Error import asset file'))
+                _mbox.setInformativeText(str(ex))
+
+                # Show the MessageBox asynchronously
+                _mbox.open()
+            else:
+                self.flushItem()
+
+                _mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
+                _mbox.setWindowTitle(_('Import'))
+                _mbox.setText(_('Import asset file success'))
+
+                # Show the MessageBox asynchronously
+                _mbox.open()
+
         basename = os.path.basename(filename)
 
         if os.path.isfile(XRAY_ASSET_DIR / basename):
+
+            def handleResultCode(_filename, code):
+                if code == PySide6LegacyEnumValueWrapper(
+                    AppQMessageBox.StandardButton.Yes
+                ):
+                    append(_filename)
+                else:
+                    # Do not overwrite
+                    pass
+
             mbox = AssetExistsMBox(icon=AppQMessageBox.Icon.Question)
             mbox.setWindowTitle(_('Import'))
             mbox.setText(_('Asset file already exists. Overwrite?'))
             mbox.setInformativeText(basename)
+            mbox.finished.connect(functools.partial(handleResultCode, filename))
 
-            if mbox.exec() == PySide6LegacyEnumValueWrapper(
-                AppQMessageBox.StandardButton.No
-            ):
-                # Do not overwrite
-                return
+            # dummy ref
+            setattr(self, '_assetExistsMBox', mbox)
 
-        try:
-            shutil.copy(filename, XRAY_ASSET_DIR)
-        except shutil.SameFileError:
-            # Same file imported. Do nothing
-            pass
-        except Exception as ex:
-            # Any non-exit exception
-
-            mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-            mbox.setWindowTitle(_('Import'))
-            mbox.setText(_('Error import asset file'))
-            mbox.setInformativeText(str(ex))
-
-            # Show the MessageBox and wait for user to close it
-            mbox.exec()
+            # Show the MessageBox asynchronously
+            mbox.open()
         else:
-            self.flushItem()
-
-            mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
-            mbox.setWindowTitle(_('Import'))
-            mbox.setText(_('Import asset file success'))
-
-            # Show the MessageBox and wait for user to close it
-            mbox.exec()
+            append(filename)
 
     def deleteSelectedItem(self):
         indexes = self.selectedIndex
@@ -178,21 +192,27 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
             # Nothing selected
             return
 
+        def handleResultCode(_indexes, code):
+            if code == PySide6LegacyEnumValueWrapper(AppQMessageBox.StandardButton.Yes):
+                for index in _indexes:
+                    os.remove(XRAY_ASSET_DIR / self.item(index).text())
+
+                self.flushItem()
+            else:
+                # Do not delete
+                pass
+
         mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
         mbox.isMulti = bool(len(indexes) > 1)
         mbox.possibleRemark = f'{self.item(indexes[0]).text()}'
         mbox.setText(mbox.customText())
+        mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
-        if mbox.exec() == PySide6LegacyEnumValueWrapper(
-            AppQMessageBox.StandardButton.No
-        ):
-            # Do not delete
-            return
+        # dummy ref
+        setattr(self, '_questionDeleteMBox', mbox)
 
-        for index in indexes:
-            os.remove(XRAY_ASSET_DIR / self.item(index).text())
-
-        self.flushItem()
+        # Show the MessageBox asynchronously
+        mbox.open()
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key.Key_Delete:

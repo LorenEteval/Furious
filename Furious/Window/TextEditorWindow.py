@@ -118,8 +118,6 @@ class TextEditorWindow(AppQMainWindow):
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setFixedSize(520, int(520 * GOLDEN_RATIO))
 
-        self.indentSpinBox = IndentSpinBox(parent=self)
-
         # Current editing index
         self.currentIndex = -1
 
@@ -270,24 +268,32 @@ class TextEditorWindow(AppQMainWindow):
 
     def questionSave(self):
         if self.modified:
-            mbox = QuestionSaveMBox(icon=AppQMessageBox.Icon.Question)
-            code = mbox.exec()
 
-            if code == PySide6LegacyEnumValueWrapper(
-                AppQMessageBox.ButtonRole.AcceptRole
-            ):
-                if self.save():
+            def handleResultCode(code):
+                if code == PySide6LegacyEnumValueWrapper(
+                    AppQMessageBox.ButtonRole.AcceptRole
+                ):
+                    if self.save():
+                        self.hide()
+                if code == PySide6LegacyEnumValueWrapper(
+                    AppQMessageBox.ButtonRole.DestructiveRole
+                ):
+                    self.markAsSaved()
                     self.hide()
-            if code == PySide6LegacyEnumValueWrapper(
-                AppQMessageBox.ButtonRole.DestructiveRole
-            ):
-                self.markAsSaved()
-                self.hide()
-            if code == PySide6LegacyEnumValueWrapper(
-                AppQMessageBox.ButtonRole.RejectRole
-            ):
-                # Cancel. Do nothing
-                pass
+                if code == PySide6LegacyEnumValueWrapper(
+                    AppQMessageBox.ButtonRole.RejectRole
+                ):
+                    # Cancel. Do nothing
+                    pass
+
+            mbox = QuestionSaveMBox(icon=AppQMessageBox.Icon.Question)
+            mbox.finished.connect(functools.partial(handleResultCode))
+
+            # dummy ref
+            setattr(self, '_questionSaveMBox', mbox)
+
+            # Show the MessageBox asynchronously
+            mbox.open()
         else:
             self.hide()
 
@@ -319,8 +325,8 @@ class TextEditorWindow(AppQMainWindow):
             mbox.setWindowTitle(_('Error saving configuration'))
             mbox.setText(mbox.customText())
 
-            # Show the MessageBox and wait for user to close it
-            mbox.exec()
+            # Show the MessageBox asynchronously
+            mbox.open()
 
             return False
         else:
@@ -342,7 +348,9 @@ class TextEditorWindow(AppQMainWindow):
                 try:
                     if APP().isSystemTrayConnected():
                         mbox = NewChangesNextTimeMBox()
-                        mbox.exec()
+
+                        # Show the MessageBox asynchronously
+                        mbox.open()
                 except Exception:
                     # Any non-exit exceptions
 
@@ -369,34 +377,44 @@ class TextEditorWindow(AppQMainWindow):
                 mbox.setText(_('Invalid server configuration'))
                 mbox.setInformativeText(str(ex))
 
-                # Show the MessageBox and wait for user to close it
-                mbox.exec()
+                # Show the MessageBox asynchronously
+                mbox.open()
 
     def setIndent(self):
-        code = self.indentSpinBox.exec()
+        def handleResultCode(_indentSpinBox, code):
+            if code == PySide6LegacyEnumValueWrapper(AppQDialog.DialogCode.Accepted):
+                plain = self.jsonEditor.toPlainText()
 
-        if code == PySide6LegacyEnumValueWrapper(AppQDialog.DialogCode.Accepted):
-            plain = self.jsonEditor.toPlainText()
+                try:
+                    jsonObject = JSONEncoder.decode(plain)
+                except Exception as ex:
+                    # Any non-exit exceptions
 
-            try:
-                jsonObject = JSONEncoder.decode(plain)
-            except Exception as ex:
-                # Any non-exit exceptions
+                    mbox = JSONDecodeErrorMBox(icon=AppQMessageBox.Icon.Critical)
+                    mbox.error = str(ex)
+                    mbox.setWindowTitle(_('Error setting indent'))
+                    mbox.setText(mbox.customText())
 
-                mbox = JSONDecodeErrorMBox(icon=AppQMessageBox.Icon.Critical)
-                mbox.error = str(ex)
-                mbox.setWindowTitle(_('Error setting indent'))
-                mbox.setText(mbox.customText())
+                    # Show the MessageBox asynchronously
+                    mbox.open()
+                else:
+                    text = JSONEncoder.encode(jsonObject, indent=_indentSpinBox.value())
 
-                # Show the MessageBox and wait for user to close it
-                mbox.exec()
+                    self.setPlainText(text, False)
             else:
-                text = JSONEncoder.encode(jsonObject, indent=self.indentSpinBox.value())
+                # Do nothing
+                pass
 
-                self.setPlainText(text, False)
-        else:
-            # Do nothing
-            pass
+        indentSpinBox = IndentSpinBox(parent=self)
+        indentSpinBox.finished.connect(
+            functools.partial(handleResultCode, indentSpinBox)
+        )
+
+        # dummy ref
+        setattr(self, '_IndentSpinBox', indentSpinBox)
+
+        # Show the MessageBox asynchronously
+        indentSpinBox.open()
 
     def showTabAndSpaces(self):
         textOption = QTextOption()

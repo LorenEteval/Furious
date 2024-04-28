@@ -193,8 +193,8 @@ class ConnectAction(AppQAction):
                 _('Server configuration empty. Please configure your server first')
             )
 
-            # Show the MessageBox and wait for user to close it
-            mbox.exec()
+            # Show the MessageBox asynchronously
+            mbox.open()
 
             return
 
@@ -209,8 +209,8 @@ class ConnectAction(AppQAction):
                 _('Select and double click to activate configuration and connect')
             )
 
-            # Show the MessageBox and wait for user to close it
-            mbox.exec()
+            # Show the MessageBox asynchronously
+            mbox.open()
 
             return
 
@@ -242,8 +242,8 @@ class ConnectAction(AppQAction):
             )
             mbox.setInformativeText(_('Please complete your server configuration'))
 
-            # Show the MessageBox and wait for user to close it
-            mbox.exec()
+            # Show the MessageBox asynchronously
+            mbox.open()
 
             return
 

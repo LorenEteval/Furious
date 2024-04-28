@@ -63,7 +63,9 @@ class VPNModeAction(AppQAction):
         try:
             if APP().isSystemTrayConnected():
                 mbox = NewChangesNextTimeMBox()
-                mbox.exec()
+
+                # Show the MessageBox asynchronously
+                mbox.open()
         except Exception:
             # Any non-exit exceptions
 

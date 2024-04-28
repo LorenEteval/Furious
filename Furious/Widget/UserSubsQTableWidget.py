@@ -151,27 +151,33 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
             # Nothing to do
             return
 
+        def handleResultCode(_indexes, code):
+            if code == PySide6LegacyEnumValueWrapper(AppQMessageBox.StandardButton.Yes):
+                for i in range(len(_indexes)):
+                    deleteIndex = _indexes[i] - i
+                    deleteUnique = list(AS_UserSubscription().keys())[deleteIndex]
+
+                    self.removeRow(deleteIndex)
+
+                    AS_UserSubscription().pop(deleteUnique)
+
+                    if callable(self.deleteUniqueCallback):
+                        self.deleteUniqueCallback(deleteUnique)
+            else:
+                # Do not delete
+                pass
+
         mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
         mbox.isMulti = bool(len(indexes) > 1)
         mbox.possibleRemark = self.item(indexes[0], 0).text()
         mbox.setText(mbox.customText())
+        mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
-        if mbox.exec() == PySide6LegacyEnumValueWrapper(
-            AppQMessageBox.StandardButton.No
-        ):
-            # Do not delete
-            return
+        # dummy ref
+        setattr(self, '_questionDeleteMBox', mbox)
 
-        for i in range(len(indexes)):
-            deleteIndex = indexes[i] - i
-            deleteUnique = list(AS_UserSubscription().keys())[deleteIndex]
-
-            self.removeRow(deleteIndex)
-
-            AS_UserSubscription().pop(deleteUnique)
-
-            if callable(self.deleteUniqueCallback):
-                self.deleteUniqueCallback(deleteUnique)
+        # Show the MessageBox asynchronously
+        mbox.open()
 
     def flushItem(self, row, column, item):
         header = self.Headers[column]

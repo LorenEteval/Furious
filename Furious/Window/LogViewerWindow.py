@@ -75,8 +75,8 @@ def saveAsFile(content: str):
             mbox.setWindowTitle(_('Error saving log'))
             mbox.setText(mbox.customText())
 
-            # Show the MessageBox and wait for user to close it
-            mbox.exec()
+            # Show the MessageBox asynchronously
+            mbox.open()
 
 
 needTrans(
