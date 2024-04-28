@@ -381,6 +381,18 @@ class ConfigurationXray(ConfigurationFactory):
             if hasKey('serviceName'):
                 kwargs['path'] = networkObject['serviceName']
 
+        elif network == 'httpupgrade':
+            try:
+                # Get order matters here
+                if hasKey('path'):
+                    kwargs['path'] = quote(networkObject['path'])
+
+                kwargs['host'] = quote(networkObject['host'])
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
         return kwargs
 
     @property
@@ -459,6 +471,18 @@ class ConfigurationXray(ConfigurationFactory):
         elif network == 'grpc':
             if hasKey('serviceName'):
                 kwargs['serviceName'] = networkObject['serviceName']
+
+        elif network == 'httpupgrade':
+            try:
+                # Get order matters here
+                if hasKey('path'):
+                    kwargs['path'] = quote(networkObject['path'])
+
+                kwargs['host'] = quote(networkObject['host'])
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
 
         return kwargs
 
@@ -592,6 +616,17 @@ class ConfigurationXray(ConfigurationFactory):
 
             return GRPCObject
 
+        elif type_ == 'httpupgrade':
+            httpUpgradeObject = {}
+
+            if kwargs.get('path', '/'):
+                httpUpgradeObject['path'] = unquote(kwargs.get('path', '/'))
+
+            if kwargs.get('host'):
+                httpUpgradeObject['host'] = unquote(kwargs.get('host'))
+
+            return httpUpgradeObject
+
     @property
     def kwargsFromProxyStreamSettingsTLSObject(self) -> dict:
         kwargs = {}
@@ -689,7 +724,8 @@ class ConfigurationXray(ConfigurationFactory):
 
             # For VMess(v2rayN share standard) only.
             if kwargs.get('aid') is not None:
-                UserObject['alterId'] = kwargs.get('aid')
+                # int: extra guard
+                UserObject['alterId'] = int(kwargs.get('aid'))
 
             return UserObject
 
@@ -799,18 +835,6 @@ class ConfigurationXray(ConfigurationFactory):
             return '', {}
 
         def getSSParams():
-            try:
-                # ss://base64...#fragment
-                userinfo, server = (
-                    PyBase64Encoder.decode(result.netloc).decode().split('@')
-                )
-
-                return [*userinfo.split(':', 1), *parseHostPort(server)]
-            except Exception:
-                # Any non-exit exceptions
-
-                pass
-
             # Begin SIP002...
             try:
                 # Try pack with 3 element
@@ -830,6 +854,18 @@ class ConfigurationXray(ConfigurationFactory):
             try:
                 # Try pack with 4 element
                 userinfo, server = result.netloc.split('@')
+
+                return [*userinfo.split(':', 1), *parseHostPort(server)]
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+            try:
+                # ss://base64...#fragment
+                userinfo, server = (
+                    PyBase64Encoder.decode(result.netloc).decode().split('@')
+                )
 
                 return [*userinfo.split(':', 1), *parseHostPort(server)]
             except Exception:
@@ -937,14 +973,14 @@ class ConfigurationXray(ConfigurationFactory):
                         'v': '2',
                         'ps': override,
                         **{
-                            key: self.proxyServerObject[value]
+                            key: str(self.proxyServerObject[value])
                             for key, value in {
                                 'add': 'address',
                                 'port': 'port',
                             }.items()
                         },
                         **{
-                            key: self.proxyUserObject[value]
+                            key: str(self.proxyUserObject[value])
                             for key, value in {
                                 'id': 'id',
                                 'aid': 'alterId',
@@ -1141,10 +1177,24 @@ class ConfigurationXray(ConfigurationFactory):
 
     def setHttpProxyEndpoint(self, endpoint: str) -> bool:
         try:
-            listen, port = parseHostPort(endpoint)
-
             if self.get('inbounds') is None:
                 self['inbounds'] = []
+
+            if not isinstance(self['inbounds'], list):
+                self['inbounds'] = []
+
+            if endpoint == '':
+                for inbound in self['inbounds']:
+                    if inbound['protocol'] == 'http':
+                        self['inbounds'].remove(inbound)
+
+                        # Remove first chosen
+                        return True
+
+                # None satisfied. Return success
+                return True
+
+            listen, port = parseHostPort(endpoint)
 
             for inbound in self['inbounds']:
                 if inbound['protocol'] == 'http':
@@ -1184,10 +1234,24 @@ class ConfigurationXray(ConfigurationFactory):
 
     def setSocksProxyEndpoint(self, endpoint: str) -> bool:
         try:
-            listen, port = parseHostPort(endpoint)
-
             if self.get('inbounds') is None:
                 self['inbounds'] = []
+
+            if not isinstance(self['inbounds'], list):
+                self['inbounds'] = []
+
+            if endpoint == '':
+                for inbound in self['inbounds']:
+                    if inbound['protocol'] == 'socks':
+                        self['inbounds'].remove(inbound)
+
+                        # Remove first chosen
+                        return True
+
+                # None satisfied. Return success
+                return True
+
+            listen, port = parseHostPort(endpoint)
 
             for inbound in self['inbounds']:
                 if inbound['protocol'] == 'socks':
@@ -1285,10 +1349,152 @@ class ConfigurationHysteria1(ConfigurationFactory):
         return super().toJSONString(indent=indent)
 
     def toURI(self, remark: str = '') -> str:
-        return ''
+        if remark == '':
+            override = self.itemRemark
+        else:
+            override = remark
+
+        try:
+            netloc, mport = self['server'].split(',')
+        except Exception:
+            # Any non-exit exceptions
+
+            netloc, mport = self['server'], ''
+
+        if mport:
+            mportArgs = {'mport': mport}
+        else:
+            mportArgs = {}
+
+        protocol = self.get('protocol', 'udp')
+
+        if self.get('auth_str'):
+            # auth in string
+            authArgs = {'auth': self['auth_str']}
+        else:
+            authArgs = {}
+
+        if self.get('server_name'):
+            peerArgs = {'peer': self['server_name']}
+        else:
+            peerArgs = {}
+
+        if self.get('insecure') is True:
+            insecureArgs = {'insecure': '1'}
+        else:
+            insecureArgs = {}
+
+        upmbps = self['up_mbps']
+        downmbps = self['down_mbps']
+
+        if self.get('alpn'):
+            alpnArgs = {'alpn': self['alpn']}
+        else:
+            alpnArgs = {}
+
+        if self.get('obfs'):
+            obfsParamArgs = {'obfsParam': self['obfs']}
+        else:
+            obfsParamArgs = {}
+
+        query = '&'.join(
+            f'{key}={value}'
+            for key, value in {
+                **mportArgs,
+                'protocol': protocol,
+                **authArgs,
+                **peerArgs,
+                **insecureArgs,
+                'upmbps': upmbps,
+                'downmbps': downmbps,
+                **alpnArgs,
+                **obfsParamArgs,
+            }.items()
+        )
+
+        return urlunparse(['hysteria', netloc, '', '', query, quote(override)])
 
     def fromURI(self, URI: str) -> bool:
-        return False
+        try:
+            result = urlparse(URI)
+            remark = unquote(result.fragment)
+            queryObject = {key: value for key, value in parse_qsl(result.query)}
+
+            if result.scheme != 'hysteria':
+                raise ValueError('Invalid hysteria1 URI scheme')
+
+            server = result.netloc
+
+            mport = queryObject.get('mport', '')
+
+            if mport:
+                server += f',{mport}'
+
+            protocol = queryObject.get('protocol', 'udp')
+
+            if queryObject.get('auth', ''):
+                # auth in string
+                authArgs = {'auth_str': queryObject['auth']}
+            else:
+                authArgs = {}
+
+            if queryObject.get('peer', ''):
+                peerArgs = {'server_name': queryObject['peer']}
+            else:
+                peerArgs = {}
+
+            insecure = queryObject.get('insecure', False)
+
+            if isinstance(insecure, bool):
+                pass
+            elif insecure == '1':
+                insecure = True
+            else:
+                insecure = False
+
+            upmbps = queryObject.get('upmbps', 24)
+            downmbps = queryObject.get('downmbps', 96)
+
+            if queryObject.get('alpn', ''):
+                alpnArgs = {'alpn': queryObject['alpn']}
+            else:
+                alpnArgs = {}
+
+            # obfs mode seems not required, ignored...
+
+            if queryObject.get('obfsParam', ''):
+                obfsParamArgs = {'obfs': queryObject['obfsParam']}
+            else:
+                obfsParamArgs = {}
+
+            dict.__init__(
+                self,
+                **{
+                    'server': server,
+                    'protocol': protocol,
+                    **authArgs,
+                    **obfsParamArgs,
+                    'up_mbps': int(upmbps),
+                    'down_mbps': int(downmbps),
+                    **peerArgs,
+                    **alpnArgs,
+                    'insecure': insecure,
+                    'socks5': {
+                        'listen': '127.0.0.1:10808',
+                    },
+                    'http': {
+                        'listen': '127.0.0.1:10809',
+                    },
+                },
+            )
+
+            self.setExtras('remark', remark)
+
+            return True
+        except Exception:
+            # Any non-exit exceptions
+
+            return False
 
     def httpProxyEndpoint(self) -> str:
         try:
@@ -1308,6 +1514,11 @@ class ConfigurationHysteria1(ConfigurationFactory):
 
     def setHttpProxyEndpoint(self, endpoint: str) -> bool:
         try:
+            if endpoint == '':
+                self.pop('http', None)
+
+                return True
+
             if self.get('http') is None:
                 self['http'] = {}
 
@@ -1321,6 +1532,11 @@ class ConfigurationHysteria1(ConfigurationFactory):
 
     def setSocksProxyEndpoint(self, endpoint: str) -> bool:
         try:
+            if endpoint == '':
+                self.pop('socks5', None)
+
+                return True
+
             if self.get('socks5') is None:
                 self['socks5'] = {}
 
@@ -1474,12 +1690,12 @@ class ConfigurationHysteria2(ConfigurationFactory):
                 **{
                     'server': server,
                     'auth': auth,
+                    **obfsArg,
                     'tls': {
                         'sni': sni,
                         'insecure': insecure,
                         **pinSHA256Arg,
                     },
-                    **obfsArg,
                     'socks5': {
                         'listen': '127.0.0.1:10808',
                     },
@@ -1515,6 +1731,11 @@ class ConfigurationHysteria2(ConfigurationFactory):
 
     def setHttpProxyEndpoint(self, endpoint: str) -> bool:
         try:
+            if endpoint == '':
+                self.pop('http', None)
+
+                return True
+
             if self.get('http') is None:
                 self['http'] = {}
 
@@ -1528,6 +1749,11 @@ class ConfigurationHysteria2(ConfigurationFactory):
 
     def setSocksProxyEndpoint(self, endpoint: str) -> bool:
         try:
+            if endpoint == '':
+                self.pop('socks5', None)
+
+                return True
+
             if self.get('socks5') is None:
                 self['socks5'] = {}
 
@@ -1595,6 +1821,8 @@ def constructFromAny(config: Union[str, dict], **kwargs) -> ConfigurationFactory
             or config.startswith('trojan://')
         ):
             return ConfigurationXray(config, **kwargs)
+        if config.startswith('hysteria://'):
+            return ConfigurationHysteria1(config, **kwargs)
         if config.startswith('hy2://') or config.startswith('hysteria2://'):
             return ConfigurationHysteria2(config, **kwargs)
 
