@@ -130,15 +130,21 @@ class AppNetworkStateManager(NetworkStateManager):
 
 needTrans(
     'Server',
-    'Log',
-    'Show Furious Log',
-    'Show Core Log',
-    'Show Tun2socks Log',
+    'Add VMess Server...',
+    'Add VLESS Server...',
+    'Add Shadowsocks Server...',
+    'Add Trojan Server...',
+    'Add Hysteria1 Server...',
+    'Add Hysteria2 Server...',
     'Subscription',
     'Update Subscription (Use Current Proxy)',
     'Update Subscription (Force Proxy)',
     'Update Subscription (No Proxy)',
     'Edit Subscription...',
+    'Log',
+    'Show Furious Log',
+    'Show Core Log',
+    'Show Tun2socks Log',
     'Tools',
     'Manage Xray-core Asset File...',
     'Check For Updates',
@@ -171,6 +177,71 @@ class AppMainWindow(AppQMainWindow):
         self.mainTab = AppQTabWidget()
         self.mainTab.addTab(self.userServersQTableWidget, _('Server'))
 
+        serverActions = [
+            AppQAction(
+                _('Add VMess Server...'),
+                callback=lambda: self.userServersQTableWidget.addServerViaGui(
+                    Protocol.VMess, _('Add VMess Server...')
+                ),
+            ),
+            AppQAction(
+                _('Add VLESS Server...'),
+                callback=lambda: self.userServersQTableWidget.addServerViaGui(
+                    Protocol.VLESS, _('Add VLESS Server...')
+                ),
+            ),
+            AppQAction(
+                _('Add Shadowsocks Server...'),
+                callback=lambda: self.userServersQTableWidget.addServerViaGui(
+                    Protocol.Shadowsocks, _('Add Shadowsocks Server...')
+                ),
+            ),
+            AppQAction(
+                _('Add Trojan Server...'),
+                callback=lambda: self.userServersQTableWidget.addServerViaGui(
+                    Protocol.Trojan, _('Add Trojan Server...')
+                ),
+            ),
+            AppQSeperator(),
+            AppQAction(
+                _('Add Hysteria1 Server...'),
+                callback=lambda: self.userServersQTableWidget.addServerViaGui(
+                    Protocol.Hysteria1, _('Add Hysteria1 Server...')
+                ),
+            ),
+            AppQAction(
+                _('Add Hysteria2 Server...'),
+                callback=lambda: self.userServersQTableWidget.addServerViaGui(
+                    Protocol.Hysteria2, _('Add Hysteria2 Server...')
+                ),
+            ),
+        ]
+
+        subsActions = [
+            AppQAction(
+                _('Update Subscription (Use Current Proxy)'),
+                callback=lambda: self.userServersQTableWidget.updateSubs(
+                    connectedHttpProxyEndpoint()
+                ),
+            ),
+            AppQAction(
+                _('Update Subscription (Force Proxy)'),
+                callback=lambda: self.userServersQTableWidget.updateSubs(
+                    '127.0.0.1:10809'
+                ),
+            ),
+            AppQAction(
+                _('Update Subscription (No Proxy)'),
+                callback=lambda: self.userServersQTableWidget.updateSubs(None),
+            ),
+            AppQSeperator(),
+            AppQAction(
+                _('Edit Subscription...'),
+                icon=bootstrapIcon('star.svg'),
+                callback=lambda: self.userSubsWindow.show(),
+            ),
+        ]
+
         logActions = [
             AppQAction(
                 _('Show Furious Log'),
@@ -201,31 +272,6 @@ class AppMainWindow(AppQMainWindow):
             ),
         ]
 
-        subsActions = [
-            AppQAction(
-                _('Update Subscription (Use Current Proxy)'),
-                callback=lambda: self.userServersQTableWidget.updateSubs(
-                    connectedHttpProxyEndpoint()
-                ),
-            ),
-            AppQAction(
-                _('Update Subscription (Force Proxy)'),
-                callback=lambda: self.userServersQTableWidget.updateSubs(
-                    '127.0.0.1:10809'
-                ),
-            ),
-            AppQAction(
-                _('Update Subscription (No Proxy)'),
-                callback=lambda: self.userServersQTableWidget.updateSubs(None),
-            ),
-            AppQSeperator(),
-            AppQAction(
-                _('Edit Subscription...'),
-                icon=bootstrapIcon('star.svg'),
-                callback=lambda: self.userSubsWindow.show(),
-            ),
-        ]
-
         toolsActions = [
             AppQAction(
                 _('Manage Xray-core Asset File...'),
@@ -235,10 +281,11 @@ class AppMainWindow(AppQMainWindow):
 
         if hasattr(AppQAction, 'setMenu'):
             self.toolbar = AppQToolBar(
+                AppQSeperator(),
                 AppQAction(
-                    _('Log'),
-                    icon=bootstrapIcon('pin-angle.svg'),
-                    menu=AppQMenu(*logActions),
+                    _('Server'),
+                    icon=bootstrapIcon('database.svg'),
+                    menu=AppQMenu(*serverActions),
                     useActionGroup=False,
                     checkable=False,
                 ),
@@ -247,6 +294,13 @@ class AppMainWindow(AppQMainWindow):
                     _('Subscription'),
                     icon=bootstrapIcon('collection.svg'),
                     menu=AppQMenu(*subsActions),
+                    useActionGroup=False,
+                    checkable=False,
+                ),
+                AppQAction(
+                    _('Log'),
+                    icon=bootstrapIcon('pin-angle.svg'),
+                    menu=AppQMenu(*logActions),
                     useActionGroup=False,
                     checkable=False,
                 ),
@@ -280,14 +334,19 @@ class AppMainWindow(AppQMainWindow):
             self.addToolBar(self.toolbar)
         else:
             # Menu actions
-            logMenu = {
-                'name': 'Log',
-                'actions': [*logActions],
+            serverMenu = {
+                'name': 'Server',
+                'actions': [*serverActions],
             }
 
             subsMenu = {
                 'name': 'Subscription',
                 'actions': [*subsActions],
+            }
+
+            logMenu = {
+                'name': 'Log',
+                'actions': [*logActions],
             }
 
             toolsMenu = {
@@ -315,7 +374,7 @@ class AppMainWindow(AppQMainWindow):
             }
 
             # Menus
-            for menuDict in (logMenu, subsMenu, toolsMenu, helpMenu):
+            for menuDict in (serverMenu, subsMenu, logMenu, toolsMenu, helpMenu):
                 menuName = menuDict['name']
                 menuObjName = f'_{menuName}Menu'
                 menu = AppQMenu(
