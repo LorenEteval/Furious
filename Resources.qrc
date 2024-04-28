@@ -5,6 +5,7 @@
         <file alias="arrow-return-right.svg">Icons/bootstrap/arrow-return-right.svg</file>
         <file alias="box-arrow-in-left.svg">Icons/bootstrap/box-arrow-in-left.svg</file>
         <file alias="collection.svg">Icons/bootstrap/collection.svg</file>
+        <file alias="database.svg">Icons/bootstrap/database.svg</file>
         <file alias="display.svg">Icons/bootstrap/display.svg</file>
         <file alias="download.svg">Icons/bootstrap/download.svg</file>
         <file alias="file-earmark.svg">Icons/bootstrap/file-earmark.svg</file>
@@ -18,6 +19,7 @@
         <file alias="layout-text-sidebar-reverse.svg">Icons/bootstrap/layout-text-sidebar-reverse.svg</file>
         <file alias="lightning-charge.svg">Icons/bootstrap/lightning-charge.svg</file>
         <file alias="lock-fill.svg">Icons/bootstrap/lock-fill.svg</file>
+        <file alias="monochrome-rocket-takeoff.svg">Icons/bootstrap/monochrome-rocket-takeoff.svg</file>
         <file alias="pencil-square.svg">Icons/bootstrap/pencil-square.svg</file>
         <file alias="pin-angle.svg">Icons/bootstrap/pin-angle.svg</file>
         <file alias="qr-code.svg">Icons/bootstrap/qr-code.svg</file>
@@ -30,6 +32,7 @@
         <file alias="router.svg">Icons/bootstrap/router.svg</file>
         <file alias="save.svg">Icons/bootstrap/save.svg</file>
         <file alias="scissors.svg">Icons/bootstrap/scissors.svg</file>
+        <file alias="server.svg">Icons/bootstrap/server.svg</file>
         <file alias="shuffle.svg">Icons/bootstrap/shuffle.svg</file>
         <file alias="star.svg">Icons/bootstrap/star.svg</file>
         <file alias="tools.svg">Icons/bootstrap/tools.svg</file>
@@ -41,6 +44,7 @@
         <file alias="arrow-return-right.svg">Icons/bootstrap/white/arrow-return-right.svg</file>
         <file alias="box-arrow-in-left.svg">Icons/bootstrap/white/box-arrow-in-left.svg</file>
         <file alias="collection.svg">Icons/bootstrap/white/collection.svg</file>
+        <file alias="database.svg">Icons/bootstrap/white/database.svg</file>
         <file alias="display.svg">Icons/bootstrap/white/display.svg</file>
         <file alias="download.svg">Icons/bootstrap/white/download.svg</file>
         <file alias="file-earmark.svg">Icons/bootstrap/white/file-earmark.svg</file>
@@ -54,12 +58,14 @@
         <file alias="layout-text-sidebar-reverse.svg">Icons/bootstrap/white/layout-text-sidebar-reverse.svg</file>
         <file alias="lightning-charge.svg">Icons/bootstrap/white/lightning-charge.svg</file>
         <file alias="lock-fill.svg">Icons/bootstrap/white/lock-fill.svg</file>
+        <file alias="monochrome-rocket-takeoff.svg">Icons/bootstrap/white/monochrome-rocket-takeoff.svg</file>
         <file alias="pencil-square.svg">Icons/bootstrap/white/pencil-square.svg</file>
         <file alias="pin-angle.svg">Icons/bootstrap/white/pin-angle.svg</file>
         <file alias="qr-code.svg">Icons/bootstrap/white/qr-code.svg</file>
         <file alias="router.svg">Icons/bootstrap/white/router.svg</file>
         <file alias="save.svg">Icons/bootstrap/white/save.svg</file>
         <file alias="scissors.svg">Icons/bootstrap/white/scissors.svg</file>
+        <file alias="server.svg">Icons/bootstrap/white/server.svg</file>
         <file alias="shuffle.svg">Icons/bootstrap/white/shuffle.svg</file>
         <file alias="star.svg">Icons/bootstrap/white/star.svg</file>
         <file alias="tools.svg">Icons/bootstrap/white/tools.svg</file>
