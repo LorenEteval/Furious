@@ -91,7 +91,7 @@ def main():
                     )
                 )
 
-            # Show the AppQMessageBox and wait for user to close it
+            # Show the MessageBox and wait for user to close it
             messageBox.exec()
         else:
             if exitcode == ApplicationFactory.ExitCode.AssertionError:
@@ -123,10 +123,8 @@ def main():
                 )
                 messageBox.addButton(_('OK'), AppQMessageBox.ButtonRole.RejectRole)
 
-                # Show the AppQMessageBox and wait for user to close it
-                choice = messageBox.exec()
-
-                if choice == PySide6LegacyEnumValueWrapper(
+                # Show the MessageBox and wait for user to close it
+                if messageBox.exec() == PySide6LegacyEnumValueWrapper(
                     AppQMessageBox.ButtonRole.AcceptRole
                 ):
                     # Open
@@ -142,7 +140,7 @@ def main():
             else:
                 # Crash log not saved
 
-                # Show the AppQMessageBox and wait for user to close it
+                # Show the MessageBox and wait for user to close it
                 messageBox.exec()
 
         sys.exit(exitcode)
