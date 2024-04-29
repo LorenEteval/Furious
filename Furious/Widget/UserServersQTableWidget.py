@@ -640,7 +640,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.testDownloadSpeedTimer.start(250)
 
         # Text Editor Window
-        self.textEditorWindow = TextEditorWindow(parent=self)
+        self.textEditorWindow = TextEditorWindow()
 
         # Delegate
         self._delegate = AppQStyledItemDelegate(parent=self)
@@ -1481,6 +1481,12 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key.Key_Delete:
             self.deleteSelectedItem()
+        elif event.key() == QtCore.Qt.Key.Key_Return:
+            if PLATFORM == 'Darwin':
+                # Activate by Enter key on macOS
+                self.itemActivated.emit(self.currentItem())
+            else:
+                super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)
 
