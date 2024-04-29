@@ -42,17 +42,17 @@ class SystemTrayIcon(
         super().__init__(*args, **kwargs)
 
         actions = [
-            ConnectAction(),
-            RoutingAction(),
-            SystemProxyAction(),
+            ConnectAction(isTrayAction=True),
+            RoutingAction(isTrayAction=True),
+            SystemProxyAction(isTrayAction=True),
             AppQSeperator(),
-            ImportAction(),
-            EditConfigurationAction(),
+            ImportAction(isTrayAction=True),
+            EditConfigurationAction(isTrayAction=True),
             AppQSeperator(),
-            LanguageAction(),
-            SettingsAction(),
+            LanguageAction(isTrayAction=True),
+            SettingsAction(isTrayAction=True),
             AppQSeperator(),
-            ExitAction(),
+            ExitAction(isTrayAction=True),
         ]
 
         # Some old version PySide6 does not have setMenu method
@@ -111,8 +111,8 @@ class SystemTrayIcon(
             super().showMessage(_(APPLICATION_NAME), message, *args, **kwargs)
 
     def setMonochromeIconByTheme(self, theme):
-        if PLATFORM == 'Darwin':
-            # macOS. Always use white icon
+        if PLATFORM == 'Linux' or PLATFORM == 'Darwin':
+            # linux or macOS. Always use white icon
             self.setIcon(bootstrapIconWhite('monochrome-rocket-takeoff.svg'))
 
             return
