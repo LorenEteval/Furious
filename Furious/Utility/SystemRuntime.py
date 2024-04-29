@@ -45,6 +45,9 @@ def getPythonVersion():
 @functools.lru_cache(None)
 def getUbuntuRelease() -> str:
     try:
+        if PLATFORM != 'Linux':
+            return ''
+
         result = runExternalCommand(
             ['cat', '/etc/lsb-release'],
             stdout=subprocess.PIPE,
