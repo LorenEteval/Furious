@@ -25,6 +25,7 @@ from PySide6 import QtCore
 from PySide6.QtWidgets import QSystemTrayIcon
 
 import logging
+import platform
 import darkdetect
 
 logger = logging.getLogger(__name__)
@@ -111,16 +112,32 @@ class SystemTrayIcon(
             super().showMessage(_(APPLICATION_NAME), message, *args, **kwargs)
 
     def setMonochromeIconByTheme(self, theme):
-        if PLATFORM == 'Linux' or PLATFORM == 'Darwin':
-            # linux or macOS. Always use white icon
-            self.setIcon(bootstrapIconWhite('monochrome-rocket-takeoff.svg'))
+        def switchMonochrome():
+            if theme == 'Dark':
+                self.setIcon(bootstrapIconWhite('monochrome-rocket-takeoff.svg'))
+            else:
+                self.setIcon(bootstrapIcon('monochrome-rocket-takeoff.svg'))
 
-            return
-
-        if theme == 'Dark':
+        if PLATFORM == 'Linux':
+            # linux. Always use white icon
             self.setIcon(bootstrapIconWhite('monochrome-rocket-takeoff.svg'))
+        elif PLATFORM == 'Darwin':
+            try:
+                release, versioninfo, machine = platform.mac_ver()
+                majorRelease = int(release.split('.')[0])
+
+                if majorRelease <= 13:
+                    switchMonochrome()
+                else:
+                    # macOS 14+. Always use white icon
+                    self.setIcon(bootstrapIconWhite('monochrome-rocket-takeoff.svg'))
+            except Exception:
+                # Any non-exit exceptions
+
+                # Fall back to switch
+                switchMonochrome()
         else:
-            self.setIcon(bootstrapIcon('monochrome-rocket-takeoff.svg'))
+            switchMonochrome()
 
     def setMonochromeIcon(self):
         self.setMonochromeIconByTheme(darkdetect.theme())
