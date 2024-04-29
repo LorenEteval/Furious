@@ -111,6 +111,12 @@ class SystemTrayIcon(
             super().showMessage(_(APPLICATION_NAME), message, *args, **kwargs)
 
     def setMonochromeIconByTheme(self, theme):
+        if PLATFORM == 'Darwin':
+            # macOS. Always use white icon
+            self.setIcon(bootstrapIconWhite('monochrome-rocket-takeoff.svg'))
+
+            return
+
         if theme == 'Dark':
             self.setIcon(bootstrapIconWhite('monochrome-rocket-takeoff.svg'))
         else:
