@@ -29,10 +29,11 @@ needTrans('Edit Configuration...')
 
 
 class EditConfigurationAction(AppQAction):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
             _('Edit Configuration...'),
             icon=bootstrapIcon('pencil-square.svg'),
+            **kwargs,
         )
 
     def triggeredCallback(self, checked):

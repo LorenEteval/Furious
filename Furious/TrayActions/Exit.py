@@ -29,10 +29,11 @@ needTrans('Exit')
 
 
 class ExitAction(AppQAction):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
             _('Exit'),
             icon=bootstrapIcon('box-arrow-in-left.svg'),
+            **kwargs,
         )
 
     def triggeredCallback(self, checked):

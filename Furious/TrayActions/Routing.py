@@ -51,7 +51,7 @@ needTrans('Routing')
 
 
 class RoutingAction(AppQAction):
-    def __init__(self):
+    def __init__(self, **kwargs):
         if AppSettings.get('Routing') == 'Bypass':
             # Update value for backward compatibility
             AppSettings.set('Routing', 'Bypass Mainland China')
@@ -69,4 +69,5 @@ class RoutingAction(AppQAction):
                     for routing in BUILTIN_ROUTING
                 ),
             ),
+            **kwargs,
         )

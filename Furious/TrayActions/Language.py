@@ -61,7 +61,7 @@ needTrans('Language')
 
 
 class LanguageAction(AppQAction):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
             _('Language'),
             icon=bootstrapIcon('globe2.svg'),
@@ -76,4 +76,5 @@ class LanguageAction(AppQAction):
                     for text in list(LANGUAGE_TO_ABBR.keys())
                 ),
             ),
+            **kwargs,
         )

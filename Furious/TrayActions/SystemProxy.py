@@ -49,7 +49,7 @@ needTrans(
 
 
 class SystemProxyAction(AppQAction):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
             _('System Proxy'),
             icon=bootstrapIcon('hdd-network.svg'),
@@ -65,4 +65,5 @@ class SystemProxyAction(AppQAction):
                     checked=AppSettings.get('SystemProxyMode') == 'NoChanges',
                 ),
             ),
+            **kwargs,
         )
