@@ -177,6 +177,36 @@ class AppMainWindow(AppQMainWindow):
         self.mainTab = AppQTabWidget()
         self.mainTab.addTab(self.userServersQTableWidget, _('Server'))
 
+        logActions = [
+            AppQAction(
+                _('Show Furious Log'),
+                callback=lambda: APP().logViewerWindowApp_.showMaximized(),
+                shortcut=QtCore.QKeyCombination(
+                    QtCore.Qt.KeyboardModifier.ControlModifier
+                    | QtCore.Qt.KeyboardModifier.ShiftModifier,
+                    QtCore.Qt.Key.Key_F,
+                ),
+            ),
+            AppQAction(
+                _('Show Core Log'),
+                callback=lambda: APP().logViewerWindowCore.showMaximized(),
+                shortcut=QtCore.QKeyCombination(
+                    QtCore.Qt.KeyboardModifier.ControlModifier
+                    | QtCore.Qt.KeyboardModifier.ShiftModifier,
+                    QtCore.Qt.Key.Key_C,
+                ),
+            ),
+            AppQAction(
+                _('Show Tun2socks Log'),
+                callback=lambda: APP().logViewerWindowTun_.showMaximized(),
+                shortcut=QtCore.QKeyCombination(
+                    QtCore.Qt.KeyboardModifier.ControlModifier
+                    | QtCore.Qt.KeyboardModifier.ShiftModifier,
+                    QtCore.Qt.Key.Key_T,
+                ),
+            ),
+        ]
+
         serverActions = [
             AppQAction(
                 _('Add VMess Server...'),
@@ -242,36 +272,6 @@ class AppMainWindow(AppQMainWindow):
             ),
         ]
 
-        logActions = [
-            AppQAction(
-                _('Show Furious Log'),
-                callback=lambda: APP().logViewerWindowApp_.showMaximized(),
-                shortcut=QtCore.QKeyCombination(
-                    QtCore.Qt.KeyboardModifier.ControlModifier
-                    | QtCore.Qt.KeyboardModifier.ShiftModifier,
-                    QtCore.Qt.Key.Key_F,
-                ),
-            ),
-            AppQAction(
-                _('Show Core Log'),
-                callback=lambda: APP().logViewerWindowCore.showMaximized(),
-                shortcut=QtCore.QKeyCombination(
-                    QtCore.Qt.KeyboardModifier.ControlModifier
-                    | QtCore.Qt.KeyboardModifier.ShiftModifier,
-                    QtCore.Qt.Key.Key_C,
-                ),
-            ),
-            AppQAction(
-                _('Show Tun2socks Log'),
-                callback=lambda: APP().logViewerWindowTun_.showMaximized(),
-                shortcut=QtCore.QKeyCombination(
-                    QtCore.Qt.KeyboardModifier.ControlModifier
-                    | QtCore.Qt.KeyboardModifier.ShiftModifier,
-                    QtCore.Qt.Key.Key_T,
-                ),
-            ),
-        ]
-
         toolsActions = [
             AppQAction(
                 _('Manage Xray-core Asset File...'),
@@ -281,6 +281,13 @@ class AppMainWindow(AppQMainWindow):
 
         if hasattr(AppQAction, 'setMenu'):
             self.toolbar = AppQToolBar(
+                AppQAction(
+                    _('Log'),
+                    icon=bootstrapIcon('pin-angle.svg'),
+                    menu=AppQMenu(*logActions),
+                    useActionGroup=False,
+                    checkable=False,
+                ),
                 AppQSeperator(),
                 AppQAction(
                     _('Server'),
@@ -294,13 +301,6 @@ class AppMainWindow(AppQMainWindow):
                     _('Subscription'),
                     icon=bootstrapIcon('collection.svg'),
                     menu=AppQMenu(*subsActions),
-                    useActionGroup=False,
-                    checkable=False,
-                ),
-                AppQAction(
-                    _('Log'),
-                    icon=bootstrapIcon('pin-angle.svg'),
-                    menu=AppQMenu(*logActions),
                     useActionGroup=False,
                     checkable=False,
                 ),
@@ -334,6 +334,11 @@ class AppMainWindow(AppQMainWindow):
             self.addToolBar(self.toolbar)
         else:
             # Menu actions
+            logMenu = {
+                'name': 'Log',
+                'actions': [*logActions],
+            }
+
             serverMenu = {
                 'name': 'Server',
                 'actions': [*serverActions],
@@ -342,11 +347,6 @@ class AppMainWindow(AppQMainWindow):
             subsMenu = {
                 'name': 'Subscription',
                 'actions': [*subsActions],
-            }
-
-            logMenu = {
-                'name': 'Log',
-                'actions': [*logActions],
             }
 
             toolsMenu = {
@@ -374,7 +374,7 @@ class AppMainWindow(AppQMainWindow):
             }
 
             # Menus
-            for menuDict in (serverMenu, subsMenu, logMenu, toolsMenu, helpMenu):
+            for menuDict in (logMenu, serverMenu, subsMenu, toolsMenu, helpMenu):
                 menuName = menuDict['name']
                 menuObjName = f'_{menuName}Menu'
                 menu = AppQMenu(
