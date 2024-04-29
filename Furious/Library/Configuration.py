@@ -472,6 +472,13 @@ class ConfigurationXray(ConfigurationFactory):
             if hasKey('serviceName'):
                 kwargs['serviceName'] = networkObject['serviceName']
 
+            if hasKey('multiMode'):
+                if networkObject['multiMode']:
+                    kwargs['mode'] = 'multi'
+
+            if hasKey('authority'):
+                kwargs['authority'] = networkObject['authority']
+
         elif network == 'httpupgrade':
             try:
                 # Get order matters here
@@ -613,6 +620,9 @@ class ConfigurationXray(ConfigurationFactory):
 
             if kwargs.get('mode', 'gun'):
                 GRPCObject['multiMode'] = kwargs.get('mode', 'gun') == 'multi'
+
+            if kwargs.get('authority'):
+                GRPCObject['authority'] = kwargs.get('authority')
 
             return GRPCObject
 
