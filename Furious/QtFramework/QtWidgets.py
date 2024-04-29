@@ -45,7 +45,6 @@ __all__ = [
     'AppQMenuBar',
     'AppQMessageBox',
     'AppQPushButton',
-    'AppQStyledItemDelegate',
     'AppQTableWidget',
     'AppQTabWidget',
     'AppQToolBar',
@@ -444,17 +443,6 @@ class AppQPushButton(QTranslatable, QPushButton):
 
     def retranslate(self):
         self.setText(_(self.text()))
-
-
-class AppQStyledItemDelegate(QStyledItemDelegate):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def createEditor(self, parent, option, index):
-        editor = QLineEdit(parent)
-        editor.setFont(QFont(APP().customFontName))
-
-        return editor
 
 
 class AppQTableWidget(SupportConnectedCallback, QTableWidget):
