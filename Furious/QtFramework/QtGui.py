@@ -70,6 +70,7 @@ class AppQAction(QTranslatable, SupportThemeChangedCallback, QAction):
         statusTip=None,
         callback=None,
         shortcut=None,
+        isTrayAction=False,
         **kwargs,
     ):
         super().__init__(text=text, **kwargs)
@@ -77,6 +78,7 @@ class AppQAction(QTranslatable, SupportThemeChangedCallback, QAction):
         # Do not use QProtection because it's been managed somewhere else!!!
         self.useQProtection = False
         self.iconFileName = ''
+        self.isTrayAction = isTrayAction
 
         self.setShortcutVisibleInContextMenu(True)
 
@@ -175,8 +177,8 @@ class AppQAction(QTranslatable, SupportThemeChangedCallback, QAction):
                 # Windows. Always use black icon
                 super().setIcon(bootstrapIcon(self.iconFileName))
             else:
-                if getUbuntuRelease() == '20.04':
-                    # Ubuntu 20.04 system dark theme does not change menu color.
+                if getUbuntuRelease() == '20.04' and self.isTrayAction:
+                    # Ubuntu 20.04 system dark theme does not change tray menu color.
                     # Make it go black always
                     super().setIcon(bootstrapIcon(self.iconFileName))
                 else:
