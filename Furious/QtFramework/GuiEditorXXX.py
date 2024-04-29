@@ -267,6 +267,8 @@ class GuiEditorWidgetQWidget(GuiEditorWidget, QWidget):
         super().__init__(*args, **kwargs)
 
         layout = QFormLayout()
+        layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
         for container in self._containers:
             layout.addRow(*container.widgets())
@@ -279,6 +281,10 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
         super().__init__(*args, **kwargs)
 
         formLayout = QFormLayout()
+        formLayout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        formLayout.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        )
 
         for container in self._containers:
             formLayout.addRow(*container.widgets())
@@ -314,15 +320,17 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
         super().__init__(*args, **kwargs)
 
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
-        self.setFixedSize(520, int(520 * GOLDEN_RATIO))
+        self.setFixedSize(
+            int(470 * GOLDEN_RATIO * GOLDEN_RATIO), int(470 * GOLDEN_RATIO)
+        )
 
         self.tabCentralWidget = QWidget()
-        self.tabCentralWidgetLayout = QVBoxLayout(self.tabCentralWidget)
+        self.tabCentralWidgetLayout = QGridLayout(self.tabCentralWidget)
 
         self.groupBoxes = self.groupBoxSequence()
 
-        for groupBox in self.groupBoxes:
-            self.tabCentralWidgetLayout.addWidget(groupBox)
+        for index, groupBox in enumerate(self.groupBoxes):
+            self.tabCentralWidgetLayout.addWidget(groupBox, index // 2, index % 2)
 
         self.tabCentralWidget.setLayout(self.tabCentralWidgetLayout)
 
