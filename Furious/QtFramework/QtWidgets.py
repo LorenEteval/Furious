@@ -293,6 +293,8 @@ class AppQMainWindow(
 
                 self.setWidthAndHeight()
 
+                APP().processEvents()
+
                 self._firstShowCall = False
 
         moveToCenter(self)
