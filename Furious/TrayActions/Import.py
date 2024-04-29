@@ -285,7 +285,7 @@ needTrans('Import')
 
 
 class ImportAction(AppQAction):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
             _('Import'),
             icon=bootstrapIcon('lightning-charge.svg'),
@@ -295,4 +295,5 @@ class ImportAction(AppQAction):
             ),
             useActionGroup=False,
             checkable=True,
+            **kwargs,
         )

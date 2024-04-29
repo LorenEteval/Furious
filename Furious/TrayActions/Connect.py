@@ -75,11 +75,12 @@ def validateProxyServer(server) -> bool:
 
 
 class ConnectAction(AppQAction):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
             _('Connect'),
             icon=bootstrapIcon('unlock-fill.svg'),
             checkable=True,
+            **kwargs,
         )
 
         self.actionQueue = queue.Queue()

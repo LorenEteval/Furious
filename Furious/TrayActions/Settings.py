@@ -146,7 +146,7 @@ needTrans(
 
 
 class SettingsAction(AppQAction):
-    def __init__(self):
+    def __init__(self, **kwargs):
         if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
             extraActions = [
                 VPNModeAction(
@@ -190,6 +190,7 @@ class SettingsAction(AppQAction):
                 ),
             ),
             useActionGroup=False,
+            **kwargs,
         )
 
     def getVPNModeAction(self) -> Union[AppQAction, None]:
