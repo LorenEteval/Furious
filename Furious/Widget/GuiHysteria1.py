@@ -345,5 +345,5 @@ class GuiHysteria1(GuiEditorWidgetQDialog):
             GuiHy1GroupBoxProxy(),
             GuiHy1GroupBoxSpeed(),
             GuiHy1GroupBoxTLS(),
-            GuiHy1GroupBoxOther(),
+            # GuiHy1GroupBoxOther(),
         ]
