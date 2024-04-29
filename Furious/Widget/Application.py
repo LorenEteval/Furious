@@ -34,6 +34,7 @@ import os
 import sys
 import time
 import logging
+import platform
 import threading
 import traceback
 import functools
@@ -305,6 +306,10 @@ class Application(ApplicationFactory, SingletonApplication):
             logger.info(f'platform: {PLATFORM}')
             logger.info(f'platform release: {PLATFORM_RELEASE}')
             logger.info(f'platform machine: {PLATFORM_MACHINE}')
+
+            if PLATFORM == 'Darwin':
+                logger.info(f'mac_ver: {platform.mac_ver()}')
+
             logger.info(f'python version: {getPythonVersion()}')
             logger.info(f'system version: {sys.version}')
             logger.info(f'sys.executable: {sys.executable}')
