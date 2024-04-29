@@ -116,7 +116,7 @@ class TextEditorWindow(AppQMainWindow):
 
         self.customWindowTitle = ''
         self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
-        self.setFixedSize(470, int(470 * GOLDEN_RATIO))
+        self.setFixedSize(450, int(450 * GOLDEN_RATIO))
 
         # Current editing index
         self.currentIndex = -1
