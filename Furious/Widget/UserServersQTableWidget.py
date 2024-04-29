@@ -642,10 +642,6 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         # Text Editor Window
         self.textEditorWindow = TextEditorWindow()
 
-        # Delegate
-        self._delegate = AppQStyledItemDelegate(parent=self)
-        self.setItemDelegate(self._delegate)
-
         # Must set before flush all
         self.setColumnCount(len(self.Headers))
 

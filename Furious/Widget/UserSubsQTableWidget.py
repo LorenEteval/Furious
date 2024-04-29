@@ -84,10 +84,6 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
 
         super().__init__(*args, **kwargs)
 
-        # Delegate
-        self._delegate = AppQStyledItemDelegate(parent=self)
-        self.setItemDelegate(self._delegate)
-
         # Must set before flush all
         self.setColumnCount(len(self.Headers))
 
