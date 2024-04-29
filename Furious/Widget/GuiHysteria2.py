@@ -481,5 +481,5 @@ class GuiHysteria2(GuiEditorWidgetQDialog):
             GuiHy2GroupBoxProxy(),
             GuiHy2GroupBoxObfs(),
             GuiHy2GroupBoxTLS(),
-            GuiHy2GroupBoxOther(),
+            # GuiHy2GroupBoxOther(),
         ]
