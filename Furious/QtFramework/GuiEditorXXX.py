@@ -321,7 +321,7 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
 
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setFixedSize(
-            int(470 * GOLDEN_RATIO * GOLDEN_RATIO), int(470 * GOLDEN_RATIO)
+            int(450 * GOLDEN_RATIO * GOLDEN_RATIO), int(450 * GOLDEN_RATIO)
         )
 
         self.tabCentralWidget = QWidget()
