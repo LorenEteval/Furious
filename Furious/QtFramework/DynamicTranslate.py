@@ -86,6 +86,7 @@ def gettext(source, locale=None):
 # Register new translation type here
 LANGUAGE_TO_ABBR = {
     'English': 'EN',
+    'Российский': 'RU',
     '简体中文': 'ZH',
 }
 
