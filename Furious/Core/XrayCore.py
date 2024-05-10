@@ -40,7 +40,7 @@ def startXrayCore(jsonString: str, msgQueue: multiprocessing.Queue):
         while True:
             time.sleep(1)
     else:
-        if xray.__version__ <= '1.8.4':
+        if versionToNumber(xray.__version__) <= versionToNumber('1.8.4'):
             redirect = False
         else:
             # Can be redirected
