@@ -39,7 +39,6 @@ logger = logging.getLogger(__name__)
 
 needTrans = functools.partial(needTransFn, source=__name__)
 
-
 needTrans('New version available')
 
 
