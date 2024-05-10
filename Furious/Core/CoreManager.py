@@ -20,6 +20,7 @@ from __future__ import annotations
 from Furious.Interface import *
 from Furious.PyFramework import *
 from Furious.QtFramework import *
+from Furious.QtFramework import gettext as _
 from Furious.Library import *
 from Furious.Utility import *
 from Furious.Core import *
@@ -32,6 +33,13 @@ import subprocess
 __all__ = ['CoreManager']
 
 logger = logging.getLogger(__name__)
+
+needTrans = functools.partial(needTransFn, source=__name__)
+
+needTrans(
+    'Unable to connect',
+    'Routing option with direct rules is not allowed in VPN mode',
+)
 
 
 def fixLogObjectPath(config: ConfigurationFactory, attr: str, value: str, log=True):
@@ -115,6 +123,19 @@ class CoreManager(SupportExitCleanup):
                 fixLogObjectPath(copy, attr, logRedirectValue, log)
 
             if routing == 'Bypass Mainland China':
+                # VPN Mode handling
+                if not proxyModeOnly and isVPNMode():
+                    mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+                    mbox.setWindowTitle(_('Unable to connect'))
+                    mbox.setText(
+                        _('Routing option with direct rules is not allowed in VPN mode')
+                    )
+
+                    # Show the MessageBox asynchronously
+                    mbox.open()
+
+                    return False
+
                 routingObject = {
                     'domainStrategy': 'IPIfNonMatch',
                     'domainMatcher': 'hybrid',
@@ -202,6 +223,19 @@ class CoreManager(SupportExitCleanup):
             success = core.start(copy, **kwargs)
         elif isinstance(copy, ConfigurationHysteria1):
             if routing == 'Bypass Mainland China':
+                # VPN Mode handling
+                if not proxyModeOnly and isVPNMode():
+                    mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+                    mbox.setWindowTitle(_('Unable to connect'))
+                    mbox.setText(
+                        _('Routing option with direct rules is not allowed in VPN mode')
+                    )
+
+                    # Show the MessageBox asynchronously
+                    mbox.open()
+
+                    return False
+
                 routingObject = {
                     'rule': DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl',
                     'mmdb': DATA_DIR / 'hysteria' / 'country.mmdb',
