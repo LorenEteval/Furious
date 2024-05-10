@@ -879,24 +879,34 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             APP().systemTray.ConnectAction.doDisconnect()
             APP().systemTray.ConnectAction.trigger()
 
+    @functools.lru_cache(None)
+    def getGuiEditorByProtocol(self, protocol, **kwargs):
+        logger.debug(f'getGuiEditorByProtocol called with protocol {protocol}')
+
+        if protocolRepr(protocol) == Protocol.VMess:
+            return GuiVMess(parent=self, **kwargs)
+        if protocolRepr(protocol) == Protocol.VLESS:
+            return GuiVLESS(parent=self, **kwargs)
+        if protocolRepr(protocol) == Protocol.Shadowsocks:
+            return GuiShadowsocks(parent=self, **kwargs)
+        if protocolRepr(protocol) == Protocol.Trojan:
+            return GuiTrojan(parent=self, **kwargs)
+        if protocolRepr(protocol) == Protocol.Hysteria2:
+            return GuiHysteria2(parent=self, **kwargs)
+        if protocolRepr(protocol) == Protocol.Hysteria1:
+            return GuiHysteria1(parent=self, **kwargs)
+
+        return None
+
     def getGuiEditorByFactory(self, factory, **kwargs):
         if isinstance(factory, ConfigurationXray):
             protocol = factory.proxyProtocol
 
-            if protocolRepr(protocol) == Protocol.VMess:
-                guiEditor = GuiVMess(parent=self, **kwargs)
-            elif protocolRepr(protocol) == Protocol.VLESS:
-                guiEditor = GuiVLESS(parent=self, **kwargs)
-            elif protocolRepr(protocol) == Protocol.Shadowsocks:
-                guiEditor = GuiShadowsocks(parent=self, **kwargs)
-            elif protocolRepr(protocol) == Protocol.Trojan:
-                guiEditor = GuiTrojan(parent=self, **kwargs)
-            else:
-                guiEditor = None
+            guiEditor = self.getGuiEditorByProtocol(protocol, **kwargs)
         elif isinstance(factory, ConfigurationHysteria2):
-            guiEditor = GuiHysteria2(parent=self, **kwargs)
+            guiEditor = self.getGuiEditorByProtocol(Protocol.Hysteria2, **kwargs)
         elif isinstance(factory, ConfigurationHysteria1):
-            guiEditor = GuiHysteria1(parent=self, **kwargs)
+            guiEditor = self.getGuiEditorByProtocol(Protocol.Hysteria1, **kwargs)
         else:
             guiEditor = None
 
@@ -930,19 +940,20 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         def handleAccepted():
             modified = guiEditor.inputToFactory(factory)
 
-            self.flushRow(index, factory)
+            if modified:
+                self.flushRow(index, factory)
 
-            if index == AS_UserActivatedItemIndex():
-                try:
-                    if modified and APP().isSystemTrayConnected():
-                        mbox = NewChangesNextTimeMBox()
+                if index == AS_UserActivatedItemIndex():
+                    try:
+                        if APP().isSystemTrayConnected():
+                            mbox = NewChangesNextTimeMBox()
 
-                        # Show the MessageBox asynchronously
-                        mbox.open()
-                except Exception:
-                    # Any non-exit exceptions
+                            # Show the MessageBox asynchronously
+                            mbox.open()
+                    except Exception:
+                        # Any non-exit exceptions
 
-                    pass
+                        pass
 
         guiEditor.connectAccepted(handleAccepted)
         guiEditor.open()
