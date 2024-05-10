@@ -937,26 +937,42 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
             logger.error(f'error while converting factory to input: {ex}')
 
-        def handleAccepted():
-            modified = guiEditor.inputToFactory(factory)
-
-            if modified:
-                self.flushRow(index, factory)
-
-                if index == AS_UserActivatedItemIndex():
-                    try:
-                        if APP().isSystemTrayConnected():
-                            mbox = NewChangesNextTimeMBox()
-
-                            # Show the MessageBox asynchronously
-                            mbox.open()
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        pass
-
-        guiEditor.connectAccepted(handleAccepted)
+        guiEditor.accepted.connect(
+            functools.partial(
+                self.handleGuiEditorAccepted,
+                guiEditor,
+                index,
+                factory,
+            )
+        )
         guiEditor.open()
+
+    def handleGuiEditorAccepted(
+        self,
+        editor: GuiEditorWidgetQDialog,
+        index: int,
+        factory: ConfigurationFactory,
+    ):
+        logger.debug(f'guiEditor accepted with index {index}')
+
+        modified = editor.inputToFactory(factory)
+
+        if modified:
+            self.flushRow(index, factory)
+
+            if index == AS_UserActivatedItemIndex():
+                try:
+                    if APP().isSystemTrayConnected():
+                        mbox = NewChangesNextTimeMBox()
+
+                        # Show the MessageBox asynchronously
+                        mbox.open()
+                except Exception:
+                    # Any non-exit exceptions
+
+                    pass
+
+        editor.accepted.disconnect()
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
