@@ -957,20 +957,20 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
         modified = editor.inputToFactory(factory)
 
-        if modified:
-            self.flushRow(index, factory)
+        # Still flush to row since remark may be modified
+        self.flushRow(index, factory)
 
-            if index == AS_UserActivatedItemIndex():
-                try:
-                    if APP().isSystemTrayConnected():
-                        mbox = NewChangesNextTimeMBox()
+        if modified and index == AS_UserActivatedItemIndex():
+            try:
+                if APP().isSystemTrayConnected():
+                    mbox = NewChangesNextTimeMBox()
 
-                        # Show the MessageBox asynchronously
-                        mbox.open()
-                except Exception:
-                    # Any non-exit exceptions
+                    # Show the MessageBox asynchronously
+                    mbox.open()
+            except Exception:
+                # Any non-exit exceptions
 
-                    pass
+                pass
 
         editor.accepted.disconnect()
 
