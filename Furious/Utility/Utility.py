@@ -23,6 +23,7 @@ from typing import AnyStr, Tuple
 
 import os
 import ujson
+import operator
 import functools
 import ipaddress
 import subprocess
@@ -36,6 +37,7 @@ __all__ = [
     'parseHostPort',
     'runExternalCommand',
     'getAbsolutePath',
+    'versionToNumber',
     'getXrayProxyOutboundObject',
     'getXrayProxyOutboundStream',
 ]
@@ -110,6 +112,39 @@ def runExternalCommand(*args, **kwargs):
 
 def getAbsolutePath(path):
     return path if os.path.isabs(path) else str(ROOT_DIR / path)
+
+
+def versionToNumber(version: str) -> int:
+    def _split():
+        # x.y.z or x.y.z.u
+        result = version.split('.')
+
+        if len(result) == 3:
+            result.append('0')
+
+        return result
+
+    x_weight = 10**9
+    y_weight = 10**6
+    z_weight = 10**3
+    u_weight = 1
+
+    try:
+        x, y, z, u = _split()
+
+        return functools.reduce(
+            operator.add,
+            list(
+                int(val) * weight
+                for val, weight in zip(
+                    [x, y, z, u], [x_weight, y_weight, z_weight, u_weight]
+                )
+            ),
+        )
+    except Exception:
+        # Any non-exit exceptions
+
+        return 0
 
 
 def getXrayProxyOutboundObject(config: dict) -> dict:
