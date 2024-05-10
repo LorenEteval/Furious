@@ -46,7 +46,7 @@ needTrans(
     'Disconnect',
     'Unable to connect',
     'Server configuration empty. Please configure your server first',
-    'Select and double click to activate configuration and connect',
+    'Select and press Enter to activate configuration and connect',
     f'{APPLICATION_NAME} cannot find any valid http proxy '
     f'endpoint in the configuration',
     'Please complete your server configuration',
@@ -207,7 +207,7 @@ class ConnectAction(AppQAction):
             mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
             mbox.setWindowTitle(_('Unable to connect'))
             mbox.setText(
-                _('Select and double click to activate configuration and connect')
+                _('Select and press Enter to activate configuration and connect')
             )
 
             # Show the MessageBox asynchronously
