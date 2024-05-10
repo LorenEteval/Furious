@@ -40,22 +40,6 @@ logger = logging.getLogger(__name__)
 needTrans = functools.partial(needTransFn, source=__name__)
 
 
-def versionToNumber(version):
-    major_weight = 10000
-    minor_weight = 100
-    patch_weight = 1
-
-    return functools.reduce(
-        operator.add,
-        list(
-            int(ver) * weight
-            for ver, weight in zip(
-                version.split('.'), [major_weight, minor_weight, patch_weight]
-            )
-        ),
-    )
-
-
 needTrans('New version available')
 
 
@@ -116,7 +100,7 @@ class UpdatesManager(AppQNetworkAccessManager):
             # Unchecked?
             info = UJSONEncoder.decode(networkReply.readAll().data())
 
-            if versionToNumber(info['tag_name']) > versionToNumber(APPLICATION_VERSION):
+            if versionToValue(info['tag_name']) > versionToValue(APPLICATION_VERSION):
 
                 def handleResultCode(code):
                     if code == PySide6LegacyEnumValueWrapper(
