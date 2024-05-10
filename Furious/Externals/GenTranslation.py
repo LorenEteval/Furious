@@ -909,6 +909,7 @@ TRANSLATION = {
     },
     "Unable to connect": {
         "source": [
+            "Furious.Core.CoreManager",
             "Furious.TrayActions.Connect"
         ],
         "RU": "Не удается подключиться",
@@ -921,14 +922,6 @@ TRANSLATION = {
         ],
         "RU": "Конфигурация сервера пуста. Пожалуйста, сначала настройте свой сервер",
         "ZH": "服务器配置为空。请先配置服务器",
-        "isReviewed": "True"
-    },
-    "Select and double click to activate configuration and connect": {
-        "source": [
-            "Furious.TrayActions.Connect"
-        ],
-        "RU": "Выберите и дважды щелкните, чтобы активировать настройку и подключиться",
-        "ZH": "选择并双击以激活配置并连接",
         "isReviewed": "True"
     },
     "Connected": {
@@ -1319,6 +1312,20 @@ TRANSLATION = {
         ],
         "RU": "Добавьте сервер Hysteria 2...",
         "ZH": "添加Hysteria2服务器...",
+        "isReviewed": "True"
+    },
+    "Routing option with direct rules is not allowed in VPN mode": {
+        "source": [
+            "Furious.Core.CoreManager"
+        ],
+        "ZH": "VPN模式下不允许使用直接规则的路由选项",
+        "isReviewed": "True"
+    },
+    "Select and press Enter to activate configuration and connect": {
+        "source": [
+            "Furious.TrayActions.Connect"
+        ],
+        "ZH": "选择并按下Enter键以激活配置并连接",
         "isReviewed": "True"
     }
 }
