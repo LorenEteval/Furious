@@ -358,9 +358,6 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
     def setTabText(self, text: str):
         self.tabWidget.setTabText(0, text)
 
-    def connectAccepted(self, func: Callable):
-        self.dialogBtns.accepted.connect(func)
-
     def inputToFactory(self, config: ConfigurationFactory) -> bool:
         modified = False
 
