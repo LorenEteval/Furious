@@ -77,7 +77,18 @@ def main():
             if source not in unit['source']:
                 unit['source'].append(source)
 
-    translator = deepl.Translator(args.key, send_platform_info=False, proxy=args.proxy)
+    nonexist = []
+
+    for key in translation.keys():
+        if len(translation[key]['source']) == 0:
+            # No source, add to nonexist
+            nonexist.append(key)
+
+    for key in nonexist:
+        # Key with no source, remove
+        translation.pop(key, None)
+
+    translator = deepl.Translator(args.key, send_platform_info=False, proxy=proxy)
 
     for text in translation.keys():
         # Remove redundant EN translation
