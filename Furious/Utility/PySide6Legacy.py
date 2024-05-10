@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Utility.Constants import *
+from Furious.Utility.Utility import *
 
 import time
 
@@ -24,7 +25,7 @@ __all__ = ['PySide6LegacyEnumValueWrapper', 'PySide6LegacyEventLoopWait']
 
 def PySide6LegacyEnumValueWrapper(enum):
     # Protect PySide6 enum wrapper behavior changes
-    if PYSIDE6_VERSION < '6.2.2':
+    if versionToValue(PYSIDE6_VERSION) < versionToValue('6.2.2'):
         return enum
     else:
         return enum.value
@@ -33,7 +34,7 @@ def PySide6LegacyEnumValueWrapper(enum):
 def PySide6LegacyEventLoopWait(ms):
     # Protect qWait method does not exist in some
     # old PySide6 version
-    if PYSIDE6_VERSION < '6.3.1':
+    if versionToValue(PYSIDE6_VERSION) < versionToValue('6.3.1'):
         for counter in range(0, ms, 10):
             time.sleep(10 / 1000)
 
