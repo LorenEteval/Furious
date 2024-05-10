@@ -1318,6 +1318,7 @@ TRANSLATION = {
         "source": [
             "Furious.Core.CoreManager"
         ],
+        "RU": "Опция маршрутизации с прямыми правилами не разрешена в режиме VPN",
         "ZH": "VPN模式下不允许使用直接规则的路由选项",
         "isReviewed": "True"
     },
@@ -1325,6 +1326,7 @@ TRANSLATION = {
         "source": [
             "Furious.TrayActions.Connect"
         ],
+        "RU": "Выберите и нажмите Enter, чтобы активировать конфигурацию и подключиться",
         "ZH": "选择并按下Enter键以激活配置并连接",
         "isReviewed": "True"
     }
