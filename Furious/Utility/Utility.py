@@ -37,7 +37,7 @@ __all__ = [
     'parseHostPort',
     'runExternalCommand',
     'getAbsolutePath',
-    'versionToNumber',
+    'versionToValue',
     'getXrayProxyOutboundObject',
     'getXrayProxyOutboundStream',
 ]
@@ -114,7 +114,7 @@ def getAbsolutePath(path):
     return path if os.path.isabs(path) else str(ROOT_DIR / path)
 
 
-def versionToNumber(version: str) -> int:
+def versionToValue(version: str) -> int:
     def _split():
         # x.y.z or x.y.z.u
         result = version.split('.')

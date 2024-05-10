@@ -73,7 +73,7 @@ if PLATFORM == 'Windows':
         f'{PLATFORM.lower()}{PLATFORM_RELEASE}-{PLATFORM_MACHINE.lower()}'
     )
 elif PLATFORM == 'Darwin':
-    if versionToNumber(PYSIDE6_VERSION) <= versionToNumber('6.4.3'):
+    if versionToValue(PYSIDE6_VERSION) <= versionToValue('6.4.3'):
         ARTIFACT_NAME = (
             f'{APPLICATION_NAME}-{__version__}-'
             f'macOS-10.9-{PLATFORM_MACHINE.lower()}'

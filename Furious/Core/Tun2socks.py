@@ -36,7 +36,7 @@ def startTun2socks(msgQueue: multiprocessing.Queue, *args):
         while True:
             time.sleep(1)
     else:
-        if versionToNumber(tun2socks.__version__) <= versionToNumber('2.5.1.1'):
+        if versionToValue(tun2socks.__version__) <= versionToValue('2.5.1.1'):
             redirect = False
         else:
             redirect = True

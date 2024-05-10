@@ -41,7 +41,7 @@ def startHysteria2(jsonString: str, msgQueue: multiprocessing.Queue):
         while True:
             time.sleep(1)
     else:
-        if versionToNumber(hysteria2.__version__) <= versionToNumber('2.0.0.1'):
+        if versionToValue(hysteria2.__version__) <= versionToValue('2.0.0.1'):
             redirect = False
         else:
             redirect = True
