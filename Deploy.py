@@ -1,3 +1,22 @@
+# Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>
+#
+# This file is part of Furious.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+from __future__ import annotations
+
 from Furious.Version import __version__
 from Furious.Utility import *
 
@@ -54,7 +73,7 @@ if PLATFORM == 'Windows':
         f'{PLATFORM.lower()}{PLATFORM_RELEASE}-{PLATFORM_MACHINE.lower()}'
     )
 elif PLATFORM == 'Darwin':
-    if PYSIDE6_VERSION == '6.4.3':
+    if versionToNumber(PYSIDE6_VERSION) <= versionToNumber('6.4.3'):
         ARTIFACT_NAME = (
             f'{APPLICATION_NAME}-{__version__}-'
             f'macOS-10.9-{PLATFORM_MACHINE.lower()}'
@@ -77,6 +96,8 @@ def cleanup():
     try:
         shutil.rmtree(ROOT_DIR / DEPLOY_DIR_NAME)
     except Exception as ex:
+        # Any non-exit exceptions
+
         logger.error(f'remove deployment dir failed: {ex}')
     else:
         logger.info(f'remove deployment dir success')
@@ -86,6 +107,8 @@ def cleanup():
         try:
             os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.zip')
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'remove artifact failed: {ex}')
         else:
             logger.info(f'remove artifact success')
@@ -96,6 +119,8 @@ def cleanup():
                 f'{PLATFORM.lower()}{PLATFORM_RELEASE}'
             )
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'remove potential unzipped dir failed: {ex}')
         else:
             logger.info(f'remove potential unzipped dir success')
@@ -104,6 +129,8 @@ def cleanup():
         try:
             os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.dmg')
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'remove artifact failed: {ex}')
         else:
             logger.info(f'remove artifact success')
@@ -111,6 +138,8 @@ def cleanup():
         try:
             shutil.rmtree(ROOT_DIR / 'dmg')
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'remove dmg dir failed: {ex}')
         else:
             logger.info(f'remove dmg dir success')
@@ -195,6 +224,8 @@ def main():
         except FileNotFoundError:
             pass
         except Exception:
+            # Any non-exit exceptions
+
             raise
 
         shutil.copytree(
@@ -216,6 +247,8 @@ def main():
         except FileNotFoundError:
             pass
         except Exception:
+            # Any non-exit exceptions
+
             raise
 
         try:
