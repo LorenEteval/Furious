@@ -1093,13 +1093,25 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
             logger.error(f'error while converting factory to input: {ex}')
 
-        def handleAccepted():
-            guiEditor.inputToFactory(factory)
-
-            self.appendNewItemByFactory(factory)
-
-        guiEditor.connectAccepted(handleAccepted)
+        guiEditor.accepted.connect(
+            functools.partial(
+                self.handleAddServerViaGui,
+                guiEditor,
+                factory,
+            )
+        )
         guiEditor.open()
+
+    def handleAddServerViaGui(
+        self,
+        editor: GuiEditorWidgetQDialog,
+        factory: ConfigurationFactory,
+    ):
+        editor.inputToFactory(factory)
+
+        self.appendNewItemByFactory(factory)
+
+        editor.accepted.disconnect()
 
     def flushRow(self, row: int, item: ConfigurationFactory):
         for column in list(range(self.columnCount())):
