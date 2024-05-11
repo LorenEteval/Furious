@@ -130,6 +130,14 @@ class ImportMultiSuccessMBox(AppQMessageBox):
             # Limited
             return _('Import share link success') + f'\n\n...'
 
+    def retranslate(self):
+        self.setWindowTitle(_(self.windowTitle()))
+        self.setText(self.customText())
+
+        # Ignore informative text, buttons
+
+        self.moveToCenter()
+
 
 needTrans(
     'Import',
