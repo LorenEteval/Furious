@@ -115,7 +115,7 @@ class TextEditorWindow(AppQMainWindow):
         super().__init__(*args, **kwargs)
 
         self.customWindowTitle = ''
-        self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setFixedSize(450, int(450 * GOLDEN_RATIO))
 
         # Current editing index
@@ -286,7 +286,8 @@ class TextEditorWindow(AppQMainWindow):
                     # Cancel. Do nothing
                     pass
 
-            mbox = QuestionSaveMBox(icon=AppQMessageBox.Icon.Question)
+            mbox = QuestionSaveMBox(icon=AppQMessageBox.Icon.Question, parent=self)
+            mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
             mbox.finished.connect(functools.partial(handleResultCode))
 
             # dummy ref
@@ -320,9 +321,10 @@ class TextEditorWindow(AppQMainWindow):
         except Exception as ex:
             # Any non-exit exceptions
 
-            mbox = JSONDecodeErrorMBox(icon=AppQMessageBox.Icon.Critical)
+            mbox = JSONDecodeErrorMBox(icon=AppQMessageBox.Icon.Critical, parent=self)
             mbox.error = str(ex)
             mbox.setWindowTitle(_('Error saving configuration'))
+            mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
             mbox.setText(mbox.customText())
 
             # Show the MessageBox asynchronously
@@ -347,7 +349,8 @@ class TextEditorWindow(AppQMainWindow):
             if index == AS_UserActivatedItemIndex():
                 try:
                     if APP().isSystemTrayConnected():
-                        mbox = NewChangesNextTimeMBox()
+                        mbox = NewChangesNextTimeMBox(parent=self)
+                        mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
                         # Show the MessageBox asynchronously
                         mbox.open()
@@ -372,8 +375,9 @@ class TextEditorWindow(AppQMainWindow):
             except Exception as ex:
                 # Any non-exit exceptions
 
-                mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+                mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical, parent=self)
                 mbox.setWindowTitle(_('Error Saving File'))
+                mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
                 mbox.setText(_('Invalid server configuration'))
                 mbox.setInformativeText(str(ex))
 
@@ -390,9 +394,12 @@ class TextEditorWindow(AppQMainWindow):
                 except Exception as ex:
                     # Any non-exit exceptions
 
-                    mbox = JSONDecodeErrorMBox(icon=AppQMessageBox.Icon.Critical)
+                    mbox = JSONDecodeErrorMBox(
+                        icon=AppQMessageBox.Icon.Critical, parent=self
+                    )
                     mbox.error = str(ex)
                     mbox.setWindowTitle(_('Error setting indent'))
+                    mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
                     mbox.setText(mbox.customText())
 
                     # Show the MessageBox asynchronously
