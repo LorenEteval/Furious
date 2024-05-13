@@ -45,7 +45,6 @@ import queue
 import logging
 import icmplib
 import functools
-import threading
 
 __all__ = ['UserServersQTableWidget']
 
@@ -813,8 +812,6 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         # Distinguish double-click and activated
         self.doubleClickedFlag = False
 
-        self.guiEditorMutex = threading.Lock()
-
         # Signals
         self.itemChanged.connect(self.handleItemChanged)
         self.itemSelectionChanged.connect(self.handleItemSelectionChanged)
@@ -918,39 +915,41 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
     @QtCore.Slot(QTableWidgetItem)
     def handleItemDoubleClicked(self, item: QTableWidgetItem):
-        with self.guiEditorMutex:
-            self.doubleClickedFlag = True
+        self.doubleClickedFlag = True
 
-            index = item.row()
-            factory = AS_UserServers()[index]
+        index = item.row()
+        factory = AS_UserServers()[index]
 
-            guiEditor = self.getGuiEditorByFactory(factory, translatable=False)
+        guiEditor = self.getGuiEditorByFactory(factory, translatable=False)
 
-            if guiEditor is None:
-                # Unrecognized. Do nothing
-                return
+        if guiEditor is None:
+            # Unrecognized. Do nothing
+            return
 
-            # Dummy ref
-            setattr(self, '_guiEditorRef0', guiEditor)
+        guiEditor.setWindowTitle(f'{index + 1} - ' + factory.getExtras('remark'))
 
-            guiEditor.setWindowTitle(f'{index + 1} - ' + factory.getExtras('remark'))
+        try:
+            guiEditor.factoryToInput(factory)
+        except Exception as ex:
+            # Any non-exit exceptions
 
-            try:
-                guiEditor.factoryToInput(factory)
-            except Exception as ex:
-                # Any non-exit exceptions
+            logger.error(f'error while converting factory to input: {ex}')
 
-                logger.error(f'error while converting factory to input: {ex}')
-
-            guiEditor.accepted.connect(
-                functools.partial(
-                    self.handleGuiEditorAccepted,
-                    guiEditor,
-                    index,
-                    factory,
-                )
+        guiEditor.accepted.connect(
+            functools.partial(
+                self.handleGuiEditorAccepted,
+                guiEditor,
+                index,
+                factory,
             )
-            guiEditor.open()
+        )
+        guiEditor.rejected.connect(
+            functools.partial(
+                self.handleGuiEditorRejected,
+                guiEditor,
+            )
+        )
+        guiEditor.open()
 
     def handleGuiEditorAccepted(
         self,
@@ -958,27 +957,31 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         index: int,
         factory: ConfigurationFactory,
     ):
-        with self.guiEditorMutex:
-            logger.debug(f'guiEditor accepted with index {index}')
+        logger.debug(f'guiEditor accepted with index {index}')
 
-            modified = editor.inputToFactory(factory)
+        modified = editor.inputToFactory(factory)
 
-            # Still flush to row since remark may be modified
-            self.flushRow(index, factory)
+        # Still flush to row since remark may be modified
+        self.flushRow(index, factory)
 
-            if modified and index == AS_UserActivatedItemIndex():
-                try:
-                    if APP().isSystemTrayConnected():
-                        mbox = NewChangesNextTimeMBox()
+        if modified and index == AS_UserActivatedItemIndex():
+            try:
+                if APP().isSystemTrayConnected():
+                    mbox = NewChangesNextTimeMBox()
 
-                        # Show the MessageBox asynchronously
-                        mbox.open()
-                except Exception:
-                    # Any non-exit exceptions
+                    # Show the MessageBox asynchronously
+                    mbox.open()
+            except Exception:
+                # Any non-exit exceptions
 
-                    pass
+                pass
 
-            editor.accepted.disconnect()
+        editor.accepted.disconnect()
+        editor.rejected.disconnect()
+
+    def handleGuiEditorRejected(self, editor: GuiEditorWidgetQDialog):
+        editor.accepted.disconnect()
+        editor.rejected.disconnect()
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
@@ -1079,47 +1082,53 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         windowTitle: str = APPLICATION_NAME,
         **kwargs,
     ):
-        with self.guiEditorMutex:
-            factory = getEmptyFactory(protocol)
+        factory = getEmptyFactory(protocol)
 
-            guiEditor = self.getGuiEditorByFactory(factory, **kwargs)
+        guiEditor = self.getGuiEditorByFactory(factory, **kwargs)
 
-            if guiEditor is None:
-                # Unrecognized. Do nothing
-                return
+        if guiEditor is None:
+            # Unrecognized. Do nothing
+            return
 
-            # Dummy ref
-            setattr(self, '_guiEditorRef1', guiEditor)
+        guiEditor.setWindowTitle(windowTitle)
 
-            guiEditor.setWindowTitle(windowTitle)
+        try:
+            guiEditor.factoryToInput(factory)
+        except Exception as ex:
+            # Any non-exit exceptions
 
-            try:
-                guiEditor.factoryToInput(factory)
-            except Exception as ex:
-                # Any non-exit exceptions
+            logger.error(f'error while converting factory to input: {ex}')
 
-                logger.error(f'error while converting factory to input: {ex}')
-
-            guiEditor.accepted.connect(
-                functools.partial(
-                    self.handleAddServerViaGui,
-                    guiEditor,
-                    factory,
-                )
+        guiEditor.accepted.connect(
+            functools.partial(
+                self.handleAddServerViaGuiAccepted,
+                guiEditor,
+                factory,
             )
-            guiEditor.open()
+        )
+        guiEditor.rejected.connect(
+            functools.partial(
+                self.handleAddServerViaGuiRejected,
+                guiEditor,
+            )
+        )
+        guiEditor.open()
 
-    def handleAddServerViaGui(
+    def handleAddServerViaGuiAccepted(
         self,
         editor: GuiEditorWidgetQDialog,
         factory: ConfigurationFactory,
     ):
-        with self.guiEditorMutex:
-            editor.inputToFactory(factory)
+        editor.inputToFactory(factory)
 
-            self.appendNewItemByFactory(factory)
+        self.appendNewItemByFactory(factory)
 
-            editor.accepted.disconnect()
+        editor.accepted.disconnect()
+        editor.rejected.disconnect()
+
+    def handleAddServerViaGuiRejected(self, editor: GuiEditorWidgetQDialog):
+        editor.accepted.disconnect()
+        editor.rejected.disconnect()
 
     def flushRow(self, row: int, item: ConfigurationFactory):
         for column in list(range(self.columnCount())):
