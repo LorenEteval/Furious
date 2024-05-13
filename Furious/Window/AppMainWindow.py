@@ -162,15 +162,16 @@ class AppMainWindow(AppQMainWindow):
         self.updatesManager = UpdatesManager()
         self.networkStateManager = AppNetworkStateManager(parent=self)
 
-        self.userServersQTableWidget = UserServersQTableWidget()
+        self.userServersQTableWidget = UserServersQTableWidget(parent=self)
         self.userSubsWindow = UserSubsWindow(
+            parent=self,
             deleteUniqueCallback=lambda unique: self.userServersQTableWidget.deleteItemByIndex(
                 list(
                     index
                     for index, server in enumerate(AS_UserServers())
                     if server.getExtras('subsId') == unique
                 )
-            )
+            ),
         )
         self.xrayAssetViewerWindow = XrayAssetViewerWindow()
 
