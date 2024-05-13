@@ -163,12 +163,19 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
                 # Do not delete
                 pass
 
-        mbox = QuestionDeleteMBox(
-            icon=AppQMessageBox.Icon.Question, parent=self.parent()
-        )
+        if PLATFORM == 'Windows':
+            # Windows
+            mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
+        else:
+            # macOS & linux
+            mbox = QuestionDeleteMBox(
+                icon=AppQMessageBox.Icon.Question, parent=self.parent()
+            )
+            mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+
+        mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
         mbox.isMulti = bool(len(indexes) > 1)
         mbox.possibleRemark = self.item(indexes[0], 0).text()
-        mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         mbox.setText(mbox.customText())
         mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
