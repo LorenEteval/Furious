@@ -97,10 +97,11 @@ class UserSubsWindow(AppQMainWindow):
 
         super().__init__(*args, **kwargs)
 
-        self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setWindowTitle(_('Edit Subscription'))
 
-        self.userSubsQTableWidget = UserSubsQTableWidget(deleteUniqueCallback=callback)
+        self.userSubsQTableWidget = UserSubsQTableWidget(
+            deleteUniqueCallback=callback, parent=self
+        )
 
         self.userSubsTab = AppQTabWidget(self)
         self.userSubsTab.addTab(self.userSubsQTableWidget, _('Subscription List'))
@@ -152,6 +153,7 @@ class UserSubsWindow(AppQMainWindow):
                 pass
 
         addSubsDialog = AddSubsDialog(parent=self)
+        addSubsDialog.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         addSubsDialog.finished.connect(
             functools.partial(handleResultCode, addSubsDialog)
         )
