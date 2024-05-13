@@ -225,6 +225,9 @@ class Application(ApplicationFactory, SingletonApplication):
         )
         logging.raiseExceptions = False
 
+    def log(self):
+        return self.logViewerWindowApp_.plainText()
+
     def addCustomFont(self):
         fontFile = str(DATA_DIR / 'font' / 'CascadiaMono')
         fontName = 'Cascadia Mono'

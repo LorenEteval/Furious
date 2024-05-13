@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
+
 from Furious.QtFramework import *
 from Furious.QtFramework import gettext as _
 
@@ -175,6 +177,9 @@ class LogViewerWindow(AppQMainWindow):
         self.menuBar().addMenu(self._fileMenu)
         self.menuBar().addMenu(self._editMenu)
         self.menuBar().addMenu(self._viewMenu)
+
+    def plainText(self) -> str:
+        return self.textBrowser.toPlainText()
 
     def appendLine(self, line: str):
         self.textBrowser.appendLine(line)
