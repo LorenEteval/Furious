@@ -173,7 +173,6 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
             )
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
         mbox.isMulti = bool(len(indexes) > 1)
         mbox.possibleRemark = self.item(indexes[0], 0).text()
         mbox.setText(mbox.customText())
