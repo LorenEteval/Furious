@@ -26,7 +26,7 @@ setup(
     name='Furious-GUI',
     version=__version__,
     license='GPL v3.0',
-    description='A PySide6-based cross platform GUI client that launches your beloved GFW to outer space.',
+    description='A GUI proxy client based on PySide6. Support Xray-core & hysteria',
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='Loren Eteval',
