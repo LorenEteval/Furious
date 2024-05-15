@@ -17,7 +17,6 @@
 
 from __future__ import annotations
 
-from Furious.Version import __version__
 from Furious.Utility import *
 
 import os
@@ -29,11 +28,9 @@ import argparse
 import subprocess
 
 try:
-    from nuitka.Version import getNuitkaVersion
+    import nuitka
 except ImportError:
-    raise
-else:
-    NUITKA_VERSION = getNuitkaVersion()
+    raise ModuleNotFoundError('please install nuitka to run this script')
 
 logging.basicConfig(
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
@@ -75,27 +72,28 @@ else:
     NUITKA_BUILD = ''
 
 if PLATFORM == 'Windows':
-    ARTIFACT_NAME = (
-        f'{APPLICATION_NAME}-{__version__}-'
-        f'{PLATFORM.lower()}{PLATFORM_RELEASE}-{PLATFORM_MACHINE.lower()}'
-    )
+    if PLATFORM_RELEASE.endswith('Server'):
+        # Windows server. Fixed to windows10
+        ARTIFACT_NAME = (
+            f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
+            f'{PLATFORM.lower()}10-{PLATFORM_MACHINE.lower()}'
+        )
+    else:
+        ARTIFACT_NAME = (
+            f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
+            f'{PLATFORM.lower()}{PLATFORM_RELEASE}-{PLATFORM_MACHINE.lower()}'
+        )
 elif PLATFORM == 'Darwin':
     if versionToValue(PYSIDE6_VERSION) <= versionToValue('6.4.3'):
         ARTIFACT_NAME = (
-            f'{APPLICATION_NAME}-{__version__}-'
+            f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
             f'macOS-10.9-{PLATFORM_MACHINE.lower()}'
         )
     else:
-        if versionToValue(NUITKA_VERSION) <= versionToValue('1.8.6'):
-            ARTIFACT_NAME = (
-                f'{APPLICATION_NAME}-{__version__}-'
-                f'macOS-11.0-{PLATFORM_MACHINE.lower()}'
-            )
-        else:
-            ARTIFACT_NAME = (
-                f'{APPLICATION_NAME}-{__version__}-'
-                f'macOS-12.0-{PLATFORM_MACHINE.lower()}'
-            )
+        ARTIFACT_NAME = (
+            f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
+            f'macOS-11.0-{PLATFORM_MACHINE.lower()}'
+        )
 else:
     ARTIFACT_NAME = ''
 
@@ -218,10 +216,16 @@ def main():
     time.sleep(5)
 
     if PLATFORM == 'Windows':
-        foldername = (
-            f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
-            f'{PLATFORM.lower()}{PLATFORM_RELEASE}'
-        )
+        if PLATFORM_RELEASE.endswith('Server'):
+            # Windows server. Fixed to windows10
+            foldername = (
+                f'{APPLICATION_NAME}-{APPLICATION_VERSION}-{PLATFORM.lower()}10'
+            )
+        else:
+            foldername = (
+                f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
+                f'{PLATFORM.lower()}{PLATFORM_RELEASE}'
+            )
 
         try:
             shutil.rmtree(ROOT_DIR / DEPLOY_DIR_NAME / foldername)
