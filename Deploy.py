@@ -28,6 +28,13 @@ import logging
 import argparse
 import subprocess
 
+try:
+    from nuitka.Version import getNuitkaVersion
+except ImportError:
+    raise
+else:
+    NUITKA_VERSION = getNuitkaVersion()
+
 logging.basicConfig(
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
     level=logging.INFO,
@@ -79,10 +86,16 @@ elif PLATFORM == 'Darwin':
             f'macOS-10.9-{PLATFORM_MACHINE.lower()}'
         )
     else:
-        ARTIFACT_NAME = (
-            f'{APPLICATION_NAME}-{__version__}-'
-            f'macOS-11.0-{PLATFORM_MACHINE.lower()}'
-        )
+        if versionToValue(NUITKA_VERSION) <= versionToValue('1.8.6'):
+            ARTIFACT_NAME = (
+                f'{APPLICATION_NAME}-{__version__}-'
+                f'macOS-11.0-{PLATFORM_MACHINE.lower()}'
+            )
+        else:
+            ARTIFACT_NAME = (
+                f'{APPLICATION_NAME}-{__version__}-'
+                f'macOS-12.0-{PLATFORM_MACHINE.lower()}'
+            )
 else:
     ARTIFACT_NAME = ''
 
@@ -167,15 +180,6 @@ def main():
         logger.info('cleanup done')
 
         sys.exit(0)
-
-    try:
-        import nuitka
-    except ImportError:
-        # Any non-exit exceptions
-
-        logger.error('please install nuitka to run this script')
-
-        sys.exit(-1)
 
     try:
         logger.info('building')
