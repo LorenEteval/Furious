@@ -228,15 +228,6 @@ jobs:
         run: |
           python3 Deploy.py
 
-      - name: Upgrade PySide6-Essentials to 6.5.3
-        run: |
-          python3 -m pip uninstall -y PySide6-Essentials shiboken6
-          python3 -m pip install PySide6-Essentials==6.5.3
-
-      - name: Run deploy script again
-        run: |
-          python3 Deploy.py
-
       - name: Store the distribution packages
         uses: actions/upload-artifact@v3
         with:
