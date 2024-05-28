@@ -105,16 +105,19 @@ class NetworkStateManager(SupportConnectedCallback, AppQNetworkAccessManager):
         self.jobTimeoutTimer.timeout.connect(functools.partial(abort, networkReply))
         self.jobTimeoutTimer.start(NetworkStateManager.MIN_JOB_INTERVAL - 500)
 
-    def startTest(self):
-        self.jobArrangeTimer.start(NetworkStateManager.MIN_JOB_INTERVAL)
-
     def stopTest(self):
         self.jobArrangeTimer.stop()
 
     def connectedCallback(self):
-        self.jobInterval = NetworkStateManager.MIN_JOB_INTERVAL
+        if AppSettings.isStateON_('PowerSaveMode'):
+            # Power optimization
+            logger.info('no job for network state manager in power save mode')
 
-        self.jobArrangeTimer.start(self.jobInterval)
+            self.jobArrangeTimer.stop()
+        else:
+            self.jobInterval = NetworkStateManager.MIN_JOB_INTERVAL
+
+            self.jobArrangeTimer.start(self.jobInterval)
 
     def disconnectedCallback(self):
         self.jobArrangeTimer.stop()
