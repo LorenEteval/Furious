@@ -202,7 +202,16 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
                 # Do not delete
                 pass
 
-        mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
+        if PLATFORM == 'Windows':
+            # Windows
+            mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
+        else:
+            # macOS & linux
+            mbox = QuestionDeleteMBox(
+                icon=AppQMessageBox.Icon.Question, parent=self.parent()
+            )
+            mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+
         mbox.isMulti = bool(len(indexes) > 1)
         mbox.possibleRemark = f'{self.item(indexes[0]).text()}'
         mbox.setText(mbox.customText())
