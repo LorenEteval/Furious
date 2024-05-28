@@ -50,6 +50,7 @@ __all__ = [
     'AppQToolBar',
     'QuestionDeleteMBox',
     'NewChangesNextTimeMBox',
+    'showNewChangesNextTimeMBox',
 ]
 
 needTrans = functools.partial(needTransFn, source=__name__)
@@ -592,3 +593,21 @@ class NewChangesNextTimeMBox(AppQMessageBox):
 
         self.setIcon(AppQMessageBox.Icon.Information)
         self.setText(_('New changes will take effect next time'))
+
+
+def showNewChangesNextTimeMBox(**kwargs):
+    try:
+        if APP().isSystemTrayConnected():
+            mbox = NewChangesNextTimeMBox(**kwargs)
+
+            if isinstance(mbox.parent(), QMainWindow):
+                mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+            else:
+                mbox.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+
+            # Show the MessageBox asynchronously
+            mbox.open()
+    except Exception:
+        # Any non-exit exceptions
+
+        pass
