@@ -965,16 +965,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.flushRow(index, factory)
 
         if modified and index == AS_UserActivatedItemIndex():
-            try:
-                if APP().isSystemTrayConnected():
-                    mbox = NewChangesNextTimeMBox()
-
-                    # Show the MessageBox asynchronously
-                    mbox.open()
-            except Exception:
-                # Any non-exit exceptions
-
-                pass
+            showNewChangesNextTimeMBox()
 
         editor.accepted.disconnect()
         editor.rejected.disconnect()
@@ -1281,7 +1272,16 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             else:
                 pass
 
-        mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
+        if PLATFORM == 'Windows':
+            # Windows
+            mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
+        else:
+            # macOS & linux
+            mbox = QuestionDeleteMBox(
+                icon=AppQMessageBox.Icon.Question, parent=self.parent()
+            )
+            mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+
         mbox.isMulti = bool(len(indexes) > 1)
         mbox.possibleRemark = f'{indexes[0] + 1} - {self.item(indexes[0], 0).text()}'
         mbox.setText(mbox.customText())
