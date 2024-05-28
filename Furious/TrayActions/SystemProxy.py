@@ -37,7 +37,7 @@ class SystemProxyChildAction(AppQAction):
     def triggeredCallback(self, checked):
         if self.textCompare('Automatically Configure System Proxy'):
             AppSettings.set('SystemProxyMode', 'Auto')
-        if self.textCompare('Do Not Change System Proxy'):
+        elif self.textCompare('Do Not Change System Proxy'):
             AppSettings.set('SystemProxyMode', 'NoChanges')
 
 
