@@ -396,8 +396,6 @@ class AppMainWindow(AppQMainWindow):
 
         self.statusBar().addPermanentWidget(self.networkState)
 
-        self.networkStateManager.startTest()
-
         self._widget = QWidget()
         self._layout = QVBoxLayout(self._widget)
         self._layout.addWidget(self.mainTab)
