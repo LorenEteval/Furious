@@ -23,11 +23,13 @@ from Furious.QtFramework import gettext as _
 from Furious.Utility import *
 
 from PySide6 import QtCore
+from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 import os
 import shutil
 import logging
+import datetime
 import functools
 import darkdetect
 
@@ -103,9 +105,21 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
     def flushItemByTheme(self, theme: str):
         self.clear()
 
+        maxlen = max(
+            len(filename)
+            for filename in os.listdir(XRAY_ASSET_DIR)
+            if os.path.isfile(XRAY_ASSET_DIR / filename)
+        )
+
         for filename in os.listdir(XRAY_ASSET_DIR):
             if os.path.isfile(XRAY_ASSET_DIR / filename):
-                item = QListWidgetItem(filename)
+                epoch = os.path.getmtime(XRAY_ASSET_DIR / filename)
+                mdate = datetime.datetime.fromtimestamp(epoch).strftime(
+                    '%Y-%m-%d %H:%M:%S'
+                )
+
+                item = QListWidgetItem(f'{filename:{maxlen + 6}}{mdate}')
+                item.setFont(QFont(APP().customFontName))
 
                 if AppSettings.isStateON_('DarkMode'):
                     # Custom dark mode
