@@ -107,14 +107,14 @@ jobs:
       - name: Install macOS dependencies
         run: |
           brew install create-dmg
-        if: runner.os == "macOS"
+        if: runner.os == 'macOS'
 
       # Remove problematic brew libs if Intel Mac
       - name: Remove problematic brew libs on Intel Mac
         run: |
           brew remove --force --ignore-dependencies openssl@3
           brew cleanup openssl@3
-        if: runner.os == "macOS" && runner.arch == "X64"
+        if: runner.os == 'macOS' && runner.arch == 'X64'
 
       - name: Install setuptools, wheel
         run: >-
@@ -172,12 +172,12 @@ jobs:
         run: |
           python3 -m pip uninstall -y PySide6-Essentials shiboken6
           python3 -m pip install PySide6-Essentials==6.5.3
-        if: runner.os == "macOS"
+        if: runner.os == 'macOS'
 
       - name: Run deploy script again if on macOS
         run: |
           python3 Deploy.py
-        if: runner.os == "macOS"
+        if: runner.os == 'macOS'
 
       - name: Store the distribution packages
         uses: actions/upload-artifact@v3
