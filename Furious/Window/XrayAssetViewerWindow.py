@@ -57,6 +57,21 @@ class XrayAssetViewerWindow(AppQMainWindow):
         self.xrayAssetViewerWidget = XrayAssetViewerQListWidget(parent=self)
         self.setCentralWidget(self.xrayAssetViewerWidget)
 
+        if versionToValue(PYSIDE6_VERSION) <= versionToValue('6.1.3'):
+            openAssetDirectoryActions = [None]
+        else:
+            # openUrl will crash on PySide6 6.1.3, probably a Qt bug
+            openAssetDirectoryActions = [
+                AppQAction(
+                    _('Open Asset Directory'),
+                    callback=lambda: self.openAssetDirectory(),
+                    shortcut=QtCore.QKeyCombination(
+                        QtCore.Qt.KeyboardModifier.ControlModifier,
+                        QtCore.Qt.Key.Key_O,
+                    ),
+                ),
+            ]
+
         self.fileMenu = AppQMenu(
             AppQAction(
                 _('Refresh'),
@@ -67,14 +82,7 @@ class XrayAssetViewerWindow(AppQMainWindow):
                 ),
             ),
             AppQSeperator(),
-            AppQAction(
-                _('Open Asset Directory'),
-                callback=lambda: self.openAssetDirectory(),
-                shortcut=QtCore.QKeyCombination(
-                    QtCore.Qt.KeyboardModifier.ControlModifier,
-                    QtCore.Qt.Key.Key_O,
-                ),
-            ),
+            *openAssetDirectoryActions,
             AppQAction(
                 _('Import From File...'),
                 callback=lambda: self.appendNewItem(),
