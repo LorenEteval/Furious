@@ -54,7 +54,7 @@ class XrayAssetViewerWindow(AppQMainWindow):
 
         self.setWindowTitle(_('Xray-core Asset File'))
 
-        self.xrayAssetViewerWidget = XrayAssetViewerQListWidget()
+        self.xrayAssetViewerWidget = XrayAssetViewerQListWidget(parent=self)
         self.setCentralWidget(self.xrayAssetViewerWidget)
 
         self.fileMenu = AppQMenu(
