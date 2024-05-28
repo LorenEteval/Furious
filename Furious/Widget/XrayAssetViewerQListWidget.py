@@ -113,10 +113,17 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
 
         for filename in os.listdir(XRAY_ASSET_DIR):
             if os.path.isfile(XRAY_ASSET_DIR / filename):
-                epoch = os.path.getmtime(XRAY_ASSET_DIR / filename)
-                mdate = datetime.datetime.fromtimestamp(epoch).strftime(
-                    '%Y-%m-%d %H:%M:%S'
-                )
+                try:
+                    # Exception may be raised
+                    epoch = os.path.getmtime(XRAY_ASSET_DIR / filename)
+                except Exception:
+                    # Any non-exit exceptions
+
+                    mdate = ''
+                else:
+                    mdate = datetime.datetime.fromtimestamp(epoch).strftime(
+                        '%Y-%m-%d %H:%M:%S'
+                    )
 
                 item = QListWidgetItem(f'{filename:{maxlen + 6}}{mdate}')
                 item.setFont(QFont(APP().customFontName))
