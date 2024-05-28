@@ -347,17 +347,7 @@ class TextEditorWindow(AppQMainWindow):
                 pass
 
             if index == AS_UserActivatedItemIndex():
-                try:
-                    if APP().isSystemTrayConnected():
-                        mbox = NewChangesNextTimeMBox(parent=self)
-                        mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
-
-                        # Show the MessageBox asynchronously
-                        mbox.open()
-                except Exception:
-                    # Any non-exit exceptions
-
-                    pass
+                showNewChangesNextTimeMBox(parent=self)
 
             self.markAsSaved()
 
