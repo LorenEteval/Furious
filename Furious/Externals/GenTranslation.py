@@ -198,7 +198,7 @@ TRANSLATION = {
             "Furious.Window.TextEditorWindow",
             "Furious.Window.UserSubsWindow"
         ],
-        "RU": "Отменить",
+        "RU": "Отмена",
         "ZH": "取消",
         "isReviewed": "True"
     },
@@ -1328,6 +1328,14 @@ TRANSLATION = {
         ],
         "RU": "Выберите и нажмите Enter, чтобы активировать конфигурацию и подключиться",
         "ZH": "选择并按下Enter键以激活配置并连接",
+        "isReviewed": "True"
+    },
+    "Power Save Mode": {
+        "source": [
+            "Furious.TrayActions.Settings"
+        ],
+        "RU": "Режим энергосбережения",
+        "ZH": "省电模式",
         "isReviewed": "True"
     }
 }
