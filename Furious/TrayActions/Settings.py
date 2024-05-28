@@ -27,12 +27,13 @@ __all__ = ['SettingsAction']
 
 registerAppSettings('VPNMode', isBinary=True)
 registerAppSettings('DarkMode', isBinary=True)
+registerAppSettings('UseMonochromeTrayIcon', isBinary=True)
 registerAppSettings('StartupOnBoot', isBinary=True, default=BinarySettings.ON_)
+registerAppSettings('PowerSaveMode', isBinary=True)
 registerAppSettings(
     'ShowProgressBarWhenConnecting', isBinary=True, default=BinarySettings.ON_
 )
 registerAppSettings('ShowTabAndSpacesInEditor', isBinary=True)
-registerAppSettings('UseMonochromeTrayIcon', isBinary=True)
 
 needTrans = functools.partial(needTransFn, source=__name__)
 
@@ -60,16 +61,7 @@ class VPNModeAction(AppQAction):
         else:
             AppSettings.turnOFF('VPNMode')
 
-        try:
-            if APP().isSystemTrayConnected():
-                mbox = NewChangesNextTimeMBox()
-
-                # Show the MessageBox asynchronously
-                mbox.open()
-        except Exception:
-            # Any non-exit exceptions
-
-            pass
+        showNewChangesNextTimeMBox()
 
 
 class SettingsChildAction(AppQAction):
@@ -97,30 +89,7 @@ class SettingsChildAction(AppQAction):
                     # Any non-exit exceptions
 
                     pass
-        if self.textCompare('Startup On Boot'):
-            if checked:
-                StartupOnBoot.on_()
-
-                AppSettings.turnON_('StartupOnBoot')
-            else:
-                StartupOnBoot.off()
-
-                AppSettings.turnOFF('StartupOnBoot')
-        if self.textCompare('Show Progress Bar When Connecting'):
-            if checked:
-                AppSettings.turnON_('ShowProgressBarWhenConnecting')
-            else:
-                AppSettings.turnOFF('ShowProgressBarWhenConnecting')
-        if self.textCompare('Show Tab And Spaces In Editor'):
-            if checked:
-                APP().mainWindow.showTabAndSpaces()
-
-                AppSettings.turnON_('ShowTabAndSpacesInEditor')
-            else:
-                APP().mainWindow.hideTabAndSpaces()
-
-                AppSettings.turnOFF('ShowTabAndSpacesInEditor')
-        if self.textCompare('Use Monochrome Tray Icon'):
+        elif self.textCompare('Use Monochrome Tray Icon'):
             # Settings turn on/off order matters here
             if checked:
                 AppSettings.turnON_('UseMonochromeTrayIcon')
@@ -133,15 +102,46 @@ class SettingsChildAction(AppQAction):
                     APP().systemTray.setConnectedIcon()
                 else:
                     APP().systemTray.setDisconnectedIcon()
+        elif self.textCompare('Startup On Boot'):
+            if checked:
+                StartupOnBoot.on_()
+
+                AppSettings.turnON_('StartupOnBoot')
+            else:
+                StartupOnBoot.off()
+
+                AppSettings.turnOFF('StartupOnBoot')
+        elif self.textCompare('Power Save Mode'):
+            if checked:
+                AppSettings.turnON_('PowerSaveMode')
+            else:
+                AppSettings.turnOFF('PowerSaveMode')
+
+            showNewChangesNextTimeMBox()
+        elif self.textCompare('Show Progress Bar When Connecting'):
+            if checked:
+                AppSettings.turnON_('ShowProgressBarWhenConnecting')
+            else:
+                AppSettings.turnOFF('ShowProgressBarWhenConnecting')
+        elif self.textCompare('Show Tab And Spaces In Editor'):
+            if checked:
+                APP().mainWindow.showTabAndSpaces()
+
+                AppSettings.turnON_('ShowTabAndSpacesInEditor')
+            else:
+                APP().mainWindow.hideTabAndSpaces()
+
+                AppSettings.turnOFF('ShowTabAndSpacesInEditor')
 
 
 needTrans(
     'Settings',
     'Dark Mode',
+    'Use Monochrome Tray Icon',
     'Startup On Boot',
+    'Power Save Mode',
     'Show Progress Bar When Connecting',
     'Show Tab And Spaces In Editor',
-    'Use Monochrome Tray Icon',
 )
 
 
@@ -173,11 +173,18 @@ class SettingsAction(AppQAction):
                     checkable=True,
                     checked=AppSettings.isStateON_('UseMonochromeTrayIcon'),
                 ),
+                AppQSeperator(),
                 SettingsChildAction(
                     _('Startup On Boot'),
                     checkable=True,
                     checked=AppSettings.isStateON_('StartupOnBoot'),
                 ),
+                SettingsChildAction(
+                    _('Power Save Mode'),
+                    checkable=True,
+                    checked=AppSettings.isStateON_('PowerSaveMode'),
+                ),
+                AppQSeperator(),
                 SettingsChildAction(
                     _('Show Progress Bar When Connecting'),
                     checkable=True,
