@@ -122,8 +122,14 @@ class CoreProcess(CoreFactory, ABC):
             PySide6LegacyEventLoopWait(waitTime)
 
         if self.checkIsRunning():
-            # Start core daemon
-            self._daemonTimer.start(CORE_CHECK_ALIVE_INTERVAL)
+            if AppSettings.isStateON_('PowerSaveMode'):
+                # Power optimization
+                logger.info(f'no core daemon for {self.name()} in power save mode')
+
+                self._daemonTimer.stop()
+            else:
+                # Start core daemon
+                self._daemonTimer.start(CORE_CHECK_ALIVE_INTERVAL)
 
             return True
         else:
