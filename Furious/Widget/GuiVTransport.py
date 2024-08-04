@@ -39,6 +39,7 @@ STREAM_NETWORK = [
     'quic',
     'grpc',
     'httpupgrade',
+    'splithttp',
 ]
 
 
@@ -562,6 +563,106 @@ class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
             self.setText('')
 
 
+class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+        streamSettings = getXrayProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('splithttpSettings'), dict):
+            streamSettings['splithttpSettings'] = {}
+
+        splitHttpObject = streamSettings['splithttpSettings']
+
+        try:
+            oldHost = splitHttpObject.get('host', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            oldHost = ''
+
+        newHost = self.text()
+
+        def setNewHost():
+            if newHost == '':
+                splitHttpObject.pop('host', None)
+            else:
+                splitHttpObject['host'] = newHost
+
+        if isinstance(oldHost, str):
+            if newHost != oldHost:
+                setNewHost()
+
+                return True
+            else:
+                return False
+        else:
+            setNewHost()
+
+            return True
+
+    def factoryToInput(self, config: ConfigurationFactory):
+        try:
+            splitHttpObject = getXrayProxyOutboundStream(config)['splithttpSettings']
+
+            self.setText(splitHttpObject.get('host', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
+class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+        streamSettings = getXrayProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('splithttpSettings'), dict):
+            streamSettings['splithttpSettings'] = {}
+
+        splitHttpObject = streamSettings['splithttpSettings']
+
+        try:
+            oldPath = splitHttpObject.get('path', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            oldPath = ''
+
+        newPath = self.text()
+
+        def setNewPath():
+            if newPath == '':
+                splitHttpObject.pop('path', None)
+            else:
+                splitHttpObject['path'] = newPath
+
+        if isinstance(oldPath, str):
+            if newPath != oldPath:
+                setNewPath()
+
+                return True
+            else:
+                return False
+        else:
+            setNewPath()
+
+            return True
+
+    def factoryToInput(self, config: ConfigurationFactory):
+        try:
+            splitHttpObject = getXrayProxyOutboundStream(config)['splithttpSettings']
+
+            self.setText(splitHttpObject.get('path', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
 class GuiVTransportItemHostH2(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1023,6 +1124,18 @@ class GuiVTransportPageHttpUpgrade(GuiVTransportPageXXX):
         ]
 
 
+class GuiVTransportPageSplitHttp(GuiVTransportPageXXX):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def containerSequence(self):
+        return [
+            GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemHostSplitHttp(title='Host', translatable=False),
+            GuiVTransportItemPathSplitHttp(title='Path', translatable=False),
+        ]
+
+
 class GuiVTransportPageH2(GuiVTransportPageXXX):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1076,6 +1189,7 @@ class GuiVTransportPageStackedWidget(QStackedWidget):
             GuiVTransportPageQuic(),
             GuiVTransportPageGRPC(),
             GuiVTransportPageHttpUpgrade(),
+            GuiVTransportPageSplitHttp(),
         ]
 
         for page in self._pages:

@@ -393,6 +393,18 @@ class ConfigurationXray(ConfigurationFactory):
 
                 pass
 
+        elif network == 'splithttp':
+            try:
+                # Get order matters here
+                if hasKey('path'):
+                    kwargs['path'] = quote(networkObject['path'])
+
+                kwargs['host'] = quote(networkObject['host'])
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
         return kwargs
 
     @property
@@ -480,6 +492,18 @@ class ConfigurationXray(ConfigurationFactory):
                 kwargs['authority'] = networkObject['authority']
 
         elif network == 'httpupgrade':
+            try:
+                # Get order matters here
+                if hasKey('path'):
+                    kwargs['path'] = quote(networkObject['path'])
+
+                kwargs['host'] = quote(networkObject['host'])
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif network == 'splithttp':
             try:
                 # Get order matters here
                 if hasKey('path'):
@@ -636,6 +660,17 @@ class ConfigurationXray(ConfigurationFactory):
                 httpUpgradeObject['host'] = unquote(kwargs.get('host'))
 
             return httpUpgradeObject
+
+        elif type_ == 'splithttp':
+            splitHttpObject = {}
+
+            if kwargs.get('path', '/'):
+                splitHttpObject['path'] = unquote(kwargs.get('path', '/'))
+
+            if kwargs.get('host'):
+                splitHttpObject['host'] = unquote(kwargs.get('host'))
+
+            return splitHttpObject
 
     @property
     def kwargsFromProxyStreamSettingsTLSObject(self) -> dict:
