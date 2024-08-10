@@ -139,6 +139,12 @@ jobs:
           pip install
           -r requirements-nocore.txt
 
+      - name: Install numpy<2
+        run: >-
+          python3 -m
+          pip install
+          "numpy<2"
+
       - name: Install nuitka, imageio
         run: >-
           python3 -m
