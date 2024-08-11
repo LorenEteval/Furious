@@ -149,7 +149,7 @@ jobs:
         run: >-
           python3 -m
           pip install
-          "nuitka==1.8.6" imageio
+          nuitka imageio
 
       - name: Set up go 1.20
         uses: actions/setup-go@v4
