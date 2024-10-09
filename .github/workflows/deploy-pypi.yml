@@ -155,6 +155,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: "1.20"
+          check-latest: true
 
       - name: Install go 1.20 dependencies
         run: |
@@ -165,6 +166,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: "1.23"
+          check-latest: true
 
       - name: Install go 1.23 dependencies
         run: |
