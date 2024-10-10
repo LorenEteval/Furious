@@ -26,6 +26,7 @@ import shutil
 import logging
 import argparse
 import subprocess
+import requests
 
 try:
     import nuitka
@@ -96,6 +97,39 @@ elif PLATFORM == 'Darwin':
         )
 else:
     ARTIFACT_NAME = ''
+
+
+def download_xray_assets(url, filename):
+    try:
+        # Make sure the save directory exists
+        if not os.path.exists(XRAY_ASSET_DIR):
+            os.makedirs(XRAY_ASSET_DIR)
+
+        # Full path where the file will be saved
+        file_path = os.path.join(XRAY_ASSET_DIR, filename)
+
+        # Send an HTTP GET request to the URL
+        response = requests.get(url)
+        response.raise_for_status()  # Check if the request was successful
+
+        # Open the save_path in write-binary mode and write the content of the response
+        with open(file_path, 'wb') as file:
+            file.write(response.content)
+
+    except Exception as ex:
+        # Any non-exit exceptions
+
+        logger.error(f'Failed to download file from {url}. Status code: {response.status_code}')
+    else:
+        logger.info(f'File downloaded successfully and saved to {file_path}')
+
+# URLs of geosite and geoip assets
+url_geosite = 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat'
+url_geoip = 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat'
+
+# xray assets names
+filename_geosite = 'geosite.dat'
+filename_geoip = 'geoip.dat'
 
 
 def printArtifactName():
@@ -178,6 +212,10 @@ def main():
         logger.info('cleanup done')
 
         sys.exit(0)
+
+    # Download geosite and geoip assets
+    download_xray_assets(url_geosite, filename_geosite)
+    download_xray_assets(url_geoip, filename_geoip)
 
     try:
         logger.info('building')

@@ -5,6 +5,7 @@ pybase64
 pyqrcode
 pypng
 icmplib
+requests
 sysproxy; sys_platform == "win32"
 darkdetect; sys_platform != "darwin"
 darkdetect[macos-listener]; sys_platform == "darwin"
