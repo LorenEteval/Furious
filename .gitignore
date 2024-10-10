@@ -175,3 +175,6 @@ dmg/
 
 # dmg files
 *.dmg
+
+# xray geoip and geosite assets
+Furious/Data/xray/
