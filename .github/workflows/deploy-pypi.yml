@@ -35,11 +35,16 @@ jobs:
           pip install
           setuptools wheel
 
-      - name: Install requirements-nocore.txt
+      - name: Install requirements.txt
         run: >-
           python3 -m
           pip install
-          -r requirements-nocore.txt
+          -r requirements.txt
+
+      - name: Download latest asset files
+        run: |
+          python3 -m pip install requests
+          python3 Deploy.py --download
 
       - name: Build a binary wheel and a source tarball
         run: python3 setup.py sdist bdist_wheel
@@ -133,11 +138,11 @@ jobs:
             exit 1
           fi
 
-      - name: Install requirements-nocore.txt
+      - name: Install requirements.txt
         run: >-
           python3 -m
           pip install
-          -r requirements-nocore.txt
+          -r requirements.txt
 
       - name: Install numpy<2
         run: >-
@@ -172,6 +177,11 @@ jobs:
         run: |
           go version
           python3 -m pip install "Xray-core >= 1.8.8" "hysteria2 >= 2.0.4" "tun2socks > 2.5.2"
+
+      - name: Download latest asset files
+        run: |
+          python3 -m pip install requests
+          python3 Deploy.py --download
 
       - name: Run deploy script
         run: python3 Deploy.py
