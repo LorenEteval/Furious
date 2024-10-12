@@ -1,15 +1,10 @@
 PySide6-Essentials
 qdarkstyle
-Xray-core
-hysteria > 1.3.5
-hysteria2 > 2.0.0
-tun2socks > 2.5.1
 ujson
 pybase64
 pyqrcode
 pypng
 icmplib
-requests
 sysproxy; sys_platform == "win32"
 darkdetect; sys_platform != "darwin"
 darkdetect[macos-listener]; sys_platform == "darwin"
