@@ -21,16 +21,10 @@ from Furious.Utility import *
 
 import os
 import sys
-import time
 import shutil
 import logging
 import argparse
 import subprocess
-
-try:
-    import nuitka
-except ImportError:
-    raise ModuleNotFoundError('please install nuitka to run this script')
 
 logging.basicConfig(
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
@@ -98,9 +92,40 @@ else:
     ARTIFACT_NAME = ''
 
 
-def printArtifactName():
-    if PLATFORM == 'Windows':
-        print(f'{ARTIFACT_NAME}.zip', flush=True)
+def downloadXrayAssets(url, filename):
+    try:
+        import requests
+    except ImportError:
+        raise ModuleNotFoundError('missing requests module')
+
+    try:
+        # Make sure the save directory exists
+        if not os.path.exists(XRAY_ASSET_DIR):
+            os.makedirs(XRAY_ASSET_DIR)
+
+        # Full path where the file will be saved
+        filepath = os.path.join(XRAY_ASSET_DIR, filename)
+
+        # Send an HTTP GET request to the URL
+        response = requests.get(url)
+        response.raise_for_status()  # Check if the request was successful
+
+        # Open the save_path in write-binary mode and write the content of the response
+        with open(filepath, 'wb') as file:
+            file.write(response.content)
+
+    except Exception as ex:
+        # Any non-exit exceptions
+
+        logger.error(
+            f'failed to download file from {url}. Status code: {response.status_code}'
+        )
+
+        return False
+    else:
+        logger.info(f'file downloaded successfully and saved to {filepath}')
+
+        return True
 
 
 def cleanup():
@@ -156,21 +181,39 @@ def cleanup():
             logger.info(f'remove dmg dir success')
 
 
+def download():
+    # URLs of geosite and geoip assets
+    url_geosite = 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat'
+    url_geoip = 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat'
+
+    # Xray assets names
+    filename_geosite = 'geosite.dat'
+    filename_geoip = 'geoip.dat'
+
+    return all(
+        [
+            downloadXrayAssets(url_geosite, filename_geosite),
+            downloadXrayAssets(url_geoip, filename_geoip),
+        ]
+    )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-n', '--name', action='store_true', help='Target artifact name'
+        '-d',
+        '--download',
+        action='store_true',
+        help='Download latest asset files',
     )
     parser.add_argument(
-        '-c', '--cleanup', action='store_true', help='Cleanup deployment files'
+        '-c',
+        '--cleanup',
+        action='store_true',
+        help='Cleanup deployment files',
     )
 
     args = parser.parse_args()
-
-    if args.name:
-        printArtifactName()
-
-        sys.exit(0)
 
     if args.cleanup:
         cleanup()
@@ -178,6 +221,16 @@ def main():
         logger.info('cleanup done')
 
         sys.exit(0)
+
+    if args.download:
+        success = 0 if download() else 1
+
+        sys.exit(success)
+
+    try:
+        import nuitka
+    except ImportError:
+        raise ModuleNotFoundError('please install nuitka to run this script')
 
     try:
         logger.info('building')
@@ -211,9 +264,6 @@ def main():
             + result.stderr.decode('utf-8', 'replace'),
             flush=True,
         )
-
-    # Sleep for a while for any running nuitka tasks
-    time.sleep(5)
 
     if PLATFORM == 'Windows':
         if PLATFORM_RELEASE.endswith('Server'):
@@ -317,9 +367,6 @@ def main():
             )
 
             logger.info(f'generate dmg success: {output}')
-
-    # Sleep for a while for any running tasks
-    time.sleep(5)
 
 
 if __name__ == '__main__':
