@@ -22,6 +22,9 @@ from setuptools import setup, find_packages
 with open('README.md', 'r', encoding='utf-8') as file:
     long_description = file.read()
 
+with open('requirements.txt', 'r', encoding='utf-8') as file:
+    install_requires = file.read().split('\n')
+
 setup(
     name='Furious-GUI',
     version=__version__,
@@ -35,36 +38,7 @@ setup(
     packages=find_packages(),
     package_data={'Furious': ['Data/**']},
     include_package_data=True,
-    install_requires=[
-        'PySide6',
-        'qdarkstyle',
-        'ujson',
-        'pybase64',
-        'pyqrcode',
-        'pypng',
-        'icmplib',
-        'sysproxy; platform_system == "Windows"',
-        'darkdetect; platform_system != "Darwin"',
-        'darkdetect[macos-listener]; platform_system == "Darwin"',
-    ],
-    extras_require={
-        'go1.20': [
-            'Xray-core < 1.8.5',
-            'hysteria > 1.3.5',
-            'hysteria2 == 2.0.0.1',
-            'tun2socks > 2.5.1, <= 2.5.2; platform_system != "Linux"',
-        ],
-        'go1.21': [
-            'Xray-core >= 1.8.5, < 1.8.8',
-            'hysteria2 >= 2.0.4',
-            'tun2socks > 2.5.1, <= 2.5.2; platform_system != "Linux"',
-        ],
-        'go1.22': [
-            'Xray-core >= 1.8.8',
-            'hysteria2 >= 2.0.4',
-            'tun2socks > 2.5.2; platform_system != "Linux"',
-        ],
-    },
+    install_requires=install_requires,
     entry_points={
         'gui_scripts': [
             'Furious = Furious.__main__:main',
