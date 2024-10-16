@@ -158,13 +158,13 @@ class AppMainWindow(AppQMainWindow):
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_(APPLICATION_NAME))
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
 
         self.updatesManager = UpdatesManager()
         self.networkStateManager = AppNetworkStateManager(parent=self)
 
         self.userServersQTableWidget = UserServersQTableWidget(parent=self)
         self.userSubsWindow = UserSubsWindow(
-            parent=self,
             deleteUniqueCallback=lambda unique: self.userServersQTableWidget.deleteItemByIndex(
                 list(
                     index

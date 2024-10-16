@@ -383,6 +383,18 @@ class Application(ApplicationFactory, SingletonApplication):
             if AppSettings.isStateON_('DarkMode'):
                 self.switchToDarkMode()
 
+            def onApplicationStateChange(state):
+                if state == QtCore.Qt.ApplicationState.ApplicationActive:
+                    if (
+                        not self.mainWindow.isVisible()
+                        and not self.systemTray.ConnectAction.isConnecting()
+                    ):
+                        self.mainWindow.show()
+
+            if PLATFORM == 'Darwin':
+                # Ensure the main window is shown when the dock icon is clicked
+                self.applicationStateChanged.connect(onApplicationStateChange)
+
             self.systemTray.show()
             self.systemTray.setCustomToolTip()
             self.systemTray.bootstrap()
