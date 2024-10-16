@@ -106,8 +106,6 @@ class AppQDialog(QTranslatable, SupportConnectedCallback, QDialog):
 
         if PLATFORM == 'Darwin':
             if self._firstShowCall:
-                APP().processEvents()
-
                 self.setWidthAndHeight()
 
                 self._firstShowCall = False
@@ -289,15 +287,15 @@ class AppQMainWindow(
 
         if PLATFORM == 'Darwin':
             if self._firstShowCall:
-                APP().processEvents()
-
                 self.setWidthAndHeight()
-
-                APP().processEvents()
 
                 self._firstShowCall = False
 
         moveToCenter(self)
+
+        if PLATFORM == 'Darwin':
+            self.activateWindow()
+            self.raise_()
 
     def closeEvent(self, event):
         event.ignore()

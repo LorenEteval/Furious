@@ -32,6 +32,9 @@ class ConnectProgressBar(QTranslatable, SupportConnectedCallback, QWidget):
 
         self.setWindowTitle(_(APPLICATION_NAME))
         self.setWindowIcon(AppHue.currentWindowIcon())
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self.setFixedSize(280, 61)
 
         @QtCore.Slot()
