@@ -116,8 +116,11 @@ def getAbsolutePath(path):
 
 def versionToValue(version: str) -> int:
     def _split():
-        # x.y.z or x.y.z.u
+        # x.y or x.y.z or x.y.z.u
         result = version.split('.')
+
+        if len(result) == 2:
+            result.append('0')
 
         if len(result) == 3:
             result.append('0')
