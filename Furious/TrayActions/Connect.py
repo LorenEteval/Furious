@@ -264,7 +264,8 @@ class ConnectAction(AppQAction):
 
         if self.actionQueue.empty():
             if success:
-                SystemProxy.set(config.httpProxyEndpoint(), PROXY_SERVER_BYPASS)
+                if PLATFORM == 'Windows':
+                    SystemProxy.set(config.httpProxyEndpoint(), PROXY_SERVER_BYPASS)
 
                 self.doConnected()
 
