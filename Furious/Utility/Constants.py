@@ -58,16 +58,24 @@ XRAY_ASSET_DIR = DATA_DIR / 'xray'
 CRASH_LOG_DIR = ROOT_DIR / APPLICATION_NAME / 'CrashLog'
 GEN_TRANSLATION_FILE = ROOT_DIR / APPLICATION_NAME / 'Externals' / 'GenTranslation.py'
 
-PROXY_SERVER_BYPASS = (
+WINDOWS_PROXY_SERVER_BYPASS = (
     'localhost;*.local;127.*;10.*;172.16.*;172.17.*;'
     '172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;'
     '172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'
 )
 
+DARWIN_PROXY_SERVER_BYPASS = (
+    '*.local,169.254/16'
+)
+
+LINUX_PROXY_SERVER_BYPASS = (
+    'localhost, 127.0.0.0/8, ::1'
+)
+
 if PLATFORM == 'Windows':
     if PLATFORM_RELEASE != '7':
         # https://github.com/2dust/v2rayN/issues/4334
-        PROXY_SERVER_BYPASS += ';<local>'
+        WINDOWS_PROXY_SERVER_BYPASS += ';<local>'
 
 CORE_CHECK_ALIVE_INTERVAL = 2500
 

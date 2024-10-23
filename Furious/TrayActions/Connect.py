@@ -264,7 +264,12 @@ class ConnectAction(AppQAction):
 
         if self.actionQueue.empty():
             if success:
-                SystemProxy.set(config.httpProxyEndpoint(), PROXY_SERVER_BYPASS)
+                if PLATFORM == 'Windows':
+                    SystemProxy.set(config.httpProxyEndpoint(), WINDOWS_PROXY_SERVER_BYPASS)
+                elif PLATFORM == 'Darwin':
+                    SystemProxy.set(config.httpProxyEndpoint(), DARWIN_PROXY_SERVER_BYPASS)
+                elif PLATFORM == 'Linux':
+                    SystemProxy.set(config.httpProxyEndpoint(), LINUX_PROXY_SERVER_BYPASS)
 
                 self.doConnected()
 
