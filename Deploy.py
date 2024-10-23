@@ -63,32 +63,50 @@ elif PLATFORM == 'Darwin':
         f'--output-dir=\"{ROOT_DIR / DEPLOY_DIR_NAME}\"'
     )
 else:
+    # Deploy: Not implemented
     NUITKA_BUILD = ''
 
 if PLATFORM == 'Windows':
     if PLATFORM_RELEASE.endswith('Server'):
         # Windows server. Fixed to windows10
-        ARTIFACT_NAME = (
-            f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
-            f'{PLATFORM.lower()}10-{PLATFORM_MACHINE.lower()}'
-        )
+        winVerCompatible = f'{PLATFORM.lower()}10'
     else:
-        ARTIFACT_NAME = (
-            f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
-            f'{PLATFORM.lower()}{PLATFORM_RELEASE}-{PLATFORM_MACHINE.lower()}'
-        )
+        winVerCompatible = f'{PLATFORM.lower()}{PLATFORM_RELEASE}'
+
+    ARTIFACT_NAME = (
+        f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
+        f'{winVerCompatible}-{PLATFORM_MACHINE.lower()}'
+    )
+
+    WIN_UNZIPPED = f'{APPLICATION_NAME}-{APPLICATION_VERSION}-{winVerCompatible}'
 elif PLATFORM == 'Darwin':
     if versionToValue(PYSIDE6_VERSION) <= versionToValue('6.4.3'):
-        ARTIFACT_NAME = (
-            f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
-            f'macOS-10.9-{PLATFORM_MACHINE.lower()}'
-        )
+        macVerCompatible = 'macOS-10.9'
     else:
-        ARTIFACT_NAME = (
-            f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
-            f'macOS-11.0-{PLATFORM_MACHINE.lower()}'
-        )
+        macVerCompatible = 'macOS-11.0'
+
+    ARTIFACT_NAME = (
+        f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
+        f'{macVerCompatible}-{PLATFORM_MACHINE.lower()}'
+    )
+
+    MAC_APP_DIR = ROOT_DIR / 'app'
+    MAC_DMG_FILENAME = f'{ARTIFACT_NAME}.dmg'
+    MAC_CREATE_DMG_CMD = (
+        f'create-dmg '
+        f'--volname \"Furious\" '
+        f'--volicon \"Icons/png/rocket-takeoff-window.png\" '
+        f'--window-pos 200 120 '
+        f'--window-size 600 300 '
+        f'--icon-size 100 '
+        f'--icon \"Furious-GUI.app\" 175 120 '
+        f'--hide-extension \"Furious-GUI.app\" '
+        f'--app-drop-link 425 120 '
+        f'\"{ROOT_DIR / MAC_DMG_FILENAME}\" '
+        f'\"{MAC_APP_DIR}\"'
+    )
 else:
+    # Deploy: Not implemented
     ARTIFACT_NAME = ''
 
 
@@ -150,16 +168,13 @@ def cleanup():
             logger.info(f'remove artifact success')
 
         try:
-            shutil.rmtree(
-                ROOT_DIR / f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
-                f'{PLATFORM.lower()}{PLATFORM_RELEASE}'
-            )
+            shutil.rmtree(ROOT_DIR / WIN_UNZIPPED)
         except Exception as ex:
             # Any non-exit exceptions
 
-            logger.error(f'remove potential unzipped dir failed: {ex}')
+            logger.error(f'remove unzipped dir failed: {ex}')
         else:
-            logger.info(f'remove potential unzipped dir success')
+            logger.info('remove unzipped dir success')
     elif PLATFORM == 'Darwin':
         # More cleanup on Darwin
         try:
@@ -172,13 +187,16 @@ def cleanup():
             logger.info(f'remove artifact success')
 
         try:
-            shutil.rmtree(ROOT_DIR / 'dmg')
+            shutil.rmtree(MAC_APP_DIR)
         except Exception as ex:
             # Any non-exit exceptions
 
-            logger.error(f'remove dmg dir failed: {ex}')
+            logger.error(f'remove app dir failed: {ex}')
         else:
-            logger.info(f'remove dmg dir success')
+            logger.info(f'remove app dir success')
+    else:
+        # Deploy: Not implemented
+        pass
 
 
 def download():
@@ -196,6 +214,20 @@ def download():
             downloadXrayAssets(url_geoip, filename_geoip),
         ]
     )
+
+
+def printStandardStream(stdout, stderr):
+    if isinstance(stdout, bytes):
+        decoded_stdout = stdout.decode('utf-8', 'replace')
+    else:
+        decoded_stdout = stdout
+
+    if isinstance(stderr, bytes):
+        decoded_stderr = stderr.decode('utf-8', 'replace')
+    else:
+        decoded_stderr = stderr
+
+    print(f'stdout:\n{decoded_stdout}stderr:\n{decoded_stderr}', flush=True)
 
 
 def main():
@@ -232,9 +264,9 @@ def main():
     except ImportError:
         raise ModuleNotFoundError('please install nuitka to run this script')
 
-    try:
-        logger.info('building')
+    logger.info('building')
 
+    try:
         result = runExternalCommand(
             NUITKA_BUILD,
             stdout=subprocess.PIPE,
@@ -245,40 +277,17 @@ def main():
     except subprocess.CalledProcessError as err:
         logger.error(f'build failed with returncode {err.returncode}')
 
-        print(
-            'stdout:\n'
-            + err.stdout.decode('utf-8', 'replace')
-            + 'stderr:\n'
-            + err.stderr.decode('utf-8', 'replace'),
-            flush=True,
-        )
+        printStandardStream(err.stdout, err.stderr)
 
         sys.exit(-1)
     else:
         logger.info(f'build success')
 
-        print(
-            'stdout:\n'
-            + result.stdout.decode('utf-8', 'replace')
-            + 'stderr:\n'
-            + result.stderr.decode('utf-8', 'replace'),
-            flush=True,
-        )
+        printStandardStream(result.stdout, result.stderr)
 
     if PLATFORM == 'Windows':
-        if PLATFORM_RELEASE.endswith('Server'):
-            # Windows server. Fixed to windows10
-            foldername = (
-                f'{APPLICATION_NAME}-{APPLICATION_VERSION}-{PLATFORM.lower()}10'
-            )
-        else:
-            foldername = (
-                f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
-                f'{PLATFORM.lower()}{PLATFORM_RELEASE}'
-            )
-
         try:
-            shutil.rmtree(ROOT_DIR / DEPLOY_DIR_NAME / foldername)
+            shutil.rmtree(ROOT_DIR / DEPLOY_DIR_NAME / WIN_UNZIPPED)
         except FileNotFoundError:
             pass
         except Exception:
@@ -288,20 +297,18 @@ def main():
 
         shutil.copytree(
             ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
-            ROOT_DIR / DEPLOY_DIR_NAME / foldername,
+            ROOT_DIR / DEPLOY_DIR_NAME / WIN_UNZIPPED,
         )
         shutil.make_archive(
             ARTIFACT_NAME,
             'zip',
             ROOT_DIR / DEPLOY_DIR_NAME,
-            foldername,
+            WIN_UNZIPPED,
             logger=logger,
         )
     elif PLATFORM == 'Darwin':
-        appDir = ROOT_DIR / 'app'
-
         try:
-            shutil.rmtree(appDir)
+            shutil.rmtree(MAC_APP_DIR)
         except FileNotFoundError:
             pass
         except Exception:
@@ -310,7 +317,7 @@ def main():
             raise
 
         try:
-            os.mkdir(appDir)
+            os.mkdir(MAC_APP_DIR)
         except Exception:
             # Any non-exit exceptions
 
@@ -318,28 +325,14 @@ def main():
 
         shutil.copytree(
             ROOT_DIR / DEPLOY_DIR_NAME / 'Furious-GUI.app',
-            appDir / 'Furious-GUI.app',
+            MAC_APP_DIR / 'Furious-GUI.app',
         )
 
+        logger.info('generating dmg')
+
         try:
-            logger.info('generating dmg')
-
-            output = f'{ARTIFACT_NAME}.dmg'
-
             result = runExternalCommand(
-                (
-                    f'create-dmg '
-                    f'--volname \"Furious\" '
-                    f'--volicon \"Icons/png/rocket-takeoff-window.png\" '
-                    f'--window-pos 200 120 '
-                    f'--window-size 600 300 '
-                    f'--icon-size 100 '
-                    f'--icon \"Furious-GUI.app\" 175 120 '
-                    f'--hide-extension \"Furious-GUI.app\" '
-                    f'--app-drop-link 425 120 '
-                    f'\"{ROOT_DIR / output}\" '
-                    f'\"{appDir}\"'
-                ),
+                MAC_CREATE_DMG_CMD,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 shell=True,
@@ -348,25 +341,13 @@ def main():
         except subprocess.CalledProcessError as err:
             logger.error(f'generate dmg failed with returncode {err.returncode}')
 
-            print(
-                'stdout:\n'
-                + err.stdout.decode('utf-8', 'replace')
-                + 'stderr:\n'
-                + err.stderr.decode('utf-8', 'replace'),
-                flush=True,
-            )
+            printStandardStream(err.stdout, err.stderr)
 
             sys.exit(-1)
         else:
-            print(
-                'stdout:\n'
-                + result.stdout.decode('utf-8', 'replace')
-                + 'stderr:\n'
-                + result.stderr.decode('utf-8', 'replace'),
-                flush=True,
-            )
+            printStandardStream(result.stdout, result.stderr)
 
-            logger.info(f'generate dmg success: {output}')
+            logger.info(f'generate dmg success: {MAC_DMG_FILENAME}')
 
 
 if __name__ == '__main__':
