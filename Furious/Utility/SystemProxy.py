@@ -154,7 +154,7 @@ class _SystemProxy:
                     linuxProxyConfig('proxy.https', 'host', host)
                     linuxProxyConfig('proxy.https', 'port', port)
                     linuxProxyConfig(
-                        'proxy', 'ignore-hosts', str(list(bypass.split(';')))
+                        'proxy', 'ignore-hosts', str(list(bypass.split(',')))
                     )
                     linuxProxyConfig('proxy', 'mode', 'manual')
                 except Exception:
@@ -168,7 +168,7 @@ class _SystemProxy:
                 try:
                     darwinProxyConfig('setwebproxy', *parseHostPort(server))
                     darwinProxyConfig('setsecurewebproxy', *parseHostPort(server))
-                    darwinProxyConfig('setproxybypassdomains', *bypass.split(';'))
+                    darwinProxyConfig('setproxybypassdomains', *bypass.split(','))
                 except Exception:
                     # Any non-exit exceptions
 
