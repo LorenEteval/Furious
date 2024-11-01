@@ -270,7 +270,13 @@ class ConnectAction(AppQAction):
 
                 APP().systemTray.showMessage(f'{config.coreName()}: ' + _('Connected'))
 
-                self.actionTimer.start(CORE_CHECK_ALIVE_INTERVAL)
+                if AppSettings.isStateON_('PowerSaveMode'):
+                    # Power optimization
+                    logger.info(f'no action queue in power save mode')
+
+                    self.actionTimer.stop()
+                else:
+                    self.actionTimer.start(CORE_CHECK_ALIVE_INTERVAL)
             else:
                 logger.error('failed to start core manager')
 
