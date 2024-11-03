@@ -18,6 +18,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+          check-latest: true
 
       - name: Set up Python venv
         run: |
@@ -30,16 +31,12 @@ jobs:
           sudo apt update && sudo apt install -y libegl1
 
       - name: Install setuptools, wheel
-        run: >-
-          python3 -m
-          pip install
-          setuptools wheel
+        run: |
+          python3 -m pip install setuptools wheel
 
       - name: Install requirements.txt
-        run: >-
-          python3 -m
-          pip install
-          -r requirements.txt
+        run: |
+          python3 -m pip install -r requirements.txt
 
       - name: Download latest asset files
         run: |
@@ -122,10 +119,8 @@ jobs:
         if: runner.os == 'macOS' && runner.arch == 'X64'
 
       - name: Install setuptools, wheel
-        run: >-
-          python3 -m
-          pip install
-          setuptools wheel
+        run: |
+          python3 -m pip install setuptools wheel
 
       - name: Install specific PySide6-Essentials on OS
         run: |
@@ -139,22 +134,16 @@ jobs:
           fi
 
       - name: Install requirements.txt
-        run: >-
-          python3 -m
-          pip install
-          -r requirements.txt
+        run: |
+          python3 -m pip install -r requirements.txt
 
       - name: Install numpy<2
-        run: >-
-          python3 -m
-          pip install
-          "numpy<2"
+        run: |
+          python3 -m pip install "numpy<2"
 
       - name: Install nuitka, imageio
-        run: >-
-          python3 -m
-          pip install
-          nuitka imageio
+        run: |
+          python3 -m pip install nuitka imageio
 
       - name: Set up go 1.20
         uses: actions/setup-go@v4
