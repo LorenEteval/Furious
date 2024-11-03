@@ -34,6 +34,10 @@ logging.raiseExceptions = False
 
 logger = logging.getLogger('Deploy')
 
+# Exit status
+EXIT_SUCCESS = 0
+EXIT_FAILURE = 1
+
 DEPLOY_DIR_NAME = f'{APPLICATION_NAME}-Deploy'
 
 if PLATFORM == 'Windows':
@@ -159,6 +163,7 @@ def cleanup():
     if PLATFORM == 'Windows':
         # More cleanup on Windows
         try:
+            # Remove artifact
             os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.zip')
         except Exception as ex:
             # Any non-exit exceptions
@@ -168,6 +173,7 @@ def cleanup():
             logger.info(f'remove artifact success')
 
         try:
+            # Remove unzipped folder
             shutil.rmtree(ROOT_DIR / WIN_UNZIPPED)
         except Exception as ex:
             # Any non-exit exceptions
@@ -178,6 +184,7 @@ def cleanup():
     elif PLATFORM == 'Darwin':
         # More cleanup on Darwin
         try:
+            # Remove artifact
             os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.dmg')
         except Exception as ex:
             # Any non-exit exceptions
@@ -187,6 +194,7 @@ def cleanup():
             logger.info(f'remove artifact success')
 
         try:
+            # Remove app folder
             shutil.rmtree(MAC_APP_DIR)
         except Exception as ex:
             # Any non-exit exceptions
@@ -252,10 +260,10 @@ def main():
 
         logger.info('cleanup done')
 
-        sys.exit(0)
+        sys.exit(EXIT_SUCCESS)
 
     if args.download:
-        success = 0 if download() else 1
+        success = EXIT_SUCCESS if download() else EXIT_FAILURE
 
         sys.exit(success)
 
@@ -279,7 +287,7 @@ def main():
 
         printStandardStream(err.stdout, err.stderr)
 
-        sys.exit(-1)
+        sys.exit(EXIT_FAILURE)
     else:
         logger.info(f'build success')
 
@@ -343,11 +351,16 @@ def main():
 
             printStandardStream(err.stdout, err.stderr)
 
-            sys.exit(-1)
+            sys.exit(EXIT_FAILURE)
         else:
-            printStandardStream(result.stdout, result.stderr)
-
             logger.info(f'generate dmg success: {MAC_DMG_FILENAME}')
+
+            printStandardStream(result.stdout, result.stderr)
+    else:
+        # Deploy: Not implemented
+        pass
+
+    sys.exit(EXIT_SUCCESS)
 
 
 if __name__ == '__main__':
