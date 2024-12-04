@@ -163,6 +163,7 @@ cython_debug/
 
 # Any potential virtual environment folder
 venv*/
+.venv*/
 
 # Furious deploy folders
 Furious-*/
