@@ -83,6 +83,9 @@ jobs:
     strategy:
       matrix:
         os: [windows-2022, macos-13, macos-14]
+    env:
+      PySide6_Legacy_Version: "6.4.3"
+      PySide6_Target_Version: "6.8.1"
 
     steps:
       - uses: actions/checkout@v4
@@ -125,9 +128,9 @@ jobs:
       - name: Install specific PySide6-Essentials on OS
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            python3 -m pip install PySide6-Essentials==6.4.3
+            python3 -m pip install PySide6-Essentials==$PySide6_Legacy_Version
           elif [ "$RUNNER_OS" == "Windows" ]; then
-            python3 -m pip install PySide6-Essentials==6.5.3
+            python3 -m pip install PySide6-Essentials==$PySide6_Target_Version
           else
             echo "$RUNNER_OS not supported"
             exit 1
@@ -175,10 +178,10 @@ jobs:
       - name: Run deploy script
         run: python3 Deploy.py
 
-      - name: Upgrade PySide6-Essentials to 6.5.3 if on macOS
+      - name: Upgrade PySide6-Essentials to target version if on macOS
         run: |
           python3 -m pip uninstall -y PySide6-Essentials shiboken6
-          python3 -m pip install PySide6-Essentials==6.5.3
+          python3 -m pip install PySide6-Essentials==$PySide6_Target_Version
         if: runner.os == 'macOS'
 
       - name: Run deploy script again if on macOS
