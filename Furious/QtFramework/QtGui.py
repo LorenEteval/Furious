@@ -174,8 +174,14 @@ class AppQAction(QTranslatable, SupportThemeChangedCallback, QAction):
 
         if theme == 'Dark':
             if PLATFORM == 'Windows':
-                # Windows. Always use black icon
-                super().setIcon(bootstrapIcon(self.iconFileName))
+                # Windows
+                if versionToValue(PYSIDE6_VERSION) < versionToValue('6.7.0'):
+                    # PySide6 < 6.7.0 has no system theme handling on Windows.
+                    # Always use black icon
+                    super().setIcon(bootstrapIcon(self.iconFileName))
+                else:
+                    # PySide6 has system theme handling.
+                    super().setIcon(bootstrapIconWhite(self.iconFileName))
             else:
                 if getUbuntuRelease() == '20.04' and self.isTrayAction:
                     # Ubuntu 20.04 system dark theme does not change tray menu color.
