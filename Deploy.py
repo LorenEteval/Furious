@@ -84,10 +84,15 @@ if PLATFORM == 'Windows':
 
     WIN_UNZIPPED = f'{APPLICATION_NAME}-{APPLICATION_VERSION}-{winVerCompatible}'
 elif PLATFORM == 'Darwin':
-    if versionToValue(PYSIDE6_VERSION) <= versionToValue('6.4.3'):
+    value = versionToValue(PYSIDE6_VERSION)
+
+    # https://doc.qt.io/qt-6/supported-platforms.html
+    if value <= versionToValue('6.4.3'):
         macVerCompatible = 'macOS-10.9'
+    elif value <= versionToValue('6.7.3'):
+        macVerCompatible = 'macos-11.0'
     else:
-        macVerCompatible = 'macOS-11.0'
+        macVerCompatible = 'macOS-12.0'
 
     ARTIFACT_NAME = (
         f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
