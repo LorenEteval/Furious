@@ -251,15 +251,15 @@ class ConnectAction(AppQAction):
         self.doConnecting()
 
         # Clear previous log
-        APP().logViewerWindowCore.clear()
-        APP().logViewerWindowTun_.clear()
+        loggerCore().clear()
+        loggerTun_().clear()
 
         success = self.coreManager.start(
             config,
             routing=AppSettings.get('Routing'),
             exitCallback=self.coreExitCallback,
-            msgCallback=lambda line: APP().logViewerWindowCore.appendLine(line),
-            tunMsgCallback=lambda line: APP().logViewerWindowTun_.appendLine(line),
+            msgCallbackCore=lambda line: loggerCore().appendLine(line),
+            msgCallbackTun_=lambda line: loggerTun_().appendLine(line),
         )
 
         if self.actionQueue.empty():

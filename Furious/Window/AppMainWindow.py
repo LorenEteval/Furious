@@ -181,7 +181,7 @@ class AppMainWindow(AppQMainWindow):
         logActions = [
             AppQAction(
                 _('Show Furious Log'),
-                callback=lambda: APP().logViewerWindowApp_.showMaximized(),
+                callback=lambda: loggerApp_().showMaximized(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier
                     | QtCore.Qt.KeyboardModifier.ShiftModifier,
@@ -190,7 +190,7 @@ class AppMainWindow(AppQMainWindow):
             ),
             AppQAction(
                 _('Show Core Log'),
-                callback=lambda: APP().logViewerWindowCore.showMaximized(),
+                callback=lambda: loggerCore().showMaximized(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier
                     | QtCore.Qt.KeyboardModifier.ShiftModifier,
@@ -199,7 +199,7 @@ class AppMainWindow(AppQMainWindow):
             ),
             AppQAction(
                 _('Show Tun2socks Log'),
-                callback=lambda: APP().logViewerWindowTun_.showMaximized(),
+                callback=lambda: loggerTun_().showMaximized(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier
                     | QtCore.Qt.KeyboardModifier.ShiftModifier,
