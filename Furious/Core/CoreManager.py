@@ -96,8 +96,8 @@ class CoreManager(SupportExitCleanup):
         config: ConfigurationFactory,
         routing: str,
         exitCallback=None,
-        msgCallback=None,
-        tunMsgCallback=None,
+        msgCallbackCore=None,
+        msgCallbackTun_=None,
         deepcopy=True,
         proxyModeOnly=False,
         log=True,
@@ -219,8 +219,10 @@ class CoreManager(SupportExitCleanup):
 
             copy['routing'] = routingObject
 
-            core = XrayCore(exitCallback=exitCallback, msgCallback=msgCallback)
-            success = core.start(copy, **kwargs)
+            coreProcess = XrayCore(
+                exitCallback=exitCallback, msgCallback=msgCallbackCore
+            )
+            success = coreProcess.start(copy, **kwargs)
         elif isinstance(copy, ConfigurationHysteria1):
             if routing == 'Bypass Mainland China':
                 # VPN Mode handling
@@ -266,8 +268,10 @@ class CoreManager(SupportExitCleanup):
                 logger.info(f'routing is {routing}')
                 logger.info(f'RoutingObject: {routingObject}')
 
-            core = Hysteria1(exitCallback=exitCallback, msgCallback=msgCallback)
-            success = core.start(
+            coreProcess = Hysteria1(
+                exitCallback=exitCallback, msgCallback=msgCallbackCore
+            )
+            success = coreProcess.start(
                 copy,
                 Hysteria1.rule(routingObject.get('rule', '')),
                 Hysteria1.mmdb(routingObject.get('mmdb', '')),
@@ -277,17 +281,19 @@ class CoreManager(SupportExitCleanup):
             if log:
                 logger.info(f'core {Hysteria2.name()} configured')
 
-            core = Hysteria2(exitCallback=exitCallback, msgCallback=msgCallback)
-            success = core.start(copy, **kwargs)
+            coreProcess = Hysteria2(
+                exitCallback=exitCallback, msgCallback=msgCallbackCore
+            )
+            success = coreProcess.start(copy, **kwargs)
         else:
-            core = None
+            coreProcess = None
             success = False
 
-        if core is not None:
-            self.coresPool.append(core)
+        if coreProcess is not None:
+            self.coresPool.append(coreProcess)
 
         if not success:
-            logger.error(f'core {core.name()} start failed')
+            logger.error(f'core {coreProcess.name()} start failed')
 
             return success
 
@@ -323,10 +329,12 @@ class CoreManager(SupportExitCleanup):
                 else:
                     gateway, interfaceIP = defaultGateway[0], None
 
-                tun = Tun2socks(exitCallback=exitCallback, msgCallback=tunMsgCallback)
-                self.coresPool.append(tun)
+                tunProcess = Tun2socks(
+                    exitCallback=exitCallback, msgCallback=msgCallbackTun_
+                )
+                self.coresPool.append(tunProcess)
 
-                if not tun.start(
+                if not tunProcess.start(
                     APPLICATION_TUN_DEVICE_NAME,
                     APPLICATION_TUN_NETWORK_INTERFACE_NAME,
                     'info',
@@ -399,7 +407,7 @@ class CoreManager(SupportExitCleanup):
                             SystemRoutingTable.WIN32SetInterfaceDNS(_alias)
                             SystemRoutingTable.WIN32FlushDNSCache()
 
-                        tun.cleanup = functools.partial(_windowsCleanup, alias)
+                        tunProcess.cleanup = functools.partial(_windowsCleanup, alias)
 
                         SystemRoutingTable.WIN32SetInterfaceDNS(
                             alias, '127.0.0.1', False
@@ -433,7 +441,7 @@ class CoreManager(SupportExitCleanup):
                         for _service, _dnsserver in _servers:
                             SystemRoutingTable.DarwinSetDNSServers(_service, _dnsserver)
 
-                    tun.cleanup = functools.partial(_darwinCleanup, servers)
+                    tunProcess.cleanup = functools.partial(_darwinCleanup, servers)
 
                     for service, dnsserver in servers:
                         SystemRoutingTable.DarwinSetDNSServers(
@@ -451,16 +459,16 @@ class CoreManager(SupportExitCleanup):
         return True
 
     def allRunning(self) -> bool:
-        return all(core.isRunning() for core in self.coresPool)
+        return all(coreProcess.isAlive() for coreProcess in self.coresPool)
 
     def anyRunning(self) -> bool:
-        return any(core.isRunning() for core in self.coresPool)
+        return any(coreProcess.isAlive() for coreProcess in self.coresPool)
 
     def stopAll(self):
         if self.coresPool:
-            for core in self.coresPool:
-                if isinstance(core, CoreFactory):
-                    core.stop()
+            for coreProcess in self.coresPool:
+                if isinstance(coreProcess, CoreFactory):
+                    coreProcess.stop()
 
             self.coresPool.clear()
 
