@@ -101,7 +101,7 @@ def startXrayCore(jsonString: str, msgQueue: multiprocessing.Queue):
 
                                         pass
 
-                        time.sleep(CoreProcess.MSG_PRODUCE_THRESHOLD / 1000)
+                        time.sleep(MsgQueue.MSG_PRODUCE_THRESHOLD / 1000)
 
                 try:
                     if fileStreams:
