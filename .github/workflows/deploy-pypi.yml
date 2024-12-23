@@ -84,8 +84,8 @@ jobs:
       matrix:
         os: [windows-2022, macos-13, macos-14]
     env:
-      PySide6_Legacy_Version: "6.4.3"
-      PySide6_Target_Version: "6.8.1"
+      PYSIDE6_LEGACY_VERSION: "6.4.3"
+      PYSIDE6_TARGET_VERSION: "6.5.3"
 
     steps:
       - uses: actions/checkout@v4
@@ -128,9 +128,9 @@ jobs:
       - name: Install specific PySide6-Essentials on OS
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            python3 -m pip install PySide6-Essentials==$PySide6_Legacy_Version
+            python3 -m pip install PySide6-Essentials==$PYSIDE6_LEGACY_VERSION
           elif [ "$RUNNER_OS" == "Windows" ]; then
-            python3 -m pip install PySide6-Essentials==$PySide6_Target_Version
+            python3 -m pip install PySide6-Essentials==$PYSIDE6_TARGET_VERSION
           else
             echo "$RUNNER_OS not supported"
             exit 1
@@ -181,7 +181,7 @@ jobs:
       - name: Upgrade PySide6-Essentials to target version if on macOS
         run: |
           python3 -m pip uninstall -y PySide6-Essentials shiboken6
-          python3 -m pip install PySide6-Essentials==$PySide6_Target_Version
+          python3 -m pip install PySide6-Essentials==$PYSIDE6_TARGET_VERSION
         if: runner.os == 'macOS'
 
       - name: Run deploy script again if on macOS
@@ -226,7 +226,7 @@ jobs:
           --prerelease
           --generate-notes
           --title 'Furious ${{ github.ref_name }}'
-      - name: Upload artifact signatures to GitHub Release
+      - name: Upload artifact to GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
         # Upload to GitHub Release using the `gh` CLI.
