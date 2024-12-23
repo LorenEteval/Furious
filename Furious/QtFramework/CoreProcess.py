@@ -23,7 +23,7 @@ from Furious.Utility import *
 from PySide6 import QtCore
 
 from abc import ABC
-from typing import Callable
+from typing import Callable, Union
 
 import os
 import sys
@@ -32,128 +32,203 @@ import uuid
 import logging
 import threading
 import multiprocessing
+import multiprocessing.queues
 
-__all__ = ['CoreProcess', 'StdoutRedirectHelper']
+__all__ = ['CoreProcess', 'MsgQueue', 'StdoutRedirectHelper']
 
 logger = logging.getLogger(__name__)
 
 
-class CoreProcess(CoreFactory, ABC):
-    MSG_PRODUCE_THRESHOLD = 250
-
+class CoreProcessDaemon(CoreFactory, ABC):
     def __init__(self, **kwargs):
         exitCallback = kwargs.pop('exitCallback', None)
 
         super().__init__(exitCallback)
 
         self._process = None
-        self._msgQueue = multiprocessing.Queue()
-        self._msgCallback = kwargs.pop('msgCallback', None)
 
-        @QtCore.Slot()
-        def handleMsgTimemout():
-            msg = self.getMsgNoWait()
-
-            if msg and not msg.isspace():
-                if callable(self._msgCallback):
-                    self._msgCallback(msg)
-
-        self._msgTimer = QtCore.QTimer()
-        self._msgTimer.timeout.connect(handleMsgTimemout)
-
-        @QtCore.Slot()
-        def handleDaemonTimemout():
-            self.checkIsRunning()
-
-        self._daemonTimer = QtCore.QTimer()
-        self._daemonTimer.timeout.connect(handleDaemonTimemout)
+        self._daemon = QtCore.QTimer()
+        self._daemon.timeout.connect(self.queryIsAlive)
 
     @property
-    def msgQueue(self) -> multiprocessing.Queue:
-        return self._msgQueue
+    def process(self) -> Union[multiprocessing.Process, None]:
+        return self._process
 
-    def registerMsgCallback(self, msgCallback) -> CoreProcess:
-        self._msgCallback = msgCallback
+    @process.setter
+    def process(self, process: Union[multiprocessing.Process, None]):
+        self._process = process
 
-        return self
+    @property
+    def daemon(self) -> QtCore.QTimer:
+        return self._daemon
 
-    def isRunning(self) -> bool:
-        if isinstance(self._process, multiprocessing.Process):
-            return self._process.is_alive()
+    def isAlive(self) -> bool:
+        if isinstance(self.process, multiprocessing.Process):
+            return self.process.is_alive()
         else:
             return False
 
-    def checkIsRunning(self) -> bool:
-        if isinstance(self._process, multiprocessing.Process):
-            if self._process.is_alive():
+    def queryIsAlive(self):
+        if isinstance(self.process, multiprocessing.Process):
+            if self.process.is_alive():
                 return True
             else:
-                logger.error(
-                    f'{self.name()} stopped unexpectedly with exitcode {self._process.exitcode}'
-                )
-
-                self._msgTimer.stop()
-                self._daemonTimer.stop()
-
-                if callable(self._exitCallback):
-                    self._exitCallback(self, self._process.exitcode)
-
-                # Reset internal process
-                self._process = None
+                self.handleInteralProcessStopped()
 
                 return False
         else:
             return False
+
+    def handleInteralProcessStopped(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+class MsgQueue(multiprocessing.queues.Queue):
+    MSG_PRODUCE_THRESHOLD = 1024
+    OPTIMIZER_MIN_FREQ = 2
+    OPTIMIZER_MAX_FREQ = 256
+
+    def __init__(self, **kwargs):
+        msgCallback = kwargs.pop('msgCallback', None)
+        backgroundOptimizer = kwargs.pop('backgroundOptimizer', None)
+
+        super().__init__(**kwargs, ctx=multiprocessing.get_context())
+
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.processMsg)
+        self.timeout = MsgQueue.MSG_PRODUCE_THRESHOLD
+        self.callback = msgCallback
+        self.backgroundOptimizer = backgroundOptimizer
+
+    def getNoWait(self) -> str:
+        try:
+            return self.get_nowait()
+        except Exception:
+            # Any non-exit exceptions
+
+            return ''
+
+    def getTimeout(self) -> int:
+        return self.timeout
+
+    def setTimeout(self, timeout: int):
+        self.timeout = timeout
+
+    def startTimer(self):
+        self.timer.start(self.getTimeout())
+
+    def stopTimer(self):
+        self.timer.stop()
+
+    @property
+    def optimizer(self):
+        try:
+            return self.backgroundOptimizer()
+        except Exception:
+            # Any non-exit exceptions
+
+            return None
+
+    def processMsg(self):
+        msg = self.getNoWait()
+
+        if not callable(self.callback):
+            # Nothing to do
+            return
+
+        if msg and not msg.isspace():
+            # Call message callback
+            self.callback(msg)
+
+            if self.optimizer is not None and self.optimizer.isVisible():
+                # Logger window is visible: maximum loading speed for user
+
+                # 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 2, 2, ...
+                # For timeout value 2 Furious can handle at about 500 messages per second
+                self.setTimeout(
+                    max(MsgQueue.OPTIMIZER_MIN_FREQ, self.getTimeout() // 2)
+                )
+                self.startTimer()
+            else:
+                # Logger window does not exist or is not visible: low speed in background
+                # to avoid consuming too much CPU resources
+
+                # 1024, 512, 256, 256, 256, ...
+                # For timeout value 256 Furious can handle at about 4 messages per second
+                self.setTimeout(
+                    max(MsgQueue.OPTIMIZER_MAX_FREQ, self.getTimeout() // 2)
+                )
+                self.startTimer()
+        else:
+            # Reset timeout value
+            self.setTimeout(MsgQueue.MSG_PRODUCE_THRESHOLD)
+            self.startTimer()
+
+
+class CoreProcess(CoreProcessDaemon):
+    def __init__(self, **kwargs):
+        msgCallback = kwargs.pop('msgCallback', None)
+        # Optimizer is loggerCore window
+        backgroundOptimizer = kwargs.pop('backgroundOptimizer', loggerCore)
+
+        super().__init__(**kwargs)
+
+        self.msgQueue = MsgQueue(
+            msgCallback=msgCallback, backgroundOptimizer=backgroundOptimizer
+        )
+
+    def handleInteralProcessStopped(self):
+        logger.error(
+            f'{self.name()} stopped unexpectedly with exitcode {self.process.exitcode}'
+        )
+
+        self.msgQueue.stopTimer()
+        self.daemon.stop()
+
+        self.callExitCallback(self.process.exitcode)
+
+        # Reset internal process
+        self.process = None
 
     def start(self, **kwargs) -> bool:
         daemon = kwargs.pop('daemon', True)
         waitCore = kwargs.pop('waitCore', True)
         waitTime = kwargs.pop('waitTime', 2500)
 
-        self._process = multiprocessing.Process(**kwargs, daemon=daemon)
-        self._process.start()
+        self.process = multiprocessing.Process(**kwargs, daemon=daemon)
+        self.process.start()
 
         logger.info(f'{self.name()} {self.version()} started')
 
-        self._msgTimer.start(self.MSG_PRODUCE_THRESHOLD)
+        self.msgQueue.setTimeout(MsgQueue.MSG_PRODUCE_THRESHOLD)
+        self.msgQueue.startTimer()
 
         if waitCore:
             # Wait for the core to start up completely
             PySide6LegacyEventLoopWait(waitTime)
 
-        if self.checkIsRunning():
-            if AppSettings.isStateON_('PowerSaveMode'):
-                # Power optimization
-                logger.info(f'no core daemon for {self.name()} in power save mode')
-
-                self._daemonTimer.stop()
-            else:
-                # Start core daemon
-                self._daemonTimer.start(CORE_CHECK_ALIVE_INTERVAL)
+        if self.queryIsAlive():
+            # Start core daemon
+            self.daemon.start(CORE_CHECK_ALIVE_INTERVAL)
 
             return True
         else:
             return False
 
     def stop(self):
-        if self.isRunning():
-            self._msgTimer.stop()
-            self._daemonTimer.stop()
+        if self.isAlive():
+            self.msgQueue.stopTimer()
+            self.daemon.stop()
 
-            self._process.terminate()
-            self._process.join()
+            self.process.terminate()
+            self.process.join()
 
             logger.info(
-                f'{self.name()} terminated with exitcode {self._process.exitcode}'
+                f'{self.name()} terminated with exitcode {self.process.exitcode}'
             )
-
-    def getMsgNoWait(self) -> str:
-        try:
-            return self._msgQueue.get_nowait()
-        except Exception:
-            # Any non-exit exceptions
-
-            return ''
+        else:
+            # Do nothing
+            pass
 
 
 class StdoutRedirectHelper:
@@ -204,7 +279,7 @@ class StdoutRedirectHelper:
 
                                 pass
 
-                    time.sleep(CoreProcess.MSG_PRODUCE_THRESHOLD / 1000)
+                    time.sleep(MsgQueue.MSG_PRODUCE_THRESHOLD / 1000)
 
         msgThread = threading.Thread(target=produceMsg, daemon=True)
         msgThread.start()
