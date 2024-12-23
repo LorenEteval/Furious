@@ -40,6 +40,9 @@ __all__ = [
     'versionToValue',
     'getXrayProxyOutboundObject',
     'getXrayProxyOutboundStream',
+    'loggerApp_',
+    'loggerCore',
+    'loggerTun_',
 ]
 
 
@@ -171,3 +174,30 @@ def getXrayProxyOutboundStream(config: dict) -> dict:
         proxyOutboundObject['streamSettings'] = {}
 
     return proxyOutboundObject['streamSettings']
+
+
+def loggerApp_():
+    try:
+        return APP().logViewerWindowApp_
+    except Exception:
+        # Any non-exit exceptions
+
+        return None
+
+
+def loggerCore():
+    try:
+        return APP().logViewerWindowCore
+    except Exception:
+        # Any non-exit exceptions
+
+        return None
+
+
+def loggerTun_():
+    try:
+        return APP().logViewerWindowTun_
+    except Exception:
+        # Any non-exit exceptions
+
+        return None
