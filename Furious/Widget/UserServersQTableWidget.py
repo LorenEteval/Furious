@@ -315,11 +315,11 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
 
         def coreExitCallback(config: ConfigurationFactory, exitcode: int):
             if exitcode == CoreProcess.ExitCode.ConfigurationError:
-                self.currentItem.setExtras('speedResult', 'Invalid')
+                self.currentItem.setExtras('speedResult', f'Invalid')
 
                 return self.updateResult()
             if exitcode == CoreProcess.ExitCode.ServerStartFailure:
-                self.currentItem.setExtras('speedResult', 'Start failed')
+                self.currentItem.setExtras('speedResult', f'Core start failed')
 
                 return self.updateResult()
             if exitcode == CoreProcess.ExitCode.SystemShuttingDown:
@@ -331,7 +331,7 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
 
         def msgCallback(line: str):
             try:
-                APP().logViewerWindowCore.appendLine(line)
+                loggerCore().appendLine(line)
             except Exception:
                 # Any non-exit exceptions
 
@@ -379,7 +379,7 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
                 copy,
                 'Global',
                 coreExitCallback,
-                msgCallback=msgCallback,
+                msgCallbackCore=msgCallback,
                 deepcopy=False,
                 proxyModeOnly=True,
                 log=False,
@@ -393,7 +393,6 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
                 'timeout': 300,
                 'disable_udp': False,
             }
-
             # No socks inbounds
             copy.pop('socks5', '')
 
@@ -401,7 +400,7 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
                 copy,
                 'Global',
                 coreExitCallback,
-                msgCallback=msgCallback,
+                msgCallbackCore=msgCallback,
                 deepcopy=False,
                 proxyModeOnly=True,
                 log=False,
@@ -437,7 +436,7 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
 
             # Has speed test result
             self.hasSpeedResult = True
-            self.currentItem.setExtras('speedResult', f'{downloadSpeed:.2f} M/s')
+            self.currentItem.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
             self.updateResult()
 
     @QtCore.Slot()
@@ -482,9 +481,9 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
                 elapsedSecond = self.elapsedTimer.elapsed() / 1000
                 downloadSpeed = self.totalBytesRead / elapsedSecond / 1024 / 1024
 
-                self.currentItem.setExtras('speedResult', f'{downloadSpeed:.2f} M/s')
+                self.currentItem.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
             else:
-                self.currentItem.setExtras('speedResult', 'Start failed')
+                self.currentItem.setExtras('speedResult', f'Core start failed')
 
         self.coreManager.stopAll()
         self.updateResult()
@@ -637,7 +636,6 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.testDownloadSpeedQueue = queue.Queue()
         self.testDownloadSpeedTimer = QtCore.QTimer()
         self.testDownloadSpeedTimer.timeout.connect(self.handleTestDownloadSpeedJob)
-        self.testDownloadSpeedTimer.start(250)
 
         # Text Editor Window
         self.textEditorWindow = TextEditorWindow(parent=self.parent())
@@ -995,9 +993,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                     return abs(hash(data)) + 2**20
 
             if clickedIndex == self.Headers.index('Speed'):
-                if data.endswith(' M/s'):
+                if data.endswith(' MiB/s'):
                     # Strip value
-                    data = data[:-4]
+                    data = data[:-6]
 
                 try:
                     return float(data)
@@ -1370,7 +1368,12 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         except queue.Empty:
             # Queue is empty
 
+            # Power Optimization. Timer gets fired only when needed
+            self.testDownloadSpeedTimer.stop()
+
             return
+
+        assert isinstance(server, ConfigurationFactory)
 
         def testDownloadSpeed(counter=0, timeout=5000, step=100):
             worker = TestDownloadSpeedWorker(AS_UserServers(), index, server)
@@ -1418,6 +1421,10 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 # Any non-exit exceptions
 
                 pass
+
+        # Power Optimization
+        if not self.testDownloadSpeedTimer.isActive():
+            self.testDownloadSpeedTimer.start(250)
 
     def clearSelectedItemTestResult(self):
         indexes = self.selectedIndex
