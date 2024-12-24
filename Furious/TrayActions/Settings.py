@@ -29,7 +29,7 @@ registerAppSettings('VPNMode', isBinary=True)
 registerAppSettings('DarkMode', isBinary=True)
 registerAppSettings('UseMonochromeTrayIcon', isBinary=True)
 registerAppSettings('StartupOnBoot', isBinary=True, default=BinarySettings.ON_)
-registerAppSettings('PowerSaveMode', isBinary=True)
+registerAppSettings('PowerSaveMode', isBinary=True, default=BinarySettings.ON_)
 registerAppSettings(
     'ShowProgressBarWhenConnecting', isBinary=True, default=BinarySettings.ON_
 )
