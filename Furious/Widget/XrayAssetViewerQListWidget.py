@@ -135,7 +135,9 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
                     if theme == 'Dark':
                         if PLATFORM == 'Windows':
                             # Windows
-                            if versionToValue(PYSIDE6_VERSION) < versionToValue('6.7.0'):
+                            if versionToValue(PYSIDE6_VERSION) < versionToValue(
+                                '6.7.0'
+                            ):
                                 # PySide6 < 6.7.0 has no system theme handling on Windows.
                                 # Always use black icon
                                 item.setIcon(bootstrapIcon('file-earmark.svg'))

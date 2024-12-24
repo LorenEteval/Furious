@@ -61,10 +61,10 @@ class ConfigurationXrayProxyOutboundObjectV(dict):
         else:
             networkKey = f'{type_}Settings'
 
-        networkObjectArgs[
-            networkKey
-        ] = ConfigurationXray.kwargs2ProxyStreamSettingsNetworkObject(
-            type_, remote_host, kwargs
+        networkObjectArgs[networkKey] = (
+            ConfigurationXray.kwargs2ProxyStreamSettingsNetworkObject(
+                type_, remote_host, kwargs
+            )
         )
 
         if security:
@@ -147,10 +147,10 @@ class ConfigurationXrayProxyOutboundObjectTrojan(dict):
         else:
             networkKey = f'{type_}Settings'
 
-        networkObjectArgs[
-            networkKey
-        ] = ConfigurationXray.kwargs2ProxyStreamSettingsNetworkObject(
-            type_, address, kwargs
+        networkObjectArgs[networkKey] = (
+            ConfigurationXray.kwargs2ProxyStreamSettingsNetworkObject(
+                type_, address, kwargs
+            )
         )
 
         if security:
