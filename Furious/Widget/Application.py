@@ -126,11 +126,19 @@ class SingletonApplication(ApplicationExitHelper):
             # Do not start
             return True
         else:
+            # Remove the old socket file if it exists
+            socket_path = QLocalServer.removeServer(self.serverName)
+            if socket_path:
+                logger.info(f"Old socket file removed: {self.serverName}")
+            else:
+                logger.info(f"No existing socket file found for: {self.serverName}")
+
             # New instance
             self.server.newConnection.connect(self.showExistingApp)
 
             if not self.server.listen(self.serverName):
                 # Do not start
+                logger.error(f"Unable to listen on server: {self.serverName}")
                 return True
 
             # Start
