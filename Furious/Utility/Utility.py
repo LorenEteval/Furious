@@ -87,7 +87,7 @@ def isValidIPAddress(address) -> bool:
     try:
         ipaddress.ip_address(address)
     except Exception:
-        # Any non-exita exceptions
+        # Any non-exit exceptions
 
         return False
     else:
