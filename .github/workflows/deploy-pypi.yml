@@ -10,43 +10,31 @@ jobs:
   build-distribution:
     name: Build distribution
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
+      - name: Install libegl1
+        run: |
+          sudo apt update && sudo apt install -y libegl1
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
           check-latest: true
-
       - name: Set up Python venv
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
           python3 --version
           python3 -m pip install --upgrade pip
-
-      - name: Install libegl1
-        run: |
-          sudo apt update && sudo apt install -y libegl1
-
-      - name: Install setuptools, wheel
+      - name: Download Python dependencies & latest asset files
         run: |
           python3 -m pip install setuptools wheel
-
-      - name: Install requirements.txt
-        run: |
           python3 -m pip install -r requirements.txt
-
-      - name: Download latest asset files
-        run: |
           python3 -m pip install requests
           python3 Deploy.py --download
-
       - name: Build a binary wheel and a source tarball
-        run: python3 setup.py sdist bdist_wheel
-
+        run: |
+          python3 setup.py sdist bdist_wheel
       - name: Store the distribution packages
         uses: actions/upload-artifact@v3
         with:
@@ -68,7 +56,6 @@ jobs:
       url: https://pypi.org/p/Furious-GUI
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
-
     steps:
       - name: Download all the dists
         uses: actions/download-artifact@v3
@@ -85,19 +72,27 @@ jobs:
       matrix:
         os: [windows-2022, macos-13, macos-14]
     env:
-      # Last PySide6 version that supports macOS 10.9 + Python 3.11
+      # Last PySide6 version that supports macOS 10.9 & Python 3.11
       PYSIDE6_LEGACY_VERSION: "6.4.3"
       PYSIDE6_TARGET_VERSION: "6.8.1"
-
     steps:
       - uses: actions/checkout@v4
-
+      - name: Install macOS dependencies
+        run: |
+          brew install create-dmg
+        if: runner.os == 'macOS'
+      # Remove problematic brew libs if Intel Mac
+      # Credits: https://github.com/RimSort/RimSort
+      - name: Remove problematic brew libs on Intel Mac
+        run: |
+          brew remove --force --ignore-dependencies openssl@3
+          brew cleanup openssl@3
+        if: runner.os == 'macOS' && runner.arch == 'X64'
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
           check-latest: true
-
       - name: Set up Python venv
         run: |
           python3 -m venv .venv
@@ -111,69 +106,34 @@ jobs:
           fi
           python3 --version
           python3 -m pip install --upgrade pip
-
-      - name: Install macOS dependencies
-        run: |
-          brew install create-dmg
-        if: runner.os == 'macOS'
-
-      # Remove problematic brew libs if Intel Mac
-      - name: Remove problematic brew libs on Intel Mac
-        run: |
-          brew remove --force --ignore-dependencies openssl@3
-          brew cleanup openssl@3
-        if: runner.os == 'macOS' && runner.arch == 'X64'
-
-      - name: Install setuptools, wheel
+      - name: Download Python dependencies & latest asset files
         run: |
           python3 -m pip install setuptools wheel
-
-      - name: Install PySide6-Essentials
-        run: |
           python3 -m pip install PySide6-Essentials==$PYSIDE6_TARGET_VERSION
-
-      - name: Install requirements.txt
-        run: |
           python3 -m pip install -r requirements.txt
-
-      - name: Install numpy<2
-        run: |
-          python3 -m pip install "numpy<2"
-
-      - name: Install nuitka, imageio
-        run: |
-          python3 -m pip install nuitka imageio
-
+          python3 -m pip install "numpy<2" nuitka imageio
+          python3 -m pip install requests
+          python3 Deploy.py --download
       - name: Set up go 1.20
         uses: actions/setup-go@v4
         with:
           go-version: "1.20"
           check-latest: true
-
       - name: Install go 1.20 dependencies
         run: |
           go version
           python3 -m pip install "hysteria > 1.3.5"
-
       - name: Set up go 1.23
         uses: actions/setup-go@v4
         with:
           go-version: "1.23"
           check-latest: true
-
       - name: Install go 1.23 dependencies
         run: |
           go version
           python3 -m pip install "Xray-core >= 1.8.8" "hysteria2 >= 2.0.4" "tun2socks > 2.5.2"
-
-      - name: Download latest asset files
-        run: |
-          python3 -m pip install requests
-          python3 Deploy.py --download
-
       - name: Run deploy script
         run: python3 Deploy.py
-
       - name: Store the distribution packages
         uses: actions/upload-artifact@v3
         with:
@@ -189,11 +149,9 @@ jobs:
       - deploy-binaries
       - publish-to-pypi
     runs-on: ubuntu-latest
-
     permissions:
       contents: write  # IMPORTANT: mandatory for making GitHub Releases
       id-token: write  # IMPORTANT: mandatory for sigstore
-
     steps:
       - name: Download all the dists
         uses: actions/download-artifact@v3
