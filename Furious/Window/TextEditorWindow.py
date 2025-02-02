@@ -53,10 +53,10 @@ class QuestionSaveMBox(AppQMessageBox):
         self.setText(_('The content has been modified. Save changes?'))
 
         self.button0 = self.addButton(_('Save'), AppQMessageBox.ButtonRole.AcceptRole)
-        self.button1 = self.addButton(_('Cancel'), AppQMessageBox.ButtonRole.RejectRole)
-        self.button2 = self.addButton(
+        self.button1 = self.addButton(
             _('Discard'), AppQMessageBox.ButtonRole.DestructiveRole
         )
+        self.button2 = self.addButton(_('Cancel'), AppQMessageBox.ButtonRole.RejectRole)
 
         self.setDefaultButton(self.button0)
 
@@ -88,7 +88,7 @@ class JSONDecodeErrorMBox(AppQMessageBox):
 needTrans(
     'Save',
     'Save As...',
-    'Exit',
+    'Close Window',
     'File',
     'Undo',
     'Redo',
@@ -115,7 +115,7 @@ class TextEditorWindow(AppQMainWindow):
         super().__init__(*args, **kwargs)
 
         self.customWindowTitle = ''
-        self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+        self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
         self.setFixedSize(450, int(450 * GOLDEN_RATIO))
 
         # Current editing index
@@ -161,7 +161,7 @@ class TextEditorWindow(AppQMainWindow):
             ),
             AppQSeperator(),
             AppQAction(
-                _('Exit'),
+                _('Close Window'),
                 callback=lambda: self.questionSave(),
             ),
             title=_('File'),
@@ -269,26 +269,22 @@ class TextEditorWindow(AppQMainWindow):
     def questionSave(self):
         if self.modified:
 
-            def handleResultCode(code):
-                if code == PySide6LegacyEnumValueWrapper(
-                    AppQMessageBox.ButtonRole.AcceptRole
-                ):
+            def handleButtonClicked(saveMBox, button):
+                assert isinstance(saveMBox, QuestionSaveMBox)
+
+                if saveMBox.button0 == button:
                     if self.save():
                         self.hide()
-                if code == PySide6LegacyEnumValueWrapper(
-                    AppQMessageBox.ButtonRole.DestructiveRole
-                ):
+                if saveMBox.button1 == button:
                     self.markAsSaved()
                     self.hide()
-                if code == PySide6LegacyEnumValueWrapper(
-                    AppQMessageBox.ButtonRole.RejectRole
-                ):
+                if saveMBox.button2 == button:
                     # Cancel. Do nothing
                     pass
 
             mbox = QuestionSaveMBox(icon=AppQMessageBox.Icon.Question, parent=self)
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
-            mbox.finished.connect(functools.partial(handleResultCode))
+            mbox.buttonClicked.connect(functools.partial(handleButtonClicked, mbox))
 
             # dummy ref
             setattr(self, '_questionSaveMBox', mbox)
