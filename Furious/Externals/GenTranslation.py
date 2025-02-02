@@ -251,15 +251,12 @@ TRANSLATION = {
         "ZH": "另存为...",
         "isReviewed": "True"
     },
-    "Exit": {
+    "Close Window": {
         "source": [
             "Furious.Window.TextEditorWindow",
-            "Furious.Window.LogViewerWindow",
-            "Furious.Window.XrayAssetViewerWindow",
-            "Furious.TrayActions.Exit"
         ],
-        "RU": "Выход",
-        "ZH": "退出",
+        "RU": "Закрыть окно",
+        "ZH": "关闭窗口",
         "isReviewed": "True"
     },
     "File": {
@@ -665,6 +662,16 @@ TRANSLATION = {
         "ZH": "添加",
         "isReviewed": "True"
     },
+    "Exit": {
+        "source": [
+            "Furious.Window.LogViewerWindow",
+            "Furious.Window.XrayAssetViewerWindow",
+            "Furious.TrayActions.Exit"
+        ],
+        "RU": "Выход",
+        "ZH": "退出",
+        "isReviewed": "True"
+    },
     "Unable to save log": {
         "source": [
             "Furious.Window.LogViewerWindow"
@@ -842,6 +849,14 @@ TRANSLATION = {
         "RU": "Управление файлами ресурсов Xray-core...",
         "ZH": "管理Xray-core资源文件...",
         "isReviewed": "True"
+    },
+    "Open Application Folder": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Открыть папку приложения",
+        "ZH": "打开应用程序文件夹",
+        "isReviewed": "True",
     },
     "Check For Updates": {
         "source": [
