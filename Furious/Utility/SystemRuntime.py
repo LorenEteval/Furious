@@ -38,6 +38,7 @@ __all__ = [
 ]
 
 
+@functools.lru_cache(None)
 def getPythonVersion():
     return '.'.join(str(info) for info in sys.version_info)
 
@@ -82,10 +83,12 @@ def isVPNMode() -> bool:
     return isAdministrator() and AppSettings.isStateON_('VPNMode')
 
 
+@functools.lru_cache(None)
 def isScriptMode() -> bool:
     return sys.argv[0].endswith('.py')
 
 
+@functools.lru_cache(None)
 def isPythonw() -> bool:
     def isRealFile(file):
         if not hasattr(file, 'fileno'):
@@ -106,5 +109,6 @@ def isPythonw() -> bool:
     return not isRealFile(sys.__stdout__) or not isRealFile(sys.__stderr__)
 
 
+@functools.lru_cache(None)
 def isWindows7() -> bool:
     return PLATFORM == 'Windows' and PLATFORM_RELEASE == '7'
