@@ -34,6 +34,7 @@ from PySide6.QtNetwork import *
 
 from typing import Union
 
+import os
 import logging
 import functools
 
@@ -147,6 +148,7 @@ needTrans(
     'Show Tun2socks Log',
     'Tools',
     'Manage Xray-core Asset File...',
+    'Open Application Folder',
     'Check For Updates',
     'About',
     'Help',
@@ -277,6 +279,11 @@ class AppMainWindow(AppQMainWindow):
             AppQAction(
                 _('Manage Xray-core Asset File...'),
                 callback=lambda: self.xrayAssetViewerWindow.show(),
+            ),
+            AppQSeperator(),
+            AppQAction(
+                _('Open Application Folder'),
+                callback=lambda: self.openApplicationFolder(),
             ),
         ]
 
@@ -438,6 +445,15 @@ class AppMainWindow(AppQMainWindow):
                 )
             else:
                 self.resetNetworkState()
+
+    @staticmethod
+    def openApplicationFolder():
+        appFolder = os.path.dirname(APP().applicationFilePath())
+
+        if QDesktopServices.openUrl(QtCore.QUrl(appFolder)):
+            logger.info(f'open application folder \'{appFolder}\' success')
+        else:
+            logger.error(f'open application folder \'{appFolder}\' failed')
 
     @staticmethod
     def openAboutPage():
