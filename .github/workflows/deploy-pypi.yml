@@ -36,7 +36,7 @@ jobs:
         run: |
           python3 setup.py sdist bdist_wheel
       - name: Store the distribution packages
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
           path: |
@@ -58,7 +58,7 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
@@ -71,6 +71,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-2022, macos-13, macos-14]
+        python-version: ["3.12"]
     env:
       # Last PySide6 version that supports macOS 10.9 & Python 3.11
       PYSIDE6_LEGACY_VERSION: "6.4.3"
@@ -91,7 +92,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
           check-latest: true
       - name: Set up Python venv
         run: |
@@ -135,9 +136,9 @@ jobs:
       - name: Run deploy script
         run: python3 Deploy.py
       - name: Store the distribution packages
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: binary-distributions
+          name: binary-distributions-${{ matrix.os }}-Python${{ matrix.python-version }}
           path: |
             *.zip
             *.dmg
@@ -154,9 +155,10 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for sigstore
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: binary-distributions
+          name: binary-distributions-*
+          merge-multiple: true
           path: dist/
       - name: Create GitHub Release
         env:
