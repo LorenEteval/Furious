@@ -837,7 +837,10 @@ class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
         xhttpObject = streamSettings['xhttpSettings']
 
         try:
-            oldExtra = UJSONEncoder.encode(xhttpObject.get('extra', ''))
+            if xhttpObject.get('extra', ''):
+                oldExtra = UJSONEncoder.encode(xhttpObject.get('extra', ''))
+            else:
+                oldExtra = ''
         except Exception:
             # Any non-exit exceptions
 
@@ -872,7 +875,10 @@ class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
         try:
             xhttpObject = getXrayProxyOutboundStream(config)['xhttpSettings']
 
-            self.setText(UJSONEncoder.encode(xhttpObject.get('extra', '')))
+            if xhttpObject.get('extra', ''):
+                self.setText(UJSONEncoder.encode(xhttpObject.get('extra', '')))
+            else:
+                self.setText('')
         except Exception:
             # Any non-exit exceptions
 
