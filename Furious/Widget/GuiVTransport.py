@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 from Furious.Interface import *
+from Furious.Library import *
 from Furious.QtFramework import *
 from Furious.QtFramework import gettext as _
 from Furious.Utility import *
@@ -40,6 +41,7 @@ STREAM_NETWORK = [
     'grpc',
     'httpupgrade',
     'splithttp',
+    'xhttp',
 ]
 
 
@@ -663,6 +665,220 @@ class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
             self.setText('')
 
 
+class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+        streamSettings = getXrayProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('xhttpSettings'), dict):
+            streamSettings['xhttpSettings'] = {}
+
+        xhttpObject = streamSettings['xhttpSettings']
+
+        try:
+            oldHost = xhttpObject.get('host', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            oldHost = ''
+
+        newHost = self.text()
+
+        def setNewHost():
+            if newHost == '':
+                xhttpObject.pop('host', None)
+            else:
+                xhttpObject['host'] = newHost
+
+        if isinstance(oldHost, str):
+            if newHost != oldHost:
+                setNewHost()
+
+                return True
+            else:
+                return False
+        else:
+            setNewHost()
+
+            return True
+
+    def factoryToInput(self, config: ConfigurationFactory):
+        try:
+            xhttpObject = getXrayProxyOutboundStream(config)['xhttpSettings']
+
+            self.setText(xhttpObject.get('host', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
+class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+        streamSettings = getXrayProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('xhttpSettings'), dict):
+            streamSettings['xhttpSettings'] = {}
+
+        xhttpObject = streamSettings['xhttpSettings']
+
+        try:
+            oldPath = xhttpObject.get('path', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            oldPath = ''
+
+        newPath = self.text()
+
+        def setNewPath():
+            if newPath == '':
+                xhttpObject.pop('path', None)
+            else:
+                xhttpObject['path'] = newPath
+
+        if isinstance(oldPath, str):
+            if newPath != oldPath:
+                setNewPath()
+
+                return True
+            else:
+                return False
+        else:
+            setNewPath()
+
+            return True
+
+    def factoryToInput(self, config: ConfigurationFactory):
+        try:
+            xhttpObject = getXrayProxyOutboundStream(config)['xhttpSettings']
+
+            self.setText(xhttpObject.get('path', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
+class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.addItems(
+            [
+                '',
+                'auto',
+                'packet-up',
+                'stream-up',
+            ]
+        )
+
+    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+        streamSettings = getXrayProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('xhttpSettings'), dict):
+            streamSettings['xhttpSettings'] = {}
+
+        xhttpObject = streamSettings['xhttpSettings']
+
+        try:
+            oldMode = xhttpObject.get('mode', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            oldMode = ''
+
+        newMode = self.text()
+
+        def setNewMode():
+            if newMode == '':
+                xhttpObject.pop('mode', None)
+            else:
+                xhttpObject['mode'] = newMode
+
+        if isinstance(oldMode, str):
+            if newMode != oldMode:
+                setNewMode()
+
+                return True
+            else:
+                return False
+        else:
+            setNewMode()
+
+            return True
+
+    def factoryToInput(self, config: ConfigurationFactory):
+        try:
+            xhttpObject = getXrayProxyOutboundStream(config)['xhttpSettings']
+
+            self.setText(xhttpObject.get('mode', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
+class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+        streamSettings = getXrayProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('xhttpSettings'), dict):
+            streamSettings['xhttpSettings'] = {}
+
+        xhttpObject = streamSettings['xhttpSettings']
+
+        try:
+            oldExtra = UJSONEncoder.encode(xhttpObject.get('extra', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            oldExtra = ''
+
+        newExtra = self.text()
+
+        def setNewExtra():
+            if newExtra == '':
+                xhttpObject.pop('extra', None)
+            else:
+                try:
+                    xhttpObject['extra'] = UJSONEncoder.decode(newExtra)
+                except Exception:
+                    # Any non-exit exceptions
+
+                    xhttpObject.pop('extra', None)
+
+        if isinstance(oldExtra, str):
+            if newExtra != oldExtra:
+                setNewExtra()
+
+                return True
+            else:
+                return False
+        else:
+            setNewExtra()
+
+            return True
+
+    def factoryToInput(self, config: ConfigurationFactory):
+        try:
+            xhttpObject = getXrayProxyOutboundStream(config)['xhttpSettings']
+
+            self.setText(UJSONEncoder.encode(xhttpObject.get('extra', '')))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
 class GuiVTransportItemHostH2(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1136,6 +1352,20 @@ class GuiVTransportPageSplitHttp(GuiVTransportPageXXX):
         ]
 
 
+class GuiVTransportPageXHttp(GuiVTransportPageXXX):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def containerSequence(self):
+        return [
+            GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemHostXHttp(title='Host', translatable=False),
+            GuiVTransportItemPathXHttp(title='Path', translatable=False),
+            GuiVTransportItemModeXHttp(title='Mode', translatable=False),
+            GuiVTransportItemExtraXHttp(title='Extra', translatable=False),
+        ]
+
+
 class GuiVTransportPageH2(GuiVTransportPageXXX):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1190,6 +1420,7 @@ class GuiVTransportPageStackedWidget(QStackedWidget):
             GuiVTransportPageGRPC(),
             GuiVTransportPageHttpUpgrade(),
             GuiVTransportPageSplitHttp(),
+            GuiVTransportPageXHttp(),
         ]
 
         for page in self._pages:

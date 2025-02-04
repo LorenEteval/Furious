@@ -405,6 +405,24 @@ class ConfigurationXray(ConfigurationFactory):
 
                 pass
 
+        elif network == 'xhttp':
+            try:
+                if hasKey('host'):
+                    kwargs['host'] = quote(networkObject['host'])
+
+                if hasKey('path'):
+                    kwargs['path'] = quote(networkObject['path'])
+
+                if hasKey('mode'):
+                    kwargs['mode'] = networkObject['mode']
+
+                if hasKey('extra'):
+                    kwargs['extra'] = quote(UJSONEncoder.encode(networkObject['extra']))
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
         return kwargs
 
     @property
@@ -510,6 +528,24 @@ class ConfigurationXray(ConfigurationFactory):
                     kwargs['path'] = quote(networkObject['path'])
 
                 kwargs['host'] = quote(networkObject['host'])
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+        elif network == 'xhttp':
+            try:
+                if hasKey('host'):
+                    kwargs['host'] = quote(networkObject['host'])
+
+                if hasKey('path'):
+                    kwargs['path'] = quote(networkObject['path'])
+
+                if hasKey('mode'):
+                    kwargs['mode'] = networkObject['mode']
+
+                if hasKey('extra'):
+                    kwargs['extra'] = quote(UJSONEncoder.encode(networkObject['extra']))
             except Exception:
                 # Any non-exit exceptions
 
@@ -671,6 +707,30 @@ class ConfigurationXray(ConfigurationFactory):
                 splitHttpObject['host'] = unquote(kwargs.get('host'))
 
             return splitHttpObject
+
+        elif type_ == 'xhttp':
+            xhttpObject = {}
+
+            if kwargs.get('host', ''):
+                xhttpObject['host'] = unquote(kwargs.get('host', ''))
+
+            if kwargs.get('path', '/'):
+                xhttpObject['path'] = unquote(kwargs.get('path', '/'))
+
+            if kwargs.get('mode', ''):
+                xhttpObject['mode'] = kwargs.get('mode', '')
+
+            try:
+                if kwargs.get('extra', ''):
+                    xhttpObject['extra'] = UJSONEncoder.decode(
+                        unquote(kwargs.get('extra', ''))
+                    )
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+            return xhttpObject
 
     @property
     def kwargsFromProxyStreamSettingsTLSObject(self) -> dict:
