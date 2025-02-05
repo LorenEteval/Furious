@@ -75,7 +75,7 @@ jobs:
     env:
       # Last PySide6 version that supports macOS 10.9 & Python 3.11
       PYSIDE6_LEGACY_VERSION: "6.4.3"
-      PYSIDE6_TARGET_VERSION: "6.8.1"
+      PYSIDE6_TARGET_VERSION: "6.8.2"
     steps:
       - uses: actions/checkout@v4
       - name: Install macOS dependencies
@@ -157,7 +157,7 @@ jobs:
       - name: Download all the dists
         uses: actions/download-artifact@v4
         with:
-          name: binary-distributions-*
+          pattern: binary-distributions-*
           merge-multiple: true
           path: dist/
       - name: Create GitHub Release
