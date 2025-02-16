@@ -115,7 +115,7 @@ class TextEditorWindow(AppQMainWindow):
         super().__init__(*args, **kwargs)
 
         self.customWindowTitle = ''
-        self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setFixedSize(450, int(450 * GOLDEN_RATIO))
 
         # Current editing index
@@ -273,12 +273,16 @@ class TextEditorWindow(AppQMainWindow):
                 assert isinstance(saveMBox, QuestionSaveMBox)
 
                 if saveMBox.button0 == button:
+                    # Save
                     if self.save():
+                        saveMBox.close()
                         self.hide()
-                if saveMBox.button1 == button:
+                elif saveMBox.button1 == button:
+                    # Discard
                     self.markAsSaved()
+                    saveMBox.close()
                     self.hide()
-                if saveMBox.button2 == button:
+                elif saveMBox.button2 == button:
                     # Cancel. Do nothing
                     pass
 

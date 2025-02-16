@@ -638,7 +638,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.testDownloadSpeedTimer.timeout.connect(self.handleTestDownloadSpeedJob)
 
         # Text Editor Window
-        self.textEditorWindow = TextEditorWindow()
+        self.textEditorWindow = TextEditorWindow(parent=self.parent())
 
         # Must set before flush all
         self.setColumnCount(len(self.Headers))
