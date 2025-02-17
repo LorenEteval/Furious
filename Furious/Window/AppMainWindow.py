@@ -275,16 +275,23 @@ class AppMainWindow(AppQMainWindow):
             ),
         ]
 
+        if PLATFORM == 'Darwin':
+            openAppFolderAction = [None]
+        else:
+            openAppFolderAction = [
+                AppQSeperator(),
+                AppQAction(
+                    _('Open Application Folder'),
+                    callback=lambda: self.openApplicationFolder(),
+                ),
+            ]
+
         toolsActions = [
             AppQAction(
                 _('Manage Xray-core Asset File...'),
                 callback=lambda: self.xrayAssetViewerWindow.show(),
             ),
-            AppQSeperator(),
-            AppQAction(
-                _('Open Application Folder'),
-                callback=lambda: self.openApplicationFolder(),
-            ),
+            *openAppFolderAction,
         ]
 
         if hasattr(AppQAction, 'setMenu'):
