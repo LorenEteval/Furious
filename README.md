@@ -12,11 +12,6 @@ from [PyPI](https://pypi.org/project/Furious-GUI/).
 * [TUN Mode](https://github.com/LorenEteval/Furious/wiki/TUN-Mode)
 * [Install From PyPI](https://github.com/LorenEteval/Furious/wiki/Install-From-PyPI)
 
-## Contribute
-
-* Translations
-* ...
-
 ## License
 
 License under [GPL v3.0](https://github.com/LorenEteval/Furious/blob/main/LICENSE).
