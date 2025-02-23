@@ -104,13 +104,13 @@ class CoreManager(SupportExitCleanup):
         **kwargs,
     ) -> bool:
         if deepcopy:
-            copy = config.deepcopy()
+            configcopy = config.deepcopy()
         else:
-            copy = config
+            configcopy = config
 
-        if isinstance(copy, ConfigurationXray):
-            if copy.get('log') is None or not isinstance(copy['log'], dict):
-                copy['log'] = {
+        if isinstance(configcopy, ConfigurationXray):
+            if configcopy.get('log') is None or not isinstance(configcopy['log'], dict):
+                configcopy['log'] = {
                     'access': '',
                     'error': '',
                     'loglevel': 'warning',
@@ -120,7 +120,7 @@ class CoreManager(SupportExitCleanup):
 
             # Fix logObject
             for attr in ['access', 'error']:
-                fixLogObjectPath(copy, attr, logRedirectValue, log)
+                fixLogObjectPath(configcopy, attr, logRedirectValue, log)
 
             if routing == 'Bypass Mainland China':
                 # VPN Mode handling
@@ -208,7 +208,7 @@ class CoreManager(SupportExitCleanup):
             elif routing == 'Global':
                 routingObject = {}
             elif routing == 'Custom':
-                routingObject = copy.get('routing', {})
+                routingObject = configcopy.get('routing', {})
             else:
                 routingObject = {}
 
@@ -217,13 +217,13 @@ class CoreManager(SupportExitCleanup):
                 logger.info(f'routing is {routing}')
                 logger.info(f'RoutingObject: {routingObject}')
 
-            copy['routing'] = routingObject
+            configcopy['routing'] = routingObject
 
             coreProcess = XrayCore(
                 exitCallback=exitCallback, msgCallback=msgCallbackCore
             )
-            success = coreProcess.start(copy, **kwargs)
-        elif isinstance(copy, ConfigurationHysteria1):
+            success = coreProcess.start(configcopy, **kwargs)
+        elif isinstance(configcopy, ConfigurationHysteria1):
             if routing == 'Bypass Mainland China':
                 # VPN Mode handling
                 if not proxyModeOnly and isVPNMode():
@@ -254,8 +254,8 @@ class CoreManager(SupportExitCleanup):
                 }
             elif routing == 'Custom':
                 routingObject = {
-                    'rule': copy.get('acl', ''),
-                    'mmdb': copy.get('mmdb', ''),
+                    'rule': configcopy.get('acl', ''),
+                    'mmdb': configcopy.get('mmdb', ''),
                 }
             else:
                 routingObject = {
@@ -272,19 +272,19 @@ class CoreManager(SupportExitCleanup):
                 exitCallback=exitCallback, msgCallback=msgCallbackCore
             )
             success = coreProcess.start(
-                copy,
+                configcopy,
                 Hysteria1.rule(routingObject.get('rule', '')),
                 Hysteria1.mmdb(routingObject.get('mmdb', '')),
                 **kwargs,
             )
-        elif isinstance(copy, ConfigurationHysteria2):
+        elif isinstance(configcopy, ConfigurationHysteria2):
             if log:
                 logger.info(f'core {Hysteria2.name()} configured')
 
             coreProcess = Hysteria2(
                 exitCallback=exitCallback, msgCallback=msgCallbackCore
             )
-            success = coreProcess.start(copy, **kwargs)
+            success = coreProcess.start(configcopy, **kwargs)
         else:
             coreProcess = None
             success = False
@@ -338,16 +338,16 @@ class CoreManager(SupportExitCleanup):
                     APPLICATION_TUN_DEVICE_NAME,
                     APPLICATION_TUN_NETWORK_INTERFACE_NAME,
                     'info',
-                    f'socks5://{copy.socksProxyEndpoint()}',
+                    f'socks5://{configcopy.socksProxyEndpoint()}',
                     '',
                 ):
                     return False
 
-                address = copy.itemAddress
+                address = configcopy.itemAddress
 
                 if not isValidIPAddress(address):
                     error, resolved = DNSResolver.resolve(
-                        address, *parseHostPort(copy.httpProxyEndpoint())
+                        address, *parseHostPort(configcopy.httpProxyEndpoint())
                     )
 
                     if error:
