@@ -27,6 +27,7 @@ from typing import Union
 import io
 import time
 import threading
+import functools
 import multiprocessing
 
 __all__ = ['XrayCore']
@@ -48,7 +49,9 @@ def startXrayCore(jsonString: str, msgQueue: multiprocessing.Queue):
 
         if not isPythonw():
             return StdoutRedirectHelper.launch(
-                msgQueue, lambda: xray.startFromJSON(jsonString), redirect
+                msgQueue,
+                functools.partial(xray.startFromJSON, jsonString),
+                redirect,
             )
 
         if not redirect:
