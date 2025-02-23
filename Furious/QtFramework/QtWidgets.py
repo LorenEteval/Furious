@@ -51,6 +51,8 @@ __all__ = [
     'QuestionDeleteMBox',
     'NewChangesNextTimeMBox',
     'showNewChangesNextTimeMBox',
+    'UnrecognizedConfigMBox',
+    'showUnrecognizedConfigMBox',
 ]
 
 needTrans = functools.partial(needTransFn, source=__name__)
@@ -609,3 +611,28 @@ def showNewChangesNextTimeMBox(**kwargs):
         # Any non-exit exceptions
 
         pass
+
+
+needTrans(
+    'Unrecognized Configuration. Please modify it in the editor',
+)
+
+
+class UnrecognizedConfigMBox(AppQMessageBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setIcon(AppQMessageBox.Icon.Critical)
+        self.setText(_('Unrecognized Configuration. Please modify it in the editor'))
+
+
+def showUnrecognizedConfigMBox(**kwargs):
+    mbox = UnrecognizedConfigMBox(**kwargs)
+
+    if isinstance(mbox.parent(), QMainWindow):
+        mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+    else:
+        mbox.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+
+    # Show the MessageBox asynchronously
+    mbox.open()
