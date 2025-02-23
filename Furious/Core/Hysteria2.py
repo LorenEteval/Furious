@@ -26,6 +26,7 @@ from typing import Union
 
 import time
 import logging
+import functools
 import multiprocessing
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,9 @@ def startHysteria2(jsonString: str, msgQueue: multiprocessing.Queue):
             redirect = True
 
         StdoutRedirectHelper.launch(
-            msgQueue, lambda: hysteria2.startFromJSON(jsonString), redirect
+            msgQueue,
+            functools.partial(hysteria2.startFromJSON, jsonString),
+            redirect,
         )
 
 

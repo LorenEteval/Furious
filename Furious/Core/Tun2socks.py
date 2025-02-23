@@ -23,6 +23,7 @@ from Furious.Library import *
 from Furious.Utility import *
 
 import time
+import functools
 import multiprocessing
 
 __all__ = ['Tun2socks']
@@ -42,7 +43,9 @@ def startTun2socks(msgQueue: multiprocessing.Queue, *args):
             redirect = True
 
         StdoutRedirectHelper.launch(
-            msgQueue, lambda: tun2socks.startFromArgs(*args), redirect
+            msgQueue,
+            functools.partial(tun2socks.startFromArgs, *args),
+            redirect,
         )
 
 
