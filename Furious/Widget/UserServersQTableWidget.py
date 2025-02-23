@@ -921,7 +921,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         guiEditor = self.getGuiEditorByFactory(factory, translatable=False)
 
         if guiEditor is None:
-            # Unrecognized. Do nothing
+            # Unrecognized.
+            showUnrecognizedConfigMBox()
+
             return
 
         guiEditor.setWindowTitle(f'{index + 1} - ' + factory.getExtras('remark'))

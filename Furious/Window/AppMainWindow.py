@@ -248,6 +248,11 @@ class AppMainWindow(AppQMainWindow):
                     Protocol.Hysteria2, _('Add Hysteria2 Server...')
                 ),
             ),
+            AppQSeperator(),
+            AppQAction(
+                _('New Empty Configuration'),
+                callback=lambda: self.userServersQTableWidget.newEmptyItem(),
+            ),
         ]
 
         subsActions = [

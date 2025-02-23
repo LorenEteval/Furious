@@ -35,6 +35,14 @@ TRANSLATION = {
         "ZH": "新的更改将于下次生效",
         "isReviewed": "True"
     },
+    "Unrecognized Configuration. Please modify it in the editor": {
+        "source": [
+            "Furious.QtFramework.QtWidgets"
+        ],
+        "RU": "Нераспознанная конфигурация. Пожалуйста, измените его в редакторе",
+        "ZH": "无法识别的配置。请在编辑器中修改",
+        "isReviewed": "True"
+    },
     "New version available": {
         "source": [
             "Furious.QtFramework.UpdatesManager"
