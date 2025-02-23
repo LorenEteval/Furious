@@ -340,11 +340,11 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
         self.currentItem.setExtras('speedResult', 'Starting')
         self.updateResult()
 
-        copy = self.currentItem.deepcopy()
+        itemcopy = self.currentItem.deepcopy()
 
-        if isinstance(copy, ConfigurationXray):
+        if isinstance(itemcopy, ConfigurationXray):
             # Force redirect
-            copy['inbounds'] = [
+            itemcopy['inbounds'] = [
                 {
                     'tag': 'http',
                     'port': 20809,
@@ -366,7 +366,7 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
             ]
 
             try:
-                for outboundObject in copy['outbounds']:
+                for outboundObject in itemcopy['outbounds']:
                     if outboundObject['tag'] == 'proxy':
                         # Avoid confusion with potentially existing 'proxy' tag
                         outboundObject['tag'] = 'proxy20809'
@@ -376,7 +376,7 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
                 pass
 
             self.coreManager.start(
-                copy,
+                itemcopy,
                 'Global',
                 coreExitCallback,
                 msgCallbackCore=msgCallback,
@@ -384,20 +384,20 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
                 proxyModeOnly=True,
                 log=False,
             )
-        elif isinstance(copy, ConfigurationHysteria1) or isinstance(
-            copy, ConfigurationHysteria2
+        elif isinstance(itemcopy, ConfigurationHysteria1) or isinstance(
+            itemcopy, ConfigurationHysteria2
         ):
             # Force redirect
-            copy['http'] = {
+            itemcopy['http'] = {
                 'listen': '127.0.0.1:20809',
                 'timeout': 300,
                 'disable_udp': False,
             }
             # No socks inbounds
-            copy.pop('socks5', '')
+            itemcopy.pop('socks5', '')
 
             self.coreManager.start(
-                copy,
+                itemcopy,
                 'Global',
                 coreExitCallback,
                 msgCallbackCore=msgCallback,
@@ -459,7 +459,7 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
                     except Exception:
                         # Any non-exit exceptions
 
-                        error = 'Unknown Error'
+                        error = 'UnknownError'
 
                     if isinstance(error, bytes):
                         # Some old version PySide6 returns it as bytes. Protect it.
@@ -467,9 +467,9 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
                     elif isinstance(error, str):
                         errorString = error
                     else:
-                        errorString = 'Unknown Error'
+                        errorString = 'UnknownError'
 
-                    if errorString.endswith('Error'):
+                    if errorString != 'UnknownError' and errorString.endswith('Error'):
                         self.currentItem.setExtras('speedResult', errorString[:-5])
                     else:
                         self.currentItem.setExtras('speedResult', errorString)
@@ -968,7 +968,8 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         editor.accepted.disconnect()
         editor.rejected.disconnect()
 
-    def handleGuiEditorRejected(self, editor: GuiEditorWidgetQDialog):
+    @staticmethod
+    def handleGuiEditorRejected(editor: GuiEditorWidgetQDialog):
         editor.accepted.disconnect()
         editor.rejected.disconnect()
 
@@ -1026,7 +1027,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         newItem = QTableWidgetItem(header(item))
 
         if oldItem is None:
-            # Item does not exists
+            # Item does not exist
             newItem.setFont(QFont(APP().customFontName))
 
             if str(header) == 'Latency' or str(header) == 'Speed':
