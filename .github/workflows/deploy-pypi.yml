@@ -71,7 +71,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-2022, macos-13, macos-14]
-        python-version: ["3.12"]
+        python-version: ["3.13"]
     env:
       # Last PySide6 version that supports macOS 10.9 & Python 3.11
       PYSIDE6_LEGACY_VERSION: "6.4.3"
