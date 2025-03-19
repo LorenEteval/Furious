@@ -34,19 +34,6 @@ __all__ = ['XrayAssetViewerWindow']
 
 logger = logging.getLogger(__name__)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans(
-    'Xray-core Asset File',
-    'Refresh',
-    'Open Asset Directory',
-    'Import From File...',
-    'Exit',
-    'File',
-    'Import File',
-    'All files (*)',
-)
-
 
 class XrayAssetViewerWindow(AppQMainWindow):
     def __init__(self, *args, **kwargs):

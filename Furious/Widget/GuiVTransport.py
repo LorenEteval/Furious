@@ -30,8 +30,6 @@ from typing import Callable
 
 __all__ = ['GuiVTransportQGroupBox']
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 STREAM_NETWORK = [
     'tcp',
     'kcp',
@@ -1438,11 +1436,6 @@ class GuiVTransportPageStackedWidget(QStackedWidget):
     def connectActivated(self, func: Callable):
         for page in self._pages:
             page.connectActivated(func)
-
-
-needTrans(
-    'Transport',
-)
 
 
 class GuiVTransportQGroupBox(GuiEditorItemFactory, AppQGroupBox):

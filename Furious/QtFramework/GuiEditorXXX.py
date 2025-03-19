@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 from Furious.Interface import *
-from Furious.QtFramework.DynamicTranslate import gettext as _, needTransFn
+from Furious.QtFramework.DynamicTranslate import gettext as _
 from Furious.QtFramework.QtWidgets import *
 from Furious.Utility import *
 
@@ -39,8 +39,6 @@ __all__ = [
     'GuiEditorWidgetQGroupBox',
     'GuiEditorWidgetQDialog',
 ]
-
-needTrans = functools.partial(needTransFn, source=__name__)
 
 
 class GuiEditorItemTextInput(GuiEditorItemWidgetContainer):
@@ -309,9 +307,6 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
         # self.setLayout(layout)
 
 
-needTrans('Cancel')
-
-
 class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
     def __init__(self, *args, **kwargs):
         tabText = kwargs.pop('tabText', '')
@@ -330,6 +325,7 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
         self.groupBoxes = self.groupBoxSequence()
 
         for index, groupBox in enumerate(self.groupBoxes):
+            # TODO: Layout
             self.tabCentralWidgetLayout.addWidget(groupBox, index // 2, index % 2)
 
         self.tabCentralWidget.setLayout(self.tabCentralWidgetLayout)

@@ -23,10 +23,6 @@ import functools
 
 __all__ = ['ExitAction']
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans('Exit')
-
 
 class ExitAction(AppQAction):
     def __init__(self, **kwargs):

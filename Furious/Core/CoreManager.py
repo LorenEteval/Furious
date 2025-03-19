@@ -34,13 +34,6 @@ __all__ = ['CoreManager']
 
 logger = logging.getLogger(__name__)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans(
-    'Unable to connect',
-    'Routing option with direct rules is not allowed in VPN mode',
-)
-
 
 def fixLogObjectPath(config: ConfigurationFactory, attr: str, value: str, log=True):
     try:

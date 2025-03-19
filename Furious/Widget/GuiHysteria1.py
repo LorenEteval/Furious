@@ -33,8 +33,6 @@ __all__ = ['GuiHysteria1']
 
 logger = logging.getLogger(__name__)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 class GuiHy1ItemTextInput(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
@@ -217,9 +215,6 @@ class GuiHy1ItemTLSInsecure(GuiEditorItemTextCheckBox):
         self.setChecked(checked)
 
 
-needTrans('Project Website')
-
-
 class GuiHy1ProjectWebsiteURL(AppQLabel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -247,14 +242,6 @@ class GuiHy1ProjectWebsiteURL(AppQLabel):
         self.setWebsiteURL()
 
 
-needTrans(
-    'Basic Configuration',
-    'Remark',
-    'Server',
-    'Protocol',
-)
-
-
 class GuiHy1GroupBoxBasic(GuiEditorWidgetQGroupBox):
     def __init__(self, **kwargs):
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -269,9 +256,6 @@ class GuiHy1GroupBoxBasic(GuiEditorWidgetQGroupBox):
         ]
 
 
-needTrans('Proxy')
-
-
 class GuiHy1GroupBoxProxy(GuiEditorWidgetQGroupBox):
     def __init__(self, **kwargs):
         super().__init__(_('Proxy'), **kwargs)
@@ -281,9 +265,6 @@ class GuiHy1GroupBoxProxy(GuiEditorWidgetQGroupBox):
             GuiEditorItemProxyHttp(title='http', translatable=False),
             GuiEditorItemProxySocks(title='socks', translatable=False),
         ]
-
-
-needTrans('Speed')
 
 
 class GuiHy1GroupBoxSpeed(GuiEditorWidgetQGroupBox):
@@ -310,9 +291,6 @@ class GuiHy1GroupBoxTLS(GuiEditorWidgetQGroupBox):
             GuiHy1ItemTextInput(title='ca', translatable=False, key='ca'),
             GuiHy1ItemTLSInsecure(title='insecure', translatable=False),
         ]
-
-
-needTrans('Other')
 
 
 class GuiHy1GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):

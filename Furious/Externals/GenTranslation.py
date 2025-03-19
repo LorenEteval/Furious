@@ -4,8 +4,8 @@ TRANSLATION = {
             "Furious.QtFramework.QtWidgets",
             "Furious.Widget.UserServersQTableWidget",
             "Furious.Widget.UserSubsQTableWidget",
-            "Furious.Window.UserSubsWindow",
-            "Furious.Widget.XrayAssetViewerQListWidget"
+            "Furious.Widget.XrayAssetViewerQListWidget",
+            "Furious.Window.UserSubsWindow"
         ],
         "RU": "Удалить",
         "ZH": "删除",
@@ -252,8 +252,8 @@ TRANSLATION = {
     },
     "Save As...": {
         "source": [
-            "Furious.Window.TextEditorWindow",
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogViewerWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Сохранить как...",
         "ZH": "另存为...",
@@ -261,7 +261,7 @@ TRANSLATION = {
     },
     "Close Window": {
         "source": [
-            "Furious.Window.TextEditorWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Закрыть окно",
         "ZH": "关闭窗口",
@@ -269,8 +269,8 @@ TRANSLATION = {
     },
     "File": {
         "source": [
-            "Furious.Window.TextEditorWindow",
             "Furious.Window.LogViewerWindow",
+            "Furious.Window.TextEditorWindow",
             "Furious.Window.XrayAssetViewerWindow"
         ],
         "RU": "Файл",
@@ -303,8 +303,8 @@ TRANSLATION = {
     },
     "Copy": {
         "source": [
-            "Furious.Window.TextEditorWindow",
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogViewerWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Копировать",
         "ZH": "复制",
@@ -320,9 +320,9 @@ TRANSLATION = {
     },
     "Select All": {
         "source": [
-            "Furious.Window.TextEditorWindow",
             "Furious.Widget.UserServersQTableWidget",
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogViewerWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Выбрать все",
         "ZH": "全选",
@@ -338,8 +338,8 @@ TRANSLATION = {
     },
     "Edit": {
         "source": [
-            "Furious.Window.TextEditorWindow",
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogViewerWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Редактировать",
         "ZH": "编辑",
@@ -347,8 +347,8 @@ TRANSLATION = {
     },
     "Zoom In": {
         "source": [
-            "Furious.Window.TextEditorWindow",
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogViewerWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Увеличить маштаб",
         "ZH": "变大",
@@ -356,8 +356,8 @@ TRANSLATION = {
     },
     "Zoom Out": {
         "source": [
-            "Furious.Window.TextEditorWindow",
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogViewerWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Уменьшить маштаб",
         "ZH": "变小",
@@ -365,8 +365,8 @@ TRANSLATION = {
     },
     "View": {
         "source": [
-            "Furious.Window.TextEditorWindow",
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogViewerWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Вид",
         "ZH": "显示",
@@ -382,8 +382,8 @@ TRANSLATION = {
     },
     "Save File": {
         "source": [
-            "Furious.Window.TextEditorWindow",
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogViewerWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Сохранить файл",
         "ZH": "保存文件",
@@ -399,8 +399,8 @@ TRANSLATION = {
     },
     "Invalid server configuration": {
         "source": [
-            "Furious.Window.TextEditorWindow",
-            "Furious.TrayActions.Connect"
+            "Furious.TrayActions.Connect",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Неверная конфигурация сервера",
         "ZH": "无效的服务器配置",
@@ -418,8 +418,11 @@ TRANSLATION = {
         "source": [
             "Furious.Widget.GuiHysteria1",
             "Furious.Widget.GuiHysteria2",
-            "Furious.Widget.UserServersQTableWidget",
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiTrojan",
+            "Furious.Widget.GuiVLESS",
+            "Furious.Widget.GuiVMess",
+            "Furious.Widget.UserServersQTableWidget"
         ],
         "RU": "Примечание",
         "ZH": "别名",
@@ -567,7 +570,8 @@ TRANSLATION = {
     },
     "New Empty Configuration": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableWidget",
+            "Furious.Window.AppMainWindow"
         ],
         "RU": "Создать новую пустую конфигурацию",
         "ZH": "新建空白配置",
@@ -599,8 +603,8 @@ TRANSLATION = {
     },
     "Connecting": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget",
-            "Furious.TrayActions.Connect"
+            "Furious.TrayActions.Connect",
+            "Furious.Widget.UserServersQTableWidget"
         ],
         "RU": "Подключение",
         "ZH": "正在连接",
@@ -672,9 +676,9 @@ TRANSLATION = {
     },
     "Exit": {
         "source": [
+            "Furious.TrayActions.Exit",
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.XrayAssetViewerWindow",
-            "Furious.TrayActions.Exit"
+            "Furious.Window.XrayAssetViewerWindow"
         ],
         "RU": "Выход",
         "ZH": "退出",
@@ -864,7 +868,7 @@ TRANSLATION = {
         ],
         "RU": "Открыть папку приложения",
         "ZH": "打开应用程序文件夹",
-        "isReviewed": "True",
+        "isReviewed": "True"
     },
     "Check For Updates": {
         "source": [
@@ -1359,6 +1363,17 @@ TRANSLATION = {
         ],
         "RU": "Режим энергосбережения",
         "ZH": "省电模式",
+        "isReviewed": "True"
+    },
+    "OK": {
+        "source": [
+            "Furious.__main__",
+            "Furious.QtFramework.GuiEditorXXX",
+            "Furious.Widget.IndentSpinBox",
+            "Furious.Window.UserSubsWindow"
+        ],
+        "RU": "OK",
+        "ZH": "OK",
         "isReviewed": "True"
     }
 }

@@ -26,8 +26,6 @@ from Furious.Widget.GuiVTLS import *
 
 __all__ = ['GuiVMess']
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 def getProxyOutboundObject(config: ConfigurationFactory) -> dict:
     if not isinstance(config.get('outbounds'), list):
@@ -293,13 +291,6 @@ class GuiVMessItemBasicSecurity(GuiEditorItemTextComboBox):
             self.setText('')
 
 
-needTrans(
-    'Basic Configuration',
-    'Address',
-    'Port',
-)
-
-
 class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
     def __init__(self, **kwargs):
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -313,9 +304,6 @@ class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
             GuiVMessItemBasicAlterId(title='AlterId', translatable=False),
             GuiVMessItemBasicSecurity(title='Security', translatable=False),
         ]
-
-
-needTrans('Proxy')
 
 
 class GuiVMessGroupBoxProxy(GuiEditorWidgetQGroupBox):

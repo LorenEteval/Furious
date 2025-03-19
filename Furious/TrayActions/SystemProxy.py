@@ -27,8 +27,6 @@ BUILTIN_PROXY_MODE = ['Auto', 'NoChanges']
 
 registerAppSettings('SystemProxyMode', validRange=BUILTIN_PROXY_MODE)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 class SystemProxyChildAction(AppQAction):
     def __init__(self, *args, **kwargs):
@@ -39,13 +37,6 @@ class SystemProxyChildAction(AppQAction):
             AppSettings.set('SystemProxyMode', 'Auto')
         elif self.textCompare('Do Not Change System Proxy'):
             AppSettings.set('SystemProxyMode', 'NoChanges')
-
-
-needTrans(
-    'System Proxy',
-    'Automatically Configure System Proxy',
-    'Do Not Change System Proxy',
-)
 
 
 class SystemProxyAction(AppQAction):

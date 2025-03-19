@@ -53,8 +53,6 @@ logger = logging.getLogger(__name__)
 registerAppSettings('ActivatedItemIndex')
 registerAppSettings('ServerWidgetSectionSizeTable')
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 class SubscriptionManager(AppQNetworkAccessManager):
     def __init__(self, parent):
@@ -584,35 +582,18 @@ class UserServersQTableWidgetHeaders:
         return self.name
 
 
-needTrans(
-    'Remark',
-    'Protocol',
-    'Address',
-    'Port',
-    'Transport',
-    'TLS',
-    'Subscription',
-    'Latency',
-    'Speed',
-    'Customize JSON Configuration...',
-    'Move Up',
-    'Move Down',
-    'Duplicate',
-    'Delete',
-    'Select All',
-    'Scroll To Activated Server',
-    'Test Ping Latency',
-    'Test Tcping Latency',
-    'Test Download Speed',
-    'Clear Test Results',
-    'New Empty Configuration',
-    'Export Share Link To Clipboard',
-    'Export As QR Code',
-    'Export JSON Configuration To Clipboard',
-    'Connecting',
-    'Connecting. Please wait',
-    'Untitled',
-)
+# ALL Headers VALUE
+TRANSLATABLE_HEADERS = [
+    _('Remark'),
+    _('Protocol'),
+    _('Address'),
+    _('Port'),
+    _('Transport'),
+    _('TLS'),
+    _('Subscription'),
+    _('Latency'),
+    _('Speed'),
+]
 
 
 class UserServersQTableWidget(QTranslatable, AppQTableWidget):
@@ -857,7 +838,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         if APP().systemTray.ConnectAction.isConnecting():
             mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
             mbox.setWindowTitle(_('Connecting'))
-            mbox.setText(_('Connecting. Please wait'))
+            mbox.setText(_('Connecting. Please wait...'))
 
             if PLATFORM != 'Darwin':
                 # Show the MessageBox asynchronously

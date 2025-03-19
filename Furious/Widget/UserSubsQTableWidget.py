@@ -36,8 +36,6 @@ __all__ = ['UserSubsQTableWidget']
 
 registerAppSettings('SubscriptionWidgetSectionSizeTable')
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 class UserSubsQTableWidgetHorizontalHeader(AppQHeaderView):
     def __init__(self, *args, **kwargs):
@@ -65,12 +63,6 @@ class UserSubsQTableWidgetHeaders:
 
     def __str__(self):
         return self.name
-
-
-needTrans(
-    'Remark',
-    'Delete',
-)
 
 
 class UserSubsQTableWidget(QTranslatable, AppQTableWidget):

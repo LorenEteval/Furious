@@ -44,8 +44,6 @@ logger = logging.getLogger(__name__)
 
 registerAppSettings('ServerWidgetWindowSize')
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 def connectedHttpProxyEndpoint() -> Union[str, None]:
     try:
@@ -127,32 +125,6 @@ class AppNetworkStateManager(NetworkStateManager):
             parent.resetNetworkState()
 
         self.stopTest()
-
-
-needTrans(
-    'Server',
-    'Add VMess Server...',
-    'Add VLESS Server...',
-    'Add Shadowsocks Server...',
-    'Add Trojan Server...',
-    'Add Hysteria1 Server...',
-    'Add Hysteria2 Server...',
-    'Subscription',
-    'Update Subscription (Use Current Proxy)',
-    'Update Subscription (Force Proxy)',
-    'Update Subscription (No Proxy)',
-    'Edit Subscription...',
-    'Log',
-    'Show Furious Log',
-    'Show Core Log',
-    'Show Tun2socks Log',
-    'Tools',
-    'Manage Xray-core Asset File...',
-    'Open Application Folder',
-    'Check For Updates',
-    'About',
-    'Help',
-)
 
 
 class AppMainWindow(AppQMainWindow):
@@ -392,6 +364,15 @@ class AppMainWindow(AppQMainWindow):
                     ),
                 ],
             }
+
+            # Corresponds to menus defined above
+            TRANSLATABLE_MENU_NAME = [
+                _('Log'),
+                _('Server'),
+                _('Subscription'),
+                _('Tools'),
+                _('Help'),
+            ]
 
             # Menus
             for menuDict in (logMenu, serverMenu, subsMenu, toolsMenu, helpMenu):

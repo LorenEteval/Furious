@@ -37,8 +37,6 @@ __all__ = ['XrayAssetViewerQListWidget']
 
 logger = logging.getLogger(__name__)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 class AssetExistsMBox(AppQMessageBox):
     def __init__(self, *args, **kwargs):
@@ -55,15 +53,6 @@ class AssetExistsMBox(AppQMessageBox):
         # Ignore informative text, buttons
 
         self.moveToCenter()
-
-
-needTrans(
-    'Delete',
-    'Import',
-    'Asset file already exists. Overwrite?',
-    'Error import asset file',
-    'Import asset file success',
-)
 
 
 class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):

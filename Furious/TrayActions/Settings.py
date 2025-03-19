@@ -35,13 +35,11 @@ registerAppSettings(
 )
 registerAppSettings('ShowTabAndSpacesInEditor', isBinary=True)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans(
-    'VPN Mode',
-    'VPN Mode Disabled (Administrator)',
-    'VPN Mode Disabled (root)',
-)
+# Administrator, root
+TRANSLATABLE_VPN_MODE = [
+    _('VPN Mode Disabled (Administrator)'),
+    _('VPN Mode Disabled (root)'),
+]
 
 
 class VPNModeAction(AppQAction):
@@ -132,17 +130,6 @@ class SettingsChildAction(AppQAction):
                 APP().mainWindow.hideTabAndSpaces()
 
                 AppSettings.turnOFF('ShowTabAndSpacesInEditor')
-
-
-needTrans(
-    'Settings',
-    'Dark Mode',
-    'Use Monochrome Tray Icon',
-    'Startup On Boot',
-    'Power Save Mode',
-    'Show Progress Bar When Connecting',
-    'Show Tab And Spaces In Editor',
-)
 
 
 class SettingsAction(AppQAction):

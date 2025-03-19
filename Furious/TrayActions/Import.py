@@ -36,13 +36,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans(
-    'Invalid data',
-    'Invalid data. The content of the clipboard is:',
-)
-
 
 def showImportErrorMBox(clipboard: str):
     mbox = ImportErrorMBox(icon=AppQMessageBox.Icon.Critical)
@@ -75,9 +68,6 @@ def importItemFromClipboard(clipboard: str):
         mbox.open()
 
 
-needTrans('Import')
-
-
 class ImportErrorMBox(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -91,13 +81,6 @@ class ImportErrorMBox(AppQMessageBox):
         # Ignore informative text, buttons
 
         self.moveToCenter()
-
-
-needTrans(
-    'Import',
-    'Import share link success',
-    'Imported to row',
-)
 
 
 class ImportMultiSuccessMBox(AppQMessageBox):
@@ -139,12 +122,6 @@ class ImportMultiSuccessMBox(AppQMessageBox):
         self.moveToCenter()
 
 
-needTrans(
-    'Import',
-    'Import success',
-)
-
-
 class ImportSuccessMBox(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -165,16 +142,6 @@ class ImportSuccessMBox(AppQMessageBox):
         # Ignore informative text, buttons
 
         self.moveToCenter()
-
-
-needTrans(
-    'Import From File...',
-    'Import File',
-    'Text files (*.json);;All files (*)',
-    'Error opening file',
-    'Invalid configuration file',
-    'Invalid data',
-)
 
 
 class ImportFromFileAction(AppQAction):
@@ -227,9 +194,6 @@ class ImportFromFileAction(AppQAction):
                     mbox.open()
 
 
-needTrans('Import Share Link From Clipboard')
-
-
 class ImportURIFromClipboardAction(AppQAction):
     def __init__(self, **kwargs):
         super().__init__(_('Import Share Link From Clipboard'), **kwargs)
@@ -276,9 +240,6 @@ class ImportURIFromClipboardAction(AppQAction):
                     mbox.open()
 
 
-needTrans('Import JSON Configuration From Clipboard')
-
-
 class ImportJSONFromClipboardAction(AppQAction):
     def __init__(self, **kwargs):
         super().__init__(_('Import JSON Configuration From Clipboard'), **kwargs)
@@ -287,9 +248,6 @@ class ImportJSONFromClipboardAction(AppQAction):
         clipboard = QApplication.clipboard().text().strip()
 
         importItemFromClipboard(clipboard)
-
-
-needTrans('Import')
 
 
 class ImportAction(AppQAction):

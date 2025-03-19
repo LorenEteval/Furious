@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from Furious.QtFramework.QtNetwork import *
 from Furious.QtFramework.QtWidgets import *
-from Furious.QtFramework.DynamicTranslate import gettext as _, needTransFn
+from Furious.QtFramework.DynamicTranslate import gettext as _
 from Furious.Utility import *
 from Furious.Library import *
 
@@ -36,10 +36,6 @@ import functools
 __all__ = ['UpdatesManager']
 
 logger = logging.getLogger(__name__)
-
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans('New version available')
 
 
 class QuestionUpdateMBox(AppQMessageBox):
@@ -63,13 +59,6 @@ class QuestionUpdateMBox(AppQMessageBox):
         # Ignore button text
 
         self.moveToCenter()
-
-
-needTrans(
-    'Check for updates failed',
-    'Go to download page?',
-    f'{APPLICATION_NAME} is already the latest version',
-)
 
 
 class UpdatesManager(AppQNetworkAccessManager):

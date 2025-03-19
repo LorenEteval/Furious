@@ -23,10 +23,6 @@ import functools
 
 __all__ = ['EditConfigurationAction']
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans('Edit Configuration...')
-
 
 class EditConfigurationAction(AppQAction):
     def __init__(self, **kwargs):

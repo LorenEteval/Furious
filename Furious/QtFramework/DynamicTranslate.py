@@ -25,11 +25,9 @@ import functools
 
 __all__ = [
     'gettext',
-    'needTransFn',
     'LANGUAGE_TO_ABBR',
     'ABBR_TO_LANGUAGE',
     'SUPPORTED_LANGUAGE',
-    'TranslationPool',
 ]
 
 
@@ -74,9 +72,11 @@ def installTranslation(translation):
 
 def gettext(source, locale=None):
     if locale is None:
-        assert APP() is not None
-
-        return translator.translate(source, AppSettings.get('Language'))
+        if APP() is None:
+            # Normally should not reach here if performing a translation
+            return source
+        else:
+            return translator.translate(source, AppSettings.get('Language'))
     else:
         assert locale in SUPPORTED_LANGUAGE
 
@@ -95,19 +95,3 @@ ABBR_TO_LANGUAGE = {value: key for key, value in LANGUAGE_TO_ABBR.items()}
 SUPPORTED_LANGUAGE = list(LANGUAGE_TO_ABBR.values())
 
 installTranslation(TRANSLATION)
-
-
-class TranslatorHelper:
-    TranslationPool = list()
-
-    @staticmethod
-    def appendText(*texts, **kwargs):
-        source = kwargs.pop('source', '')
-
-        for text in texts:
-            if isinstance(text, str):
-                TranslatorHelper.TranslationPool.append([text, source])
-
-
-needTransFn = functools.partial(TranslatorHelper.appendText)
-TranslationPool = TranslatorHelper.TranslationPool

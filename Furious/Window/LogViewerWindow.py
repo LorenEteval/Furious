@@ -27,10 +27,6 @@ import functools
 
 __all__ = ['LogViewerWindow']
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans('Unable to save log')
-
 
 class SaveErrorMBox(AppQMessageBox):
     def __init__(self, *args, **kwargs):
@@ -53,13 +49,6 @@ class SaveErrorMBox(AppQMessageBox):
         self.moveToCenter()
 
 
-needTrans(
-    'Save File',
-    'Text files (*.txt);;All files (*)',
-    'Error saving log',
-)
-
-
 def saveAsFile(content: str):
     filename, selectedFilter = QFileDialog.getSaveFileName(
         None, _('Save File'), filter=_('Text files (*.txt);;All files (*)')
@@ -79,20 +68,6 @@ def saveAsFile(content: str):
 
             # Show the MessageBox asynchronously
             mbox.open()
-
-
-needTrans(
-    'Log Viewer',
-    'Save As...',
-    'Exit',
-    'File',
-    'Copy',
-    'Select All',
-    'Edit',
-    'Zoom In',
-    'Zoom Out',
-    'View',
-)
 
 
 class LogViewerWindow(AppQMainWindow):

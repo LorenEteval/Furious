@@ -28,8 +28,6 @@ from typing import Callable
 
 __all__ = ['GuiVTLSQGroupBox']
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 STREAM_SECURITY = [
     '',
     'none',
