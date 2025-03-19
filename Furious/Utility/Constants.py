@@ -53,10 +53,11 @@ GOLDEN_RATIO = (math.sqrt(5) + 1) / 2
 PROXY_OUTBOUND_USER_EMAIL = f'user@{ORGANIZATION_DOMAIN}'
 
 ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
-DATA_DIR = ROOT_DIR / APPLICATION_NAME / 'Data'
+PACKAGE_DIR = ROOT_DIR / APPLICATION_NAME
+DATA_DIR = PACKAGE_DIR / 'Data'
 XRAY_ASSET_DIR = DATA_DIR / 'xray'
-CRASH_LOG_DIR = ROOT_DIR / APPLICATION_NAME / 'CrashLog'
-GEN_TRANSLATION_FILE = ROOT_DIR / APPLICATION_NAME / 'Externals' / 'GenTranslation.py'
+CRASH_LOG_DIR = PACKAGE_DIR / 'CrashLog'
+GEN_TRANSLATION_FILE = PACKAGE_DIR / 'Externals' / 'GenTranslation.py'
 
 PROXY_SERVER_BYPASS = (
     'localhost;*.local;127.*;10.*;172.16.*;172.17.*;'

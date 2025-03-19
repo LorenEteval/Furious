@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from Furious.QtFramework.Ancestors import *
 from Furious.QtFramework.DynamicTheme import AppHue
-from Furious.QtFramework.DynamicTranslate import gettext as _, needTransFn
+from Furious.QtFramework.DynamicTranslate import gettext as _
 from Furious.QtFramework.QtGui import AppQAction, AppQSeperator
 from Furious.PyFramework import *
 from Furious.Utility import *
@@ -54,8 +54,6 @@ __all__ = [
     'UnrecognizedConfigMBox',
     'showUnrecognizedConfigMBox',
 ]
-
-needTrans = functools.partial(needTransFn, source=__name__)
 
 
 def moveToCenter(widget, parent=None):
@@ -550,13 +548,6 @@ class AppQToolBar(QTranslatable, QToolBar):
         self.setWindowTitle(_(self.windowTitle()))
 
 
-needTrans(
-    'Delete',
-    'Delete these items?',
-    'Delete this item?',
-)
-
-
 class QuestionDeleteMBox(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -584,9 +575,6 @@ class QuestionDeleteMBox(AppQMessageBox):
         self.moveToCenter()
 
 
-needTrans('New changes will take effect next time')
-
-
 class NewChangesNextTimeMBox(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -611,11 +599,6 @@ def showNewChangesNextTimeMBox(**kwargs):
         # Any non-exit exceptions
 
         pass
-
-
-needTrans(
-    'Unrecognized Configuration. Please modify it in the editor',
-)
 
 
 class UnrecognizedConfigMBox(AppQMessageBox):

@@ -27,14 +27,6 @@ import functools
 
 __all__ = ['IndentSpinBox']
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans(
-    'Set Indent',
-    'Indent:',
-    'Cancel',
-)
-
 
 class IndentSpinBox(AppQDialog):
     def __init__(self, parent=None):

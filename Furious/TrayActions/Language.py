@@ -35,8 +35,6 @@ registerAppSettings(
     'Language', validRange=SUPPORTED_LANGUAGE, default=SMART_CHOSEN_LANGUAGE
 )
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 class LanguageChildAction(AppQAction):
     def __init__(self, *args, **kwargs):
@@ -55,9 +53,6 @@ class LanguageChildAction(AppQAction):
     def retranslate(self):
         # Nothing to do
         pass
-
-
-needTrans('Language')
 
 
 class LanguageAction(AppQAction):

@@ -33,8 +33,6 @@ __all__ = ['GuiHysteria2']
 
 logger = logging.getLogger(__name__)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
@@ -355,13 +353,6 @@ class GuiHy2ItemTLSInsecure(GuiEditorItemTextCheckBox):
         self.setChecked(checked)
 
 
-needTrans(
-    'Basic Configuration',
-    'Remark',
-    'Server',
-)
-
-
 class GuiHy2GroupBoxBasic(GuiEditorWidgetQGroupBox):
     def __init__(self, **kwargs):
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -372,9 +363,6 @@ class GuiHy2GroupBoxBasic(GuiEditorWidgetQGroupBox):
             GuiHy2ItemBasicServer(title=_('Server')),
             GuiHy2ItemBasicAuth(title='auth', translatable=False),
         ]
-
-
-needTrans('Proxy')
 
 
 class GuiHy2GroupBoxProxy(GuiEditorWidgetQGroupBox):
@@ -418,9 +406,6 @@ class GuiHy2GroupBoxTLS(GuiEditorWidgetQGroupBox):
         ]
 
 
-needTrans('Project Website')
-
-
 class GuiHy2ProjectWebsiteURL(AppQLabel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -446,9 +431,6 @@ class GuiHy2ProjectWebsiteURL(AppQLabel):
 
     def retranslate(self):
         self.setWebsiteURL()
-
-
-needTrans('Other')
 
 
 class GuiHy2GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):

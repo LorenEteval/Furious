@@ -26,8 +26,6 @@ from Furious.Widget.GuiVTLS import *
 
 __all__ = ['GuiTrojan']
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 def getProxyOutboundObject(config: ConfigurationFactory) -> dict:
     if not isinstance(config.get('outbounds'), list):
@@ -161,14 +159,6 @@ class GuiTrojanItemBasicPort(GuiEditorItemTextSpinBox):
             self.setValue(0)
 
 
-needTrans(
-    'Basic Configuration',
-    'Address',
-    'Port',
-    'Password',
-)
-
-
 class GuiTrojanGroupBoxBasic(GuiEditorWidgetQGroupBox):
     def __init__(self, **kwargs):
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -180,9 +170,6 @@ class GuiTrojanGroupBoxBasic(GuiEditorWidgetQGroupBox):
             GuiTrojanItemBasicPort(title=_('Port')),
             GuiTrojanItemTextInput(title=_('Password'), key='password'),
         ]
-
-
-needTrans('Proxy')
 
 
 class GuiTrojanGroupBoxProxy(GuiEditorWidgetQGroupBox):

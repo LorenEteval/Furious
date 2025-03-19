@@ -38,27 +38,6 @@ logger = logging.getLogger(__name__)
 
 registerAppSettings('Connect', isBinary=True)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans(
-    'Connect',
-    'Connecting',
-    'Disconnect',
-    'Unable to connect',
-    'Server configuration empty. Please configure your server first',
-    'Select and press Enter to activate configuration and connect',
-    f'{APPLICATION_NAME} cannot find any valid http proxy '
-    f'endpoint in the configuration',
-    'Please complete your server configuration',
-    'Connected',
-    'Unknown error',
-    'Invalid server configuration',
-    'Failed to start core',
-    'Connection to server has been lost',
-    'Core terminated unexpectedly',
-    'Disconnected',
-)
-
 
 def validateProxyServer(server) -> bool:
     try:
@@ -237,8 +216,7 @@ class ConnectAction(AppQAction):
             mbox.setWindowTitle(_('Unable to connect'))
             mbox.setText(
                 _(
-                    f'{APPLICATION_NAME} cannot find any valid http proxy '
-                    f'endpoint in the configuration'
+                    f'{APPLICATION_NAME} cannot find any valid http proxy endpoint in the configuration'
                 )
             )
             mbox.setInformativeText(_('Please complete your server configuration'))

@@ -17,23 +17,20 @@
 
 from __future__ import annotations
 
-from Furious.Core import *
-from Furious.Interface import *
 from Furious.Library import *
 from Furious.Utility import *
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.Storage import *
-from Furious.TrayActions import *
-from Furious.Widget import *
-from Furious.Window import *
-from Furious.__main__ import *
 from Furious.Externals import *
 
+import os
+import re
 import copy
-import deepl
+
+# import deepl
 import logging
 import argparse
+import functools
+
+import Furious
 
 logging.basicConfig(
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
@@ -44,9 +41,32 @@ logging.raiseExceptions = False
 logger = logging.getLogger('Translation')
 
 
+@functools.lru_cache(None)
+def getAppSourceCodePath(path):
+    # Walk through the directory tree
+    for dirpath, dirnames, filenames in os.walk(path):
+        # Check if __init__.py exists in the current directory
+        if '__init__.py' in filenames:
+            for filename in filenames:
+                yield os.path.join(dirpath, filename)
+
+
+@functools.lru_cache(None)
+def getMagicNameFromPath(path):
+    return os.path.relpath(path, ROOT_DIR).removesuffix('.py').replace(os.sep, '.')
+
+
+@functools.lru_cache(None)
+def getAppConstantsByName(name):
+    return getattr(Furious.Utility.Constants, name)
+
+
+APPLICATION_SOURCE_CODE_PATH = getAppSourceCodePath(PACKAGE_DIR)
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-k', '--key', help='DeepL auth key', required=True)
+    # parser.add_argument('-k', '--key', help='DeepL auth key', required=True)
     parser.add_argument(
         '-t', '--target', help='Target translation language', required=True
     )
@@ -68,14 +88,40 @@ def main():
         # Reset source
         translation[key]['source'] = []
 
-    for text, source in TranslationPool:
-        if text not in translation:
-            translation[text] = {'source': [source]}
-        else:
-            unit = translation[text]
+    for sourceCodePath in APPLICATION_SOURCE_CODE_PATH:
+        with open(sourceCodePath, 'r', encoding='utf-8') as file:
+            content = file.read()
 
-            if source not in unit['source']:
-                unit['source'].append(source)
+        magicName = getMagicNameFromPath(sourceCodePath)
+
+        pattern = r"(?<![a-zA-Z])_\(\s*f?\s*(?:'([^']*)'|\"([^\"]*)\")\s*\)"
+        matches = re.findall(pattern, content)
+
+        if matches:
+            match = [m[0] or m[1] for m in matches]
+
+            for source in match:
+                foundBraces = True
+
+                while foundBraces:
+                    lBraceIndex = source.find('{')
+                    rBraceIndex = source.find('}')
+
+                    if lBraceIndex >= 0 and rBraceIndex >= 0:
+                        parsed = source[lBraceIndex + 1 : rBraceIndex]
+
+                        source = source.replace(
+                            source[lBraceIndex : rBraceIndex + 1],
+                            getAppConstantsByName(parsed),
+                        )
+                    else:
+                        foundBraces = False
+
+                if source not in translation:
+                    translation[source] = {'source': [magicName]}
+                else:
+                    if magicName not in translation[source]['source']:
+                        translation[source]['source'].append(magicName)
 
     nonexist = []
 
@@ -88,7 +134,7 @@ def main():
         # Key with no source, remove
         translation.pop(key, None)
 
-    translator = deepl.Translator(args.key, send_platform_info=False, proxy=proxy)
+    # translator = deepl.Translator(args.key, send_platform_info=False, proxy=proxy)
 
     for text in translation.keys():
         # Remove redundant EN translation
@@ -103,21 +149,21 @@ def main():
                 f'skip reviewed translation: \'{text}\' --{target}--> \'{targetText}\''
             )
         else:
-            result = translator.translate_text(
-                text,
-                source_lang='EN',
-                target_lang=target,
-                context=(
-                    f'\'{APPLICATION_NAME}\' is application name. '
-                    'Please do not translate this word'
-                ),
-            )
-
-            logger.info(
-                f'query translation: \'{text}\' --{target}--> \'{result.text}\''
-            )
-
-            translation[text][target] = result.text
+            # result = translator.translate_text(
+            #     text,
+            #     source_lang='EN',
+            #     target_lang=target,
+            #     context=(
+            #         f'\'{APPLICATION_NAME}\' is application name. '
+            #         'Please do not translate this word'
+            #     ),
+            # )
+            #
+            # logger.info(
+            #     f'query translation: \'{text}\' --{target}--> \'{result.text}\''
+            # )
+            #
+            # translation[text][target] = result.text
 
             if not targetText or translation[text].get('isReviewed') is None:
                 # Target translation does not exist, or does not have 'isReviewed' field.
@@ -143,12 +189,12 @@ def main():
         if isReviewed == 'False':
             unreviewed += 1
 
-            logger.warning(f'have unreviewed translations \'{text}\'')
+            logger.warning(f'have unreviewed translation \'{text}\'')
 
     if unreviewed > 0:
-        logger.error(f'have {unreviewed} unreviewed translations')
+        logger.error(f'have {unreviewed} unreviewed translation(s)')
     else:
-        logger.info(f'all translations have been reviewed')
+        logger.info(f'all {len(translation)} translation(s) have been reviewed')
 
 
 if __name__ == '__main__':

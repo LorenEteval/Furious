@@ -33,15 +33,6 @@ __all__ = ['UserSubsWindow']
 
 registerAppSettings('SubscriptionWidgetWindowSize')
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans(
-    'Add Subscription',
-    'Enter subscription remark:',
-    'Enter subscription URL:',
-    'Cancel',
-)
-
 
 class AddSubsDialog(AppQDialog):
     def __init__(self, *args, **kwargs):
@@ -81,14 +72,6 @@ class AddSubsDialog(AppQDialog):
 
     def subsWebURL(self):
         return self.webURLEdit.text()
-
-
-needTrans(
-    'Edit Subscription',
-    'Subscription List',
-    'Add',
-    'Delete',
-)
 
 
 class UserSubsWindow(AppQMainWindow):

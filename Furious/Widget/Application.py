@@ -47,8 +47,6 @@ registerAppSettings('AppLogViewerWidgetPointSize')
 registerAppSettings('CoreLogViewerWidgetPointSize')
 registerAppSettings('TunLogViewerWidgetPointSize')
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 def rateLimited(maxCallPerSecond):
     """
@@ -156,14 +154,6 @@ class ApplicationThemeDetector(QtCore.QObject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-
-needTrans(
-    'Already started',
-    'Furious Log',
-    'Core Log',
-    'Tun2socks Log',
-)
 
 
 class Application(ApplicationFactory, SingletonApplication):

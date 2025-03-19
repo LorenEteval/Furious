@@ -26,8 +26,6 @@ from Furious.Widget.GuiVTLS import *
 
 __all__ = ['GuiShadowsocks']
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
 
 def getProxyOutboundObject(config: ConfigurationFactory) -> dict:
     if not isinstance(config.get('outbounds'), list):
@@ -213,15 +211,6 @@ class GuiSSItemBasicMethod(GuiEditorItemTextComboBox):
             self.setText('')
 
 
-needTrans(
-    'Basic Configuration',
-    'Address',
-    'Port',
-    'Encryption',
-    'Password',
-)
-
-
 class GuiSSGroupBoxBasic(GuiEditorWidgetQGroupBox):
     def __init__(self, **kwargs):
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -234,9 +223,6 @@ class GuiSSGroupBoxBasic(GuiEditorWidgetQGroupBox):
             GuiSSItemBasicMethod(title=_('Encryption')),
             GuiSSItemTextInput(title=_('Password'), key='password'),
         ]
-
-
-needTrans('Proxy')
 
 
 class GuiSSGroupBoxProxy(GuiEditorWidgetQGroupBox):

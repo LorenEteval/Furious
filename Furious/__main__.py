@@ -34,17 +34,6 @@ __all__ = ['main']
 
 logger = logging.getLogger(__name__)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans(
-    f'{APPLICATION_NAME} is not able to run on this operating system',
-    'Operating system information',
-    f'{APPLICATION_NAME} encountered an internal error and needs to be stopped',
-    f'{APPLICATION_NAME} stopped unexpectedly due to an unknown exception',
-    'Crash log has been saved to',
-    'Open crash log',
-)
-
 
 def runAppMain():
     appMainProcess = AppMainProcess(functools.partial(Application, sys.argv))

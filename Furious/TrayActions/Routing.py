@@ -27,9 +27,12 @@ BUILTIN_ROUTING = ['Bypass Mainland China', 'Global', 'Custom']
 
 registerAppSettings('Routing', validRange=BUILTIN_ROUTING)
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans(*BUILTIN_ROUTING)
+# ALL BUILTIN ROUTING VALUE
+TRANSLATABLE_BUILTIN_ROUTING = [
+    _('Bypass Mainland China'),
+    _('Global'),
+    _('Custom'),
+]
 
 
 class RoutingChildAction(AppQAction):
@@ -45,9 +48,6 @@ class RoutingChildAction(AppQAction):
             if APP().isSystemTrayConnected():
                 APP().systemTray.ConnectAction.doDisconnect()
                 APP().systemTray.ConnectAction.trigger()
-
-
-needTrans('Routing')
 
 
 class RoutingAction(AppQAction):

@@ -34,16 +34,6 @@ __all__ = ['TextEditorWindow']
 
 registerAppSettings('ServerWidgetPointSize')
 
-needTrans = functools.partial(needTransFn, source=__name__)
-
-needTrans(
-    'Save Changes',
-    'The content has been modified. Save changes?',
-    'Save',
-    'Cancel',
-    'Discard',
-)
-
 
 class QuestionSaveMBox(AppQMessageBox):
     def __init__(self, *args, **kwargs):
@@ -59,9 +49,6 @@ class QuestionSaveMBox(AppQMessageBox):
         self.button2 = self.addButton(_('Cancel'), AppQMessageBox.ButtonRole.RejectRole)
 
         self.setDefaultButton(self.button0)
-
-
-needTrans('Please check if the configuration is in valid JSON format')
 
 
 class JSONDecodeErrorMBox(AppQMessageBox):
@@ -83,31 +70,6 @@ class JSONDecodeErrorMBox(AppQMessageBox):
         # Ignore informative text, buttons
 
         self.moveToCenter()
-
-
-needTrans(
-    'Save',
-    'Save As...',
-    'Close Window',
-    'File',
-    'Undo',
-    'Redo',
-    'Cut',
-    'Copy',
-    'Paste',
-    'Select All',
-    'Indent...',
-    'Edit',
-    'Zoom In',
-    'Zoom Out',
-    'View',
-    'Error saving configuration',
-    'Save File',
-    'Text files (*.json);;All files (*)',
-    'Error Saving File',
-    'Invalid server configuration',
-    'Error setting indent',
-)
 
 
 class TextEditorWindow(AppQMainWindow):
