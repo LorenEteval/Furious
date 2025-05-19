@@ -165,6 +165,9 @@ def main():
             #
             # translation[text][target] = result.text
 
+            # TODO: Temporarily set the same as original text
+            translation[text][target] = text
+
             if not targetText or translation[text].get('isReviewed') is None:
                 # Target translation does not exist, or does not have 'isReviewed' field.
                 # Set 'isReviewed' field to "False"
