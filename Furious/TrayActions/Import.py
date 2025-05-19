@@ -96,7 +96,7 @@ class ImportMultiSuccessMBox(AppQMessageBox):
     def customText(self):
         text = (
             _('Import share link success')
-            + f'\n\n'
+            + '\n\n'
             + '\n'.join(
                 list(
                     f'{index + 1} - {remark}. '

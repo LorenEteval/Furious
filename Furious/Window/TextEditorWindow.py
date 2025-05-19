@@ -124,7 +124,7 @@ class TextEditorWindow(AppQMainWindow):
             AppQSeperator(),
             AppQAction(
                 _('Close Window'),
-                callback=lambda: self.questionSave(),
+                callback=lambda: self.close(),
             ),
             title=_('File'),
             parent=self.menuBar(),
@@ -228,38 +228,6 @@ class TextEditorWindow(AppQMainWindow):
         self.modified = False
         self.setWindowTitle(self.customWindowTitle)
 
-    def questionSave(self):
-        if self.modified:
-
-            def handleButtonClicked(saveMBox, button):
-                assert isinstance(saveMBox, QuestionSaveMBox)
-
-                if saveMBox.button0 == button:
-                    # Save
-                    if self.save():
-                        saveMBox.close()
-                        self.hide()
-                elif saveMBox.button1 == button:
-                    # Discard
-                    self.markAsSaved()
-                    saveMBox.close()
-                    self.hide()
-                elif saveMBox.button2 == button:
-                    # Cancel. Do nothing
-                    pass
-
-            mbox = QuestionSaveMBox(icon=AppQMessageBox.Icon.Question, parent=self)
-            mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
-            mbox.buttonClicked.connect(functools.partial(handleButtonClicked, mbox))
-
-            # dummy ref
-            setattr(self, '_questionSaveMBox', mbox)
-
-            # Show the MessageBox asynchronously
-            mbox.open()
-        else:
-            self.hide()
-
     def setPlainText(self, text: str, blockSignals: bool):
         if blockSignals:
             with QBlockSignals(self.jsonEditor):
@@ -297,7 +265,7 @@ class TextEditorWindow(AppQMainWindow):
             old = AS_UserServers()[index]
             new = constructFromDict(jsonObject, **old.kwargs)
 
-            FastItemDeletionSearch.moveToTrash(old)
+            QGarbageCollector.track(old)
 
             AS_UserServers()[index] = new
 
@@ -369,9 +337,6 @@ class TextEditorWindow(AppQMainWindow):
             functools.partial(handleResultCode, indentSpinBox)
         )
 
-        # dummy ref
-        setattr(self, '_IndentSpinBox', indentSpinBox)
-
         # Show the MessageBox asynchronously
         indentSpinBox.open()
 
@@ -393,9 +358,36 @@ class TextEditorWindow(AppQMainWindow):
         self.jsonEditor.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 
     def closeEvent(self, event: QtCore.QEvent):
-        event.ignore()
+        if self.modified:
+            mbox = QuestionSaveMBox(icon=AppQMessageBox.Icon.Question, parent=self)
+            mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        self.questionSave()
+            def handleButtonClicked(button):
+                if button == mbox.button0:
+                    # Save
+                    if self.save():
+                        mbox.close()
+
+                        event.accept()
+                    else:
+                        event.ignore()
+                elif button == mbox.button1:
+                    # Discard
+                    self.markAsSaved()
+
+                    mbox.close()
+
+                    event.accept()
+                elif button == mbox.button2:
+                    # Cancel. Do nothing
+                    event.ignore()
+
+            mbox.buttonClicked.connect(functools.partial(handleButtonClicked))
+
+            # Show the MessageBox and wait for the user to close it
+            mbox.exec()
+        else:
+            event.accept()
 
     def retranslate(self):
         # Do nothing

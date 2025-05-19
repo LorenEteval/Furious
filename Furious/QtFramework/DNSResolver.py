@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+from Furious.QtFramework.WebGETManager import *
 from Furious.Utility import *
 from Furious.Library import *
 
@@ -32,8 +33,11 @@ __all__ = ['DNSResolver']
 logger = logging.getLogger(__name__)
 
 
-class DNSResolver:
-    Manager = QNetworkAccessManager()
+class _DNSResolver(WebGETManager):
+    def __init__(self, parent=None, **kwargs):
+        actionMessage = kwargs.pop('actionMessage', 'DNS resolution')
+
+        super().__init__(parent, actionMessage=actionMessage)
 
     @staticmethod
     def request(address) -> QNetworkRequest:
@@ -44,21 +48,22 @@ class DNSResolver:
 
         return request
 
-    @staticmethod
-    def handleFinishedByNetworkReply(networkReply, domain, resultMap):
-        assert isinstance(networkReply, QNetworkReply)
+    def successCallback(self, networkReply, **kwargs):
+        domain = kwargs.pop('domain', '')
+        resultMap = kwargs.pop('resultMap', {})
 
-        if networkReply.error() != QNetworkReply.NetworkError.NoError:
+        data = networkReply.readAll().data()
+
+        try:
+            replyObject = UJSONEncoder.decode(data)
+        except Exception as ex:
             logger.error(
-                f'DNS resolution for \'{domain}\' failed. {networkReply.errorString()}'
+                f'bad network reply while resolving DNS for \'{domain}\'. {ex}'
             )
 
             resultMap['error'] = True
         else:
             logger.info(f'DNS resolution for \'{domain}\' success')
-
-            # Unchecked?
-            replyObject = UJSONEncoder.decode(networkReply.readAll().data())
 
             for record in replyObject['Answer']:
                 address = record['data']
@@ -70,46 +75,31 @@ class DNSResolver:
                 else:
                     resultMap['depth'] += 1
 
-                    newNetworkReply = DNSResolver.Manager.get(
-                        DNSResolver.request(address)
-                    )
-                    newNetworkReply.finished.connect(
-                        functools.partial(
-                            DNSResolver.handleFinishedByNetworkReply,
-                            newNetworkReply,
-                            address,
-                            resultMap,
-                        )
+                    newNetworkReply = self.webGET(
+                        self.request(address),
+                        logActionMessage=False,
+                        domain=address,
+                        resultMap=resultMap,
                     )
 
                     resultMap['reference'].append(newNetworkReply)
 
         resultMap['depth'] -= 1
 
-    @staticmethod
-    def resolve(domain, proxyHost=None, proxyPort=None) -> Tuple[bool, list[str]]:
-        if proxyHost is None or proxyPort is None:
-            DNSResolver.Manager.setProxy(QNetworkProxy.ProxyType.NoProxy)
-        else:
-            try:
-                DNSResolver.Manager.setProxy(
-                    QNetworkProxy(
-                        QNetworkProxy.ProxyType.HttpProxy, proxyHost, int(proxyPort)
-                    )
-                )
+    def failureCallback(self, networkReply: QNetworkReply, **kwargs):
+        domain = kwargs.pop('domain', '')
+        resultMap = kwargs.pop('resultMap', {})
 
-                logger.info(f'DNS resolution uses proxy server {proxyHost}:{proxyPort}')
-            except Exception as ex:
-                # Any non-exit exceptions
+        logger.error(
+            f'DNS resolution for \'{domain}\' failed. {networkReply.errorString()}'
+        )
 
-                logger.error(
-                    f'invalid proxy server {proxyHost}:{proxyPort}. {ex}. '
-                    f'DNS resolution uses no proxy'
-                )
+        resultMap['error'] = True
+        resultMap['depth'] -= 1
 
-                DNSResolver.Manager.setProxy(QNetworkProxy.ProxyType.NoProxy)
-
+    def resolve(self, domain, timeout=30000) -> Tuple[bool, list[str]]:
         resultMap = {
+            'domain': domain,
             'depth': 0,
             'error': False,
             'reference': [],
@@ -118,26 +108,28 @@ class DNSResolver:
 
         resultMap['depth'] += 1
 
-        networkReply = DNSResolver.Manager.get(DNSResolver.request(domain))
-        networkReply.finished.connect(
-            functools.partial(
-                DNSResolver.handleFinishedByNetworkReply,
-                networkReply,
-                domain,
-                resultMap,
-            )
+        networkReply = self.webGET(
+            self.request(domain),
+            logActionMessage=False,
+            domain=domain,
+            resultMap=resultMap,
         )
 
         resultMap['reference'].append(networkReply)
 
-        DNSResolver.wait(resultMap)
+        self.wait(resultMap, timeout=timeout)
 
         return resultMap['error'], list(resultMap['result'].keys())
 
     @staticmethod
     def wait(resultMap, startCounter=0, timeout=30000, step=100):
+        domain = resultMap.get('domain', '')
+
+        if not domain:
+            return
+
         if resultMap['depth'] != 0:
-            logger.info('DNS resolution in progress. Wait')
+            logger.info(f'DNS resolution for \'{domain}\' in progress. Wait')
         else:
             return
 
@@ -147,7 +139,9 @@ class DNSResolver:
             startCounter += step
 
         if resultMap['depth'] != 0:
-            logger.error('DNS resolution timeout')
+            logger.error(
+                f'DNS resolution for \'{domain}\' reached timeout {timeout // 1000}s'
+            )
 
             for networkReply in resultMap['reference']:
                 if (
@@ -155,3 +149,6 @@ class DNSResolver:
                     and not networkReply.isFinished()
                 ):
                     networkReply.abort()
+
+
+DNSResolver = _DNSResolver()

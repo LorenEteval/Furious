@@ -69,6 +69,9 @@ class ConnectAction(AppQAction):
         self.actionTimer = QtCore.QTimer()
         self.actionTimer.timeout.connect(lambda: self.callActionFromQueue())
 
+        self.updatesManager = UpdatesManager()
+        self.assetDownloadManager = XrayAssetDownloadManager()
+
     def reset(self):
         self.hideProgressBar(True)
         self.setText(_('Connect'))
@@ -93,7 +96,7 @@ class ConnectAction(AppQAction):
         if done:
             self.progressBar.setValue(100)
 
-        self.progressBar.hide()
+        self.progressBar.close()
         self.progressBar.stop()
 
         return self
@@ -105,10 +108,10 @@ class ConnectAction(AppQAction):
         APP().systemTray.SystemProxyAction.setDisabled(value)
 
         if isAdministrator():
-            VPNModeAction = APP().systemTray.SettingsAction.getVPNModeAction()
+            TUNModeAction = APP().systemTray.SettingsAction.getTUNModeAction()
 
-            if VPNModeAction is not None:
-                VPNModeAction.setDisabled(value)
+            if TUNModeAction is not None:
+                TUNModeAction.setDisabled(value)
 
     def isConnected(self) -> bool:
         return self.textCompare('Disconnect')
@@ -202,69 +205,93 @@ class ConnectAction(AppQAction):
             AppSettings.turnOFF('Connect')
 
             self.setChecked(False)
+        else:
+            assert isinstance(config, ConfigurationFactory)
 
-            return
+            if not validateProxyServer(config.httpProxyEndpoint()):
+                # Proxy server is not valid. Do not connect
 
-        assert isinstance(config, ConfigurationFactory)
+                AppSettings.turnOFF('Connect')
 
-        if not validateProxyServer(config.httpProxyEndpoint()):
-            AppSettings.turnOFF('Connect')
+                self.setChecked(False)
 
-            self.setChecked(False)
-
-            mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-            mbox.setWindowTitle(_('Unable to connect'))
-            mbox.setText(
-                _(
-                    f'{APPLICATION_NAME} cannot find any valid http proxy endpoint in the configuration'
+                mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+                mbox.setWindowTitle(_('Unable to connect'))
+                mbox.setText(
+                    _(
+                        f'{APPLICATION_NAME} cannot find any valid http proxy endpoint in the configuration'
+                    )
                 )
+                mbox.setInformativeText(_('Please complete your server configuration'))
+
+                # Show the MessageBox asynchronously
+                mbox.open()
+
+                return
+
+            self.doConnecting()
+
+            # Clear previous log
+            loggerCore().clear()
+            loggerTun_().clear()
+
+            success = self.coreManager.start(
+                config,
+                routing=AppSettings.get('Routing'),
+                exitCallback=self.coreExitCallback,
+                msgCallbackCore=lambda line: loggerCore().appendLine(line),
+                msgCallbackTun_=lambda line: loggerTun_().appendLine(line),
             )
-            mbox.setInformativeText(_('Please complete your server configuration'))
 
-            # Show the MessageBox asynchronously
-            mbox.open()
+            if self.actionQueue.empty():
+                if success:
+                    SystemProxy.set(config.httpProxyEndpoint(), PROXY_SERVER_BYPASS)
 
-            return
+                    self.doConnected()
 
-        self.doConnecting()
+                    APP().systemTray.showMessage(
+                        f'{config.coreName()}: ' + _('Connected')
+                    )
 
-        # Clear previous log
-        loggerCore().clear()
-        loggerTun_().clear()
+                    if AppSettings.isStateON_('PowerSaveMode'):
+                        # Power optimization
+                        logger.info(f'no action queue in power save mode')
 
-        success = self.coreManager.start(
-            config,
-            routing=AppSettings.get('Routing'),
-            exitCallback=self.coreExitCallback,
-            msgCallbackCore=lambda line: loggerCore().appendLine(line),
-            msgCallbackTun_=lambda line: loggerTun_().appendLine(line),
+                        self.actionTimer.stop()
+                    else:
+                        self.actionTimer.start(CORE_CHECK_ALIVE_INTERVAL)
+
+                    self.doConnectedCallOnceOnly()
+                else:
+                    logger.error('failed to start core manager')
+
+                    self.coreManager.stopAll()
+                    self.doDisconnectWithTrayMessage(
+                        f'{config.coreName()}: ' + _('Unknown error')
+                    )
+            else:
+                while not self.actionQueue.empty():
+                    self.callActionFromQueue()
+
+    @callOnceOnly
+    def doConnectedCallOnceOnly(self):
+        def newVersionCallback(newVersion):
+            APP().systemTray.showMessage(
+                f'{APPLICATION_NAME} {newVersion} ' + _('is available to download')
+            )
+
+        connectedHttpProxy = connectedHttpProxyEndpoint()
+
+        # Check for updates
+        self.updatesManager.configureHttpProxy(connectedHttpProxy)
+        self.updatesManager.checkForUpdates(
+            showMessageBox=False,
+            hasNewVersionCallback=newVersionCallback,
         )
 
-        if self.actionQueue.empty():
-            if success:
-                SystemProxy.set(config.httpProxyEndpoint(), PROXY_SERVER_BYPASS)
-
-                self.doConnected()
-
-                APP().systemTray.showMessage(f'{config.coreName()}: ' + _('Connected'))
-
-                if AppSettings.isStateON_('PowerSaveMode'):
-                    # Power optimization
-                    logger.info(f'no action queue in power save mode')
-
-                    self.actionTimer.stop()
-                else:
-                    self.actionTimer.start(CORE_CHECK_ALIVE_INTERVAL)
-            else:
-                logger.error('failed to start core manager')
-
-                self.coreManager.stopAll()
-                self.doDisconnectWithTrayMessage(
-                    f'{config.coreName()}: ' + _('Unknown error')
-                )
-        else:
-            while not self.actionQueue.empty():
-                self.callActionFromQueue()
+        # Automatically update assets
+        self.assetDownloadManager.configureHttpProxy(connectedHttpProxy)
+        self.assetDownloadManager.download()
 
     def callActionFromQueue(self):
         try:

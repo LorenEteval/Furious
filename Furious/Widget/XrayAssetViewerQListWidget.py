@@ -195,9 +195,6 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
             mbox.setInformativeText(basename)
             mbox.finished.connect(functools.partial(handleResultCode, filename))
 
-            # dummy ref
-            setattr(self, '_assetExistsMBox', mbox)
-
             # Show the MessageBox asynchronously
             mbox.open()
         else:
@@ -234,9 +231,6 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
         mbox.possibleRemark = f'{self.item(indexes[0]).text()}'
         mbox.setText(mbox.customText())
         mbox.finished.connect(functools.partial(handleResultCode, indexes))
-
-        # dummy ref
-        setattr(self, '_questionDeleteMBox', mbox)
 
         # Show the MessageBox asynchronously
         mbox.open()

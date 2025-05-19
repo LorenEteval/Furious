@@ -21,6 +21,7 @@ from .GuiHysteria1 import *
 from .GuiHysteria2 import *
 from .GuiShadowsocks import *
 from .GuiTrojan import *
+from .GuiTUNSettings import *
 from .GuiVLESS import *
 from .GuiVMess import *
 from .IndentSpinBox import *

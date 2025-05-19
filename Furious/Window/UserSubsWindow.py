@@ -116,7 +116,7 @@ class UserSubsWindow(AppQMainWindow):
         except Exception:
             # Any non-exit exceptions
 
-            self.setGeometry(100, 100, 360 * GOLDEN_RATIO, 360)
+            self.setGeometry(100, 100, 500 * GOLDEN_RATIO, 500)
 
     def addSubs(self):
         def handleResultCode(_addSubsDialog, code):
@@ -140,9 +140,6 @@ class UserSubsWindow(AppQMainWindow):
         addSubsDialog.finished.connect(
             functools.partial(handleResultCode, addSubsDialog)
         )
-
-        # dummy ref
-        setattr(self, '_addSubsDialog', addSubsDialog)
 
         # Show the MessageBox asynchronously
         addSubsDialog.open()

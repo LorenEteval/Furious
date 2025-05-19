@@ -18,10 +18,7 @@
 from __future__ import annotations
 
 from Furious.PyFramework import *
-from Furious.QtFramework.TextEditorTheme import (
-    DraculaEditorTheme,
-    DraculaJSONSyntaxHighlighter,
-)
+from Furious.QtFramework.TextEditorTheme import *
 from Furious.Utility import *
 
 from PySide6 import QtCore
@@ -313,6 +310,8 @@ class DraculaTextBrowser(AppQTextBrowser):
         fontFamily = kwargs.pop('fontFamily', '')
 
         super().__init__(*args, **kwargs)
+
+        self._syntaxHighlighter = DraculaLoggerSyntaxHighlighter(self.document())
 
         # Theme
         self.setStyleSheet(

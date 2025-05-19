@@ -54,149 +54,270 @@ registerAppSettings('ActivatedItemIndex')
 registerAppSettings('ServerWidgetSectionSizeTable')
 
 
-class SubscriptionManager(AppQNetworkAccessManager):
-    def __init__(self, parent):
-        super().__init__(parent)
-
-        self.networkReplyTable = {}
-
-    def handleFinishedByNetworkReply(self, networkReply):
-        assert isinstance(networkReply, QNetworkReply)
-
-        unique, webURL = (
-            self.networkReplyTable[networkReply]['unique'],
-            self.networkReplyTable[networkReply]['webURL'],
-        )
-
-        if networkReply.error() != QNetworkReply.NetworkError.NoError:
-            logger.error(f'update subs {webURL} failed. {networkReply.errorString()}')
-        else:
-            logger.info(f'update subs {webURL} success')
-
-            try:
-                data = networkReply.readAll().data()
-
-                uris = list(
-                    filter(
-                        lambda x: x != '',
-                        PyBase64Encoder.decode(data).decode().split('\n'),
-                    )
-                )
-            except Exception as ex:
-                # Any non-exit exceptions
-
-                logger.error(f'parse share link failed: {ex}')
-            else:
-                parent = self.parent()
-
-                if isinstance(parent, UserServersQTableWidget):
-                    isConnected = APP().isSystemTrayConnected()
-
-                    subsIndexes = list(
-                        index
-                        for index, server in enumerate(AS_UserServers())
-                        if server.getExtras('subsId') == unique
-                    )
-
-                    subsGroupIndex = -1
-                    activatedIndex = AS_UserActivatedItemIndex()
-
-                    if activatedIndex in subsIndexes:
-                        for index, server in enumerate(AS_UserServers()):
-                            if index <= activatedIndex:
-                                if server.getExtras('subsId') == unique:
-                                    subsGroupIndex += 1
-                            else:
-                                break
-
-                    parent.deleteItemByIndex(
-                        subsIndexes, showTrayMessage=bool(subsGroupIndex < 0)
-                    )
-
-                    remaining = len(AS_UserServers())
-
-                    for uri in uris:
-                        parent.appendNewItem(config=uri, subsId=unique)
-
-                    if subsGroupIndex >= 0:
-                        newIndex = remaining + subsGroupIndex
-
-                        if newIndex < len(AS_UserServers()):
-                            parent.activateItemByIndex(newIndex, True)
-
-                            if isConnected and not APP().isSystemTrayConnected():
-                                # Trigger connect
-                                APP().systemTray.ConnectAction.trigger()
-
-        # Done. Remove entry. Key should be found, but protect it anyway
-        self.networkReplyTable.pop(networkReply, None)
-
-    def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
-        useProxy = super().configureHttpProxy(httpProxy)
-
-        if useProxy:
-            logger.info(f'update subs uses proxy server {httpProxy}')
-        else:
-            logger.info(f'update subs uses no proxy')
-
-        return useProxy
-
-    def updateSubs(self, unique: str, webURL: str):
-        networkReply = self.get(QNetworkRequest(QtCore.QUrl(webURL)))
-
-        self.networkReplyTable[networkReply] = {
-            'unique': unique,
-            'webURL': webURL,
-        }
-
-        networkReply.finished.connect(
-            functools.partial(
-                self.handleFinishedByNetworkReply,
-                networkReply,
-            )
-        )
-
-
-class WorkerSequence(ItemUpdateProtocol):
-    def __init__(self, sequence: Sequence, index: int, item: ConfigurationFactory):
-        super().__init__(sequence, index, item)
-
-    def currentItemDeleted(self) -> bool:
-        return super().currentItemDeleted() or FastItemDeletionSearch.isInTrash(
-            self.currentItem
-        )
-
-    def updateResult(self):
-        # Extra guard
-        if APP() is None or APP().isExiting():
-            return
-
-        super().updateResult()
-
-
-class TestPingLatencyWorker(WorkerSequence, QtCore.QObject, QtCore.QRunnable):
-    finished = QtCore.Signal(int, object)
-
+class UpdateSubsInfoMBox(AppQMessageBox):
     def __init__(self, *args, **kwargs):
+        self.successArgs = kwargs.pop('successArgs', list())
+        self.failureArgs = kwargs.pop('failureArgs', list())
+
         super().__init__(*args, **kwargs)
 
+        self.setWindowTitle(_(APPLICATION_NAME))
+
+    def customText(self):
+        if self.successArgs:
+            text = _('Update subscription completed') + '\n\n'
+        else:
+            text = _('Update subscription failed')
+
+        for param in self.successArgs:
+            remark, webURL = param['remark'], param['webURL']
+
+            text += (
+                f'\U00002705 {remark} - {webURL} '
+                + _('Configuration has been updated')
+                + '\n'
+            )
+
+        if self.successArgs and self.failureArgs:
+            text += '\n'
+        elif self.failureArgs:
+            text += '\n\n'
+
+        for param in self.failureArgs:
+            error, remark, webURL = param['error'], param['remark'], param['webURL']
+
+            # error is the specific failure reason. Not used
+            # for mbox elegant appearance
+
+            text += (
+                f'\U0000274C {remark} - {webURL} '
+                + _('Configuration update failed')
+                + '\n'
+            )
+
+        return text
+
+    def setColumnMinWidth(self):
+        self.findChild(QGridLayout).setColumnMinimumWidth(
+            2,
+            max((len(row) + 10) for row in self.text().split('\n'))
+            * self.fontMetrics().averageCharWidth(),
+        )
+
+    def retranslate(self):
+        self.setWindowTitle(_(self.windowTitle()))
+        self.setText(self.customText())
+        self.setColumnMinWidth()
+
+        # Ignore informative text, buttons
+
+        self.moveToCenter()
+
+
+class SubscriptionManager(WebGETManager):
+    # Collect unused references every 30 mins
+    GC_COLLECT_INTERVAL = 30 * 60 * 1000
+
+    def __init__(self, parent, **kwargs):
+        actionMessage = kwargs.pop('actionMessage', 'update subs')
+
+        super().__init__(parent, actionMessage=actionMessage)
+
+    def handleItemDeletionAndInsertion(self, **kwargs):
+        successArgs = kwargs.pop('successArgs', list())
+        failureArgs = kwargs.pop('failureArgs', list())
+
+        showMessageBox = kwargs.pop('showMessageBox', True)
+
+        for param in successArgs:
+            uris, unique = param['uris'], param['unique']
+
+            parent = self.parent()
+
+            if isinstance(parent, UserServersQTableWidget):
+                isConnected = APP().isSystemTrayConnected()
+
+                subsIndexes = list(
+                    index
+                    for index, server in enumerate(AS_UserServers())
+                    if server.getExtras('subsId') == unique
+                )
+
+                subsGroupIndex = -1
+                activatedIndex = AS_UserActivatedItemIndex()
+
+                if activatedIndex in subsIndexes:
+                    for index, server in enumerate(AS_UserServers()):
+                        if index <= activatedIndex:
+                            if server.getExtras('subsId') == unique:
+                                subsGroupIndex += 1
+                        else:
+                            break
+
+                parent.deleteItemByIndex(
+                    subsIndexes, showTrayMessage=bool(subsGroupIndex < 0)
+                )
+
+                remaining = len(AS_UserServers())
+
+                for uri in uris:
+                    parent.appendNewItem(config=uri, subsId=unique)
+
+                if subsGroupIndex >= 0:
+                    newIndex = remaining + subsGroupIndex
+
+                    if newIndex < len(AS_UserServers()):
+                        parent.activateItemByIndex(newIndex, True)
+
+                        if isConnected and not APP().isSystemTrayConnected():
+                            # Trigger connect
+                            APP().systemTray.ConnectAction.trigger()
+
+        if not QGarbageCollector.isEnabled():
+            QGarbageCollector.collect(SubscriptionManager.GC_COLLECT_INTERVAL)
+
+        if showMessageBox:
+            mbox = UpdateSubsInfoMBox(
+                successArgs=successArgs,
+                failureArgs=failureArgs,
+            )
+
+            if successArgs:
+                mbox.setIcon(AppQMessageBox.Icon.Information)
+            else:
+                mbox.setIcon(AppQMessageBox.Icon.Critical)
+
+            mbox.setText(mbox.customText())
+            mbox.setColumnMinWidth()
+
+            # Show the MessageBox asynchronously
+            mbox.open()
+
+    def successCallback(self, networkReply, **kwargs):
+        remark = kwargs.get('remark', '')
+        webURL = kwargs.get('webURL', '')
+        depthMap = kwargs.get('depthMap', {})
+        successArgs = kwargs.get('successArgs', list())
+        failureArgs = kwargs.get('failureArgs', list())
+
+        data = networkReply.readAll().data()
+
+        try:
+            uris = list(
+                filter(
+                    lambda x: x != '',
+                    PyBase64Encoder.decode(data).decode().split('\n'),
+                )
+            )
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            def classname(ob) -> str:
+                return ob.__class__.__name__
+
+            logger.error(f'parse share link from \'{webURL}\' failed: {ex}')
+
+            failureArgs.append({'error': classname(ex), **kwargs})
+        else:
+            logger.info(
+                f'update subs ({remark}, {webURL}) success. Got {len(uris)} share link'
+            )
+
+            successArgs.append({'uris': uris, **kwargs})
+
+        depthMap['depth'] -= 1
+
+        if depthMap['depth'] == 0:
+            self.handleItemDeletionAndInsertion(**kwargs)
+
+    def failureCallback(self, networkReply, **kwargs):
+        remark = kwargs.get('remark', '')
+        webURL = kwargs.get('webURL', '')
+        depthMap = kwargs.get('depthMap', {})
+        successArgs = kwargs.get('successArgs', list())
+        failureArgs = kwargs.get('failureArgs', list())
+
+        logger.error(
+            f'update subs ({remark}, {webURL}) failed: {networkReply.errorString()}'
+        )
+
+        failureArgs.append({'error': networkReply.errorString(), **kwargs})
+
+        depthMap['depth'] -= 1
+
+        if depthMap['depth'] == 0:
+            self.handleItemDeletionAndInsertion(**kwargs)
+
+    def updateSubsByWebGET(self, **kwargs):
+        url = kwargs.get('webURL', '')
+
+        if not url:
+            # Has url empty check
+            return
+
+        logActionMessage = kwargs.pop('logActionMessage', False)
+
+        self.webGET(url, logActionMessage=logActionMessage, **kwargs)
+
+    def updateSubsByUnique(self, unique: str, **kwargs):
+        depthMap = kwargs.get('depthMap', {'depth': 1})
+        successArgs = kwargs.get('successArgs', list())
+        failureArgs = kwargs.get('failureArgs', list())
+
+        if kwargs.get('depthMap') is None:
+            kwargs['depthMap'] = depthMap
+
+        if kwargs.get('successArgs') is None:
+            kwargs['successArgs'] = successArgs
+
+        if kwargs.get('failureArgs') is None:
+            kwargs['failureArgs'] = failureArgs
+
+        subsob = AS_UserSubscription()[unique]
+
+        self.updateSubsByWebGET(unique=unique, **subsob, **kwargs)
+
+    def updateSubs(self, **kwargs):
+        depthMap = {'depth': len(AS_UserSubscription())}
+        successArgs = list()
+        failureArgs = list()
+
+        for key in AS_UserSubscription().keys():
+            self.updateSubsByUnique(
+                key,
+                depthMap=depthMap,
+                successArgs=successArgs,
+                failureArgs=failureArgs,
+                **kwargs,
+            )
+
+
+class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
+    finished = QtCore.Signal()
+
+    def __init__(self, factory: ConfigurationFactory):
         # Explictly called __init__
         QtCore.QObject.__init__(self)
         QtCore.QRunnable.__init__(self)
 
-    def updateImpl(self):
-        self.finished.emit(self.currentIndex, self.currentItem)
+        self.factory = factory
 
     def run(self):
-        if self.currentItemDeleted():
-            # Deleted. Do nothing
+        index = self.factory.index()
+
+        if (
+            index < 0
+            or index >= len(AS_UserServers())
+            or QGarbageCollector.isTracked(self.factory)
+        ):
+            # Invalid item. Do nothing
             return
 
-        assert isinstance(self.currentItem, ConfigurationFactory)
+        assert isinstance(self.factory, ConfigurationFactory)
 
         try:
             result = icmplib.ping(
-                self.currentItem.itemAddress,
+                self.factory.itemAddress,
                 count=1,
                 timeout=2,
                 interval=1,
@@ -207,45 +328,57 @@ class TestPingLatencyWorker(WorkerSequence, QtCore.QObject, QtCore.QRunnable):
             def classname(ob) -> str:
                 return ob.__class__.__name__
 
-            self.currentItem.setExtras('delayResult', classname(ex))
-            self.updateResult()
+            self.factory.setExtras('delayResult', classname(ex))
+
+            # Extra guard
+            if APP() is None or APP().isExiting():
+                return
+            else:
+                self.finished.emit()
         else:
             # Result address should not be empty
             if result.address and result.is_alive:
-                self.currentItem.setExtras('delayResult', f'{round(result.avg_rtt)}ms')
+                self.factory.setExtras('delayResult', f'{round(result.avg_rtt)}ms')
             else:
                 if result.packet_loss == 1:
-                    self.currentItem.setExtras('delayResult', 'Timeout')
+                    self.factory.setExtras('delayResult', 'Timeout')
                 else:
-                    self.currentItem.setExtras('delayResult', 'Error')
+                    self.factory.setExtras('delayResult', 'Error')
 
-            self.updateResult()
+            # Extra guard
+            if APP() is None or APP().isExiting():
+                return
+            else:
+                self.finished.emit()
 
 
-class TestTcpingLatencyWorker(WorkerSequence, QtCore.QObject, QtCore.QRunnable):
-    finished = QtCore.Signal(int, object)
+class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
+    finished = QtCore.Signal()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    def __init__(self, factory: ConfigurationFactory):
         # Explictly called __init__
         QtCore.QObject.__init__(self)
         QtCore.QRunnable.__init__(self)
 
-    def updateImpl(self):
-        self.finished.emit(self.currentIndex, self.currentItem)
+        self.factory = factory
 
     def run(self):
-        if self.currentItemDeleted():
-            # Deleted. Do nothing
+        index = self.factory.index()
+
+        if (
+            index < 0
+            or index >= len(AS_UserServers())
+            or QGarbageCollector.isTracked(self.factory)
+        ):
+            # Invalid item. Do nothing
             return
 
-        assert isinstance(self.currentItem, ConfigurationFactory)
+        assert isinstance(self.factory, ConfigurationFactory)
 
         try:
             sent, rtts = tcping(
-                self.currentItem.itemAddress,
-                int(self.currentItem.itemPort.split(',')[0]),
+                self.factory.itemAddress,
+                int(self.factory.itemPort.split(',')[0]),
                 count=1,
                 timeout=2,
                 interval=1,
@@ -256,32 +389,44 @@ class TestTcpingLatencyWorker(WorkerSequence, QtCore.QObject, QtCore.QRunnable):
             def classname(ob) -> str:
                 return ob.__class__.__name__
 
-            self.currentItem.setExtras('delayResult', classname(ex))
-            self.updateResult()
+            self.factory.setExtras('delayResult', classname(ex))
+
+            # Extra guard
+            if APP() is None or APP().isExiting():
+                return
+            else:
+                self.finished.emit()
         else:
             if rtts:
-                self.currentItem.setExtras('delayResult', f'{round(rtts[0] * 1000)}ms')
+                self.factory.setExtras('delayResult', f'{round(rtts[0] * 1000)}ms')
             else:
-                self.currentItem.setExtras('delayResult', 'Timeout')
+                self.factory.setExtras('delayResult', 'Timeout')
 
-            self.updateResult()
+            # Extra guard
+            if APP() is None or APP().isExiting():
+                return
+            else:
+                self.finished.emit()
 
 
-class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
-    progressed = QtCore.Signal(int, object)
+class TestDownloadSpeedWorker(WebGETManager):
+    progressed = QtCore.Signal()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, factory: ConfigurationFactory, port: int, parent=None, **kwargs):
+        actionMessage = kwargs.pop('actionMessage', 'test download speed')
 
-        # Explictly called __init__
-        QtCore.QObject.__init__(self)
+        super().__init__(parent, actionMessage=actionMessage)
+
+        self.factory = factory
+        self.port = port
 
         self.hasSpeedResult = False
         self.totalBytesRead = 0
 
+        self.hasDataCounter = 0
+
         self.coreManager = CoreManager()
 
-        self.networkAccessManager = QNetworkAccessManager()
         self.networkReply = None
         self.elapsedTimer = QtCore.QElapsedTimer()
 
@@ -295,37 +440,58 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
         if isinstance(self.networkReply, QNetworkReply):
             self.networkReply.abort()
 
-    def updateImpl(self):
-        self.progressed.emit(self.currentIndex, self.currentItem)
-
     def run(self):
-        if self.currentItemDeleted():
-            # Deleted. Do nothing
+        index = self.factory.index()
+
+        if (
+            index < 0
+            or index >= len(AS_UserServers())
+            or QGarbageCollector.isTracked(self.factory)
+        ):
+            # Invalid item. Do nothing
             return
 
-        assert isinstance(self.currentItem, ConfigurationFactory)
+        assert isinstance(self.factory, ConfigurationFactory)
 
-        if not self.currentItem.isValid():
-            self.currentItem.setExtras('speedResult', 'Invalid')
-            self.updateResult()
+        if not self.factory.isValid():
+            self.factory.setExtras('speedResult', 'Invalid')
 
+            # Extra guard
+            if APP() is None or APP().isExiting():
+                return
+            else:
+                self.progressed.emit()
+
+            # Configuration is not valid. Do nothing
             return
 
         def coreExitCallback(config: ConfigurationFactory, exitcode: int):
             if exitcode == CoreProcess.ExitCode.ConfigurationError:
-                self.currentItem.setExtras('speedResult', f'Invalid')
+                self.factory.setExtras('speedResult', f'Invalid')
 
-                return self.updateResult()
-            if exitcode == CoreProcess.ExitCode.ServerStartFailure:
-                self.currentItem.setExtras('speedResult', f'Core start failed')
+                # Extra guard
+                if APP() is None or APP().isExiting():
+                    return
+                else:
+                    self.progressed.emit()
+            elif exitcode == CoreProcess.ExitCode.ServerStartFailure:
+                self.factory.setExtras('speedResult', f'Core start failed')
 
-                return self.updateResult()
-            if exitcode == CoreProcess.ExitCode.SystemShuttingDown:
+                # Extra guard
+                if APP() is None or APP().isExiting():
+                    return
+                else:
+                    self.progressed.emit()
+            elif exitcode == CoreProcess.ExitCode.SystemShuttingDown:
                 pass
             else:
-                self.currentItem.setExtras('speedResult', f'Core exited {exitcode}')
+                self.factory.setExtras('speedResult', f'Core exited {exitcode}')
 
-                return self.updateResult()
+                # Extra guard
+                if APP() is None or APP().isExiting():
+                    return
+                else:
+                    self.progressed.emit()
 
         def msgCallback(line: str):
             try:
@@ -335,17 +501,22 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
 
                 pass
 
-        self.currentItem.setExtras('speedResult', 'Starting')
-        self.updateResult()
+        self.factory.setExtras('speedResult', 'Starting')
 
-        itemcopy = self.currentItem.deepcopy()
+        # Extra guard
+        if APP() is None or APP().isExiting():
+            return
+        else:
+            self.progressed.emit()
+
+        itemcopy = self.factory.deepcopy()
 
         if isinstance(itemcopy, ConfigurationXray):
             # Force redirect
             itemcopy['inbounds'] = [
                 {
                     'tag': 'http',
-                    'port': 20809,
+                    'port': self.port,
                     'listen': '127.0.0.1',
                     'protocol': 'http',
                     'sniffing': {
@@ -365,9 +536,9 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
 
             try:
                 for outboundObject in itemcopy['outbounds']:
-                    if outboundObject['tag'] == 'proxy':
+                    if outboundObject['tag'] == f'proxy':
                         # Avoid confusion with potentially existing 'proxy' tag
-                        outboundObject['tag'] = 'proxy20809'
+                        outboundObject['tag'] = f'proxy{self.port}'
             except Exception:
                 # Any non-exit exceptions
 
@@ -387,7 +558,7 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
         ):
             # Force redirect
             itemcopy['http'] = {
-                'listen': '127.0.0.1:20809',
+                'listen': f'127.0.0.1:{self.port}',
                 'timeout': 300,
                 'disable_udp': False,
             }
@@ -404,29 +575,47 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
                 log=False,
             )
         else:
-            self.currentItem.setExtras('speedResult', 'Invalid')
-            self.updateResult()
+            self.factory.setExtras('speedResult', 'Invalid')
 
+            # Extra guard
+            if APP() is None or APP().isExiting():
+                return
+            else:
+                self.progressed.emit()
+
+            # Unrecognized core. Return
             return
 
-        self.networkAccessManager.setProxy(
-            QNetworkProxy(QNetworkProxy.ProxyType.HttpProxy, '127.0.0.1', 20809)
-        )
-        self.networkReply = self.networkAccessManager.get(
-            QNetworkRequest(
-                QtCore.QUrl(
-                    'http://speed.cloudflare.com/__down?during=download&bytes=104857600'
-                )
-            )
-        )
-        self.networkReply.readyRead.connect(self.handleReadyRead)
-        self.networkReply.finished.connect(self.handleFinished)
+        self.configureHttpProxy(f'127.0.0.1:{self.port}')
+
+        self.networkReply = self.webGET(NETWORK_SPEED_TEST_URL)
         self.elapsedTimer.start()
 
-    @QtCore.Slot()
-    def handleReadyRead(self):
+    def successCallback(self, networkReply, **kwargs):
         if self.coreManager.allRunning():
-            self.totalBytesRead += self.networkReply.readAll().length()
+            self.totalBytesRead += networkReply.readAll().length()
+
+            # Convert to seconds
+            elapsedSecond = self.elapsedTimer.elapsed() / 1000
+            downloadSpeed = self.totalBytesRead / elapsedSecond / 1024 / 1024
+
+            self.factory.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
+        else:
+            self.factory.setExtras('speedResult', f'Core start failed')
+
+        self.coreManager.stopAll()
+
+        # Extra guard
+        if APP() is None or APP().isExiting():
+            return
+        else:
+            self.progressed.emit()
+
+    def hasDataCallback(self, networkReply, **kwargs):
+        self.hasDataCounter += 1
+
+        if self.coreManager.allRunning():
+            self.totalBytesRead += networkReply.readAll().length()
 
             # Convert to seconds
             elapsedSecond = self.elapsedTimer.elapsed() / 1000
@@ -434,57 +623,56 @@ class TestDownloadSpeedWorker(WorkerSequence, QtCore.QObject):
 
             # Has speed test result
             self.hasSpeedResult = True
-            self.currentItem.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
-            self.updateResult()
+            self.factory.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
 
-    @QtCore.Slot()
-    def handleFinished(self):
-        if self.networkReply.error() != QNetworkReply.NetworkError.NoError:
-            if not self.hasSpeedResult:
-                if not self.coreManager.allRunning():
-                    # Core ExitCallback has been called
-                    return
-
-                if (
-                    self.networkReply.error()
-                    == QNetworkReply.NetworkError.OperationCanceledError
-                ):
-                    # Canceled by application
-                    self.currentItem.setExtras('speedResult', 'Canceled')
-                else:
-                    try:
-                        error = self.networkReply.error().name
-                    except Exception:
-                        # Any non-exit exceptions
-
-                        error = 'UnknownError'
-
-                    if isinstance(error, bytes):
-                        # Some old version PySide6 returns it as bytes. Protect it.
-                        errorString = error.decode('utf-8', 'replace')
-                    elif isinstance(error, str):
-                        errorString = error
-                    else:
-                        errorString = 'UnknownError'
-
-                    if errorString != 'UnknownError' and errorString.endswith('Error'):
-                        self.currentItem.setExtras('speedResult', errorString[:-5])
-                    else:
-                        self.currentItem.setExtras('speedResult', errorString)
-        else:
-            if self.coreManager.allRunning():
-                self.totalBytesRead += self.networkReply.readAll().length()
-
-                # Convert to seconds
-                elapsedSecond = self.elapsedTimer.elapsed() / 1000
-                downloadSpeed = self.totalBytesRead / elapsedSecond / 1024 / 1024
-
-                self.currentItem.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
+            # Extra guard
+            if APP() is None or APP().isExiting():
+                return
             else:
-                self.currentItem.setExtras('speedResult', f'Core start failed')
+                if self.hasDataCounter % 10 == 0:
+                    # Limited to save CPU resources
+                    self.progressed.emit()
+
+    def failureCallback(self, networkReply, **kwargs):
+        if not self.hasSpeedResult:
+            if not self.coreManager.allRunning():
+                # Core ExitCallback has been called
+                return
+
+            if (
+                networkReply.error()
+                == QNetworkReply.NetworkError.OperationCanceledError
+            ):
+                # Canceled by application
+                self.factory.setExtras('speedResult', 'Canceled')
+            else:
+                try:
+                    error = networkReply.error().name
+                except Exception:
+                    # Any non-exit exceptions
+
+                    error = 'UnknownError'
+
+                if isinstance(error, bytes):
+                    # Some old version PySide6 returns it as bytes. Protect it.
+                    errorString = error.decode('utf-8', 'replace')
+                elif isinstance(error, str):
+                    errorString = error
+                else:
+                    errorString = 'UnknownError'
+
+                if errorString != 'UnknownError' and errorString.endswith('Error'):
+                    self.factory.setExtras('speedResult', errorString[:-5])
+                else:
+                    self.factory.setExtras('speedResult', errorString)
 
         self.coreManager.stopAll()
-        self.updateResult()
+
+        # Extra guard
+        if APP() is None or APP().isExiting():
+            return
+        else:
+            self.progressed.emit()
 
 
 class UserServersQTableWidgetHorizontalHeader(AppQHeaderView):
@@ -520,7 +708,7 @@ class UserServersQTableWidgetHorizontalHeader(AppQHeaderView):
             return
 
         if self.customSortFn is None:
-            # Sorting not supported
+            # Sorting is not supported
             return
 
         parent = self.parent()
@@ -654,7 +842,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.setDropIndicatorShown(False)
         self.setDefaultDropAction(QtCore.Qt.DropAction.IgnoreAction)
 
-        self.editConfigActionRef = AppQAction(
+        self.customizeJSONConfigActionRef = AppQAction(
             _('Customize JSON Configuration...'),
             icon=bootstrapIcon('pencil-square.svg'),
             callback=lambda: self.editSelectedItemConfiguration(),
@@ -664,14 +852,31 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             ),
         )
 
+        self.advancedActionRef = AppQAction(
+            _('Advanced...'),
+            menu=AppQMenu(
+                self.customizeJSONConfigActionRef,
+            ),
+            useActionGroup=False,
+            checkable=True,
+        )
+
         contextMenuActions = [
             AppQAction(
                 _('Move Up'),
                 callback=lambda: self.moveUpSelectedItem(),
+                shortcut=QtCore.QKeyCombination(
+                    QtCore.Qt.KeyboardModifier.ControlModifier,
+                    QtCore.Qt.Key.Key_Up,
+                ),
             ),
             AppQAction(
                 _('Move Down'),
                 callback=lambda: self.moveDownSelectedItem(),
+                shortcut=QtCore.QKeyCombination(
+                    QtCore.Qt.KeyboardModifier.ControlModifier,
+                    QtCore.Qt.Key.Key_Down,
+                ),
             ),
             AppQAction(
                 _('Duplicate'),
@@ -680,9 +885,10 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             AppQAction(
                 _('Delete'),
                 callback=lambda: self.deleteSelectedItem(),
+                shortcut=QtCore.QKeyCombination(
+                    QtCore.Qt.Key.Key_Delete,
+                ),
             ),
-            AppQSeperator(),
-            self.editConfigActionRef,
             AppQSeperator(),
             AppQAction(
                 _('Select All'),
@@ -734,6 +940,8 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                     QtCore.Qt.Key.Key_R,
                 ),
             ),
+            AppQSeperator(),
+            self.advancedActionRef,
             AppQSeperator(),
             AppQAction(
                 _('New Empty Configuration'),
@@ -803,22 +1011,25 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
     @QtCore.Slot(QTableWidgetItem)
     def handleItemChanged(self, item: QTableWidgetItem):
-        index = item.row()
+        pass
 
-        if self.item(index, 0) is None:
-            return
-
-        itemText = self.item(index, 0).text()
-
-        if AS_UserServers()[index].getExtras('remark') != itemText:
-            AS_UserServers()[index].setExtras('remark', itemText)
+        # TODO: In use?
+        # index = item.row()
+        #
+        # if self.item(index, 0) is None:
+        #     return
+        #
+        # itemText = self.item(index, 0).text()
+        #
+        # if AS_UserServers()[index].getExtras('remark') != itemText:
+        #     AS_UserServers()[index].setExtras('remark', itemText)
 
     @QtCore.Slot()
     def handleItemSelectionChanged(self):
         if len(self.selectedIndex) > 1:
-            self.editConfigActionRef.setDisabled(True)
+            self.customizeJSONConfigActionRef.setDisabled(True)
         else:
-            self.editConfigActionRef.setDisabled(False)
+            self.customizeJSONConfigActionRef.setDisabled(False)
 
     @QtCore.Slot(QTableWidgetItem)
     def handleItemActivated(self, item: QTableWidgetItem):
@@ -899,6 +1110,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         index = item.row()
         factory = AS_UserServers()[index]
 
+        # Do not translate window title
         guiEditor = self.getGuiEditorByFactory(factory, translatable=False)
 
         if guiEditor is None:
@@ -992,6 +1204,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
         AS_UserServers().sort(key=keyFn, **kwargs)
 
+        # Index is refreshed by calling flushAll()
         self.flushAll()
 
     def activatedItem(self) -> QTableWidgetItem:
@@ -1004,6 +1217,45 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             AppSettings.set('ActivatedItemIndex', str(index))
 
     def flushItem(self, row: int, column: int, item: ConfigurationFactory):
+        itemIndex = item.index()
+
+        if (
+            itemIndex < 0
+            or itemIndex >= len(AS_UserServers())
+            or QGarbageCollector.isTracked(item)
+        ):
+            # Invalid item. Do nothing
+            return
+
+        def searchIndex(start, stop, step=1):
+            nonlocal itemIndex
+
+            for _index in range(start, stop, step):
+                if id(item) == id(AS_UserServers()[_index]):
+                    itemIndex = _index
+
+                    item.setIndex(itemIndex)
+
+                    return True
+
+            return False
+
+        if id(item) != id(AS_UserServers()[itemIndex]):
+            # itemIndex doesn't match
+            if searchIndex(itemIndex - 1, -1, -1) or searchIndex(
+                itemIndex + 1, len(AS_UserServers())
+            ):
+                pass
+            else:
+                # Item isn't found in user servers. Do nothing
+                return
+
+        if row != itemIndex:
+            # Adjust row value
+            row = itemIndex
+        else:
+            pass
+
         header = self.Headers[column]
 
         oldItem = self.item(row, column)
@@ -1108,6 +1360,10 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             self.flushItem(row, column, item)
 
     def flushAll(self):
+        # Refresh index
+        for index, item in enumerate(AS_UserServers()):
+            item.setIndex(index)
+
         if self.rowCount() == 0:
             # Should insert row
             for index, item in enumerate(AS_UserServers()):
@@ -1125,6 +1381,10 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             sequence[param1] = swap
 
         swapSequenceItem(AS_UserServers(), index0, index1)
+
+        # Refresh index
+        AS_UserServers()[index0].setIndex(index1)
+        AS_UserServers()[index1].setIndex(index0)
 
         self.flushRow(index0, AS_UserServers()[index0])
         self.flushRow(index1, AS_UserServers()[index1])
@@ -1212,13 +1472,14 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         else:
             deleteActivated = False
 
+        # Note: param indexes must be sorted
         for i in range(len(indexes)):
             deleteIndex = indexes[i] - i
 
             with QBlockSignals(self):
                 self.removeRow(deleteIndex)
 
-            FastItemDeletionSearch.moveToTrash(AS_UserServers()[deleteIndex])
+            QGarbageCollector.track(AS_UserServers()[deleteIndex])
 
             AS_UserServers().pop(deleteIndex)
 
@@ -1269,9 +1530,6 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         mbox.setText(mbox.customText())
         mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
-        # dummy ref
-        setattr(self, '_questionDeleteMBox', mbox)
-
         # Show the MessageBox asynchronously
         mbox.open()
 
@@ -1312,16 +1570,19 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         references = list(AS_UserServers()[index] for index in indexes)
 
         for index, reference in zip(indexes, references):
-            worker = TestPingLatencyWorker(AS_UserServers(), index, reference)
+            worker = TestPingLatencyWorker(reference)
 
             worker.setAutoDelete(True)
             worker.finished.connect(
-                lambda paramIndex, paramFactory: self.flushItem(
-                    paramIndex, self.Headers.index('Latency'), paramFactory
+                functools.partial(
+                    self.flushItem,
+                    index,
+                    self.Headers.index('Latency'),
+                    reference,
                 )
             )
 
-            APP().threadPool.start(worker)
+            AppThreadPool().start(worker)
 
     def testSelectedItemTcpingLatency(self):
         indexes = self.selectedIndex
@@ -1334,21 +1595,24 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         references = list(AS_UserServers()[index] for index in indexes)
 
         for index, reference in zip(indexes, references):
-            worker = TestTcpingLatencyWorker(AS_UserServers(), index, reference)
+            worker = TestTcpingLatencyWorker(reference)
 
             worker.setAutoDelete(True)
             worker.finished.connect(
-                lambda paramIndex, paramFactory: self.flushItem(
-                    paramIndex, self.Headers.index('Latency'), paramFactory
+                functools.partial(
+                    self.flushItem,
+                    index,
+                    self.Headers.index('Latency'),
+                    reference,
                 )
             )
 
-            APP().threadPool.start(worker)
+            AppThreadPool().start(worker)
 
     @QtCore.Slot()
     def handleTestDownloadSpeedJob(self):
         try:
-            index, server = self.testDownloadSpeedQueue.get_nowait()
+            index, factory, timeout = self.testDownloadSpeedQueue.get_nowait()
         except queue.Empty:
             # Queue is empty
 
@@ -1357,13 +1621,18 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
             return
 
-        assert isinstance(server, ConfigurationFactory)
+        assert isinstance(factory, ConfigurationFactory)
 
-        def testDownloadSpeed(counter=0, timeout=5000, step=100):
-            worker = TestDownloadSpeedWorker(AS_UserServers(), index, server)
+        def testDownloadSpeed(counter=0, step=100):
+            worker = TestDownloadSpeedWorker(
+                factory, port=20809, logActionMessage=False
+            )
             worker.progressed.connect(
-                lambda paramIndex, paramFactory: self.flushItem(
-                    paramIndex, self.Headers.index('Speed'), paramFactory
+                functools.partial(
+                    self.flushItem,
+                    index,
+                    self.Headers.index('Speed'),
+                    factory,
                 )
             )
             worker.run()
@@ -1387,7 +1656,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
         testDownloadSpeed()
 
-    def testSelectedItemDownloadSpeed(self):
+    def testSelectedItemDownloadSpeedWithTimeout(self, timeout: int):
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -1400,7 +1669,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         for index, reference in zip(indexes, references):
             try:
                 # Served by FIFO
-                self.testDownloadSpeedQueue.put_nowait((index, reference))
+                self.testDownloadSpeedQueue.put_nowait((index, reference, timeout))
             except Exception:
                 # Any non-exit exceptions
 
@@ -1409,6 +1678,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         # Power Optimization
         if not self.testDownloadSpeedTimer.isActive():
             self.testDownloadSpeedTimer.start(250)
+
+    def testSelectedItemDownloadSpeed(self):
+        self.testSelectedItemDownloadSpeedWithTimeout(5000)
 
     def clearSelectedItemTestResult(self):
         indexes = self.selectedIndex
@@ -1425,21 +1697,30 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             self.flushItem(index, self.Headers.index('Latency'), factory)
             self.flushItem(index, self.Headers.index('Speed'), factory)
 
-    def updateSubs(self, httpProxy: Union[str, None]):
+    def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
         self.subsManager.configureHttpProxy(httpProxy)
+        self.subsManager.updateSubsByUnique(unique, **kwargs)
 
-        for key, value in AS_UserSubscription().items():
-            self.subsManager.updateSubs(key, value.get('webURL', ''))
+    def updateSubs(self, httpProxy: Union[str, None], **kwargs):
+        self.subsManager.configureHttpProxy(httpProxy)
+        self.subsManager.updateSubs(**kwargs)
 
     def appendNewItemByFactory(self, factory: ConfigurationFactory):
+        index = len(AS_UserServers())
+
+        # Set index
+        factory.setIndex(index)
+
         AS_UserServers().append(factory)
 
         row = self.rowCount()
 
+        assert index == row
+
         self.insertRow(row)
         self.flushRow(row, factory)
 
-        if len(AS_UserServers()) == 1:
+        if index == 0:
             # The first one. Click it
             self.setCurrentItem(self.item(0, 0))
 
@@ -1522,9 +1803,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.textEditorWindow.hideTabAndSpaces()
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key.Key_Delete:
-            self.deleteSelectedItem()
-        elif event.key() == QtCore.Qt.Key.Key_Return:
+        if event.key() == QtCore.Qt.Key.Key_Return:
             if PLATFORM == 'Darwin':
                 # Activate by Enter key on macOS
                 self.itemActivated.emit(self.currentItem())

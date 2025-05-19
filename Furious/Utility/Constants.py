@@ -59,6 +59,16 @@ XRAY_ASSET_DIR = DATA_DIR / 'xray'
 CRASH_LOG_DIR = PACKAGE_DIR / 'CrashLog'
 GEN_TRANSLATION_FILE = PACKAGE_DIR / 'Externals' / 'GenTranslation.py'
 
+URL_GEOSITE = 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat'
+URL_GEOIP = (
+    'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat'
+)
+URL_GEOSITE_SHA256 = 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat.sha256sum'
+URL_GEOIP_SHA256 = 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat.sha256sum'
+
+XRAY_ASSET_PATH_GEOSITE = XRAY_ASSET_DIR / 'geosite.dat'
+XRAY_ASSET_PATH_GEOIP = XRAY_ASSET_DIR / 'geoip.dat'
+
 PROXY_SERVER_BYPASS = (
     'localhost;*.local;127.*;10.*;172.16.*;172.17.*;'
     '172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;'
@@ -92,6 +102,9 @@ APPLICATION_TUN_INTERFACE_DNS_ADDRESS = '1.1.1.1'
 ADMINISTRATOR_NAME = 'Administrator' if PLATFORM == 'Windows' else 'root'
 
 NETWORK_STATE_TEST_URL = 'http://cp.cloudflare.com'
+NETWORK_SPEED_TEST_URL = (
+    'http://speed.cloudflare.com/__down?during=download&bytes=104857600'
+)
 
 UNICODE_LARGE_RED_CIRCLE = u'\U0001F534'
 UNICODE_LARGE_GREEN_CIRCLE = u'\U0001F7E2'

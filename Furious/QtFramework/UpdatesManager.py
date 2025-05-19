@@ -20,6 +20,7 @@ from __future__ import annotations
 from Furious.QtFramework.QtNetwork import *
 from Furious.QtFramework.QtWidgets import *
 from Furious.QtFramework.DynamicTranslate import gettext as _
+from Furious.QtFramework.WebGETManager import *
 from Furious.Utility import *
 from Furious.Library import *
 
@@ -27,10 +28,9 @@ from PySide6 import QtCore
 from PySide6.QtGui import *
 from PySide6.QtNetwork import *
 
-from typing import Union
+from typing import Union, Callable
 
 import logging
-import operator
 import functools
 
 __all__ = ['UpdatesManager']
@@ -61,34 +61,36 @@ class QuestionUpdateMBox(AppQMessageBox):
         self.moveToCenter()
 
 
-class UpdatesManager(AppQNetworkAccessManager):
+class UpdatesManager(WebGETManager):
     API_URL = (
         f'https://api.github.com/repos/'
         f'{APPLICATION_REPO_OWNER_NAME}/{APPLICATION_REPO_NAME}/releases/latest'
     )
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, parent=None, **kwargs):
+        actionMessage = kwargs.pop('actionMessage', 'check for updates')
 
-    def handleFinishedByNetworkReply(self, networkReply):
-        assert isinstance(networkReply, QNetworkReply)
+        super().__init__(parent, actionMessage=actionMessage)
 
-        if networkReply.error() != QNetworkReply.NetworkError.NoError:
-            logger.error(f'check for updates failed. {networkReply.errorString()}')
+    def successCallback(self, networkReply, **kwargs):
+        showMessageBox = kwargs.pop('showMessageBox', True)
+        hasNewVersionCallback = kwargs.pop('hasNewVersionCallback', None)
 
-            mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-            mbox.setWindowTitle(_(APPLICATION_NAME))
-            mbox.setText(_('Check for updates failed'))
+        data = networkReply.readAll().data()
 
-            # Show the MessageBox asynchronously
-            mbox.open()
+        try:
+            info = UJSONEncoder.decode(data)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'bad network reply while checking for updates. {ex}')
+
+            if showMessageBox:
+                self.showErrorMessageBox()
         else:
-            logger.info('check for updates success')
+            newVersion = info['tag_name']
 
-            # Unchecked?
-            info = UJSONEncoder.decode(networkReply.readAll().data())
-
-            if versionToValue(info['tag_name']) > versionToValue(APPLICATION_VERSION):
+            if versionToValue(newVersion) > versionToValue(APPLICATION_VERSION):
 
                 def handleResultCode(code):
                     if code == PySide6LegacyEnumValueWrapper(
@@ -102,40 +104,49 @@ class UpdatesManager(AppQNetworkAccessManager):
                         # Do nothing
                         pass
 
-                mbox = QuestionUpdateMBox(icon=AppQMessageBox.Icon.Information)
-                mbox.version = info['tag_name']
-                mbox.setText(mbox.customText())
-                mbox.setInformativeText(_('Go to download page?'))
-                mbox.finished.connect(functools.partial(handleResultCode))
+                if callable(hasNewVersionCallback):
+                    hasNewVersionCallback(newVersion)
 
-                # dummy ref
-                setattr(self, '_questionUpdateMBox', mbox)
+                if showMessageBox:
+                    mbox = QuestionUpdateMBox(icon=AppQMessageBox.Icon.Information)
+                    mbox.version = newVersion
+                    mbox.setText(mbox.customText())
+                    mbox.setInformativeText(_('Go to download page?'))
+                    mbox.finished.connect(functools.partial(handleResultCode))
 
-                # Show the MessageBox asynchronously
-                mbox.open()
+                    # Show the MessageBox asynchronously
+                    mbox.open()
             else:
-                mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
-                mbox.setWindowTitle(_(APPLICATION_NAME))
-                mbox.setText(_(f'{APPLICATION_NAME} is already the latest version'))
+                if showMessageBox:
+                    mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
+                    mbox.setWindowTitle(_(APPLICATION_NAME))
+                    mbox.setText(_(f'{APPLICATION_NAME} is already the latest version'))
 
-                # Show the MessageBox asynchronously
-                mbox.open()
+                    # Show the MessageBox asynchronously
+                    mbox.open()
 
-    def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
-        useProxy = super().configureHttpProxy(httpProxy)
+    @staticmethod
+    def showErrorMessageBox():
+        mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+        mbox.setWindowTitle(_(APPLICATION_NAME))
+        mbox.setText(_('Check for updates failed'))
 
-        if useProxy:
-            logger.info(f'check for updates uses proxy server {httpProxy}')
-        else:
-            logger.info(f'check for updates uses no proxy')
+        # Show the MessageBox asynchronously
+        mbox.open()
 
-        return useProxy
+    def failureCallback(self, networkReply, **kwargs):
+        showMessageBox = kwargs.pop('showMessageBox', True)
 
-    def checkForUpdates(self):
-        networkReply = self.get(QNetworkRequest(QtCore.QUrl(self.API_URL)))
-        networkReply.finished.connect(
-            functools.partial(
-                self.handleFinishedByNetworkReply,
-                networkReply,
-            )
+        if showMessageBox:
+            self.showErrorMessageBox()
+
+    def checkForUpdates(
+        self,
+        showMessageBox=True,
+        hasNewVersionCallback: Callable[[str], None] = None,
+    ):
+        self.webGET(
+            self.API_URL,
+            showMessageBox=showMessageBox,
+            hasNewVersionCallback=hasNewVersionCallback,
         )

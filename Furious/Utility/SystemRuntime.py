@@ -31,7 +31,7 @@ __all__ = [
     'getPythonVersion',
     'getUbuntuRelease',
     'isAdministrator',
-    'isVPNMode',
+    'isTUNMode',
     'isScriptMode',
     'isPythonw',
     'isWindows7',
@@ -79,7 +79,7 @@ def isAdministrator() -> bool:
         return os.geteuid() == 0
 
 
-def isVPNMode() -> bool:
+def isTUNMode() -> bool:
     return isAdministrator() and AppSettings.isStateON_('VPNMode')
 
 

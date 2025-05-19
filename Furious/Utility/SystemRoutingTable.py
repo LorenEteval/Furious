@@ -356,7 +356,7 @@ class SystemRoutingTable:
                     result = runExternalCommand(
                         'netsh interface ip set address'.split()
                         + [
-                            deviceName,
+                            f'\"{deviceName}\"',
                             'static',
                             deviceIP,
                             '255.255.255.0',

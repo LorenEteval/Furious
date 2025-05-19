@@ -15,36 +15,38 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
+
 from Furious.PyFramework import *
 
-__all__ = ['QBlockSignals', 'QTranslatable']
+from PySide6 import QtCore
+
+__all__ = ['QBlockSignals', 'QTranslatable', 'QGarbageCollector']
 
 
 class QProtection:
-    def __init__(self, qobject):
+    def __init__(self, qobject: QtCore.QObject):
         self.qobject = qobject
-        self.hasattr = hasattr(self.qobject, 'setDisabled')
 
     def __enter__(self):
-        if self.hasattr:
+        if hasattr(self.qobject, 'setDisabled'):
             self.qobject.setDisabled(True)
 
     def __exit__(self, exceptionType, exceptionValue, tb):
-        if self.hasattr:
+        if hasattr(self.qobject, 'setDisabled'):
             self.qobject.setDisabled(False)
 
 
 class QBlockSignals:
-    def __init__(self, qobject):
+    def __init__(self, qobject: QtCore.QObject):
         self.qobject = qobject
-        self.hasattr = hasattr(self.qobject, 'blockSignals')
 
     def __enter__(self):
-        if self.hasattr:
+        if hasattr(self.qobject, 'blockSignals'):
             self.qobject.blockSignals(True)
 
     def __exit__(self, exceptionType, exceptionValue, tb):
-        if self.hasattr:
+        if hasattr(self.qobject, 'blockSignals'):
             self.qobject.blockSignals(False)
 
 
@@ -64,7 +66,22 @@ class QTranslatable(Translatable):
 
             if ob.translatable:
                 if ob.useQProtection:
+                    assert isinstance(ob, QtCore.QObject)
+
                     with QProtection(ob):
                         ob.retranslate()
                 else:
                     ob.retranslate()
+
+
+class QGarbageCollector(GarbageCollector):
+    Timer = QtCore.QTimer()
+
+    @staticmethod
+    def isEnabled():
+        return QGarbageCollector.Timer.isActive()
+
+    @staticmethod
+    def collect(timeout: int):
+        QGarbageCollector.Timer.timeout.connect(QGarbageCollector.clear)
+        QGarbageCollector.Timer.start(timeout)

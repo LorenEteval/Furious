@@ -33,7 +33,7 @@ import pyqrcode
 __all__ = ['QRCodeWindow']
 
 
-class QRCodeWindow(SupportImplicitReference, AppQMainWindow):
+class QRCodeWindow(AppQMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -83,4 +83,4 @@ class QRCodeWindow(SupportImplicitReference, AppQMainWindow):
         self.tabWidget.removeTab(index)
 
         if self.tabWidget.count() == 0:
-            self.hide()
+            self.close()

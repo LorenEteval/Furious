@@ -181,6 +181,7 @@ class Application(ApplicationFactory, SingletonApplication):
         # Initialize storage
         self.userServers = UserServers()
         self.userSubs = UserSubs()
+        self.userTUNSettings = UserTUNSettings()
 
         # ThreadPool
         self.threadPool = QtCore.QThreadPool()

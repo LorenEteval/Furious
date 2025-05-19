@@ -18,7 +18,6 @@
 from .Encoder import *
 from .GuiEditorItemFactory import *
 from .UserServersTableItem import *
-from .ItemUpdateProtocol import *
 from .Storage import *
 from .Application import *
 from .ConfigurationFactory import *

@@ -23,6 +23,7 @@ from Furious.QtFramework import gettext as _
 from Furious.Library import *
 from Furious.Utility import *
 from Furious.Widget.UserServersQTableWidget import *
+from Furious.Widget.GuiTUNSettings import *
 from Furious.Window.UserSubsWindow import *
 from Furious.Window.LogViewerWindow import *
 from Furious.Window.XrayAssetViewerWindow import *
@@ -45,57 +46,25 @@ logger = logging.getLogger(__name__)
 registerAppSettings('ServerWidgetWindowSize')
 
 
-def connectedHttpProxyEndpoint() -> Union[str, None]:
-    try:
-        if APP().isSystemTrayConnected():
-            index = AS_UserActivatedItemIndex()
-
-            if index >= 0:
-                return AS_UserServers()[index].httpProxyEndpoint()
-            else:
-                # Should not reach here
-                return None
-        else:
-            return None
-    except Exception:
-        # Any non-exit exceptions
-
-        return None
-
-
-def connectedRemark() -> str:
-    try:
-        if APP().isSystemTrayConnected():
-            index = AS_UserActivatedItemIndex()
-
-            if index >= 0:
-                return f'{index + 1} - ' + AS_UserServers()[index].getExtras('remark')
-            else:
-                # Should not reach here
-                return ''
-        else:
-            return ''
-    except Exception:
-        # Any non-exit exceptions
-
-        return ''
-
-
 class AppNetworkStateManager(NetworkStateManager):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-    def successCallback(self):
+    def successCallback(self, networkReply, **kwargs):
         parent = self.parent()
 
         if isinstance(parent, AppMainWindow):
             parent.setNetworkState(True)
 
-    def errorCallback(self, errorString: str):
+        super().successCallback(networkReply, **kwargs)
+
+    def failureCallback(self, networkReply, **kwargs):
         parent = self.parent()
 
         if isinstance(parent, AppMainWindow):
-            parent.setNetworkState(False, errorString=errorString)
+            parent.setNetworkState(False, errorString=networkReply.errorString())
+
+        super().failureCallback(networkReply, **kwargs)
 
     def startSingleTest(self):
         if not APP().isSystemTrayConnected():
@@ -106,15 +75,15 @@ class AppNetworkStateManager(NetworkStateManager):
 
             self.stopTest()
 
-        httpProxyEndpoint = connectedHttpProxyEndpoint()
+        connectedHttpProxy = connectedHttpProxyEndpoint()
 
-        if httpProxyEndpoint is None:
+        if connectedHttpProxy is None:
             parent = self.parent()
 
             if isinstance(parent, AppMainWindow):
                 parent.resetNetworkState()
         else:
-            self.configureHttpProxy(httpProxyEndpoint)
+            self.configureHttpProxy(connectedHttpProxy)
 
             super().startSingleTest()
 
@@ -124,7 +93,7 @@ class AppNetworkStateManager(NetworkStateManager):
         if isinstance(parent, AppMainWindow):
             parent.resetNetworkState()
 
-        self.stopTest()
+        super().disconnectedCallback()
 
 
 class AppMainWindow(AppQMainWindow):
@@ -132,7 +101,8 @@ class AppMainWindow(AppQMainWindow):
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_(APPLICATION_NAME))
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        # TODO: Need this?
+        # self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
 
         self.updatesManager = UpdatesManager()
         self.networkStateManager = AppNetworkStateManager(parent=self)
@@ -263,7 +233,21 @@ class AppMainWindow(AppQMainWindow):
                 ),
             ]
 
+        if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
+            customizeTUNSettingsAction = [
+                AppQAction(
+                    _('Customize TUN Settings...'),
+                    icon=bootstrapIcon('diagram-3.svg'),
+                    checkable=False,
+                    callback=lambda: self.getGuiTUNSettings().open(),
+                ),
+                AppQSeperator(),
+            ]
+        else:
+            customizeTUNSettingsAction = []
+
         toolsActions = [
+            *customizeTUNSettingsAction,
             AppQAction(
                 _('Manage Xray-core Asset File...'),
                 callback=lambda: self.xrayAssetViewerWindow.show(),
@@ -402,6 +386,9 @@ class AppMainWindow(AppQMainWindow):
 
         self.setCentralWidget(self._widget)
 
+    def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
+        self.userServersQTableWidget.updateSubsByUnique(unique, httpProxy, **kwargs)
+
     def appendNewItemByFactory(self, factory: ConfigurationFactory):
         self.userServersQTableWidget.appendNewItemByFactory(factory)
 
@@ -414,15 +401,25 @@ class AppMainWindow(AppQMainWindow):
     def hideTabAndSpaces(self):
         self.userServersQTableWidget.hideTabAndSpaces()
 
-    def checkForUpdates(self):
+    def getGuiTUNSettings(self, **kwargs):
+        @functools.lru_cache(None)
+        def cachedGuiTUNSettings():
+            return GuiTUNSettings(self, **kwargs)
+
+        guiTUNSettings = cachedGuiTUNSettings()
+        guiTUNSettings.factoryToInput(AS_UserTUNSettings())
+
+        return guiTUNSettings
+
+    def checkForUpdates(self, **kwargs):
         self.updatesManager.configureHttpProxy(connectedHttpProxyEndpoint())
-        self.updatesManager.checkForUpdates()
+        self.updatesManager.checkForUpdates(**kwargs)
 
     def resetNetworkState(self):
         self.networkState.setText('')
 
     def setNetworkState(self, success: bool, **kwargs):
-        remark = connectedRemark()
+        remark = connectedServerRemark()
 
         if success:
             if remark:

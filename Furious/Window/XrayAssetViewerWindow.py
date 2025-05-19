@@ -77,7 +77,7 @@ class XrayAssetViewerWindow(AppQMainWindow):
             AppQSeperator(),
             AppQAction(
                 _('Exit'),
-                callback=lambda: self.hide(),
+                callback=lambda: self.close(),
             ),
             title=_('File'),
             parent=self.menuBar(),

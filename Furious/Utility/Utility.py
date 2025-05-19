@@ -30,8 +30,10 @@ import subprocess
 import urllib.parse
 
 __all__ = [
+    'AppThreadPool',
     'Protocol',
     'BinarySettings',
+    'callOnceOnly',
     'protocolRepr',
     'isValidIPAddress',
     'parseHostPort',
@@ -44,6 +46,13 @@ __all__ = [
     'loggerCore',
     'loggerTun_',
 ]
+
+
+def _appThreadPool() -> QtCore.QThreadPool:
+    return APP().threadPool
+
+
+AppThreadPool = functools.partial(_appThreadPool)
 
 
 class Protocol:
@@ -60,6 +69,26 @@ class BinarySettings:
     ON_ = '1'
 
     RANGE = [OFF, ON_]
+
+
+def callOnceOnly(func):
+    """
+    Decorator that ensures a function is only called once.
+    Later calls return the cached result from the first invocation.
+    """
+    result = None
+    called = False
+
+    def wrapper(*args, **kwargs):
+        nonlocal result, called
+
+        if not called:
+            result = func(*args, **kwargs)
+            called = True
+
+        return result
+
+    return wrapper
 
 
 @functools.lru_cache(None)

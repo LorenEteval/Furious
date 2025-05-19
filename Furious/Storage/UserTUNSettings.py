@@ -22,29 +22,19 @@ from Furious.PyFramework import *
 from Furious.Utility import *
 from Furious.Library import *
 
-__all__ = ['UserSubs']
+__all__ = ['UserTUNSettings']
 
-registerAppSettings('CustomSubscription')
-
-
-class UserSubEntry:
-    remark: str
-    webURL: str
+registerAppSettings('CustomTUNSettings')
 
 
-class UserSub:
-    unique: dict[str, dict]
-
-
-class UserSubs(SupportExitCleanup, StorageFactory):
-    # unique: { remark, webURL }
+class UserTUNSettings(SupportExitCleanup, StorageFactory):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         def restore():
             try:
                 return UJSONEncoder.decode(
-                    PyBase64Encoder.decode(AppSettings.get('CustomSubscription'))
+                    PyBase64Encoder.decode(AppSettings.get('CustomTUNSettings'))
                 )
             except Exception:
                 # Any non-exit exceptions
@@ -55,13 +45,13 @@ class UserSubs(SupportExitCleanup, StorageFactory):
 
     def sync(self):
         AppSettings.set(
-            'CustomSubscription',
+            'CustomTUNSettings',
             PyBase64Encoder.encode(
                 UJSONEncoder.encode(self._data).encode(),
             ),
         )
 
-    def data(self) -> dict[str, dict]:
+    def data(self) -> dict[str, str]:
         # Shallow copy
         return self._data
 

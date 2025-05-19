@@ -17,8 +17,6 @@
 
 from __future__ import annotations
 
-from Furious.Interface.ConfigurationFactory import ConfigurationFactory
-
 from typing import Any
 
 __all__ = ['GuiEditorItemFactory', 'GuiEditorItemWidgetContainer']
@@ -28,10 +26,10 @@ class GuiEditorItemFactory:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> Any:
+    def inputToFactory(self, *args, **kwargs) -> Any:
         raise NotImplementedError
 
-    def factoryToInput(self, config: ConfigurationFactory) -> Any:
+    def factoryToInput(self, *args, **kwargs) -> Any:
         raise NotImplementedError
 
 

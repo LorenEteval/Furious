@@ -27,15 +27,7 @@ import ujson
 __all__ = ['CoreFactory']
 
 
-class CoreFactorySuper:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-
-ExitCallbackType = Callable[[CoreFactorySuper, int], None]
-
-
-class CoreFactory(CoreFactorySuper, ABC):
+class CoreFactory(ABC):
     class ExitCode:
         ConfigurationError = 23
         # Windows: 4294967295. Darwin, Linux: 255 (-1)
@@ -43,20 +35,13 @@ class CoreFactory(CoreFactorySuper, ABC):
         # Windows shutting down
         SystemShuttingDown = 0x40010004
 
-    def __init__(self, exitCallback: ExitCallbackType = None):
+    def __init__(
+        self, exitCallback: Union[Callable[[CoreFactory, int], None], None] = None
+    ):
         super().__init__()
 
         self._exitCallback = exitCallback
         self._jsonConfig = ''
-
-    @property
-    def exitCallback(self) -> ExitCallbackType:
-        return self._exitCallback
-
-    def registerExitCallback(self, exitCallback: ExitCallbackType) -> CoreFactory:
-        self._exitCallback = exitCallback
-
-        return self
 
     def callExitCallback(self, exitcode: int):
         if callable(self._exitCallback):
@@ -66,14 +51,6 @@ class CoreFactory(CoreFactorySuper, ABC):
         self._jsonConfig = config
 
         return self
-
-    @staticmethod
-    def name() -> str:
-        raise NotImplementedError
-
-    @staticmethod
-    def version() -> str:
-        raise NotImplementedError
 
     def configJSONString(self) -> str:
         if isinstance(self._jsonConfig, str):
@@ -104,6 +81,14 @@ class CoreFactory(CoreFactorySuper, ABC):
             return self._jsonConfig
 
         return {}
+
+    @staticmethod
+    def name() -> str:
+        raise NotImplementedError
+
+    @staticmethod
+    def version() -> str:
+        raise NotImplementedError
 
     def start(self, *args, **kwargs) -> bool:
         raise NotImplementedError
