@@ -28,3 +28,5 @@ from .NetworkStateManager import *
 from .TextEditor import *
 from .TextEditorTheme import *
 from .GuiEditorXXX import *
+from .WebGETManager import *
+from .XrayAssetDownloadManager import *

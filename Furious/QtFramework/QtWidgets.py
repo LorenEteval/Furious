@@ -34,6 +34,7 @@ import functools
 __all__ = [
     'moveToCenter',
     'AppQCheckBox',
+    'AppQComboBox',
     'AppQDialog',
     'AppQDialogButtonBox',
     'AppQGroupBox',
@@ -75,6 +76,15 @@ class AppQCheckBox(QTranslatable, QCheckBox):
 
     def retranslate(self):
         self.setText(_(self.text()))
+
+
+class AppQComboBox(QTranslatable, QComboBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def retranslate(self):
+        for index in range(self.count()):
+            self.setItemText(index, _(self.itemText(index)))
 
 
 class AppQDialog(QTranslatable, SupportConnectedCallback, QDialog):
@@ -176,7 +186,7 @@ class AppQHeaderView(SupportExitCleanup, SupportConnectedCallback, QHeaderView):
                     self.sectionSizeTable[str(column)] = self.defaultSectionSize()
 
             with QBlockSignals(self):
-                for key, value in self.sectionSizeTable.items():
+                for key, value in reversed(self.sectionSizeTable.items()):
                     self.resizeSection(int(key), value)
         except Exception:
             # Any non-exit exceptions
@@ -293,14 +303,11 @@ class AppQMainWindow(
 
         moveToCenter(self)
 
+        APP().processEvents()
+
         if PLATFORM == 'Darwin':
             self.activateWindow()
             self.raise_()
-
-    def closeEvent(self, event):
-        event.ignore()
-
-        self.hide()
 
     def retranslate(self):
         self.setWindowTitle(_(self.windowTitle()))

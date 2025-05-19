@@ -36,12 +36,12 @@ logger = logging.getLogger(__name__)
 
 
 def runAppMain():
-    appMainProcess = AppMainProcess(functools.partial(Application, sys.argv))
+    process = AppMainProcess(functools.partial(Application, sys.argv))
 
-    appMainProcess.start()
-    appMainProcess.join()
+    process.start()
+    process.join()
 
-    exitcode = appMainProcess.exitcode
+    exitcode = process.exitcode
 
     if exitcode == 0:
         sys.exit(exitcode)
@@ -76,7 +76,7 @@ def runAppMain():
                 )
             )
 
-        # Show the MessageBox and wait for user to close it
+        # Show the MessageBox and wait for the user to close it
         messageBox.exec()
     else:
         if exitcode == ApplicationFactory.ExitCode.AssertionError:
@@ -96,34 +96,44 @@ def runAppMain():
         messageBox.setWindowTitle(_(APPLICATION_NAME))
         messageBox.setText(text)
 
-        if appMainProcess.fileWritten.value:
+        if process.fileWritten.value:
             # Crash log saved
-            crashLogFile = str(CRASH_LOG_DIR / appMainProcess.logFileName)
+            crashLogFile = str(CRASH_LOG_DIR / process.logFileName)
+
+            logger.info(f'crash log has been saved to {crashLogFile}')
 
             messageBox.setInformativeText(
                 _('Crash log has been saved to') + f' {crashLogFile}'
             )
-            messageBox.addButton(
+            button0 = messageBox.addButton(
                 _('Open crash log'), AppQMessageBox.ButtonRole.AcceptRole
             )
-            messageBox.addButton(_('OK'), AppQMessageBox.ButtonRole.RejectRole)
+            button1 = messageBox.addButton(
+                _('OK'), AppQMessageBox.ButtonRole.RejectRole
+            )
 
-            # Show the MessageBox and wait for user to close it
-            if messageBox.exec() == PySide6LegacyEnumValueWrapper(
-                AppQMessageBox.ButtonRole.AcceptRole
-            ):
-                # Open
-                if QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(crashLogFile)):
-                    logger.info(f'open crash log {crashLogFile} success')
+            def handleButtonClicked(button):
+                if button == button0:
+                    # Open
+                    if QDesktopServices.openUrl(
+                        QtCore.QUrl.fromLocalFile(crashLogFile)
+                    ):
+                        logger.info(f'open crash log {crashLogFile} success')
+                    else:
+                        logger.error(f'open crash log {crashLogFile} failed')
                 else:
-                    logger.error(f'open crash log {crashLogFile} failed')
-            else:
-                # OK. Do nothing
-                pass
-        else:
-            # Crash log not saved
+                    # OK. Do nothing
+                    pass
 
-            # Show the MessageBox and wait for user to close it
+            messageBox.buttonClicked.connect(handleButtonClicked)
+
+            # Show the MessageBox and wait for the user to close it
+            messageBox.exec()
+        else:
+            # Crash log wasn't saved
+            logger.info(f'crash log was not saved')
+
+            # Show the MessageBox and wait for the user to close it
             messageBox.exec()
 
     sys.exit(exitcode)

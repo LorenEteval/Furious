@@ -95,7 +95,7 @@ class GuiEditorItemTextComboBox(GuiEditorItemWidgetContainer):
         super().__init__(*args, **kwargs)
 
         self._title = AppQLabel(_(title), translatable=translatable, parent=parent)
-        self._input = QComboBox(parent=parent)
+        self._input = AppQComboBox(parent=parent, translatable=False)
 
     def text(self) -> str:
         return self._input.currentText()

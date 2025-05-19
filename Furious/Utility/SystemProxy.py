@@ -288,7 +288,7 @@ class _SystemProxy:
 
                     return False
 
-            # Note: try to resolve non-Windows proxy daemon issue by
+            # Note: try to solve non-Windows proxy daemon issue by
             # turning on StartupOnBoot by default. This should be
             # friendly for most of the users
 

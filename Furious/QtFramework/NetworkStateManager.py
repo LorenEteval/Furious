@@ -15,8 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
+
 from Furious.PyFramework import *
-from Furious.QtFramework.QtNetwork import *
+from Furious.QtFramework.WebGETManager import *
 from Furious.Utility import *
 
 from PySide6 import QtCore
@@ -30,12 +32,14 @@ __all__ = ['NetworkStateManager']
 logger = logging.getLogger(__name__)
 
 
-class NetworkStateManager(SupportConnectedCallback, AppQNetworkAccessManager):
+class NetworkStateManager(SupportConnectedCallback, WebGETManager):
     MIN_JOB_INTERVAL = 2500
     MAX_JOB_INTERVAL = 2000000000
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, parent=None, **kwargs):
+        actionMessage = kwargs.pop('actionMessage', 'test network state')
+
+        super().__init__(parent, actionMessage=actionMessage)
 
         self.jobStatus = False
         self.jobInterval = NetworkStateManager.MIN_JOB_INTERVAL
@@ -45,58 +49,32 @@ class NetworkStateManager(SupportConnectedCallback, AppQNetworkAccessManager):
 
         self.jobArrangeTimer.timeout.connect(lambda: self.startSingleTest())
 
-    def successCallback(self):
-        raise NotImplementedError
+    def recalculateJobInterval(self, jobStatus: bool) -> int:
+        assert isinstance(jobStatus, bool)
 
-    def errorCallback(self, errorString: str):
-        raise NotImplementedError
-
-    def handleFinishedByNetworkReply(self, networkReply):
-        assert isinstance(networkReply, QNetworkReply)
-
-        if networkReply.error() != QNetworkReply.NetworkError.NoError:
-            self.jobTimeoutTimer.stop()
-
-            errorString = networkReply.errorString()
-
-            logger.error(f'connection test failed. {errorString}')
-
-            self.errorCallback(errorString)
-
-            if self.jobStatus is False:
-                self.jobInterval *= 2
-            else:
-                self.jobInterval = NetworkStateManager.MIN_JOB_INTERVAL
-
-            self.jobStatus = False
+        if self.jobStatus is jobStatus:
+            self.jobInterval *= 2
         else:
-            self.jobTimeoutTimer.stop()
+            self.jobInterval = NetworkStateManager.MIN_JOB_INTERVAL
 
-            logger.info(f'connection test success')
-
-            self.successCallback()
-
-            if self.jobStatus is True:
-                self.jobInterval *= 2
-            else:
-                self.jobInterval = NetworkStateManager.MIN_JOB_INTERVAL
-
-            self.jobStatus = True
+        self.jobStatus = jobStatus
 
         if self.jobInterval >= NetworkStateManager.MAX_JOB_INTERVAL:
             # Limited
             self.jobInterval = NetworkStateManager.MAX_JOB_INTERVAL
 
-        self.jobArrangeTimer.start(self.jobInterval)
+        return self.jobInterval
+
+    def successCallback(self, networkReply, **kwargs):
+        self.jobTimeoutTimer.stop()
+        self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=True))
+
+    def failureCallback(self, networkReply, **kwargs):
+        self.jobTimeoutTimer.stop()
+        self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=False))
 
     def startSingleTest(self):
-        networkReply = self.get(QNetworkRequest(QtCore.QUrl(NETWORK_STATE_TEST_URL)))
-        networkReply.finished.connect(
-            functools.partial(
-                self.handleFinishedByNetworkReply,
-                networkReply,
-            )
-        )
+        networkReply = self.webGET(NETWORK_STATE_TEST_URL)
 
         def abort(_networkReply):
             if isinstance(_networkReply, QNetworkReply):
@@ -107,17 +85,18 @@ class NetworkStateManager(SupportConnectedCallback, AppQNetworkAccessManager):
 
     def stopTest(self):
         self.jobArrangeTimer.stop()
+        self.jobTimeoutTimer.stop()
 
     def connectedCallback(self):
         if AppSettings.isStateON_('PowerSaveMode'):
             # Power optimization
             logger.info('no job for network state manager in power save mode')
 
-            self.jobArrangeTimer.stop()
+            self.stopTest()
         else:
             self.jobInterval = NetworkStateManager.MIN_JOB_INTERVAL
 
             self.jobArrangeTimer.start(self.jobInterval)
 
     def disconnectedCallback(self):
-        self.jobArrangeTimer.stop()
+        self.stopTest()

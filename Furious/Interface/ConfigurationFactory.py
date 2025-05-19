@@ -47,6 +47,8 @@ class ConfigurationFactory(UserServersTableItem, dict, ABC):
         :param config: The input configuration. Can be a string or dict
         """
 
+        self._index = kwargs.pop('index', 0)
+
         # Extra attributes
         self.kwargs = kwargs
 
@@ -95,6 +97,12 @@ class ConfigurationFactory(UserServersTableItem, dict, ABC):
 
     def setExtras(self, item, value):
         self.kwargs[item] = value
+
+    def index(self) -> int:
+        return self._index
+
+    def setIndex(self, index):
+        self._index = index
 
     @property
     def itemRemark(self) -> str:

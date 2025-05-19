@@ -36,18 +36,18 @@ registerAppSettings(
 registerAppSettings('ShowTabAndSpacesInEditor', isBinary=True)
 
 # Administrator, root
-TRANSLATABLE_VPN_MODE = [
-    _('VPN Mode Disabled (Administrator)'),
-    _('VPN Mode Disabled (root)'),
+TRANSLATABLE_TUN_MODE = [
+    _('TUN Mode Disabled (Administrator)'),
+    _('TUN Mode Disabled (root)'),
 ]
 
 
-class VPNModeAction(AppQAction):
+class TUNModeAction(AppQAction):
     def __init__(self, **kwargs):
         if isAdministrator():
-            super().__init__(_('VPN Mode'), **kwargs)
+            super().__init__(_('TUN Mode'), **kwargs)
         else:
-            super().__init__(_(f'VPN Mode Disabled ({ADMINISTRATOR_NAME})'), **kwargs)
+            super().__init__(_(f'TUN Mode Disabled ({ADMINISTRATOR_NAME})'), **kwargs)
 
             self.setDisabled(True)
 
@@ -136,9 +136,15 @@ class SettingsAction(AppQAction):
     def __init__(self, **kwargs):
         if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
             extraActions = [
-                VPNModeAction(
+                TUNModeAction(
                     checkable=True,
                     checked=AppSettings.isStateON_('VPNMode'),
+                ),
+                AppQAction(
+                    _('Customize TUN Settings...'),
+                    icon=bootstrapIcon('diagram-3.svg'),
+                    checkable=False,
+                    callback=lambda: APP().mainWindow.getGuiTUNSettings().open(),
                 ),
                 AppQSeperator(),
             ]
@@ -187,7 +193,7 @@ class SettingsAction(AppQAction):
             **kwargs,
         )
 
-    def getVPNModeAction(self) -> Union[AppQAction, None]:
+    def getTUNModeAction(self) -> Union[AppQAction, None]:
         if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
             # 1st action
             return self._menu.actions()[0]

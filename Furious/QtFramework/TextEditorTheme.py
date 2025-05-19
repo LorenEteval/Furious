@@ -15,14 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
+
+from Furious.Core import *
+
 from PySide6 import QtCore
 from PySide6.QtGui import *
 
-__all__ = ['DraculaEditorTheme', 'DraculaJSONSyntaxHighlighter']
+__all__ = [
+    'DraculaEditorTheme',
+    'DraculaJSONSyntaxHighlighter',
+    'DraculaLoggerSyntaxHighlighter',
+]
 
 
 class EditorHighlightRules:
-    def __init__(self, regex, color, isBold=False, isJSONKey=False):
+    def __init__(self, regex, color, isBold=False, isItalic=False, isJSONKey=False):
         self.regex = QtCore.QRegularExpression(regex)
         self.color = QColor(color)
 
@@ -31,6 +39,9 @@ class EditorHighlightRules:
 
         if isBold:
             self.rules.setFontWeight(QFont.Weight.Bold)
+
+        if isItalic:
+            self.rules.setFontItalic(True)
 
         self.isJSONKey = isJSONKey
 
@@ -59,7 +70,46 @@ class DraculaEditorTheme(EditorTheme):
         )
 
 
-class DraculaJSONSyntaxHighlighter(QSyntaxHighlighter):
+class AppQSyntaxHighlighter(QSyntaxHighlighter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.highlightRules = list()
+
+    def highlightBlock(self, text):
+        for highlightRule in self.highlightRules:
+            iterator = highlightRule.regex.globalMatch(text)
+
+            while iterator.hasNext():
+                match = iterator.next()
+
+                if highlightRule.isJSONKey:
+                    # JSON keys. Ignore trailing :
+                    capturedLength = match.capturedLength() - 1
+                else:
+                    capturedLength = match.capturedLength()
+
+                capturedStart = match.capturedStart()
+                captured = text[capturedStart : capturedStart + capturedLength]
+                shouldHighlight = True
+
+                for version in [
+                    XrayCore.version(),
+                    Hysteria1.version(),
+                    Hysteria2.version(),
+                    Tun2socks.version(),
+                ]:
+                    if captured == version:
+                        # These x.y.z.u version values are not IPv4 addresses. Do not highlight
+                        shouldHighlight = False
+
+                        break
+
+                if shouldHighlight:
+                    self.setFormat(capturedStart, capturedLength, highlightRule.rules)
+
+
+class DraculaJSONSyntaxHighlighter(AppQSyntaxHighlighter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -77,22 +127,66 @@ class DraculaJSONSyntaxHighlighter(QSyntaxHighlighter):
                 r'"([^"\\]*(\\.[^"\\]*)*)"\s*:', '#50FA7B', isJSONKey=True
             ),
             # Comments(only for hints on display). Grey
-            EditorHighlightRules(r'^#.*', '#6272a4'),
+            EditorHighlightRules(r'^#.*', '#6272A4'),
         ]
 
-    def highlightBlock(self, text):
-        for highlightRule in self.highlightRules:
-            iterator = highlightRule.regex.globalMatch(text)
 
-            while iterator.hasNext():
-                match = iterator.next()
+class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
+    # https://ihateregex.io/expr/ip/
+    IPV4_REGEX = (
+        r'(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)'
+        r'(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}(?::\d{1,5})?\b'
+    )
+    # https://vernon.mauery.com/content/2008/04/21/ipv6-regex/
+    IPV6_REGEX = (
+        r'(A([0-9a-f]{1,4}:){1,1}(:[0-9a-f]{1,4}){1,6}Z)|'
+        r'(A([0-9a-f]{1,4}:){1,2}(:[0-9a-f]{1,4}){1,5}Z)|'
+        r'(A([0-9a-f]{1,4}:){1,3}(:[0-9a-f]{1,4}){1,4}Z)|'
+        r'(A([0-9a-f]{1,4}:){1,4}(:[0-9a-f]{1,4}){1,3}Z)|'
+        r'(A([0-9a-f]{1,4}:){1,5}(:[0-9a-f]{1,4}){1,2}Z)|'
+        r'(A([0-9a-f]{1,4}:){1,6}(:[0-9a-f]{1,4}){1,1}Z)|'
+        r'(A(([0-9a-f]{1,4}:){1,7}|:):Z)|'
+        r'(A:(:[0-9a-f]{1,4}){1,7}Z)|'
+        r'(A((([0-9a-f]{1,4}:){6})(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3})Z)|'
+        r'(A(([0-9a-f]{1,4}:){5}[0-9a-f]{1,4}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3})Z)|'
+        r'(A([0-9a-f]{1,4}:){5}:[0-9a-f]{1,4}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
+        r'(A([0-9a-f]{1,4}:){1,1}(:[0-9a-f]{1,4}){1,4}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
+        r'(A([0-9a-f]{1,4}:){1,2}(:[0-9a-f]{1,4}){1,3}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
+        r'(A([0-9a-f]{1,4}:){1,3}(:[0-9a-f]{1,4}){1,2}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
+        r'(A([0-9a-f]{1,4}:){1,4}(:[0-9a-f]{1,4}){1,1}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
+        r'(A(([0-9a-f]{1,4}:){1,5}|:):(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
+        r'(A:(:[0-9a-f]{1,4}){1,5}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)(?::\d{1,5})?'
+    )
 
-                if highlightRule.isJSONKey:
-                    # JSON keys. Ignore trailing :
-                    capturedLength = match.capturedLength() - 1
-                else:
-                    capturedLength = match.capturedLength()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-                self.setFormat(
-                    match.capturedStart(), capturedLength, highlightRule.rules
-                )
+        self.highlightRules = [
+            # IP addresses (IPv4 & IPv6)
+            EditorHighlightRules(
+                # https://ihateregex.io/expr/ip/
+                DraculaLoggerSyntaxHighlighter.IPV4_REGEX
+                + r'|'
+                + DraculaLoggerSyntaxHighlighter.IPV6_REGEX,
+                '#B4FFFF',
+            ),
+            # URLs
+            EditorHighlightRules(r'(https?:)?//[^\s,\'"\]\)\(<>]+', '#FFDD88'),
+            # Timestamps
+            EditorHighlightRules(
+                r'\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\]', '#7F7F7F'
+            ),
+            # Logger name: [X.Y.Z]
+            EditorHighlightRules(
+                r'\[[A-Za-z0-9_]+\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+\]', '#FFB46E'
+            ),
+            # Log levels
+            EditorHighlightRules(r'\[INFO\]', '#A0C882', isBold=True),
+            EditorHighlightRules(r'\[DEBUG\]', '#82B4FF', isBold=True),
+            EditorHighlightRules(r'\[WARNING\]', '#FFD75A', isBold=True),
+            EditorHighlightRules(r'\[ERROR\]', '#FF7878', isBold=True),
+            EditorHighlightRules(r'\[CRITICAL\]', '#FF5050', isBold=True),
+            # Quoted strings (single or double)
+            EditorHighlightRules(r"'[^']*'", '#A0FFA0'),
+            EditorHighlightRules(r'"[^"]*"', '#A0FFA0'),
+        ]

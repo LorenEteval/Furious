@@ -27,6 +27,12 @@ __all__ = ['UserServers']
 registerAppSettings('Configuration')
 
 
+class UserServer:
+    remark: str
+    config: str
+    subsId: str
+
+
 class UserServers(SupportExitCleanup, StorageFactory):
     # remark, config, subsId. (subsId corresponds to unique in user subscription)
     def __init__(self, *args, **kwargs):
@@ -44,8 +50,8 @@ class UserServers(SupportExitCleanup, StorageFactory):
 
         self._data = restore()
         self._list = list(
-            constructFromAny(model.pop('config', ''), **model)
-            for model in self._data['model']
+            constructFromAny(model.pop('config', ''), index=index, **model)
+            for index, model in enumerate(self._data['model'])
         )
 
     def sync(self):

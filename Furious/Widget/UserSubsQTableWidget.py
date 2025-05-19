@@ -28,9 +28,12 @@ from PySide6 import QtCore
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-from typing import Callable
+from typing import Union, Callable
 
+import logging
 import functools
+
+logger = logging.getLogger(__name__)
 
 __all__ = ['UserSubsQTableWidget']
 
@@ -65,16 +68,84 @@ class UserSubsQTableWidgetHeaders:
         return self.name
 
 
+class UserSubsAppQComboBox(AppQComboBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def retranslate(self):
+        # Do not emit 'currentTextChanged' when retranslate
+        with QBlockSignals(self):
+            super().retranslate()
+
+
+# Headers VALUE
+TRANSLATABLE_HEADERS = [
+    _('Never'),
+    _('Every 5 mins'),
+    _('Every 10 mins'),
+    _('Every 15 mins'),
+    _('Every 30 mins'),
+    _('Every 45 mins'),
+    _('Every 1 hour'),
+    _('Every 2 hours'),
+    _('Every 3 hours'),
+    _('Every 6 hours'),
+    _('Every 8 hours'),
+    _('Every 10 hours'),
+    _('Every 12 hours'),
+    _('Every 24 hours'),
+    _('Use current proxy'),
+    _('Force proxy'),
+    _('No proxy'),
+    _('Remark'),
+    _('Auto Update'),
+    _('Auto Update Use Proxy'),
+]
+
+
 class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
+    AutoUpdateOptions = {
+        '': None,
+        'Never': None,
+        'Every 5 mins': 5 * 60 * 1000,
+        'Every 10 mins': 10 * 60 * 1000,
+        'Every 15 mins': 15 * 60 * 1000,
+        'Every 30 mins': 30 * 60 * 1000,
+        'Every 45 mins': 45 * 60 * 1000,
+        'Every 1 hour': 1 * 60 * 60 * 1000,
+        'Every 2 hours': 2 * 60 * 60 * 1000,
+        'Every 3 hours': 3 * 60 * 60 * 1000,
+        'Every 6 hours': 6 * 60 * 60 * 1000,
+        'Every 8 hours': 8 * 60 * 60 * 1000,
+        'Every 10 hours': 10 * 60 * 60 * 1000,
+        'Every 12 hours': 12 * 60 * 60 * 1000,
+        'Every 24 hours': 24 * 60 * 60 * 1000,
+    }
+
+    ProxyOptions = {
+        '': lambda: None,
+        'Use current proxy': lambda: connectedHttpProxyEndpoint(),
+        'Force proxy': lambda: '127.0.0.1:10809',
+        'No proxy': lambda: None,
+    }
+
     Headers = [
         UserSubsQTableWidgetHeaders('Remark', lambda item: item.get('remark', '')),
         UserSubsQTableWidgetHeaders('URL', lambda item: item.get('webURL', '')),
+        UserSubsQTableWidgetHeaders(
+            'Auto Update', lambda item: item.get('autoupdate', '')
+        ),
+        UserSubsQTableWidgetHeaders(
+            'Auto Update Use Proxy', lambda item: item.get('proxy', '')
+        ),
     ]
 
     def __init__(self, *args, **kwargs):
         self.deleteUniqueCallback = kwargs.pop('deleteUniqueCallback', None)
 
         super().__init__(*args, **kwargs)
+
+        self.timers = list(QtCore.QTimer() for i in range(len(AS_UserSubscription())))
 
         # Must set before flush all
         self.setColumnCount(len(self.Headers))
@@ -124,7 +195,8 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
     @QtCore.Slot(QTableWidgetItem)
     def handleItemChanged(self, item: QTableWidgetItem):
         unique = list(AS_UserSubscription().keys())[item.row()]
-        keyMap = ['remark', 'webURL']
+        # 'autoupdate', 'proxy' is not triggered here
+        keyMap = ['remark', 'webURL', 'autoupdate', 'proxy']
 
         AS_UserSubscription()[unique][keyMap[item.column()]] = item.text()
 
@@ -149,6 +221,25 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
 
                     AS_UserSubscription().pop(deleteUnique)
 
+                    # Begin timer cleanup
+                    qtimer = self.timers[deleteIndex]
+
+                    assert isinstance(qtimer, QtCore.QTimer)
+
+                    try:
+                        qtimer.timeout.disconnect()
+                    except Exception as ex:
+                        # Any non-exit exceptions
+
+                        # Disconnect all previous signals if possible
+                        pass
+
+                    qtimer.stop()
+                    # End timer cleanup
+
+                    # Remove timer from list
+                    self.timers.pop(deleteIndex)
+
                     if callable(self.deleteUniqueCallback):
                         self.deleteUniqueCallback(deleteUnique)
             else:
@@ -170,37 +261,189 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
         mbox.setText(mbox.customText())
         mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
-        # dummy ref
-        setattr(self, '_questionDeleteMBox', mbox)
-
         # Show the MessageBox asynchronously
         mbox.open()
 
-    def flushItem(self, row, column, item):
-        header = self.Headers[column]
+    def handleAutoUpdateComboBoxCurrentTextChanged(self, text: str, row: int):
+        textEnglish = _(text, 'EN')
 
-        oldItem = self.item(row, column)
-        newItem = QTableWidgetItem(header(item))
+        unique = list(AS_UserSubscription().keys())[row]
+        subsob = AS_UserSubscription()[unique]
 
-        if oldItem is None:
-            # Item does not exists
-            newItem.setFont(QFont(APP().customFontName))
-        else:
-            # Use existing
-            newItem.setFont(oldItem.font())
-            newItem.setForeground(oldItem.foreground())
+        remark, webURL = subsob['remark'], subsob['webURL']
 
-            if oldItem.textAlignment() != 0:
-                newItem.setTextAlignment(oldItem.textAlignment())
+        try:
+            timems = self.AutoUpdateOptions[textEnglish]
+        except KeyError:
+            # Invalid key. Reset
+            logger.error(f'\'{textEnglish}\' is not in auto update options. Reset')
 
-            # Editable
-            newItem.setFlags(
-                QtCore.Qt.ItemFlag.ItemIsEnabled
-                | QtCore.Qt.ItemFlag.ItemIsSelectable
-                | QtCore.Qt.ItemFlag.ItemIsEditable
+            textEnglish = ''
+
+            # Write to subs object
+            subsob['autoupdate'] = textEnglish
+
+            timems = self.AutoUpdateOptions[textEnglish]
+
+        qtimer = self.timers[row]
+
+        assert isinstance(qtimer, QtCore.QTimer)
+
+        if timems is not None:
+            logger.info(
+                f'start auto update job for subscription ({remark}, {webURL}). '
+                f'Interval is {timems // (60 * 1000)} mins'
             )
 
-        self.setItem(row, column, newItem)
+            def getHttpProxy(_subsob):
+                return self.ProxyOptions[_subsob.get('proxy', '')]()
+
+            try:
+                qtimer.timeout.disconnect()
+            except Exception as ex:
+                # Any non-exit exceptions
+
+                # Disconnect all previous signals if possible
+                pass
+
+            qtimer.timeout.connect(
+                functools.partial(
+                    self.updateSubsByUnique,
+                    unique=unique,
+                    httpProxy=functools.partial(getHttpProxy, subsob),
+                )
+            )
+            qtimer.start(timems)
+        else:
+            logger.info(f'stop auto update job for subscription ({remark}, {webURL})')
+
+            try:
+                qtimer.timeout.disconnect()
+            except Exception as ex:
+                # Any non-exit exceptions
+
+                # Disconnect all previous signals if possible
+                pass
+
+            qtimer.stop()
+
+        # Write to subs object
+        subsob['autoupdate'] = textEnglish
+
+        # Return potentially fixed value
+        return textEnglish
+
+    def handleProxyComboBoxCurrentTextChanged(self, text: str, row: int):
+        textEnglish = _(text, 'EN')
+
+        unique = list(AS_UserSubscription().keys())[row]
+        subsob = AS_UserSubscription()[unique]
+
+        try:
+            proxyFn = self.ProxyOptions[textEnglish]
+        except KeyError:
+            # Invalid key. Reset
+            logger.error(f'\'{textEnglish}\' is not in proxy options. Reset')
+
+            textEnglish = ''
+
+            # Write to subs object
+            subsob['proxy'] = textEnglish
+
+            proxyFn = self.ProxyOptions[textEnglish]
+
+        assert callable(proxyFn)
+
+        # Write to subs object
+        subsob['proxy'] = textEnglish
+
+        # Return potentially fixed value
+        return textEnglish
+
+    def flushItem(self, row, column, item):
+        if column == self.Headers.index('Auto Update'):
+            header = self.Headers[column]
+
+            oldItem = self.item(row, column)
+            newItem = UserSubsAppQComboBox()
+            newItem.addItems(list(_(key) for key in self.AutoUpdateOptions.keys()))
+
+            if oldItem is None:
+                # Item does not exist
+                newItem.setFont(QFont(APP().customFontName))
+            else:
+                # Use existing
+                newItem.setFont(oldItem.font())
+
+            index = newItem.findText(
+                _(self.handleAutoUpdateComboBoxCurrentTextChanged(header(item), row))
+            )
+
+            if index >= 0:
+                newItem.setCurrentIndex(index)
+
+            newItem.currentTextChanged.connect(
+                functools.partial(
+                    self.handleAutoUpdateComboBoxCurrentTextChanged,
+                    row=row,
+                )
+            )
+
+            self.setCellWidget(row, column, newItem)
+        elif column == self.Headers.index('Auto Update Use Proxy'):
+            header = self.Headers[column]
+
+            oldItem = self.item(row, column)
+            newItem = UserSubsAppQComboBox()
+            newItem.addItems(list(_(key) for key in self.ProxyOptions.keys()))
+
+            if oldItem is None:
+                # Item does not exist
+                newItem.setFont(QFont(APP().customFontName))
+            else:
+                # Use existing
+                newItem.setFont(oldItem.font())
+
+            index = newItem.findText(
+                _(self.handleProxyComboBoxCurrentTextChanged(header(item), row))
+            )
+
+            if index >= 0:
+                newItem.setCurrentIndex(index)
+
+            newItem.currentTextChanged.connect(
+                functools.partial(
+                    self.handleProxyComboBoxCurrentTextChanged,
+                    row=row,
+                )
+            )
+
+            self.setCellWidget(row, column, newItem)
+        else:
+            header = self.Headers[column]
+
+            oldItem = self.item(row, column)
+            newItem = QTableWidgetItem(header(item))
+
+            if oldItem is None:
+                # Item does not exist
+                newItem.setFont(QFont(APP().customFontName))
+            else:
+                # Use existing
+                newItem.setFont(oldItem.font())
+                newItem.setForeground(oldItem.foreground())
+
+                if oldItem.textAlignment() != 0:
+                    newItem.setTextAlignment(oldItem.textAlignment())
+
+                # Editable
+                newItem.setFlags(
+                    QtCore.Qt.ItemFlag.ItemIsEnabled
+                    | QtCore.Qt.ItemFlag.ItemIsSelectable
+                    | QtCore.Qt.ItemFlag.ItemIsEditable
+                )
+
+            self.setItem(row, column, newItem)
 
     def flushRow(self, row, item):
         for column in list(range(self.columnCount())):
@@ -217,24 +460,62 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
                 self.flushRow(index, AS_UserSubscription()[key])
 
     def appendNewItem(self, **kwargs):
-        unique = kwargs.pop('unique', '')
-        remark = kwargs.pop('remark', '')
-        webURL = kwargs.pop('webURL', '')
+        unique, remark, webURL, autoupdate, proxy = (
+            kwargs.pop('unique', ''),
+            kwargs.pop('remark', ''),
+            kwargs.pop('webURL', ''),
+            # Below values are not filled when adding item via Gui
+            kwargs.pop('autoupdate', ''),
+            kwargs.pop('proxy', ''),
+        )
 
         # The internal subs object
-        subs = {
+        subsob = {
             unique: {
                 'remark': remark,
                 'webURL': webURL,
+                'autoupdate': autoupdate,
+                'proxy': proxy,
             }
         }
 
-        AS_UserSubscription().update(subs)
+        # 'unique' should be unique in subscription storage,
+        # but protect it anyway.
+        if unique not in AS_UserSubscription():
+            # Add timer
+            self.timers.append(QtCore.QTimer())
+
+        AS_UserSubscription().update(subsob)
 
         row = self.rowCount()
 
         self.insertRow(row)
-        self.flushRow(row, subs[unique])
+        self.flushRow(row, subsob[unique])
+
+    @staticmethod
+    def updateSubsByUnique(
+        unique: str, httpProxy: Union[str, Callable, None], **kwargs
+    ):
+        showMessageBox = kwargs.pop('showMessageBox', False)
+
+        if callable(httpProxy):
+            try:
+                realHttpProxy = httpProxy()
+            except Exception as ex:
+                # Any non-exit exceptions
+
+                logger.error(
+                    f'error while configuring http proxy: {ex}. '
+                    f'Update subscription uses no proxy'
+                )
+
+                realHttpProxy = None
+        else:
+            realHttpProxy = httpProxy
+
+        APP().mainWindow.updateSubsByUnique(
+            unique, realHttpProxy, showMessageBox=showMessageBox, **kwargs
+        )
 
     def retranslate(self):
         self.setHorizontalHeaderLabels(list(_(str(header)) for header in self.Headers))

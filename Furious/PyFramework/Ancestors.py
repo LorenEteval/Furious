@@ -19,18 +19,19 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QApplication
 
+from typing import Any
+
+import logging
+
+logger = logging.getLogger(__name__)
+
 __all__ = [
     'Translatable',
     'SupportConnectedCallback',
     'SupportThemeChangedCallback',
     'SupportExitCleanup',
-    'SupportImplicitReference',
-    'FastItemDeletionSearch',
+    'GarbageCollector',
 ]
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class Translatable:
@@ -48,11 +49,11 @@ class Translatable:
 
     @staticmethod
     def retranslateAll():
-        for ob in Translatable.ObjectsPool:
-            assert isinstance(ob, Translatable)
+        for object_ in Translatable.ObjectsPool:
+            assert isinstance(object_, Translatable)
 
-            if ob.translatable:
-                ob.retranslate()
+            if object_.translatable:
+                object_.retranslate()
 
 
 class SupportConnectedCallback:
@@ -71,17 +72,17 @@ class SupportConnectedCallback:
 
     @staticmethod
     def callConnectedCallback():
-        for ob in SupportConnectedCallback.ObjectsPool:
-            assert isinstance(ob, SupportConnectedCallback)
+        for object_ in SupportConnectedCallback.ObjectsPool:
+            assert isinstance(object_, SupportConnectedCallback)
 
-            ob.connectedCallback()
+            object_.connectedCallback()
 
     @staticmethod
     def callDisconnectedCallback():
-        for ob in SupportConnectedCallback.ObjectsPool:
-            assert isinstance(ob, SupportConnectedCallback)
+        for object_ in SupportConnectedCallback.ObjectsPool:
+            assert isinstance(object_, SupportConnectedCallback)
 
-            ob.disconnectedCallback()
+            object_.disconnectedCallback()
 
 
 class SupportThemeChangedCallback:
@@ -97,10 +98,10 @@ class SupportThemeChangedCallback:
 
     @staticmethod
     def callThemeChangedCallbackUnchecked(theme: str):
-        for ob in SupportThemeChangedCallback.ObjectsPool:
-            assert isinstance(ob, SupportThemeChangedCallback)
+        for object_ in SupportThemeChangedCallback.ObjectsPool:
+            assert isinstance(object_, SupportThemeChangedCallback)
 
-            ob.themeChangedCallback(theme)
+            object_.themeChangedCallback(theme)
 
     @staticmethod
     def callThemeChangedCallback(theme: str):
@@ -138,40 +139,37 @@ class SupportExitCleanup:
 
     @staticmethod
     def cleanupAll():
-        for ob in SupportExitCleanup.ObjectsPool:
-            assert isinstance(ob, SupportExitCleanup)
+        for object_ in SupportExitCleanup.ObjectsPool:
+            assert isinstance(object_, SupportExitCleanup)
 
-            if ob.uniqueCleanup:
-                obtype = str(type(ob))
+            if object_.uniqueCleanup:
+                obtype = str(type(object_))
 
                 if not SupportExitCleanup.VisitedType.get(obtype, False):
-                    ob.cleanup()
+                    object_.cleanup()
 
                     SupportExitCleanup.VisitedType[obtype] = True
                 else:
                     pass
             else:
-                ob.cleanup()
+                object_.cleanup()
 
 
-class SupportImplicitReference:
+class GarbageCollector:
     ObjectsPool = list()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        SupportImplicitReference.ObjectsPool.append(self)
-
-
-class FastItemDeletionSearch:
-    DeletedItem = list()
-    DeletedId = dict()
+    # ObjectsId is used to speed up searching
+    ObjectsId = dict()
 
     @staticmethod
-    def moveToTrash(item):
-        FastItemDeletionSearch.DeletedItem.append(item)
-        FastItemDeletionSearch.DeletedId[id(item)] = True
+    def track(object_: Any):
+        GarbageCollector.ObjectsPool.append(object_)
+        GarbageCollector.ObjectsId[id(object_)] = True
 
     @staticmethod
-    def isInTrash(item) -> bool:
-        return id(item) in FastItemDeletionSearch.DeletedId
+    def isTracked(object_: Any) -> bool:
+        return id(object_) in GarbageCollector.ObjectsId
+
+    @staticmethod
+    def clear():
+        GarbageCollector.ObjectsPool.clear()
+        GarbageCollector.ObjectsId.clear()

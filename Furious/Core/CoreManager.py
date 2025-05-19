@@ -78,6 +78,30 @@ def fixLogObjectPath(config: ConfigurationFactory, attr: str, value: str, log=Tr
         )
 
 
+def getUserTUNSettings(*args, **kwargs):
+    return AS_UserTUNSettings().get(*args, **kwargs)
+
+
+userPrimaryAdapterInterfaceName = functools.partial(
+    getUserTUNSettings, 'primaryAdapterInterfaceName', ''
+)
+userPrimaryAdapterInterfaceIP = functools.partial(
+    getUserTUNSettings, 'primaryAdapterInterfaceIP', ''
+)
+userDefaultPrimaryGatewayIP = functools.partial(
+    getUserTUNSettings, 'defaultPrimaryGatewayIP', ''
+)
+userTunAdapterInterfaceDNS = functools.partial(
+    getUserTUNSettings, 'tunAdapterInterfaceDNS', ''
+)
+userBypassTUNAdapterInterfaceIP = functools.partial(
+    getUserTUNSettings, 'bypassTUNAdapterInterfaceIP', ''
+)
+userDisablePrimaryAdapterInterfaceDNS = functools.partial(
+    getUserTUNSettings, 'disablePrimaryAdapterInterfaceDNS', 'True'
+)
+
+
 class CoreManager(SupportExitCleanup):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -116,12 +140,12 @@ class CoreManager(SupportExitCleanup):
                 fixLogObjectPath(configcopy, attr, logRedirectValue, log)
 
             if routing == 'Bypass Mainland China':
-                # VPN Mode handling
-                if not proxyModeOnly and isVPNMode():
+                # TUN Mode handling
+                if not proxyModeOnly and isTUNMode():
                     mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
                     mbox.setWindowTitle(_('Unable to connect'))
                     mbox.setText(
-                        _('Routing option with direct rules is not allowed in VPN mode')
+                        _('Routing option with direct rules is not allowed in TUN mode')
                     )
 
                     # Show the MessageBox asynchronously
@@ -218,12 +242,12 @@ class CoreManager(SupportExitCleanup):
             success = coreProcess.start(configcopy, **kwargs)
         elif isinstance(configcopy, ConfigurationHysteria1):
             if routing == 'Bypass Mainland China':
-                # VPN Mode handling
-                if not proxyModeOnly and isVPNMode():
+                # TUN Mode handling
+                if not proxyModeOnly and isTUNMode():
                     mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
                     mbox.setWindowTitle(_('Unable to connect'))
                     mbox.setText(
-                        _('Routing option with direct rules is not allowed in VPN mode')
+                        _('Routing option with direct rules is not allowed in TUN mode')
                     )
 
                     # Show the MessageBox asynchronously
@@ -290,9 +314,9 @@ class CoreManager(SupportExitCleanup):
 
             return success
 
-        # VPN Mode handling
-        if not proxyModeOnly and isVPNMode():
-            # Currently VPN Mode is only supported on Windows and macOS
+        # TUN Mode handling
+        if not proxyModeOnly and isTUNMode():
+            # Currently TUN Mode is only supported on Windows and macOS
             if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
                 if PLATFORM == 'Windows':
                     # cleanup first
@@ -300,27 +324,47 @@ class CoreManager(SupportExitCleanup):
                         '0.0.0.0', APPLICATION_TUN_GATEWAY_ADDRESS
                     )
 
-                defaultGateway = SystemRoutingTable.getDefaultGateway()
+                # Handle user defined settings
+                userGateway, userInterfaceIP = (
+                    userDefaultPrimaryGatewayIP(),
+                    userPrimaryAdapterInterfaceIP(),
+                )
 
-                if PLATFORM == 'Darwin':
-                    # Need this?
-                    defaultGateway = list(
-                        # Filter TUN Gateway
-                        filter(
-                            lambda x: x != APPLICATION_TUN_GATEWAY_ADDRESS,
-                            defaultGateway,
-                        )
+                if userGateway and userInterfaceIP:
+                    logger.info(
+                        f'got user defined TUN settings. '
+                        f'\'DefaultPrimaryGatewayIP\': {userGateway}. '
+                        f'\'PrimaryAdapterInterfaceIP\': {userInterfaceIP}'
                     )
 
-                if len(defaultGateway) != 1:
-                    logger.error(f'bad default gateway: {defaultGateway}')
-
-                    return False
-
-                if PLATFORM == 'Windows':
-                    gateway, interfaceIP = defaultGateway[0]
+                    gateway, interfaceIP = userGateway, userInterfaceIP
                 else:
-                    gateway, interfaceIP = defaultGateway[0], None
+                    logger.info(
+                        f'automatically fetching TUN settings: '
+                        f'\'DefaultPrimaryGatewayIP\' and \'PrimaryAdapterInterfaceIP\''
+                    )
+
+                    defaultGateway = SystemRoutingTable.getDefaultGateway()
+
+                    if PLATFORM == 'Darwin':
+                        # Need this?
+                        defaultGateway = list(
+                            # Filter TUN Gateway
+                            filter(
+                                lambda x: x != APPLICATION_TUN_GATEWAY_ADDRESS,
+                                defaultGateway,
+                            )
+                        )
+
+                    if len(defaultGateway) != 1:
+                        logger.error(f'bad default gateway: {defaultGateway}')
+
+                        return False
+
+                    if PLATFORM == 'Windows':
+                        gateway, interfaceIP = defaultGateway[0]
+                    else:
+                        gateway, interfaceIP = defaultGateway[0], None
 
                 tunProcess = Tun2socks(
                     exitCallback=exitCallback, msgCallback=msgCallbackTun_
@@ -336,24 +380,61 @@ class CoreManager(SupportExitCleanup):
                 ):
                     return False
 
-                address = configcopy.itemAddress
+                # Handle user defined settings
+                bypassTUN = userBypassTUNAdapterInterfaceIP()
 
-                if not isValidIPAddress(address):
-                    error, resolved = DNSResolver.resolve(
-                        address, *parseHostPort(configcopy.httpProxyEndpoint())
-                    )
+                if bypassTUN:
+                    try:
+                        bypassSplit = bypassTUN.split(',')
+                    except Exception as ex:
+                        # Any non-exit exceptions
 
-                    if error:
-                        logger.error(f'DNS resolution failed: {address}')
+                        logger.error(
+                            f'error when processing ' f'user TUN bypass Settings: {ex}'
+                        )
 
                         SystemRoutingTable.Relations.clear()
 
                         return False
                     else:
-                        for address in resolved:
-                            SystemRoutingTable.Relations.append([address, gateway])
+                        for bypass in bypassSplit:
+                            if isValidIPAddress(bypass):
+                                logger.info(f'processing user TUN bypass IP: {bypass}')
+
+                                SystemRoutingTable.Relations.append([bypass, gateway])
+                            else:
+                                logger.error(
+                                    f'invalid IP address when processing '
+                                    f'user TUN bypass Settings: {bypass}'
+                                )
+
+                                SystemRoutingTable.Relations.clear()
+
+                                return False
                 else:
-                    SystemRoutingTable.Relations.append([address, gateway])
+                    logger.info(
+                        f'automatically fetching TUN settings: '
+                        f'\'BypassTUNAdapterInterfaceIP\''
+                    )
+
+                    address = configcopy.itemAddress
+
+                    if not isValidIPAddress(address):
+                        DNSResolver.configureHttpProxy(configcopy.httpProxyEndpoint())
+
+                        error, resolved = DNSResolver.resolve(address)
+
+                        if error:
+                            logger.error(f'DNS resolution failed: {address}')
+
+                            SystemRoutingTable.Relations.clear()
+
+                            return False
+                        else:
+                            for address in resolved:
+                                SystemRoutingTable.Relations.append([address, gateway])
+                    else:
+                        SystemRoutingTable.Relations.append([address, gateway])
 
                 if PLATFORM == 'Windows':
                     foundDevice = False
@@ -392,7 +473,25 @@ class CoreManager(SupportExitCleanup):
 
                         return False
 
-                    alias = SystemRoutingTable.WIN32GetInterfaceAliasByIP(interfaceIP)
+                    # Handle user defined settings
+                    userInterfaceName = userPrimaryAdapterInterfaceName()
+
+                    if userInterfaceName:
+                        logger.info(
+                            f'got user defined TUN settings. '
+                            f'\'PrimaryAdapterInterfaceName\': {userInterfaceName}'
+                        )
+
+                        alias = userInterfaceName
+                    else:
+                        logger.info(
+                            f'automatically fetching TUN settings: '
+                            f'\'PrimaryAdapterInterfaceName\''
+                        )
+
+                        alias = SystemRoutingTable.WIN32GetInterfaceAliasByIP(
+                            interfaceIP
+                        )
 
                     if alias:
 
@@ -402,14 +501,35 @@ class CoreManager(SupportExitCleanup):
 
                         tunProcess.cleanup = functools.partial(_windowsCleanup, alias)
 
-                        SystemRoutingTable.WIN32SetInterfaceDNS(
-                            alias, '127.0.0.1', False
+                        # Handle user defined settings
+                        userDisableInterfaceDNS = (
+                            userDisablePrimaryAdapterInterfaceDNS()
+                        )
+
+                        logger.info(
+                            f'DisablePrimaryInterfaceDNS: {userDisableInterfaceDNS}'
+                        )
+
+                        if userDisableInterfaceDNS != 'False':
+                            SystemRoutingTable.WIN32SetInterfaceDNS(
+                                alias, '127.0.0.1', False
+                            )
+
+                    # Handle user defined settings
+                    userTunInterfaceDNS = userTunAdapterInterfaceDNS()
+
+                    if userTunInterfaceDNS == '':
+                        userTunInterfaceDNS = APPLICATION_TUN_INTERFACE_DNS_ADDRESS
+                    else:
+                        logger.info(
+                            f'got user defined TUN settings. '
+                            f'TunAdapterInterfaceDNS: {userTunInterfaceDNS}'
                         )
 
                     SystemRoutingTable.addRelations()
                     SystemRoutingTable.WIN32SetInterfaceDNS(
                         APPLICATION_TUN_DEVICE_NAME,
-                        APPLICATION_TUN_INTERFACE_DNS_ADDRESS,
+                        userTunInterfaceDNS,
                         False,
                     )
                     SystemRoutingTable.setDeviceGateway(
@@ -436,10 +556,21 @@ class CoreManager(SupportExitCleanup):
 
                     tunProcess.cleanup = functools.partial(_darwinCleanup, servers)
 
+                    # Handle user defined settings
+                    userTunInterfaceDNS = userTunAdapterInterfaceDNS()
+
+                    if userTunInterfaceDNS == '':
+                        userTunInterfaceDNS = APPLICATION_TUN_INTERFACE_DNS_ADDRESS
+                    else:
+                        logger.info(
+                            f'got user defined TUN settings. '
+                            f'TunAdapterInterfaceDNS: {userTunInterfaceDNS}'
+                        )
+
                     for service, dnsserver in servers:
                         SystemRoutingTable.DarwinSetDNSServers(
                             service,
-                            APPLICATION_TUN_INTERFACE_DNS_ADDRESS,
+                            userTunInterfaceDNS,
                         )
 
                     SystemRoutingTable.setDeviceGateway(

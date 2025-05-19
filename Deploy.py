@@ -119,7 +119,7 @@ else:
     ARTIFACT_NAME = ''
 
 
-def downloadXrayAssets(url, filename):
+def downloadXrayAssets(url, filepath):
     try:
         import requests
     except ImportError:
@@ -129,9 +129,6 @@ def downloadXrayAssets(url, filename):
         # Make sure the save directory exists
         if not os.path.exists(XRAY_ASSET_DIR):
             os.makedirs(XRAY_ASSET_DIR)
-
-        # Full path where the file will be saved
-        filepath = os.path.join(XRAY_ASSET_DIR, filename)
 
         # Send an HTTP GET request to the URL
         response = requests.get(url)
@@ -213,18 +210,10 @@ def cleanup():
 
 
 def download():
-    # URLs of geosite and geoip assets
-    url_geosite = 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat'
-    url_geoip = 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat'
-
-    # Xray assets names
-    filename_geosite = 'geosite.dat'
-    filename_geoip = 'geoip.dat'
-
     return all(
         [
-            downloadXrayAssets(url_geosite, filename_geosite),
-            downloadXrayAssets(url_geoip, filename_geoip),
+            downloadXrayAssets(URL_GEOSITE, XRAY_ASSET_PATH_GEOSITE),
+            downloadXrayAssets(URL_GEOIP, XRAY_ASSET_PATH_GEOIP),
         ]
     )
 

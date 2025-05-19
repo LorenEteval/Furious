@@ -85,11 +85,6 @@ class ConnectProgressBar(QTranslatable, SupportConnectedCallback, QWidget):
             f'}}'
         )
 
-    def closeEvent(self, event):
-        event.ignore()
-
-        self.hide()
-
     def disconnectedCallback(self):
         self.setWindowIcon(AppHue.disconnectedWindowIcon())
         self._progressBar.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))

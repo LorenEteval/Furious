@@ -422,7 +422,8 @@ TRANSLATION = {
             "Furious.Widget.GuiTrojan",
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess",
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableWidget",
+            "Furious.Widget.UserSubsQTableWidget"
         ],
         "RU": "Примечание",
         "ZH": "别名",
@@ -1015,28 +1016,28 @@ TRANSLATION = {
         "ZH": "路由",
         "isReviewed": "True"
     },
-    "VPN Mode": {
+    "TUN Mode": {
         "source": [
             "Furious.TrayActions.Settings"
         ],
-        "RU": "VPN режим",
-        "ZH": "VPN模式",
+        "RU": "TUN режим",
+        "ZH": "TUN模式",
         "isReviewed": "True"
     },
-    "VPN Mode Disabled (Administrator)": {
+    "TUN Mode Disabled (Administrator)": {
         "source": [
             "Furious.TrayActions.Settings"
         ],
-        "RU": "VPN режим отключен (Administrator)",
-        "ZH": "VPN模式已禁用（管理员）",
+        "RU": "TUN режим отключен (Administrator)",
+        "ZH": "TUN模式已禁用（管理员）",
         "isReviewed": "True"
     },
-    "VPN Mode Disabled (root)": {
+    "TUN Mode Disabled (root)": {
         "source": [
             "Furious.TrayActions.Settings"
         ],
-        "RU": "VPN режим отключен  (root)",
-        "ZH": "VPN模式已禁用（root）",
+        "RU": "TUN режим отключен  (root)",
+        "ZH": "TUN模式已禁用（root）",
         "isReviewed": "True"
     },
     "Settings": {
@@ -1213,6 +1214,7 @@ TRANSLATION = {
             "Furious.Widget.GuiHysteria2",
             "Furious.Widget.GuiShadowsocks",
             "Furious.Widget.GuiTrojan",
+            "Furious.Widget.GuiTUNSettings",
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess"
         ],
@@ -1341,12 +1343,12 @@ TRANSLATION = {
         "ZH": "添加Hysteria2服务器...",
         "isReviewed": "True"
     },
-    "Routing option with direct rules is not allowed in VPN mode": {
+    "Routing option with direct rules is not allowed in TUN mode": {
         "source": [
             "Furious.Core.CoreManager"
         ],
-        "RU": "Опция маршрутизации с прямыми правилами не разрешена в режиме VPN",
-        "ZH": "VPN模式下不允许使用直接规则的路由选项",
+        "RU": "Опция маршрутизации с прямыми правилами не разрешена в режиме TUN",
+        "ZH": "TUN模式下不允许使用直接规则的路由选项",
         "isReviewed": "True"
     },
     "Select and press Enter to activate configuration and connect": {
@@ -1374,6 +1376,278 @@ TRANSLATION = {
         ],
         "RU": "OK",
         "ZH": "OK",
+        "isReviewed": "True"
+    },
+    "Advanced...": {
+        "source": [
+            "Furious.Widget.UserServersQTableWidget"
+        ],
+        "RU": "Расширенные...",
+        "ZH": "高级...",
+        "isReviewed": "True"
+    },
+    "is available to download": {
+        "source": [
+            "Furious.TrayActions.Connect"
+        ],
+        "RU": "доступен для скачивания",
+        "ZH": "可供下载",
+        "isReviewed": "True"
+    },
+    "Update subscription completed": {
+        "source": [
+            "Furious.Widget.UserServersQTableWidget"
+        ],
+        "RU": "Подписка на обновление завершена",
+        "ZH": "更新订阅完成",
+        "isReviewed": "True"
+    },
+    "Update subscription failed": {
+        "source": [
+            "Furious.Widget.UserServersQTableWidget"
+        ],
+        "RU": "Обновить подписку не удалось",
+        "ZH": "更新订阅失败",
+        "isReviewed": "True"
+    },
+    "Configuration has been updated": {
+        "source": [
+            "Furious.Widget.UserServersQTableWidget"
+        ],
+        "RU": "Конфигурация обновлена",
+        "ZH": "配置已更新",
+        "isReviewed": "True"
+    },
+    "Configuration update failed": {
+        "source": [
+            "Furious.Widget.UserServersQTableWidget"
+        ],
+        "RU": "Обновление конфигурации не удалось",
+        "ZH": "配置更新失败",
+        "isReviewed": "True"
+    },
+    "Auto Update": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Авто обновление",
+        "ZH": "自动更新",
+        "isReviewed": "True"
+    },
+    "Auto Update Use Proxy": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Авто обновление Использовать прокси",
+        "ZH": "自动更新使用代理",
+        "isReviewed": "True"
+    },
+    "Never": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Никогда",
+        "ZH": "从不",
+        "isReviewed": "True"
+    },
+    "Every 5 mins": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 5 минут",
+        "ZH": "每5分钟",
+        "isReviewed": "True"
+    },
+    "Every 10 mins": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 10 минут",
+        "ZH": "每10分钟",
+        "isReviewed": "True"
+    },
+    "Every 15 mins": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 15 минут",
+        "ZH": "每15分钟",
+        "isReviewed": "True"
+    },
+    "Every 30 mins": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 30 минут",
+        "ZH": "每30分钟",
+        "isReviewed": "True"
+    },
+    "Every 45 mins": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 45 минут",
+        "ZH": "每45分钟",
+        "isReviewed": "True"
+    },
+    "Every 1 hour": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждый 1 час",
+        "ZH": "每1小时",
+        "isReviewed": "True"
+    },
+    "Every 2 hours": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 2 часа",
+        "ZH": "每2小时",
+        "isReviewed": "True"
+    },
+    "Every 3 hours": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 3 часа",
+        "ZH": "每3小时",
+        "isReviewed": "True"
+    },
+    "Every 6 hours": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 6 часа",
+        "ZH": "每6小时",
+        "isReviewed": "True"
+    },
+    "Every 8 hours": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 8 часа",
+        "ZH": "每8小时",
+        "isReviewed": "True"
+    },
+    "Every 10 hours": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 10 часа",
+        "ZH": "每10小时",
+        "isReviewed": "True"
+    },
+    "Every 12 hours": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 12 часа",
+        "ZH": "每12小时",
+        "isReviewed": "True"
+    },
+    "Every 24 hours": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Каждые 24 часа",
+        "ZH": "每24小时",
+        "isReviewed": "True"
+    },
+    "Use current proxy": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Использовать текущий прокси-сервер",
+        "ZH": "使用当前代理",
+        "isReviewed": "True"
+    },
+    "Force proxy": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Обязательно через прокси-сервер",
+        "ZH": "强制代理",
+        "isReviewed": "True"
+    },
+    "No proxy": {
+        "source": [
+            "Furious.Widget.UserSubsQTableWidget"
+        ],
+        "RU": "Не использовать прокси",
+        "ZH": "无代理",
+        "isReviewed": "True"
+    },
+    "Customize TUN Settings": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "RU": "Настройте параметры TUN",
+        "ZH": "自定义TUN设置",
+        "isReviewed": "True"
+    },
+    "Customize TUN Settings...": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Настройте параметры TUN...",
+        "ZH": "自定义TUN设置...",
+        "isReviewed": "True"
+    },
+    "Go to help page": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "RU": "Перейти на страницу помощи",
+        "ZH": "转到帮助页面",
+        "isReviewed": "True"
+    },
+    "Primary Adapter Interface Name": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "RU": "Имя основного сетевого адаптера",
+        "ZH": "主适配器接口名称",
+        "isReviewed": "True"
+    },
+    "Primary Adapter Interface IP": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "RU": "IP-адрес основного сетевого адаптера",
+        "ZH": "主适配器接口IP",
+        "isReviewed": "True"
+    },
+    "Default Primary Gateway IP": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "RU": "IP-адрес основного шлюза по умолчанию",
+        "ZH": "默认主网关IP",
+        "isReviewed": "True"
+    },
+    "TUN Adapter Interface DNS": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "RU": "DNS-адрес интерфейса адаптера TUN",
+        "ZH": "TUN适配器接口DNS",
+        "isReviewed": "True"
+    },
+    "Bypass TUN adapter interface IP (separated by commas)": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "RU": "Обход IP-адреса интерфейса адаптера TUN (через запятую)",
+        "ZH": "绕过TUN适配器接口IP（以逗号分割）",
+        "isReviewed": "True"
+    },
+    "Disable Primary Adapter Interface DNS (Mitigating DNS leaks on Windows)": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "RU": "Отключить DNS основного сетевого адаптера (для предотвращения утечек DNS в Windows)",
+        "ZH": "禁用主适配器接口DNS（在Windows上缓解DNS泄露）",
         "isReviewed": "True"
     }
 }

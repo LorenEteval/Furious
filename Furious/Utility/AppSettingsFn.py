@@ -20,9 +20,18 @@ from __future__ import annotations
 from Furious.Utility.Constants import *
 from Furious.Utility.AppSettings import *
 
+from typing import Union
+
 import functools
 
-__all___ = ['AS_UserActivatedItemIndex', 'AS_UserServers', 'AS_UserSubscription']
+__all___ = [
+    'AS_UserActivatedItemIndex',
+    'AS_UserServers',
+    'AS_UserSubscription',
+    'AS_UserTUNSettings',
+    'connectedHttpProxyEndpoint',
+    'connectedServerRemark',
+]
 
 
 def _activatedItemIndex() -> int:
@@ -52,6 +61,52 @@ def _userSubscriptionData() -> dict[str, dict]:
         return {}
 
 
+def _userTUNSettingsData() -> dict[str, str]:
+    try:
+        return APP().userTUNSettings.data()
+    except Exception:
+        # Any non-exit exceptions
+
+        return {}
+
+
 AS_UserActivatedItemIndex = functools.partial(_activatedItemIndex)
 AS_UserServers = functools.partial(_userServersData)
 AS_UserSubscription = functools.partial(_userSubscriptionData)
+AS_UserTUNSettings = functools.partial(_userTUNSettingsData)
+
+
+def connectedHttpProxyEndpoint() -> Union[str, None]:
+    try:
+        if APP().isSystemTrayConnected():
+            index = AS_UserActivatedItemIndex()
+
+            if index >= 0:
+                return AS_UserServers()[index].httpProxyEndpoint()
+            else:
+                # Should not reach here
+                return None
+        else:
+            return None
+    except Exception:
+        # Any non-exit exceptions
+
+        return None
+
+
+def connectedServerRemark() -> str:
+    try:
+        if APP().isSystemTrayConnected():
+            index = AS_UserActivatedItemIndex()
+
+            if index >= 0:
+                return f'{index + 1} - ' + AS_UserServers()[index].getExtras('remark')
+            else:
+                # Should not reach here
+                return ''
+        else:
+            return ''
+    except Exception:
+        # Any non-exit exceptions
+
+        return ''
