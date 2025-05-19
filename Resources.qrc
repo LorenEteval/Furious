@@ -6,6 +6,7 @@
         <file alias="box-arrow-in-left.svg">Icons/bootstrap/box-arrow-in-left.svg</file>
         <file alias="collection.svg">Icons/bootstrap/collection.svg</file>
         <file alias="database.svg">Icons/bootstrap/database.svg</file>
+        <file alias="diagram-3.svg">Icons/bootstrap/diagram-3.svg</file>
         <file alias="display.svg">Icons/bootstrap/display.svg</file>
         <file alias="download.svg">Icons/bootstrap/download.svg</file>
         <file alias="file-earmark.svg">Icons/bootstrap/file-earmark.svg</file>
@@ -45,6 +46,7 @@
         <file alias="box-arrow-in-left.svg">Icons/bootstrap/white/box-arrow-in-left.svg</file>
         <file alias="collection.svg">Icons/bootstrap/white/collection.svg</file>
         <file alias="database.svg">Icons/bootstrap/white/database.svg</file>
+        <file alias="diagram-3.svg">Icons/bootstrap/white/diagram-3.svg</file>
         <file alias="display.svg">Icons/bootstrap/white/display.svg</file>
         <file alias="download.svg">Icons/bootstrap/white/download.svg</file>
         <file alias="file-earmark.svg">Icons/bootstrap/white/file-earmark.svg</file>
