@@ -56,6 +56,9 @@ if PLATFORM == 'Windows':
 elif PLATFORM == 'Darwin':
     NUITKA_BUILD = (
         f'python -m nuitka '
+        f'--include-module=objc '
+        f'--include-module=AppKit '
+        f'--include-module=Cocoa '
         f'--standalone --plugin-enable=pyside6 '
         f'--disable-console '
         f'--assume-yes-for-downloads '
