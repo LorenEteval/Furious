@@ -288,14 +288,16 @@ class Application(ApplicationFactory, SingletonApplication):
         NSApplication.sharedApplication().setActivationPolicy_(policy)
 
     def eventFilter(self, obj, event):
-        # Show Dock icon on macOS when window is shown and hide only when window is closed (not minimized)
+        # Show Dock icon on macOS when window is shown
+        # and hide only when window is closed (not minimized)
         if PLATFORM == 'Darwin' and obj is getattr(self, 'mainWindow', None):
-            if event.type() == QtCore.QEvent.Show:
+            if event.type() == QtCore.QEvent.Type.Show:
                 self._setDockIconVisible(True)
-            elif event.type() == QtCore.QEvent.Hide:
+            elif event.type() == QtCore.QEvent.Type.Hide:
                 # Hide Dock icon when window is closed (not minimized)
                 if not self.mainWindow.isMinimized():
                     self._setDockIconVisible(False)
+
         return super().eventFilter(obj, event)
 
     def exit(self, exitcode=0):
@@ -400,6 +402,7 @@ class Application(ApplicationFactory, SingletonApplication):
 
             self.mainWindow = AppMainWindow()
             self.systemTray = SystemTrayIcon()
+
             if PLATFORM == 'Darwin':
                 # Install event filter for main window to track show/hide
                 self.mainWindow.installEventFilter(self)
