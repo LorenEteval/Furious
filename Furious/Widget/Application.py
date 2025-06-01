@@ -338,9 +338,9 @@ class Application(ApplicationFactory, SingletonApplication):
 
             logger.info(f'python version: {getPythonVersion()}')
             logger.info(f'system version: {sys.version}')
-            logger.info(f'sys.executable: {sys.executable}')
+            logger.info(f'sys.executable: \'{sys.executable}\'')
             logger.info(f'sys.argv: {sys.argv}')
-            logger.info(f'appFilePath: {self.applicationFilePath()}')
+            logger.info(f'appFilePath: \'{self.applicationFilePath()}\'')
             logger.info(f'isPythonw: {isPythonw()}')
             logger.info(f'system language is {SYSTEM_LANGUAGE}')
             logger.info(self.customFontLoadMsg)
@@ -376,8 +376,6 @@ class Application(ApplicationFactory, SingletonApplication):
                         logger.error(
                             'darkdetect listener is not implemented on this platform'
                         )
-
-                        pass
 
                 self.themeDetector = ApplicationThemeDetector()
                 self.themeDetector.themeChanged.connect(
