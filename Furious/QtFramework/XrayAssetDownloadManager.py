@@ -131,12 +131,16 @@ class XrayAssetAssetsDownloadManager(WebGETManager):
         data = networkReply.readAll().data()
 
         if not saveFile.open(QtCore.QSaveFile.OpenModeFlag.WriteOnly):
-            logger.error(f'failed to open \'{filepath}\' for writing')
+            logger.error(
+                f'failed to open \'{filepath}\' for writing. {saveFile.errorString()}'
+            )
         else:
             saveFile.write(data)
 
             if not saveFile.commit():
-                logger.error(f'save file to \'{filepath}\' failed')
+                logger.error(
+                    f'save file to \'{filepath}\' failed. {saveFile.errorString()}'
+                )
             else:
                 logger.info(f'save file to \'{filepath}\' success')
 
