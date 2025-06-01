@@ -164,28 +164,39 @@ class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
         self.highlightRules = [
             # IP addresses (IPv4 & IPv6)
             EditorHighlightRules(
-                # https://ihateregex.io/expr/ip/
                 DraculaLoggerSyntaxHighlighter.IPV4_REGEX
                 + r'|'
                 + DraculaLoggerSyntaxHighlighter.IPV6_REGEX,
                 '#B4FFFF',
             ),
             # URLs
-            EditorHighlightRules(r'(https?:)?//[^\s,\'"\]\)\(<>]+', '#FFDD88'),
+            EditorHighlightRules(r'(https?:)?\/\/[^\s,"\'>)\]]+', '#FFDD88'),
             # Timestamps
             EditorHighlightRules(
-                r'\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\]', '#7F7F7F'
+                # Application logging timestamp
+                r'\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\]' + r'|'
+                # Xray-core logging timestamp
+                + r'\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}.\d{6}' + r'|'
+                # hysteria2 logging timestamp
+                + r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})' + r'|'
+                # tun2socks logging timestamp
+                + r'\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}',
+                '#7F7F7F',
             ),
             # Logger name: [X.Y.Z]
             EditorHighlightRules(
                 r'\[[A-Za-z0-9_]+\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+\]', '#FFB46E'
             ),
             # Log levels
-            EditorHighlightRules(r'\[INFO\]', '#A0C882', isBold=True),
-            EditorHighlightRules(r'\[DEBUG\]', '#82B4FF', isBold=True),
-            EditorHighlightRules(r'\[WARNING\]', '#FFD75A', isBold=True),
-            EditorHighlightRules(r'\[ERROR\]', '#FF7878', isBold=True),
-            EditorHighlightRules(r'\[CRITICAL\]', '#FF5050', isBold=True),
+            EditorHighlightRules(r'\[INFO\]|\[Info\]|INFO', '#A0C882', isBold=True),
+            EditorHighlightRules(r'\[DEBUG\]|\[Debug\]|DEBUG', '#82B4FF', isBold=True),
+            EditorHighlightRules(
+                r'\[WARNING\]|\[Warning\]|WARNING', '#FFD75A', isBold=True
+            ),
+            EditorHighlightRules(r'\[ERROR\]|\[Error\]|ERROR', '#FF7878', isBold=True),
+            EditorHighlightRules(
+                r'\[CRITICAL\]|\[Critical\]|CRITICAL', '#FF5050', isBold=True
+            ),
             # Quoted strings (single or double)
             EditorHighlightRules(r"'[^']*'", '#A0FFA0'),
             EditorHighlightRules(r'"[^"]*"', '#A0FFA0'),
