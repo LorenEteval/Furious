@@ -374,7 +374,7 @@ class CoreManager(SupportExitCleanup):
                 if not tunProcess.start(
                     APPLICATION_TUN_DEVICE_NAME,
                     APPLICATION_TUN_NETWORK_INTERFACE_NAME,
-                    'info',
+                    'error',
                     f'socks5://{configcopy.socksProxyEndpoint()}',
                     '',
                 ):
