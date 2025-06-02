@@ -66,29 +66,54 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
   deploy-binaries:
-    name: Deploy binaries on ${{ matrix.os }}
+    name: Deploy binaries on ${{ matrix.os }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
       matrix:
-        os: [ windows-2022, macos-13, macos-14 ]
-        python-version: [ "3.13" ]
+        os: [ ubuntu-22.04, ubuntu-22.04-arm, windows-2022, macos-13, macos-14 ]
+        python-version: [ "3.12", "3.13" ]
+        exclude:
+          - os: ubuntu-22.04
+            python-version: "3.12"
+          - os: windows-2022
+            python-version: "3.12"
+          - os: macos-13
+            python-version: "3.12"
+          - os: macos-14
+            python-version: "3.12"
+          - os: ubuntu-22.04-arm
+            python-version: "3.13"
     env:
       # Last PySide6 version that supports macOS 10.9 & Python 3.11
       PYSIDE6_LEGACY_VERSION: "6.4.3"
       PYSIDE6_TARGET_VERSION: "6.8.3"
-      # Set by command line
-      # PYSIDE6_Windows_X64_TARGET_VERSION
-      # PYSIDE6_macOS_X64_TARGET_VERSION
-      # PYSIDE6_macOS_ARM64_TARGET_VERSION
       # PySide6 has Windows ARM64 build since 6.9.0
-      PYSIDE6_Windows_ARM64_TARGET_VERSION: "6.9.0"
+      PYSIDE6_LATEST_VERSION: "6.9.0"
     steps:
       - name: Set platform environment variables version
         run: |
           echo "PYSIDE6_Windows_X64_TARGET_VERSION=$PYSIDE6_TARGET_VERSION" >> $GITHUB_ENV
+          echo "PYSIDE6_Windows_ARM64_TARGET_VERSION=$PYSIDE6_LATEST_VERSION" >> $GITHUB_ENV
           echo "PYSIDE6_macOS_X64_TARGET_VERSION=$PYSIDE6_TARGET_VERSION" >> $GITHUB_ENV
           echo "PYSIDE6_macOS_ARM64_TARGET_VERSION=$PYSIDE6_TARGET_VERSION" >> $GITHUB_ENV
+          echo "PYSIDE6_Linux_X64_TARGET_VERSION=$PYSIDE6_TARGET_VERSION" >> $GITHUB_ENV
+          echo "PYSIDE6_Linux_ARM64_TARGET_VERSION=6.6.3.1" >> $GITHUB_ENV
+          case "${{ runner.arch }}" in
+            X64)
+              echo "MAPPED_RUNNER_ARCH=x86_64" >> $GITHUB_ENV
+              ;;
+            ARM64)
+              echo "MAPPED_RUNNER_ARCH=aarch64" >> $GITHUB_ENV
+              ;;
+            ARM)
+              echo "MAPPED_RUNNER_ARCH=armv7" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "Unknown arch: ${{ runner.arch }}"
+              exit 1
+              ;;
+          esac
       - uses: actions/checkout@v4
       - name: Install macOS dependencies
         run: |
@@ -101,6 +126,21 @@ jobs:
           brew remove --force --ignore-dependencies openssl@3
           brew cleanup openssl@3
         if: runner.os == 'macOS' && runner.arch == 'X64'
+      - name: Install Linux dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libxcb-cursor0
+          sudo apt install -y qt6-base-dev
+          sudo apt install -y patchelf ccache
+          echo "QMAKE=$(which qmake6)" >> $GITHUB_ENV
+          echo "Mapped runner architecture is $MAPPED_RUNNER_ARCH"
+          mkdir .linuxdeploy-bin
+          echo "$PWD/.linuxdeploy-bin" >> $GITHUB_PATH
+          wget -P .linuxdeploy-bin https://github.com/linuxdeploy/linuxdeploy/releases/latest/download/linuxdeploy-$MAPPED_RUNNER_ARCH.AppImage
+          wget -P .linuxdeploy-bin https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/latest/download/linuxdeploy-plugin-qt-$MAPPED_RUNNER_ARCH.AppImage
+          wget -P .linuxdeploy-bin https://github.com/AppImage/appimagetool/releases/latest/download/appimagetool-$MAPPED_RUNNER_ARCH.AppImage
+          chmod +x .linuxdeploy-bin/*
+        if: runner.os == 'Linux'
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -110,7 +150,7 @@ jobs:
           check-latest: true
       - name: Set up Python venv
         run: |
-          if [ "$RUNNER_OS" == "macOS" ]; then
+          if [ "$RUNNER_OS" == "macOS" ] || [ "$RUNNER_OS" == "Linux" ]; then
             python3 -m venv .venv
             source .venv/bin/activate
           elif [ "$RUNNER_OS" == "Windows" ]; then
@@ -122,13 +162,14 @@ jobs:
           fi
           python -c "import sys; print(sys.version)"
           python -m pip install --upgrade pip
-      - name: Install pre-built numpy wheel on Windows ARM64
-        run: |
-          python -m pip install "https://github.com/LorenEteval/numpy-2.2.4-cp313-win_arm64/releases/download/2.2.4/numpy-2.2.4-cp313-cp313-win_arm64.whl"
-        if: runner.os == 'Windows' && runner.arch == 'ARM64'
       - name: Download Python dependencies & latest asset files
         run: |
           python -m pip install setuptools wheel
+          if [ "$RUNNER_OS" == "Linux" ] && [ "$RUNNER_ARCH" == "ARM64" ]; then
+            python -m pip install "numpy<2"
+          elif [ "$RUNNER_OS" == "Windows" ] && [ "$RUNNER_ARCH" == "ARM64" ]; then
+            python -m pip install "https://github.com/LorenEteval/numpy-2.2.4-cp313-win_arm64/releases/download/2.2.4/numpy-2.2.4-cp313-cp313-win_arm64.whl"
+          fi
           python -m pip install PySide6-Essentials==$PYSIDE6_${{ runner.os }}_${{ runner.arch }}_TARGET_VERSION
           python -m pip install -r requirements.txt
           python -m pip install nuitka imageio
@@ -180,6 +221,7 @@ jobs:
           path: |
             *.zip
             *.dmg
+            *.AppImage
 
   github-release:
     name: >-
