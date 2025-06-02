@@ -30,9 +30,11 @@ APP = functools.partial(QApplication.instance)
 APPLICATION_NAME = 'Furious'
 APPLICATION_VERSION = __version__
 APPLICATION_MACOS_SIGNATURE = 'com.Furious'
-APPLICATION_ABOUT_PAGE = 'https://github.com/LorenEteval/Furious/'
 APPLICATION_REPO_OWNER_NAME = 'LorenEteval'
 APPLICATION_REPO_NAME = 'Furious'
+APPLICATION_ABOUT_PAGE = (
+    f'https://github.com/{APPLICATION_REPO_OWNER_NAME}/{APPLICATION_REPO_NAME}'
+)
 
 ORGANIZATION_NAME = 'Furious'
 ORGANIZATION_DOMAIN = 'Furious.GUI'
