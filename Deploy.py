@@ -40,6 +40,21 @@ EXIT_FAILURE = 1
 
 DEPLOY_DIR_NAME = f'{APPLICATION_NAME}-Deploy'
 
+NUITKA_BINARY_VERSION_OPTION = (
+    f'--company-name={APPLICATION_NAME} '
+    f'--product-name={APPLICATION_NAME} '
+    f'--file-version={APPLICATION_VERSION} '
+    f'--product-version={APPLICATION_VERSION} '
+)
+
+if PLATFORM == 'Windows':
+    NUITKA_BINARY_VERSION_OPTION += f'--file-description=\"A GUI proxy client based on PySide6. Support Xray-core & hysteria\" '
+
+if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
+    NUITKA_BINARY_VERSION_OPTION += (
+        f'--copyright=\"Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>\" '
+    )
+
 if PLATFORM == 'Windows':
     NUITKA_BUILD = (
         f'python -m nuitka '
@@ -47,6 +62,7 @@ if PLATFORM == 'Windows':
         f'--disable-console '
         f'--assume-yes-for-downloads '
         f'--include-package-data=Furious '
+        f'{NUITKA_BINARY_VERSION_OPTION}'
         f'--windows-icon-from-ico=\"Icons/png/rocket-takeoff-window.png\" '
         f'--force-stdout-spec=^%TEMP^%/_Furious_Enable_Stdout '
         f'--force-stderr-spec=^%TEMP^%/_Furious_Enable_Stderr '
@@ -63,10 +79,22 @@ elif PLATFORM == 'Darwin':
         f'--disable-console '
         f'--assume-yes-for-downloads '
         f'--include-package-data=Furious '
+        f'{NUITKA_BINARY_VERSION_OPTION}'
         f'--macos-create-app-bundle '
         f'--macos-app-icon=\"Icons/png/rocket-takeoff-window.png\" '
         f'--macos-app-name=\"Furious\" '
         f'Furious-GUI.py '
+        f'--output-dir=\"{ROOT_DIR / DEPLOY_DIR_NAME}\"'
+    )
+elif PLATFORM == 'Linux':
+    NUITKA_BUILD = (
+        f'python -m nuitka '
+        f'--standalone --plugin-enable=pyside6 '
+        f'--disable-console '
+        f'--assume-yes-for-downloads '
+        f'--include-package-data=Furious '
+        f'{NUITKA_BINARY_VERSION_OPTION}'
+        f'Furious '
         f'--output-dir=\"{ROOT_DIR / DEPLOY_DIR_NAME}\"'
     )
 else:
@@ -116,6 +144,24 @@ elif PLATFORM == 'Darwin':
         f'--app-drop-link 425 120 '
         f'\"{ROOT_DIR / MAC_DMG_FILENAME}\" '
         f'\"{MAC_APP_DIR}\"'
+    )
+elif PLATFORM == 'Linux':
+    LINUX_APP_DIR = ROOT_DIR / 'AppDir'
+    LINUX_ICON_FILE = 'rocket-takeoff-window-512x512.png'
+    LINUX_DESKTOP_FILE = f'{APPLICATION_NAME}.desktop'
+
+    ARTIFACT_NAME = (
+        f'{APPLICATION_NAME}-{APPLICATION_VERSION}-linux-{PLATFORM_MACHINE.lower()}'
+    )
+
+    LINUX_APPIMAGE_FILENAME = f'{ARTIFACT_NAME}.AppImage'
+    LINUX_CREATE_APPIMAGE_CMD = (
+        f'linuxdeploy-{PLATFORM_MACHINE}.AppImage '
+        f'--appdir AppDir '
+        f'-d \"{LINUX_APP_DIR / LINUX_DESKTOP_FILE}\" '
+        f'-i \"{LINUX_APP_DIR / LINUX_ICON_FILE}\" '
+        f'--plugin qt '
+        f'--output appimage'
     )
 else:
     # Deploy: Not implemented
@@ -190,7 +236,7 @@ def cleanup():
         # More cleanup on Darwin
         try:
             # Remove artifact
-            os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.dmg')
+            os.remove(ROOT_DIR / MAC_DMG_FILENAME)
         except Exception as ex:
             # Any non-exit exceptions
 
@@ -201,6 +247,27 @@ def cleanup():
         try:
             # Remove app folder
             shutil.rmtree(MAC_APP_DIR)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove app dir failed: {ex}')
+        else:
+            logger.info(f'remove app dir success')
+    elif PLATFORM == 'Linux':
+        # More cleanup on Linux
+        try:
+            # Remove artifact
+            os.remove(ROOT_DIR / LINUX_APPIMAGE_FILENAME)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove artifact failed: {ex}')
+        else:
+            logger.info(f'remove artifact success')
+
+        try:
+            # Remove app folder
+            shutil.rmtree(LINUX_APP_DIR)
         except Exception as ex:
             # Any non-exit exceptions
 
@@ -351,6 +418,78 @@ def main():
             sys.exit(EXIT_FAILURE)
         else:
             logger.info(f'generate dmg success: {MAC_DMG_FILENAME}')
+
+            printStandardStream(result.stdout, result.stderr)
+    elif PLATFORM == 'Linux':
+        try:
+            shutil.rmtree(LINUX_APP_DIR)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        try:
+            os.makedirs(LINUX_APP_DIR / 'usr' / 'bin', exist_ok=True)
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        iconbase = 'rocket-takeoff-window-512x512'
+
+        shutil.copytree(
+            ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
+            LINUX_APP_DIR / 'usr' / 'bin',
+            dirs_exist_ok=True,
+        )
+        shutil.copy(
+            ROOT_DIR / 'Icons' / 'png' / f'{iconbase}.png',
+            LINUX_APP_DIR,
+        )
+
+        try:
+            with open(
+                LINUX_APP_DIR / LINUX_DESKTOP_FILE,
+                'w',
+                encoding='utf-8',
+            ) as file:
+                file.write(
+                    f'[Desktop Entry]\n'
+                    f'Type=Application\n'
+                    f'Name={APPLICATION_NAME}\n'
+                    f'Exec={APPLICATION_NAME}.bin\n'
+                    f'Icon={iconbase}\n'
+                    f'Categories=Utility\n'
+                )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        logger.info('generating AppImage')
+
+        # https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/blob/master/README.md
+        os.environ['LDAI_OUTPUT'] = LINUX_APPIMAGE_FILENAME
+        os.environ['LINUXDEPLOY_OUTPUT_VERSION'] = APPLICATION_VERSION
+
+        try:
+            result = runExternalCommand(
+                LINUX_CREATE_APPIMAGE_CMD,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(f'generate AppImage failed with returncode {err.returncode}')
+
+            printStandardStream(err.stdout, err.stderr)
+
+            sys.exit(EXIT_FAILURE)
+        else:
+            logger.info(f'generate AppImage success: {LINUX_APPIMAGE_FILENAME}')
 
             printStandardStream(result.stdout, result.stderr)
     else:
