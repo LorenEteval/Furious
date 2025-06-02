@@ -24,6 +24,7 @@ from typing import Callable
 
 import os
 import sys
+import signal
 import logging
 import datetime
 import operator
@@ -42,14 +43,14 @@ else:
 
 
 class AppMainProcess(ProcessContext.Process):
-    def __init__(self, loaderFn: Callable[[], ApplicationFactory], **kwargs):
+    def __init__(self, loader: Callable[[], ApplicationFactory], **kwargs):
         super().__init__(**kwargs)
 
         self.startupTime = str(datetime.datetime.now()).replace(':', '')
         self.logFileName = f'{self.startupTime}.log'
         self.fileWritten = multiprocessing.Manager().Value('b', False)
 
-        self.appLoaderFn = loaderFn
+        self.loader = loader
         self.application = None
 
     def exceptHook(self, exceptionType, exceptionValue, tb):
@@ -102,9 +103,17 @@ class AppMainProcess(ProcessContext.Process):
 
             pass
 
+    def handler(self, signum, frame):
+        logger.info(f'received signal {signal.Signals(signum).name}. Exit application')
+
+        self.application.exit()
+
     def run(self):
         sys.excepthook = self.exceptHook
 
-        self.application = self.appLoaderFn()
+        self.application = self.loader()
+
+        for sig in [signal.SIGTERM, signal.SIGINT]:
+            signal.signal(sig, self.handler)
 
         sys.exit(self.application.run())
