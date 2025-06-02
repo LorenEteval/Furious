@@ -336,6 +336,13 @@ class Application(ApplicationFactory, SingletonApplication):
             if PLATFORM == 'Darwin':
                 logger.info(f'mac_ver: {platform.mac_ver()}')
 
+            appImagePath = getAppImagePath()
+
+            if appImagePath:
+                logger.info(f'running from Linux AppImage: \'{appImagePath}\'')
+            else:
+                logger.info('not running from Linux AppImage')
+
             logger.info(f'python version: {getPythonVersion()}')
             logger.info(f'system version: {sys.version}')
             logger.info(f'sys.executable: \'{sys.executable}\'')
