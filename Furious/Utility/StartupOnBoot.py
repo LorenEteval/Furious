@@ -17,7 +17,7 @@
 
 from Furious.Utility.Constants import *
 from Furious.Utility.AppSettings import *
-from Furious.Utility.SystemRuntime import isScriptMode
+from Furious.Utility.SystemRuntime import getAppImagePath, isScriptMode
 
 from PySide6 import QtCore
 
@@ -59,13 +59,20 @@ class StartupOnBoot:
                 )
 
                 try:
-                    os.mkdir(autostartDir)
+                    os.makedirs(autostartDir, exist_ok=True)
                 except FileExistsError:
                     pass
                 except Exception:
                     # Any non-exit exceptions
 
                     return False
+
+                appImagePath = getAppImagePath()
+
+                if appImagePath:
+                    execPath = appImagePath
+                else:
+                    execPath = sys.argv[0]
 
                 try:
                     with open(
@@ -75,7 +82,7 @@ class StartupOnBoot:
                     ) as file:
                         file.write(
                             f'[Desktop Entry]\n'
-                            f'Exec={sys.argv[0]}\n'
+                            f'Exec={execPath}\n'
                             f'Version={APPLICATION_VERSION}\n'
                             f'Type=Application\n'
                             f'Categories=Development\n'
