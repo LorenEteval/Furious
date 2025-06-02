@@ -30,6 +30,7 @@ import subprocess
 __all__ = [
     'getPythonVersion',
     'getUbuntuRelease',
+    'getAppImagePath',
     'isAdministrator',
     'isTUNMode',
     'isScriptMode',
@@ -68,6 +69,16 @@ def getUbuntuRelease() -> str:
     except Exception:
         # Any non-exit exceptions
 
+        return ''
+
+
+def getAppImagePath() -> str:
+    if PLATFORM != 'Linux':
+        return ''
+
+    if 'APPIMAGE' in os.environ:
+        return os.environ['APPIMAGE']
+    else:
         return ''
 
 
