@@ -31,7 +31,10 @@ import functools
 
 __all__ = ['UserSubsWindow']
 
+# Migrate legacy settings
 registerAppSettings('SubscriptionWidgetWindowSize')
+registerAppSettings('UserSubsWindowGeometry')
+registerAppSettings('UserSubsWindowState')
 
 
 class AddSubsDialog(AppQDialog):
@@ -65,7 +68,7 @@ class AddSubsDialog(AppQDialog):
         self.setLayout(layout)
 
     def setWidthAndHeight(self):
-        self.setGeometry(100, 100, 456, 150)
+        self.resize(456, 150)
 
     def subsRemark(self):
         return self.remarkEdit.text()
@@ -108,16 +111,6 @@ class UserSubsWindow(AppQMainWindow):
 
         self.setCentralWidget(self.fakeCentralWidget)
 
-    def setWidthAndHeight(self):
-        try:
-            windowSize = AppSettings.get('SubscriptionWidgetWindowSize').split(',')
-
-            self.setGeometry(100, 100, *list(int(size) for size in windowSize))
-        except Exception:
-            # Any non-exit exceptions
-
-            self.setGeometry(100, 100, 500 * GOLDEN_RATIO, 500)
-
     def addSubs(self):
         def handleResultCode(_addSubsDialog, code):
             if code == PySide6LegacyEnumValueWrapper(AppQDialog.DialogCode.Accepted):
@@ -153,8 +146,32 @@ class UserSubsWindow(AppQMainWindow):
         else:
             super().keyPressEvent(event)
 
+    def setWidthAndHeight(self):
+        if AppSettings.get('UserSubsWindowGeometry') is None:
+            # Migrate legacy settings
+            try:
+                windowSize = AppSettings.get('SubscriptionWidgetWindowSize').split(',')
+
+                self.resize(*list(int(size) for size in windowSize))
+            except Exception:
+                # Any non-exit exceptions
+
+                self.resize(520 * GOLDEN_RATIO, 520)
+        else:
+            try:
+                self.restoreGeometry(AppSettings.get('UserSubsWindowGeometry'))
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+            try:
+                self.restoreState(AppSettings.get('UserSubsWindowState'))
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
     def cleanup(self):
-        AppSettings.set(
-            'SubscriptionWidgetWindowSize',
-            f'{self.geometry().width()},{self.geometry().height()}',
-        )
+        AppSettings.set('UserSubsWindowGeometry', self.saveGeometry())
+        AppSettings.set('UserSubsWindowState', self.saveState())

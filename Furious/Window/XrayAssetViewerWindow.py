@@ -86,7 +86,7 @@ class XrayAssetViewerWindow(AppQMainWindow):
         self.menuBar().addMenu(self.fileMenu)
 
     def setWidthAndHeight(self):
-        self.setGeometry(100, 100, 360, 360 * GOLDEN_RATIO)
+        self.resize(360, 360 * GOLDEN_RATIO)
 
     def flushItem(self):
         self.xrayAssetViewerWidget.flushItem()

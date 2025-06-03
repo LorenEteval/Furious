@@ -43,7 +43,10 @@ __all__ = ['AppMainWindow']
 
 logger = logging.getLogger(__name__)
 
+# Migrate legacy settings
 registerAppSettings('ServerWidgetWindowSize')
+registerAppSettings('AppMainWindowGeometry')
+registerAppSettings('AppMainWindowState')
 
 
 class AppNetworkStateManager(NetworkStateManager):
@@ -453,17 +456,31 @@ class AppMainWindow(AppQMainWindow):
             logger.error('open about page failed')
 
     def setWidthAndHeight(self):
-        try:
-            windowSize = AppSettings.get('ServerWidgetWindowSize').split(',')
+        if AppSettings.get('AppMainWindowGeometry') is None:
+            # Migrate legacy settings
+            try:
+                windowSize = AppSettings.get('ServerWidgetWindowSize').split(',')
 
-            self.setGeometry(100, 100, *list(int(size) for size in windowSize))
-        except Exception:
-            # Any non-exit exceptions
+                self.resize(*list(int(size) for size in windowSize))
+            except Exception:
+                # Any non-exit exceptions
 
-            self.setGeometry(100, 100, 1800, 960)
+                self.resize(1800, 960)
+        else:
+            try:
+                self.restoreGeometry(AppSettings.get('AppMainWindowGeometry'))
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+            try:
+                self.restoreState(AppSettings.get('AppMainWindowState'))
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
 
     def cleanup(self):
-        AppSettings.set(
-            'ServerWidgetWindowSize',
-            f'{self.geometry().width()},{self.geometry().height()}',
-        )
+        AppSettings.set('AppMainWindowGeometry', self.saveGeometry())
+        AppSettings.set('AppMainWindowState', self.saveState())

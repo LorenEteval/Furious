@@ -37,7 +37,9 @@ logger = logging.getLogger(__name__)
 
 __all__ = ['UserSubsQTableWidget']
 
+# Migrate legacy settings
 registerAppSettings('SubscriptionWidgetSectionSizeTable')
+registerAppSettings('UserSubsHeaderViewState')
 
 
 class UserSubsQTableWidgetHorizontalHeader(AppQHeaderView):
@@ -157,7 +159,8 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
         self.setHorizontalHeader(
             UserSubsQTableWidgetHorizontalHeader(
                 parent=self,
-                sectionSizeSettingsName='SubscriptionWidgetSectionSizeTable',
+                legacySectionSizeSettingsName='SubscriptionWidgetSectionSizeTable',
+                sectionSizeSettingsName='UserSubsHeaderViewState',
             )
         )
         self.setVerticalHeader(UserSubsQTableWidgetVerticalHeader(self))

@@ -51,7 +51,9 @@ __all__ = ['UserServersQTableWidget']
 logger = logging.getLogger(__name__)
 
 registerAppSettings('ActivatedItemIndex')
+# Migrate legacy settings
 registerAppSettings('ServerWidgetSectionSizeTable')
+registerAppSettings('UserServersHeaderViewState')
 
 
 class UpdateSubsInfoMBox(AppQMessageBox):
@@ -822,7 +824,8 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 parent=self,
                 clickGuardFn=lambda: False,
                 customSortFn=self.customSortFn,
-                sectionSizeSettingsName='ServerWidgetSectionSizeTable',
+                legacySectionSizeSettingsName='ServerWidgetSectionSizeTable',
+                sectionSizeSettingsName='UserServersHeaderViewState',
             )
         )
         self.setVerticalHeader(UserServersQTableWidgetVerticalHeader(self))
