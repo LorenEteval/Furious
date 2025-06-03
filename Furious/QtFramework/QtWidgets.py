@@ -151,33 +151,55 @@ class AppQGroupBox(QTranslatable, QGroupBox):
 
 class AppQHeaderView(SupportExitCleanup, SupportConnectedCallback, QHeaderView):
     def sectionSizeSettingsEmpty(self):
-        return self.sectionSizeSettingsName == ''
+        return (
+            self.legacySectionSizeSettingsName == ''
+            and self.sectionSizeSettingsName == ''
+        )
 
     def __init__(self, *args, **kwargs):
+        self.legacySectionSizeSettingsName = kwargs.pop(
+            'legacySectionSizeSettingsName', ''
+        )
         self.sectionSizeSettingsName = kwargs.pop('sectionSizeSettingsName', '')
 
         super().__init__(*args, **kwargs)
 
-        self.columnCount = self.parent().columnCount()
+        parent = self.parent()
+
+        assert isinstance(parent, QTableWidget)
+
+        self.columnCount = parent.columnCount()
         self.sectionSizeTable = {}
 
         self.setSectionsClickable(True)
         self.setStyleSheet(self.getStyleSheet(AppHue.currentColor()))
         self.setFont(QFont(APP().customFontName))
 
-        self.sectionResized.connect(self.handleSectionResized)
+        # self.sectionResized.connect(self.handleSectionResized)
 
     def restoreSectionSize(self):
         if self.sectionSizeSettingsEmpty():
             return
 
+        if AppSettings.get(self.sectionSizeSettingsName) is not None:
+            try:
+                self.restoreState(AppSettings.get(self.sectionSizeSettingsName))
+            except Exception:
+                # Any non-exit exceptions
+
+                # Fall back to legacy restore method
+                pass
+            else:
+                return
+
+        # Fall back to legacy restore method
         try:
             # https://bugreports.qt.io/browse/QTBUG-119862
             # Affected: PySide6 6.6.1+
             self.setDefaultSectionSize(self.defaultSectionSize())
 
             self.sectionSizeTable = UJSONEncoder.decode(
-                AppSettings.get(self.sectionSizeSettingsName)
+                AppSettings.get(self.legacySectionSizeSettingsName)
             )
 
             # Fill missing value
@@ -216,22 +238,25 @@ class AppQHeaderView(SupportExitCleanup, SupportConnectedCallback, QHeaderView):
     def connectedCallback(self):
         self.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
 
-    @QtCore.Slot(int, int, int)
-    def handleSectionResized(self, index: int, oldSize: int, newSize: int):
-        if self.sectionSizeSettingsEmpty():
-            return
-
-        # Keys are string when loaded from json
-        self.sectionSizeTable[str(index)] = newSize
+    # Legacy method. Not used
+    # @QtCore.Slot(int, int, int)
+    # def handleSectionResized(self, index: int, oldSize: int, newSize: int):
+    #     if self.sectionSizeSettingsEmpty():
+    #         return
+    #
+    #     # Keys are string when loaded from json
+    #     self.sectionSizeTable[str(index)] = newSize
 
     def cleanup(self):
         if self.sectionSizeSettingsEmpty():
             return
 
-        AppSettings.set(
-            self.sectionSizeSettingsName,
-            UJSONEncoder.encode(self.sectionSizeTable),
-        )
+        # AppSettings.set(
+        #     self.sectionSizeSettingsName,
+        #     UJSONEncoder.encode(self.sectionSizeTable),
+        # )
+
+        AppSettings.set(self.sectionSizeSettingsName, self.saveState())
 
 
 class AppQLabel(QTranslatable, QLabel):
