@@ -98,11 +98,12 @@ class UpdateSubsInfoMBox(AppQMessageBox):
         return text
 
     def setColumnMinWidth(self):
-        self.findChild(QGridLayout).setColumnMinimumWidth(
-            2,
-            max((len(row) + 10) for row in self.text().split('\n'))
-            * self.fontMetrics().averageCharWidth(),
-        )
+        if PLATFORM == 'Windows':
+            self.findChild(QGridLayout).setColumnMinimumWidth(
+                2,
+                max((len(row) + 10) for row in self.text().split('\n'))
+                * self.fontMetrics().averageCharWidth(),
+            )
 
     def retranslate(self):
         self.setWindowTitle(_(self.windowTitle()))
