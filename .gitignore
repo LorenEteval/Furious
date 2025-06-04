@@ -173,3 +173,6 @@ Furious-*/
 
 # dmg files
 *.dmg
+
+# AppImage files
+*.AppImage
