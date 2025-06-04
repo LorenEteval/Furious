@@ -617,6 +617,8 @@ class NewChangesNextTimeMBox(AppQMessageBox):
 
 def showNewChangesNextTimeMBox(**kwargs):
     try:
+        method = kwargs.pop('method', 'open')
+
         if APP().isSystemTrayConnected():
             mbox = NewChangesNextTimeMBox(**kwargs)
 
@@ -625,8 +627,12 @@ def showNewChangesNextTimeMBox(**kwargs):
             else:
                 mbox.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
 
-            # Show the MessageBox asynchronously
-            mbox.open()
+            if method == 'open':
+                # Show the MessageBox asynchronously
+                mbox.open()
+            else:
+                # Show the MessageBox and wait for the user to close it
+                mbox.exec()
     except Exception:
         # Any non-exit exceptions
 
