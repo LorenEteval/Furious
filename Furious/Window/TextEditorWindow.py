@@ -235,7 +235,7 @@ class TextEditorWindow(AppQMainWindow):
         else:
             self.jsonEditor.setPlainText(text)
 
-    def save(self) -> bool:
+    def save(self, showChangesMethod='open') -> bool:
         index = self.currentIndex
 
         if index < 0:
@@ -277,7 +277,7 @@ class TextEditorWindow(AppQMainWindow):
                 pass
 
             if index == AS_UserActivatedItemIndex():
-                showNewChangesNextTimeMBox(parent=self)
+                showNewChangesNextTimeMBox(parent=self, method=showChangesMethod)
 
             self.markAsSaved()
 
@@ -365,7 +365,7 @@ class TextEditorWindow(AppQMainWindow):
             def handleButtonClicked(button):
                 if button == mbox.button0:
                     # Save
-                    if self.save():
+                    if self.save(showChangesMethod='exec'):
                         mbox.close()
 
                         event.accept()
