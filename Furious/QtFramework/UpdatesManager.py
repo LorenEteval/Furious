@@ -73,6 +73,7 @@ class UpdatesManager(WebGETManager):
         super().__init__(parent, actionMessage=actionMessage)
 
     def successCallback(self, networkReply, **kwargs):
+        parent = kwargs.pop('parent', None)
         showMessageBox = kwargs.pop('showMessageBox', True)
         hasNewVersionCallback = kwargs.pop('hasNewVersionCallback', None)
 
@@ -86,7 +87,7 @@ class UpdatesManager(WebGETManager):
             logger.error(f'bad network reply while checking for updates. {ex}')
 
             if showMessageBox:
-                self.showErrorMessageBox()
+                self.showErrorMessageBox(parent)
         else:
             newVersion = info['tag_name']
 
@@ -108,7 +109,10 @@ class UpdatesManager(WebGETManager):
                     hasNewVersionCallback(newVersion)
 
                 if showMessageBox:
-                    mbox = QuestionUpdateMBox(icon=AppQMessageBox.Icon.Information)
+                    mbox = QuestionUpdateMBox(
+                        parent=parent,
+                        icon=AppQMessageBox.Icon.Information,
+                    )
                     mbox.version = newVersion
                     mbox.setText(mbox.customText())
                     mbox.setInformativeText(_('Go to download page?'))
@@ -118,7 +122,10 @@ class UpdatesManager(WebGETManager):
                     mbox.open()
             else:
                 if showMessageBox:
-                    mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
+                    mbox = AppQMessageBox(
+                        parent=parent,
+                        icon=AppQMessageBox.Icon.Information,
+                    )
                     mbox.setWindowTitle(_(APPLICATION_NAME))
                     mbox.setText(_(f'{APPLICATION_NAME} is already the latest version'))
 
@@ -126,8 +133,8 @@ class UpdatesManager(WebGETManager):
                     mbox.open()
 
     @staticmethod
-    def showErrorMessageBox():
-        mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+    def showErrorMessageBox(parent=None):
+        mbox = AppQMessageBox(parent=parent, icon=AppQMessageBox.Icon.Critical)
         mbox.setWindowTitle(_(APPLICATION_NAME))
         mbox.setText(_('Check for updates failed'))
 
@@ -144,9 +151,11 @@ class UpdatesManager(WebGETManager):
         self,
         showMessageBox=True,
         hasNewVersionCallback: Callable[[str], None] = None,
+        **kwargs,
     ):
         self.webGET(
             self.API_URL,
             showMessageBox=showMessageBox,
             hasNewVersionCallback=hasNewVersionCallback,
+            **kwargs,
         )

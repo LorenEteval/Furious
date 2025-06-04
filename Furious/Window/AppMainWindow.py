@@ -107,11 +107,12 @@ class AppMainWindow(AppQMainWindow):
         # TODO: Need this?
         # self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
 
-        self.updatesManager = UpdatesManager()
+        self.updatesManager = UpdatesManager(parent=self)
         self.networkStateManager = AppNetworkStateManager(parent=self)
 
         self.userServersQTableWidget = UserServersQTableWidget(parent=self)
         self.userSubsWindow = UserSubsWindow(
+            parent=self,
             deleteUniqueCallback=lambda unique: self.userServersQTableWidget.deleteItemByIndex(
                 list(
                     index
@@ -120,7 +121,7 @@ class AppMainWindow(AppQMainWindow):
                 )
             ),
         )
-        self.xrayAssetViewerWindow = XrayAssetViewerWindow()
+        self.xrayAssetViewerWindow = XrayAssetViewerWindow(parent=self)
 
         self.mainTab = AppQTabWidget()
         self.mainTab.addTab(self.userServersQTableWidget, _('Server'))
@@ -204,18 +205,23 @@ class AppMainWindow(AppQMainWindow):
             AppQAction(
                 _('Update Subscription (Use Current Proxy)'),
                 callback=lambda: self.userServersQTableWidget.updateSubs(
-                    connectedHttpProxyEndpoint()
+                    connectedHttpProxyEndpoint(),
+                    parent=self,
                 ),
             ),
             AppQAction(
                 _('Update Subscription (Force Proxy)'),
                 callback=lambda: self.userServersQTableWidget.updateSubs(
-                    '127.0.0.1:10809'
+                    '127.0.0.1:10809',
+                    parent=self,
                 ),
             ),
             AppQAction(
                 _('Update Subscription (No Proxy)'),
-                callback=lambda: self.userServersQTableWidget.updateSubs(None),
+                callback=lambda: self.userServersQTableWidget.updateSubs(
+                    None,
+                    parent=self,
+                ),
             ),
             AppQSeperator(),
             AppQAction(
@@ -296,7 +302,7 @@ class AppMainWindow(AppQMainWindow):
                     _('Check For Updates'),
                     icon=bootstrapIcon('download.svg'),
                     checkable=False,
-                    callback=lambda: self.checkForUpdates(),
+                    callback=lambda: self.checkForUpdates(parent=self),
                 ),
                 AppQSeperator(),
                 AppQAction(
@@ -340,7 +346,7 @@ class AppMainWindow(AppQMainWindow):
                         _('Check For Updates'),
                         icon=bootstrapIcon('download.svg'),
                         checkable=False,
-                        callback=lambda: self.checkForUpdates(),
+                        callback=lambda: self.checkForUpdates(parent=self),
                     ),
                     AppQSeperator(),
                     AppQAction(
@@ -407,7 +413,9 @@ class AppMainWindow(AppQMainWindow):
     def getGuiTUNSettings(self, **kwargs):
         @functools.lru_cache(None)
         def cachedGuiTUNSettings():
-            return GuiTUNSettings(self, **kwargs)
+            parent = kwargs.pop('parent', self)
+
+            return GuiTUNSettings(parent=parent, **kwargs)
 
         guiTUNSettings = cachedGuiTUNSettings()
         guiTUNSettings.factoryToInput(AS_UserTUNSettings())
