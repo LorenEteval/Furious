@@ -108,6 +108,9 @@ if PLATFORM == 'Windows':
     else:
         winVerCompatible = f'{PLATFORM.lower()}{PLATFORM_RELEASE}'
 
+    if os.environ.get('WIN_VER_COMPATIBLE', ''):
+        winVerCompatible = os.environ['WIN_VER_COMPATIBLE']
+
     ARTIFACT_NAME = (
         f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
         f'{winVerCompatible}-{PLATFORM_MACHINE.lower()}'

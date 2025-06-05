@@ -16,18 +16,15 @@ jobs:
         run: |
           sudo apt update && sudo apt install -y libegl1
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          freethreaded: false
           check-latest: true
-      - name: Set up Python venv
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python -c "import sys; print(sys.version)"
-          python -m pip install --upgrade pip
       - name: Download Python dependencies & latest asset files
         run: |
+          python -c "import sys; print(sys.version)"
+          python -m pip install --upgrade pip
           python -m pip install setuptools wheel
           python -m pip install -r requirements.txt
           python -m pip install requests
@@ -71,27 +68,20 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        os: [ ubuntu-22.04, ubuntu-22.04-arm, windows-2022, macos-13, macos-14 ]
-        python-version: [ "3.12", "3.13" ]
-        exclude:
-          - os: ubuntu-22.04
-            python-version: "3.12"
+        os: [ ubuntu-22.04, ubuntu-22.04-arm, windows-2022, windows-2025, macos-13, macos-14 ]
+        python-version: [ "3.12" ]
+        include:
           - os: windows-2022
-            python-version: "3.12"
-          - os: macos-13
-            python-version: "3.12"
-          - os: macos-14
-            python-version: "3.12"
-          - os: ubuntu-22.04-arm
-            python-version: "3.13"
+            tag: win7
     env:
       # Last PySide6 version that supports macOS 10.9 & Python 3.11
       PYSIDE6_LEGACY_VERSION: "6.4.3"
       PYSIDE6_TARGET_VERSION: "6.8.3"
       # PySide6 has Windows ARM64 build since 6.9.0
-      PYSIDE6_LATEST_VERSION: "6.9.0"
+      PYSIDE6_LATEST_VERSION: "6.9.1"
+      PYTHON_IN_WIN7_VERSION: "3.12.11"
     steps:
-      - name: Set platform environment variables version
+      - name: Set platform environment variables
         run: |
           echo "PYSIDE6_Windows_X64_TARGET_VERSION=$PYSIDE6_TARGET_VERSION" >> $GITHUB_ENV
           echo "PYSIDE6_Windows_ARM64_TARGET_VERSION=$PYSIDE6_LATEST_VERSION" >> $GITHUB_ENV
@@ -141,30 +131,65 @@ jobs:
           wget -P .linuxdeploy-bin https://github.com/AppImage/appimagetool/releases/latest/download/appimagetool-$MAPPED_RUNNER_ARCH.AppImage
           chmod +x .linuxdeploy-bin/*
         if: runner.os == 'Linux'
+      - name: Remove pre-installed Python from PATH (PowerShell)
+        shell: pwsh
+        run: |
+          $pythonPath = (Get-Command python).Source
+          Write-Host "Found python at $pythonPath"
+
+          $pythonDir = Split-Path $pythonPath
+          Write-Host "Python directory: $pythonDir"
+
+          # Filter out $pythonDir from $env:Path
+          $newPath = ($env:Path -split ';' | Where-Object { $_ -notlike "$pythonDir*" }) -join ';'
+          Write-Host "New PATH: $newPath"
+
+          # Export cleaned PATH to GitHub Actions environment
+          "PATH=$newPath" >> $env:GITHUB_ENV
+        if: matrix.tag == 'win7'
+      - name: Set up Python for Windows7
+        shell: cmd
+        run: |
+          curl -L -o python-%PYTHON_IN_WIN7_VERSION%-amd64-full.exe https://github.com/adang1345/PythonWin7/raw/refs/heads/master/%PYTHON_IN_WIN7_VERSION%/python-%PYTHON_IN_WIN7_VERSION%-amd64-full.exe
+          start /wait python-%PYTHON_IN_WIN7_VERSION%-amd64-full.exe /quiet InstallAllUsers=1 PrependPath=1 Include_launcher=1
+          echo C:/Program Files/Python312 >> %GITHUB_PATH%
+          echo C:/Program Files/Python312/Scripts >> %GITHUB_PATH%
+        if: matrix.tag == 'win7'
+      - name: Add Python for Windows7 to Path
+        run: |
+          echo "C:/Program Files/Python312" >> $GITHUB_PATH
+          echo "C:/Program Files/Python312/Scripts" >> $GITHUB_PATH
+        if: matrix.tag == 'win7'
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           # Support Windows ARM64 build
           architecture: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
+          freethreaded: false
           check-latest: true
-      - name: Set up Python venv
+        if: matrix.tag != 'win7'
+      - name: Set up PySide6 for Win7
         run: |
-          if [ "$RUNNER_OS" == "macOS" ] || [ "$RUNNER_OS" == "Linux" ]; then
-            python3 -m venv .venv
-            source .venv/bin/activate
-          elif [ "$RUNNER_OS" == "Windows" ]; then
-            python -m venv .venv
-            .venv/Scripts/activate
-          else
-            echo "$RUNNER_OS not supported"
-            exit 1
-          fi
           python -c "import sys; print(sys.version)"
           python -m pip install --upgrade pip
+          python -m pip install setuptools wheel
+          python -m pip install PySide6-Essentials==$PYSIDE6_TARGET_VERSION
+          curl -L -o qt6_x64_to_run_on_windows7.7z https://github.com/crystalidea/qt6windows7/releases/download/v$PYSIDE6_TARGET_VERSION/qt6_x64_to_run_on_windows7.7z
+          7z x qt6_x64_to_run_on_windows7.7z -oqt6_x64_to_run_on_windows7 -y
+          cd qt6_x64_to_run_on_windows7
+          mkdir plugins
+          mv imageformats platforms styles plugins
+          cd ..
+          cp -r qt6_x64_to_run_on_windows7/* "C:/Program Files/Python312/Lib/site-packages/PySide6/"
+        if: matrix.tag == 'win7'
       - name: Download Python dependencies & latest asset files
         run: |
-          python -m pip install setuptools wheel
+          if [[ "${{ matrix.tag }}" != "win7" ]]; then
+            python -c "import sys; print(sys.version)"
+            python -m pip install --upgrade pip
+            python -m pip install setuptools wheel
+          fi
           if [ "$RUNNER_OS" == "Linux" ] && [ "$RUNNER_ARCH" == "ARM64" ]; then
             python -m pip install "numpy<2"
           elif [ "$RUNNER_OS" == "Windows" ] && [ "$RUNNER_ARCH" == "ARM64" ]; then
@@ -190,6 +215,32 @@ jobs:
           echo "CC=clang" >> $env:GITHUB_ENV
           echo "CXX=clang++" >> $env:GITHUB_ENV
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      - name: Set up go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.24"
+          # Support Windows ARM64 build
+          architecture: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
+          check-latest: true
+        if: matrix.tag != 'win7'
+      - name: Set up go for Win7
+        run: |
+          curl -L -o go-for-win7-windows-amd64.zip https://github.com/XTLS/go-win7/releases/latest/download/go-for-win7-windows-amd64.zip
+          7z x go-for-win7-windows-amd64.zip -ogo-for-win7-windows-amd64 -y
+          echo "GOROOT=$PWD/go-for-win7-windows-amd64" >> $GITHUB_ENV
+          echo "CGO_ENABLED=1" >> $GITHUB_ENV
+          echo "WIN_VER_COMPATIBLE=windows7" >> $GITHUB_ENV
+        if: matrix.tag == 'win7'
+      - name: Install go dependencies
+        run: |
+          if [[ "${{ matrix.tag }}" == "win7" ]]; then
+            export PATH=${GOROOT}/bin:$PATH
+          fi
+          go version
+          python -m pip install "Xray-core >= 1.8.8" "hysteria2 >= 2.0.4" "tun2socks > 2.5.2"
+          if [[ "${{ matrix.tag }}" == "win7" ]]; then
+            echo "GOROOT=" >> $GITHUB_ENV
+          fi
       - name: Set up go legacy
         uses: actions/setup-go@v4
         with:
@@ -201,17 +252,6 @@ jobs:
         run: |
           go version
           python -m pip install "hysteria > 1.3.5"
-      - name: Set up go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.24"
-          # Support Windows ARM64 build
-          architecture: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
-          check-latest: true
-      - name: Install go dependencies
-        run: |
-          go version
-          python -m pip install "Xray-core >= 1.8.8" "hysteria2 >= 2.0.4" "tun2socks > 2.5.2"
       - name: Run deploy script
         run: python Deploy.py
       - name: Store the distribution packages
@@ -219,9 +259,9 @@ jobs:
         with:
           name: binary-distributions-${{ matrix.os }}-Python${{ matrix.python-version }}
           path: |
-            *.zip
-            *.dmg
-            *.AppImage
+            Furious-*.zip
+            Furious-*.dmg
+            Furious-*.AppImage
 
   github-release:
     name: >-
