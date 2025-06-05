@@ -71,7 +71,7 @@ TRANSLATION = {
         "source": [
             "Furious.QtFramework.UpdatesManager"
         ],
-        "RU": "Furious - это уже последняя версия",
+        "RU": "Используется последняя версия Furious",
         "ZH": "Furious已是最新版本",
         "isReviewed": "True"
     },
@@ -350,7 +350,7 @@ TRANSLATION = {
             "Furious.Window.LogViewerWindow",
             "Furious.Window.TextEditorWindow"
         ],
-        "RU": "Увеличить маштаб",
+        "RU": "Увеличить маcштаб",
         "ZH": "变大",
         "isReviewed": "True"
     },
@@ -359,7 +359,7 @@ TRANSLATION = {
             "Furious.Window.LogViewerWindow",
             "Furious.Window.TextEditorWindow"
         ],
-        "RU": "Уменьшить маштаб",
+        "RU": "Уменьшить маcштаб",
         "ZH": "变小",
         "isReviewed": "True"
     },
@@ -509,7 +509,7 @@ TRANSLATION = {
         "source": [
             "Furious.TrayActions.EditConfiguration"
         ],
-        "RU": "Отредактировать конфигурацию...",
+        "RU": "Изменить конфигурацию...",
         "ZH": "编辑配置...",
         "isReviewed": "True"
     },
@@ -761,7 +761,7 @@ TRANSLATION = {
         "source": [
             "Furious.Window.XrayAssetViewerWindow"
         ],
-        "RU": "Откройте каталог ресурсов",
+        "RU": "Открыть каталог ресурсов",
         "ZH": "打开资源目录",
         "isReviewed": "True"
     },
@@ -1430,7 +1430,7 @@ TRANSLATION = {
         "source": [
             "Furious.Widget.UserSubsQTableWidget"
         ],
-        "RU": "Авто обновление",
+        "RU": "Автообновление",
         "ZH": "自动更新",
         "isReviewed": "True"
     },
@@ -1438,7 +1438,7 @@ TRANSLATION = {
         "source": [
             "Furious.Widget.UserSubsQTableWidget"
         ],
-        "RU": "Авто обновление Использовать прокси",
+        "RU": "Автообновление (используя прокси)",
         "ZH": "自动更新使用代理",
         "isReviewed": "True"
     },
@@ -1518,7 +1518,7 @@ TRANSLATION = {
         "source": [
             "Furious.Widget.UserSubsQTableWidget"
         ],
-        "RU": "Каждые 6 часа",
+        "RU": "Каждые 6 часов",
         "ZH": "每6小时",
         "isReviewed": "True"
     },
@@ -1526,7 +1526,7 @@ TRANSLATION = {
         "source": [
             "Furious.Widget.UserSubsQTableWidget"
         ],
-        "RU": "Каждые 8 часа",
+        "RU": "Каждые 8 часов",
         "ZH": "每8小时",
         "isReviewed": "True"
     },
@@ -1534,7 +1534,7 @@ TRANSLATION = {
         "source": [
             "Furious.Widget.UserSubsQTableWidget"
         ],
-        "RU": "Каждые 10 часа",
+        "RU": "Каждые 10 часов",
         "ZH": "每10小时",
         "isReviewed": "True"
     },
@@ -1542,7 +1542,7 @@ TRANSLATION = {
         "source": [
             "Furious.Widget.UserSubsQTableWidget"
         ],
-        "RU": "Каждые 12 часа",
+        "RU": "Каждые 12 часов",
         "ZH": "每12小时",
         "isReviewed": "True"
     },
