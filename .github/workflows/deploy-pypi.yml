@@ -19,7 +19,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          freethreaded: false
           check-latest: true
       - name: Download Python dependencies & latest asset files
         run: |
@@ -68,7 +67,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        os: [ ubuntu-22.04, ubuntu-22.04-arm, windows-2022, windows-2025, macos-13, macos-14 ]
+        os: [ ubuntu-22.04, ubuntu-22.04-arm, windows-2022, macos-13, macos-14 ]
         python-version: [ "3.12" ]
         include:
           - os: windows-2022
@@ -166,7 +165,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           # Support Windows ARM64 build
           architecture: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
-          freethreaded: false
           check-latest: true
         if: matrix.tag != 'win7'
       - name: Set up PySide6 for Win7
@@ -229,7 +227,7 @@ jobs:
           7z x go-for-win7-windows-amd64.zip -ogo-for-win7-windows-amd64 -y
           echo "GOROOT=$PWD/go-for-win7-windows-amd64" >> $GITHUB_ENV
           echo "CGO_ENABLED=1" >> $GITHUB_ENV
-          echo "WIN_VER_COMPATIBLE=windows7" >> $GITHUB_ENV
+          echo "WIN_VER_COMPATIBLE=windows" >> $GITHUB_ENV
         if: matrix.tag == 'win7'
       - name: Install go dependencies
         run: |
