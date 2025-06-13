@@ -9,14 +9,15 @@ A GUI proxy client based on PySide6. Support Xray-core & hysteria.
 You can install from [release page](https://github.com/LorenEteval/Furious/releases) or
 from [PyPI](https://pypi.org/project/Furious-GUI/).
 
-> [!NOTE]
-> For Linux users, PyPI is currently the only supported installation method.
-
 ## Wiki
 
-* [Install From PyPI](https://github.com/LorenEteval/Furious/wiki/Install-From-PyPI)
 * [TUN Mode](https://github.com/LorenEteval/Furious/wiki/TUN-Mode)
 * [Subscription Management](https://github.com/LorenEteval/Furious/wiki/Subscription-Management)
+* [Install From PyPI](https://github.com/LorenEteval/Furious/wiki/Install-From-PyPI)
+
+## Contributing
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/LorenEteval/Furious)
 
 ## Credits
 
