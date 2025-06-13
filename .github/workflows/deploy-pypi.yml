@@ -68,7 +68,18 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04, ubuntu-22.04-arm, windows-2022, macos-13, macos-14 ]
-        python-version: [ "3.12" ]
+        python-version: [ "3.12", "3.13" ]
+        exclude:
+          - os: ubuntu-22.04
+            python-version: "3.12"
+          - os: windows-2022
+            python-version: "3.12"
+          - os: macos-13
+            python-version: "3.12"
+          - os: macos-14
+            python-version: "3.12"
+          - os: ubuntu-22.04-arm
+            python-version: "3.13"
         include:
           - os: windows-2022
             tag: win7
@@ -78,7 +89,8 @@ jobs:
       PYSIDE6_TARGET_VERSION: "6.8.3"
       # PySide6 has Windows ARM64 build since 6.9.0
       PYSIDE6_LATEST_VERSION: "6.9.1"
-      PYTHON_IN_WIN7_VERSION: "3.12.11"
+      PYTHON_WIN7_VERSION: "3.13.5"
+      PYTHON_WIN7_VERSION_MAJOR: "Python313"
     steps:
       - name: Set platform environment variables
         run: |
@@ -149,15 +161,15 @@ jobs:
       - name: Set up Python for Windows7
         shell: cmd
         run: |
-          curl -L -o python-%PYTHON_IN_WIN7_VERSION%-amd64-full.exe https://github.com/adang1345/PythonWin7/raw/refs/heads/master/%PYTHON_IN_WIN7_VERSION%/python-%PYTHON_IN_WIN7_VERSION%-amd64-full.exe
-          start /wait python-%PYTHON_IN_WIN7_VERSION%-amd64-full.exe /quiet InstallAllUsers=1 PrependPath=1 Include_launcher=1
-          echo C:/Program Files/Python312 >> %GITHUB_PATH%
-          echo C:/Program Files/Python312/Scripts >> %GITHUB_PATH%
+          curl -L -o python-%PYTHON_WIN7_VERSION%-amd64-full.exe https://github.com/adang1345/PythonWin7/raw/refs/heads/master/%PYTHON_WIN7_VERSION%/python-%PYTHON_WIN7_VERSION%-amd64-full.exe
+          start /wait python-%PYTHON_WIN7_VERSION%-amd64-full.exe /quiet InstallAllUsers=1 PrependPath=1 Include_launcher=1
+          echo C:/Program Files/%PYTHON_WIN7_VERSION_MAJOR% >> %GITHUB_PATH%
+          echo C:/Program Files/%PYTHON_WIN7_VERSION_MAJOR%/Scripts >> %GITHUB_PATH%
         if: matrix.tag == 'win7'
       - name: Add Python for Windows7 to Path
         run: |
-          echo "C:/Program Files/Python312" >> $GITHUB_PATH
-          echo "C:/Program Files/Python312/Scripts" >> $GITHUB_PATH
+          echo "C:/Program Files/$PYTHON_WIN7_VERSION_MAJOR" >> $GITHUB_PATH
+          echo "C:/Program Files/$PYTHON_WIN7_VERSION_MAJOR/Scripts" >> $GITHUB_PATH
         if: matrix.tag == 'win7'
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -179,7 +191,7 @@ jobs:
           mkdir plugins
           mv imageformats platforms styles plugins
           cd ..
-          cp -r qt6_x64_to_run_on_windows7/* "C:/Program Files/Python312/Lib/site-packages/PySide6/"
+          cp -r qt6_x64_to_run_on_windows7/* "C:/Program Files/$PYTHON_WIN7_VERSION_MAJOR/Lib/site-packages/PySide6/"
         if: matrix.tag == 'win7'
       - name: Download Python dependencies & latest asset files
         run: |
