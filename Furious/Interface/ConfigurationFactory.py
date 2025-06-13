@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from Furious.Interface.UserServersTableItem import *
 
+from PySide6 import QtCore
 from PySide6.QtWidgets import QApplication
 
 from abc import ABC
@@ -48,6 +49,7 @@ class ConfigurationFactory(UserServersTableItem, dict, ABC):
         """
 
         self._index = kwargs.pop('index', 0)
+        self._deleted = kwargs.pop('deleted', False)
 
         # Extra attributes
         self.kwargs = kwargs
@@ -98,11 +100,25 @@ class ConfigurationFactory(UserServersTableItem, dict, ABC):
     def setExtras(self, item, value):
         self.kwargs[item] = value
 
+    @property
     def index(self) -> int:
         return self._index
 
-    def setIndex(self, index):
-        self._index = index
+    @index.setter
+    def index(self, value: int):
+        assert isinstance(value, int)
+
+        self._index = value
+
+    @property
+    def deleted(self) -> bool:
+        return self._deleted
+
+    @deleted.setter
+    def deleted(self, value: bool):
+        assert isinstance(value, bool)
+
+        self._deleted = value
 
     @property
     def itemRemark(self) -> str:

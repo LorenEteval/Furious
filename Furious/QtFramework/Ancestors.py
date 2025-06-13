@@ -21,7 +21,7 @@ from Furious.PyFramework import *
 
 from PySide6 import QtCore
 
-__all__ = ['QBlockSignals', 'QTranslatable', 'QGarbageCollector']
+__all__ = ['QBlockSignals', 'QTranslatable']
 
 
 class QProtection:
@@ -72,16 +72,3 @@ class QTranslatable(Translatable):
                         ob.retranslate()
                 else:
                     ob.retranslate()
-
-
-class QGarbageCollector(GarbageCollector):
-    Timer = QtCore.QTimer()
-
-    @staticmethod
-    def isEnabled():
-        return QGarbageCollector.Timer.isActive()
-
-    @staticmethod
-    def collect(timeout: int):
-        QGarbageCollector.Timer.timeout.connect(QGarbageCollector.clear)
-        QGarbageCollector.Timer.start(timeout)

@@ -118,9 +118,6 @@ class UpdateSubsInfoMBox(AppQMessageBox):
 
 
 class SubscriptionManager(WebGETManager):
-    # Collect unused references every 30 mins
-    GC_COLLECT_INTERVAL = 30 * 60 * 1000
-
     def __init__(self, parent, **kwargs):
         actionMessage = kwargs.pop('actionMessage', 'update subs')
 
@@ -175,9 +172,6 @@ class SubscriptionManager(WebGETManager):
                         if isConnected and not APP().isSystemTrayConnected():
                             # Trigger connect
                             APP().systemTray.ConnectAction.trigger()
-
-        if not QGarbageCollector.isEnabled():
-            QGarbageCollector.collect(SubscriptionManager.GC_COLLECT_INTERVAL)
 
         if showMessageBox:
             mbox = UpdateSubsInfoMBox(
@@ -307,13 +301,9 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
         self.factory = factory
 
     def run(self):
-        index = self.factory.index()
+        index = self.factory.index
 
-        if (
-            index < 0
-            or index >= len(AS_UserServers())
-            or QGarbageCollector.isTracked(self.factory)
-        ):
+        if self.factory.deleted or index < 0 or index >= len(AS_UserServers()):
             # Invalid item. Do nothing
             return
 
@@ -335,9 +325,7 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
             self.factory.setExtras('delayResult', classname(ex))
 
             # Extra guard
-            if APP() is None or APP().isExiting():
-                return
-            else:
+            if APP() is not None and not APP().isExiting():
                 self.finished.emit()
         else:
             # Result address should not be empty
@@ -350,9 +338,7 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
                     self.factory.setExtras('delayResult', 'Error')
 
             # Extra guard
-            if APP() is None or APP().isExiting():
-                return
-            else:
+            if APP() is not None and not APP().isExiting():
                 self.finished.emit()
 
 
@@ -367,13 +353,9 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
         self.factory = factory
 
     def run(self):
-        index = self.factory.index()
+        index = self.factory.index
 
-        if (
-            index < 0
-            or index >= len(AS_UserServers())
-            or QGarbageCollector.isTracked(self.factory)
-        ):
+        if self.factory.deleted or index < 0 or index >= len(AS_UserServers()):
             # Invalid item. Do nothing
             return
 
@@ -396,9 +378,7 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
             self.factory.setExtras('delayResult', classname(ex))
 
             # Extra guard
-            if APP() is None or APP().isExiting():
-                return
-            else:
+            if APP() is not None and not APP().isExiting():
                 self.finished.emit()
         else:
             if rtts:
@@ -407,22 +387,29 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
                 self.factory.setExtras('delayResult', 'Timeout')
 
             # Extra guard
-            if APP() is None or APP().isExiting():
-                return
-            else:
+            if APP() is not None and not APP().isExiting():
                 self.finished.emit()
 
 
 class TestDownloadSpeedWorker(WebGETManager):
     progressed = QtCore.Signal()
 
-    def __init__(self, factory: ConfigurationFactory, port: int, parent=None, **kwargs):
+    def __init__(
+        self,
+        factory: ConfigurationFactory,
+        port: int,
+        timeout: int,
+        parent=None,
+        **kwargs,
+    ):
         actionMessage = kwargs.pop('actionMessage', 'test download speed')
 
         super().__init__(parent, actionMessage=actionMessage)
 
         self.factory = factory
         self.port = port
+        self.timeout = timeout
+        self.kwargs = kwargs
 
         self.hasSpeedResult = False
         self.totalBytesRead = 0
@@ -434,6 +421,21 @@ class TestDownloadSpeedWorker(WebGETManager):
         self.networkReply = None
         self.elapsedTimer = QtCore.QElapsedTimer()
 
+        self.timeoutTimer = QtCore.QTimer()
+        self.timeoutTimer.setSingleShot(True)
+        self.timeoutTimer.timeout.connect(self.handleTimeout)
+
+    def releaseSemaphore(self):
+        parent = self.parent()
+
+        if isinstance(parent, UserServersQTableWidget):
+            parent.testDownloadSpeedMultiSema.release(1)
+
+    def syncProgress(self):
+        # Extra guard
+        if APP() is not None and not APP().isExiting():
+            self.progressed.emit()
+
     def isFinished(self) -> bool:
         if isinstance(self.networkReply, QNetworkReply):
             return self.networkReply.isFinished()
@@ -444,58 +446,26 @@ class TestDownloadSpeedWorker(WebGETManager):
         if isinstance(self.networkReply, QNetworkReply):
             self.networkReply.abort()
 
-    def run(self):
-        index = self.factory.index()
+    def handleTimeout(self):
+        if not self.isFinished():
+            self.abort()
 
-        if (
-            index < 0
-            or index >= len(AS_UserServers())
-            or QGarbageCollector.isTracked(self.factory)
-        ):
-            # Invalid item. Do nothing
-            return
+    def coreExitCallback(self, config: ConfigurationFactory, exitcode: int):
+        if exitcode == CoreProcess.ExitCode.ConfigurationError:
+            self.factory.setExtras('speedResult', f'Invalid')
+            self.syncProgress()
+        elif exitcode == CoreProcess.ExitCode.ServerStartFailure:
+            self.factory.setExtras('speedResult', f'Core start failed')
+            self.syncProgress()
+        elif exitcode == CoreProcess.ExitCode.SystemShuttingDown:
+            pass
+        else:
+            self.factory.setExtras('speedResult', f'Core exited {exitcode}')
+            self.syncProgress()
 
-        assert isinstance(self.factory, ConfigurationFactory)
-
-        if not self.factory.isValid():
-            self.factory.setExtras('speedResult', 'Invalid')
-
-            # Extra guard
-            if APP() is None or APP().isExiting():
-                return
-            else:
-                self.progressed.emit()
-
-            # Configuration is not valid. Do nothing
-            return
-
-        def coreExitCallback(config: ConfigurationFactory, exitcode: int):
-            if exitcode == CoreProcess.ExitCode.ConfigurationError:
-                self.factory.setExtras('speedResult', f'Invalid')
-
-                # Extra guard
-                if APP() is None or APP().isExiting():
-                    return
-                else:
-                    self.progressed.emit()
-            elif exitcode == CoreProcess.ExitCode.ServerStartFailure:
-                self.factory.setExtras('speedResult', f'Core start failed')
-
-                # Extra guard
-                if APP() is None or APP().isExiting():
-                    return
-                else:
-                    self.progressed.emit()
-            elif exitcode == CoreProcess.ExitCode.SystemShuttingDown:
-                pass
-            else:
-                self.factory.setExtras('speedResult', f'Core exited {exitcode}')
-
-                # Extra guard
-                if APP() is None or APP().isExiting():
-                    return
-                else:
-                    self.progressed.emit()
+    def startCore(self) -> bool:
+        self.factory.setExtras('speedResult', 'Starting')
+        self.syncProgress()
 
         def msgCallback(line: str):
             try:
@@ -504,14 +474,6 @@ class TestDownloadSpeedWorker(WebGETManager):
                 # Any non-exit exceptions
 
                 pass
-
-        self.factory.setExtras('speedResult', 'Starting')
-
-        # Extra guard
-        if APP() is None or APP().isExiting():
-            return
-        else:
-            self.progressed.emit()
 
         itemcopy = self.factory.deepcopy()
 
@@ -551,12 +513,14 @@ class TestDownloadSpeedWorker(WebGETManager):
             self.coreManager.start(
                 itemcopy,
                 'Global',
-                coreExitCallback,
+                self.coreExitCallback,
                 msgCallbackCore=msgCallback,
                 deepcopy=False,
                 proxyModeOnly=True,
                 log=False,
             )
+
+            return True
         elif isinstance(itemcopy, ConfigurationHysteria1) or isinstance(
             itemcopy, ConfigurationHysteria2
         ):
@@ -572,28 +536,49 @@ class TestDownloadSpeedWorker(WebGETManager):
             self.coreManager.start(
                 itemcopy,
                 'Global',
-                coreExitCallback,
+                self.coreExitCallback,
                 msgCallbackCore=msgCallback,
                 deepcopy=False,
                 proxyModeOnly=True,
                 log=False,
             )
+
+            return True
         else:
             self.factory.setExtras('speedResult', 'Invalid')
-
-            # Extra guard
-            if APP() is None or APP().isExiting():
-                return
-            else:
-                self.progressed.emit()
+            self.syncProgress()
 
             # Unrecognized core. Return
+            return False
+
+    def start(self):
+        index = self.factory.index
+
+        if self.factory.deleted or index < 0 or index >= len(AS_UserServers()):
+            # Invalid item. Do nothing
+            self.releaseSemaphore()
+
             return
 
-        self.configureHttpProxy(f'127.0.0.1:{self.port}')
+        assert isinstance(self.factory, ConfigurationFactory)
 
-        self.networkReply = self.webGET(NETWORK_SPEED_TEST_URL)
-        self.elapsedTimer.start()
+        if not self.factory.isValid():
+            self.factory.setExtras('speedResult', 'Invalid')
+            self.syncProgress()
+            self.releaseSemaphore()
+
+            # Configuration is not valid. Do nothing
+            return
+
+        if self.startCore():
+            self.configureHttpProxy(f'127.0.0.1:{self.port}')
+
+            self.networkReply = self.webGET(NETWORK_SPEED_TEST_URL, **self.kwargs)
+            self.elapsedTimer.start()
+
+            self.timeoutTimer.start(self.timeout)
+        else:
+            self.releaseSemaphore()
 
     def successCallback(self, networkReply, **kwargs):
         if self.coreManager.allRunning():
@@ -608,12 +593,8 @@ class TestDownloadSpeedWorker(WebGETManager):
             self.factory.setExtras('speedResult', f'Core start failed')
 
         self.coreManager.stopAll()
-
-        # Extra guard
-        if APP() is None or APP().isExiting():
-            return
-        else:
-            self.progressed.emit()
+        self.syncProgress()
+        self.releaseSemaphore()
 
     def hasDataCallback(self, networkReply, **kwargs):
         self.hasDataCounter += 1
@@ -629,18 +610,16 @@ class TestDownloadSpeedWorker(WebGETManager):
             self.hasSpeedResult = True
             self.factory.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
 
-            # Extra guard
-            if APP() is None or APP().isExiting():
-                return
-            else:
-                if self.hasDataCounter % 10 == 0:
-                    # Limited to save CPU resources
-                    self.progressed.emit()
+            # Limited to save CPU resources
+            if self.hasDataCounter % 25 == 0:
+                self.syncProgress()
 
     def failureCallback(self, networkReply, **kwargs):
         if not self.hasSpeedResult:
             if not self.coreManager.allRunning():
                 # Core ExitCallback has been called
+                self.releaseSemaphore()
+
                 return
 
             if (
@@ -671,12 +650,8 @@ class TestDownloadSpeedWorker(WebGETManager):
                     self.factory.setExtras('speedResult', errorString)
 
         self.coreManager.stopAll()
-
-        # Extra guard
-        if APP() is None or APP().isExiting():
-            return
-        else:
-            self.progressed.emit()
+        self.syncProgress()
+        self.releaseSemaphore()
 
 
 class UserServersQTableWidgetHorizontalHeader(AppQHeaderView):
@@ -810,6 +785,15 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.testDownloadSpeedTimer = QtCore.QTimer()
         self.testDownloadSpeedTimer.timeout.connect(self.handleTestDownloadSpeedJob)
 
+        self.testDownloadSpeedQueueMulti = queue.Queue()
+        self.testDownloadSpeedTimerMulti = QtCore.QTimer()
+        self.testDownloadSpeedTimerMulti.timeout.connect(
+            self.handleTestDownloadSpeedJobMulti
+        )
+
+        self.testDownloadSpeedMultiPort = 30000
+        self.testDownloadSpeedMultiSema = QtCore.QSemaphore(OS_CPU_COUNT // 2)
+
         # Text Editor Window
         self.textEditorWindow = TextEditorWindow(parent=self.parent())
 
@@ -927,6 +911,14 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier,
                     QtCore.Qt.Key.Key_O,
+                ),
+            ),
+            AppQAction(
+                _('Test Download Speed (Multithreaded)'),
+                callback=lambda: self.testSelectedItemDownloadSpeedMulti(),
+                shortcut=QtCore.QKeyCombination(
+                    QtCore.Qt.KeyboardModifier.ControlModifier,
+                    QtCore.Qt.Key.Key_M,
                 ),
             ),
             AppQAction(
@@ -1222,13 +1214,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             AppSettings.set('ActivatedItemIndex', str(index))
 
     def flushItem(self, row: int, column: int, item: ConfigurationFactory):
-        itemIndex = item.index()
+        itemIndex = item.index
 
-        if (
-            itemIndex < 0
-            or itemIndex >= len(AS_UserServers())
-            or QGarbageCollector.isTracked(item)
-        ):
+        if item.deleted or itemIndex < 0 or itemIndex >= len(AS_UserServers()):
             # Invalid item. Do nothing
             return
 
@@ -1239,7 +1227,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 if id(item) == id(AS_UserServers()[_index]):
                     itemIndex = _index
 
-                    item.setIndex(itemIndex)
+                    item.index = itemIndex
 
                     return True
 
@@ -1367,7 +1355,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
     def flushAll(self):
         # Refresh index
         for index, item in enumerate(AS_UserServers()):
-            item.setIndex(index)
+            item.index = index
 
         if self.rowCount() == 0:
             # Should insert row
@@ -1388,8 +1376,8 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         swapSequenceItem(AS_UserServers(), index0, index1)
 
         # Refresh index
-        AS_UserServers()[index0].setIndex(index1)
-        AS_UserServers()[index1].setIndex(index0)
+        AS_UserServers()[index0].index = index1
+        AS_UserServers()[index1].index = index0
 
         self.flushRow(index0, AS_UserServers()[index0])
         self.flushRow(index1, AS_UserServers()[index1])
@@ -1484,8 +1472,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             with QBlockSignals(self):
                 self.removeRow(deleteIndex)
 
-            QGarbageCollector.track(AS_UserServers()[deleteIndex])
-
+            AS_UserServers()[deleteIndex].deleted = True
             AS_UserServers().pop(deleteIndex)
 
             if not deleteActivated and deleteIndex < AS_UserActivatedItemIndex():
@@ -1614,34 +1601,35 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
             AppThreadPool().start(worker)
 
-    @QtCore.Slot()
-    def handleTestDownloadSpeedJob(self):
-        try:
-            index, factory, timeout = self.testDownloadSpeedQueue.get_nowait()
-        except queue.Empty:
-            # Queue is empty
-
-            # Power Optimization. Timer gets fired only when needed
-            self.testDownloadSpeedTimer.stop()
-
-            return
-
-        assert isinstance(factory, ConfigurationFactory)
-
-        def testDownloadSpeed(counter=0, step=100):
-            worker = TestDownloadSpeedWorker(
-                factory, port=20809, logActionMessage=False
+    def testDownloadSpeedByFactory(
+        self,
+        index: int,
+        factory: ConfigurationFactory,
+        port: int,
+        timeout: int,
+        isMulti: bool,
+        counter=0,
+        step=100,
+        logActionMessage=False,
+    ):
+        worker = TestDownloadSpeedWorker(
+            factory,
+            port,
+            timeout,
+            parent=self,
+            logActionMessage=logActionMessage,
+        )
+        worker.progressed.connect(
+            functools.partial(
+                self.flushItem,
+                index,
+                self.Headers.index('Speed'),
+                factory,
             )
-            worker.progressed.connect(
-                functools.partial(
-                    self.flushItem,
-                    index,
-                    self.Headers.index('Speed'),
-                    factory,
-                )
-            )
-            worker.run()
+        )
+        worker.start()
 
+        if not isMulti:
             while (
                 not APP().isExiting() and not worker.isFinished() and counter < timeout
             ):
@@ -1655,13 +1643,85 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 while not worker.isFinished():
                     PySide6LegacyEventLoopWait(step)
 
-            if APP().isExiting():
-                # Stop timer
-                self.testDownloadSpeedTimer.stop()
+        if APP().isExiting():
+            # Stop timer
+            self.testDownloadSpeedTimer.stop()
+            self.testDownloadSpeedTimerMulti.stop()
 
-        testDownloadSpeed()
+    def handleTestDownloadSpeedJobXXX(
+        self,
+        jobQueue: queue.Queue,
+        jobTimer: QtCore.QTimer,
+        isMulti: bool,
+    ):
+        try:
+            if isMulti and not self.testDownloadSpeedMultiSema.tryAcquire(1, 1):
+                return
 
-    def testSelectedItemDownloadSpeedWithTimeout(self, timeout: int):
+            index, factory, timeout = jobQueue.get_nowait()
+        except queue.Empty:
+            # Queue is empty
+
+            # Power Optimization. Timer gets fired only when needed
+            jobTimer.stop()
+
+            return
+        else:
+            if isMulti:
+                if self.testDownloadSpeedMultiPort >= 40000:
+                    self.testDownloadSpeedMultiPort = 30000
+
+                testDownloadSpeedPort = self.testDownloadSpeedMultiPort
+
+                self.testDownloadSpeedMultiPort += 1
+
+                jobTimer.start(1)
+            else:
+                testDownloadSpeedPort = 20809
+
+        assert isinstance(factory, ConfigurationFactory)
+
+        if factory.deleted:
+            # Invalid item. Do nothing.
+            # Fetch next job.
+            self.testDownloadSpeedMultiSema.release(1)
+
+            jobTimer.start(1)
+        else:
+            self.testDownloadSpeedByFactory(
+                index,
+                factory,
+                testDownloadSpeedPort,
+                timeout,
+                isMulti,
+            )
+
+            if not APP().isExiting():
+                # Fetch next job.
+                jobTimer.start(1)
+
+    @QtCore.Slot()
+    def handleTestDownloadSpeedJob(self):
+        self.handleTestDownloadSpeedJobXXX(
+            self.testDownloadSpeedQueue,
+            self.testDownloadSpeedTimer,
+            False,
+        )
+
+    @QtCore.Slot()
+    def handleTestDownloadSpeedJobMulti(self):
+        self.handleTestDownloadSpeedJobXXX(
+            self.testDownloadSpeedQueueMulti,
+            self.testDownloadSpeedTimerMulti,
+            True,
+        )
+
+    def testSelectedItemDownloadSpeedWithTimeoutXXX(
+        self,
+        jobQueue: queue.Queue,
+        jobTimer: QtCore.QTimer,
+        timeout: int,
+    ):
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -1674,18 +1734,35 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         for index, reference in zip(indexes, references):
             try:
                 # Served by FIFO
-                self.testDownloadSpeedQueue.put_nowait((index, reference, timeout))
+                jobQueue.put_nowait((index, reference, timeout))
             except Exception:
                 # Any non-exit exceptions
 
                 pass
 
-        # Power Optimization
-        if not self.testDownloadSpeedTimer.isActive():
-            self.testDownloadSpeedTimer.start(250)
+        if not jobTimer.isActive():
+            # # Power Optimization. Timer gets fired only when needed
+            jobTimer.start(250)
+
+    def testSelectedItemDownloadSpeedWithTimeout(self, timeout: int):
+        self.testSelectedItemDownloadSpeedWithTimeoutXXX(
+            self.testDownloadSpeedQueue,
+            self.testDownloadSpeedTimer,
+            timeout,
+        )
+
+    def testSelectedItemDownloadSpeedWithTimeoutMulti(self, timeout: int):
+        self.testSelectedItemDownloadSpeedWithTimeoutXXX(
+            self.testDownloadSpeedQueueMulti,
+            self.testDownloadSpeedTimerMulti,
+            timeout,
+        )
 
     def testSelectedItemDownloadSpeed(self):
         self.testSelectedItemDownloadSpeedWithTimeout(5000)
+
+    def testSelectedItemDownloadSpeedMulti(self):
+        self.testSelectedItemDownloadSpeedWithTimeoutMulti(5000)
 
     def clearSelectedItemTestResult(self):
         indexes = self.selectedIndex
@@ -1714,7 +1791,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         index = len(AS_UserServers())
 
         # Set index
-        factory.setIndex(index)
+        factory.index = index
 
         AS_UserServers().append(factory)
 
