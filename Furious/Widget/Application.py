@@ -329,6 +329,7 @@ class Application(ApplicationFactory, SingletonApplication):
             logger.info(
                 f'Qt version: {QtCore.qVersion()}. PySide6 version: {PYSIDE6_VERSION}'
             )
+            logger.info(f'Qt build info: {QtCore.QLibraryInfo.build()}')
             logger.info(f'platform: {PLATFORM}')
             logger.info(f'platform release: {PLATFORM_RELEASE}')
             logger.info(f'platform machine: {PLATFORM_MACHINE}')

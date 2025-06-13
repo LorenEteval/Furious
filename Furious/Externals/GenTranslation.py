@@ -561,6 +561,14 @@ TRANSLATION = {
         "ZH": "测试下行速度",
         "isReviewed": "True"
     },
+    "Test Download Speed (Multithreaded)": {
+        "source": [
+            "Furious.Widget.UserServersQTableWidget"
+        ],
+        "RU": "Измерить скорость загрузки (многопоточная)",
+        "ZH": "测试下行速度（多线程）",
+        "isReviewed": "True"
+    },
     "Clear Test Results": {
         "source": [
             "Furious.Widget.UserServersQTableWidget"
@@ -1588,6 +1596,7 @@ TRANSLATION = {
     },
     "Customize TUN Settings...": {
         "source": [
+            "Furious.TrayActions.Settings",
             "Furious.Window.AppMainWindow"
         ],
         "RU": "Настройте параметры TUN...",

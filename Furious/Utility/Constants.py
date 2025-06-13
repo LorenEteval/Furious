@@ -20,6 +20,7 @@ from Furious.Version import __version__
 from PySide6 import QtCore, __version__ as _pyside6_version
 from PySide6.QtWidgets import QApplication
 
+import os
 import math
 import pathlib
 import platform
@@ -41,6 +42,8 @@ ORGANIZATION_DOMAIN = 'Furious.GUI'
 
 # Tested: Furious supports minimum PySide6 version 6.1.0
 PYSIDE6_VERSION = _pyside6_version
+
+OS_CPU_COUNT = os.cpu_count()
 
 PLATFORM = platform.system()
 PLATFORM_RELEASE = platform.release()

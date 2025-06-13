@@ -265,7 +265,7 @@ class TextEditorWindow(AppQMainWindow):
             old = AS_UserServers()[index]
             new = constructFromDict(jsonObject, **old.kwargs)
 
-            QGarbageCollector.track(old)
+            old.deleted = True
 
             AS_UserServers()[index] = new
 

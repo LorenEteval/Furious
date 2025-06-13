@@ -30,7 +30,6 @@ __all__ = [
     'SupportConnectedCallback',
     'SupportThemeChangedCallback',
     'SupportExitCleanup',
-    'GarbageCollector',
 ]
 
 
@@ -153,23 +152,3 @@ class SupportExitCleanup:
                     pass
             else:
                 object_.cleanup()
-
-
-class GarbageCollector:
-    ObjectsPool = list()
-    # ObjectsId is used to speed up searching
-    ObjectsId = dict()
-
-    @staticmethod
-    def track(object_: Any):
-        GarbageCollector.ObjectsPool.append(object_)
-        GarbageCollector.ObjectsId[id(object_)] = True
-
-    @staticmethod
-    def isTracked(object_: Any) -> bool:
-        return id(object_) in GarbageCollector.ObjectsId
-
-    @staticmethod
-    def clear():
-        GarbageCollector.ObjectsPool.clear()
-        GarbageCollector.ObjectsId.clear()
