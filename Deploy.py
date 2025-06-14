@@ -20,11 +20,14 @@ from __future__ import annotations
 from Furious.Utility import *
 
 import os
+import re
 import sys
 import shutil
 import logging
 import argparse
+import datetime
 import subprocess
+import urllib.request
 
 logging.basicConfig(
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
@@ -39,6 +42,8 @@ EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 
 DEPLOY_DIR_NAME = f'{APPLICATION_NAME}-Deploy'
+
+HYSTERIA_DATA_DIR = DATA_DIR / 'hysteria'
 
 NUITKA_BINARY_VERSION_OPTION = (
     f'--company-name={APPLICATION_NAME} '
@@ -194,12 +199,75 @@ def downloadXrayAssets(url, filepath):
         # Any non-exit exceptions
 
         logger.error(
-            f'failed to download file from {url}. Status code: {response.status_code}'
+            f'failed to download xray asset from {url}. Status code: {response.status_code}'
         )
 
         return False
     else:
-        logger.info(f'file downloaded successfully and saved to {filepath}')
+        logger.info(f'xray asset downloaded successfully and saved to {filepath}')
+
+        return True
+
+
+def downloadHy1Asset():
+    def writeHy1Rules(response, pattern_, action_, file_):
+        count_ = 0
+
+        for domain in response:
+            m = re.search(pattern_, domain.decode('utf-8').strip()).group()
+
+            if m != 'payload':
+                count_ += 1
+
+                file_.write(f'{action_} domain-suffix {m}\n')
+
+        return count_
+
+    try:
+        urllib.request.urlretrieve(
+            'https://github.com/Loyalsoldier/geoip/releases/latest/download//Country.mmdb',
+            HYSTERIA_DATA_DIR / 'country.mmdb',
+        )
+
+        today = datetime.date.today().strftime('%B %d, %Y')
+
+        pattern = re.compile(r'([a-z]|[0-9]|[A-Z])(.*[a-z]|[A-Z])')
+
+        with open(HYSTERIA_DATA_DIR / 'bypass-mainland-China.acl', 'w') as file:
+            file.write(
+                f'# Author:github.com/A1-hub\n'
+                f'# Author:github.com/{APPLICATION_REPO_OWNER_NAME}\n'
+                f'# hysteria acl rules\n'
+                f'# Generated on {today}\n\n'
+            )
+
+            for action, url in zip(
+                [
+                    'block',
+                    'direct',
+                    'proxy',
+                ],
+                [
+                    'https://github.com/Loyalsoldier/clash-rules/releases/latest/download/reject.txt',
+                    'https://github.com/Loyalsoldier/clash-rules/releases/latest/download/direct.txt',
+                    'https://github.com/Loyalsoldier/clash-rules/releases/latest/download/proxy.txt',
+                ],
+            ):
+                count = writeHy1Rules(
+                    urllib.request.urlopen(url), pattern, action, file
+                )
+
+                logger.debug(f'genereated {count} {action} rules')
+
+            file.write('direct country cn\nproxy all\n')
+    except Exception as ex:
+        # Any non-exit exceptions
+
+        logger.error(f'download hy1 asset failed. {ex}')
+
+        return False
+    else:
+        logger.info(f'download hy1 asset success')
 
         return True
 
@@ -287,6 +355,7 @@ def download():
         [
             downloadXrayAssets(URL_GEOSITE, XRAY_ASSET_PATH_GEOSITE),
             downloadXrayAssets(URL_GEOIP, XRAY_ASSET_PATH_GEOIP),
+            downloadHy1Asset(),
         ]
     )
 
