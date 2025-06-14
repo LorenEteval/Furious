@@ -30,6 +30,8 @@ registerAppSettings('CustomSubscription')
 class UserSubEntry:
     remark: str
     webURL: str
+    autoupdate: str
+    proxy: str
 
 
 class UserSub:
