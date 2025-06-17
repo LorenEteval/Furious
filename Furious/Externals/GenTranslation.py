@@ -1295,6 +1295,14 @@ TRANSLATION = {
         "ZH": "使用单色托盘图标",
         "isReviewed": "True"
     },
+    "Hide Dock Icon": {
+        "source": [
+            "Furious.TrayActions.Settings"
+        ],
+        "RU": "Скрыть значок Dock",
+        "ZH": "隐藏程序坞图标",
+        "isReviewed": "True"
+    },
     "Customize JSON Configuration...": {
         "source": [
             "Furious.Widget.UserServersQTableWidget"
