@@ -121,7 +121,7 @@ class SubscriptionManager(WebGETManager):
     def __init__(self, parent, **kwargs):
         actionMessage = kwargs.pop('actionMessage', 'update subs')
 
-        super().__init__(parent, actionMessage=actionMessage)
+        super().__init__(parent, actionMessage=actionMessage, mustCallOnce=False)
 
     def handleItemDeletionAndInsertion(self, **kwargs):
         successArgs = kwargs.pop('successArgs', list())
@@ -191,10 +191,16 @@ class SubscriptionManager(WebGETManager):
             # Show the MessageBox asynchronously
             mbox.open()
 
+    def mustCall(self, **kwargs):
+        depthMap = kwargs.get('depthMap', {})
+        depthMap['depth'] -= 1
+
+        if depthMap['depth'] == 0:
+            self.handleItemDeletionAndInsertion(**kwargs)
+
     def successCallback(self, networkReply, **kwargs):
         remark = kwargs.get('remark', '')
         webURL = kwargs.get('webURL', '')
-        depthMap = kwargs.get('depthMap', {})
         successArgs = kwargs.get('successArgs', list())
         failureArgs = kwargs.get('failureArgs', list())
 
@@ -223,15 +229,9 @@ class SubscriptionManager(WebGETManager):
 
             successArgs.append({'uris': uris, **kwargs})
 
-        depthMap['depth'] -= 1
-
-        if depthMap['depth'] == 0:
-            self.handleItemDeletionAndInsertion(**kwargs)
-
     def failureCallback(self, networkReply, **kwargs):
         remark = kwargs.get('remark', '')
         webURL = kwargs.get('webURL', '')
-        depthMap = kwargs.get('depthMap', {})
         successArgs = kwargs.get('successArgs', list())
         failureArgs = kwargs.get('failureArgs', list())
 
@@ -240,11 +240,6 @@ class SubscriptionManager(WebGETManager):
         )
 
         failureArgs.append({'error': networkReply.errorString(), **kwargs})
-
-        depthMap['depth'] -= 1
-
-        if depthMap['depth'] == 0:
-            self.handleItemDeletionAndInsertion(**kwargs)
 
     def updateSubsByWebGET(self, **kwargs):
         url = kwargs.get('webURL', '')
@@ -425,11 +420,18 @@ class TestDownloadSpeedWorker(WebGETManager):
         self.timeoutTimer.setSingleShot(True)
         self.timeoutTimer.timeout.connect(self.handleTimeout)
 
-    def releaseSemaphore(self):
+    @property
+    def sema(self):
         parent = self.parent()
 
         if isinstance(parent, UserServersQTableWidget):
-            parent.testDownloadSpeedMultiSema.release(1)
+            return parent.testDownloadSpeedMultiSema
+        else:
+            # Should not reach here: parent must be properly set
+            raise
+
+    def mustCall(self):
+        self.sema.release(1)
 
     def syncProgress(self):
         # Extra guard
@@ -447,21 +449,27 @@ class TestDownloadSpeedWorker(WebGETManager):
             self.networkReply.abort()
 
     def handleTimeout(self):
-        if not self.isFinished():
-            self.abort()
+        try:
+            if not self.isFinished():
+                self.abort()
+        finally:
+            self.must()
 
     def coreExitCallback(self, config: ConfigurationFactory, exitcode: int):
-        if exitcode == CoreProcess.ExitCode.ConfigurationError:
-            self.factory.setExtras('speedResult', f'Invalid')
-            self.syncProgress()
-        elif exitcode == CoreProcess.ExitCode.ServerStartFailure:
-            self.factory.setExtras('speedResult', f'Core start failed')
-            self.syncProgress()
-        elif exitcode == CoreProcess.ExitCode.SystemShuttingDown:
-            pass
-        else:
-            self.factory.setExtras('speedResult', f'Core exited {exitcode}')
-            self.syncProgress()
+        try:
+            if exitcode == CoreProcess.ExitCode.ConfigurationError:
+                self.factory.setExtras('speedResult', f'Invalid')
+                self.syncProgress()
+            elif exitcode == CoreProcess.ExitCode.ServerStartFailure:
+                self.factory.setExtras('speedResult', f'Core start failed')
+                self.syncProgress()
+            elif exitcode == CoreProcess.ExitCode.SystemShuttingDown:
+                pass
+            else:
+                self.factory.setExtras('speedResult', f'Core exited {exitcode}')
+                self.syncProgress()
+        finally:
+            self.must()
 
     def startCore(self) -> bool:
         self.factory.setExtras('speedResult', 'Starting')
@@ -552,33 +560,35 @@ class TestDownloadSpeedWorker(WebGETManager):
             return False
 
     def start(self):
-        index = self.factory.index
+        def _start():
+            index = self.factory.index
 
-        if self.factory.deleted or index < 0 or index >= len(AS_UserServers()):
-            # Invalid item. Do nothing
-            self.releaseSemaphore()
+            if self.factory.deleted or index < 0 or index >= len(AS_UserServers()):
+                # Invalid item. Do nothing
+                return
 
-            return
+            assert isinstance(self.factory, ConfigurationFactory)
 
-        assert isinstance(self.factory, ConfigurationFactory)
+            if not self.factory.isValid():
+                self.factory.setExtras('speedResult', 'Invalid')
+                self.syncProgress()
 
-        if not self.factory.isValid():
-            self.factory.setExtras('speedResult', 'Invalid')
-            self.syncProgress()
-            self.releaseSemaphore()
+                # Configuration is not valid. Do nothing
+                return
 
-            # Configuration is not valid. Do nothing
-            return
+            if self.startCore():
+                self.configureHttpProxy(f'127.0.0.1:{self.port}')
 
-        if self.startCore():
-            self.configureHttpProxy(f'127.0.0.1:{self.port}')
+                self.networkReply = self.webGET(NETWORK_SPEED_TEST_URL, **self.kwargs)
 
-            self.networkReply = self.webGET(NETWORK_SPEED_TEST_URL, **self.kwargs)
-            self.elapsedTimer.start()
+                self.elapsedTimer.start()
+                self.timeoutTimer.start(self.timeout)
 
-            self.timeoutTimer.start(self.timeout)
-        else:
-            self.releaseSemaphore()
+        try:
+            _start()
+        finally:
+            if self.networkReply is None:
+                self.must()
 
     def successCallback(self, networkReply, **kwargs):
         if self.coreManager.allRunning():
@@ -594,7 +604,6 @@ class TestDownloadSpeedWorker(WebGETManager):
 
         self.coreManager.stopAll()
         self.syncProgress()
-        self.releaseSemaphore()
 
     def hasDataCallback(self, networkReply, **kwargs):
         self.hasDataCounter += 1
@@ -618,8 +627,6 @@ class TestDownloadSpeedWorker(WebGETManager):
         if not self.hasSpeedResult:
             if not self.coreManager.allRunning():
                 # Core ExitCallback has been called
-                self.releaseSemaphore()
-
                 return
 
             if (
@@ -651,7 +658,6 @@ class TestDownloadSpeedWorker(WebGETManager):
 
         self.coreManager.stopAll()
         self.syncProgress()
-        self.releaseSemaphore()
 
 
 class UserServersQTableWidgetHorizontalHeader(AppQHeaderView):
@@ -1655,12 +1661,15 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         isMulti: bool,
     ):
         try:
-            if isMulti and not self.testDownloadSpeedMultiSema.tryAcquire(1, 1):
+            if isMulti and not self.testDownloadSpeedMultiSema.tryAcquire(1):
                 return
 
             index, factory, timeout = jobQueue.get_nowait()
         except queue.Empty:
             # Queue is empty
+
+            if isMulti:
+                self.testDownloadSpeedMultiSema.release(1)
 
             # Power Optimization. Timer gets fired only when needed
             jobTimer.stop()
@@ -1683,9 +1692,10 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
         if factory.deleted:
             # Invalid item. Do nothing.
-            # Fetch next job.
-            self.testDownloadSpeedMultiSema.release(1)
+            if isMulti:
+                self.testDownloadSpeedMultiSema.release(1)
 
+            # Fetch next job.
             jobTimer.start(1)
         else:
             self.testDownloadSpeedByFactory(

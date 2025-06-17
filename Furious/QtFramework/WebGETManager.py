@@ -38,10 +38,13 @@ logger = logging.getLogger(__name__)
 
 
 class WebGETManager(AppQNetworkAccessManager):
-    def __init__(self, parent=None, actionMessage='web GET'):
+    def __init__(self, parent=None, actionMessage='web GET', **kwargs):
         super().__init__(parent)
 
         self.actionMessage = actionMessage
+
+        self.mustCallOnce = kwargs.pop('mustCallOnce', True)
+        self.mustCalled = False
 
     def successCallback(self, networkReply: QNetworkReply, **kwargs):
         pass
@@ -52,31 +55,56 @@ class WebGETManager(AppQNetworkAccessManager):
     def failureCallback(self, networkReply: QNetworkReply, **kwargs):
         pass
 
+    def mustCall(self, **kwargs):
+        pass
+
+    def must(self, **kwargs):
+        def call():
+            try:
+                self.mustCall(**kwargs)
+            except Exception as ex:
+                # Any non-exit exceptions
+
+                logger.error(f'error calling must(): {ex}')
+            finally:
+                self.mustCalled = True
+
+        if not self.mustCallOnce:
+            call()
+        else:
+            if not self.mustCalled:
+                call()
+
     def handleReadyReadByNetworkReply(self, networkReply: QNetworkReply, **kwargs):
         self.hasDataCallback(networkReply, **kwargs)
 
     def handleFinishedByNetworkReply(self, networkReply: QNetworkReply, **kwargs):
-        if not isinstance(networkReply, QNetworkReply):
-            # Some PySide6 version does not have networkReply as
-            # QNetworkReply instance, so assertion is not used here
-            logger.error(f'QNetworkReply error in PySide6 {PYSIDE6_VERSION} version')
-
-            return
-
-        logActionMessage = kwargs.pop('logActionMessage', True)
-
-        if networkReply.error() != QNetworkReply.NetworkError.NoError:
-            if logActionMessage:
+        try:
+            if not isinstance(networkReply, QNetworkReply):
+                # Some PySide6 version does not have networkReply as
+                # QNetworkReply instance, so assertion is not used here
                 logger.error(
-                    f'{self.actionMessage} failed. {networkReply.errorString()}'
+                    f'QNetworkReply error in PySide6 {PYSIDE6_VERSION} version'
                 )
 
-            self.failureCallback(networkReply, **kwargs)
-        else:
-            if logActionMessage:
-                logger.info(f'{self.actionMessage} success')
+                return
 
-            self.successCallback(networkReply, **kwargs)
+            logActionMessage = kwargs.pop('logActionMessage', True)
+
+            if networkReply.error() != QNetworkReply.NetworkError.NoError:
+                if logActionMessage:
+                    logger.error(
+                        f'{self.actionMessage} failed. {networkReply.errorString()}'
+                    )
+
+                self.failureCallback(networkReply, **kwargs)
+            else:
+                if logActionMessage:
+                    logger.info(f'{self.actionMessage} success')
+
+                self.successCallback(networkReply, **kwargs)
+        finally:
+            self.must(**kwargs)
 
     def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
         useProxy = super().configureHttpProxy(httpProxy)
