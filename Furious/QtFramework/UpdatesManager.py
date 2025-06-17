@@ -72,6 +72,15 @@ class UpdatesManager(WebGETManager):
 
         super().__init__(parent, actionMessage=actionMessage)
 
+    @staticmethod
+    def showErrorMessageBox(parent=None):
+        mbox = AppQMessageBox(parent=parent, icon=AppQMessageBox.Icon.Critical)
+        mbox.setWindowTitle(_(APPLICATION_NAME))
+        mbox.setText(_('Check for updates failed'))
+
+        # Show the MessageBox asynchronously
+        mbox.open()
+
     def successCallback(self, networkReply, **kwargs):
         parent = kwargs.pop('parent', None)
         showMessageBox = kwargs.pop('showMessageBox', True)
@@ -131,15 +140,6 @@ class UpdatesManager(WebGETManager):
 
                     # Show the MessageBox asynchronously
                     mbox.open()
-
-    @staticmethod
-    def showErrorMessageBox(parent=None):
-        mbox = AppQMessageBox(parent=parent, icon=AppQMessageBox.Icon.Critical)
-        mbox.setWindowTitle(_(APPLICATION_NAME))
-        mbox.setText(_('Check for updates failed'))
-
-        # Show the MessageBox asynchronously
-        mbox.open()
 
     def failureCallback(self, networkReply, **kwargs):
         showMessageBox = kwargs.pop('showMessageBox', True)
