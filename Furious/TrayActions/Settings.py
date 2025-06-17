@@ -28,6 +28,10 @@ __all__ = ['SettingsAction']
 registerAppSettings('VPNMode', isBinary=True)
 registerAppSettings('DarkMode', isBinary=True)
 registerAppSettings('UseMonochromeTrayIcon', isBinary=True)
+
+if PLATFORM == 'Darwin':
+    registerAppSettings('HideDockIcon', isBinary=True)
+
 registerAppSettings('StartupOnBoot', isBinary=True, default=BinarySettings.ON_)
 registerAppSettings('PowerSaveMode', isBinary=True, default=BinarySettings.ON_)
 registerAppSettings(
@@ -100,6 +104,15 @@ class SettingsChildAction(AppQAction):
                     APP().systemTray.setConnectedIcon()
                 else:
                     APP().systemTray.setDisconnectedIcon()
+        elif self.textCompare('Hide Dock Icon'):
+            if checked:
+                APP().installDockIconVisibilityFeature()
+
+                AppSettings.turnON_('HideDockIcon')
+            else:
+                APP().installDockIconVisibilityFeature(remove=True)
+
+                AppSettings.turnOFF('HideDockIcon')
         elif self.textCompare('Startup On Boot'):
             if checked:
                 StartupOnBoot.on_()
@@ -135,7 +148,7 @@ class SettingsChildAction(AppQAction):
 class SettingsAction(AppQAction):
     def __init__(self, **kwargs):
         if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
-            extraActions = [
+            tunActions = [
                 TUNModeAction(
                     checkable=True,
                     checked=AppSettings.isStateON_('VPNMode'),
@@ -149,13 +162,24 @@ class SettingsAction(AppQAction):
                 AppQSeperator(),
             ]
         else:
-            extraActions = [None]
+            tunActions = [None]
+
+        if PLATFORM == 'Darwin':
+            hideDockIconAction = [
+                SettingsChildAction(
+                    _('Hide Dock Icon'),
+                    checkable=True,
+                    checked=AppSettings.isStateON_('HideDockIcon'),
+                )
+            ]
+        else:
+            hideDockIconAction = [None]
 
         super().__init__(
             _('Settings'),
             icon=bootstrapIcon('gear-wide-connected.svg'),
             menu=AppQMenu(
-                *extraActions,
+                *tunActions,
                 SettingsChildAction(
                     _('Dark Mode'),
                     checkable=True,
@@ -166,6 +190,7 @@ class SettingsAction(AppQAction):
                     checkable=True,
                     checked=AppSettings.isStateON_('UseMonochromeTrayIcon'),
                 ),
+                *hideDockIconAction,
                 AppQSeperator(),
                 SettingsChildAction(
                     _('Startup On Boot'),

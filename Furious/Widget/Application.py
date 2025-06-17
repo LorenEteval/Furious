@@ -278,7 +278,8 @@ class Application(ApplicationFactory, SingletonApplication):
 
         logger.info('final cleanup done')
 
-    def _setDockIconVisible(self, visible: bool):
+    @staticmethod
+    def setDockIconVisible(visible: bool):
         if PLATFORM != 'Darwin':
             return
 
@@ -292,13 +293,24 @@ class Application(ApplicationFactory, SingletonApplication):
         # and hide only when window is closed (not minimized)
         if PLATFORM == 'Darwin' and obj is getattr(self, 'mainWindow', None):
             if event.type() == QtCore.QEvent.Type.Show:
-                self._setDockIconVisible(True)
+                self.setDockIconVisible(True)
             elif event.type() == QtCore.QEvent.Type.Hide:
                 # Hide Dock icon when window is closed (not minimized)
                 if not self.mainWindow.isMinimized():
-                    self._setDockIconVisible(False)
+                    self.setDockIconVisible(False)
 
         return super().eventFilter(obj, event)
+
+    def installDockIconVisibilityFeature(self, remove=False):
+        if remove:
+            self.mainWindow.removeEventFilter(self)
+            self.setDockIconVisible(True)
+        else:
+            # Install event filter for main window to track show/hide
+            self.mainWindow.installEventFilter(self)
+
+            if not self.mainWindow.isVisible() and not self.mainWindow.isMinimized():
+                self.setDockIconVisible(False)
 
     def exit(self, exitcode=0):
         self.setExitingFlag(True)
@@ -409,11 +421,9 @@ class Application(ApplicationFactory, SingletonApplication):
             self.mainWindow = AppMainWindow()
             self.systemTray = SystemTrayIcon()
 
-            if PLATFORM == 'Darwin':
-                # Install event filter for main window to track show/hide
-                self.mainWindow.installEventFilter(self)
+            if PLATFORM == 'Darwin' and AppSettings.isStateON_('HideDockIcon'):
                 # Hide Dock icon initially, keeping only the tray icon visible
-                self._setDockIconVisible(False)
+                self.installDockIconVisibilityFeature()
 
             if AppSettings.isStateON_('DarkMode'):
                 self.switchToDarkMode()
