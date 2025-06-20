@@ -89,8 +89,6 @@ jobs:
       PYSIDE6_TARGET_VERSION: "6.8.3"
       # PySide6 has Windows ARM64 build since 6.9.0
       PYSIDE6_LATEST_VERSION: "6.9.1"
-      PYTHON_WIN7_VERSION: "3.13.5"
-      PYTHON_WIN7_VERSION_MAJOR: "Python313"
     steps:
       - name: Set platform environment variables
         run: |
@@ -142,41 +140,15 @@ jobs:
           wget -P .linuxdeploy-bin https://github.com/AppImage/appimagetool/releases/latest/download/appimagetool-$MAPPED_RUNNER_ARCH.AppImage
           chmod +x .linuxdeploy-bin/*
         if: runner.os == 'Linux'
-      - name: Remove pre-installed Python from PATH (PowerShell)
-        shell: pwsh
-        run: |
-          $pythonPath = (Get-Command python).Source
-          Write-Host "Found python at $pythonPath"
-
-          $pythonDir = Split-Path $pythonPath
-          Write-Host "Python directory: $pythonDir"
-
-          # Filter out $pythonDir from $env:Path
-          $newPath = ($env:Path -split ';' | Where-Object { $_ -notlike "$pythonDir*" }) -join ';'
-          Write-Host "New PATH: $newPath"
-
-          # Export cleaned PATH to GitHub Actions environment
-          "PATH=$newPath" >> $env:GITHUB_ENV
-        if: matrix.tag == 'win7'
       - name: Set up Python for Windows7
-        shell: cmd
-        run: |
-          curl -L -o python-%PYTHON_WIN7_VERSION%-amd64-full.exe https://github.com/adang1345/PythonWin7/raw/refs/heads/master/%PYTHON_WIN7_VERSION%/python-%PYTHON_WIN7_VERSION%-amd64-full.exe
-          start /wait python-%PYTHON_WIN7_VERSION%-amd64-full.exe /quiet InstallAllUsers=1 PrependPath=1 Include_launcher=1
-          echo C:/Program Files/%PYTHON_WIN7_VERSION_MAJOR% >> %GITHUB_PATH%
-          echo C:/Program Files/%PYTHON_WIN7_VERSION_MAJOR%/Scripts >> %GITHUB_PATH%
-        if: matrix.tag == 'win7'
-      - name: Add Python for Windows7 to Path
-        run: |
-          echo "C:/Program Files/$PYTHON_WIN7_VERSION_MAJOR" >> $GITHUB_PATH
-          echo "C:/Program Files/$PYTHON_WIN7_VERSION_MAJOR/Scripts" >> $GITHUB_PATH
+        uses: LorenEteval/setup-python-win7@v1
+        with:
+          python-version: ${{ matrix.python-version }}
         if: matrix.tag == 'win7'
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          # Support Windows ARM64 build
-          architecture: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
           check-latest: true
         if: matrix.tag != 'win7'
       - name: Set up PySide6 for Win7
@@ -191,7 +163,7 @@ jobs:
           mkdir plugins
           mv imageformats platforms styles plugins
           cd ..
-          cp -r qt6_x64_to_run_on_windows7/* "C:/Program Files/$PYTHON_WIN7_VERSION_MAJOR/Lib/site-packages/PySide6/"
+          cp -r qt6_x64_to_run_on_windows7/* "$PYTHON_WIN7_HOME/Lib/site-packages/PySide6/"
         if: matrix.tag == 'win7'
       - name: Download Python dependencies & latest asset files
         run: |
@@ -229,8 +201,6 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: "1.24"
-          # Support Windows ARM64 build
-          architecture: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
           check-latest: true
         if: matrix.tag != 'win7'
       - name: Set up go for Win7
@@ -255,8 +225,6 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: "1.20"
-          # Support Windows ARM64 build
-          architecture: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
           check-latest: true
       - name: Install go legacy dependencies
         run: |
