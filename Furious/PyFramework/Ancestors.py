@@ -152,3 +152,6 @@ class SupportExitCleanup:
                     pass
             else:
                 object_.cleanup()
+
+        SupportExitCleanup.ObjectsPool.clear()
+        SupportExitCleanup.VisitedType.clear()
