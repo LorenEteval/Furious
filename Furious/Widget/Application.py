@@ -183,6 +183,9 @@ class Application(ApplicationFactory, SingletonApplication):
         self.userSubs = UserSubs()
         self.userTUNSettings = UserTUNSettings()
 
+        self.mainWindow = None
+        self.systemTray = None
+
         # ThreadPool
         self.threadPool = QtCore.QThreadPool()
 
@@ -269,12 +272,16 @@ class Application(ApplicationFactory, SingletonApplication):
             darkdetect.theme()
         )
 
+    @staticmethod
+    @callOnceOnly
     @QtCore.Slot()
-    def cleanup(self):
-        SystemProxy.off()
-        SystemProxy.daemonOff()
-
+    def cleanup():
         SupportExitCleanup.cleanupAll()
+
+        if AppSettings.get('SystemProxyMode') == 'Auto':
+            # Automatically configure
+            SystemProxy.off()
+            SystemProxy.daemonOff()
 
         logger.info('final cleanup done')
 
@@ -288,18 +295,18 @@ class Application(ApplicationFactory, SingletonApplication):
         policy = 0 if visible else 1
         NSApplication.sharedApplication().setActivationPolicy_(policy)
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, watched, event):
         # Show Dock icon on macOS when window is shown
         # and hide only when window is closed (not minimized)
-        if PLATFORM == 'Darwin' and obj is getattr(self, 'mainWindow', None):
+        if PLATFORM == 'Darwin' and watched is self.mainWindow:
             if event.type() == QtCore.QEvent.Type.Show:
                 self.setDockIconVisible(True)
-            elif event.type() == QtCore.QEvent.Type.Hide:
+            if event.type() == QtCore.QEvent.Type.Hide:
                 # Hide Dock icon when window is closed (not minimized)
                 if not self.mainWindow.isMinimized():
                     self.setDockIconVisible(False)
 
-        return super().eventFilter(obj, event)
+        return super().eventFilter(watched, event)
 
     def installDockIconVisibilityFeature(self, remove=False):
         if remove:
@@ -412,33 +419,34 @@ class Application(ApplicationFactory, SingletonApplication):
             # Mandatory
             self.setQuitOnLastWindowClosed(False)
 
-            # Reset proxy
-            SystemProxy.off()
-            SystemProxy.daemonOn_()
+            if AppSettings.get('SystemProxyMode') == 'Auto':
+                # Automatically configure
+                SystemProxy.off()
+                SystemProxy.daemonOn_()
 
-            self.aboutToQuit.connect(self.cleanup)
+            self.aboutToQuit.connect(Application.cleanup)
 
             self.mainWindow = AppMainWindow()
             self.systemTray = SystemTrayIcon()
 
-            if PLATFORM == 'Darwin' and AppSettings.isStateON_('HideDockIcon'):
-                # Hide Dock icon initially, keeping only the tray icon visible
-                self.installDockIconVisibilityFeature()
+            if PLATFORM == 'Darwin':
+                if AppSettings.isStateON_('HideDockIcon'):
+                    # Hide Dock icon initially, keeping only the tray icon visible
+                    self.installDockIconVisibilityFeature()
+
+                def onApplicationStateChange(state):
+                    if state == QtCore.Qt.ApplicationState.ApplicationActive:
+                        if (
+                            not self.mainWindow.isVisible()
+                            and not self.systemTray.ConnectAction.isConnecting()
+                        ):
+                            self.mainWindow.show()
+
+                # Ensure the main window is shown when the dock icon is clicked
+                self.applicationStateChanged.connect(onApplicationStateChange)
 
             if AppSettings.isStateON_('DarkMode'):
                 self.switchToDarkMode()
-
-            def onApplicationStateChange(state):
-                if state == QtCore.Qt.ApplicationState.ApplicationActive:
-                    if (
-                        not self.mainWindow.isVisible()
-                        and not self.systemTray.ConnectAction.isConnecting()
-                    ):
-                        self.mainWindow.show()
-
-            if PLATFORM == 'Darwin':
-                # Ensure the main window is shown when the dock icon is clicked
-                self.applicationStateChanged.connect(onApplicationStateChange)
 
             self.systemTray.show()
             self.systemTray.setCustomToolTip()
