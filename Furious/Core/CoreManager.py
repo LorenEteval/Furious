@@ -106,6 +106,8 @@ class CoreManager(SupportExitCleanup):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.uniqueCleanup = False
+
         self.coresPool = []
 
     def start(
