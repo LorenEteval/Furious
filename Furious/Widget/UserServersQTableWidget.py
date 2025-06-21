@@ -1684,7 +1684,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
                 self.testDownloadSpeedMultiPort += 1
 
-                jobTimer.start(1)
+                if not APP().isExiting():
+                    # Fetch next job.
+                    jobTimer.start(1)
             else:
                 testDownloadSpeedPort = 20809
 
@@ -1695,8 +1697,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             if isMulti:
                 self.testDownloadSpeedMultiSema.release(1)
 
-            # Fetch next job.
-            jobTimer.start(1)
+            if not APP().isExiting():
+                # Fetch next job.
+                jobTimer.start(1)
         else:
             self.testDownloadSpeedByFactory(
                 index,
