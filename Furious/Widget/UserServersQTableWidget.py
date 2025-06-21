@@ -798,7 +798,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         )
 
         self.testDownloadSpeedMultiPort = 30000
-        self.testDownloadSpeedMultiSema = QtCore.QSemaphore(OS_CPU_COUNT // 2)
+        self.testDownloadSpeedMultiSema = QtCore.QSemaphore(max(OS_CPU_COUNT // 2, 1))
 
         # Text Editor Window
         self.textEditorWindow = TextEditorWindow(parent=self.parent())
