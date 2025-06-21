@@ -68,21 +68,21 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04, ubuntu-22.04-arm, windows-2022, macos-13, macos-14 ]
-        python-version: [ "3.12", "3.13" ]
+        python-version: [ "3.11", "3.13" ]
         exclude:
           - os: ubuntu-22.04
-            python-version: "3.12"
+            python-version: "3.11"
           - os: windows-2022
-            python-version: "3.12"
+            python-version: "3.11"
           - os: macos-13
-            python-version: "3.12"
+            python-version: "3.11"
           - os: macos-14
-            python-version: "3.12"
+            python-version: "3.11"
           - os: ubuntu-22.04-arm
             python-version: "3.13"
         include:
           - os: windows-2022
-            tag: win7
+            id: win7
     env:
       # Last PySide6 version that supports macOS 10.9 & Python 3.11
       PYSIDE6_LEGACY_VERSION: "6.4.3"
@@ -90,29 +90,6 @@ jobs:
       # PySide6 has Windows ARM64 build since 6.9.0
       PYSIDE6_LATEST_VERSION: "6.9.1"
     steps:
-      - name: Set platform environment variables
-        run: |
-          echo "PYSIDE6_Windows_X64_TARGET_VERSION=$PYSIDE6_TARGET_VERSION" >> $GITHUB_ENV
-          echo "PYSIDE6_Windows_ARM64_TARGET_VERSION=$PYSIDE6_LATEST_VERSION" >> $GITHUB_ENV
-          echo "PYSIDE6_macOS_X64_TARGET_VERSION=$PYSIDE6_TARGET_VERSION" >> $GITHUB_ENV
-          echo "PYSIDE6_macOS_ARM64_TARGET_VERSION=$PYSIDE6_TARGET_VERSION" >> $GITHUB_ENV
-          echo "PYSIDE6_Linux_X64_TARGET_VERSION=$PYSIDE6_TARGET_VERSION" >> $GITHUB_ENV
-          echo "PYSIDE6_Linux_ARM64_TARGET_VERSION=6.6.3.1" >> $GITHUB_ENV
-          case "${{ runner.arch }}" in
-            X64)
-              echo "MAPPED_RUNNER_ARCH=x86_64" >> $GITHUB_ENV
-              ;;
-            ARM64)
-              echo "MAPPED_RUNNER_ARCH=aarch64" >> $GITHUB_ENV
-              ;;
-            ARM)
-              echo "MAPPED_RUNNER_ARCH=armv7" >> $GITHUB_ENV
-              ;;
-            *)
-              echo "Unknown arch: ${{ runner.arch }}"
-              exit 1
-              ;;
-          esac
       - uses: actions/checkout@v4
       - name: Install macOS dependencies
         run: |
@@ -128,99 +105,80 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt update
-          sudo apt install -y libxcb-cursor0
-          sudo apt install -y qt6-base-dev
-          sudo apt install -y patchelf ccache
+          sudo apt install -y libxcb-cursor0 qt6-base-dev patchelf ccache
           echo "QMAKE=$(which qmake6)" >> $GITHUB_ENV
-          echo "Mapped runner architecture is $MAPPED_RUNNER_ARCH"
+
+          if [ "$RUNNER_ARCH" == "X64" ]; then
+            linuxdeploy_arch="x86_64"
+          elif [ "$RUNNER_ARCH" == "ARM64" ]; then
+            linuxdeploy_arch="aarch64"
+          else
+            echo "Unknown runner architecture: $RUNNER_ARCH"
+            exit 1
+          fi
+
+          echo "linuxdeploy architecture is $linuxdeploy_arch"
           mkdir .linuxdeploy-bin
           echo "$PWD/.linuxdeploy-bin" >> $GITHUB_PATH
-          wget -P .linuxdeploy-bin https://github.com/linuxdeploy/linuxdeploy/releases/latest/download/linuxdeploy-$MAPPED_RUNNER_ARCH.AppImage
-          wget -P .linuxdeploy-bin https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/latest/download/linuxdeploy-plugin-qt-$MAPPED_RUNNER_ARCH.AppImage
-          wget -P .linuxdeploy-bin https://github.com/AppImage/appimagetool/releases/latest/download/appimagetool-$MAPPED_RUNNER_ARCH.AppImage
+          wget -P .linuxdeploy-bin https://github.com/linuxdeploy/linuxdeploy/releases/latest/download/linuxdeploy-$linuxdeploy_arch.AppImage
+          wget -P .linuxdeploy-bin https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/latest/download/linuxdeploy-plugin-qt-$linuxdeploy_arch.AppImage
+          wget -P .linuxdeploy-bin https://github.com/AppImage/appimagetool/releases/latest/download/appimagetool-$linuxdeploy_arch.AppImage
           chmod +x .linuxdeploy-bin/*
         if: runner.os == 'Linux'
       - name: Set up Python for Windows7
         uses: LorenEteval/setup-python-win7@v1
         with:
           python-version: ${{ matrix.python-version }}
-        if: matrix.tag == 'win7'
+        if: matrix.id == 'win7'
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           check-latest: true
-        if: matrix.tag != 'win7'
-      - name: Set up PySide6 for Win7
+        if: matrix.id != 'win7'
+      - name: Set up PySide6 for Windows7
+        uses: LorenEteval/setup-pyside6-win7@v1
+        with:
+          pyside6-version: ${{ env.PYSIDE6_TARGET_VERSION }}
+        if: matrix.id == 'win7'
+      - name: Download Python dependencies & latest asset files
         run: |
           python -c "import sys; print(sys.version)"
           python -m pip install --upgrade pip
           python -m pip install setuptools wheel
-          python -m pip install PySide6-Essentials==$PYSIDE6_TARGET_VERSION
-          curl -L -o qt6_x64_to_run_on_windows7.7z https://github.com/crystalidea/qt6windows7/releases/download/v$PYSIDE6_TARGET_VERSION/qt6_x64_to_run_on_windows7.7z
-          7z x qt6_x64_to_run_on_windows7.7z -oqt6_x64_to_run_on_windows7 -y
-          cd qt6_x64_to_run_on_windows7
-          mkdir plugins
-          mv imageformats platforms styles plugins
-          cd ..
-          cp -r qt6_x64_to_run_on_windows7/* "$PYTHON_WIN7_HOME/Lib/site-packages/PySide6/"
-        if: matrix.tag == 'win7'
-      - name: Download Python dependencies & latest asset files
-        run: |
-          if [[ "${{ matrix.tag }}" != "win7" ]]; then
-            python -c "import sys; print(sys.version)"
-            python -m pip install --upgrade pip
-            python -m pip install setuptools wheel
-          fi
           if [ "$RUNNER_OS" == "Linux" ] && [ "$RUNNER_ARCH" == "ARM64" ]; then
             python -m pip install "numpy<2"
-          elif [ "$RUNNER_OS" == "Windows" ] && [ "$RUNNER_ARCH" == "ARM64" ]; then
-            python -m pip install "https://github.com/LorenEteval/numpy-2.2.4-cp313-win_arm64/releases/download/2.2.4/numpy-2.2.4-cp313-cp313-win_arm64.whl"
+            python -m pip install PySide6-Essentials==6.5.3
+          else
+            python -m pip install PySide6-Essentials==$PYSIDE6_TARGET_VERSION
           fi
-          python -m pip install PySide6-Essentials==$PYSIDE6_${{ runner.os }}_${{ runner.arch }}_TARGET_VERSION
           python -m pip install -r requirements.txt
-          python -m pip install nuitka imageio
-          python -m pip install requests
+          python -m pip install nuitka imageio requests
           python Deploy.py --download
-      - name: Download LLVM ARM64 Clang toolchain
-        # TODO: Need mingw-arm64 on Windows ARM64
-        shell: pwsh
-        run: |
-          Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.5/clang+llvm-20.1.5-aarch64-pc-windows-msvc.tar.xz" `
-                            -OutFile "clang+llvm-20.1.5-aarch64-pc-windows-msvc.tar.xz"
-          $newPath = ($env:PATH -split ";" | Where-Object { $_ -notlike "C:\Program Files\LLVM\bin" }) -join ";"
-          echo "PATH=$newPath" >> $env:GITHUB_ENV
-          mkdir C:\llvm-aarch64
-          tar -xf clang+llvm-20.1.5-aarch64-pc-windows-msvc.tar.xz -C C:\llvm-aarch64
-          echo "C:\llvm-aarch64\clang+llvm-20.1.5-aarch64-pc-windows-msvc\bin" >> $env:GITHUB_PATH
-          echo "CGO_ENABLED=1" >> $env:GITHUB_ENV
-          echo "CC=clang" >> $env:GITHUB_ENV
-          echo "CXX=clang++" >> $env:GITHUB_ENV
-        if: runner.os == 'Windows' && runner.arch == 'ARM64'
       - name: Set up go
         uses: actions/setup-go@v4
         with:
           go-version: "1.24"
           check-latest: true
-        if: matrix.tag != 'win7'
-      - name: Set up go for Win7
-        run: |
-          curl -L -o go-for-win7-windows-amd64.zip https://github.com/XTLS/go-win7/releases/latest/download/go-for-win7-windows-amd64.zip
-          7z x go-for-win7-windows-amd64.zip -ogo-for-win7-windows-amd64 -y
-          echo "GOROOT=$PWD/go-for-win7-windows-amd64" >> $GITHUB_ENV
-          echo "CGO_ENABLED=1" >> $GITHUB_ENV
-          echo "WIN_VER_COMPATIBLE=windows" >> $GITHUB_ENV
-        if: matrix.tag == 'win7'
+        if: matrix.id != 'win7'
       - name: Install go dependencies
         run: |
-          if [[ "${{ matrix.tag }}" == "win7" ]]; then
-            export PATH=${GOROOT}/bin:$PATH
+          if [[ "${{ matrix.id }}" == "win7" ]]; then
+            go_name="go-for-win7-windows-amd64"
+            go_file="${go_name}.zip"
+
+            curl -L -o ${go_file} https://github.com/XTLS/go-win7/releases/latest/download/${go_file}
+            7z x ${go_file} -o${go_name} -y
+
+            export GOROOT="$PWD/${go_name}"
+            export CGO_ENABLED=1
+            export PATH="${GOROOT}/bin:$PATH"
+            echo "WIN_VER_COMPATIBLE=windows" >> $GITHUB_ENV
           fi
           go version
-          python -m pip install "Xray-core >= 1.8.8" "hysteria2 >= 2.0.4" "tun2socks > 2.5.2"
-          if [[ "${{ matrix.tag }}" == "win7" ]]; then
-            echo "GOROOT=" >> $GITHUB_ENV
-          fi
+          python -m pip install "Xray-core >= 1.8.8"
+          python -m pip install "hysteria2 >= 2.0.4"
+          python -m pip install "tun2socks >  2.5.2"
       - name: Set up go legacy
         uses: actions/setup-go@v4
         with:
