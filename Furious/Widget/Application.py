@@ -419,12 +419,15 @@ class Application(ApplicationFactory, SingletonApplication):
             # Mandatory
             self.setQuitOnLastWindowClosed(False)
 
+            self.aboutToQuit.connect(Application.cleanup)
+
+            Win32Session.set(Application.cleanup)
+            Win32Session.run()
+
             if AppSettings.get('SystemProxyMode') == 'Auto':
                 # Automatically configure
                 SystemProxy.off()
                 SystemProxy.daemonOn_()
-
-            self.aboutToQuit.connect(Application.cleanup)
 
             self.mainWindow = AppMainWindow()
             self.systemTray = SystemTrayIcon()
