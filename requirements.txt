@@ -6,6 +6,7 @@ pyqrcode
 pypng
 icmplib
 sysproxy; sys_platform == "win32"
+win32session; sys_platform == "win32"
 darkdetect; sys_platform != "darwin"
 darkdetect[macos-listener]; sys_platform == "darwin"
 pyobjc-core; sys_platform == "darwin"
