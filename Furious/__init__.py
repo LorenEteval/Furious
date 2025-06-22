@@ -1,4 +1,4 @@
-# Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>
+# Copyright (C) 2024–present  Loren Eteval & contributors <loren.eteval@proton.me>
 #
 # This file is part of Furious.
 #
