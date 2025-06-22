@@ -56,9 +56,7 @@ if PLATFORM == 'Windows':
     NUITKA_BINARY_VERSION_OPTION += f'--file-description=\"A GUI proxy client based on PySide6. Support Xray-core & hysteria\" '
 
 if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
-    NUITKA_BINARY_VERSION_OPTION += (
-        f'--copyright=\"Copyright (C) 2024–present  Loren Eteval & contributors <loren.eteval@proton.me>\" '
-    )
+    NUITKA_BINARY_VERSION_OPTION += f'--copyright=\"Copyright (C) 2024–present  Loren Eteval & contributors <loren.eteval@proton.me>\" '
 
 if PLATFORM == 'Windows':
     NUITKA_BUILD = (
@@ -233,7 +231,11 @@ def downloadHy1Asset():
 
         pattern = re.compile(r'([a-z]|[0-9]|[A-Z])(.*[a-z]|[A-Z])')
 
-        with open(HYSTERIA_DATA_DIR / 'bypass-mainland-China.acl', 'w') as file:
+        with open(
+            HYSTERIA_DATA_DIR / 'bypass-mainland-China.acl',
+            'w',
+            encoding='utf-8',
+        ) as file:
             file.write(
                 f'# Author:github.com/A1-hub\n'
                 f'# Author:github.com/{APPLICATION_REPO_OWNER_NAME}\n'

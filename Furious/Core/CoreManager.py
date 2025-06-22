@@ -62,7 +62,7 @@ def fixLogObjectPath(config: ConfigurationFactory, attr: str, value: str, log=Tr
     if result:
         try:
             # Create a new file
-            with open(result, 'x'):
+            with open(result, 'x', encoding='utf-8'):
                 pass
         except FileExistsError:
             pass
