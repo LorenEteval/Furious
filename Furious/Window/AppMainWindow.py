@@ -312,6 +312,7 @@ class AppMainWindow(AppQMainWindow):
                     callback=lambda: self.openAboutPage(),
                 ),
             )
+            self.toolbar.setObjectName('AppMainWindow_AppQToolBar')
             self.toolbar.setIconSize(QtCore.QSize(64, 32))
             self.toolbar.setToolButtonStyle(
                 QtCore.Qt.ToolButtonStyle.ToolButtonTextUnderIcon
