@@ -564,6 +564,25 @@ def main():
             logger.info(f'generate AppImage success: {LINUX_APPIMAGE_FILENAME}')
 
             printStandardStream(result.stdout, result.stderr)
+
+        try:
+            result = runExternalCommand(
+                f'chmod +x {LINUX_APPIMAGE_FILENAME}',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(f'chmod +x failed with returncode {err.returncode}')
+
+            printStandardStream(err.stdout, err.stderr)
+
+            sys.exit(EXIT_FAILURE)
+        else:
+            logger.info(f'chmod +x success: {LINUX_APPIMAGE_FILENAME}')
+
+            printStandardStream(result.stdout, result.stderr)
     else:
         # Deploy: Not implemented
         pass
