@@ -168,11 +168,12 @@ venv*/
 # Furious deploy folders
 Furious-*/
 
+# Linux app dir
+AppDir/
+
 # zip files
 *.zip
-
 # dmg files
 *.dmg
-
 # AppImage files
 *.AppImage
