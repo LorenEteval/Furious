@@ -1,4 +1,4 @@
-# Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>
+# Copyright (C) 2024–present  Loren Eteval & contributors <loren.eteval@proton.me>
 #
 # This file is part of Furious.
 #
@@ -57,7 +57,7 @@ if PLATFORM == 'Windows':
 
 if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
     NUITKA_BINARY_VERSION_OPTION += (
-        f'--copyright=\"Copyright (C) 2024  Loren Eteval <loren.eteval@proton.me>\" '
+        f'--copyright=\"Copyright (C) 2024–present  Loren Eteval & contributors <loren.eteval@proton.me>\" '
     )
 
 if PLATFORM == 'Windows':
