@@ -1568,8 +1568,15 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         references = list(AS_UserServers()[index] for index in indexes)
 
         for index, reference in zip(indexes, references):
-            worker = TestPingLatencyWorker(reference)
+            if APP().isExiting():
+                break
 
+            assert isinstance(reference, ConfigurationFactory)
+
+            if reference.deleted:
+                continue
+
+            worker = TestPingLatencyWorker(reference)
             worker.setAutoDelete(True)
             worker.finished.connect(
                 functools.partial(
@@ -1593,8 +1600,15 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         references = list(AS_UserServers()[index] for index in indexes)
 
         for index, reference in zip(indexes, references):
-            worker = TestTcpingLatencyWorker(reference)
+            if APP().isExiting():
+                break
 
+            assert isinstance(reference, ConfigurationFactory)
+
+            if reference.deleted:
+                continue
+
+            worker = TestTcpingLatencyWorker(reference)
             worker.setAutoDelete(True)
             worker.finished.connect(
                 functools.partial(
@@ -1660,10 +1674,15 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         jobTimer: QtCore.QTimer,
         isMulti: bool,
     ):
-        try:
-            if isMulti and not self.testDownloadSpeedMultiSema.tryAcquire(1):
-                return
+        if APP().isExiting():
+            jobTimer.stop()
 
+            return
+
+        if isMulti and not self.testDownloadSpeedMultiSema.tryAcquire(1):
+            return
+
+        try:
             index, factory, timeout = jobQueue.get_nowait()
         except queue.Empty:
             # Queue is empty
@@ -1675,20 +1694,31 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             jobTimer.stop()
 
             return
-        else:
-            if isMulti:
-                if self.testDownloadSpeedMultiPort >= 40000:
-                    self.testDownloadSpeedMultiPort = 30000
 
-                testDownloadSpeedPort = self.testDownloadSpeedMultiPort
+        def fetchNextJob():
+            if not APP().isExiting():
+                # Fetch next job.
+                if self.isVisible():
+                    interval = max(1.0, 1000 / len(AS_UserServers()))
+                    interval = min(interval, 50)
 
-                self.testDownloadSpeedMultiPort += 1
-
-                if not APP().isExiting():
-                    # Fetch next job.
-                    jobTimer.start(1)
+                    jobTimer.start(int(interval))
+                else:
+                    jobTimer.start(50)
             else:
-                testDownloadSpeedPort = 20809
+                jobTimer.stop()
+
+        if isMulti:
+            if self.testDownloadSpeedMultiPort >= 40000:
+                self.testDownloadSpeedMultiPort = 30000
+
+            testDownloadSpeedPort = self.testDownloadSpeedMultiPort
+
+            self.testDownloadSpeedMultiPort += 1
+
+            fetchNextJob()
+        else:
+            testDownloadSpeedPort = 20809
 
         assert isinstance(factory, ConfigurationFactory)
 
@@ -1697,21 +1727,18 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             if isMulti:
                 self.testDownloadSpeedMultiSema.release(1)
 
-            if not APP().isExiting():
-                # Fetch next job.
-                jobTimer.start(1)
+            fetchNextJob()
         else:
-            self.testDownloadSpeedByFactory(
-                index,
-                factory,
-                testDownloadSpeedPort,
-                timeout,
-                isMulti,
-            )
-
             if not APP().isExiting():
-                # Fetch next job.
-                jobTimer.start(1)
+                self.testDownloadSpeedByFactory(
+                    index,
+                    factory,
+                    testDownloadSpeedPort,
+                    timeout,
+                    isMulti,
+                )
+
+            fetchNextJob()
 
     @QtCore.Slot()
     def handleTestDownloadSpeedJob(self):

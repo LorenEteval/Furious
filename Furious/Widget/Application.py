@@ -188,6 +188,7 @@ class Application(ApplicationFactory, SingletonApplication):
 
         # ThreadPool
         self.threadPool = QtCore.QThreadPool()
+        self.threadPool.setMaxThreadCount(max(OS_CPU_COUNT // 2, 1))
 
     @rateLimited(maxCallPerSecond=2)
     @QtCore.Slot()
@@ -282,6 +283,11 @@ class Application(ApplicationFactory, SingletonApplication):
             # Automatically configure
             SystemProxy.off()
             SystemProxy.daemonOff()
+
+        if PLATFORM == 'Darwin':
+            AppThreadPool().clear()
+
+            APP().processEvents()
 
         logger.info('final cleanup done')
 
