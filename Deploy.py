@@ -29,6 +29,8 @@ import datetime
 import subprocess
 import urllib.request
 
+from typing import AnyStr
+
 logging.basicConfig(
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
     level=logging.INFO,
@@ -362,18 +364,20 @@ def download():
     )
 
 
-def printStandardStream(stdout, stderr):
-    if isinstance(stdout, bytes):
-        decoded_stdout = stdout.decode('utf-8', 'replace')
+def printStandardStream(stdout: AnyStr, stderr: AnyStr):
+    if isinstance(stdout, str):
+        encoded_stdout = stdout.encode()
     else:
-        decoded_stdout = stdout
+        encoded_stdout = stdout
 
-    if isinstance(stderr, bytes):
-        decoded_stderr = stderr.decode('utf-8', 'replace')
+    if isinstance(stderr, str):
+        encoded_stderr = stderr.encode()
     else:
-        decoded_stderr = stderr
+        encoded_stderr = stderr
 
-    print(f'stdout:\n{decoded_stdout}stderr:\n{decoded_stderr}', flush=True)
+    encoded_output = b'stdout:\n%sstderr:\n%s' % (encoded_stdout, encoded_stderr)
+
+    print(encoded_output.decode('utf-8', 'ignore'), flush=True)
 
 
 def main():
