@@ -49,7 +49,9 @@ class _Win32Session:
             import win32session
 
             if win32session.off():
-                self._daemonThread.join()
+                if isinstance(self._daemonThread, threading.Thread):
+                    self._daemonThread.join()
+
                 # Reset it
                 self._daemonThread = None
 
