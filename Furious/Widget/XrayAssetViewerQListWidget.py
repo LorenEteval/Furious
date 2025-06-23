@@ -59,6 +59,8 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.setAlternatingRowColors(True)
+
         self.setSelectionBehavior(AppQListWidget.SelectionBehavior.SelectRows)
         self.setSelectionMode(AppQListWidget.SelectionMode.ExtendedSelection)
         self.setIconSize(QtCore.QSize(64, 64))
