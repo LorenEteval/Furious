@@ -78,6 +78,8 @@ class AddSubsDialog(AppQDialog):
 
 
 class UserSubsWindow(AppQMainWindow):
+    DEFAULT_WINDOW_SIZE = QtCore.QSize(1120, 600)
+
     def __init__(self, *args, **kwargs):
         callback = kwargs.pop('deleteUniqueCallback', None)
 
@@ -152,25 +154,33 @@ class UserSubsWindow(AppQMainWindow):
             try:
                 windowSize = AppSettings.get('SubscriptionWidgetWindowSize').split(',')
 
-                self.resize(*list(int(size) for size in windowSize))
+                width, height = tuple(int(size) for size in windowSize)
+
+                if (width, height) == (640, 480):
+                    self.resize(UserSubsWindow.DEFAULT_WINDOW_SIZE)
+                else:
+                    self.resize(width, height)
             except Exception:
                 # Any non-exit exceptions
 
-                self.resize(520 * GOLDEN_RATIO, 520)
+                self.resize(UserSubsWindow.DEFAULT_WINDOW_SIZE)
         else:
-            try:
-                self.restoreGeometry(AppSettings.get('UserSubsWindowGeometry'))
-            except Exception:
-                # Any non-exit exceptions
+            if PLATFORM == 'Darwin':
+                self.resize(UserSubsWindow.DEFAULT_WINDOW_SIZE)
+            else:
+                try:
+                    self.restoreGeometry(AppSettings.get('UserSubsWindowGeometry'))
+                except Exception:
+                    # Any non-exit exceptions
 
-                pass
+                    self.resize(UserSubsWindow.DEFAULT_WINDOW_SIZE)
 
-            try:
-                self.restoreState(AppSettings.get('UserSubsWindowState'))
-            except Exception:
-                # Any non-exit exceptions
+                try:
+                    self.restoreState(AppSettings.get('UserSubsWindowState'))
+                except Exception:
+                    # Any non-exit exceptions
 
-                pass
+                    self.resize(UserSubsWindow.DEFAULT_WINDOW_SIZE)
 
     def cleanup(self):
         AppSettings.set('UserSubsWindowGeometry', self.saveGeometry())
