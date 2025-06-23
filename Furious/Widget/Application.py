@@ -257,6 +257,11 @@ class Application(ApplicationFactory, SingletonApplication):
         else:
             return False
 
+    def isDarkMode(self):
+        backgroudColor = self.palette().color(QPalette.ColorRole.Window)
+
+        return backgroudColor.lightness() < 128
+
     @staticmethod
     def isDarkModeEnabled():
         return AppSettings.isStateON_('DarkMode')
@@ -456,6 +461,8 @@ class Application(ApplicationFactory, SingletonApplication):
 
             if AppSettings.isStateON_('DarkMode'):
                 self.switchToDarkMode()
+            else:
+                self.switchToAutoMode()
 
             self.systemTray.show()
             self.systemTray.setCustomToolTip()
