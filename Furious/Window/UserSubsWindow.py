@@ -180,7 +180,7 @@ class UserSubsWindow(AppQMainWindow):
                 except Exception:
                     # Any non-exit exceptions
 
-                    self.resize(UserSubsWindow.DEFAULT_WINDOW_SIZE)
+                    pass
 
     def cleanup(self):
         AppSettings.set('UserSubsWindowGeometry', self.saveGeometry())
