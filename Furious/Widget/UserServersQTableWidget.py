@@ -560,7 +560,7 @@ class TestDownloadSpeedWorker(WebGETManager):
             return False
 
     def start(self):
-        def _start():
+        def startit():
             index = self.factory.index
 
             if self.factory.deleted or index < 0 or index >= len(AS_UserServers()):
@@ -570,13 +570,13 @@ class TestDownloadSpeedWorker(WebGETManager):
             assert isinstance(self.factory, ConfigurationFactory)
 
             if not self.factory.isValid():
+                # Configuration is invalid
                 self.factory.setExtras('speedResult', 'Invalid')
                 self.syncProgress()
+            else:
+                if not self.startCore() or APP().isExiting():
+                    return
 
-                # Configuration is not valid. Do nothing
-                return
-
-            if self.startCore():
                 self.configureHttpProxy(f'127.0.0.1:{self.port}')
 
                 self.networkReply = self.webGET(NETWORK_SPEED_TEST_URL, **self.kwargs)
@@ -585,7 +585,8 @@ class TestDownloadSpeedWorker(WebGETManager):
                 self.timeoutTimer.start(self.timeout)
 
         try:
-            _start()
+            if not APP().isExiting():
+                startit()
         finally:
             if self.networkReply is None:
                 self.must()
@@ -1694,6 +1695,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                     PySide6LegacyEventLoopWait(step)
 
         if APP().isExiting():
+            if not worker.isFinished():
+                worker.abort()
+
             # Stop timer
             self.testDownloadSpeedTimer.stop()
             self.testDownloadSpeedTimerMulti.stop()

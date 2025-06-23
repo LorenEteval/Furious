@@ -292,7 +292,8 @@ class Application(ApplicationFactory, SingletonApplication):
         if PLATFORM == 'Darwin':
             AppThreadPool().clear()
 
-            APP().processEvents()
+            for timeout in [1000, 2000, 3000]:
+                QtCore.QTimer.singleShot(timeout, APP().exit)
 
         logger.info('final cleanup done')
 
