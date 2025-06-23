@@ -100,6 +100,11 @@ class AppNetworkStateManager(NetworkStateManager):
 
 
 class AppMainWindow(AppQMainWindow):
+    DEFAULT_WINDOW_SIZE_DARWIN = QtCore.QSize(1500, 780)
+    DEFAULT_WINDOW_SIZE = (
+        QtCore.QSize(1800, 960) if PLATFORM != 'Darwin' else DEFAULT_WINDOW_SIZE_DARWIN
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -474,18 +479,23 @@ class AppMainWindow(AppQMainWindow):
             try:
                 windowSize = AppSettings.get('ServerWidgetWindowSize').split(',')
 
-                self.resize(*list(int(size) for size in windowSize))
+                width, height = tuple(int(size) for size in windowSize)
+
+                if (width, height) == (640, 480):
+                    self.resize(AppMainWindow.DEFAULT_WINDOW_SIZE)
+                else:
+                    self.resize(width, height)
             except Exception:
                 # Any non-exit exceptions
 
-                self.resize(1800, 960)
+                self.resize(AppMainWindow.DEFAULT_WINDOW_SIZE)
         else:
             try:
                 self.restoreGeometry(AppSettings.get('AppMainWindowGeometry'))
             except Exception:
                 # Any non-exit exceptions
 
-                pass
+                self.resize(AppMainWindow.DEFAULT_WINDOW_SIZE)
 
             try:
                 self.restoreState(AppSettings.get('AppMainWindowState'))
@@ -493,6 +503,24 @@ class AppMainWindow(AppQMainWindow):
                 # Any non-exit exceptions
 
                 pass
+
+            if PLATFORM == 'Darwin':
+                APP().processEvents()
+
+                size = self.size()
+
+                if size == QtCore.QSize(640, 480):
+                    logger.error(
+                        f'detected unresolve Qt bug on macOS. '
+                        f'Resizing main window to default '
+                        f'{AppMainWindow.DEFAULT_WINDOW_SIZE.toTuple()}'
+                    )
+                    self.resize(AppMainWindow.DEFAULT_WINDOW_SIZE)
+                else:
+                    logger.info(
+                        f'restore main window size on macOS success: '
+                        f'{size.toTuple()}'
+                    )
 
     def cleanup(self):
         AppSettings.set('AppMainWindowGeometry', self.saveGeometry())
