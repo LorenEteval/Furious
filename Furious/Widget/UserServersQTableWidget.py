@@ -851,6 +851,34 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             _('Advanced...'),
             menu=AppQMenu(
                 self.customizeJSONConfigActionRef,
+                AppQSeperator(),
+                AppQAction(
+                    _('Show Furious Log...'),
+                    callback=lambda: loggerApp_().showMaximized(),
+                    shortcut=QtCore.QKeyCombination(
+                        QtCore.Qt.KeyboardModifier.ControlModifier
+                        | QtCore.Qt.KeyboardModifier.ShiftModifier,
+                        QtCore.Qt.Key.Key_F,
+                    ),
+                ),
+                AppQAction(
+                    _('Show Core Log...'),
+                    callback=lambda: loggerCore().showMaximized(),
+                    shortcut=QtCore.QKeyCombination(
+                        QtCore.Qt.KeyboardModifier.ControlModifier
+                        | QtCore.Qt.KeyboardModifier.ShiftModifier,
+                        QtCore.Qt.Key.Key_C,
+                    ),
+                ),
+                AppQAction(
+                    _('Show Tun2socks Log...'),
+                    callback=lambda: loggerTun_().showMaximized(),
+                    shortcut=QtCore.QKeyCombination(
+                        QtCore.Qt.KeyboardModifier.ControlModifier
+                        | QtCore.Qt.KeyboardModifier.ShiftModifier,
+                        QtCore.Qt.Key.Key_T,
+                    ),
+                ),
             ),
             useActionGroup=False,
             checkable=True,
