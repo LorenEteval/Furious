@@ -128,7 +128,7 @@ class AppMainWindow(AppQMainWindow):
 
         logActions = [
             AppQAction(
-                _('Show Furious Log'),
+                _('Show Furious Log...'),
                 callback=lambda: loggerApp_().showMaximized(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier
@@ -137,7 +137,7 @@ class AppMainWindow(AppQMainWindow):
                 ),
             ),
             AppQAction(
-                _('Show Core Log'),
+                _('Show Core Log...'),
                 callback=lambda: loggerCore().showMaximized(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier
@@ -146,7 +146,7 @@ class AppMainWindow(AppQMainWindow):
                 ),
             ),
             AppQAction(
-                _('Show Tun2socks Log'),
+                _('Show Tun2socks Log...'),
                 callback=lambda: loggerTun_().showMaximized(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier
@@ -270,6 +270,7 @@ class AppMainWindow(AppQMainWindow):
                     _('Log'),
                     icon=bootstrapIcon('pin-angle.svg'),
                     menu=AppQMenu(*logActions),
+                    useSetMenu=False,
                     useActionGroup=False,
                     checkable=False,
                 ),
@@ -278,6 +279,7 @@ class AppMainWindow(AppQMainWindow):
                     _('Server'),
                     icon=bootstrapIcon('database.svg'),
                     menu=AppQMenu(*serverActions),
+                    useSetMenu=False,
                     useActionGroup=False,
                     checkable=False,
                 ),
@@ -286,6 +288,7 @@ class AppMainWindow(AppQMainWindow):
                     _('Subscription'),
                     icon=bootstrapIcon('collection.svg'),
                     menu=AppQMenu(*subsActions),
+                    useSetMenu=False,
                     useActionGroup=False,
                     checkable=False,
                 ),
@@ -294,6 +297,7 @@ class AppMainWindow(AppQMainWindow):
                     _('Tools'),
                     icon=bootstrapIcon('tools.svg'),
                     menu=AppQMenu(*toolsActions),
+                    useSetMenu=False,
                     useActionGroup=False,
                     checkable=False,
                 ),
