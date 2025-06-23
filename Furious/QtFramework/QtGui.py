@@ -64,6 +64,7 @@ class AppQAction(QTranslatable, SupportThemeChangedCallback, QAction):
         text,
         icon=None,
         menu=None,
+        useSetMenu=True,
         useActionGroup=True,
         checkable=False,
         checked=False,
@@ -91,7 +92,7 @@ class AppQAction(QTranslatable, SupportThemeChangedCallback, QAction):
 
             # Some old version PySide6 does not have setMenu method
             # for QAction. Protect it. Currently only used in SystemTrayIcon
-            if hasattr(self, 'setMenu'):
+            if hasattr(self, 'setMenu') and useSetMenu:
                 self.setMenu(menu)
 
             if useActionGroup:
