@@ -799,28 +799,28 @@ TRANSLATION = {
         "ZH": "日志",
         "isReviewed": "True"
     },
-    "Show Furious Log": {
+    "Show Furious Log...": {
         "source": [
             "Furious.Window.AppMainWindow"
         ],
-        "RU": "Показать журнал Furious",
-        "ZH": "显示Furious日志",
+        "RU": "Показать журнал Furious...",
+        "ZH": "显示Furious日志...",
         "isReviewed": "True"
     },
-    "Show Core Log": {
+    "Show Core Log...": {
         "source": [
             "Furious.Window.AppMainWindow"
         ],
-        "RU": "Показать журнал ядра",
-        "ZH": "显示内核日志",
+        "RU": "Показать журнал ядра...",
+        "ZH": "显示内核日志...",
         "isReviewed": "True"
     },
-    "Show Tun2socks Log": {
+    "Show Tun2socks Log...": {
         "source": [
             "Furious.Window.AppMainWindow"
         ],
-        "RU": "Показать журнал Tun2socks",
-        "ZH": "显示Tun2socks日志",
+        "RU": "Показать журнал Tun2socks...",
+        "ZH": "显示Tun2socks日志...",
         "isReviewed": "True"
     },
     "Update Subscription (Use Current Proxy)": {
