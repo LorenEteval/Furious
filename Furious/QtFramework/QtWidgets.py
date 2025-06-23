@@ -31,6 +31,8 @@ from PySide6.QtWidgets import *
 
 import functools
 
+from typing import Union
+
 __all__ = [
     'moveToCenter',
     'AppQCheckBox',
@@ -372,7 +374,12 @@ class AppQMenu(QTranslatable, SupportConnectedCallback, QMenu):
     @staticmethod
     def getStyleSheet(color):
         return (
+            f'QMenu {{'
+            f'    padding: 6px;'
+            f'}}'
+            f''
             f'QMenu::item {{'
+            f'    padding: 6px 12px;'
             f'    background-color: solid;'
             f'}}'
             f''
@@ -481,6 +488,7 @@ class AppQTableWidget(SupportConnectedCallback, QTableWidget):
         super().__init__(*args, **kwargs)
 
         self.setWordWrap(False)
+        self.setAlternatingRowColors(True)
 
     @property
     def selectedIndex(self):
@@ -571,6 +579,30 @@ class AppQToolBar(QTranslatable, QToolBar):
                 pass
 
         self.setStyleSheet(self.getStyleSheet())
+
+        self.actionTriggered.connect(self.showMenuBelow)
+
+    @QtCore.Slot(AppQAction)
+    def showMenuBelow(self, action: AppQAction):
+        def toolBarWidgetForAction() -> Union[QWidget | None]:
+            # Walk through the toolbar to find the widget for the action
+            for child in self.children():
+                if hasattr(child, 'defaultAction'):
+                    # PySide6.QtWidgets.QMenu.defaultAction
+                    assert isinstance(child, QWidget)
+
+                    if child.defaultAction() == action:
+                        return child
+
+            return None
+
+        button = toolBarWidgetForAction()
+
+        if button is not None:
+            menu = action._menu
+
+            if isinstance(menu, AppQMenu):
+                menu.exec(button.mapToGlobal(button.rect().bottomLeft()))
 
     @staticmethod
     def getStyleSheet():
