@@ -1256,9 +1256,11 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             pass
 
         header = self.Headers[column]
+        text = header(item)
 
         oldItem = self.item(row, column)
-        newItem = QTableWidgetItem(header(item))
+        newItem = QTableWidgetItem(text)
+        newItem.setToolTip(text)
 
         if oldItem is None:
             # Item does not exist
