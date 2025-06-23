@@ -142,6 +142,9 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
         ),
     ]
 
+    # Corresponds to 'Headers'
+    ItemKey = ['remark', 'webURL', 'autoupdate', 'proxy']
+
     def __init__(self, *args, **kwargs):
         self.deleteUniqueCallback = kwargs.pop('deleteUniqueCallback', None)
 
@@ -198,10 +201,14 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
     @QtCore.Slot(QTableWidgetItem)
     def handleItemChanged(self, item: QTableWidgetItem):
         unique = list(AS_UserSubscription().keys())[item.row()]
-        # 'autoupdate', 'proxy' is not triggered here
-        keyMap = ['remark', 'webURL', 'autoupdate', 'proxy']
+        mapped = UserSubsQTableWidget.ItemKey[item.column()]
 
-        AS_UserSubscription()[unique][keyMap[item.column()]] = item.text()
+        # 'autoupdate', 'proxy' is not triggered here
+        assert mapped not in ['autoupdate', 'proxy']
+
+        item.setToolTip(item.text())
+
+        AS_UserSubscription()[unique][mapped] = item.text()
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
@@ -424,9 +431,11 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
             self.setCellWidget(row, column, newItem)
         else:
             header = self.Headers[column]
+            text = header(item)
 
             oldItem = self.item(row, column)
-            newItem = QTableWidgetItem(header(item))
+            newItem = QTableWidgetItem(text)
+            newItem.setToolTip(text)
 
             if oldItem is None:
                 # Item does not exist
