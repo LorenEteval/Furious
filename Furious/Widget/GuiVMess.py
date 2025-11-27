@@ -264,6 +264,7 @@ class GuiVMess(GuiEditorWidgetQDialog):
 
         self.setTabText(Protocol.VMess.value)
 
+    @functools.lru_cache(None)
     def groupBoxSequence(self):
         return [
             GuiVMessGroupBoxBasic(),

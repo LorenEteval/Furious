@@ -27,6 +27,8 @@ from PySide6.QtWidgets import *
 
 from typing import Callable, Sequence
 
+import functools
+
 __all__ = [
     'GuiEditorItemTextInput',
     'GuiEditorItemTextSpinBox',
@@ -237,7 +239,7 @@ class GuiEditorWidget(GuiEditorItemFactory):
     def containerSequence(self) -> Sequence[GuiEditorItemWidgetContainer]:
         raise NotImplementedError
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: dict) -> bool:
         modified = False
 
         for container in self._containers:
@@ -250,7 +252,7 @@ class GuiEditorWidget(GuiEditorItemFactory):
 
         return modified
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: dict):
         for container in self._containers:
             try:
                 container.factoryToInput(config)
@@ -278,17 +280,15 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        formLayout = QFormLayout()
-        formLayout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-        formLayout.setFieldGrowthPolicy(
-            QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
-        )
+        layout = QFormLayout()
+        layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
         for container in self._containers:
-            formLayout.addRow(*container.widgets())
+            layout.addRow(*container.widgets())
 
         page = QWidget()
-        page.setLayout(formLayout)
+        page.setLayout(layout)
 
         # Align
         self._widget = QStackedWidget()
@@ -299,18 +299,12 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
 
         self.setLayout(vboxLayout)
 
-        # layout = QFormLayout()
-        #
-        # for container in self._containers:
-        #     layout.addRow(*container.widgets())
-        #
-        # self.setLayout(layout)
-
 
 class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
     def __init__(self, *args, **kwargs):
         tabText = kwargs.pop('tabText', '')
         tabTranslatable = kwargs.pop('tabTranslatable', False)
+        style = kwargs.pop('style', 'grid')
 
         super().__init__(*args, **kwargs)
 
@@ -322,11 +316,7 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
         self.tabCentralWidget = QWidget()
         self.tabCentralWidgetLayout = QGridLayout(self.tabCentralWidget)
 
-        self.groupBoxes = self.groupBoxSequence()
-
-        for index, groupBox in enumerate(self.groupBoxes):
-            # TODO: Layout
-            self.tabCentralWidgetLayout.addWidget(groupBox, index // 2, index % 2)
+        self.setGroupBoxStyle(style)
 
         self.tabCentralWidget.setLayout(self.tabCentralWidgetLayout)
 
@@ -348,8 +338,20 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
 
         self.setLayout(layout)
 
+    @functools.lru_cache(None)
     def groupBoxSequence(self) -> Sequence[GuiEditorWidgetQGroupBox]:
         raise NotImplementedError
+
+    def setGroupBoxStyle(self, style: str):
+        if style == 'grid':
+            for index, groupBox in enumerate(self.groupBoxSequence()):
+                self.tabCentralWidgetLayout.addWidget(groupBox, index // 2, index % 2)
+        elif style == 'landscape':
+            for index, groupBox in enumerate(self.groupBoxSequence()):
+                self.tabCentralWidgetLayout.addWidget(groupBox, 0, index)
+        elif style == 'portrait':
+            for index, groupBox in enumerate(self.groupBoxSequence()):
+                self.tabCentralWidgetLayout.addWidget(groupBox, index, 0)
 
     def setTabText(self, text: str):
         self.tabWidget.setTabText(0, text)
@@ -358,14 +360,14 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
         self.accepted.disconnect()
         self.rejected.disconnect()
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: dict) -> bool:
         modified = False
 
-        for groupBox in self.groupBoxes:
+        for groupBox in self.groupBoxSequence():
             modified |= groupBox.inputToFactory(config)
 
         return modified
 
-    def factoryToInput(self, config: ConfigFactory):
-        for groupBox in self.groupBoxes:
+    def factoryToInput(self, config: dict):
+        for groupBox in self.groupBoxSequence():
             groupBox.factoryToInput(config)

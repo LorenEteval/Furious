@@ -194,6 +194,7 @@ class GuiShadowsocks(GuiEditorWidgetQDialog):
 
         self.setTabText(Protocol.Shadowsocks.value)
 
+    @functools.lru_cache(None)
     def groupBoxSequence(self):
         return [
             GuiSSGroupBoxBasic(),

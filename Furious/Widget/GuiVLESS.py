@@ -263,6 +263,7 @@ class GuiVLESS(GuiEditorWidgetQDialog):
 
         self.setTabText(Protocol.VLESS.value)
 
+    @functools.lru_cache(None)
     def groupBoxSequence(self):
         return [
             GuiVLESSGroupBoxBasic(),

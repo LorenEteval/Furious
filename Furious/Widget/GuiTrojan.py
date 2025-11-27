@@ -143,6 +143,7 @@ class GuiTrojan(GuiEditorWidgetQDialog):
 
         self.setTabText(Protocol.Trojan.value)
 
+    @functools.lru_cache(None)
     def groupBoxSequence(self):
         return [
             GuiTrojanGroupBoxBasic(),

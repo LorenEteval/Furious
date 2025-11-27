@@ -27,6 +27,7 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 import logging
+import functools
 
 __all__ = ['GuiHysteria1']
 
@@ -316,6 +317,7 @@ class GuiHysteria1(GuiEditorWidgetQDialog):
 
         self.setTabText(Protocol.Hysteria1.value)
 
+    @functools.lru_cache(None)
     def groupBoxSequence(self):
         return [
             GuiHy1GroupBoxBasic(),
