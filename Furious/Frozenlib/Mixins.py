@@ -160,6 +160,8 @@ class Mixins:
 
             super().__init__(*args, **kwargs)
 
+            Mixins.QTranslatable.ObjectsPool.append(self)
+
         def retranslate(self):
             raise NotImplementedError
 
