@@ -279,6 +279,50 @@ class GuiVTLSItemTLSAlpn(GuiEditorItemTextInput):
             self.setText('')
 
 
+class GuiVTLSItemTLSEch(GuiEditorItemTextInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('tlsSettings'), dict):
+            streamSettings['tlsSettings'] = {}
+
+        tlsObject = streamSettings['tlsSettings']
+
+        oldEch = tlsObject.get('echConfigList', '')
+        newEch = self.text()
+
+        def setNewEch():
+            if newEch == '':
+                tlsObject.pop('echConfigList', None)
+            else:
+                tlsObject['echConfigList'] = newEch
+
+        if isinstance(oldEch, str):
+            if newEch != oldEch:
+                setNewEch()
+
+                return True
+            else:
+                return False
+        else:
+            setNewEch()
+
+            return True
+
+    def factoryToInput(self, config: ConfigFactory):
+        try:
+            tlsObject = ConfigXray.getProxyOutboundStream(config)['tlsSettings']
+
+            self.setText(tlsObject.get('echConfigList', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
 class GuiVTLSItemTLSAllowInsecure(GuiEditorItemTextCheckBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -395,6 +439,13 @@ class GuiVTLSItemRealityShortId(GuiVTLSItemRealityXXX):
         super().__init__(*args, **kwargs, realityKey=realityKey)
 
 
+class GuiVTLSItemRealityMldsa65Verify(GuiVTLSItemRealityXXX):
+    def __init__(self, *args, **kwargs):
+        realityKey = kwargs.pop('realityKey', 'mldsa65Verify')
+
+        super().__init__(*args, **kwargs, realityKey=realityKey)
+
+
 class GuiVTLSItemRealitySpiderX(GuiVTLSItemRealityXXX):
     def __init__(self, *args, **kwargs):
         realityKey = kwargs.pop('realityKey', 'spiderX')
@@ -449,6 +500,7 @@ class GuiVTLSPageTLS(GuiVTLSPageXXX):
             GuiVTLSItemTLSServerName(title='SNI', translatable=False),
             GuiVTLSItemTLSFingerprint(title='Fingerprint', translatable=False),
             GuiVTLSItemTLSAlpn(title='Alpn', translatable=False),
+            GuiVTLSItemTLSEch(title='Ech', translatable=False),
             GuiVTLSItemTLSAllowInsecure(title='AllowInsecure', translatable=False),
         ]
 
@@ -464,6 +516,7 @@ class GuiVTLSPageReality(GuiVTLSPageXXX):
             GuiVTLSItemRealityFingerprint(title='Fingerprint', translatable=False),
             GuiVTLSItemRealityPublicKey(title='PublicKey', translatable=False),
             GuiVTLSItemRealityShortId(title='ShortId', translatable=False),
+            GuiVTLSItemRealityMldsa65Verify(title='Mldsa65Verify', translatable=False),
             GuiVTLSItemRealitySpiderX(title='SpiderX', translatable=False),
         ]
 
