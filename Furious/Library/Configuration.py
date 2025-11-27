@@ -903,6 +903,9 @@ class ConfigXray(ConfigFactory):
             if TLSObject.get('alpn'):
                 kwargs['alpn'] = quote(','.join(TLSObject['alpn']))
 
+            if TLSObject.get('echConfigList'):
+                kwargs['ech'] = quote(TLSObject['echConfigList'])
+
         if TLS == 'reality':
             # More kwargs for reality
             if TLSObject.get('publicKey'):
@@ -913,6 +916,9 @@ class ConfigXray(ConfigFactory):
 
             if TLSObject.get('spiderX'):
                 kwargs['spx'] = quote(TLSObject['spiderX'])
+
+            if TLSObject.get('mldsa65Verify'):
+                kwargs['pqv'] = TLSObject['mldsa65Verify']
 
         return kwargs
 
@@ -934,6 +940,7 @@ class ConfigXray(ConfigFactory):
                     unquote(kwargs.get('alpn', '')).split(','),
                 )
             )
+            ech = unquote(kwargs.get('ech', ''))
 
             if fp:
                 TLSObject['fingerprint'] = fp
@@ -955,17 +962,22 @@ class ConfigXray(ConfigFactory):
             if alpn:
                 TLSObject['alpn'] = alpn
 
+            if ech:
+                TLSObject['echConfigList'] = ech
+
         if security == 'reality':
             # More args for reality
             pbk = kwargs.get('pbk')
             sid = kwargs.get('sid', '')
             spx = kwargs.get('spx', '')
+            pqv = kwargs.get('pqv', '')
 
             if pbk:
                 TLSObject['publicKey'] = pbk
 
             TLSObject['shortId'] = sid
             TLSObject['spiderX'] = unquote(spx)
+            TLSObject['mldsa65Verify'] = pqv
 
         return TLSObject
 
@@ -1234,9 +1246,9 @@ class ConfigXray(ConfigFactory):
         else:
             override = remark
 
-        proxyProtocol = self.proxyProtocol.lower()
+        protocol = self.proxyProtocol.lower()
 
-        if proxyProtocol == 'vmess':
+        if protocol == 'vmess':
             netloc = PyBase64Encoder.encode(
                 UJSONEncoder.encode(
                     {
@@ -1268,7 +1280,7 @@ class ConfigXray(ConfigFactory):
 
             return urlunparse(['vmess', netloc, '', '', {}, ''])
 
-        if proxyProtocol == 'vless':
+        if protocol == 'vless':
             flowArg = {}
 
             if self.proxyUserObject.get('flow'):
@@ -1297,7 +1309,7 @@ class ConfigXray(ConfigFactory):
 
             return urlunparse(['vless', netloc, '', '', query, quote(override)])
 
-        if proxyProtocol == 'shadowsocks':
+        if protocol == 'shadowsocks':
             method, password, address, port = list(
                 self.proxyServerObject[value]
                 for value in ['method', 'password', 'address', 'port']
@@ -1307,7 +1319,7 @@ class ConfigXray(ConfigFactory):
 
             return urlunparse(['ss', netloc, '', '', '', quote(override)])
 
-        if proxyProtocol == 'trojan':
+        if protocol == 'trojan':
             password, address, port = list(
                 self.proxyServerObject[value]
                 for value in ['password', 'address', 'port']
@@ -2042,7 +2054,7 @@ def configXrayEmptyProxyOutboundObject(protocol: Protocol) -> dict:
     if value == 'vless' or value == 'vmess':
         return {
             'tag': 'proxy',
-            'protocol': protocol,
+            'protocol': value,
             'settings': {
                 'vnext': [
                     {
