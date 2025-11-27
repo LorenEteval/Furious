@@ -82,6 +82,9 @@ class Tun2socks(CoreProcessWorker):
         logLevel: str,
         proxy: str,
         restAPI: str,
+        tcpSendBufferSize: str = '',
+        tcpReceiveBufferSize: str = '',
+        tcpAutoTuning: bool = False,
         **kwargs,
     ) -> bool:
         return super().start(
@@ -93,6 +96,9 @@ class Tun2socks(CoreProcessWorker):
                 logLevel,
                 proxy,
                 restAPI,
+                tcpSendBufferSize,
+                tcpReceiveBufferSize,
+                tcpAutoTuning,
             ),
             **kwargs,
         )
