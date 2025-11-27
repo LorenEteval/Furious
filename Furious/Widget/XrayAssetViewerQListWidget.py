@@ -17,9 +17,9 @@
 
 from __future__ import annotations
 
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
+from Furious.Frozenlib import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Utility import *
 
 from PySide6 import QtCore
@@ -55,7 +55,7 @@ class AssetExistsMBox(AppQMessageBox):
         self.moveToCenter()
 
 
-class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
+class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -65,7 +65,7 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
         self.setSelectionMode(AppQListWidget.SelectionMode.ExtendedSelection)
         self.setIconSize(QtCore.QSize(64, 64))
 
-        if PLATFORM == 'Linux' and getUbuntuRelease() == '20.04':
+        if PLATFORM == 'Linux' and SystemRuntime.ubuntuRelease() == '20.04':
             self.initialTheme = darkdetect.theme()
         else:
             self.initialTheme = None
@@ -117,7 +117,7 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
                     )
 
                 item = QListWidgetItem(f'{filename:{maxlen + 6}}{mdate}')
-                item.setFont(QFont(APP().customFontName))
+                item.setFont(QFont(AppFontName()))
 
                 if AppSettings.isStateON_('DarkMode'):
                     # Custom dark mode
@@ -143,7 +143,7 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
                 self.addItem(item)
 
     def flushItem(self):
-        if PLATFORM == 'Linux' and getUbuntuRelease() == '20.04':
+        if PLATFORM == 'Linux' and SystemRuntime.ubuntuRelease() == '20.04':
             assert self.initialTheme is not None
 
             # Ubuntu 20.04. Flush by initial theme(Ubuntu 20.04 theme changes bug)
@@ -183,7 +183,7 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
         if os.path.isfile(XRAY_ASSET_DIR / basename):
 
             def handleResultCode(_filename, code):
-                if code == PySide6LegacyEnumValueWrapper(
+                if code == PySide6Legacy.enumValueWrapper(
                     AppQMessageBox.StandardButton.Yes
                 ):
                     append(_filename)
@@ -210,7 +210,9 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
             return
 
         def handleResultCode(_indexes, code):
-            if code == PySide6LegacyEnumValueWrapper(AppQMessageBox.StandardButton.Yes):
+            if code == PySide6Legacy.enumValueWrapper(
+                AppQMessageBox.StandardButton.Yes
+            ):
                 for index in _indexes:
                     os.remove(XRAY_ASSET_DIR / self.item(index).text())
 
@@ -244,7 +246,7 @@ class XrayAssetViewerQListWidget(SupportThemeChangedCallback, AppQListWidget):
             super().keyPressEvent(event)
 
     def themeChangedCallback(self, theme):
-        if PLATFORM == 'Linux' and getUbuntuRelease() == '20.04':
+        if PLATFORM == 'Linux' and SystemRuntime.ubuntuRelease() == '20.04':
             # Ubuntu 20.04 system dark theme does not
             # change menu color. Do nothing
             pass

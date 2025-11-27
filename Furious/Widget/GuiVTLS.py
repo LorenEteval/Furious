@@ -18,9 +18,8 @@
 from __future__ import annotations
 
 from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
+from Furious.Library import *
+from Furious.Qt import *
 
 from PySide6.QtWidgets import *
 
@@ -42,8 +41,8 @@ class GuiVTLSItemSecurity(GuiEditorItemTextComboBox):
 
         self.addItems(STREAM_SECURITY)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         try:
             oldSecurity = streamSettings['security']
@@ -81,9 +80,9 @@ class GuiVTLSItemSecurity(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            streamSettings = getXrayProxyOutboundStream(config)
+            streamSettings = ConfigXray.getProxyOutboundStream(config)
 
             self.setText(streamSettings.get('security', ''))
         except Exception:
@@ -101,8 +100,8 @@ class GuiVTLSItemXXXServerName(GuiEditorItemTextInput):
 
         self.securityKey = securityKey
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get(self.securityKey), dict):
             streamSettings[self.securityKey] = {}
@@ -136,9 +135,9 @@ class GuiVTLSItemXXXServerName(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            xxxObject = getXrayProxyOutboundStream(config)[self.securityKey]
+            xxxObject = ConfigXray.getProxyOutboundStream(config)[self.securityKey]
 
             self.setText(xxxObject.get('serverName', ''))
         except Exception:
@@ -170,8 +169,8 @@ class GuiVTLSItemXXXFingerprint(GuiEditorItemTextInput):
 
         self.securityKey = securityKey
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get(self.securityKey), dict):
             streamSettings[self.securityKey] = {}
@@ -205,9 +204,9 @@ class GuiVTLSItemXXXFingerprint(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            xxxObject = getXrayProxyOutboundStream(config)[self.securityKey]
+            xxxObject = ConfigXray.getProxyOutboundStream(config)[self.securityKey]
 
             self.setText(xxxObject.get('fingerprint', ''))
         except Exception:
@@ -234,8 +233,8 @@ class GuiVTLSItemTLSAlpn(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('tlsSettings'), dict):
             streamSettings['tlsSettings'] = {}
@@ -269,9 +268,9 @@ class GuiVTLSItemTLSAlpn(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            tlsObject = getXrayProxyOutboundStream(config)['tlsSettings']
+            tlsObject = ConfigXray.getProxyOutboundStream(config)['tlsSettings']
 
             self.setText(','.join(tlsObject.get('alpn', [])))
         except Exception:
@@ -284,8 +283,8 @@ class GuiVTLSItemTLSAllowInsecure(GuiEditorItemTextCheckBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('tlsSettings'), dict):
             streamSettings['tlsSettings'] = {}
@@ -316,9 +315,9 @@ class GuiVTLSItemTLSAllowInsecure(GuiEditorItemTextCheckBox):
             else:
                 return False
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            tlsObject = getXrayProxyOutboundStream(config)['tlsSettings']
+            tlsObject = ConfigXray.getProxyOutboundStream(config)['tlsSettings']
 
             self.setChecked(tlsObject.get('allowInsecure', False))
         except Exception:
@@ -336,8 +335,8 @@ class GuiVTLSItemRealityXXX(GuiEditorItemTextInput):
 
         self.realityKey = realityKey
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('realitySettings'), dict):
             streamSettings['realitySettings'] = {}
@@ -371,9 +370,9 @@ class GuiVTLSItemRealityXXX(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            realityObject = getXrayProxyOutboundStream(config)['realitySettings']
+            realityObject = ConfigXray.getProxyOutboundStream(config)['realitySettings']
 
             self.setText(realityObject.get(self.realityKey, ''))
         except Exception:
@@ -498,7 +497,7 @@ class GuiVTLSQGroupBox(GuiEditorItemFactory, AppQGroupBox):
 
         super().__init__('TLS', **kwargs, translatable=translatable)
 
-        self._config = ConfigurationFactory()
+        self._config = ConfigFactory()
 
         self._widget = GuiVTLSPageStackedWidget()
         self._widget.connectActivated(self.handleActivated)
@@ -524,14 +523,14 @@ class GuiVTLSQGroupBox(GuiEditorItemFactory, AppQGroupBox):
 
         self.setCurrentIndex(index)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         return self.page(self.currentIndex()).inputToFactory(config)
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         # Shallow copy
         self._config = config
 
-        streamSettings = getXrayProxyOutboundStream(config)
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
         security = streamSettings.get('security', '')
 
         if not isinstance(security, str):

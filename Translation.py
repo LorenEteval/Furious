@@ -17,9 +17,9 @@
 
 from __future__ import annotations
 
-from Furious.Library import *
-from Furious.Utility import *
+from Furious.Frozenlib import *
 from Furious.Externals import *
+from Furious.Library import *
 
 import os
 import re
@@ -58,7 +58,7 @@ def getMagicNameFromPath(path):
 
 @functools.lru_cache(None)
 def getAppConstantsByName(name):
-    return getattr(Furious.Utility.Constants, name)
+    return getattr(Furious.Frozenlib.Constants, name)
 
 
 APPLICATION_SOURCE_CODE_PATH = getAppSourceCodePath(PACKAGE_DIR)

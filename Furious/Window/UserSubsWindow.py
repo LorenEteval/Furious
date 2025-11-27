@@ -15,16 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Library import *
-from Furious.Utility import *
+from __future__ import annotations
+
+from Furious.Frozenlib import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Widget.UserSubsQTableWidget import *
 
-from PySide6 import QtWidgets
-from PySide6.QtGui import *
+from PySide6 import QtCore
 from PySide6.QtWidgets import *
-from PySide6.QtNetwork import *
 
 import uuid
 import functools
@@ -115,7 +114,7 @@ class UserSubsWindow(AppQMainWindow):
 
     def addSubs(self):
         def handleResultCode(_addSubsDialog, code):
-            if code == PySide6LegacyEnumValueWrapper(AppQDialog.DialogCode.Accepted):
+            if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
                 remark = _addSubsDialog.subsRemark()
                 webURL = _addSubsDialog.subsWebURL()
 

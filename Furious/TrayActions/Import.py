@@ -15,17 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
+from Furious.Frozenlib import *
 from Furious.Library import *
-from Furious.Utility import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 
 from PySide6.QtWidgets import QApplication, QFileDialog
 
 import os
 import logging
-import functools
 
 __all__ = [
     'ImportFromFileAction',
@@ -53,7 +51,7 @@ def showImportErrorMBox(clipboard: str):
 
 
 def importItemFromClipboard(clipboard: str):
-    factory = constructFromAny(clipboard)
+    factory = configFactoryFromAny(clipboard)
 
     if not factory.isValid():
         showImportErrorMBox(clipboard)
@@ -174,7 +172,9 @@ class ImportFromFileAction(AppQAction):
                 # Show the MessageBox asynchronously
                 mbox.open()
             else:
-                factory = constructFromAny(plainText, remark=os.path.basename(filename))
+                factory = configFactoryFromAny(
+                    plainText, remark=os.path.basename(filename)
+                )
 
                 if factory.isValid():
                     APP().mainWindow.appendNewItemByFactory(factory)
@@ -209,10 +209,10 @@ class ImportURIFromClipboardAction(AppQAction):
             importItemFromClipboard(clipboard)
         else:
             imported = list()
-            rowCount = len(AS_UserServers())
+            rowCount = len(Storage.UserServers())
 
             for uri in split:
-                factory = constructFromAny(uri)
+                factory = configFactoryFromAny(uri)
 
                 if factory.isValid():
                     APP().mainWindow.appendNewItemByFactory(factory)

@@ -17,12 +17,14 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Utility import *
 from Furious.Library.Encoder import *
+from Furious.Library.Storage import *
 
 from typing import Union, Tuple
 
+import copy
 import functools
 import urllib.parse
 
@@ -32,17 +34,21 @@ parse_qsl = functools.partial(urllib.parse.parse_qsl)
 urlparse = functools.partial(urllib.parse.urlparse)
 urlunparse = functools.partial(urllib.parse.urlunparse)
 
-
 __all__ = [
-    'ConfigurationXray',
-    'ConfigurationHysteria1',
-    'ConfigurationHysteria2',
-    'constructFromDict',
-    'constructFromAny',
+    'BLANK_CONFIG_XRAY',
+    'BLANK_CONFIG_HYSTERIA1',
+    'BLANK_CONFIG_HYSTERIA2',
+    'ConfigXray',
+    'ConfigHysteria1',
+    'ConfigHysteria2',
+    'configXrayEmptyProxyOutboundObject',
+    'configFactoryFromDict',
+    'configFactoryFromAny',
+    'configFactoryBlank',
 ]
 
 
-class ConfigurationXrayProxyOutboundObjectV(dict):
+class ConfigXrayProxyOutboundObjectV(dict):
     def __init__(
         self,
         protocol,
@@ -62,7 +68,7 @@ class ConfigurationXrayProxyOutboundObjectV(dict):
             networkKey = f'{type_}Settings'
 
         networkObjectArgs[networkKey] = (
-            ConfigurationXray.kwargs2ProxyStreamSettingsNetworkObject(
+            ConfigXray.kwargs2ProxyStreamSettingsNetworkObject(
                 type_, remote_host, kwargs
             )
         )
@@ -74,7 +80,7 @@ class ConfigurationXrayProxyOutboundObjectV(dict):
                 TLSObjectArgs[
                     # tlsSettings, realitySettings
                     f'{security}Settings'
-                ] = ConfigurationXray.kwargs2ProxyStreamSettingsTLSObject(
+                ] = ConfigXray.kwargs2ProxyStreamSettingsTLSObject(
                     protocol, remote_host, security, kwargs
                 )
 
@@ -88,7 +94,7 @@ class ConfigurationXrayProxyOutboundObjectV(dict):
                             'address': remote_host,
                             'port': int(remote_port),
                             'users': [
-                                ConfigurationXray.kwargs2ProxyUserObject(
+                                ConfigXray.kwargs2ProxyUserObject(
                                     protocol, uuid_, encryption, kwargs
                                 ),
                             ],
@@ -109,7 +115,7 @@ class ConfigurationXrayProxyOutboundObjectV(dict):
         )
 
 
-class ConfigurationXrayProxyOutboundObjectSS(dict):
+class ConfigXrayProxyOutboundObjectSS(dict):
     def __init__(self, method, password, address, port):
         super().__init__(
             **{
@@ -138,7 +144,7 @@ class ConfigurationXrayProxyOutboundObjectSS(dict):
         )
 
 
-class ConfigurationXrayProxyOutboundObjectTrojan(dict):
+class ConfigXrayProxyOutboundObjectTrojan(dict):
     def __init__(self, password, address, port, type_, security, **kwargs):
         networkObjectArgs, securityArgs, TLSObjectArgs = {}, {}, {}
 
@@ -148,9 +154,7 @@ class ConfigurationXrayProxyOutboundObjectTrojan(dict):
             networkKey = f'{type_}Settings'
 
         networkObjectArgs[networkKey] = (
-            ConfigurationXray.kwargs2ProxyStreamSettingsNetworkObject(
-                type_, address, kwargs
-            )
+            ConfigXray.kwargs2ProxyStreamSettingsNetworkObject(type_, address, kwargs)
         )
 
         if security:
@@ -160,7 +164,7 @@ class ConfigurationXrayProxyOutboundObjectTrojan(dict):
                 TLSObjectArgs[
                     # tlsSettings, realitySettings
                     f'{security}Settings'
-                ] = ConfigurationXray.kwargs2ProxyStreamSettingsTLSObject(
+                ] = ConfigXray.kwargs2ProxyStreamSettingsTLSObject(
                     'trojan', address, security, kwargs
                 )
 
@@ -192,21 +196,169 @@ class ConfigurationXrayProxyOutboundObjectTrojan(dict):
         )
 
 
-class ConfigurationXray(ConfigurationFactory):
+BLANK_CONFIG_XRAY = {
+    # log
+    'log': {
+        'access': '',
+        'error': '',
+        'loglevel': 'warning',
+    },
+    # inbounds
+    'inbounds': [
+        {
+            'tag': 'socks',
+            'port': 10808,
+            'listen': '127.0.0.1',
+            'protocol': 'socks',
+            'sniffing': {
+                'enabled': True,
+                'destOverride': [
+                    'http',
+                    'tls',
+                ],
+            },
+            'settings': {
+                'auth': 'noauth',
+                'udp': True,
+                'allowTransparent': False,
+            },
+        },
+        {
+            'tag': 'http',
+            'port': 10809,
+            'listen': '127.0.0.1',
+            'protocol': 'http',
+            'sniffing': {
+                'enabled': True,
+                'destOverride': [
+                    'http',
+                    'tls',
+                ],
+            },
+            'settings': {
+                'auth': 'noauth',
+                'udp': True,
+                'allowTransparent': False,
+            },
+        },
+    ],
+    # outbounds
+    'outbounds': [
+        # proxy
+        {
+            'tag': 'proxy',
+            'protocol': '',
+            'settings': {},
+            'streamSettings': {
+                'network': 'tcp',
+            },
+            'mux': {
+                'enabled': False,
+                'concurrency': -1,
+            },
+        },
+        # direct
+        {
+            'tag': 'direct',
+            'protocol': 'freedom',
+            'settings': {},
+        },
+        # block
+        {
+            'tag': 'block',
+            'protocol': 'blackhole',
+            'settings': {
+                'response': {
+                    'type': 'http',
+                }
+            },
+        },
+    ],
+    # routing
+    'routing': {},
+}
+
+
+class ConfigXray(ConfigFactory):
     def __init__(self, config: Union[str, dict] = '', **kwargs):
         super().__init__(config, **kwargs)
 
     def coreName(self):
         return 'Xray-core'
 
+    @staticmethod
+    def getProxyOutboundObject(config: dict, default=None) -> dict:
+        if not isinstance(config.get('outbounds'), list):
+            config['outbounds'] = []
+
+        for outbound in config['outbounds']:
+            if isinstance(outbound, dict):
+                tag = outbound.get('tag')
+
+                if isinstance(tag, str) and tag == 'proxy':
+                    return outbound
+
+        if isinstance(default, dict):
+            # Proxy outbound not found. Add it
+            config['outbounds'].append(default)
+
+        return {}
+
+    @staticmethod
+    def getProxyOutboundStream(config: dict, **kwargs) -> dict:
+        proxyOutbound = ConfigXray.getProxyOutboundObject(config, **kwargs)
+
+        if not isinstance(proxyOutbound.get('streamSettings'), dict):
+            proxyOutbound['streamSettings'] = {}
+
+        return proxyOutbound['streamSettings']
+
+    @staticmethod
+    def getProxyOutboundServer(config: dict, protocol: Protocol, **kwargs) -> dict:
+        value, proxyOutbound = (
+            protocol.value.lower(),
+            ConfigXray.getProxyOutboundObject(config, **kwargs),
+        )
+
+        try:
+            if value == 'vless' or value == 'vmess':
+                server = proxyOutbound['settings']['vnext'][0]
+            elif value == 'shadowsocks' or value == 'trojan':
+                server = proxyOutbound['settings']['servers'][0]
+            else:
+                server = {}
+        except Exception:
+            # Any non-exit exceptions
+
+            server = {}
+
+        if not isinstance(server, dict):
+            server = {}
+
+        return server
+
+    @staticmethod
+    def getProxyOutboundUser(config: dict, protocol: Protocol, **kwargs) -> dict:
+        proxyOutboundServer = ConfigXray.getProxyOutboundServer(
+            config, protocol, **kwargs
+        )
+
+        try:
+            user = proxyOutboundServer['users'][0]
+        except Exception:
+            # Any non-exit exceptions
+
+            user = {}
+
+        if not isinstance(user, dict):
+            user = {}
+
+        return user
+
     @property
     def proxyOutboundObject(self) -> dict:
         try:
-            for outboundObject in self['outbounds']:
-                if outboundObject['tag'] == 'proxy':
-                    return outboundObject
-
-            return {}
+            return ConfigXray.getProxyOutboundObject(self)
         except Exception:
             # Any non-exit exceptions
 
@@ -224,16 +376,12 @@ class ConfigurationXray(ConfigurationFactory):
     @property
     def proxyServerObject(self) -> dict:
         try:
-            if (
-                self.proxyProtocol.lower() == 'vmess'
-                or self.proxyProtocol.lower() == 'vless'
-            ):
+            proxyProtocol = self.proxyProtocol.lower()
+
+            if proxyProtocol == 'vmess' or proxyProtocol == 'vless':
                 return self.proxyOutboundObject['settings']['vnext'][0]
 
-            if (
-                self.proxyProtocol.lower() == 'shadowsocks'
-                or self.proxyProtocol.lower() == 'trojan'
-            ):
+            if proxyProtocol == 'shadowsocks' or proxyProtocol == 'trojan':
                 return self.proxyOutboundObject['settings']['servers'][0]
 
             return {}
@@ -254,7 +402,7 @@ class ConfigurationXray(ConfigurationFactory):
     @property
     def proxyStreamSettingsObject(self) -> dict:
         try:
-            return self.proxyOutboundObject['streamSettings']
+            return ConfigXray.getProxyOutboundStream(self)
         except Exception:
             # Any non-exit exceptions
 
@@ -732,6 +880,9 @@ class ConfigurationXray(ConfigurationFactory):
 
             return xhttpObject
 
+        else:
+            return {}
+
     @property
     def kwargsFromProxyStreamSettingsTLSObject(self) -> dict:
         kwargs = {}
@@ -864,7 +1015,7 @@ class ConfigurationXray(ConfigurationFactory):
         except Exception:
             # Any non-exit exceptions
 
-            return ConfigurationXray.URI2ProxyOutboundObjectVLESS(URI, protocol='vmess')
+            return ConfigXray.URI2ProxyOutboundObjectVLESS(URI, protocol='vmess')
         else:
 
             def getOrDefault(key, default=''):
@@ -875,7 +1026,7 @@ class ConfigurationXray(ConfigurationFactory):
             return (
                 remark,
                 # Ignore: v
-                ConfigurationXrayProxyOutboundObjectV(
+                ConfigXrayProxyOutboundObjectV(
                     'vmess',
                     getOrDefault('add'),
                     int(getOrDefault('port', '0')),
@@ -916,7 +1067,7 @@ class ConfigurationXray(ConfigurationFactory):
 
         return (
             remark,
-            ConfigurationXrayProxyOutboundObjectV(
+            ConfigXrayProxyOutboundObjectV(
                 kwargs.pop('protocol', 'vless'),
                 remote_host,
                 int(remote_port),
@@ -982,7 +1133,7 @@ class ConfigurationXray(ConfigurationFactory):
 
         return (
             remark,
-            ConfigurationXrayProxyOutboundObjectSS(*getSSParams()),
+            ConfigXrayProxyOutboundObjectSS(*getSSParams()),
         )
 
     @staticmethod
@@ -1001,7 +1152,7 @@ class ConfigurationXray(ConfigurationFactory):
 
         return (
             remark,
-            ConfigurationXrayProxyOutboundObjectTrojan(
+            ConfigXrayProxyOutboundObjectTrojan(
                 password, address, port, type_, security, **queryObject
             ),
         )
@@ -1009,16 +1160,16 @@ class ConfigurationXray(ConfigurationFactory):
     @staticmethod
     def URI2ProxyOutboundObject(URI: str) -> Tuple[str, dict]:
         if URI.startswith('vmess://'):
-            return ConfigurationXray.URI2ProxyOutboundObjectVMess(URI)
+            return ConfigXray.URI2ProxyOutboundObjectVMess(URI)
 
         if URI.startswith('vless://'):
-            return ConfigurationXray.URI2ProxyOutboundObjectVLESS(URI)
+            return ConfigXray.URI2ProxyOutboundObjectVLESS(URI)
 
         if URI.startswith('ss://'):
-            return ConfigurationXray.URI2ProxyOutboundObjectSS(URI)
+            return ConfigXray.URI2ProxyOutboundObjectSS(URI)
 
         if URI.startswith('trojan://'):
-            return ConfigurationXray.URI2ProxyOutboundObjectTrojan(URI)
+            return ConfigXray.URI2ProxyOutboundObjectTrojan(URI)
 
         raise ValueError(f'Unrecognized URI scheme {URI}')
 
@@ -1027,8 +1178,20 @@ class ConfigurationXray(ConfigurationFactory):
         return self.getExtras('remark')
 
     @property
+    def itemSubscription(self) -> str:
+        try:
+            subsId = self.getExtras('subsId')
+            subsOb = Storage.UserSubs().get(subsId, {})
+
+            return subsOb.get('remark', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            return ''
+
+    @property
     def itemProtocol(self) -> str:
-        return protocolRepr(self.proxyProtocol)
+        return Protocol.toEnum(self.proxyProtocol).value
 
     @property
     def itemAddress(self) -> str:
@@ -1071,7 +1234,9 @@ class ConfigurationXray(ConfigurationFactory):
         else:
             override = remark
 
-        if self.proxyProtocol.lower() == 'vmess':
+        proxyProtocol = self.proxyProtocol.lower()
+
+        if proxyProtocol == 'vmess':
             netloc = PyBase64Encoder.encode(
                 UJSONEncoder.encode(
                     {
@@ -1103,7 +1268,7 @@ class ConfigurationXray(ConfigurationFactory):
 
             return urlunparse(['vmess', netloc, '', '', {}, ''])
 
-        if self.proxyProtocol.lower() == 'vless':
+        if proxyProtocol == 'vless':
             flowArg = {}
 
             if self.proxyUserObject.get('flow'):
@@ -1132,7 +1297,7 @@ class ConfigurationXray(ConfigurationFactory):
 
             return urlunparse(['vless', netloc, '', '', query, quote(override)])
 
-        if self.proxyProtocol.lower() == 'shadowsocks':
+        if proxyProtocol == 'shadowsocks':
             method, password, address, port = list(
                 self.proxyServerObject[value]
                 for value in ['method', 'password', 'address', 'port']
@@ -1142,7 +1307,7 @@ class ConfigurationXray(ConfigurationFactory):
 
             return urlunparse(['ss', netloc, '', '', '', quote(override)])
 
-        if self.proxyProtocol.lower() == 'trojan':
+        if proxyProtocol == 'trojan':
             password, address, port = list(
                 self.proxyServerObject[value]
                 for value in ['password', 'address', 'port']
@@ -1168,81 +1333,31 @@ class ConfigurationXray(ConfigurationFactory):
 
     def fromURI(self, URI: str) -> bool:
         try:
-            remark, proxyOutboundObject = ConfigurationXray.URI2ProxyOutboundObject(URI)
+            remark, proxyOutboundObject = ConfigXray.URI2ProxyOutboundObject(URI)
 
-            dict.__init__(
-                self,
-                **{
-                    # log
-                    'log': {
-                        'access': '',
-                        'error': '',
-                        'loglevel': 'warning',
-                    },
-                    # inbounds
-                    'inbounds': [
-                        {
-                            'tag': 'socks',
-                            'port': 10808,
-                            'listen': '127.0.0.1',
-                            'protocol': 'socks',
-                            'sniffing': {
-                                'enabled': True,
-                                'destOverride': [
-                                    'http',
-                                    'tls',
-                                ],
-                            },
-                            'settings': {
-                                'auth': 'noauth',
-                                'udp': True,
-                                'allowTransparent': False,
-                            },
-                        },
-                        {
-                            'tag': 'http',
-                            'port': 10809,
-                            'listen': '127.0.0.1',
-                            'protocol': 'http',
-                            'sniffing': {
-                                'enabled': True,
-                                'destOverride': [
-                                    'http',
-                                    'tls',
-                                ],
-                            },
-                            'settings': {
-                                'auth': 'noauth',
-                                'udp': True,
-                                'allowTransparent': False,
-                            },
-                        },
-                    ],
-                    # outbounds
-                    'outbounds': [
-                        # proxy
-                        proxyOutboundObject,
-                        # direct
-                        {
-                            'tag': 'direct',
-                            'protocol': 'freedom',
-                            'settings': {},
-                        },
-                        # block
-                        {
-                            'tag': 'block',
-                            'protocol': 'blackhole',
-                            'settings': {
-                                'response': {
-                                    'type': 'http',
-                                }
-                            },
-                        },
-                    ],
-                    # routing
-                    'routing': {},
+            factory = copy.deepcopy(BLANK_CONFIG_XRAY)
+            factory['outbounds'] = [
+                # proxy
+                proxyOutboundObject,
+                # direct
+                {
+                    'tag': 'direct',
+                    'protocol': 'freedom',
+                    'settings': {},
                 },
-            )
+                # block
+                {
+                    'tag': 'block',
+                    'protocol': 'blackhole',
+                    'settings': {
+                        'response': {
+                            'type': 'http',
+                        }
+                    },
+                },
+            ]
+
+            dict.__init__(self, **factory)
 
             self.setExtras('remark', remark)
 
@@ -1252,7 +1367,7 @@ class ConfigurationXray(ConfigurationFactory):
 
             return False
 
-    def httpProxyEndpoint(self) -> str:
+    def httpProxy(self) -> str:
         try:
             for inbound in self['inbounds']:
                 if inbound['protocol'] == 'http':
@@ -1266,7 +1381,7 @@ class ConfigurationXray(ConfigurationFactory):
 
             return ''
 
-    def socksProxyEndpoint(self) -> str:
+    def socksProxy(self) -> str:
         try:
             for inbound in self['inbounds']:
                 if inbound['protocol'] == 'socks':
@@ -1280,7 +1395,7 @@ class ConfigurationXray(ConfigurationFactory):
 
             return ''
 
-    def setHttpProxyEndpoint(self, endpoint: str) -> bool:
+    def setHttpProxy(self, endpoint: str) -> bool:
         try:
             if self.get('inbounds') is None:
                 self['inbounds'] = []
@@ -1337,7 +1452,7 @@ class ConfigurationXray(ConfigurationFactory):
 
             return False
 
-    def setSocksProxyEndpoint(self, endpoint: str) -> bool:
+    def setSocksProxy(self, endpoint: str) -> bool:
         try:
             if self.get('inbounds') is None:
                 self['inbounds'] = []
@@ -1395,7 +1510,19 @@ class ConfigurationXray(ConfigurationFactory):
             return False
 
 
-class ConfigurationHysteria1(ConfigurationFactory):
+BLANK_CONFIG_HYSTERIA1 = {
+    'server': '',
+    'protocol': 'udp',
+    'socks5': {
+        'listen': '127.0.0.1:10808',
+    },
+    'http': {
+        'listen': '127.0.0.1:10809',
+    },
+}
+
+
+class ConfigHysteria1(ConfigFactory):
     def __init__(self, config: Union[str, dict] = '', **kwargs):
         super().__init__(config, **kwargs)
 
@@ -1407,8 +1534,20 @@ class ConfigurationHysteria1(ConfigurationFactory):
         return self.getExtras('remark')
 
     @property
+    def itemSubscription(self) -> str:
+        try:
+            subsId = self.getExtras('subsId')
+            subsOb = Storage.UserSubs().get(subsId, {})
+
+            return subsOb.get('remark', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            return ''
+
+    @property
     def itemProtocol(self) -> str:
-        return Protocol.Hysteria1
+        return Protocol.Hysteria1.value
 
     @property
     def itemAddress(self) -> str:
@@ -1601,7 +1740,7 @@ class ConfigurationHysteria1(ConfigurationFactory):
 
             return False
 
-    def httpProxyEndpoint(self) -> str:
+    def httpProxy(self) -> str:
         try:
             return self['http']['listen']
         except Exception:
@@ -1609,7 +1748,7 @@ class ConfigurationHysteria1(ConfigurationFactory):
 
             return ''
 
-    def socksProxyEndpoint(self) -> str:
+    def socksProxy(self) -> str:
         try:
             return self['socks5']['listen']
         except Exception:
@@ -1617,7 +1756,7 @@ class ConfigurationHysteria1(ConfigurationFactory):
 
             return ''
 
-    def setHttpProxyEndpoint(self, endpoint: str) -> bool:
+    def setHttpProxy(self, endpoint: str) -> bool:
         try:
             if endpoint == '':
                 self.pop('http', None)
@@ -1635,7 +1774,7 @@ class ConfigurationHysteria1(ConfigurationFactory):
 
             return False
 
-    def setSocksProxyEndpoint(self, endpoint: str) -> bool:
+    def setSocksProxy(self, endpoint: str) -> bool:
         try:
             if endpoint == '':
                 self.pop('socks5', None)
@@ -1654,7 +1793,21 @@ class ConfigurationHysteria1(ConfigurationFactory):
             return False
 
 
-class ConfigurationHysteria2(ConfigurationFactory):
+BLANK_CONFIG_HYSTERIA2 = {
+    'server': '',
+    'tls': {
+        'insecure': False,
+    },
+    'socks5': {
+        'listen': '127.0.0.1:10808',
+    },
+    'http': {
+        'listen': '127.0.0.1:10809',
+    },
+}
+
+
+class ConfigHysteria2(ConfigFactory):
     def __init__(self, config: Union[str, dict] = '', **kwargs):
         super().__init__(config, **kwargs)
 
@@ -1666,8 +1819,20 @@ class ConfigurationHysteria2(ConfigurationFactory):
         return self.getExtras('remark')
 
     @property
+    def itemSubscription(self) -> str:
+        try:
+            subsId = self.getExtras('subsId')
+            subsOb = Storage.UserSubs().get(subsId, {})
+
+            return subsOb.get('remark', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            return ''
+
+    @property
     def itemProtocol(self) -> str:
-        return Protocol.Hysteria2
+        return Protocol.Hysteria2.value
 
     @property
     def itemAddress(self) -> str:
@@ -1818,7 +1983,7 @@ class ConfigurationHysteria2(ConfigurationFactory):
 
             return False
 
-    def httpProxyEndpoint(self) -> str:
+    def httpProxy(self) -> str:
         try:
             return self['http']['listen']
         except Exception:
@@ -1826,7 +1991,7 @@ class ConfigurationHysteria2(ConfigurationFactory):
 
             return ''
 
-    def socksProxyEndpoint(self) -> str:
+    def socksProxy(self) -> str:
         try:
             return self['socks5']['listen']
         except Exception:
@@ -1834,7 +1999,7 @@ class ConfigurationHysteria2(ConfigurationFactory):
 
             return ''
 
-    def setHttpProxyEndpoint(self, endpoint: str) -> bool:
+    def setHttpProxy(self, endpoint: str) -> bool:
         try:
             if endpoint == '':
                 self.pop('http', None)
@@ -1852,7 +2017,7 @@ class ConfigurationHysteria2(ConfigurationFactory):
 
             return False
 
-    def setSocksProxyEndpoint(self, endpoint: str) -> bool:
+    def setSocksProxy(self, endpoint: str) -> bool:
         try:
             if endpoint == '':
                 self.pop('socks5', None)
@@ -1871,16 +2036,94 @@ class ConfigurationHysteria2(ConfigurationFactory):
             return False
 
 
-def constructFromDict(config: dict, **kwargs) -> ConfigurationFactory:
+def configXrayEmptyProxyOutboundObject(protocol: Protocol) -> dict:
+    value = protocol.value.lower()
+
+    if value == 'vless' or value == 'vmess':
+        return {
+            'tag': 'proxy',
+            'protocol': protocol,
+            'settings': {
+                'vnext': [
+                    {
+                        'address': '',
+                        'port': 0,
+                        'users': [
+                            {
+                                'email': PROXY_OUTBOUND_USER_EMAIL,
+                            },
+                        ],
+                    },
+                ]
+            },
+            'streamSettings': {
+                'network': 'tcp',
+            },
+            'mux': {
+                'enabled': False,
+                'concurrency': -1,
+            },
+        }
+    elif value == 'shadowsocks':
+        return {
+            'tag': 'proxy',
+            'protocol': 'shadowsocks',
+            'settings': {
+                'servers': [
+                    {
+                        'address': '',
+                        'port': 0,
+                        'method': '',
+                        'password': '',
+                        'email': PROXY_OUTBOUND_USER_EMAIL,
+                        'ota': False,
+                    }
+                ]
+            },
+            'streamSettings': {
+                'network': 'tcp',
+            },
+            'mux': {
+                'enabled': False,
+                'concurrency': -1,
+            },
+        }
+    elif value == 'trojan':
+        return {
+            'tag': 'proxy',
+            'protocol': 'trojan',
+            'settings': {
+                'servers': [
+                    {
+                        'address': '',
+                        'port': 0,
+                        'password': '',
+                        'email': PROXY_OUTBOUND_USER_EMAIL,
+                    }
+                ]
+            },
+            'streamSettings': {
+                'network': 'tcp',
+            },
+            'mux': {
+                'enabled': False,
+                'concurrency': -1,
+            },
+        }
+    else:
+        return {}
+
+
+def configFactoryFromDict(config: dict, **kwargs) -> ConfigFactory:
     if not isinstance(config, dict):
-        return ConfigurationFactory()
+        return ConfigFactory()
 
     def hasField(field):
         return config.get(field) is not None
 
     if hasField('inbounds') or hasField('outbounds'):
         # Assuming is Xray-Core
-        return ConfigurationXray(config, **kwargs)
+        return ConfigXray(config, **kwargs)
 
     if hasField('server'):
         if (
@@ -1897,7 +2140,7 @@ def constructFromDict(config: dict, **kwargs) -> ConfigurationFactory:
             or hasField('fast_open')
             or hasField('lazy_start')
         ):
-            return ConfigurationHysteria1(config, **kwargs)
+            return ConfigHysteria1(config, **kwargs)
         if (
             hasField('tls')
             or hasField('transport')
@@ -1911,13 +2154,13 @@ def constructFromDict(config: dict, **kwargs) -> ConfigurationFactory:
             or hasField('fastOpen')
             or hasField('lazy')
         ):
-            return ConfigurationHysteria2(config, **kwargs)
+            return ConfigHysteria2(config, **kwargs)
 
     # Copied to factory unrecognized
-    return ConfigurationFactory(config, **kwargs)
+    return ConfigFactory(config, **kwargs)
 
 
-def constructFromAny(config: Union[str, dict], **kwargs) -> ConfigurationFactory:
+def configFactoryFromAny(config: Union[str, dict], **kwargs) -> ConfigFactory:
     if isinstance(config, str):
         if (
             config.startswith('vmess://')
@@ -1925,21 +2168,60 @@ def constructFromAny(config: Union[str, dict], **kwargs) -> ConfigurationFactory
             or config.startswith('ss://')
             or config.startswith('trojan://')
         ):
-            return ConfigurationXray(config, **kwargs)
+            return ConfigXray(config, **kwargs)
         if config.startswith('hysteria://'):
-            return ConfigurationHysteria1(config, **kwargs)
+            return ConfigHysteria1(config, **kwargs)
         if config.startswith('hy2://') or config.startswith('hysteria2://'):
-            return ConfigurationHysteria2(config, **kwargs)
+            return ConfigHysteria2(config, **kwargs)
 
         try:
             # Try to construct from JSON string
-            return constructFromDict(UJSONEncoder.decode(config), **kwargs)
+            return configFactoryFromDict(UJSONEncoder.decode(config), **kwargs)
         except Exception:
             # Any non-exit exceptions
 
-            return ConfigurationFactory(**kwargs)
+            return ConfigFactory(**kwargs)
 
     if isinstance(config, dict):
-        return constructFromDict(config, **kwargs)
+        return configFactoryFromDict(config, **kwargs)
 
-    return ConfigurationFactory(**kwargs)
+    return ConfigFactory(**kwargs)
+
+
+def configFactoryBlank(protocol: Protocol) -> ConfigFactory:
+    if protocol == Protocol.VMess or protocol == Protocol.VLESS:
+        factory = configFactoryFromDict(BLANK_CONFIG_XRAY)
+        factory['outbounds'][0]['protocol'] = protocol.value.lower()
+        factory['outbounds'][0]['settings']['vnext'] = [
+            {
+                'address': '',
+                'port': 0,
+                'users': [{'email': PROXY_OUTBOUND_USER_EMAIL}],
+            },
+        ]
+
+        return factory
+
+    if protocol == Protocol.Shadowsocks or protocol == Protocol.Trojan:
+        factory = configFactoryFromDict(BLANK_CONFIG_XRAY)
+        factory['outbounds'][0]['protocol'] = protocol.value.lower()
+        factory['outbounds'][0]['settings']['servers'] = [
+            {
+                'address': '',
+                'port': 0,
+                'email': PROXY_OUTBOUND_USER_EMAIL,
+            },
+        ]
+
+        return factory
+
+    if protocol == Protocol.Hysteria1:
+        factory = configFactoryFromDict(BLANK_CONFIG_HYSTERIA1)
+
+        return factory
+    if protocol == Protocol.Hysteria2:
+        factory = configFactoryFromDict(BLANK_CONFIG_HYSTERIA2)
+
+        return factory
+
+    return ConfigFactory()

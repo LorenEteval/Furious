@@ -15,60 +15,42 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
+from Furious.Frozenlib import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import QHBoxLayout, QProgressBar, QWidget
+from PySide6.QtWidgets import *
 
 __all__ = ['ConnectProgressBar']
 
 
-class ConnectProgressBar(QTranslatable, SupportConnectedCallback, QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-        self.setWindowTitle(_(APPLICATION_NAME))
-        self.setWindowIcon(AppHue.currentWindowIcon())
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
-        self.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
-        self.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
-        self.setFixedSize(280, 61)
+        self.setRange(0, 100)
 
         @QtCore.Slot()
-        def updateProgressBar():
+        def update():
             # Update the progress bar value
-            if self._progressBar.value() < 90:
-                self._progressBar.setValue(self._progressBar.value() + 1)
+            if self.value() < 90:
+                self.setValue(self.value() + 1)
 
             # Stop the timer when the progress bar reaches 100%
-            if self._progressBar.value() >= 100:
-                self._timer.stop()
+            if self.value() > 99:
+                self.timer.stop()
 
-        # Create a progress bar widget
-        self._progressBar = QProgressBar(self)
-        self._progressBar.setRange(0, 100)
-        self._progressBar.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(update)
 
-        # Create a timer to update the progress bar
-        self._timer = QtCore.QTimer(self)
-        self._timer.timeout.connect(updateProgressBar)
-
-        self._layout = QHBoxLayout()
-        self._layout.addWidget(self._progressBar)
-
-        self.setLayout(self._layout)
-
-    def setValue(self, value: int):
-        self._progressBar.setValue(value)
+        self.setStyleSheet(self.getStyleSheet(AppHue.currentColor()))
 
     def start(self, msec: int):
-        self._timer.start(msec)
+        self.timer.start(msec)
 
     def stop(self):
-        self._timer.stop()
+        self.timer.stop()
 
     @staticmethod
     def getStyleSheet(color):
@@ -86,12 +68,43 @@ class ConnectProgressBar(QTranslatable, SupportConnectedCallback, QWidget):
         )
 
     def disconnectedCallback(self):
+        self.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
+
+    def connectedCallback(self):
+        self.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
+
+
+class ConnectProgressBar(Mixins.QTranslatable, Mixins.ConnectionAware, QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle(_(APPLICATION_NAME))
+        self.setWindowIcon(AppHue.currentWindowIcon())
+        self.setFixedSize(280, 61)
+
+        # Create a progress bar widget
+        self._widget = AutoUpdateProgressBar(parent=self)
+        self._widget.setRange(0, 100)
+
+        self._layout = QVBoxLayout()
+        self._layout.addWidget(self._widget)
+
+        self.setLayout(self._layout)
+
+    def setValue(self, value: int):
+        self._widget.setValue(value)
+
+    def start(self, msec: int):
+        self._widget.start(msec)
+
+    def stop(self):
+        self._widget.stop()
+
+    def disconnectedCallback(self):
         self.setWindowIcon(AppHue.disconnectedWindowIcon())
-        self._progressBar.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
 
     def connectedCallback(self):
         self.setWindowIcon(AppHue.connectedWindowIcon())
-        self._progressBar.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
 
     def retranslate(self):
         self.setWindowTitle(_(self.windowTitle()))

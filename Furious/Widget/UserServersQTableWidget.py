@@ -17,12 +17,11 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
 from Furious.Library import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Core import *
 from Furious.TrayActions.Import import *
 from Furious.Widget.GuiHysteria1 import *
@@ -39,7 +38,7 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from PySide6.QtNetwork import *
 
-from typing import Callable, Union, Sequence, MutableSequence
+from typing import Callable, Union, MutableSequence
 
 import queue
 import logging
@@ -86,13 +85,17 @@ class UpdateSubsInfoMBox(AppQMessageBox):
             text += '\n\n'
 
         for param in self.failureArgs:
-            error, remark, webURL = param['error'], param['remark'], param['webURL']
+            error, remark, webURL = (
+                param['error'],
+                param['remark'],
+                param['webURL'],
+            )
 
             # error is the specific failure reason. Not used
             # for mbox elegant appearance
 
             text += (
-                f'\U0000274C {remark} - {webURL} '
+                f'\U0000274c {remark} - {webURL} '
                 + _('Configuration update failed')
                 + '\n'
             )
@@ -126,7 +129,6 @@ class SubscriptionManager(WebGETManager):
     def handleItemDeletionAndInsertion(self, **kwargs):
         successArgs = kwargs.pop('successArgs', list())
         failureArgs = kwargs.pop('failureArgs', list())
-
         showMessageBox = kwargs.pop('showMessageBox', True)
 
         for param in successArgs:
@@ -139,15 +141,15 @@ class SubscriptionManager(WebGETManager):
 
                 subsIndexes = list(
                     index
-                    for index, server in enumerate(AS_UserServers())
+                    for index, server in enumerate(Storage.UserServers())
                     if server.getExtras('subsId') == unique
                 )
 
                 subsGroupIndex = -1
-                activatedIndex = AS_UserActivatedItemIndex()
+                activatedIndex = Storage.UserActivatedItemIndex()
 
                 if activatedIndex in subsIndexes:
-                    for index, server in enumerate(AS_UserServers()):
+                    for index, server in enumerate(Storage.UserServers()):
                         if index <= activatedIndex:
                             if server.getExtras('subsId') == unique:
                                 subsGroupIndex += 1
@@ -158,7 +160,7 @@ class SubscriptionManager(WebGETManager):
                     subsIndexes, showTrayMessage=bool(subsGroupIndex < 0)
                 )
 
-                remaining = len(AS_UserServers())
+                remaining = len(Storage.UserServers())
 
                 for uri in uris:
                     parent.appendNewItem(config=uri, subsId=unique)
@@ -166,7 +168,7 @@ class SubscriptionManager(WebGETManager):
                 if subsGroupIndex >= 0:
                     newIndex = remaining + subsGroupIndex
 
-                    if newIndex < len(AS_UserServers()):
+                    if newIndex < len(Storage.UserServers()):
                         parent.activateItemByIndex(newIndex, True)
 
                         if isConnected and not APP().isSystemTrayConnected():
@@ -266,16 +268,14 @@ class SubscriptionManager(WebGETManager):
         if kwargs.get('failureArgs') is None:
             kwargs['failureArgs'] = failureArgs
 
-        subsob = AS_UserSubscription()[unique]
-
-        self.updateSubsByWebGET(unique=unique, **subsob, **kwargs)
+        self.updateSubsByWebGET(unique=unique, **Storage.UserSubs()[unique], **kwargs)
 
     def updateSubs(self, **kwargs):
-        depthMap = {'depth': len(AS_UserSubscription())}
+        depthMap = {'depth': len(Storage.UserSubs())}
         successArgs = list()
         failureArgs = list()
 
-        for key in AS_UserSubscription().keys():
+        for key in Storage.UserSubs().keys():
             self.updateSubsByUnique(
                 key,
                 depthMap=depthMap,
@@ -288,7 +288,7 @@ class SubscriptionManager(WebGETManager):
 class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
     finished = QtCore.Signal()
 
-    def __init__(self, factory: ConfigurationFactory):
+    def __init__(self, factory: ConfigFactory):
         # Explictly called __init__
         QtCore.QObject.__init__(self)
         QtCore.QRunnable.__init__(self)
@@ -298,11 +298,11 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
     def run(self):
         index = self.factory.index
 
-        if self.factory.deleted or index < 0 or index >= len(AS_UserServers()):
+        if self.factory.deleted or index < 0 or index >= len(Storage.UserServers()):
             # Invalid item. Do nothing
             return
 
-        assert isinstance(self.factory, ConfigurationFactory)
+        assert isinstance(self.factory, ConfigFactory)
 
         try:
             result = icmplib.ping(
@@ -340,7 +340,7 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
 class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
     finished = QtCore.Signal()
 
-    def __init__(self, factory: ConfigurationFactory):
+    def __init__(self, factory: ConfigFactory):
         # Explictly called __init__
         QtCore.QObject.__init__(self)
         QtCore.QRunnable.__init__(self)
@@ -350,11 +350,11 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
     def run(self):
         index = self.factory.index
 
-        if self.factory.deleted or index < 0 or index >= len(AS_UserServers()):
+        if self.factory.deleted or index < 0 or index >= len(Storage.UserServers()):
             # Invalid item. Do nothing
             return
 
-        assert isinstance(self.factory, ConfigurationFactory)
+        assert isinstance(self.factory, ConfigFactory)
 
         try:
             sent, rtts = tcping(
@@ -391,7 +391,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
     def __init__(
         self,
-        factory: ConfigurationFactory,
+        factory: ConfigFactory,
         port: int,
         timeout: int,
         parent=None,
@@ -424,16 +424,15 @@ class TestDownloadSpeedWorker(WebGETManager):
     def sema(self):
         parent = self.parent()
 
-        if isinstance(parent, UserServersQTableWidget):
-            return parent.testDownloadSpeedMultiSema
-        else:
-            # Should not reach here: parent must be properly set
-            raise
+        # parent must be properly set
+        assert isinstance(parent, UserServersQTableWidget)
+
+        return parent.testDownloadSpeedMultiSema
 
     def mustCall(self):
         self.sema.release(1)
 
-    def syncProgress(self):
+    def sync(self):
         # Extra guard
         if APP() is not None and not APP().isExiting():
             self.progressed.emit()
@@ -455,138 +454,148 @@ class TestDownloadSpeedWorker(WebGETManager):
         finally:
             self.must()
 
-    def coreExitCallback(self, config: ConfigurationFactory, exitcode: int):
+    def coreExitCallback(self, config: ConfigFactory, exitcode: int):
         try:
-            if exitcode == CoreProcess.ExitCode.ConfigurationError:
+            if exitcode == CoreProcessFactory.ExitCode.ConfigurationError.value:
                 self.factory.setExtras('speedResult', f'Invalid')
-                self.syncProgress()
-            elif exitcode == CoreProcess.ExitCode.ServerStartFailure:
+                self.sync()
+            elif exitcode == CoreProcessFactory.ExitCode.ServerStartFailure.value:
                 self.factory.setExtras('speedResult', f'Core start failed')
-                self.syncProgress()
-            elif exitcode == CoreProcess.ExitCode.SystemShuttingDown:
+                self.sync()
+            elif exitcode == CoreProcessFactory.ExitCode.SystemShuttingDown.value:
                 pass
             else:
                 self.factory.setExtras('speedResult', f'Core exited {exitcode}')
-                self.syncProgress()
+                self.sync()
         finally:
             self.must()
 
-    def startCore(self) -> bool:
+    @staticmethod
+    def coreMsgCallback(line):
+        try:
+            AppLoggerWindow.Core().appendLine(line)
+        except Exception:
+            # Any non-exit exceptions
+
+            pass
+
+    @functools.singledispatchmethod
+    def _startCore(self, config) -> bool:
+        self.factory.setExtras('speedResult', 'Invalid')
+        self.sync()
+
+        # Unrecognized core. Return
+        return False
+
+    @_startCore.register(ConfigXray)
+    def _(self, config) -> bool:
         self.factory.setExtras('speedResult', 'Starting')
-        self.syncProgress()
+        self.sync()
 
-        def msgCallback(line: str):
-            try:
-                loggerCore().appendLine(line)
-            except Exception:
-                # Any non-exit exceptions
-
-                pass
-
-        itemcopy = self.factory.deepcopy()
-
-        if isinstance(itemcopy, ConfigurationXray):
-            # Force redirect
-            itemcopy['inbounds'] = [
-                {
-                    'tag': 'http',
-                    'port': self.port,
-                    'listen': '127.0.0.1',
-                    'protocol': 'http',
-                    'sniffing': {
-                        'enabled': True,
-                        'destOverride': [
-                            'http',
-                            'tls',
-                        ],
-                    },
-                    'settings': {
-                        'auth': 'noauth',
-                        'udp': True,
-                        'allowTransparent': False,
-                    },
+        configcopy = config.deepcopy()
+        # Force redirect
+        configcopy['inbounds'] = [
+            {
+                'tag': 'http',
+                'port': self.port,
+                'listen': '127.0.0.1',
+                'protocol': 'http',
+                'sniffing': {
+                    'enabled': True,
+                    'destOverride': [
+                        'http',
+                        'tls',
+                    ],
                 },
-            ]
-
-            try:
-                for outboundObject in itemcopy['outbounds']:
-                    if outboundObject['tag'] == f'proxy':
-                        # Avoid confusion with potentially existing 'proxy' tag
-                        outboundObject['tag'] = f'proxy{self.port}'
-            except Exception:
-                # Any non-exit exceptions
-
-                pass
-
-            self.coreManager.start(
-                itemcopy,
-                'Global',
-                self.coreExitCallback,
-                msgCallbackCore=msgCallback,
-                deepcopy=False,
-                proxyModeOnly=True,
-                log=False,
-            )
-
-            return True
-        elif isinstance(itemcopy, ConfigurationHysteria1) or isinstance(
-            itemcopy, ConfigurationHysteria2
-        ):
-            # Force redirect
-            itemcopy['http'] = {
-                'listen': f'127.0.0.1:{self.port}',
-                'timeout': 300,
-                'disable_udp': False,
-            }
-            # No socks inbounds
-            itemcopy.pop('socks5', '')
-
-            self.coreManager.start(
-                itemcopy,
-                'Global',
-                self.coreExitCallback,
-                msgCallbackCore=msgCallback,
-                deepcopy=False,
-                proxyModeOnly=True,
-                log=False,
-            )
-
-            return True
-        else:
-            self.factory.setExtras('speedResult', 'Invalid')
-            self.syncProgress()
-
-            # Unrecognized core. Return
-            return False
-
-    def start(self):
-        def startit():
-            index = self.factory.index
-
-            if self.factory.deleted or index < 0 or index >= len(AS_UserServers()):
-                # Invalid item. Do nothing
-                return
-
-            assert isinstance(self.factory, ConfigurationFactory)
-
-            if not self.factory.isValid():
-                # Configuration is invalid
-                self.factory.setExtras('speedResult', 'Invalid')
-                self.syncProgress()
-            else:
-                if not self.startCore() or APP().isExiting():
-                    return
-
-                self.configureHttpProxy(f'127.0.0.1:{self.port}')
-
-                self.networkReply = self.webGET(NETWORK_SPEED_TEST_URL, **self.kwargs)
-
-                self.elapsedTimer.start()
-                self.timeoutTimer.start(self.timeout)
+                'settings': {
+                    'auth': 'noauth',
+                    'udp': True,
+                    'allowTransparent': False,
+                },
+            },
+        ]
 
         try:
+            for outboundObject in configcopy['outbounds']:
+                if outboundObject['tag'] == f'proxy':
+                    # Avoid confusion with potentially existing 'proxy' tag
+                    outboundObject['tag'] = f'proxy{self.port}'
+        except Exception:
+            # Any non-exit exceptions
+
+            pass
+
+        self.coreManager.start(
+            configcopy,
+            'Global',
+            self.coreExitCallback,
+            msgCallbackCore=self.coreMsgCallback,
+            deepcopy=False,
+            proxyModeOnly=True,
+            log=False,
+        )
+
+        return True
+
+    @_startCore.register(ConfigHysteria1)
+    @_startCore.register(ConfigHysteria2)
+    def _(self, config) -> bool:
+        self.factory.setExtras('speedResult', 'Starting')
+        self.sync()
+
+        configcopy = config.deepcopy()
+        # Force redirect
+        configcopy['http'] = {
+            'listen': f'127.0.0.1:{self.port}',
+            'timeout': 300,
+            'disable_udp': False,
+        }
+        # No socks inbounds
+        configcopy.pop('socks5', '')
+
+        self.coreManager.start(
+            configcopy,
+            'Global',
+            self.coreExitCallback,
+            msgCallbackCore=self.coreMsgCallback,
+            deepcopy=False,
+            proxyModeOnly=True,
+            log=False,
+        )
+
+        return True
+
+    def start(self):
+        try:
             if not APP().isExiting():
-                startit()
+                index = self.factory.index
+
+                if (
+                    self.factory.deleted
+                    or index < 0
+                    or index >= len(Storage.UserServers())
+                ):
+                    # Invalid item. Do nothing
+                    return
+
+                assert isinstance(self.factory, ConfigFactory)
+
+                if not self.factory.isValid():
+                    # Configuration is invalid
+                    self.factory.setExtras('speedResult', 'Invalid')
+                    self.sync()
+                else:
+                    if not self._startCore(self.factory) or APP().isExiting():
+                        return
+
+                    self.configureHttpProxy(f'127.0.0.1:{self.port}')
+
+                    self.networkReply = self.webGET(
+                        NETWORK_SPEED_TEST_URL, **self.kwargs
+                    )
+
+                    self.elapsedTimer.start()
+                    self.timeoutTimer.start(self.timeout)
         finally:
             if self.networkReply is None:
                 self.must()
@@ -604,7 +613,7 @@ class TestDownloadSpeedWorker(WebGETManager):
             self.factory.setExtras('speedResult', f'Core start failed')
 
         self.coreManager.stopAll()
-        self.syncProgress()
+        self.sync()
 
     def hasDataCallback(self, networkReply, **kwargs):
         self.hasDataCounter += 1
@@ -621,8 +630,8 @@ class TestDownloadSpeedWorker(WebGETManager):
             self.factory.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
 
             # Limited to save CPU resources
-            if self.hasDataCounter % 25 == 0:
-                self.syncProgress()
+            if self.hasDataCounter % 20 == 0:
+                self.sync()
 
     def failureCallback(self, networkReply, **kwargs):
         if not self.hasSpeedResult:
@@ -646,19 +655,19 @@ class TestDownloadSpeedWorker(WebGETManager):
 
                 if isinstance(error, bytes):
                     # Some old version PySide6 returns it as bytes. Protect it.
-                    errorString = error.decode('utf-8', 'replace')
+                    error = error.decode('utf-8', 'replace')
                 elif isinstance(error, str):
-                    errorString = error
+                    pass
                 else:
-                    errorString = 'UnknownError'
+                    error = 'UnknownError'
 
-                if errorString != 'UnknownError' and errorString.endswith('Error'):
-                    self.factory.setExtras('speedResult', errorString[:-5])
+                if error != 'UnknownError' and error.endswith('Error'):
+                    self.factory.setExtras('speedResult', error[:-5])
                 else:
-                    self.factory.setExtras('speedResult', errorString)
+                    self.factory.setExtras('speedResult', error)
 
         self.coreManager.stopAll()
-        self.syncProgress()
+        self.sync()
 
 
 class UserServersQTableWidgetHorizontalHeader(AppQHeaderView):
@@ -701,12 +710,12 @@ class UserServersQTableWidgetHorizontalHeader(AppQHeaderView):
 
         if isinstance(parent, AppQTableWidget):
             # Support item activation
-            activatedIndex = AS_UserActivatedItemIndex()
+            activatedIndex = Storage.UserActivatedItemIndex()
 
             if activatedIndex < 0:
                 activatedServerId = None
             else:
-                activatedServerId = id(AS_UserServers()[activatedIndex])
+                activatedServerId = id(Storage.UserServers()[activatedIndex])
 
                 # De-activated temporarily for sorting
                 parent.activateItemByIndex(activatedIndex, False)
@@ -716,7 +725,7 @@ class UserServersQTableWidgetHorizontalHeader(AppQHeaderView):
             if activatedServerId is not None:
                 foundActivatedItem = False
 
-                for index, server in enumerate(AS_UserServers()):
+                for index, server in enumerate(Storage.UserServers()):
                     if activatedServerId == id(server):
                         foundActivatedItem = True
 
@@ -739,11 +748,11 @@ class UserServersQTableWidgetVerticalHeader(AppQHeaderView):
 
 
 class UserServersQTableWidgetHeaders:
-    def __init__(self, name: str, func: Callable[[ConfigurationFactory], str] = None):
+    def __init__(self, name: str, func: Callable[[ConfigFactory], str] = None):
         self.name = name
         self.func = func
 
-    def __call__(self, item: ConfigurationFactory) -> str:
+    def __call__(self, item: ConfigFactory) -> str:
         if callable(self.func):
             return self.func(item)
         else:
@@ -770,7 +779,7 @@ TRANSLATABLE_HEADERS = [
 ]
 
 
-class UserServersQTableWidget(QTranslatable, AppQTableWidget):
+class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
     Headers = [
         UserServersQTableWidgetHeaders('Remark'),
         UserServersQTableWidgetHeaders('Protocol'),
@@ -855,7 +864,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 AppQSeperator(),
                 AppQAction(
                     _('Show Furious Log...'),
-                    callback=lambda: loggerApp_().showMaximized(),
+                    callback=lambda: AppLoggerWindow.Self().showMaximized(),
                     shortcut=QtCore.QKeyCombination(
                         QtCore.Qt.KeyboardModifier.ControlModifier
                         | QtCore.Qt.KeyboardModifier.ShiftModifier,
@@ -864,7 +873,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 ),
                 AppQAction(
                     _('Show Core Log...'),
-                    callback=lambda: loggerCore().showMaximized(),
+                    callback=lambda: AppLoggerWindow.Core().showMaximized(),
                     shortcut=QtCore.QKeyCombination(
                         QtCore.Qt.KeyboardModifier.ControlModifier
                         | QtCore.Qt.KeyboardModifier.ShiftModifier,
@@ -873,7 +882,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 ),
                 AppQAction(
                     _('Show Tun2socks Log...'),
-                    callback=lambda: loggerTun_().showMaximized(),
+                    callback=lambda: AppLoggerWindow.TUN_().showMaximized(),
                     shortcut=QtCore.QKeyCombination(
                         QtCore.Qt.KeyboardModifier.ControlModifier
                         | QtCore.Qt.KeyboardModifier.ShiftModifier,
@@ -1039,7 +1048,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
         if self.activatedItem() is not None:
             self.setCurrentItem(self.activatedItem())
-            self.activateItemByIndex(AS_UserActivatedItemIndex(), True)
+            self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
 
     @QtCore.Slot(QTableWidgetItem)
     def handleItemChanged(self, item: QTableWidgetItem):
@@ -1053,8 +1062,8 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         #
         # itemText = self.item(index, 0).text()
         #
-        # if AS_UserServers()[index].getExtras('remark') != itemText:
-        #     AS_UserServers()[index].setExtras('remark', itemText)
+        # if Storage.UserServers()[index].getExtras('remark') != itemText:
+        #     Storage.UserServers()[index].setExtras('remark', itemText)
 
     @QtCore.Slot()
     def handleItemSelectionChanged(self):
@@ -1071,7 +1080,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
             return
 
-        oldIndex = AS_UserActivatedItemIndex()
+        oldIndex = Storage.UserActivatedItemIndex()
         newIndex = item.row()
 
         if oldIndex == newIndex:
@@ -1103,44 +1112,50 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             APP().systemTray.ConnectAction.trigger()
 
     @functools.lru_cache(None)
-    def getGuiEditorByProtocol(self, protocol, **kwargs):
-        logger.debug(f'getGuiEditorByProtocol called with protocol {protocol}')
+    def getGuiEditorByProtocol(self, protocol: Protocol, **kwargs):
+        logger.debug(f'getGuiEditorByProtocol called with protocol {protocol.value}')
 
-        if protocolRepr(protocol) == Protocol.VMess:
+        if protocol == Protocol.VMess:
             return GuiVMess(parent=self, **kwargs)
-        if protocolRepr(protocol) == Protocol.VLESS:
+        if protocol == Protocol.VLESS:
             return GuiVLESS(parent=self, **kwargs)
-        if protocolRepr(protocol) == Protocol.Shadowsocks:
+        if protocol == Protocol.Shadowsocks:
             return GuiShadowsocks(parent=self, **kwargs)
-        if protocolRepr(protocol) == Protocol.Trojan:
+        if protocol == Protocol.Trojan:
             return GuiTrojan(parent=self, **kwargs)
-        if protocolRepr(protocol) == Protocol.Hysteria2:
+        if protocol == Protocol.Hysteria2:
             return GuiHysteria2(parent=self, **kwargs)
-        if protocolRepr(protocol) == Protocol.Hysteria1:
+        if protocol == Protocol.Hysteria1:
             return GuiHysteria1(parent=self, **kwargs)
 
         return None
 
-    def getGuiEditorByFactory(self, factory, **kwargs):
-        if isinstance(factory, ConfigurationXray):
-            protocol = factory.proxyProtocol
+    @functools.singledispatchmethod
+    def getGuiEditorByFactory(
+        self, factory, **kwargs
+    ) -> Union[GuiEditorWidgetQDialog, None]:
+        return None
 
-            guiEditor = self.getGuiEditorByProtocol(protocol, **kwargs)
-        elif isinstance(factory, ConfigurationHysteria2):
-            guiEditor = self.getGuiEditorByProtocol(Protocol.Hysteria2, **kwargs)
-        elif isinstance(factory, ConfigurationHysteria1):
-            guiEditor = self.getGuiEditorByProtocol(Protocol.Hysteria1, **kwargs)
-        else:
-            guiEditor = None
+    @getGuiEditorByFactory.register(ConfigXray)
+    def _(self, factory, **kwargs):
+        return self.getGuiEditorByProtocol(
+            Protocol.toEnum(factory.proxyProtocol), **kwargs
+        )
 
-        return guiEditor
+    @getGuiEditorByFactory.register(ConfigHysteria1)
+    def _(self, factory, **kwargs):
+        return self.getGuiEditorByProtocol(Protocol.Hysteria1, **kwargs)
+
+    @getGuiEditorByFactory.register(ConfigHysteria2)
+    def _(self, factory, **kwargs):
+        return self.getGuiEditorByProtocol(Protocol.Hysteria2, **kwargs)
 
     @QtCore.Slot(QTableWidgetItem)
     def handleItemDoubleClicked(self, item: QTableWidgetItem):
         self.doubleClickedFlag = True
 
         index = item.row()
-        factory = AS_UserServers()[index]
+        factory = Storage.UserServers()[index]
 
         # Do not translate window title
         guiEditor = self.getGuiEditorByFactory(factory, translatable=False)
@@ -1180,7 +1195,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self,
         editor: GuiEditorWidgetQDialog,
         index: int,
-        factory: ConfigurationFactory,
+        factory: ConfigFactory,
     ):
         logger.debug(f'guiEditor accepted with index {index}')
 
@@ -1189,7 +1204,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         # Still flush to row since remark may be modified
         self.flushRow(index, factory)
 
-        if modified and index == AS_UserActivatedItemIndex():
+        if modified and index == Storage.UserActivatedItemIndex():
             showNewChangesNextTimeMBox()
 
         editor.accepted.disconnect()
@@ -1234,13 +1249,13 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
             return data
 
-        AS_UserServers().sort(key=keyFn, **kwargs)
+        Storage.UserServers().sort(key=keyFn, **kwargs)
 
         # Index is refreshed by calling flushAll()
         self.flushAll()
 
     def activatedItem(self) -> QTableWidgetItem:
-        return self.item(AS_UserActivatedItemIndex(), 0)
+        return self.item(Storage.UserActivatedItemIndex(), 0)
 
     def activateItemByIndex(self, index, activate):
         super().activateItemByIndex(index, activate)
@@ -1248,10 +1263,10 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         if activate:
             AppSettings.set('ActivatedItemIndex', str(index))
 
-    def flushItem(self, row: int, column: int, item: ConfigurationFactory):
+    def flushItem(self, row: int, column: int, item: ConfigFactory):
         itemIndex = item.index
 
-        if item.deleted or itemIndex < 0 or itemIndex >= len(AS_UserServers()):
+        if item.deleted or itemIndex < 0 or itemIndex >= len(Storage.UserServers()):
             # Invalid item. Do nothing
             return
 
@@ -1259,7 +1274,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             nonlocal itemIndex
 
             for _index in range(start, stop, step):
-                if id(item) == id(AS_UserServers()[_index]):
+                if id(item) == id(Storage.UserServers()[_index]):
                     itemIndex = _index
 
                     item.index = itemIndex
@@ -1268,10 +1283,10 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
             return False
 
-        if id(item) != id(AS_UserServers()[itemIndex]):
+        if id(item) != id(Storage.UserServers()[itemIndex]):
             # itemIndex doesn't match
             if searchIndex(itemIndex - 1, -1, -1) or searchIndex(
-                itemIndex + 1, len(AS_UserServers())
+                itemIndex + 1, len(Storage.UserServers())
             ):
                 pass
             else:
@@ -1293,7 +1308,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
         if oldItem is None:
             # Item does not exist
-            newItem.setFont(QFont(APP().customFontName))
+            newItem.setFont(QFont(AppFontName()))
 
             if str(header) == 'Latency' or str(header) == 'Speed':
                 # Test results. Align right and vcenter
@@ -1333,11 +1348,11 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
     def addServerViaGui(
         self,
-        protocol: str,
+        protocol: Protocol,
         windowTitle: str = APPLICATION_NAME,
         **kwargs,
     ):
-        factory = getEmptyFactory(protocol)
+        factory = configFactoryBlank(protocol)
 
         guiEditor = self.getGuiEditorByFactory(factory, **kwargs)
 
@@ -1372,7 +1387,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
     def handleAddServerViaGuiAccepted(
         self,
         editor: GuiEditorWidgetQDialog,
-        factory: ConfigurationFactory,
+        factory: ConfigFactory,
     ):
         editor.inputToFactory(factory)
 
@@ -1385,22 +1400,22 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         editor.accepted.disconnect()
         editor.rejected.disconnect()
 
-    def flushRow(self, row: int, item: ConfigurationFactory):
+    def flushRow(self, row: int, item: ConfigFactory):
         for column in list(range(self.columnCount())):
             self.flushItem(row, column, item)
 
     def flushAll(self):
         # Refresh index
-        for index, item in enumerate(AS_UserServers()):
+        for index, item in enumerate(Storage.UserServers()):
             item.index = index
 
         if self.rowCount() == 0:
             # Should insert row
-            for index, item in enumerate(AS_UserServers()):
+            for index, item in enumerate(Storage.UserServers()):
                 self.insertRow(index)
                 self.flushRow(index, item)
         else:
-            for index, item in enumerate(AS_UserServers()):
+            for index, item in enumerate(Storage.UserServers()):
                 self.flushRow(index, item)
 
     def swapItem(self, index0: int, index1: int):
@@ -1410,21 +1425,21 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             sequence[param0] = sequence[param1]
             sequence[param1] = swap
 
-        swapSequenceItem(AS_UserServers(), index0, index1)
+        swapSequenceItem(Storage.UserServers(), index0, index1)
 
         # Refresh index
-        AS_UserServers()[index0].index = index1
-        AS_UserServers()[index1].index = index0
+        Storage.UserServers()[index0].index = index1
+        Storage.UserServers()[index1].index = index0
 
-        self.flushRow(index0, AS_UserServers()[index0])
-        self.flushRow(index1, AS_UserServers()[index1])
+        self.flushRow(index0, Storage.UserServers()[index0])
+        self.flushRow(index1, Storage.UserServers()[index1])
 
-        if index0 == AS_UserActivatedItemIndex():
+        if index0 == Storage.UserActivatedItemIndex():
             # De-activate
             self.activateItemByIndex(index0, False)
             # Activate
             self.activateItemByIndex(index1, True)
-        elif index1 == AS_UserActivatedItemIndex():
+        elif index1 == Storage.UserActivatedItemIndex():
             # De-activate
             self.activateItemByIndex(index1, False)
             # Activate
@@ -1434,7 +1449,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.appendNewItem(remark=_('Untitled'), acceptInvalid=True)
 
     def moveUpItemByIndex(self, index):
-        if index <= 0 or index >= len(AS_UserServers()):
+        if index <= 0 or index >= len(Storage.UserServers()):
             # The top item, or does not exist. Do nothing
             return
 
@@ -1450,13 +1465,13 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         for index in indexes:
             self.moveUpItemByIndex(index)
 
-        with QBlockSignals(self):
+        with Mixins.QBlockSignalContext(self):
             self.setCurrentIndex(self.indexFromItem(self.item(indexes[-1] - 1, 0)))
 
         self.selectMultipleRows(list(index - 1 for index in indexes), True)
 
     def moveDownItemByIndex(self, index):
-        if index < 0 or index >= len(AS_UserServers()) - 1:
+        if index < 0 or index >= len(Storage.UserServers()) - 1:
             # The bottom item, or does not exist. Do nothing
             return
 
@@ -1472,7 +1487,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         for index in indexes[::-1]:
             self.moveDownItemByIndex(index)
 
-        with QBlockSignals(self):
+        with Mixins.QBlockSignalContext(self):
             self.setCurrentIndex(self.indexFromItem(self.item(indexes[0] + 1, 0)))
 
         self.selectMultipleRows(list(index + 1 for index in indexes), True)
@@ -1485,11 +1500,11 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             return
 
         for index in indexes:
-            if 0 <= index < len(AS_UserServers()):
+            if 0 <= index < len(Storage.UserServers()):
                 # Do not clone subsId
                 self.appendNewItem(
-                    remark=AS_UserServers()[index].getExtras('remark'),
-                    config=AS_UserServers()[index],
+                    remark=Storage.UserServers()[index].getExtras('remark'),
+                    config=Storage.UserServers()[index],
                 )
 
     def deleteItemByIndex(self, indexes, showTrayMessage=True) -> int:
@@ -1497,7 +1512,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             # Nothing selected. Do nothing
             return 0
 
-        if AS_UserActivatedItemIndex() in indexes:
+        if Storage.UserActivatedItemIndex() in indexes:
             deleteActivated = True
         else:
             deleteActivated = False
@@ -1506,15 +1521,15 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         for i in range(len(indexes)):
             deleteIndex = indexes[i] - i
 
-            with QBlockSignals(self):
+            with Mixins.QBlockSignalContext(self):
                 self.removeRow(deleteIndex)
 
-            AS_UserServers()[deleteIndex].deleted = True
-            AS_UserServers().pop(deleteIndex)
+            Storage.UserServers()[deleteIndex].deleted = True
+            Storage.UserServers().pop(deleteIndex)
 
-            if not deleteActivated and deleteIndex < AS_UserActivatedItemIndex():
+            if not deleteActivated and deleteIndex < Storage.UserActivatedItemIndex():
                 AppSettings.set(
-                    'ActivatedItemIndex', str(AS_UserActivatedItemIndex() - 1)
+                    'ActivatedItemIndex', str(Storage.UserActivatedItemIndex() - 1)
                 )
 
         if deleteActivated:
@@ -1539,7 +1554,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             return
 
         def handleResultCode(_indexes, code):
-            if code == PySide6LegacyEnumValueWrapper(AppQMessageBox.StandardButton.Yes):
+            if code == PySide6Legacy.enumValueWrapper(
+                AppQMessageBox.StandardButton.Yes
+            ):
                 self.deleteItemByIndex(_indexes)
             else:
                 pass
@@ -1574,12 +1591,14 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             return
 
         index = indexes[0]
-        title = f'{index + 1} - ' + AS_UserServers()[index].getExtras('remark')
+        title = f'{index + 1} - ' + Storage.UserServers()[index].getExtras('remark')
 
         self.textEditorWindow.currentIndex = index
         self.textEditorWindow.customWindowTitle = title
         self.textEditorWindow.setWindowTitle(title)
-        self.textEditorWindow.setPlainText(AS_UserServers()[index].toJSONString(), True)
+        self.textEditorWindow.setPlainText(
+            Storage.UserServers()[index].toJSONString(), True
+        )
         self.textEditorWindow.show()
 
     def scrollToActivatedItem(self):
@@ -1596,13 +1615,13 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             return
 
         # Real selected factory
-        references = list(AS_UserServers()[index] for index in indexes)
+        references = list(Storage.UserServers()[index] for index in indexes)
 
         for index, reference in zip(indexes, references):
             if APP().isExiting():
                 break
 
-            assert isinstance(reference, ConfigurationFactory)
+            assert isinstance(reference, ConfigFactory)
 
             if reference.deleted:
                 continue
@@ -1628,13 +1647,13 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             return
 
         # Real selected factory
-        references = list(AS_UserServers()[index] for index in indexes)
+        references = list(Storage.UserServers()[index] for index in indexes)
 
         for index, reference in zip(indexes, references):
             if APP().isExiting():
                 break
 
-            assert isinstance(reference, ConfigurationFactory)
+            assert isinstance(reference, ConfigFactory)
 
             if reference.deleted:
                 continue
@@ -1655,7 +1674,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
     def testDownloadSpeedByFactory(
         self,
         index: int,
-        factory: ConfigurationFactory,
+        factory: ConfigFactory,
         port: int,
         timeout: int,
         isMulti: bool,
@@ -1684,7 +1703,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             while (
                 not APP().isExiting() and not worker.isFinished() and counter < timeout
             ):
-                PySide6LegacyEventLoopWait(step)
+                PySide6Legacy.eventLoopWait(step)
 
                 counter += step
 
@@ -1692,7 +1711,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
                 worker.abort()
 
                 while not worker.isFinished():
-                    PySide6LegacyEventLoopWait(step)
+                    PySide6Legacy.eventLoopWait(step)
 
         if APP().isExiting():
             if not worker.isFinished():
@@ -1733,7 +1752,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             if not APP().isExiting():
                 # Fetch next job.
                 if self.isVisible():
-                    interval = max(1.0, 1000 / len(AS_UserServers()))
+                    interval = max(1.0, 1000 / len(Storage.UserServers()))
                     interval = min(interval, 50)
 
                     jobTimer.start(int(interval))
@@ -1754,7 +1773,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         else:
             testDownloadSpeedPort = 20809
 
-        assert isinstance(factory, ConfigurationFactory)
+        assert isinstance(factory, ConfigFactory)
 
         if factory.deleted:
             # Invalid item. Do nothing.
@@ -1803,7 +1822,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             return
 
         # Real selected factory
-        references = list(AS_UserServers()[index] for index in indexes)
+        references = list(Storage.UserServers()[index] for index in indexes)
 
         for index, reference in zip(indexes, references):
             try:
@@ -1846,7 +1865,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             return
 
         for index in indexes:
-            factory = AS_UserServers()[index]
+            factory = Storage.UserServers()[index]
             factory.setExtras('delayResult', '')
             factory.setExtras('speedResult', '')
 
@@ -1861,13 +1880,13 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         self.subsManager.configureHttpProxy(httpProxy)
         self.subsManager.updateSubs(**kwargs)
 
-    def appendNewItemByFactory(self, factory: ConfigurationFactory):
-        index = len(AS_UserServers())
+    def appendNewItemByFactory(self, factory: ConfigFactory):
+        index = len(Storage.UserServers())
 
         # Set index
         factory.index = index
 
-        AS_UserServers().append(factory)
+        Storage.UserServers().append(factory)
 
         row = self.rowCount()
 
@@ -1895,7 +1914,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
         }
         tostr = f'{model}'
 
-        factory = constructFromAny(model.pop('config', ''), **model)
+        factory = configFactoryFromAny(model.pop('config', ''), **model)
 
         if factory.isValid():
             self.appendNewItemByFactory(factory)
@@ -1913,7 +1932,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
             return
 
         def toURI(factory) -> str:
-            assert isinstance(factory, ConfigurationFactory)
+            assert isinstance(factory, ConfigFactory)
 
             try:
                 return factory.toURI()
@@ -1924,7 +1943,7 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
         # TODO: MessageBox?
         QApplication.clipboard().setText(
-            '\n'.join(list(toURI(AS_UserServers()[index]) for index in indexes))
+            '\n'.join(list(toURI(Storage.UserServers()[index]) for index in indexes))
         )
 
     def exportSelectedItemQR(self):
@@ -1949,7 +1968,9 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
 
         # TODO: MessageBox?
         QApplication.clipboard().setText(
-            '\n'.join(list(AS_UserServers()[index].toJSONString() for index in indexes))
+            '\n'.join(
+                list(Storage.UserServers()[index].toJSONString() for index in indexes)
+            )
         )
 
     def showTabAndSpaces(self):
@@ -1971,12 +1992,12 @@ class UserServersQTableWidget(QTranslatable, AppQTableWidget):
     def disconnectedCallback(self):
         super().disconnectedCallback()
 
-        self.activateItemByIndex(AS_UserActivatedItemIndex(), True)
+        self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
 
     def connectedCallback(self):
         super().connectedCallback()
 
-        self.activateItemByIndex(AS_UserActivatedItemIndex(), True)
+        self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
 
     def retranslate(self):
         self.setHorizontalHeaderLabels(list(_(str(header)) for header in self.Headers))

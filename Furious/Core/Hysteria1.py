@@ -17,11 +17,10 @@
 
 from __future__ import annotations
 
-from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.Library import *
-from Furious.Utility import *
+from Furious.Frozenlib import *
+from Furious.Core.CoreProcessWorker import *
 
+from enum import Enum
 from typing import Union
 
 import time
@@ -40,22 +39,22 @@ def startHysteria1(jsonString, rule, mmdb, msgQueue: multiprocessing.Queue):
     except ImportError:
         # Fake running process
         while True:
-            time.sleep(1)
+            time.sleep(3600)
     else:
         if versionToValue(hysteria.__version__) <= versionToValue('1.3.5'):
             redirect = False
         else:
             redirect = True
 
-        StdoutRedirectHelper.launch(
+        ProcessOutputRedirector.launch(
             msgQueue,
             functools.partial(hysteria.startFromJSON, jsonString, rule, mmdb),
             redirect,
         )
 
 
-class Hysteria1(CoreProcess):
-    class ExitCode:
+class Hysteria1(CoreProcessWorker):
+    class ExitCode(Enum):
         ConfigurationError = 23
         RemoteNetworkError = 3
         # Windows shutting down
@@ -70,7 +69,7 @@ class Hysteria1(CoreProcess):
             return ''
 
         try:
-            path = getAbsolutePath(str(rulePath))
+            path = absolutePath(str(rulePath))
         except Exception:
             # Any non-exit exceptions
 
@@ -100,7 +99,7 @@ class Hysteria1(CoreProcess):
             return ''
 
         try:
-            path = getAbsolutePath(str(mmdbPath))
+            path = absolutePath(str(mmdbPath))
         except Exception:
             # Any non-exit exceptions
 
@@ -139,28 +138,19 @@ class Hysteria1(CoreProcess):
 
             return '0.0.0'
 
-    def startFromArgs(self, jsonString: str, rule, mmdb, **kwargs) -> bool:
-        self.registerCurrentJSONConfig(jsonString)
-
-        return super().start(
-            target=startHysteria1,
-            args=(jsonString, rule, mmdb, self.msgQueue),
-            **kwargs,
-        )
-
     def start(self, config: Union[str, dict], rule, mmdb, **kwargs) -> bool:
-        if isinstance(config, str):
-            return self.startFromArgs(config, rule, mmdb, **kwargs)
-        elif isinstance(config, ConfigurationFactory):
-            return self.startFromArgs(config.toJSONString(), rule, mmdb, **kwargs)
-        elif isinstance(config, dict):
-            try:
-                jsonString = UJSONEncoder.encode(config)
-            except Exception:
-                # Any non-exit exceptions
+        param = self.toJSONString(config)
 
-                return False
-            else:
-                return self.startFromArgs(jsonString, rule, mmdb, **kwargs)
+        if param:
+            return super().start(
+                target=startHysteria1,
+                args=(
+                    param,
+                    rule,
+                    mmdb,
+                    self.msgQueue,
+                ),
+                **kwargs,
+            )
         else:
             return False

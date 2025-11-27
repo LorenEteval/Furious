@@ -15,9 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Utility import *
 from Furious.Widget.Application import Application
 
@@ -49,12 +50,12 @@ def runAppMain():
     # For Qt runtime. Not used
     _app = Application(sys.argv)
 
-    if exitcode == ApplicationFactory.ExitCode.PlatformNotSupported:
-        messageBox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+    if exitcode == ApplicationFactory.ExitCode.PlatformNotSupported.value:
+        mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
 
-        messageBox.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-        messageBox.setWindowTitle(_(APPLICATION_NAME))
-        messageBox.setText(
+        mbox.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+        mbox.setWindowTitle(_(APPLICATION_NAME))
+        mbox.setText(
             _(f'{APPLICATION_NAME} is not able to run on this operating system')
         )
 
@@ -68,7 +69,7 @@ def runAppMain():
                 'machine',
             )
 
-            messageBox.setInformativeText(
+            mbox.setInformativeText(
                 _('Operating system information')
                 + '\n'
                 + '\n'.join(
@@ -77,9 +78,9 @@ def runAppMain():
             )
 
         # Show the MessageBox and wait for the user to close it
-        messageBox.exec()
+        mbox.exec()
     else:
-        if exitcode == ApplicationFactory.ExitCode.AssertionError:
+        if exitcode == ApplicationFactory.ExitCode.AssertionError.value:
             # Assertion error
             text = _(
                 f'{APPLICATION_NAME} encountered an internal error and needs to be stopped'
@@ -90,11 +91,11 @@ def runAppMain():
                 f'{APPLICATION_NAME} stopped unexpectedly due to an unknown exception'
             )
 
-        messageBox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+        mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
 
-        messageBox.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-        messageBox.setWindowTitle(_(APPLICATION_NAME))
-        messageBox.setText(text)
+        mbox.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+        mbox.setWindowTitle(_(APPLICATION_NAME))
+        mbox.setText(text)
 
         if process.fileWritten.value:
             # Crash log saved
@@ -102,15 +103,13 @@ def runAppMain():
 
             logger.info(f'crash log has been saved to {crashLogFile}')
 
-            messageBox.setInformativeText(
+            mbox.setInformativeText(
                 _('Crash log has been saved to') + f' {crashLogFile}'
             )
-            button0 = messageBox.addButton(
+            button0 = mbox.addButton(
                 _('Open crash log'), AppQMessageBox.ButtonRole.AcceptRole
             )
-            button1 = messageBox.addButton(
-                _('OK'), AppQMessageBox.ButtonRole.RejectRole
-            )
+            button1 = mbox.addButton(_('OK'), AppQMessageBox.ButtonRole.RejectRole)
 
             def handleButtonClicked(button):
                 if button == button0:
@@ -125,16 +124,16 @@ def runAppMain():
                     # OK. Do nothing
                     pass
 
-            messageBox.buttonClicked.connect(handleButtonClicked)
+            mbox.buttonClicked.connect(handleButtonClicked)
 
             # Show the MessageBox and wait for the user to close it
-            messageBox.exec()
+            mbox.exec()
         else:
             # Crash log wasn't saved
             logger.info(f'crash log was not saved')
 
             # Show the MessageBox and wait for the user to close it
-            messageBox.exec()
+            mbox.exec()
 
     sys.exit(exitcode)
 

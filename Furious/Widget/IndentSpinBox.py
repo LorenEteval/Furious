@@ -17,13 +17,11 @@
 
 from __future__ import annotations
 
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 
+from PySide6 import QtCore
 from PySide6.QtWidgets import *
-
-import functools
 
 __all__ = ['IndentSpinBox']
 

@@ -17,11 +17,10 @@
 
 from __future__ import annotations
 
-from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.Library import *
-from Furious.Utility import *
+from Furious.Frozenlib import *
+from Furious.Core.CoreProcessWorker import *
 
+from enum import Enum
 from typing import Union
 
 import time
@@ -40,22 +39,22 @@ def startHysteria2(jsonString: str, msgQueue: multiprocessing.Queue):
     except ImportError:
         # Fake running process
         while True:
-            time.sleep(1)
+            time.sleep(3600)
     else:
         if versionToValue(hysteria2.__version__) <= versionToValue('2.0.0.1'):
             redirect = False
         else:
             redirect = True
 
-        StdoutRedirectHelper.launch(
+        ProcessOutputRedirector.launch(
             msgQueue,
             functools.partial(hysteria2.startFromJSON, jsonString),
             redirect,
         )
 
 
-class Hysteria2(CoreProcess):
-    class ExitCode:
+class Hysteria2(CoreProcessWorker):
+    class ExitCode(Enum):
         ConfigurationError = 23
         # Windows: 4294967295. Darwin, Linux: 255 (-1)
         ServerStartFailure = 4294967295 if PLATFORM == 'Windows' else 255
@@ -80,26 +79,17 @@ class Hysteria2(CoreProcess):
 
             return '0.0.0'
 
-    def startFromArgs(self, jsonString: str, **kwargs) -> bool:
-        self.registerCurrentJSONConfig(jsonString)
-
-        return super().start(
-            target=startHysteria2, args=(jsonString, self.msgQueue), **kwargs
-        )
-
     def start(self, config: Union[str, dict], **kwargs) -> bool:
-        if isinstance(config, str):
-            return self.startFromArgs(config, **kwargs)
-        elif isinstance(config, ConfigurationFactory):
-            return self.startFromArgs(config.toJSONString(), **kwargs)
-        elif isinstance(config, dict):
-            try:
-                jsonString = UJSONEncoder.encode(config)
-            except Exception:
-                # Any non-exit exceptions
+        param = self.toJSONString(config)
 
-                return False
-            else:
-                return self.startFromArgs(jsonString, **kwargs)
+        if param:
+            return super().start(
+                target=startHysteria2,
+                args=(
+                    param,
+                    self.msgQueue,
+                ),
+                **kwargs,
+            )
         else:
             return False

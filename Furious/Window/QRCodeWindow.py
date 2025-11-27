@@ -17,11 +17,10 @@
 
 from __future__ import annotations
 
-from Furious.Interface import *
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
+from Furious.Frozenlib import *
+from Furious.Library import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -55,7 +54,7 @@ class QRCodeWindow(AppQMainWindow):
         for index in indexes:
             qrdata = io.BytesIO()
 
-            config = AS_UserServers()[index]
+            config = Storage.UserServers()[index]
 
             try:
                 uri = config.toURI()

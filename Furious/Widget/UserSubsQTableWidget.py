@@ -17,12 +17,10 @@
 
 from __future__ import annotations
 
-from Furious.Interface import *
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
+from Furious.Frozenlib import *
 from Furious.Library import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -76,7 +74,7 @@ class UserSubsAppQComboBox(AppQComboBox):
 
     def retranslate(self):
         # Do not emit 'currentTextChanged' when retranslate
-        with QBlockSignals(self):
+        with Mixins.QBlockSignalContext(self):
             super().retranslate()
 
 
@@ -105,7 +103,7 @@ TRANSLATABLE_HEADERS = [
 ]
 
 
-class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
+class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
     AutoUpdateOptions = {
         '': None,
         'Never': None,
@@ -126,7 +124,7 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
 
     ProxyOptions = {
         '': lambda: None,
-        'Use current proxy': lambda: connectedHttpProxyEndpoint(),
+        'Use current proxy': lambda: Storage.Extras.UserHttpProxy(),
         'Force proxy': lambda: '127.0.0.1:10809',
         'No proxy': lambda: None,
     }
@@ -150,7 +148,7 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
 
         super().__init__(*args, **kwargs)
 
-        self.timers = list(QtCore.QTimer() for i in range(len(AS_UserSubscription())))
+        self.timers = list(QtCore.QTimer() for i in range(len(Storage.UserSubs())))
 
         # Must set before flush all
         self.setColumnCount(len(self.Headers))
@@ -200,7 +198,7 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
 
     @QtCore.Slot(QTableWidgetItem)
     def handleItemChanged(self, item: QTableWidgetItem):
-        unique = list(AS_UserSubscription().keys())[item.row()]
+        unique = list(Storage.UserSubs().keys())[item.row()]
         mapped = UserSubsQTableWidget.ItemKey[item.column()]
 
         # 'autoupdate', 'proxy' is not triggered here
@@ -208,7 +206,7 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
 
         item.setToolTip(item.text())
 
-        AS_UserSubscription()[unique][mapped] = item.text()
+        Storage.UserSubs()[unique][mapped] = item.text()
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
@@ -222,14 +220,16 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
             return
 
         def handleResultCode(_indexes, code):
-            if code == PySide6LegacyEnumValueWrapper(AppQMessageBox.StandardButton.Yes):
+            if code == PySide6Legacy.enumValueWrapper(
+                AppQMessageBox.StandardButton.Yes
+            ):
                 for i in range(len(_indexes)):
                     deleteIndex = _indexes[i] - i
-                    deleteUnique = list(AS_UserSubscription().keys())[deleteIndex]
+                    deleteUnique = list(Storage.UserSubs().keys())[deleteIndex]
 
                     self.removeRow(deleteIndex)
 
-                    AS_UserSubscription().pop(deleteUnique)
+                    Storage.UserSubs().pop(deleteUnique)
 
                     # Begin timer cleanup
                     qtimer = self.timers[deleteIndex]
@@ -277,8 +277,8 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
     def handleAutoUpdateComboBoxCurrentTextChanged(self, text: str, row: int):
         textEnglish = _(text, 'EN')
 
-        unique = list(AS_UserSubscription().keys())[row]
-        subsob = AS_UserSubscription()[unique]
+        unique = list(Storage.UserSubs().keys())[row]
+        subsob = Storage.UserSubs()[unique]
 
         remark, webURL = subsob['remark'], subsob['webURL']
 
@@ -346,8 +346,8 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
     def handleProxyComboBoxCurrentTextChanged(self, text: str, row: int):
         textEnglish = _(text, 'EN')
 
-        unique = list(AS_UserSubscription().keys())[row]
-        subsob = AS_UserSubscription()[unique]
+        unique = list(Storage.UserSubs().keys())[row]
+        subsob = Storage.UserSubs()[unique]
 
         try:
             proxyFn = self.ProxyOptions[textEnglish]
@@ -380,7 +380,7 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
 
             if oldItem is None:
                 # Item does not exist
-                newItem.setFont(QFont(APP().customFontName))
+                newItem.setFont(QFont(AppFontName()))
             else:
                 # Use existing
                 newItem.setFont(oldItem.font())
@@ -409,7 +409,7 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
 
             if oldItem is None:
                 # Item does not exist
-                newItem.setFont(QFont(APP().customFontName))
+                newItem.setFont(QFont(AppFontName()))
             else:
                 # Use existing
                 newItem.setFont(oldItem.font())
@@ -439,7 +439,7 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
 
             if oldItem is None:
                 # Item does not exist
-                newItem.setFont(QFont(APP().customFontName))
+                newItem.setFont(QFont(AppFontName()))
             else:
                 # Use existing
                 newItem.setFont(oldItem.font())
@@ -464,12 +464,12 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
     def flushAll(self):
         if self.rowCount() == 0:
             # Should insert row
-            for index, key in enumerate(AS_UserSubscription()):
+            for index, key in enumerate(Storage.UserSubs()):
                 self.insertRow(index)
-                self.flushRow(index, AS_UserSubscription()[key])
+                self.flushRow(index, Storage.UserSubs()[key])
         else:
-            for index, key in enumerate(AS_UserSubscription()):
-                self.flushRow(index, AS_UserSubscription()[key])
+            for index, key in enumerate(Storage.UserSubs()):
+                self.flushRow(index, Storage.UserSubs()[key])
 
     def appendNewItem(self, **kwargs):
         unique, remark, webURL, autoupdate, proxy = (
@@ -493,11 +493,11 @@ class UserSubsQTableWidget(QTranslatable, AppQTableWidget):
 
         # 'unique' should be unique in subscription storage,
         # but protect it anyway.
-        if unique not in AS_UserSubscription():
+        if unique not in Storage.UserSubs():
             # Add timer
             self.timers.append(QtCore.QTimer())
 
-        AS_UserSubscription().update(subsob)
+        Storage.UserSubs().update(subsob)
 
         row = self.rowCount()
 

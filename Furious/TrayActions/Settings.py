@@ -15,13 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
+from Furious.Frozenlib import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Utility import *
 
 from typing import Union
-
-import functools
 
 __all__ = ['SettingsAction']
 
@@ -32,10 +31,10 @@ registerAppSettings('UseMonochromeTrayIcon', isBinary=True)
 if PLATFORM == 'Darwin':
     registerAppSettings('HideDockIcon', isBinary=True)
 
-registerAppSettings('StartupOnBoot', isBinary=True, default=BinarySettings.ON_)
-registerAppSettings('PowerSaveMode', isBinary=True, default=BinarySettings.ON_)
+registerAppSettings('StartupOnBoot', isBinary=True, default=AppBinarySettings.ON_)
+registerAppSettings('PowerSaveMode', isBinary=True, default=AppBinarySettings.ON_)
 registerAppSettings(
-    'ShowProgressBarWhenConnecting', isBinary=True, default=BinarySettings.ON_
+    'ShowProgressBarWhenConnecting', isBinary=True, default=AppBinarySettings.ON_
 )
 registerAppSettings('ShowTabAndSpacesInEditor', isBinary=True)
 
@@ -48,7 +47,7 @@ TRANSLATABLE_TUN_MODE = [
 
 class TUNModeAction(AppQAction):
     def __init__(self, **kwargs):
-        if isAdministrator():
+        if SystemRuntime.isAdmin():
             super().__init__(_('TUN Mode'), **kwargs)
         else:
             super().__init__(_(f'TUN Mode Disabled ({ADMINISTRATOR_NAME})'), **kwargs)
@@ -56,7 +55,7 @@ class TUNModeAction(AppQAction):
             self.setDisabled(True)
 
     def triggeredCallback(self, checked):
-        assert isAdministrator()
+        assert SystemRuntime.isAdmin()
 
         if checked:
             AppSettings.turnON_('VPNMode')

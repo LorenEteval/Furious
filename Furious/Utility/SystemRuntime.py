@@ -17,9 +17,7 @@
 
 from __future__ import annotations
 
-from Furious.Utility.Constants import *
-from Furious.Utility.AppSettings import AppSettings
-from Furious.Utility.Utility import runExternalCommand
+from Furious.Frozenlib import *
 
 import os
 import sys
@@ -27,99 +25,89 @@ import ctypes
 import functools
 import subprocess
 
-__all__ = [
-    'getPythonVersion',
-    'getUbuntuRelease',
-    'getAppImagePath',
-    'isAdministrator',
-    'isTUNMode',
-    'isScriptMode',
-    'isPythonw',
-    'isWindows7',
-]
+__all__ = ['SystemRuntime']
 
 
-@functools.lru_cache(None)
-def getPythonVersion():
-    return '.'.join(str(info) for info in sys.version_info)
-
-
-@functools.lru_cache(None)
-def getUbuntuRelease() -> str:
-    try:
-        if PLATFORM != 'Linux':
-            return ''
-
-        result = runExternalCommand(
-            ['cat', '/etc/lsb-release'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=True,
-        )
-
-        values = dict(
-            list(line.split('='))
-            for line in filter(lambda x: x != '', result.stdout.decode().split('\n'))
-        )
-
-        if values['DISTRIB_ID'] == 'Ubuntu':
-            return values['DISTRIB_RELEASE']
-        else:
-            return ''
-    except Exception:
-        # Any non-exit exceptions
-
-        return ''
-
-
-def getAppImagePath() -> str:
-    if PLATFORM != 'Linux':
-        return ''
-
-    if 'APPIMAGE' in os.environ:
-        return os.environ['APPIMAGE']
-    else:
-        return ''
-
-
-@functools.lru_cache(None)
-def isAdministrator() -> bool:
-    if PLATFORM == 'Windows':
-        return ctypes.windll.shell32.IsUserAnAdmin() == 1
-    else:
-        return os.geteuid() == 0
-
-
-def isTUNMode() -> bool:
-    return isAdministrator() and AppSettings.isStateON_('VPNMode')
-
-
-@functools.lru_cache(None)
-def isScriptMode() -> bool:
-    return sys.argv[0].endswith('.py')
-
-
-@functools.lru_cache(None)
-def isPythonw() -> bool:
-    def isRealFile(file):
-        if not hasattr(file, 'fileno'):
-            return False
-
+class SystemRuntime:
+    @staticmethod
+    @functools.lru_cache(None)
+    def ubuntuRelease() -> str:
         try:
-            tmp = os.dup(file.fileno())
+            if PLATFORM != 'Linux':
+                return ''
+
+            result = runExternalCommand(
+                ['cat', '/etc/lsb-release'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+
+            values = dict(
+                list(line.split('='))
+                for line in filter(
+                    lambda x: x != '', result.stdout.decode().split('\n')
+                )
+            )
+
+            if values['DISTRIB_ID'] == 'Ubuntu':
+                return values['DISTRIB_RELEASE']
+            else:
+                return ''
         except Exception:
             # Any non-exit exceptions
 
-            return False
+            return ''
+
+    @staticmethod
+    def appImagePath() -> str:
+        if PLATFORM != 'Linux':
+            return ''
+
+        if 'APPIMAGE' in os.environ:
+            return os.environ['APPIMAGE']
         else:
-            os.close(tmp)
+            return ''
 
-            return True
+    @staticmethod
+    @functools.lru_cache(None)
+    def isAdmin() -> bool:
+        if PLATFORM == 'Windows':
+            return ctypes.windll.shell32.IsUserAnAdmin() == 1
+        else:
+            return os.geteuid() == 0
 
-    # pythonw.exe. Also applies to packed GUI application on Windows
-    return not isRealFile(sys.__stdout__) or not isRealFile(sys.__stderr__)
+    @staticmethod
+    def isTUNMode() -> bool:
+        return SystemRuntime.isAdmin() and AppSettings.isStateON_('VPNMode')
 
+    @staticmethod
+    @functools.lru_cache(None)
+    def isScriptMode() -> bool:
+        return sys.argv[0].endswith('.py')
 
-@functools.lru_cache(None)
-def isWindows7() -> bool:
-    return PLATFORM == 'Windows' and PLATFORM_RELEASE == '7'
+    @staticmethod
+    @functools.lru_cache(None)
+    def isPythonw() -> bool:
+        def isRealFile(file):
+            if not hasattr(file, 'fileno'):
+                return False
+
+            try:
+                tmp = os.dup(file.fileno())
+            except Exception:
+                # Any non-exit exceptions
+
+                return False
+            else:
+                os.close(tmp)
+
+                return True
+
+        # pythonw.exe. Also applies to packed GUI application on Windows
+        return not isRealFile(sys.__stdout__) or not isRealFile(sys.__stderr__)
+
+    @staticmethod
+    @functools.lru_cache(None)
+    def isWindows7() -> bool:
+        return PLATFORM == 'Windows' and PLATFORM_RELEASE == '7'

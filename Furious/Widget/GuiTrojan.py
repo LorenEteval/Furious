@@ -17,69 +17,23 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
+from Furious.Library import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Widget.GuiVTransport import *
 from Furious.Widget.GuiVTLS import *
 
+import functools
+
 __all__ = ['GuiTrojan']
 
-
-def getProxyOutboundObject(config: ConfigurationFactory) -> dict:
-    if not isinstance(config.get('outbounds'), list):
-        config['outbounds'] = []
-
-    for outbound in config['outbounds']:
-        if isinstance(outbound, dict):
-            tag = outbound.get('tag')
-
-            if isinstance(tag, str) and tag == 'proxy':
-                return outbound
-
-    outboundObject = {
-        'tag': 'proxy',
-        'protocol': 'trojan',
-        'settings': {
-            'servers': [
-                {
-                    'address': '',
-                    'port': 0,
-                    'password': '',
-                    'email': PROXY_OUTBOUND_USER_EMAIL,
-                }
-            ]
-        },
-        'streamSettings': {
-            'network': 'tcp',
-        },
-        'mux': {
-            'enabled': False,
-            'concurrency': -1,
-        },
-    }
-
-    # Proxy outbound not found. Add it
-    config['outbounds'].append(outboundObject)
-
-    return outboundObject
-
-
-def getProxyOutboundServer(config: ConfigurationFactory) -> dict:
-    proxyOutbound = getProxyOutboundObject(config)
-
-    try:
-        server = proxyOutbound['settings']['servers'][0]
-    except Exception:
-        # Any non-exit exceptions
-
-        server = {}
-
-    if not isinstance(server, dict):
-        server = {}
-
-    return server
+getProxyOutboundServer = functools.partial(
+    ConfigXray.getProxyOutboundServer,
+    protocol=Protocol.Trojan,
+    default=configXrayEmptyProxyOutboundObject(Protocol.Trojan),
+)
 
 
 class GuiTrojanItemTextInput(GuiEditorItemTextInput):
@@ -90,7 +44,7 @@ class GuiTrojanItemTextInput(GuiEditorItemTextInput):
 
         self.key = key
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldValue = proxyOutboundServer.get(self.key, '')
@@ -112,7 +66,7 @@ class GuiTrojanItemTextInput(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -130,7 +84,7 @@ class GuiTrojanItemBasicPort(GuiEditorItemTextSpinBox):
         # Range
         self.setRange(0, 65535)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldPort = proxyOutboundServer.get('port')
@@ -148,7 +102,7 @@ class GuiTrojanItemBasicPort(GuiEditorItemTextSpinBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -187,7 +141,7 @@ class GuiTrojan(GuiEditorWidgetQDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setTabText(Protocol.Trojan)
+        self.setTabText(Protocol.Trojan.value)
 
     def groupBoxSequence(self):
         return [

@@ -17,14 +17,17 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
+from Furious.Library import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Utility import *
 
 from PySide6.QtGui import *
 
 import logging
+import functools
 
 __all__ = ['GuiTUNSettings']
 
@@ -164,7 +167,7 @@ class GuiTUNSettings(GuiEditorWidgetQDialog):
         self.setFixedSize(int(460 * GOLDEN_RATIO), int(460))
 
         # Shallow copy
-        config = AS_UserTUNSettings()
+        config = Storage.UserTUNSettings()
 
         try:
             self.factoryToInput(config)
@@ -179,7 +182,7 @@ class GuiTUNSettings(GuiEditorWidgetQDialog):
     def handleAccepted(self, config: dict):
         modified = self.inputToFactory(config)
 
-        if modified and isTUNMode():
+        if modified and SystemRuntime.isTUNMode():
             showNewChangesNextTimeMBox()
 
         self.accepted.disconnect()
