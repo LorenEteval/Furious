@@ -914,11 +914,11 @@ class ConfigXray(ConfigFactory):
             if TLSObject.get('shortId'):
                 kwargs['sid'] = TLSObject['shortId']
 
-            if TLSObject.get('spiderX'):
-                kwargs['spx'] = quote(TLSObject['spiderX'])
-
             if TLSObject.get('mldsa65Verify'):
                 kwargs['pqv'] = TLSObject['mldsa65Verify']
+
+            if TLSObject.get('spiderX'):
+                kwargs['spx'] = quote(TLSObject['spiderX'])
 
         return kwargs
 
@@ -969,15 +969,15 @@ class ConfigXray(ConfigFactory):
             # More args for reality
             pbk = kwargs.get('pbk')
             sid = kwargs.get('sid', '')
-            spx = kwargs.get('spx', '')
             pqv = kwargs.get('pqv', '')
+            spx = kwargs.get('spx', '')
 
             if pbk:
                 TLSObject['publicKey'] = pbk
 
             TLSObject['shortId'] = sid
-            TLSObject['spiderX'] = unquote(spx)
             TLSObject['mldsa65Verify'] = pqv
+            TLSObject['spiderX'] = unquote(spx)
 
         return TLSObject
 
