@@ -1654,7 +1654,7 @@ TRANSLATION = {
         "ZH": "TUN适配器接口DNS",
         "isReviewed": "True"
     },
-    "Bypass TUN adapter interface IP (separated by commas)": {
+    "Bypass TUN Adapter Interface IP (separated by commas)": {
         "source": [
             "Furious.Widget.GuiTUNSettings"
         ],
@@ -1668,6 +1668,38 @@ TRANSLATION = {
         ],
         "RU": "Отключить DNS основного сетевого адаптера (для предотвращения утечек DNS в Windows)",
         "ZH": "禁用主适配器接口DNS（在Windows上缓解DNS泄露）",
+        "isReviewed": "True"
+    },
+    "Memory Optimization": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "ZH": "内存优化",
+        "RU": "Оптимизация памяти",
+        "isReviewed": "True"
+    },
+    "TCP Send Buffer Size": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "ZH": "TCP发送缓冲区大小",
+        "RU": "Размер буфера отправки TCP",
+        "isReviewed": "True"
+    },
+    "TCP Receive Buffer Size": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "ZH": "TCP接收缓冲区大小",
+        "RU": "Размер буфера приема TCP",
+        "isReviewed": "True"
+    },
+    "TCP Receive Buffer Auto-tuning": {
+        "source": [
+            "Furious.Widget.GuiTUNSettings"
+        ],
+        "ZH": "TCP接收缓冲区自动调优",
+        "RU": "Автоматическая настройка буфера приема TCP",
         "isReviewed": "True"
     }
 }

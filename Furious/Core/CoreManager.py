@@ -95,6 +95,9 @@ def getUserTUNSettings(*args, **kwargs):
     userTunAdapterInterfaceDNS,
     userBypassTUNAdapterInterfaceIP,
     userDisablePrimaryAdapterInterfaceDNS,
+    userTcpSendBufferSize,
+    userTcpReceiveBufferSize,
+    userTcpAutoTuning,
 ) = (
     functools.partial(getUserTUNSettings, 'primaryAdapterInterfaceName', ''),
     functools.partial(getUserTUNSettings, 'primaryAdapterInterfaceIP', ''),
@@ -102,6 +105,9 @@ def getUserTUNSettings(*args, **kwargs):
     functools.partial(getUserTUNSettings, 'tunAdapterInterfaceDNS', ''),
     functools.partial(getUserTUNSettings, 'bypassTUNAdapterInterfaceIP', ''),
     functools.partial(getUserTUNSettings, 'disablePrimaryAdapterInterfaceDNS', 'True'),
+    functools.partial(getUserTUNSettings, 'tcpSendBufferSize', ''),
+    functools.partial(getUserTUNSettings, 'tcpReceiveBufferSize', ''),
+    functools.partial(getUserTUNSettings, 'tcpAutoTuning', 'False'),
 )
 
 
@@ -161,7 +167,7 @@ class CoreManager(Mixins.CleanupOnExit):
                 # Show the MessageBox asynchronously
                 mbox.open()
 
-                return False
+                return None, False
 
             routingObject = {
                 'domainStrategy': 'IPIfNonMatch',
@@ -238,7 +244,7 @@ class CoreManager(Mixins.CleanupOnExit):
                 # Show the MessageBox asynchronously
                 mbox.open()
 
-                return False
+                return None, False
 
             routingObject = {
                 'rule': DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl',
@@ -385,12 +391,42 @@ class CoreManager(Mixins.CleanupOnExit):
                 tun = Tun2socks(exitCallback=exitCallback, msgCallback=msgCallbackTUN_)
                 self.processesPool.append(tun)
 
+                tcpSendBufferSize, tcpReceiveBufferSize, tcpAutoTuning = (
+                    userTcpSendBufferSize(),
+                    userTcpReceiveBufferSize(),
+                    userTcpAutoTuning(),
+                )
+
+                if tcpSendBufferSize != '':
+                    logger.info(
+                        f'got user defined TUN settings. TcpSendBufferSize: {tcpSendBufferSize}'
+                    )
+
+                if tcpReceiveBufferSize != '':
+                    logger.info(
+                        f'got user defined TUN settings. TCPReceiveBufferSize: {tcpReceiveBufferSize}'
+                    )
+
+                if tcpAutoTuning == 'False':
+                    tcpAutoTuning = False
+                elif tcpAutoTuning == 'True':
+                    tcpAutoTuning = True
+
+                    logger.info(
+                        f'got user defined TUN settings. TcpAutoTuning: {tcpAutoTuning}'
+                    )
+                else:
+                    tcpAutoTuning = False
+
                 if not tun.start(
                     APPLICATION_TUN_DEVICE_NAME,
                     APPLICATION_TUN_NETWORK_INTERFACE_NAME,
                     'error',
                     f'socks5://{configcopy.socksProxy()}',
                     '',
+                    tcpSendBufferSize,
+                    tcpReceiveBufferSize,
+                    tcpAutoTuning,
                 ):
                     return False
 

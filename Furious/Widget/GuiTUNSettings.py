@@ -57,19 +57,20 @@ class GuiTUNSettingsItemXXX(GuiEditorItemTextInput):
         self.setText(config.get(self.key, ''))
 
 
-class GuiTUNSettingsItemDisablePrimaryAdapterInterfaceDNS(GuiEditorItemTextCheckBox):
+class GuiTUNSettingsItemCheckBoxXXX(GuiEditorItemTextCheckBox):
     def __init__(self, *args, **kwargs):
         self.key = kwargs.pop('key', '')
+        self.default = kwargs.pop('default', 'False')
 
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: dict) -> bool:
-        oldItem = config.get(self.key, 'True')
+        oldItem = config.get(self.key, self.default)
         newItem = self.isChecked()
 
         if oldItem not in ['False', 'True']:
             # Invalid value. Set to default
-            oldItem = 'True'
+            oldItem = self.default
 
         if str(newItem) != oldItem:
             config[self.key] = str(newItem)
@@ -81,7 +82,7 @@ class GuiTUNSettingsItemDisablePrimaryAdapterInterfaceDNS(GuiEditorItemTextCheck
             return False
 
     def factoryToInput(self, config: dict):
-        self.setChecked(config.get(self.key, 'True') != 'False')
+        self.setChecked(config.get(self.key, self.default) == 'True')
 
 
 class AppQLabelHelpPage(AppQLabel):
@@ -121,7 +122,7 @@ class GuiTUNSettingsItemHelpPage(GuiEditorItemWidgetContainer):
         return [self._page]
 
 
-class GuiTUNSettingsGroupBox(GuiEditorWidgetQGroupBox):
+class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
     def __init__(self, **kwargs):
         super().__init__(_('Basic Configuration'), **kwargs)
 
@@ -144,27 +145,51 @@ class GuiTUNSettingsGroupBox(GuiEditorWidgetQGroupBox):
                 key='tunAdapterInterfaceDNS',
             ),
             GuiTUNSettingsItemXXX(
-                title=_('Bypass TUN adapter interface IP (separated by commas)'),
+                title=_('Bypass TUN Adapter Interface IP (separated by commas)'),
                 key='bypassTUNAdapterInterfaceIP',
             ),
-            GuiTUNSettingsItemDisablePrimaryAdapterInterfaceDNS(
+            GuiTUNSettingsItemCheckBoxXXX(
                 title=_(
                     'Disable Primary Adapter Interface DNS (Mitigating DNS leaks on Windows)'
                 ),
                 key='disablePrimaryAdapterInterfaceDNS',
+                default='True',
             ),
             GuiTUNSettingsItemHelpPage(),
+        ]
+
+
+class GuiTUNSettingsGroupBoxMemory(GuiEditorWidgetQGroupBox):
+    def __init__(self, **kwargs):
+        super().__init__(_('Memory Optimization'), **kwargs)
+
+    def containerSequence(self):
+        return [
+            GuiTUNSettingsItemXXX(
+                title=_('TCP Send Buffer Size'),
+                key='tcpSendBufferSize',
+            ),
+            GuiTUNSettingsItemXXX(
+                title=_('TCP Receive Buffer Size'),
+                key='tcpReceiveBufferSize',
+            ),
+            GuiTUNSettingsItemCheckBoxXXX(
+                title=_('TCP Receive Buffer Auto-tuning'),
+                key='tcpAutoTuning',
+                default='False',
+            ),
         ]
 
 
 class GuiTUNSettings(GuiEditorWidgetQDialog):
     def __init__(self, *args, **kwargs):
         tabTranslatable = kwargs.pop('tabTranslatable', True)
+        style = kwargs.pop('style', 'portrait')
 
-        super().__init__(*args, tabTranslatable=tabTranslatable, **kwargs)
+        super().__init__(*args, tabTranslatable=tabTranslatable, style=style, **kwargs)
 
         self.setTabText(_('Customize TUN Settings'))
-        self.setFixedSize(int(460 * GOLDEN_RATIO), int(460))
+        self.setFixedSize(int(480 * GOLDEN_RATIO), int(480))
 
         # Shallow copy
         config = Storage.UserTUNSettings()
@@ -195,16 +220,18 @@ class GuiTUNSettings(GuiEditorWidgetQDialog):
     def inputToFactory(self, config: dict) -> bool:
         modified = False
 
-        for groupBox in self.groupBoxes:
+        for groupBox in self.groupBoxSequence():
             modified |= groupBox.inputToFactory(config)
 
         return modified
 
     def factoryToInput(self, config: dict):
-        for groupBox in self.groupBoxes:
+        for groupBox in self.groupBoxSequence():
             groupBox.factoryToInput(config)
 
+    @functools.lru_cache(None)
     def groupBoxSequence(self):
         return [
-            GuiTUNSettingsGroupBox(),
+            GuiTUNSettingsGroupBoxBasic(),
+            GuiTUNSettingsGroupBoxMemory(),
         ]
