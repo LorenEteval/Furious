@@ -17,18 +17,15 @@
 
 from __future__ import annotations
 
-from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Library import *
-from Furious.Utility import *
+from Furious.Frozenlib import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Widget.XrayAssetViewerQListWidget import *
 
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 import logging
-import functools
 
 __all__ = ['XrayAssetViewerWindow']
 

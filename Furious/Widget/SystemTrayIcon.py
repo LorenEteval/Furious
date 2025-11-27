@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
+from Furious.Frozenlib import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Utility import *
 from Furious.TrayActions import *
 
@@ -34,9 +34,9 @@ __all__ = ['SystemTrayIcon']
 
 
 class SystemTrayIcon(
-    QTranslatable,
-    SupportConnectedCallback,
-    SupportThemeChangedCallback,
+    Mixins.QTranslatable,
+    Mixins.ConnectionAware,
+    Mixins.ThemeAware,
     QSystemTrayIcon,
 ):
     def __init__(self, *args, **kwargs):
@@ -150,7 +150,7 @@ class SystemTrayIcon(
 
         if (
             PLATFORM == 'Darwin'
-            or isWindows7()
+            or SystemRuntime.isWindows7()
             or (PLATFORM == 'Windows' and darkdetect.theme() == 'Light')
         ):
             # Darker
@@ -164,12 +164,12 @@ class SystemTrayIcon(
 
             return
 
-        if isAdministrator():
+        if SystemRuntime.isAdmin():
             self.setIcon(bootstrapIcon('rocket-takeoff-admin-connected.svg'))
         else:
             if (
                 PLATFORM == 'Darwin'
-                or isWindows7()
+                or SystemRuntime.isWindows7()
                 or (PLATFORM == 'Windows' and darkdetect.theme() == 'Light')
             ):
                 # Darker

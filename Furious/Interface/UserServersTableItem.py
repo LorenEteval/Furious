@@ -17,12 +17,10 @@
 
 from __future__ import annotations
 
-from abc import ABC
-
 __all__ = ['UserServersTableItem']
 
 
-class UserServersTableItem(ABC):
+class UserServersTableItem:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

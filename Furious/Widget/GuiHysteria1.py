@@ -17,17 +17,16 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 import logging
-import functools
 
 __all__ = ['GuiHysteria1']
 
@@ -42,7 +41,7 @@ class GuiHy1ItemTextInput(GuiEditorItemTextInput):
 
         self.key = key
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         oldValue = config.get(self.key, '')
         newValue = self.text()
 
@@ -62,7 +61,7 @@ class GuiHy1ItemTextInput(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             self.setText(config.get(self.key, ''))
         except Exception:
@@ -77,7 +76,7 @@ class GuiHy1ItemBasicProtocol(GuiEditorItemTextComboBox):
 
         self.addItems(['', 'udp', 'wechat-video', 'faketcp'])
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         oldProtocol = config.get('protocol', '')
         newProtocol = self.text()
 
@@ -93,7 +92,7 @@ class GuiHy1ItemBasicProtocol(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             self.setText(config.get('protocol', 'udp'))
         except Exception:
@@ -109,7 +108,7 @@ class GuiHy1ItemSpeedUpMbps(GuiEditorItemTextSpinBox):
         # Range
         self.setRange(0, 1048576)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         oldUpMbps = config.get('up_mbps')
         newUpMbps = self.value()
 
@@ -125,7 +124,7 @@ class GuiHy1ItemSpeedUpMbps(GuiEditorItemTextSpinBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             self.setValue(config.get('up_mbps'))
         except Exception:
@@ -141,7 +140,7 @@ class GuiHy1ItemSpeedDownMbps(GuiEditorItemTextSpinBox):
         # Range
         self.setRange(0, 1048576)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         oldDownMbps = config.get('down_mbps')
         newDownMbps = self.value()
 
@@ -157,7 +156,7 @@ class GuiHy1ItemSpeedDownMbps(GuiEditorItemTextSpinBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             self.setValue(config.get('down_mbps'))
         except Exception:
@@ -170,7 +169,7 @@ class GuiHy1ItemTLSInsecure(GuiEditorItemTextCheckBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         try:
             oldChecked = config.get('insecure')
         except Exception:
@@ -201,7 +200,7 @@ class GuiHy1ItemTLSInsecure(GuiEditorItemTextCheckBox):
             # Modified silently
             return False
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             checked = config['insecure']
         except Exception:
@@ -304,10 +303,10 @@ class GuiHy1GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):
 
         self.setLayout(layout)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         return False
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         pass
 
 
@@ -315,7 +314,7 @@ class GuiHysteria1(GuiEditorWidgetQDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setTabText(Protocol.Hysteria1)
+        self.setTabText(Protocol.Hysteria1.value)
 
     def groupBoxSequence(self):
         return [

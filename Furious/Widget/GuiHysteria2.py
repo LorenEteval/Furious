@@ -17,17 +17,16 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 import logging
-import functools
 
 __all__ = ['GuiHysteria2']
 
@@ -38,7 +37,7 @@ class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         oldServer = config.get('server', '')
         newServer = self.text()
 
@@ -54,7 +53,7 @@ class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             self.setText(config.get('server', ''))
         except Exception:
@@ -67,7 +66,7 @@ class GuiHy2ItemBasicAuth(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         oldAuth = config.get('auth')
         newAuth = self.text()
 
@@ -91,7 +90,7 @@ class GuiHy2ItemBasicAuth(GuiEditorItemTextInput):
 
                 return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             self.setText(config.get('auth', ''))
         except Exception:
@@ -107,7 +106,7 @@ class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
         # TODO: Only 'salamander' is currently supported by hy2
         self.addItems(['', 'salamander'])
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         try:
             oldObfsType = config['obfs']['type']
         except Exception:
@@ -140,7 +139,7 @@ class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
             else:
                 return False
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             obfsType = config['obfs']['type']
         except Exception:
@@ -159,7 +158,7 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         newObfsPassword = self.text()
 
         try:
@@ -205,7 +204,7 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
         else:
             return modified
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             obfsType = config['obfs']['type']
         except Exception:
@@ -237,7 +236,7 @@ class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
 
         self.key = key
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         newValue = self.text()
 
         if newValue == '':
@@ -293,7 +292,7 @@ class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
             else:
                 return False
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             value = config['tls'][self.key]
         except Exception:
@@ -308,7 +307,7 @@ class GuiHy2ItemTLSInsecure(GuiEditorItemTextCheckBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         try:
             oldChecked = config['tls']['insecure']
         except Exception:
@@ -339,7 +338,7 @@ class GuiHy2ItemTLSInsecure(GuiEditorItemTextCheckBox):
             else:
                 return False
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             checked = config['tls']['insecure']
         except Exception:
@@ -444,10 +443,10 @@ class GuiHy2GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):
 
         self.setLayout(layout)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         return False
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         pass
 
 
@@ -455,7 +454,7 @@ class GuiHysteria2(GuiEditorWidgetQDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setTabText(Protocol.Hysteria2)
+        self.setTabText(Protocol.Hysteria2.value)
 
     def groupBoxSequence(self):
         return [

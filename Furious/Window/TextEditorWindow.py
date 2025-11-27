@@ -17,11 +17,10 @@
 
 from __future__ import annotations
 
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
+from Furious.Frozenlib import *
 from Furious.Library import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Widget.IndentSpinBox import *
 
 from PySide6 import QtCore
@@ -98,7 +97,7 @@ class TextEditorWindow(AppQMainWindow):
             )
 
         self.jsonEditor = DraculaJSONTextEditor(
-            fontFamily=APP().customFontName,
+            fontFamily=AppFontName(),
             pointSizeSettingsName='ServerWidgetPointSize',
         )
         self.jsonEditor.setLineWrapMode(DraculaJSONTextEditor.LineWrapMode.NoWrap)
@@ -230,7 +229,7 @@ class TextEditorWindow(AppQMainWindow):
 
     def setPlainText(self, text: str, blockSignals: bool):
         if blockSignals:
-            with QBlockSignals(self.jsonEditor):
+            with Mixins.QBlockSignalContext(self.jsonEditor):
                 self.jsonEditor.setPlainText(text)
         else:
             self.jsonEditor.setPlainText(text)
@@ -262,12 +261,12 @@ class TextEditorWindow(AppQMainWindow):
 
             return False
         else:
-            old = AS_UserServers()[index]
-            new = constructFromDict(jsonObject, **old.kwargs)
+            old = Storage.UserServers()[index]
+            new = configFactoryFromDict(jsonObject, **old.kwargs)
 
             old.deleted = True
 
-            AS_UserServers()[index] = new
+            Storage.UserServers()[index] = new
 
             try:
                 APP().mainWindow.flushRow(index, new)
@@ -276,7 +275,7 @@ class TextEditorWindow(AppQMainWindow):
 
                 pass
 
-            if index == AS_UserActivatedItemIndex():
+            if index == Storage.UserActivatedItemIndex():
                 showNewChangesNextTimeMBox(parent=self, method=showChangesMethod)
 
             self.markAsSaved()
@@ -306,7 +305,7 @@ class TextEditorWindow(AppQMainWindow):
 
     def setIndent(self):
         def handleResultCode(_indentSpinBox, code):
-            if code == PySide6LegacyEnumValueWrapper(AppQDialog.DialogCode.Accepted):
+            if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
                 plain = self.jsonEditor.toPlainText()
 
                 try:

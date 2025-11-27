@@ -15,9 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Utility.Constants import *
-from Furious.Utility.AppSettings import *
-from Furious.Utility.SystemRuntime import getAppImagePath, isScriptMode
+from Furious.Frozenlib import *
+from Furious.Utility.SystemRuntime import *
 
 from PySide6 import QtCore
 
@@ -35,7 +34,7 @@ class StartupOnBoot:
     @staticmethod
     def on_():
         def _on_():
-            if isScriptMode():
+            if SystemRuntime.isScriptMode():
                 # Script mode
                 logger.info('ignore turn on StartupOnBoot in script mode')
 
@@ -67,7 +66,7 @@ class StartupOnBoot:
 
                     return False
 
-                appImagePath = getAppImagePath()
+                appImagePath = SystemRuntime.appImagePath()
 
                 if appImagePath:
                     execPath = appImagePath
@@ -122,13 +121,11 @@ class StartupOnBoot:
                         'RunAtLoad': True,
                     }
 
-                    with open(
-                        os.path.join(
-                            autostartDir,
-                            f'{APPLICATION_MACOS_SIGNATURE}.{APPLICATION_NAME}.plist',
-                        ),
-                        'wb',
-                    ) as file:
+                    plistFile = (
+                        f'{APPLICATION_MACOS_SIGNATURE}.{APPLICATION_NAME}.plist'
+                    )
+
+                    with open(os.path.join(autostartDir, plistFile), 'wb') as file:
                         plistlib.dump(plistData, file)
                 except Exception:
                     # Any non-exit exceptions
@@ -176,13 +173,10 @@ class StartupOnBoot:
                     os.path.expanduser('~'), 'Library', 'LaunchAgents'
                 )
 
+                plistFile = f'{APPLICATION_MACOS_SIGNATURE}.{APPLICATION_NAME}.plist'
+
                 try:
-                    os.remove(
-                        os.path.join(
-                            autostartDir,
-                            f'{APPLICATION_MACOS_SIGNATURE}.{APPLICATION_NAME}.plist',
-                        )
-                    )
+                    os.remove(os.path.join(autostartDir, plistFile))
                 except FileNotFoundError:
                     return True
                 except Exception:

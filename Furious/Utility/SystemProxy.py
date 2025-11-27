@@ -17,9 +17,7 @@
 
 from __future__ import annotations
 
-from Furious.Utility.Constants import *
-from Furious.Utility.Utility import parseHostPort, runExternalCommand
-from Furious.Utility.AppSettings import *
+from Furious.Frozenlib import *
 
 import logging
 import subprocess
@@ -148,6 +146,9 @@ class _SystemProxy:
             if PLATFORM == 'Linux':
                 try:
                     host, port = parseHostPort(server)
+
+                    if host is None or port is None:
+                        raise
 
                     linuxProxyConfig('proxy.http', 'host', host)
                     linuxProxyConfig('proxy.http', 'port', port)

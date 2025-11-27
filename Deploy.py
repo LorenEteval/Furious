@@ -17,7 +17,7 @@
 
 from __future__ import annotations
 
-from Furious.Utility import *
+from Furious.Frozenlib import *
 
 import os
 import re

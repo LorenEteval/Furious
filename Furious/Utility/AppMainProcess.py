@@ -17,8 +17,8 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Utility.Constants import *
 
 from typing import Callable
 
@@ -43,14 +43,14 @@ else:
 
 
 class AppMainProcess(ProcessContext.Process):
-    def __init__(self, loader: Callable[[], ApplicationFactory], **kwargs):
+    def __init__(self, func: Callable[[], ApplicationFactory], **kwargs):
         super().__init__(**kwargs)
 
         self.startupTime = str(datetime.datetime.now()).replace(':', '')
         self.logFileName = f'{self.startupTime}.log'
         self.fileWritten = multiprocessing.Manager().Value('b', False)
 
-        self.loader = loader
+        self.func = func
         self.application = None
 
     def exceptHook(self, exceptionType, exceptionValue, tb):
@@ -58,9 +58,9 @@ class AppMainProcess(ProcessContext.Process):
             traceback.print_exception(exceptionType, exceptionValue, tb)
 
         if isinstance(exceptionValue, AssertionError):
-            exitcode = ApplicationFactory.ExitCode.AssertionError
+            exitcode = ApplicationFactory.ExitCode.AssertionError.value
         else:
-            exitcode = ApplicationFactory.ExitCode.UnknownException
+            exitcode = ApplicationFactory.ExitCode.UnknownException.value
 
         logger.error(f'stopped with exitcode {exitcode}')
 
@@ -92,7 +92,7 @@ class AppMainProcess(ProcessContext.Process):
             if APP() is None:
                 crashLog = f'{stackLog}'
             else:
-                crashLog = f'{APP().log()}\n{stackLog}'
+                crashLog = f'{AppLoggerWindow.Self().plainText()}\n{stackLog}'
 
             with open(CRASH_LOG_DIR / self.logFileName, 'w', encoding='utf-8') as file:
                 file.write(crashLog)
@@ -111,7 +111,7 @@ class AppMainProcess(ProcessContext.Process):
     def run(self):
         sys.excepthook = self.exceptHook
 
-        self.application = self.loader()
+        self.application = self.func()
 
         for sig in [signal.SIGTERM, signal.SIGINT]:
             signal.signal(sig, self.handler)

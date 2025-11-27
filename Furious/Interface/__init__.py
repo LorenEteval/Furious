@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .Encoder import *
+from .ApplicationFactory import *
+from .EncoderFactory import *
 from .GuiEditorItemFactory import *
+from .StorageFactory import *
 from .UserServersTableItem import *
-from .Storage import *
-from .Application import *
-from .ConfigurationFactory import *
-from .CoreFactory import *
+from .ConfigFactory import *
+from .CoreProcessFactory import *

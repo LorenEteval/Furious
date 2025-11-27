@@ -17,95 +17,36 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
+from Furious.Library import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Widget.GuiVTransport import *
 from Furious.Widget.GuiVTLS import *
 
+import functools
+
 __all__ = ['GuiVLESS']
 
+getProxyOutboundServer = functools.partial(
+    ConfigXray.getProxyOutboundServer,
+    protocol=Protocol.VLESS,
+    default=configXrayEmptyProxyOutboundObject(Protocol.VLESS),
+)
 
-def getProxyOutboundObject(config: ConfigurationFactory) -> dict:
-    if not isinstance(config.get('outbounds'), list):
-        config['outbounds'] = []
-
-    for outbound in config['outbounds']:
-        if isinstance(outbound, dict):
-            tag = outbound.get('tag')
-
-            if isinstance(tag, str) and tag == 'proxy':
-                return outbound
-
-    outboundObject = {
-        'tag': 'proxy',
-        'protocol': 'vless',
-        'settings': {
-            'vnext': [
-                {
-                    'address': '',
-                    'port': 0,
-                    'users': [
-                        {
-                            'email': PROXY_OUTBOUND_USER_EMAIL,
-                        },
-                    ],
-                },
-            ]
-        },
-        'streamSettings': {
-            'network': 'tcp',
-        },
-        'mux': {
-            'enabled': False,
-            'concurrency': -1,
-        },
-    }
-
-    # Proxy outbound not found. Add it
-    config['outbounds'].append(outboundObject)
-
-    return outboundObject
-
-
-def getProxyOutboundServer(config: ConfigurationFactory) -> dict:
-    proxyOutbound = getProxyOutboundObject(config)
-
-    try:
-        server = proxyOutbound['settings']['vnext'][0]
-    except Exception:
-        # Any non-exit exceptions
-
-        server = {}
-
-    if not isinstance(server, dict):
-        server = {}
-
-    return server
-
-
-def getProxyOutboundUser(config: ConfigurationFactory) -> dict:
-    proxyOutboundServer = getProxyOutboundServer(config)
-
-    try:
-        user = proxyOutboundServer['users'][0]
-    except Exception:
-        # Any non-exit exceptions
-
-        user = {}
-
-    if not isinstance(user, dict):
-        user = {}
-
-    return user
+getProxyOutboundUser = functools.partial(
+    ConfigXray.getProxyOutboundUser,
+    protocol=Protocol.VLESS,
+    default=configXrayEmptyProxyOutboundObject(Protocol.VLESS),
+)
 
 
 class GuiVLESSItemBasicAddress(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldAddress = proxyOutboundServer.get('address', '')
@@ -127,7 +68,7 @@ class GuiVLESSItemBasicAddress(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -145,7 +86,7 @@ class GuiVLESSItemBasicPort(GuiEditorItemTextSpinBox):
         # Range
         self.setRange(0, 65535)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldPort = proxyOutboundServer.get('port')
@@ -163,7 +104,7 @@ class GuiVLESSItemBasicPort(GuiEditorItemTextSpinBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -178,7 +119,7 @@ class GuiVLESSItemBasicId(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         proxyOutboundUser = getProxyOutboundUser(config)
 
         oldId = proxyOutboundUser.get('id', '')
@@ -200,7 +141,7 @@ class GuiVLESSItemBasicId(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -215,7 +156,7 @@ class GuiVLESSItemBasicEncryption(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         proxyOutboundUser = getProxyOutboundUser(config)
 
         oldEncryption = proxyOutboundUser.get('encryption', '')
@@ -237,7 +178,7 @@ class GuiVLESSItemBasicEncryption(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -261,7 +202,7 @@ class GuiVLESSItemBasicFlow(GuiEditorItemTextComboBox):
             ]
         )
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         proxyOutboundUser = getProxyOutboundUser(config)
 
         oldFlow = proxyOutboundUser.get('flow', '')
@@ -279,7 +220,7 @@ class GuiVLESSItemBasicFlow(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -320,7 +261,7 @@ class GuiVLESS(GuiEditorWidgetQDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setTabText(Protocol.VLESS)
+        self.setTabText(Protocol.VLESS.value)
 
     def groupBoxSequence(self):
         return [

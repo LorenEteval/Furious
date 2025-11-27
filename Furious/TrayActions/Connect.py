@@ -17,12 +17,12 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
 from Furious.Library import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
+from Furious.Utility import *
 from Furious.Core import *
 from Furious.Widget.ConnectProgressBar import ConnectProgressBar
 
@@ -107,7 +107,7 @@ class ConnectAction(AppQAction):
         APP().systemTray.RoutingAction.setDisabled(value)
         APP().systemTray.SystemProxyAction.setDisabled(value)
 
-        if isAdministrator():
+        if SystemRuntime.isAdmin():
             TUNModeAction = APP().systemTray.SettingsAction.getTUNModeAction()
 
             if TUNModeAction is not None:
@@ -133,7 +133,7 @@ class ConnectAction(AppQAction):
 
         AppSettings.turnON_('Connect')
 
-        SupportConnectedCallback.callConnectedCallback()
+        Mixins.ConnectionAware.callConnectedCallback()
 
         # Accept new action
         self.setDisabledAction(False)
@@ -154,7 +154,7 @@ class ConnectAction(AppQAction):
 
                 pass
 
-        SupportConnectedCallback.callDisconnectedCallback()
+        Mixins.ConnectionAware.callDisconnectedCallback()
 
     def doDisconnectWithTrayMessage(self, message: str):
         self.doDisconnect()
@@ -165,7 +165,7 @@ class ConnectAction(AppQAction):
         # Connect action
         assert self.textCompare('Connect')
 
-        if not AS_UserServers():
+        if not Storage.UserServers():
             AppSettings.turnOFF('Connect')
 
             self.setChecked(False)
@@ -181,7 +181,7 @@ class ConnectAction(AppQAction):
 
             return
 
-        if AS_UserActivatedItemIndex() < 0:
+        if Storage.UserActivatedItemIndex() < 0:
             AppSettings.turnOFF('Connect')
 
             self.setChecked(False)
@@ -198,7 +198,7 @@ class ConnectAction(AppQAction):
             return
 
         try:
-            config = AS_UserServers()[AS_UserActivatedItemIndex()]
+            config = Storage.UserServers()[Storage.UserActivatedItemIndex()]
         except Exception:
             # Any non-exit exceptions
 
@@ -206,9 +206,9 @@ class ConnectAction(AppQAction):
 
             self.setChecked(False)
         else:
-            assert isinstance(config, ConfigurationFactory)
+            assert isinstance(config, ConfigFactory)
 
-            if not validateProxyServer(config.httpProxyEndpoint()):
+            if not validateProxyServer(config.httpProxy()):
                 # Proxy server is not valid. Do not connect
 
                 AppSettings.turnOFF('Connect')
@@ -232,20 +232,20 @@ class ConnectAction(AppQAction):
             self.doConnecting()
 
             # Clear previous log
-            loggerCore().clear()
-            loggerTun_().clear()
+            AppLoggerWindow.Core().clear()
+            AppLoggerWindow.TUN_().clear()
 
             success = self.coreManager.start(
                 config,
                 routing=AppSettings.get('Routing'),
                 exitCallback=self.coreExitCallback,
-                msgCallbackCore=lambda line: loggerCore().appendLine(line),
-                msgCallbackTun_=lambda line: loggerTun_().appendLine(line),
+                msgCallbackCore=lambda line: AppLoggerWindow.Core().appendLine(line),
+                msgCallbackTUN_=lambda line: AppLoggerWindow.TUN_().appendLine(line),
             )
 
             if self.actionQueue.empty():
                 if success:
-                    SystemProxy.set(config.httpProxyEndpoint(), PROXY_SERVER_BYPASS)
+                    SystemProxy.set(config.httpProxy(), PROXY_SERVER_BYPASS)
 
                     self.doConnected()
 
@@ -280,7 +280,7 @@ class ConnectAction(AppQAction):
                 f'{APPLICATION_NAME} {newVersion} ' + _('is available to download')
             )
 
-        connectedHttpProxy = connectedHttpProxyEndpoint()
+        connectedHttpProxy = Storage.Extras.UserHttpProxy()
 
         # Check for updates
         self.updatesManager.configureHttpProxy(connectedHttpProxy)
@@ -308,7 +308,7 @@ class ConnectAction(AppQAction):
             if callable(action):
                 action()
 
-    def coreExitCallback(self, core: CoreFactory, exitcode: int):
+    def coreExitCallback(self, core: CoreProcessFactory, exitcode: int):
         def putItem(item):
             try:
                 self.actionQueue.put_nowait(item)
@@ -317,11 +317,11 @@ class ConnectAction(AppQAction):
 
                 pass
 
-        if exitcode == CoreFactory.ExitCode.SystemShuttingDown:
+        if exitcode == CoreProcessFactory.ExitCode.SystemShuttingDown.value:
             # System shutting down. Do nothing
             return
 
-        if exitcode == CoreFactory.ExitCode.ConfigurationError:
+        if exitcode == CoreProcessFactory.ExitCode.ConfigurationError.value:
             return putItem(
                 functools.partial(
                     self.doDisconnectWithTrayMessage,
@@ -329,7 +329,7 @@ class ConnectAction(AppQAction):
                 )
             )
 
-        if exitcode == CoreFactory.ExitCode.ServerStartFailure:
+        if exitcode == CoreProcessFactory.ExitCode.ServerStartFailure.value:
             return putItem(
                 functools.partial(
                     self.doDisconnectWithTrayMessage,
@@ -338,7 +338,7 @@ class ConnectAction(AppQAction):
             )
 
         if isinstance(core, Hysteria1):
-            if exitcode == Hysteria1.ExitCode.RemoteNetworkError:
+            if exitcode == Hysteria1.ExitCode.RemoteNetworkError.value:
                 return putItem(
                     functools.partial(
                         self.doDisconnectWithTrayMessage,

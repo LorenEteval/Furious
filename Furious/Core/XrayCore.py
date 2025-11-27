@@ -17,11 +17,13 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.QtFramework import *
 from Furious.Library import *
 from Furious.Utility import *
+from Furious.Core.CoreProcessWorker import *
 
+from enum import Enum
 from typing import Union
 
 import io
@@ -39,7 +41,7 @@ def startXrayCore(jsonString: str, msgQueue: multiprocessing.Queue):
     except ImportError:
         # Fake running process
         while True:
-            time.sleep(1)
+            time.sleep(3600)
     else:
         if versionToValue(xray.__version__) <= versionToValue('1.8.4'):
             redirect = False
@@ -47,8 +49,8 @@ def startXrayCore(jsonString: str, msgQueue: multiprocessing.Queue):
             # Can be redirected
             redirect = True
 
-        if not isPythonw():
-            return StdoutRedirectHelper.launch(
+        if not SystemRuntime.isPythonw():
+            return ProcessOutputRedirector.launch(
                 msgQueue,
                 functools.partial(xray.startFromJSON, jsonString),
                 redirect,
@@ -57,70 +59,65 @@ def startXrayCore(jsonString: str, msgQueue: multiprocessing.Queue):
         if not redirect:
             return xray.startFromJSON(jsonString)
 
-        def xrayPythonwProduceMsg():
-            try:
-                jsonObject = UJSONEncoder.decode(jsonString)
-            except Exception:
-                # Any non-exit exceptions
+        try:
+            jsonObject = UJSONEncoder.decode(jsonString)
+        except Exception:
+            # Any non-exit exceptions
 
-                xray.startFromJSON(jsonString)
-            else:
-                loggingPath = []
-                fileStreams = []
+            xray.startFromJSON(jsonString)
+        else:
+            loggingPath = list()
+            fileStreams = list()
 
-                for loggingAttr in ['access', 'error']:
+            for loggingAttr in ['access', 'error']:
+                try:
+                    path = jsonObject['log'][loggingAttr]
+                except Exception:
+                    # Any non-exit exceptions
+
+                    continue
+
+                if path not in loggingPath:
+                    loggingPath.append(path)
+
                     try:
-                        path = jsonObject['log'][loggingAttr]
+                        stream = open(path, 'rb')
                     except Exception:
                         # Any non-exit exceptions
 
-                        continue
+                        pass
+                    else:
+                        stream.seek(0, io.SEEK_END)
 
-                    if path not in loggingPath:
-                        loggingPath.append(path)
+                        fileStreams.append(stream)
 
-                        try:
-                            stream = open(path, 'rb')
-                        except Exception:
-                            # Any non-exit exceptions
+            def produceMsg():
+                while True:
+                    for file in fileStreams:
+                        for line in iter(file.readline, b''):
+                            if line and not line.isspace():
+                                try:
+                                    msgQueue.put_nowait(line.decode('utf-8', 'replace'))
+                                except Exception:
+                                    # Any non-exit exceptions
 
-                            pass
-                        else:
-                            stream.seek(0, io.SEEK_END)
+                                    pass
 
-                            fileStreams.append(stream)
+                    time.sleep(MsgQueue.MSG_PRODUCE_THRESHOLD / 1000)
 
-                def produceMsg():
-                    while True:
-                        for file in fileStreams:
-                            for line in iter(file.readline, b''):
-                                if line and not line.isspace():
-                                    try:
-                                        msgQueue.put_nowait(
-                                            line.decode('utf-8', 'replace')
-                                        )
-                                    except Exception:
-                                        # Any non-exit exceptions
+            try:
+                if fileStreams:
+                    msgThread = threading.Thread(target=produceMsg, daemon=True)
+                    msgThread.start()
 
-                                        pass
-
-                        time.sleep(MsgQueue.MSG_PRODUCE_THRESHOLD / 1000)
-
-                try:
-                    if fileStreams:
-                        msgThread = threading.Thread(target=produceMsg, daemon=True)
-                        msgThread.start()
-
-                    xray.startFromJSON(jsonString)
-                finally:
-                    for stream in fileStreams:
-                        stream.close()
-
-        xrayPythonwProduceMsg()
+                xray.startFromJSON(jsonString)
+            finally:
+                for stream in fileStreams:
+                    stream.close()
 
 
-class XrayCore(CoreProcess):
-    class ExitCode:
+class XrayCore(CoreProcessWorker):
+    class ExitCode(Enum):
         ConfigurationError = 23
         # Windows: 4294967295. Darwin, Linux: 255 (-1)
         ServerStartFailure = 4294967295 if PLATFORM == 'Windows' else 255
@@ -145,26 +142,17 @@ class XrayCore(CoreProcess):
 
             return '0.0.0'
 
-    def startFromArgs(self, jsonString: str, **kwargs) -> bool:
-        self.registerCurrentJSONConfig(jsonString)
+    def start(self, config: Union[str, ConfigFactory, dict], **kwargs) -> bool:
+        param = self.toJSONString(config)
 
-        return super().start(
-            target=startXrayCore, args=(jsonString, self.msgQueue), **kwargs
-        )
-
-    def start(self, config: Union[str, dict], **kwargs) -> bool:
-        if isinstance(config, str):
-            return self.startFromArgs(config, **kwargs)
-        elif isinstance(config, ConfigurationFactory):
-            return self.startFromArgs(config.toJSONString(), **kwargs)
-        elif isinstance(config, dict):
-            try:
-                jsonString = UJSONEncoder.encode(config)
-            except Exception:
-                # Any non-exit exceptions
-
-                return False
-            else:
-                return self.startFromArgs(jsonString, **kwargs)
+        if param:
+            return super().start(
+                target=startXrayCore,
+                args=(
+                    param,
+                    self.msgQueue,
+                ),
+                **kwargs,
+            )
         else:
             return False

@@ -17,13 +17,19 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
 from Furious.Library import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Utility import *
-from Furious.Core import *
+from Furious.Core.CoreProcessWorker import *
+from Furious.Core.XrayCore import *
+from Furious.Core.Hysteria1 import *
+from Furious.Core.Hysteria2 import *
+from Furious.Core.Tun2socks import *
+
+from typing import Tuple, Union
 
 import uuid
 import logging
@@ -35,7 +41,7 @@ __all__ = ['CoreManager']
 logger = logging.getLogger(__name__)
 
 
-def fixLogObjectPath(config: ConfigurationFactory, attr: str, value: str, log=True):
+def fixLogObjectPath(config: ConfigFactory, attr: str, value: str, log=True):
     try:
         path = config['log'][attr]
     except Exception:
@@ -47,15 +53,15 @@ def fixLogObjectPath(config: ConfigurationFactory, attr: str, value: str, log=Tr
         config['log'][attr] = path = ''
 
     if path == '':
-        if isPythonw() and StdoutRedirectHelper.TemporaryDir.isValid():
+        if SystemRuntime.isPythonw() and ProcessOutputRedirector.TemporaryDir.isValid():
             # Redirect implementation for pythonw environment
-            config['log'][attr] = StdoutRedirectHelper.TemporaryDir.filePath(value)
+            config['log'][attr] = ProcessOutputRedirector.TemporaryDir.filePath(value)
     else:
         # Relative path fails if booting on start up
         # on Windows, when packed using nuitka...
 
         # Fix relative path if needed. User cannot feel this operation.
-        config['log'][attr] = getAbsolutePath(path)
+        config['log'][attr] = absolutePath(path)
 
     result = config['log'][attr]
 
@@ -79,44 +85,222 @@ def fixLogObjectPath(config: ConfigurationFactory, attr: str, value: str, log=Tr
 
 
 def getUserTUNSettings(*args, **kwargs):
-    return AS_UserTUNSettings().get(*args, **kwargs)
+    return Storage.UserTUNSettings().get(*args, **kwargs)
 
 
-userPrimaryAdapterInterfaceName = functools.partial(
-    getUserTUNSettings, 'primaryAdapterInterfaceName', ''
-)
-userPrimaryAdapterInterfaceIP = functools.partial(
-    getUserTUNSettings, 'primaryAdapterInterfaceIP', ''
-)
-userDefaultPrimaryGatewayIP = functools.partial(
-    getUserTUNSettings, 'defaultPrimaryGatewayIP', ''
-)
-userTunAdapterInterfaceDNS = functools.partial(
-    getUserTUNSettings, 'tunAdapterInterfaceDNS', ''
-)
-userBypassTUNAdapterInterfaceIP = functools.partial(
-    getUserTUNSettings, 'bypassTUNAdapterInterfaceIP', ''
-)
-userDisablePrimaryAdapterInterfaceDNS = functools.partial(
-    getUserTUNSettings, 'disablePrimaryAdapterInterfaceDNS', 'True'
+(
+    userPrimaryAdapterInterfaceName,
+    userPrimaryAdapterInterfaceIP,
+    userDefaultPrimaryGatewayIP,
+    userTunAdapterInterfaceDNS,
+    userBypassTUNAdapterInterfaceIP,
+    userDisablePrimaryAdapterInterfaceDNS,
+) = (
+    functools.partial(getUserTUNSettings, 'primaryAdapterInterfaceName', ''),
+    functools.partial(getUserTUNSettings, 'primaryAdapterInterfaceIP', ''),
+    functools.partial(getUserTUNSettings, 'defaultPrimaryGatewayIP', ''),
+    functools.partial(getUserTUNSettings, 'tunAdapterInterfaceDNS', ''),
+    functools.partial(getUserTUNSettings, 'bypassTUNAdapterInterfaceIP', ''),
+    functools.partial(getUserTUNSettings, 'disablePrimaryAdapterInterfaceDNS', 'True'),
 )
 
 
-class CoreManager(SupportExitCleanup):
+class CoreManager(Mixins.CleanupOnExit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.uniqueCleanup = False
+        self.processesPool = list()
 
-        self.coresPool = []
+    @functools.singledispatchmethod
+    def _startCore(
+        self,
+        config,
+        routing,
+        exitCallback=None,
+        msgCallback=None,
+        proxyModeOnly=False,
+        log=True,
+        **kwargs,
+    ) -> Tuple[Union[CoreProcessWorker, None], bool]:
+        return None, False
+
+    @_startCore.register(ConfigXray)
+    def _(
+        self,
+        config,
+        routing,
+        exitCallback=None,
+        msgCallback=None,
+        proxyModeOnly=False,
+        log=True,
+        **kwargs,
+    ):
+        if config.get('log') is None or not isinstance(config['log'], dict):
+            config['log'] = {
+                'access': '',
+                'error': '',
+                'loglevel': 'warning',
+            }
+
+        logRedirectValue = str(uuid.uuid4())
+
+        # Fix logObject
+        for attr in ['access', 'error']:
+            fixLogObjectPath(config, attr, logRedirectValue, log)
+
+        if routing == 'Bypass Mainland China':
+            # TUN Mode handling
+            if not proxyModeOnly and SystemRuntime.isTUNMode():
+                mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+                mbox.setWindowTitle(_('Unable to connect'))
+                mbox.setText(
+                    _('Routing option with direct rules is not allowed in TUN mode')
+                )
+
+                # Show the MessageBox asynchronously
+                mbox.open()
+
+                return False
+
+            routingObject = {
+                'domainStrategy': 'IPIfNonMatch',
+                'domainMatcher': 'hybrid',
+                'rules': [
+                    {
+                        'type': 'field',
+                        'domain': [
+                            'geosite:category-ads-all',
+                        ],
+                        'outboundTag': 'block',
+                    },
+                    {
+                        'type': 'field',
+                        'domain': [
+                            'geosite:cn',
+                        ],
+                        'outboundTag': 'direct',
+                    },
+                    {
+                        'type': 'field',
+                        'ip': [
+                            'geoip:private',
+                            'geoip:cn',
+                        ],
+                        'outboundTag': 'direct',
+                    },
+                    {
+                        'type': 'field',
+                        'port': '0-65535',
+                        'outboundTag': 'proxy',
+                    },
+                ],
+            }
+        elif routing == 'Global':
+            routingObject = {}
+        elif routing == 'Custom':
+            routingObject = config.get('routing', {})
+        else:
+            routingObject = {}
+
+        if log:
+            logger.info(f'core {XrayCore.name()} configured')
+            logger.info(f'routing is {routing}')
+            logger.info(f'RoutingObject: {routingObject}')
+
+        config['routing'] = routingObject
+
+        process = XrayCore(exitCallback=exitCallback, msgCallback=msgCallback)
+        success = process.start(config, **kwargs)
+
+        return process, success
+
+    @_startCore.register(ConfigHysteria1)
+    def _(
+        self,
+        config,
+        routing,
+        exitCallback=None,
+        msgCallback=None,
+        proxyModeOnly=False,
+        log=True,
+        **kwargs,
+    ):
+        if routing == 'Bypass Mainland China':
+            # TUN Mode handling
+            if not proxyModeOnly and SystemRuntime.isTUNMode():
+                mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+                mbox.setWindowTitle(_('Unable to connect'))
+                mbox.setText(
+                    _('Routing option with direct rules is not allowed in TUN mode')
+                )
+
+                # Show the MessageBox asynchronously
+                mbox.open()
+
+                return False
+
+            routingObject = {
+                'rule': DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl',
+                'mmdb': DATA_DIR / 'hysteria' / 'country.mmdb',
+            }
+        elif routing == 'Global':
+            routingObject = {
+                'rule': '',
+                'mmdb': '',
+            }
+        elif routing == 'Custom':
+            routingObject = {
+                'rule': config.get('acl', ''),
+                'mmdb': config.get('mmdb', ''),
+            }
+        else:
+            routingObject = {
+                'rule': '',
+                'mmdb': '',
+            }
+
+        if log:
+            logger.info(f'core {Hysteria1.name()} configured')
+            logger.info(f'routing is {routing}')
+            logger.info(f'RoutingObject: {routingObject}')
+
+        process = Hysteria1(exitCallback=exitCallback, msgCallback=msgCallback)
+        success = process.start(
+            config,
+            Hysteria1.rule(routingObject.get('rule', '')),
+            Hysteria1.mmdb(routingObject.get('mmdb', '')),
+            **kwargs,
+        )
+
+        return process, success
+
+    @_startCore.register(ConfigHysteria2)
+    def _(
+        self,
+        config,
+        routing,
+        exitCallback=None,
+        msgCallback=None,
+        proxyModeOnly=False,
+        log=True,
+        **kwargs,
+    ):
+        if log:
+            logger.info(f'core {Hysteria2.name()} configured')
+
+        process = Hysteria2(exitCallback=exitCallback, msgCallback=msgCallback)
+        success = process.start(config, **kwargs)
+
+        return process, success
 
     def start(
         self,
-        config: ConfigurationFactory,
+        config: ConfigFactory,
         routing: str,
         exitCallback=None,
         msgCallbackCore=None,
-        msgCallbackTun_=None,
+        msgCallbackTUN_=None,
         deepcopy=True,
         proxyModeOnly=False,
         log=True,
@@ -127,197 +311,27 @@ class CoreManager(SupportExitCleanup):
         else:
             configcopy = config
 
-        if isinstance(configcopy, ConfigurationXray):
-            if configcopy.get('log') is None or not isinstance(configcopy['log'], dict):
-                configcopy['log'] = {
-                    'access': '',
-                    'error': '',
-                    'loglevel': 'warning',
-                }
+        process, success = self._startCore(
+            configcopy,
+            routing,
+            exitCallback,
+            msgCallbackCore,
+            proxyModeOnly,
+            log,
+            **kwargs,
+        )
 
-            logRedirectValue = str(uuid.uuid4())
-
-            # Fix logObject
-            for attr in ['access', 'error']:
-                fixLogObjectPath(configcopy, attr, logRedirectValue, log)
-
-            if routing == 'Bypass Mainland China':
-                # TUN Mode handling
-                if not proxyModeOnly and isTUNMode():
-                    mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-                    mbox.setWindowTitle(_('Unable to connect'))
-                    mbox.setText(
-                        _('Routing option with direct rules is not allowed in TUN mode')
-                    )
-
-                    # Show the MessageBox asynchronously
-                    mbox.open()
-
-                    return False
-
-                routingObject = {
-                    'domainStrategy': 'IPIfNonMatch',
-                    'domainMatcher': 'hybrid',
-                    'rules': [
-                        {
-                            'type': 'field',
-                            'domain': [
-                                'geosite:category-ads-all',
-                            ],
-                            'outboundTag': 'block',
-                        },
-                        {
-                            'type': 'field',
-                            'domain': [
-                                'geosite:cn',
-                            ],
-                            'outboundTag': 'direct',
-                        },
-                        {
-                            'type': 'field',
-                            'ip': [
-                                'geoip:private',
-                                'geoip:cn',
-                            ],
-                            'outboundTag': 'direct',
-                        },
-                        {
-                            'type': 'field',
-                            'port': '0-65535',
-                            'outboundTag': 'proxy',
-                        },
-                    ],
-                }
-            # elif routing == 'Bypass Iran':
-            #     routingObject = {
-            #         'domainStrategy': 'IPIfNonMatch',
-            #         'domainMatcher': 'hybrid',
-            #         'rules': [
-            #             {
-            #                 'type': 'field',
-            #                 'domain': [
-            #                     'geosite:category-ads-all',
-            #                     'iran:ads',
-            #                 ],
-            #                 'outboundTag': 'block',
-            #             },
-            #             {
-            #                 'type': 'field',
-            #                 'domain': [
-            #                     'iran:ir',
-            #                     'iran:other',
-            #                 ],
-            #                 'outboundTag': 'direct',
-            #             },
-            #             {
-            #                 'type': 'field',
-            #                 'ip': [
-            #                     'geoip:private',
-            #                     'geoip:ir',
-            #                 ],
-            #                 'outboundTag': 'direct',
-            #             },
-            #             {
-            #                 'type': 'field',
-            #                 'port': '0-65535',
-            #                 'outboundTag': 'proxy',
-            #             },
-            #         ],
-            #     }
-            elif routing == 'Global':
-                routingObject = {}
-            elif routing == 'Custom':
-                routingObject = configcopy.get('routing', {})
-            else:
-                routingObject = {}
-
-            if log:
-                logger.info(f'core {XrayCore.name()} configured')
-                logger.info(f'routing is {routing}')
-                logger.info(f'RoutingObject: {routingObject}')
-
-            configcopy['routing'] = routingObject
-
-            coreProcess = XrayCore(
-                exitCallback=exitCallback, msgCallback=msgCallbackCore
-            )
-            success = coreProcess.start(configcopy, **kwargs)
-        elif isinstance(configcopy, ConfigurationHysteria1):
-            if routing == 'Bypass Mainland China':
-                # TUN Mode handling
-                if not proxyModeOnly and isTUNMode():
-                    mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-                    mbox.setWindowTitle(_('Unable to connect'))
-                    mbox.setText(
-                        _('Routing option with direct rules is not allowed in TUN mode')
-                    )
-
-                    # Show the MessageBox asynchronously
-                    mbox.open()
-
-                    return False
-
-                routingObject = {
-                    'rule': DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl',
-                    'mmdb': DATA_DIR / 'hysteria' / 'country.mmdb',
-                }
-            # elif routing == 'Bypass Iran':
-            #     routingObject = {
-            #         'rule': DATA_DIR / 'hysteria' / 'bypass-Iran.acl',
-            #         'mmdb': DATA_DIR / 'hysteria' / 'country.mmdb',
-            #     }
-            elif routing == 'Global':
-                routingObject = {
-                    'rule': '',
-                    'mmdb': '',
-                }
-            elif routing == 'Custom':
-                routingObject = {
-                    'rule': configcopy.get('acl', ''),
-                    'mmdb': configcopy.get('mmdb', ''),
-                }
-            else:
-                routingObject = {
-                    'rule': '',
-                    'mmdb': '',
-                }
-
-            if log:
-                logger.info(f'core {Hysteria1.name()} configured')
-                logger.info(f'routing is {routing}')
-                logger.info(f'RoutingObject: {routingObject}')
-
-            coreProcess = Hysteria1(
-                exitCallback=exitCallback, msgCallback=msgCallbackCore
-            )
-            success = coreProcess.start(
-                configcopy,
-                Hysteria1.rule(routingObject.get('rule', '')),
-                Hysteria1.mmdb(routingObject.get('mmdb', '')),
-                **kwargs,
-            )
-        elif isinstance(configcopy, ConfigurationHysteria2):
-            if log:
-                logger.info(f'core {Hysteria2.name()} configured')
-
-            coreProcess = Hysteria2(
-                exitCallback=exitCallback, msgCallback=msgCallbackCore
-            )
-            success = coreProcess.start(configcopy, **kwargs)
-        else:
-            coreProcess = None
-            success = False
-
-        if coreProcess is not None:
-            self.coresPool.append(coreProcess)
+        if process is not None:
+            self.processesPool.append(process)
 
         if not success:
-            logger.error(f'core {coreProcess.name()} start failed')
+            if isinstance(process, CoreProcessWorker):
+                logger.error(f'core {process.name()} start failed')
 
             return success
 
         # TUN Mode handling
-        if not proxyModeOnly and isTUNMode():
+        if not proxyModeOnly and SystemRuntime.isTUNMode():
             # Currently TUN Mode is only supported on Windows and macOS
             if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
                 if PLATFORM == 'Windows':
@@ -368,16 +382,14 @@ class CoreManager(SupportExitCleanup):
                     else:
                         gateway, interfaceIP = defaultGateway[0], None
 
-                tunProcess = Tun2socks(
-                    exitCallback=exitCallback, msgCallback=msgCallbackTun_
-                )
-                self.coresPool.append(tunProcess)
+                tun = Tun2socks(exitCallback=exitCallback, msgCallback=msgCallbackTUN_)
+                self.processesPool.append(tun)
 
-                if not tunProcess.start(
+                if not tun.start(
                     APPLICATION_TUN_DEVICE_NAME,
                     APPLICATION_TUN_NETWORK_INTERFACE_NAME,
                     'error',
-                    f'socks5://{configcopy.socksProxyEndpoint()}',
+                    f'socks5://{configcopy.socksProxy()}',
                     '',
                 ):
                     return False
@@ -392,7 +404,7 @@ class CoreManager(SupportExitCleanup):
                         # Any non-exit exceptions
 
                         logger.error(
-                            f'error when processing ' f'user TUN bypass Settings: {ex}'
+                            f'error when processing user TUN bypass settings: {ex}'
                         )
 
                         SystemRoutingTable.Relations.clear()
@@ -407,7 +419,7 @@ class CoreManager(SupportExitCleanup):
                             else:
                                 logger.error(
                                     f'invalid IP address when processing '
-                                    f'user TUN bypass Settings: {bypass}'
+                                    f'user TUN bypass settings: {bypass}'
                                 )
 
                                 SystemRoutingTable.Relations.clear()
@@ -422,7 +434,7 @@ class CoreManager(SupportExitCleanup):
                     address = configcopy.itemAddress
 
                     if not isValidIPAddress(address):
-                        DNSResolver.configureHttpProxy(configcopy.httpProxyEndpoint())
+                        DNSResolver.configureHttpProxy(configcopy.httpProxy())
 
                         error, resolved = DNSResolver.resolve(address)
 
@@ -466,7 +478,7 @@ class CoreManager(SupportExitCleanup):
 
                                 break
 
-                        PySide6LegacyEventLoopWait(100)
+                        PySide6Legacy.eventLoopWait(100)
 
                     if not foundDevice:
                         logger.error(
@@ -501,7 +513,7 @@ class CoreManager(SupportExitCleanup):
                             SystemRoutingTable.WIN32SetInterfaceDNS(_alias)
                             SystemRoutingTable.WIN32FlushDNSCache()
 
-                        tunProcess.cleanup = functools.partial(_windowsCleanup, alias)
+                        tun.cleanup = functools.partial(_windowsCleanup, alias)
 
                         # Handle user defined settings
                         userDisableInterfaceDNS = (
@@ -556,7 +568,7 @@ class CoreManager(SupportExitCleanup):
                         for _service, _dnsserver in _servers:
                             SystemRoutingTable.DarwinSetDNSServers(_service, _dnsserver)
 
-                    tunProcess.cleanup = functools.partial(_darwinCleanup, servers)
+                    tun.cleanup = functools.partial(_darwinCleanup, servers)
 
                     # Handle user defined settings
                     userTunInterfaceDNS = userTunAdapterInterfaceDNS()
@@ -585,18 +597,18 @@ class CoreManager(SupportExitCleanup):
         return True
 
     def allRunning(self) -> bool:
-        return all(coreProcess.isAlive() for coreProcess in self.coresPool)
+        return all(process.isAlive() for process in self.processesPool)
 
     def anyRunning(self) -> bool:
-        return any(coreProcess.isAlive() for coreProcess in self.coresPool)
+        return any(process.isAlive() for process in self.processesPool)
 
     def stopAll(self):
-        if self.coresPool:
-            for coreProcess in self.coresPool:
-                if isinstance(coreProcess, CoreFactory):
-                    coreProcess.stop()
+        if self.processesPool:
+            for process in self.processesPool:
+                if isinstance(process, CoreProcessFactory):
+                    process.stop()
 
-            self.coresPool.clear()
+            self.processesPool.clear()
 
     def cleanup(self):
         self.stopAll()

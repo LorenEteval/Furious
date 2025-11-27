@@ -19,10 +19,8 @@ from __future__ import annotations
 
 from Furious.Interface import *
 from Furious.Library import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
-from Furious.Utility import *
-from Furious.Widget.GuiVTLS import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 
 from PySide6.QtWidgets import *
 
@@ -49,8 +47,8 @@ class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
 
         self.addItems(STREAM_NETWORK)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         try:
             oldNetwork = streamSettings['network']
@@ -88,9 +86,9 @@ class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            streamSettings = getXrayProxyOutboundStream(config)
+            streamSettings = ConfigXray.getProxyOutboundStream(config)
 
             self.setText(streamSettings.get('network', ''))
         except Exception:
@@ -107,8 +105,8 @@ class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
 
         self.networkKey = networkKey
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get(self.networkKey), dict):
             streamSettings[self.networkKey] = {}
@@ -145,9 +143,9 @@ class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            xxxObject = getXrayProxyOutboundStream(config)[self.networkKey]
+            xxxObject = ConfigXray.getProxyOutboundStream(config)[self.networkKey]
 
             self.setText(xxxObject['header']['type'])
         except Exception:
@@ -175,8 +173,8 @@ class GuiVTransportItemHostTcp(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('tcpSettings'), dict):
             streamSettings['tcpSettings'] = {}
@@ -219,9 +217,9 @@ class GuiVTransportItemHostTcp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            tcpObject = getXrayProxyOutboundStream(config)['tcpSettings']
+            tcpObject = ConfigXray.getProxyOutboundStream(config)['tcpSettings']
 
             self.setText(','.join(tcpObject['header']['request']['headers']['Host']))
         except Exception:
@@ -234,8 +232,8 @@ class GuiVTransportItemPathTcp(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('tcpSettings'), dict):
             streamSettings['tcpSettings'] = {}
@@ -275,9 +273,9 @@ class GuiVTransportItemPathTcp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            tcpObject = getXrayProxyOutboundStream(config)['tcpSettings']
+            tcpObject = ConfigXray.getProxyOutboundStream(config)['tcpSettings']
 
             self.setText(','.join(tcpObject['header']['request']['path']))
         except Exception:
@@ -310,8 +308,8 @@ class GuiVTransportItemSeedKcp(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('kcpSettings'), dict):
             streamSettings['kcpSettings'] = {}
@@ -345,9 +343,9 @@ class GuiVTransportItemSeedKcp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            kcpObject = getXrayProxyOutboundStream(config)['kcpSettings']
+            kcpObject = ConfigXray.getProxyOutboundStream(config)['kcpSettings']
 
             self.setText(kcpObject.get('seed', ''))
         except Exception:
@@ -360,8 +358,8 @@ class GuiVTransportItemHostWs(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('wsSettings'), dict):
             streamSettings['wsSettings'] = {}
@@ -398,9 +396,9 @@ class GuiVTransportItemHostWs(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            wsObject = getXrayProxyOutboundStream(config)['wsSettings']
+            wsObject = ConfigXray.getProxyOutboundStream(config)['wsSettings']
 
             self.setText(wsObject['headers']['Host'])
         except Exception:
@@ -413,8 +411,8 @@ class GuiVTransportItemPathWs(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('wsSettings'), dict):
             streamSettings['wsSettings'] = {}
@@ -448,9 +446,9 @@ class GuiVTransportItemPathWs(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            wsObject = getXrayProxyOutboundStream(config)['wsSettings']
+            wsObject = ConfigXray.getProxyOutboundStream(config)['wsSettings']
 
             self.setText(wsObject.get('path', ''))
         except Exception:
@@ -463,8 +461,8 @@ class GuiVTransportItemHostHttpUpgrade(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('httpupgradeSettings'), dict):
             streamSettings['httpupgradeSettings'] = {}
@@ -498,9 +496,9 @@ class GuiVTransportItemHostHttpUpgrade(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            httpUpgradeObject = getXrayProxyOutboundStream(config)[
+            httpUpgradeObject = ConfigXray.getProxyOutboundStream(config)[
                 'httpupgradeSettings'
             ]
 
@@ -515,8 +513,8 @@ class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('httpupgradeSettings'), dict):
             streamSettings['httpupgradeSettings'] = {}
@@ -550,9 +548,9 @@ class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            httpUpgradeObject = getXrayProxyOutboundStream(config)[
+            httpUpgradeObject = ConfigXray.getProxyOutboundStream(config)[
                 'httpupgradeSettings'
             ]
 
@@ -567,8 +565,8 @@ class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('splithttpSettings'), dict):
             streamSettings['splithttpSettings'] = {}
@@ -602,9 +600,11 @@ class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            splitHttpObject = getXrayProxyOutboundStream(config)['splithttpSettings']
+            splitHttpObject = ConfigXray.getProxyOutboundStream(config)[
+                'splithttpSettings'
+            ]
 
             self.setText(splitHttpObject.get('host', ''))
         except Exception:
@@ -617,8 +617,8 @@ class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('splithttpSettings'), dict):
             streamSettings['splithttpSettings'] = {}
@@ -652,9 +652,11 @@ class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            splitHttpObject = getXrayProxyOutboundStream(config)['splithttpSettings']
+            splitHttpObject = ConfigXray.getProxyOutboundStream(config)[
+                'splithttpSettings'
+            ]
 
             self.setText(splitHttpObject.get('path', ''))
         except Exception:
@@ -667,8 +669,8 @@ class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('xhttpSettings'), dict):
             streamSettings['xhttpSettings'] = {}
@@ -702,9 +704,9 @@ class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            xhttpObject = getXrayProxyOutboundStream(config)['xhttpSettings']
+            xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
 
             self.setText(xhttpObject.get('host', ''))
         except Exception:
@@ -717,8 +719,8 @@ class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('xhttpSettings'), dict):
             streamSettings['xhttpSettings'] = {}
@@ -752,9 +754,9 @@ class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            xhttpObject = getXrayProxyOutboundStream(config)['xhttpSettings']
+            xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
 
             self.setText(xhttpObject.get('path', ''))
         except Exception:
@@ -776,8 +778,8 @@ class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
             ]
         )
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('xhttpSettings'), dict):
             streamSettings['xhttpSettings'] = {}
@@ -811,9 +813,9 @@ class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            xhttpObject = getXrayProxyOutboundStream(config)['xhttpSettings']
+            xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
 
             self.setText(xhttpObject.get('mode', ''))
         except Exception:
@@ -826,8 +828,8 @@ class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('xhttpSettings'), dict):
             streamSettings['xhttpSettings'] = {}
@@ -869,9 +871,9 @@ class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            xhttpObject = getXrayProxyOutboundStream(config)['xhttpSettings']
+            xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
 
             if xhttpObject.get('extra', ''):
                 self.setText(UJSONEncoder.encode(xhttpObject.get('extra', '')))
@@ -887,8 +889,8 @@ class GuiVTransportItemHostH2(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('httpSettings'), dict):
             streamSettings['httpSettings'] = {}
@@ -922,9 +924,9 @@ class GuiVTransportItemHostH2(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            httpObject = getXrayProxyOutboundStream(config)['httpSettings']
+            httpObject = ConfigXray.getProxyOutboundStream(config)['httpSettings']
 
             self.setText(','.join(httpObject.get('host', [])))
         except Exception:
@@ -937,8 +939,8 @@ class GuiVTransportItemPathH2(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('httpSettings'), dict):
             streamSettings['httpSettings'] = {}
@@ -972,9 +974,9 @@ class GuiVTransportItemPathH2(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            httpObject = getXrayProxyOutboundStream(config)['httpSettings']
+            httpObject = ConfigXray.getProxyOutboundStream(config)['httpSettings']
 
             self.setText(httpObject.get('path', ''))
         except Exception:
@@ -1015,8 +1017,8 @@ class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
             ]
         )
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('quicSettings'), dict):
             streamSettings['quicSettings'] = {}
@@ -1047,9 +1049,9 @@ class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            quicObject = getXrayProxyOutboundStream(config)['quicSettings']
+            quicObject = ConfigXray.getProxyOutboundStream(config)['quicSettings']
 
             self.setText(quicObject.get('security', ''))
         except Exception:
@@ -1062,8 +1064,8 @@ class GuiVTransportItemKeyQuic(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('quicSettings'), dict):
             streamSettings['quicSettings'] = {}
@@ -1097,9 +1099,9 @@ class GuiVTransportItemKeyQuic(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            quicObject = getXrayProxyOutboundStream(config)['quicSettings']
+            quicObject = ConfigXray.getProxyOutboundStream(config)['quicSettings']
 
             self.setText(quicObject.get('key', ''))
         except Exception:
@@ -1120,8 +1122,8 @@ class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
             ]
         )
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('grpcSettings'), dict):
             streamSettings['grpcSettings'] = {}
@@ -1160,9 +1162,9 @@ class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            grpcObject = getXrayProxyOutboundStream(config)['grpcSettings']
+            grpcObject = ConfigXray.getProxyOutboundStream(config)['grpcSettings']
 
             multi = grpcObject.get('multiMode', False)
 
@@ -1182,8 +1184,8 @@ class GuiVTransportItemAuthorityGRPC(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('grpcSettings'), dict):
             streamSettings['grpcSettings'] = {}
@@ -1217,9 +1219,9 @@ class GuiVTransportItemAuthorityGRPC(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            grpcObject = getXrayProxyOutboundStream(config)['grpcSettings']
+            grpcObject = ConfigXray.getProxyOutboundStream(config)['grpcSettings']
 
             self.setText(grpcObject.get('authority', ''))
         except Exception:
@@ -1232,8 +1234,8 @@ class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
-        streamSettings = getXrayProxyOutboundStream(config)
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('grpcSettings'), dict):
             streamSettings['grpcSettings'] = {}
@@ -1267,9 +1269,9 @@ class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         try:
-            grpcObject = getXrayProxyOutboundStream(config)['grpcSettings']
+            grpcObject = ConfigXray.getProxyOutboundStream(config)['grpcSettings']
 
             self.setText(grpcObject.get('serviceName', ''))
         except Exception:
@@ -1442,7 +1444,7 @@ class GuiVTransportQGroupBox(GuiEditorItemFactory, AppQGroupBox):
     def __init__(self, **kwargs):
         super().__init__(_('Transport'), **kwargs)
 
-        self._config = ConfigurationFactory()
+        self._config = ConfigFactory()
 
         self._widget = GuiVTransportPageStackedWidget()
         self._widget.connectActivated(self.handleActivated)
@@ -1468,14 +1470,14 @@ class GuiVTransportQGroupBox(GuiEditorItemFactory, AppQGroupBox):
 
         self.setCurrentIndex(index)
 
-    def inputToFactory(self, config: ConfigurationFactory) -> bool:
+    def inputToFactory(self, config: ConfigFactory) -> bool:
         return self.page(self.currentIndex()).inputToFactory(config)
 
-    def factoryToInput(self, config: ConfigurationFactory):
+    def factoryToInput(self, config: ConfigFactory):
         # Shallow copy
         self._config = config
 
-        streamSettings = getXrayProxyOutboundStream(config)
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
         network = streamSettings.get('network', '')
 
         if not isinstance(network, str):

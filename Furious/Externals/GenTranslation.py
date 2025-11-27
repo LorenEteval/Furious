@@ -1,7 +1,7 @@
 TRANSLATION = {
     "Delete": {
         "source": [
-            "Furious.QtFramework.QtWidgets",
+            "Furious.Qt.QtWidgets",
             "Furious.Widget.UserServersQTableWidget",
             "Furious.Widget.UserSubsQTableWidget",
             "Furious.Widget.XrayAssetViewerQListWidget",
@@ -13,7 +13,7 @@ TRANSLATION = {
     },
     "Delete these items?": {
         "source": [
-            "Furious.QtFramework.QtWidgets"
+            "Furious.Qt.QtWidgets"
         ],
         "RU": "Удалить эти элементы?",
         "ZH": "删除这些项目？",
@@ -21,7 +21,7 @@ TRANSLATION = {
     },
     "Delete this item?": {
         "source": [
-            "Furious.QtFramework.QtWidgets"
+            "Furious.Qt.QtWidgets"
         ],
         "RU": "Удалить этот элемент?",
         "ZH": "删除此项目？",
@@ -29,7 +29,7 @@ TRANSLATION = {
     },
     "New changes will take effect next time": {
         "source": [
-            "Furious.QtFramework.QtWidgets"
+            "Furious.Qt.QtWidgets"
         ],
         "RU": "Новые изменения вступят в силу при следующем подключении",
         "ZH": "新的更改将于下次生效",
@@ -37,7 +37,7 @@ TRANSLATION = {
     },
     "Unrecognized Configuration. Please modify it in the editor": {
         "source": [
-            "Furious.QtFramework.QtWidgets"
+            "Furious.Qt.QtWidgets"
         ],
         "RU": "Нераспознанная конфигурация. Пожалуйста, измените его в редакторе",
         "ZH": "无法识别的配置。请在编辑器中修改",
@@ -45,7 +45,7 @@ TRANSLATION = {
     },
     "New version available": {
         "source": [
-            "Furious.QtFramework.UpdatesManager"
+            "Furious.Qt.UpdatesManager"
         ],
         "RU": "Доступна новая версия",
         "ZH": "新版本可用",
@@ -53,7 +53,7 @@ TRANSLATION = {
     },
     "Check for updates failed": {
         "source": [
-            "Furious.QtFramework.UpdatesManager"
+            "Furious.Qt.UpdatesManager"
         ],
         "RU": "Не удалось проверить наличие обновлений",
         "ZH": "检查更新失败",
@@ -61,7 +61,7 @@ TRANSLATION = {
     },
     "Go to download page?": {
         "source": [
-            "Furious.QtFramework.UpdatesManager"
+            "Furious.Qt.UpdatesManager"
         ],
         "RU": "Перейти на страницу загрузки?",
         "ZH": "前往下载页面？",
@@ -69,7 +69,7 @@ TRANSLATION = {
     },
     "Furious is already the latest version": {
         "source": [
-            "Furious.QtFramework.UpdatesManager"
+            "Furious.Qt.UpdatesManager"
         ],
         "RU": "Используется последняя версия Furious",
         "ZH": "Furious已是最新版本",
@@ -201,7 +201,7 @@ TRANSLATION = {
     },
     "Cancel": {
         "source": [
-            "Furious.QtFramework.GuiEditorXXX",
+            "Furious.Qt.GuiEditorXXX",
             "Furious.Widget.IndentSpinBox",
             "Furious.Window.TextEditorWindow",
             "Furious.Window.UserSubsWindow"
@@ -801,6 +801,7 @@ TRANSLATION = {
     },
     "Show Furious Log...": {
         "source": [
+            "Furious.Widget.UserServersQTableWidget",
             "Furious.Window.AppMainWindow"
         ],
         "RU": "Показать журнал Furious...",
@@ -809,6 +810,7 @@ TRANSLATION = {
     },
     "Show Core Log...": {
         "source": [
+            "Furious.Widget.UserServersQTableWidget",
             "Furious.Window.AppMainWindow"
         ],
         "RU": "Показать журнал ядра...",
@@ -817,6 +819,7 @@ TRANSLATION = {
     },
     "Show Tun2socks Log...": {
         "source": [
+            "Furious.Widget.UserServersQTableWidget",
             "Furious.Window.AppMainWindow"
         ],
         "RU": "Показать журнал Tun2socks...",
@@ -1386,7 +1389,7 @@ TRANSLATION = {
     "OK": {
         "source": [
             "Furious.__main__",
-            "Furious.QtFramework.GuiEditorXXX",
+            "Furious.Qt.GuiEditorXXX",
             "Furious.Widget.IndentSpinBox",
             "Furious.Window.UserSubsWindow"
         ],

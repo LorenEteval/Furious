@@ -17,21 +17,19 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
 from Furious.Library import *
-from Furious.Utility import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 from Furious.Widget.UserServersQTableWidget import *
 from Furious.Widget.GuiTUNSettings import *
 from Furious.Window.UserSubsWindow import *
-from Furious.Window.LogViewerWindow import *
 from Furious.Window.XrayAssetViewerWindow import *
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from PySide6.QtNetwork import *
 
 from typing import Union
 
@@ -78,7 +76,7 @@ class AppNetworkStateManager(NetworkStateManager):
 
             self.stopTest()
 
-        connectedHttpProxy = connectedHttpProxyEndpoint()
+        connectedHttpProxy = Storage.Extras.UserHttpProxy()
 
         if connectedHttpProxy is None:
             parent = self.parent()
@@ -121,7 +119,7 @@ class AppMainWindow(AppQMainWindow):
             deleteUniqueCallback=lambda unique: self.userServersQTableWidget.deleteItemByIndex(
                 list(
                     index
-                    for index, server in enumerate(AS_UserServers())
+                    for index, server in enumerate(Storage.UserServers())
                     if server.getExtras('subsId') == unique
                 )
             ),
@@ -134,7 +132,7 @@ class AppMainWindow(AppQMainWindow):
         logActions = [
             AppQAction(
                 _('Show Furious Log...'),
-                callback=lambda: loggerApp_().showMaximized(),
+                callback=lambda: AppLoggerWindow.Self().showMaximized(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier
                     | QtCore.Qt.KeyboardModifier.ShiftModifier,
@@ -143,7 +141,7 @@ class AppMainWindow(AppQMainWindow):
             ),
             AppQAction(
                 _('Show Core Log...'),
-                callback=lambda: loggerCore().showMaximized(),
+                callback=lambda: AppLoggerWindow.Core().showMaximized(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier
                     | QtCore.Qt.KeyboardModifier.ShiftModifier,
@@ -152,7 +150,7 @@ class AppMainWindow(AppQMainWindow):
             ),
             AppQAction(
                 _('Show Tun2socks Log...'),
-                callback=lambda: loggerTun_().showMaximized(),
+                callback=lambda: AppLoggerWindow.TUN_().showMaximized(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier
                     | QtCore.Qt.KeyboardModifier.ShiftModifier,
@@ -210,7 +208,7 @@ class AppMainWindow(AppQMainWindow):
             AppQAction(
                 _('Update Subscription (Use Current Proxy)'),
                 callback=lambda: self.userServersQTableWidget.updateSubs(
-                    connectedHttpProxyEndpoint(),
+                    Storage.Extras.UserHttpProxy(),
                     parent=self,
                 ),
             ),
@@ -408,10 +406,10 @@ class AppMainWindow(AppQMainWindow):
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
         self.userServersQTableWidget.updateSubsByUnique(unique, httpProxy, **kwargs)
 
-    def appendNewItemByFactory(self, factory: ConfigurationFactory):
+    def appendNewItemByFactory(self, factory: ConfigFactory):
         self.userServersQTableWidget.appendNewItemByFactory(factory)
 
-    def flushRow(self, row: int, item: ConfigurationFactory):
+    def flushRow(self, row: int, item: ConfigFactory):
         self.userServersQTableWidget.flushRow(row, item)
 
     def showTabAndSpaces(self):
@@ -428,19 +426,19 @@ class AppMainWindow(AppQMainWindow):
             return GuiTUNSettings(parent=parent, **kwargs)
 
         guiTUNSettings = cachedGuiTUNSettings()
-        guiTUNSettings.factoryToInput(AS_UserTUNSettings())
+        guiTUNSettings.factoryToInput(Storage.UserTUNSettings())
 
         return guiTUNSettings
 
     def checkForUpdates(self, **kwargs):
-        self.updatesManager.configureHttpProxy(connectedHttpProxyEndpoint())
+        self.updatesManager.configureHttpProxy(Storage.Extras.UserHttpProxy())
         self.updatesManager.checkForUpdates(**kwargs)
 
     def resetNetworkState(self):
         self.networkState.setText('')
 
     def setNetworkState(self, success: bool, **kwargs):
-        remark = connectedServerRemark()
+        remark = Storage.Extras.UserServerRemark()
 
         if success:
             if remark:

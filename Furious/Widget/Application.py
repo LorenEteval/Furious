@@ -15,12 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.PyFramework import *
-from Furious.QtFramework import *
-from Furious.QtFramework import gettext as _
+from Furious.Qt import gettext as _
 from Furious.Utility import *
-from Furious.Storage import *
 from Furious.Widget.SystemTrayIcon import *
 from Furious.Window.AppMainWindow import *
 from Furious.Window.LogViewerWindow import *
@@ -32,12 +30,10 @@ from PySide6.QtWidgets import *
 
 import os
 import sys
-import time
 import logging
 import platform
 import threading
 import traceback
-import functools
 import qdarkstyle
 import darkdetect
 
@@ -46,34 +42,6 @@ logger = logging.getLogger(__name__)
 registerAppSettings('AppLogViewerWidgetPointSize')
 registerAppSettings('CoreLogViewerWidgetPointSize')
 registerAppSettings('TunLogViewerWidgetPointSize')
-
-
-def rateLimited(maxCallPerSecond):
-    """
-    Decorator function that limits the rate at which a function can be called.
-    """
-    interval = 1.0 / float(maxCallPerSecond)
-    called = time.monotonic()
-
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            # Previously called
-            nonlocal called
-
-            elapsed = time.monotonic() - called
-            waitsec = interval - elapsed
-
-            if waitsec > 0:
-                time.sleep(waitsec)
-
-            result = func(*args, **kwargs)
-            called = time.monotonic()
-
-            return result
-
-        return wrapper
-
-    return decorator
 
 
 class SystemTrayUnavailable(Exception):
@@ -178,11 +146,6 @@ class Application(ApplicationFactory, SingletonApplication):
         self.themeDetector = None
         self.themeListenerThread = None
 
-        # Initialize storage
-        self.userServers = UserServers()
-        self.userSubs = UserSubs()
-        self.userTUNSettings = UserTUNSettings()
-
         self.mainWindow = None
         self.systemTray = None
 
@@ -190,7 +153,7 @@ class Application(ApplicationFactory, SingletonApplication):
         self.threadPool = QtCore.QThreadPool()
         self.threadPool.setMaxThreadCount(max(OS_CPU_COUNT // 2, 1))
 
-    @rateLimited(maxCallPerSecond=2)
+    @callRateLimited(maxCallPerSecond=2)
     @QtCore.Slot()
     def showExistingApp(self):
         if isinstance(self.systemTray, SystemTrayIcon):
@@ -202,7 +165,7 @@ class Application(ApplicationFactory, SingletonApplication):
             pass
 
     def configureLogging(self):
-        self.logViewerWindowApp_ = LogViewerWindow(
+        self.logViewerWindowSelf = LogViewerWindow(
             tabTitle=_('Furious Log'),
             fontFamily=self.customFontName,
             pointSizeSettingsName='AppLogViewerWidgetPointSize',
@@ -223,15 +186,12 @@ class Application(ApplicationFactory, SingletonApplication):
             level=logging.INFO,
             handlers=(
                 AppLogHandler(
-                    lambda record: self.logViewerWindowApp_.appendLine(record)
+                    lambda record: self.logViewerWindowSelf.appendLine(record)
                 ),
                 logging.StreamHandler(),
             ),
         )
         logging.raiseExceptions = False
-
-    def log(self):
-        return self.logViewerWindowApp_.plainText()
 
     def addCustomFont(self):
         fontFile = str(DATA_DIR / 'font' / 'CascadiaMono')
@@ -269,20 +229,18 @@ class Application(ApplicationFactory, SingletonApplication):
     def switchToDarkMode(self):
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyside6())
 
-        SupportThemeChangedCallback.callThemeChangedCallbackUnchecked('Dark')
+        Mixins.ThemeAware.callThemeChangedCallbackUnchecked('Dark')
 
     def switchToAutoMode(self):
         self.setStyleSheet('')
 
-        SupportThemeChangedCallback.callThemeChangedCallbackUnchecked(
-            darkdetect.theme()
-        )
+        Mixins.ThemeAware.callThemeChangedCallbackUnchecked(darkdetect.theme())
 
     @staticmethod
     @callOnceOnly
     @QtCore.Slot()
     def cleanup():
-        SupportExitCleanup.cleanupAll()
+        Mixins.CleanupOnExit.cleanupAll()
 
         if AppSettings.get('SystemProxyMode') == 'Auto':
             # Automatically configure
@@ -345,7 +303,7 @@ class Application(ApplicationFactory, SingletonApplication):
                 # sys.exit(None) in multiprocessing will produce
                 # exitcode 1 in some Python version, which is
                 # not what we want.
-                return ApplicationFactory.ExitCode.ExitSuccess
+                return ApplicationFactory.ExitCode.ExitSuccess.value
 
             if not SystemTrayIcon.isSystemTrayAvailable():
                 raise SystemTrayUnavailable(
@@ -368,24 +326,24 @@ class Application(ApplicationFactory, SingletonApplication):
             if PLATFORM == 'Darwin':
                 logger.info(f'mac_ver: {platform.mac_ver()}')
 
-            appImagePath = getAppImagePath()
+            appImagePath = SystemRuntime.appImagePath()
 
             if appImagePath:
                 logger.info(f'running from Linux AppImage: \'{appImagePath}\'')
             else:
                 logger.info('not running from Linux AppImage')
 
-            logger.info(f'python version: {getPythonVersion()}')
+            logger.info(f'python version: {PLATFORM_PYTHON_VERSION}')
             logger.info(f'system version: {sys.version}')
             logger.info(f'sys.executable: \'{sys.executable}\'')
             logger.info(f'sys.argv: {sys.argv}')
             logger.info(f'appFilePath: \'{self.applicationFilePath()}\'')
-            logger.info(f'isPythonw: {isPythonw()}')
+            logger.info(f'isPythonw: {SystemRuntime.isPythonw()}')
             logger.info(f'system language is {SYSTEM_LANGUAGE}')
             logger.info(self.customFontLoadMsg)
             logger.info(f'current theme is {darkdetect.theme()}')
 
-            if PLATFORM != 'Windows' and not isScriptMode():
+            if PLATFORM != 'Windows' and not SystemRuntime.isScriptMode():
                 logger.info('theme detect method uses timer implementation')
 
                 @QtCore.Slot()
@@ -395,9 +353,7 @@ class Application(ApplicationFactory, SingletonApplication):
                     if self.currentTheme != currentTheme:
                         self.currentTheme = currentTheme
 
-                        SupportThemeChangedCallback.callThemeChangedCallback(
-                            currentTheme
-                        )
+                        Mixins.ThemeAware.callThemeChangedCallback(currentTheme)
 
                 self.currentTheme = darkdetect.theme()
                 self.themeDetectTimer = QtCore.QTimer()
@@ -418,7 +374,7 @@ class Application(ApplicationFactory, SingletonApplication):
 
                 self.themeDetector = ApplicationThemeDetector()
                 self.themeDetector.themeChanged.connect(
-                    SupportThemeChangedCallback.callThemeChangedCallback
+                    Mixins.ThemeAware.callThemeChangedCallback
                 )
 
                 self.themeListenerThread = threading.Thread(
@@ -471,10 +427,10 @@ class Application(ApplicationFactory, SingletonApplication):
 
             return self.exec()
         except SystemTrayUnavailable:
-            return ApplicationFactory.ExitCode.PlatformNotSupported
+            return ApplicationFactory.ExitCode.PlatformNotSupported.value
         except Exception:
             # Any non-exit exceptions
 
             traceback.print_exc()
 
-            return ApplicationFactory.ExitCode.UnknownException
+            return ApplicationFactory.ExitCode.UnknownException.value

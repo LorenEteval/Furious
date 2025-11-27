@@ -17,10 +17,8 @@
 
 from __future__ import annotations
 
-from Furious.Interface import *
-from Furious.QtFramework import *
-from Furious.Library import *
-from Furious.Utility import *
+from Furious.Frozenlib import *
+from Furious.Core.CoreProcessWorker import *
 
 import time
 import functools
@@ -35,28 +33,28 @@ def startTun2socks(msgQueue: multiprocessing.Queue, *args):
     except ImportError:
         # Fake running process
         while True:
-            time.sleep(1)
+            time.sleep(3600)
     else:
         if versionToValue(tun2socks.__version__) <= versionToValue('2.5.1.1'):
             redirect = False
         else:
             redirect = True
 
-        StdoutRedirectHelper.launch(
+        ProcessOutputRedirector.launch(
             msgQueue,
             functools.partial(tun2socks.startFromArgs, *args),
             redirect,
         )
 
 
-class Tun2socks(CoreProcess):
+class Tun2socks(CoreProcessWorker):
     class ExitCode:
         # Windows shutting down
         SystemShuttingDown = 0x40010004
 
     def __init__(self, **kwargs):
-        # Optimizer is loggerTun_ window
-        backgroundOptimizer = kwargs.pop('backgroundOptimizer', loggerTun_)
+        # Optimizer is AppLoggerWindow.TUN_ window
+        backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLoggerWindow.TUN_)
 
         super().__init__(**kwargs, backgroundOptimizer=backgroundOptimizer)
 
@@ -88,7 +86,14 @@ class Tun2socks(CoreProcess):
     ) -> bool:
         return super().start(
             target=startTun2socks,
-            args=(self.msgQueue, device, networkInterface, logLevel, proxy, restAPI),
+            args=(
+                self.msgQueue,
+                device,
+                networkInterface,
+                logLevel,
+                proxy,
+                restAPI,
+            ),
             **kwargs,
         )
 
