@@ -105,8 +105,8 @@ def getUserTUNSettings(*args, **kwargs):
     functools.partial(getUserTUNSettings, 'tunAdapterInterfaceDNS', ''),
     functools.partial(getUserTUNSettings, 'bypassTUNAdapterInterfaceIP', ''),
     functools.partial(getUserTUNSettings, 'disablePrimaryAdapterInterfaceDNS', 'True'),
-    functools.partial(getUserTUNSettings, 'tcpSendBufferSize', ''),
-    functools.partial(getUserTUNSettings, 'tcpReceiveBufferSize', ''),
+    functools.partial(getUserTUNSettings, 'tcpSendBufferSize', 1),
+    functools.partial(getUserTUNSettings, 'tcpReceiveBufferSize', 1),
     functools.partial(getUserTUNSettings, 'tcpAutoTuning', 'False'),
 )
 
@@ -424,8 +424,8 @@ class CoreManager(Mixins.CleanupOnExit):
                     'error',
                     f'socks5://{configcopy.socksProxy()}',
                     '',
-                    tcpSendBufferSize,
-                    tcpReceiveBufferSize,
+                    f'{tcpSendBufferSize}MB',
+                    f'{tcpReceiveBufferSize}MB',
                     tcpAutoTuning,
                 ):
                     return False

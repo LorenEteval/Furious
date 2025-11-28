@@ -57,6 +57,43 @@ class GuiTUNSettingsItemXXX(GuiEditorItemTextInput):
         self.setText(config.get(self.key, ''))
 
 
+class GuiTUNSettingsItemSpinBoxBufferSizeXXX(GuiEditorItemTextSpinBox):
+    def __init__(self, *args, **kwargs):
+        self.key = kwargs.pop('key', '')
+        self.default = kwargs.pop('default', 1)
+        self.start = kwargs.pop('start', 1)
+        self.end = kwargs.pop('end', 4)
+
+        super().__init__(*args, **kwargs)
+
+        # Range
+        self.setRange(self.start, self.end)
+
+    def inputToFactory(self, config: dict) -> bool:
+        oldValue = config.get(self.key, self.default)
+        newValue = self.value()
+
+        if not isinstance(oldValue, int):
+            oldValue = -1e8
+
+        if newValue != oldValue:
+            config[self.key] = newValue
+
+            # Modified
+            return True
+        else:
+            # Not modified
+            return False
+
+    def factoryToInput(self, config: dict):
+        oldValue = config.get(self.key, self.default)
+
+        if not isinstance(oldValue, int):
+            config[self.key] = oldValue = self.default
+
+        self.setValue(oldValue)
+
+
 class GuiTUNSettingsItemCheckBoxXXX(GuiEditorItemTextCheckBox):
     def __init__(self, *args, **kwargs):
         self.key = kwargs.pop('key', '')
@@ -165,13 +202,19 @@ class GuiTUNSettingsGroupBoxMemory(GuiEditorWidgetQGroupBox):
 
     def containerSequence(self):
         return [
-            GuiTUNSettingsItemXXX(
-                title=_('TCP Send Buffer Size'),
+            GuiTUNSettingsItemSpinBoxBufferSizeXXX(
+                title=_('TCP Send Buffer Size (MiB)'),
                 key='tcpSendBufferSize',
+                default=1,
+                start=1,
+                end=4,
             ),
-            GuiTUNSettingsItemXXX(
-                title=_('TCP Receive Buffer Size'),
+            GuiTUNSettingsItemSpinBoxBufferSizeXXX(
+                title=_('TCP Receive Buffer Size (MiB)'),
                 key='tcpReceiveBufferSize',
+                default=1,
+                start=1,
+                end=4,
             ),
             GuiTUNSettingsItemCheckBoxXXX(
                 title=_('TCP Receive Buffer Auto-tuning'),

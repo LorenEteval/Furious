@@ -1674,32 +1674,32 @@ TRANSLATION = {
         "source": [
             "Furious.Widget.GuiTUNSettings"
         ],
-        "ZH": "内存优化",
         "RU": "Оптимизация памяти",
+        "ZH": "内存优化",
         "isReviewed": "True"
     },
-    "TCP Send Buffer Size": {
+    "TCP Send Buffer Size (MiB)": {
         "source": [
             "Furious.Widget.GuiTUNSettings"
         ],
-        "ZH": "TCP发送缓冲区大小",
-        "RU": "Размер буфера отправки TCP",
+        "RU": "Размер буфера отправки TCP (MiB)",
+        "ZH": "TCP发送缓冲区大小（MiB）",
         "isReviewed": "True"
     },
-    "TCP Receive Buffer Size": {
+    "TCP Receive Buffer Size (MiB)": {
         "source": [
             "Furious.Widget.GuiTUNSettings"
         ],
-        "ZH": "TCP接收缓冲区大小",
-        "RU": "Размер буфера приема TCP",
+        "RU": "Размер буфера приема TCP (MiB)",
+        "ZH": "TCP接收缓冲区大小（MiB）",
         "isReviewed": "True"
     },
     "TCP Receive Buffer Auto-tuning": {
         "source": [
             "Furious.Widget.GuiTUNSettings"
         ],
-        "ZH": "TCP接收缓冲区自动调优",
         "RU": "Автоматическая настройка буфера приема TCP",
+        "ZH": "TCP接收缓冲区自动调优",
         "isReviewed": "True"
     }
 }
