@@ -397,12 +397,12 @@ class CoreManager(Mixins.CleanupOnExit):
                     userTcpAutoTuning(),
                 )
 
-                if tcpSendBufferSize != '':
+                if tcpSendBufferSize != 1:
                     logger.info(
                         f'got user defined TUN settings. TcpSendBufferSize: {tcpSendBufferSize}'
                     )
 
-                if tcpReceiveBufferSize != '':
+                if tcpReceiveBufferSize != 1:
                     logger.info(
                         f'got user defined TUN settings. TCPReceiveBufferSize: {tcpReceiveBufferSize}'
                     )
