@@ -33,15 +33,16 @@ import sys
 import logging
 import platform
 import threading
+import functools
 import traceback
 import qdarkstyle
 import darkdetect
 
 logger = logging.getLogger(__name__)
 
-registerAppSettings('AppLogViewerWidgetPointSize')
-registerAppSettings('CoreLogViewerWidgetPointSize')
-registerAppSettings('TunLogViewerWidgetPointSize')
+registerAppSettings('LogViewerWidgetPointSizeSelf')
+registerAppSettings('LogViewerWidgetPointSizeCore')
+registerAppSettings('LogViewerWidgetPointSizeTun_')
 
 
 class SystemTrayUnavailable(Exception):
@@ -168,17 +169,17 @@ class Application(ApplicationFactory, SingletonApplication):
         self.logViewerWindowSelf = LogViewerWindow(
             tabTitle=_('Furious Log'),
             fontFamily=self.customFontName,
-            pointSizeSettingsName='AppLogViewerWidgetPointSize',
+            pointSizeSettingsName='LogViewerWidgetPointSizeSelf',
         )
         self.logViewerWindowCore = LogViewerWindow(
             tabTitle=_('Core Log'),
             fontFamily=self.customFontName,
-            pointSizeSettingsName='CoreLogViewerWidgetPointSize',
+            pointSizeSettingsName='LogViewerWidgetPointSizeCore',
         )
         self.logViewerWindowTun_ = LogViewerWindow(
             tabTitle=_('Tun2socks Log'),
             fontFamily=self.customFontName,
-            pointSizeSettingsName='TunLogViewerWidgetPointSize',
+            pointSizeSettingsName='LogViewerWidgetPointSizeTun_',
         )
 
         logging.basicConfig(
@@ -186,7 +187,7 @@ class Application(ApplicationFactory, SingletonApplication):
             level=logging.INFO,
             handlers=(
                 AppLogHandler(
-                    lambda record: self.logViewerWindowSelf.appendLine(record)
+                    functools.partial(self.logViewerWindowSelf.appendLine),
                 ),
                 logging.StreamHandler(),
             ),
