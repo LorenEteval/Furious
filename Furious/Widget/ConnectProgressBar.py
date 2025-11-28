@@ -44,7 +44,7 @@ class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(update)
 
-        self.setStyleSheet(self.getStyleSheet(AppHue.currentColor()))
+        self.setStyleSheet(self.getStyleSheet())
 
     def start(self, msec: int):
         self.timer.start(msec)
@@ -53,7 +53,7 @@ class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
         self.timer.stop()
 
     @staticmethod
-    def getStyleSheet(color):
+    def getStyleSheet():
         return (
             f'QProgressBar {{'
             f'    border-radius: 2px;'
@@ -61,17 +61,20 @@ class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
             f'}}'
             f''
             f'QProgressBar::chunk {{'
-            f'    background-color: {color};'
-            f'    width: 10px;'
-            f'    margin: 0.5px;'
+            f'    background: qlineargradient('
+            f'        x1: 0, y1: 0, x2: 1, y2: 0,'
+            f'        stop: 0 {AppHue.disconnectedColor()},'
+            f'        stop: 1 {AppHue.connectedColor()}'
+            f'    );'
+            f'    border-radius: 2px;'
             f'}}'
         )
 
     def disconnectedCallback(self):
-        self.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
+        pass
 
     def connectedCallback(self):
-        self.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
+        pass
 
 
 class ConnectProgressBar(Mixins.QTranslatable, Mixins.ConnectionAware, QWidget):
