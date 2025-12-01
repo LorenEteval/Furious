@@ -1,6 +1,7 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="Icons/bootstrap">
+        <file alias="arrow-clockwise.svg">Icons/bootstrap/arrow-clockwise.svg</file>
         <file alias="arrow-return-left.svg">Icons/bootstrap/arrow-return-left.svg</file>
         <file alias="arrow-return-right.svg">Icons/bootstrap/arrow-return-right.svg</file>
         <file alias="box-arrow-in-left.svg">Icons/bootstrap/box-arrow-in-left.svg</file>
@@ -11,6 +12,7 @@
         <file alias="download.svg">Icons/bootstrap/download.svg</file>
         <file alias="file-earmark.svg">Icons/bootstrap/file-earmark.svg</file>
         <file alias="files.svg">Icons/bootstrap/files.svg</file>
+        <file alias="folder2.svg">Icons/bootstrap/folder2.svg</file>
         <file alias="folder2-open.svg">Icons/bootstrap/folder2-open.svg</file>
         <file alias="gear-wide-connected.svg">Icons/bootstrap/gear-wide-connected.svg</file>
         <file alias="globe2.svg">Icons/bootstrap/globe2.svg</file>
@@ -22,6 +24,7 @@
         <file alias="lock-fill.svg">Icons/bootstrap/lock-fill.svg</file>
         <file alias="monochrome-rocket-takeoff.svg">Icons/bootstrap/monochrome-rocket-takeoff.svg</file>
         <file alias="pencil-square.svg">Icons/bootstrap/pencil-square.svg</file>
+        <file alias="person-gear.svg">Icons/bootstrap/person-gear.svg</file>
         <file alias="pin-angle.svg">Icons/bootstrap/pin-angle.svg</file>
         <file alias="qr-code.svg">Icons/bootstrap/qr-code.svg</file>
         <file alias="rocket-takeoff.svg">Icons/bootstrap/rocket-takeoff.svg</file>
@@ -41,6 +44,7 @@
         <file alias="wifi.svg">Icons/bootstrap/wifi.svg</file>
     </qresource>
     <qresource prefix="Icons/bootstrap/white">
+        <file alias="arrow-clockwise.svg">Icons/bootstrap/white/arrow-clockwise.svg</file>
         <file alias="arrow-return-left.svg">Icons/bootstrap/white/arrow-return-left.svg</file>
         <file alias="arrow-return-right.svg">Icons/bootstrap/white/arrow-return-right.svg</file>
         <file alias="box-arrow-in-left.svg">Icons/bootstrap/white/box-arrow-in-left.svg</file>
@@ -51,6 +55,7 @@
         <file alias="download.svg">Icons/bootstrap/white/download.svg</file>
         <file alias="file-earmark.svg">Icons/bootstrap/white/file-earmark.svg</file>
         <file alias="files.svg">Icons/bootstrap/white/files.svg</file>
+        <file alias="folder2.svg">Icons/bootstrap/white/folder2.svg</file>
         <file alias="folder2-open.svg">Icons/bootstrap/white/folder2-open.svg</file>
         <file alias="gear-wide-connected.svg">Icons/bootstrap/white/gear-wide-connected.svg</file>
         <file alias="globe2.svg">Icons/bootstrap/white/globe2.svg</file>
@@ -62,6 +67,7 @@
         <file alias="lock-fill.svg">Icons/bootstrap/white/lock-fill.svg</file>
         <file alias="monochrome-rocket-takeoff.svg">Icons/bootstrap/white/monochrome-rocket-takeoff.svg</file>
         <file alias="pencil-square.svg">Icons/bootstrap/white/pencil-square.svg</file>
+        <file alias="person-gear.svg">Icons/bootstrap/white/person-gear.svg</file>
         <file alias="pin-angle.svg">Icons/bootstrap/white/pin-angle.svg</file>
         <file alias="qr-code.svg">Icons/bootstrap/white/qr-code.svg</file>
         <file alias="router.svg">Icons/bootstrap/white/router.svg</file>

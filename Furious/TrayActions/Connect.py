@@ -161,6 +161,10 @@ class ConnectAction(AppQAction):
 
         APP().systemTray.showMessage(message)
 
+    def doReconnect(self, message=''):
+        self.doDisconnectWithTrayMessage(message)
+        self.trigger()
+
     def doConnect(self):
         # Connect action
         assert self.textCompare('Connect')
@@ -289,9 +293,12 @@ class ConnectAction(AppQAction):
             hasNewVersionCallback=newVersionCallback,
         )
 
-        # Automatically update assets
-        self.assetDownloadManager.configureHttpProxy(connectedHttpProxy)
-        self.assetDownloadManager.download()
+        if SystemRuntime.appImagePath():
+            logger.info('skipped auto assets update due to running from Linux AppImage')
+        else:
+            # Automatically update assets
+            self.assetDownloadManager.configureHttpProxy(connectedHttpProxy)
+            self.assetDownloadManager.download()
 
     def callActionFromQueue(self):
         try:

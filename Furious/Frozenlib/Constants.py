@@ -101,12 +101,12 @@ else:
 
 APPLICATION_TUN_INTERFACE_DNS_ADDRESS = '1.1.1.1'
 
-ADMINISTRATOR_NAME = 'Administrator' if PLATFORM == 'Windows' else 'root'
+ADMINISTRATOR_NAME = 'Administrator' if PLATFORM == 'Windows' else 'Superuser'
 
 NETWORK_STATE_TEST_URL = 'http://cp.cloudflare.com'
 NETWORK_SPEED_TEST_URL = (
     'http://speed.cloudflare.com/__down?during=download&bytes=104857600'
 )
 
-UNICODE_LARGE_RED_CIRCLE = u'\U0001F534'
-UNICODE_LARGE_GREEN_CIRCLE = u'\U0001F7E2'
+UNICODE_LARGE_RED_CIRCLE = u'\U0001f534'
+UNICODE_LARGE_GREEN_CIRCLE = u'\U0001f7e2'

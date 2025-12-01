@@ -766,7 +766,7 @@ class UserServersQTableWidgetHeaders:
 
 
 # ALL Headers VALUE
-TRANSLATABLE_HEADERS = [
+_TRANSLATABLE_HEADERS = [
     _('Remark'),
     _('Protocol'),
     _('Address'),
@@ -1108,8 +1108,7 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         self.activateItemByIndex(newIndex, True)
 
         if APP().isSystemTrayConnected():
-            APP().systemTray.ConnectAction.doDisconnect()
-            APP().systemTray.ConnectAction.trigger()
+            APP().systemTray.ConnectAction.doReconnect()
 
     @functools.lru_cache(None)
     def getGuiEditorByProtocol(self, protocol: Protocol, **kwargs):

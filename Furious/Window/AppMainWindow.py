@@ -22,6 +22,7 @@ from Furious.Interface import *
 from Furious.Library import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
+from Furious.Utility import *
 from Furious.Widget.UserServersQTableWidget import *
 from Furious.Widget.GuiTUNSettings import *
 from Furious.Window.UserSubsWindow import *
@@ -106,7 +107,10 @@ class AppMainWindow(AppQMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setWindowTitle(_(APPLICATION_NAME))
+        if SystemRuntime.isAdmin():
+            self.setWindowTitle(f'{_(APPLICATION_NAME)} ({_(ADMINISTRATOR_NAME)})')
+        else:
+            self.setWindowTitle(f'{_(APPLICATION_NAME)}')
         # TODO: Need this?
         # self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
 
@@ -235,14 +239,16 @@ class AppMainWindow(AppQMainWindow):
         ]
 
         if PLATFORM == 'Darwin':
-            openAppFolderAction = [None]
+            openAppFolderAction = []
         else:
             openAppFolderAction = [
-                AppQSeperator(),
                 AppQAction(
                     _('Open Application Folder'),
+                    icon=bootstrapIcon('folder2.svg'),
+                    checkable=False,
                     callback=lambda: self.openApplicationFolder(),
                 ),
+                AppQSeperator(),
             ]
 
         if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
@@ -258,13 +264,31 @@ class AppMainWindow(AppQMainWindow):
         else:
             customizeTUNSettingsAction = []
 
+        if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
+            _TRANSLATABLE_RESTART_AS_ADMIN = [
+                _('Restart The Application As Administrator'),
+                _('Restart The Application As Superuser'),
+            ]
+
+            restartAsAdminAction = [
+                AppQAction(
+                    _(f'Restart The Application As {ADMINISTRATOR_NAME}'),
+                    icon=bootstrapIcon('arrow-clockwise.svg'),
+                    checkable=False,
+                    callback=lambda: self.restartAsAdmin(),
+                ),
+            ]
+        else:
+            restartAsAdminAction = []
+
         toolsActions = [
             *customizeTUNSettingsAction,
+            *restartAsAdminAction,
+            *openAppFolderAction,
             AppQAction(
                 _('Manage Xray-core Asset File...'),
                 callback=lambda: self.xrayAssetViewerWindow.show(),
             ),
-            *openAppFolderAction,
         ]
 
         if hasattr(AppQAction, 'setMenu'):
@@ -367,7 +391,7 @@ class AppMainWindow(AppQMainWindow):
             }
 
             # Corresponds to menus defined above
-            TRANSLATABLE_MENU_NAME = [
+            _TRANSLATABLE_MENU_NAME = [
                 _('Log'),
                 _('Server'),
                 _('Subscription'),
@@ -463,6 +487,33 @@ class AppMainWindow(AppQMainWindow):
             logger.info(f'open application folder \'{appFolder}\' success')
         else:
             logger.error(f'open application folder \'{appFolder}\' failed')
+
+    @staticmethod
+    def restartAsAdmin():
+        if not SystemRuntime.isScriptMode():
+            if not SystemRuntime.isAdmin():
+                process = QtCore.QProcess()
+
+                if PLATFORM == 'Windows':
+                    process.startDetached(
+                        'powershell',
+                        arguments=[
+                            '-Command',
+                            f'Start-Process \'{APP().applicationFilePath()}\' '
+                            f'\'{AppCommands.RunAs.value}\' -Verb runAs',
+                        ],
+                    )
+            else:
+                mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
+                mbox.setWindowTitle(_(APPLICATION_NAME))
+                mbox.setText(_('I am, the supreme authority.'))
+
+                # Show the MessageBox asynchronously
+                mbox.open()
+
+                logger.info('ignored request to restart as admin as already is')
+        else:
+            logger.info(f'ignored request to restart as admin in script mode')
 
     @staticmethod
     def openAboutPage():

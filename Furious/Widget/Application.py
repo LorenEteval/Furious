@@ -87,11 +87,28 @@ class SingletonApplication(ApplicationExitHelper):
         self.socket.connectToServer(self.serverName)
 
         if self.socket.waitForConnected(1000):
-            # Show tray message in the started instance
-            self.socket.close()
+            if len(sys.argv) == 1:
+                command = AppCommands.Empty.value
+            else:
+                command = sys.argv[1]
 
-            # Do not start
-            return True
+            self.socket.write(command.encode())
+            self.socket.flush()
+
+            if command == AppCommands.Empty.value:
+                # Show tray message in the started instance. Do not start
+                return True
+            elif command == AppCommands.RunAs.value:
+                if self.socket.waitForDisconnected(3000):
+                    # The other instance have been exited. Start
+                    return False
+                else:
+                    # Do not start
+                    return True
+            else:
+                # TODO: Not implemented
+                # Do not start
+                return True
         else:
             # Remove the old socket file if it exists
             socket_path = QLocalServer.removeServer(self.serverName)
@@ -102,7 +119,7 @@ class SingletonApplication(ApplicationExitHelper):
                 logger.info(f'no existing socket file found for: {self.serverName}')
 
             # New instance
-            self.server.newConnection.connect(self.showExistingApp)
+            self.server.newConnection.connect(self.handleNewConnection)
 
             if not self.server.listen(self.serverName):
                 # Do not start
@@ -114,7 +131,7 @@ class SingletonApplication(ApplicationExitHelper):
             return False
 
     @QtCore.Slot()
-    def showExistingApp(self):
+    def handleNewConnection(self):
         raise NotImplementedError
 
 
@@ -156,13 +173,33 @@ class Application(ApplicationFactory, SingletonApplication):
 
     @callRateLimited(maxCallPerSecond=2)
     @QtCore.Slot()
-    def showExistingApp(self):
-        if isinstance(self.systemTray, SystemTrayIcon):
-            logger.info('attempting to start multiple instance. Show tray message')
+    def handleNewConnection(self):
+        socket = self.server.nextPendingConnection()
+        socket.readyRead.connect(functools.partial(self.handleNewData, socket))
 
-            self.systemTray.showMessage(_('Already started'))
+    @QtCore.Slot(QLocalSocket)
+    def handleNewData(self, socket: QLocalSocket):
+        data = socket.readAll().data()
+
+        if isinstance(data, bytes):
+            datastr = data.decode('utf-8', 'replace')
         else:
-            # The tray hasn't been initialized. Do nothing
+            datastr = str(data)
+
+        if datastr == AppCommands.Empty.value:
+            if isinstance(self.systemTray, SystemTrayIcon):
+                logger.info('attempting to start multiple instance. Show tray message')
+
+                self.systemTray.showMessage(_('Already started'))
+            else:
+                # The tray hasn't been initialized. Do nothing
+                pass
+        elif datastr == AppCommands.RunAs.value:
+            logger.info('detected requests to start as admin in new instance. Exiting')
+
+            self.exit()
+        else:
+            # TODO: Not implemented
             pass
 
     def configureLogging(self):
@@ -248,11 +285,7 @@ class Application(ApplicationFactory, SingletonApplication):
             SystemProxy.off()
             SystemProxy.daemonOff()
 
-        if PLATFORM == 'Darwin':
-            AppThreadPool().clear()
-
-            for timeout in [1000, 2000, 3000]:
-                QtCore.QTimer.singleShot(timeout, APP().exit)
+        AppThreadPool().clear()
 
         logger.info('final cleanup done')
 
@@ -294,6 +327,10 @@ class Application(ApplicationFactory, SingletonApplication):
         self.setExitingFlag(True)
 
         self.threadPool.clear()
+
+        # Dirty exit
+        for timeout in [1000, 2000, 3000]:
+            QtCore.QTimer.singleShot(timeout, APP().exit)
 
         super().exit(exitcode)
 
