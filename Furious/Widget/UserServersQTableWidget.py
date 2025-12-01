@@ -1500,10 +1500,12 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
 
         for index in indexes:
             if 0 <= index < len(Storage.UserServers()):
+                deepcopy = Storage.UserServers()[index].deepcopy()
+
                 # Do not clone subsId
                 self.appendNewItem(
-                    remark=Storage.UserServers()[index].getExtras('remark'),
-                    config=Storage.UserServers()[index],
+                    remark=deepcopy.getExtras('remark'),
+                    config=deepcopy,
                 )
 
     def deleteItemByIndex(self, indexes, showTrayMessage=True) -> int:
