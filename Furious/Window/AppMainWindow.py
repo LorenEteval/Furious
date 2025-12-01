@@ -238,19 +238,6 @@ class AppMainWindow(AppQMainWindow):
             ),
         ]
 
-        if PLATFORM == 'Darwin':
-            openAppFolderAction = []
-        else:
-            openAppFolderAction = [
-                AppQAction(
-                    _('Open Application Folder'),
-                    icon=bootstrapIcon('folder2.svg'),
-                    checkable=False,
-                    callback=lambda: self.openApplicationFolder(),
-                ),
-                AppQSeperator(),
-            ]
-
         if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
             customizeTUNSettingsAction = [
                 AppQAction(
@@ -280,6 +267,21 @@ class AppMainWindow(AppQMainWindow):
             ]
         else:
             restartAsAdminAction = []
+
+        if PLATFORM == 'Darwin':
+            openAppFolderAction = [
+                AppQSeperator(),
+            ]
+        else:
+            openAppFolderAction = [
+                AppQAction(
+                    _('Open Application Folder'),
+                    icon=bootstrapIcon('folder2.svg'),
+                    checkable=False,
+                    callback=lambda: self.openApplicationFolder(),
+                ),
+                AppQSeperator(),
+            ]
 
         toolsActions = [
             *customizeTUNSettingsAction,
@@ -501,6 +503,15 @@ class AppMainWindow(AppQMainWindow):
                             '-Command',
                             f'Start-Process \'{APP().applicationFilePath()}\' '
                             f'\'{AppCommands.RunAs.value}\' -Verb runAs',
+                        ],
+                    )
+                elif PLATFORM == 'Darwin':
+                    process.startDetached(
+                        'osascript',
+                        arguments=[
+                            '-e',
+                            f'do shell script \"{APP().applicationFilePath()} '
+                            f'{AppCommands.RunAs.value}\" with administrator privileges',
                         ],
                     )
             else:
