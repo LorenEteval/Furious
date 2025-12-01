@@ -296,9 +296,12 @@ class ConnectAction(AppQAction):
         if SystemRuntime.appImagePath():
             logger.info('skipped auto assets update due to running from Linux AppImage')
         else:
-            # Automatically update assets
-            self.assetDownloadManager.configureHttpProxy(connectedHttpProxy)
-            self.assetDownloadManager.download()
+            if AppSettings.isStateON_('AutoUpdateAssetFiles'):
+                # Automatically update assets
+                self.assetDownloadManager.configureHttpProxy(connectedHttpProxy)
+                self.assetDownloadManager.download()
+            else:
+                logger.info('skipped auto assets update due to settings')
 
     def callActionFromQueue(self):
         try:

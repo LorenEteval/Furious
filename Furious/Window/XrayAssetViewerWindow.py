@@ -42,7 +42,7 @@ class XrayAssetViewerWindow(AppQMainWindow):
         self.setCentralWidget(self.xrayAssetViewerWidget)
 
         if versionToValue(PYSIDE6_VERSION) <= versionToValue('6.1.3'):
-            openAssetDirectoryActions = [None]
+            openAssetDirectoryActions = []
         else:
             # openUrl will crash on PySide6 6.1.3, probably a Qt bug
             openAssetDirectoryActions = [
