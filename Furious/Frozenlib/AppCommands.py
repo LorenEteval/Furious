@@ -15,13 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .AppCommands import *
-from .AppSettings import *
-from .Constants import *
-from .Globals import *
-from .Mixins import *
-from .PySide6Legacy import *
-from .SystemRoutingTable import *
-from .Tcping import *
-from .Utility import *
-from .Win32Session import *
+from __future__ import annotations
+
+from enum import Enum
+
+__all__ = ['AppCommands']
+
+
+class AppCommands(Enum):
+    Empty = 'empty'
+    RunAs = 'runas'

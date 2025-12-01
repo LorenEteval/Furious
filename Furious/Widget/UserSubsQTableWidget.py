@@ -79,7 +79,7 @@ class UserSubsAppQComboBox(AppQComboBox):
 
 
 # Headers VALUE
-TRANSLATABLE_HEADERS = [
+_TRANSLATABLE_HEADERS = [
     _('Never'),
     _('Every 5 mins'),
     _('Every 10 mins'),

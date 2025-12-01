@@ -35,6 +35,14 @@ TRANSLATION = {
         "ZH": "新的更改将于下次生效",
         "isReviewed": "True"
     },
+    "Reconnect now?": {
+        "source": [
+            "Furious.Qt.QtWidgets"
+        ],
+        "RU": "Переподключиться сейчас?",
+        "ZH": "现在重新连接？",
+        "isReviewed": "True"
+    },
     "Unrecognized Configuration. Please modify it in the editor": {
         "source": [
             "Furious.Qt.QtWidgets"
@@ -1043,12 +1051,12 @@ TRANSLATION = {
         "ZH": "TUN模式已禁用（管理员）",
         "isReviewed": "True"
     },
-    "TUN Mode Disabled (root)": {
+    "TUN Mode Disabled (Superuser)": {
         "source": [
             "Furious.TrayActions.Settings"
         ],
-        "RU": "TUN режим отключен  (root)",
-        "ZH": "TUN模式已禁用（root）",
+        "RU": "TUN режим отключен  (Superuser)",
+        "ZH": "TUN模式已禁用（Superuser）",
         "isReviewed": "True"
     },
     "Settings": {
@@ -1700,6 +1708,38 @@ TRANSLATION = {
         ],
         "RU": "Автоматическая настройка буфера приема TCP",
         "ZH": "TCP接收缓冲区自动调优",
+        "isReviewed": "True"
+    },
+    "Restart The Application As Administrator": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Перезапустите приложение от имени администратора",
+        "ZH": "以管理员身份重新启动应用程序",
+        "isReviewed": "True"
+    },
+    "Restart The Application As Superuser": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Перезапустите приложение от имени суперпользователя",
+        "ZH": "以Superuser身份重新启动应用程序",
+        "isReviewed": "True"
+    },
+    "Administrator": {
+        "source": [
+            "Furious.Widget.SystemTrayIcon"
+        ],
+        "RU": "Administrator",
+        "ZH": "管理员",
+        "isReviewed": "True"
+    },
+    "I am, the supreme authority.": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Я — единственная высшая инстанция.",
+        "ZH": "我就是至高无上的存在。",
         "isReviewed": "True"
     }
 }

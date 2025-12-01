@@ -38,10 +38,10 @@ registerAppSettings(
 )
 registerAppSettings('ShowTabAndSpacesInEditor', isBinary=True)
 
-# Administrator, root
-TRANSLATABLE_TUN_MODE = [
+# Administrator, Superuser
+_TRANSLATABLE_TUN_MODE = [
     _('TUN Mode Disabled (Administrator)'),
-    _('TUN Mode Disabled (root)'),
+    _('TUN Mode Disabled (Superuser)'),
 ]
 
 

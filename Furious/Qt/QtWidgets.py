@@ -639,11 +639,38 @@ class NewChangesNextTimeMBox(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.setWindowTitle(_(APPLICATION_NAME))
         self.setIcon(AppQMessageBox.Icon.Information)
-        self.setText(_('New changes will take effect next time'))
+        self.setStandardButtons(
+            AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.No
+        )
+        self.setText(self.customText())
+
+    @staticmethod
+    def customText() -> str:
+        return (
+            _('New changes will take effect next time') + '\n\n' + _('Reconnect now?')
+        )
+
+    def retranslate(self):
+        self.setWindowTitle(_(self.windowTitle()))
+        self.setText(self.customText())
+
+        # Ignore informative text, buttons
+
+        self.moveToCenter()
 
 
 def showNewChangesNextTimeMBox(**kwargs):
+
+    @QtCore.Slot(int)
+    def handleResultCode(code):
+        if code == PySide6Legacy.enumValueWrapper(AppQMessageBox.StandardButton.Yes):
+            APP().systemTray.ConnectAction.doReconnect()
+        else:
+            # Do nothing
+            pass
+
     try:
         method = kwargs.pop('method', 'open')
 
@@ -656,11 +683,12 @@ def showNewChangesNextTimeMBox(**kwargs):
                 mbox.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
 
             if method == 'open':
+                mbox.finished.connect(handleResultCode)
                 # Show the MessageBox asynchronously
                 mbox.open()
             else:
                 # Show the MessageBox and wait for the user to close it
-                mbox.exec()
+                handleResultCode(mbox.exec())
     except Exception:
         # Any non-exit exceptions
 

@@ -32,6 +32,10 @@ logger = logging.getLogger(__name__)
 
 __all__ = ['SystemTrayIcon']
 
+_TRANSLATABLE_ADMIN = [
+    _('Administrator'),
+]
+
 
 class SystemTrayIcon(
     Mixins.QTranslatable,
@@ -183,7 +187,12 @@ class SystemTrayIcon(
             APP().mainWindow.show()
 
     def setCustomToolTip(self):
-        self.setToolTip(f'{_(APPLICATION_NAME)} {APPLICATION_VERSION}')
+        if SystemRuntime.isAdmin():
+            self.setToolTip(
+                f'{_(APPLICATION_NAME)} {APPLICATION_VERSION} ({_(ADMINISTRATOR_NAME)})'
+            )
+        else:
+            self.setToolTip(f'{_(APPLICATION_NAME)} {APPLICATION_VERSION}')
 
     def disconnectedCallback(self):
         self.setDisconnectedIcon()
