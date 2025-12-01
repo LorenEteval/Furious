@@ -232,7 +232,11 @@ class GuiTUNSettings(GuiEditorWidgetQDialog):
         super().__init__(*args, tabTranslatable=tabTranslatable, style=style, **kwargs)
 
         self.setTabText(_('Customize TUN Settings'))
-        self.setFixedSize(int(480 * GOLDEN_RATIO), int(480))
+
+        if PLATFORM == 'Darwin':
+            self.setFixedSize(int(550 * GOLDEN_RATIO), int(550))
+        else:
+            self.setFixedSize(int(480 * GOLDEN_RATIO), int(480))
 
         # Shallow copy
         config = Storage.UserTUNSettings()
