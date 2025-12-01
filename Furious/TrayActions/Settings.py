@@ -34,6 +34,9 @@ if PLATFORM == 'Darwin':
 registerAppSettings('StartupOnBoot', isBinary=True, default=AppBinarySettings.ON_)
 registerAppSettings('PowerSaveMode', isBinary=True, default=AppBinarySettings.ON_)
 registerAppSettings(
+    'AutoUpdateAssetFiles', isBinary=True, default=AppBinarySettings.ON_
+)
+registerAppSettings(
     'ShowProgressBarWhenConnecting', isBinary=True, default=AppBinarySettings.ON_
 )
 registerAppSettings('ShowTabAndSpacesInEditor', isBinary=True)
@@ -128,6 +131,11 @@ class SettingsChildAction(AppQAction):
                 AppSettings.turnOFF('PowerSaveMode')
 
             showNewChangesNextTimeMBox()
+        elif self.textCompare('Automatically Update Asset Files'):
+            if checked:
+                AppSettings.turnON_('AutoUpdateAssetFiles')
+            else:
+                AppSettings.turnOFF('AutoUpdateAssetFiles')
         elif self.textCompare('Show Progress Bar When Connecting'):
             if checked:
                 AppSettings.turnON_('ShowProgressBarWhenConnecting')
@@ -161,7 +169,7 @@ class SettingsAction(AppQAction):
                 AppQSeperator(),
             ]
         else:
-            tunActions = [None]
+            tunActions = []
 
         if PLATFORM == 'Darwin':
             hideDockIconAction = [
@@ -172,7 +180,18 @@ class SettingsAction(AppQAction):
                 )
             ]
         else:
-            hideDockIconAction = [None]
+            hideDockIconAction = []
+
+        if SystemRuntime.appImagePath():
+            autoUpdateAssetFilesAction = []
+        else:
+            autoUpdateAssetFilesAction = (
+                SettingsChildAction(
+                    _('Automatically Update Asset Files'),
+                    checkable=True,
+                    checked=AppSettings.isStateON_('AutoUpdateAssetFiles'),
+                ),
+            )
 
         super().__init__(
             _('Settings'),
@@ -202,6 +221,7 @@ class SettingsAction(AppQAction):
                     checked=AppSettings.isStateON_('PowerSaveMode'),
                 ),
                 AppQSeperator(),
+                *autoUpdateAssetFilesAction,
                 SettingsChildAction(
                     _('Show Progress Bar When Connecting'),
                     checkable=True,

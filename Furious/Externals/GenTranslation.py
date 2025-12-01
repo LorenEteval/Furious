@@ -1083,6 +1083,14 @@ TRANSLATION = {
         "ZH": "开机启动",
         "isReviewed": "True"
     },
+    "Automatically Update Asset Files": {
+        "source": [
+            "Furious.TrayActions.Settings"
+        ],
+        "RU": "Автоматически обновлять файлы активов",
+        "ZH": "自动更新资源文件",
+        "isReviewed": "True"
+    },
     "Show Progress Bar When Connecting": {
         "source": [
             "Furious.TrayActions.Settings"
