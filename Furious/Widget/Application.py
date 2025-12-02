@@ -89,17 +89,17 @@ class SingletonApplication(ApplicationExitHelper):
 
         if self.socket.waitForConnected(1000):
             if len(sys.argv) == 1:
-                command = AppCommands.Empty.value
+                command = AppBuiltinCommand.Empty.value
             else:
                 command = sys.argv[1]
 
             self.socket.write(command.encode())
             self.socket.flush()
 
-            if command == AppCommands.Empty.value:
+            if command == AppBuiltinCommand.Empty.value:
                 # Show tray message in the started instance. Do not start
                 return True
-            elif command == AppCommands.RunAs.value:
+            elif command == AppBuiltinCommand.RunAs.value:
                 if self.socket.waitForDisconnected(3000):
                     # The other instance have been exited. Start
                     return False
@@ -198,7 +198,7 @@ class Application(ApplicationFactory, SingletonApplication):
         else:
             datastr = str(data)
 
-        if datastr == AppCommands.Empty.value:
+        if datastr == AppBuiltinCommand.Empty.value:
             if isinstance(self.systemTray, SystemTrayIcon):
                 logger.info('attempting to start multiple instance. Show tray message')
 
@@ -206,7 +206,7 @@ class Application(ApplicationFactory, SingletonApplication):
             else:
                 # The tray hasn't been initialized. Do nothing
                 pass
-        elif datastr == AppCommands.RunAs.value:
+        elif datastr == AppBuiltinCommand.RunAs.value:
             logger.info('detected requests to start as admin in new instance. Exiting')
 
             self.exit()
@@ -301,7 +301,7 @@ class Application(ApplicationFactory, SingletonApplication):
     def cleanup():
         Mixins.CleanupOnExit.cleanupAll()
 
-        if AppSettings.get('SystemProxyMode') == 'Auto':
+        if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:
             # Automatically configure
             SystemProxy.off()
             SystemProxy.daemonOff()
@@ -452,7 +452,7 @@ class Application(ApplicationFactory, SingletonApplication):
             Win32Session.set(Application.cleanup)
             Win32Session.run()
 
-            if AppSettings.get('SystemProxyMode') == 'Auto':
+            if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:
                 # Automatically configure
                 SystemProxy.off()
                 SystemProxy.daemonOn_()

@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 def handleAppSystemProxyMode() -> bool:
     try:
-        if AppSettings.get('SystemProxyMode') == 'Auto':
+        if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:
             # Automatically configure
             return True
         else:

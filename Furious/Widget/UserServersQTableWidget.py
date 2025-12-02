@@ -527,7 +527,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
         self.coreManager.start(
             configcopy,
-            'Global',
+            AppBuiltinRouting.Global.value,
             self.coreExitCallback,
             msgCallbackCore=self.coreMsgCallback,
             deepcopy=False,
@@ -555,7 +555,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
         self.coreManager.start(
             configcopy,
-            'Global',
+            AppBuiltinRouting.Global.value,
             self.coreExitCallback,
             msgCallbackCore=self.coreMsgCallback,
             deepcopy=False,

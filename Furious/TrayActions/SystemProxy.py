@@ -15,15 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
+
 from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
 __all__ = ['SystemProxyAction']
 
-BUILTIN_PROXY_MODE = ['Auto', 'NoChanges']
-
-registerAppSettings('SystemProxyMode', validRange=BUILTIN_PROXY_MODE)
+registerAppSettings(
+    'SystemProxyMode', validRange=list(mode.value for mode in AppBuiltinProxyMode)
+)
 
 
 class SystemProxyChildAction(AppQAction):
@@ -32,9 +34,9 @@ class SystemProxyChildAction(AppQAction):
 
     def triggeredCallback(self, checked):
         if self.textCompare('Automatically Configure System Proxy'):
-            AppSettings.set('SystemProxyMode', 'Auto')
+            AppSettings.set('SystemProxyMode', AppBuiltinProxyMode.Auto.value)
         elif self.textCompare('Do Not Change System Proxy'):
-            AppSettings.set('SystemProxyMode', 'NoChanges')
+            AppSettings.set('SystemProxyMode', AppBuiltinProxyMode.NoChanges.value)
 
 
 class SystemProxyAction(AppQAction):
@@ -46,12 +48,14 @@ class SystemProxyAction(AppQAction):
                 SystemProxyChildAction(
                     _('Automatically Configure System Proxy'),
                     checkable=True,
-                    checked=AppSettings.get('SystemProxyMode') == 'Auto',
+                    checked=AppSettings.get('SystemProxyMode')
+                    == AppBuiltinProxyMode.Auto.value,
                 ),
                 SystemProxyChildAction(
                     _('Do Not Change System Proxy'),
                     checkable=True,
-                    checked=AppSettings.get('SystemProxyMode') == 'NoChanges',
+                    checked=AppSettings.get('SystemProxyMode')
+                    == AppBuiltinProxyMode.NoChanges.value,
                 ),
             ),
             **kwargs,

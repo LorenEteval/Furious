@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .AppCommands import *
 from .AppSettings import *
 from .Constants import *
+from .Enum import *
 from .Globals import *
 from .Mixins import *
 from .PySide6Legacy import *
