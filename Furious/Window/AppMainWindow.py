@@ -502,7 +502,7 @@ class AppMainWindow(AppQMainWindow):
                         arguments=[
                             '-Command',
                             f'Start-Process \'{APP().applicationFilePath()}\' '
-                            f'\'{AppCommands.RunAs.value}\' -Verb runAs',
+                            f'\'{AppBuiltinCommand.RunAs.value}\' -Verb runAs',
                         ],
                     )
                 elif PLATFORM == 'Darwin':
@@ -511,7 +511,7 @@ class AppMainWindow(AppQMainWindow):
                         arguments=[
                             '-e',
                             f'do shell script \"{APP().applicationFilePath()} '
-                            f'{AppCommands.RunAs.value}\" with administrator privileges',
+                            f'{AppBuiltinCommand.RunAs.value}\" with administrator privileges',
                         ],
                     )
             else:

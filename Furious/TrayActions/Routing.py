@@ -15,15 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
+
 from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
 __all__ = ['RoutingAction']
 
-BUILTIN_ROUTING = ['Bypass Mainland China', 'Global', 'Custom']
-
-registerAppSettings('Routing', validRange=BUILTIN_ROUTING)
+registerAppSettings(
+    'Routing', validRange=list(routing.value for routing in AppBuiltinRouting)
+)
 
 # ALL BUILTIN ROUTING VALUE
 _TRANSLATABLE_BUILTIN_ROUTING = [
@@ -51,7 +53,7 @@ class RoutingAction(AppQAction):
     def __init__(self, **kwargs):
         if AppSettings.get('Routing') == 'Bypass':
             # Update value for backward compatibility
-            AppSettings.set('Routing', 'Bypass Mainland China')
+            AppSettings.set('Routing', AppBuiltinRouting.BypassMainlandChina.value)
 
         super().__init__(
             _('Routing'),
@@ -59,11 +61,11 @@ class RoutingAction(AppQAction):
             menu=AppQMenu(
                 *list(
                     RoutingChildAction(
-                        _(routing),
+                        _(routing.value),
                         checkable=True,
-                        checked=AppSettings.get('Routing') == routing,
+                        checked=AppSettings.get('Routing') == routing.value,
                     )
-                    for routing in BUILTIN_ROUTING
+                    for routing in AppBuiltinRouting
                 ),
             ),
             **kwargs,

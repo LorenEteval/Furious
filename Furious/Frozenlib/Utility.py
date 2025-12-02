@@ -19,10 +19,10 @@ from __future__ import annotations
 
 from Furious.Frozenlib.Constants import *
 
+from enum import Enum
 from typing import AnyStr, Tuple
 
 import os
-import enum
 import time
 import pathlib
 import operator
@@ -43,7 +43,7 @@ __all__ = [
 ]
 
 
-class Protocol(enum.Enum):
+class Protocol(Enum):
     Unknown = 'Unknown'
     VMess = 'VMess'
     VLESS = 'VLESS'

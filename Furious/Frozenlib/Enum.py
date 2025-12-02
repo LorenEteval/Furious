@@ -19,9 +19,24 @@ from __future__ import annotations
 
 from enum import Enum
 
-__all__ = ['AppCommands']
+__all__ = [
+    'AppBuiltinCommand',
+    'AppBuiltinRouting',
+    'AppBuiltinProxyMode',
+]
 
 
-class AppCommands(Enum):
+class AppBuiltinCommand(Enum):
     Empty = 'empty'
     RunAs = 'runas'
+
+
+class AppBuiltinRouting(Enum):
+    BypassMainlandChina = 'Bypass Mainland China'
+    Global = 'Global'
+    Custom = 'Custom'
+
+
+class AppBuiltinProxyMode(Enum):
+    Auto = 'Auto'
+    NoChanges = 'NoChanges'

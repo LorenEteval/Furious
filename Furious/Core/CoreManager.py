@@ -155,7 +155,7 @@ class CoreManager(Mixins.CleanupOnExit):
         for attr in ['access', 'error']:
             fixLogObjectPath(config, attr, logRedirectValue, log)
 
-        if routing == 'Bypass Mainland China':
+        if routing == AppBuiltinRouting.BypassMainlandChina.value:
             # TUN Mode handling
             if not proxyModeOnly and SystemRuntime.isTUNMode():
                 showMBoxDirectRulesNotAllowed()
@@ -195,9 +195,9 @@ class CoreManager(Mixins.CleanupOnExit):
                     },
                 ],
             }
-        elif routing == 'Global':
+        elif routing == AppBuiltinRouting.Global.value:
             routingObject = {}
-        elif routing == 'Custom':
+        elif routing == AppBuiltinRouting.Custom.value:
             routingObject = config.get('routing', {})
         else:
             routingObject = {}
@@ -225,7 +225,7 @@ class CoreManager(Mixins.CleanupOnExit):
         log=True,
         **kwargs,
     ):
-        if routing == 'Bypass Mainland China':
+        if routing == AppBuiltinRouting.BypassMainlandChina.value:
             # TUN Mode handling
             if not proxyModeOnly and SystemRuntime.isTUNMode():
                 showMBoxDirectRulesNotAllowed()
@@ -236,12 +236,12 @@ class CoreManager(Mixins.CleanupOnExit):
                 'rule': DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl',
                 'mmdb': DATA_DIR / 'hysteria' / 'country.mmdb',
             }
-        elif routing == 'Global':
+        elif routing == AppBuiltinRouting.Global.value:
             routingObject = {
                 'rule': '',
                 'mmdb': '',
             }
-        elif routing == 'Custom':
+        elif routing == AppBuiltinRouting.Custom.value:
             routingObject = {
                 'rule': config.get('acl', ''),
                 'mmdb': config.get('mmdb', ''),
