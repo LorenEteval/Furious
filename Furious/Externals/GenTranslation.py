@@ -956,7 +956,7 @@ TRANSLATION = {
     },
     "Unable to connect": {
         "source": [
-            "Furious.Core.CoreManager",
+            "Furious.Qt.QtWidgets",
             "Furious.TrayActions.Connect"
         ],
         "RU": "Не удается подключиться",
@@ -1191,7 +1191,7 @@ TRANSLATION = {
         "source": [
             "Furious.TrayActions.Routing"
         ],
-        "RU": "Весь трафик",
+        "RU": "глобальный режим",
         "ZH": "全球",
         "isReviewed": "True"
     },
@@ -1380,10 +1380,18 @@ TRANSLATION = {
     },
     "Routing option with direct rules is not allowed in TUN mode": {
         "source": [
-            "Furious.Core.CoreManager"
+            "Furious.Qt.QtWidgets"
         ],
         "RU": "Опция маршрутизации с прямыми правилами не разрешена в режиме TUN",
         "ZH": "TUN模式下不允许使用直接规则的路由选项",
+        "isReviewed": "True"
+    },
+    "Switch to global and reconnect?": {
+        "source": [
+            "Furious.Qt.QtWidgets"
+        ],
+        "RU": "Переключиться в глобальный режим и переподключиться?",
+        "ZH": "切换到全局模式并重新连接？",
         "isReviewed": "True"
     },
     "Select and press Enter to activate configuration and connect": {

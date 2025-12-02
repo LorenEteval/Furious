@@ -158,14 +158,7 @@ class CoreManager(Mixins.CleanupOnExit):
         if routing == 'Bypass Mainland China':
             # TUN Mode handling
             if not proxyModeOnly and SystemRuntime.isTUNMode():
-                mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-                mbox.setWindowTitle(_('Unable to connect'))
-                mbox.setText(
-                    _('Routing option with direct rules is not allowed in TUN mode')
-                )
-
-                # Show the MessageBox asynchronously
-                mbox.open()
+                showDirectRulesNotAllowedMBox()
 
                 return None, False
 
@@ -235,14 +228,7 @@ class CoreManager(Mixins.CleanupOnExit):
         if routing == 'Bypass Mainland China':
             # TUN Mode handling
             if not proxyModeOnly and SystemRuntime.isTUNMode():
-                mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-                mbox.setWindowTitle(_('Unable to connect'))
-                mbox.setText(
-                    _('Routing option with direct rules is not allowed in TUN mode')
-                )
-
-                # Show the MessageBox asynchronously
-                mbox.open()
+                showDirectRulesNotAllowedMBox()
 
                 return None, False
 
