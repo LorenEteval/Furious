@@ -50,6 +50,8 @@ __all__ = [
     'QuestionDeleteMBox',
     'NewChangesNextTimeMBox',
     'showNewChangesNextTimeMBox',
+    'DirectRulesNotAllowedMBox',
+    'showDirectRulesNotAllowedMBox',
     'UnrecognizedConfigMBox',
     'showUnrecognizedConfigMBox',
 ]
@@ -693,6 +695,56 @@ def showNewChangesNextTimeMBox(**kwargs):
         # Any non-exit exceptions
 
         pass
+
+
+class DirectRulesNotAllowedMBox(AppQMessageBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setWindowTitle(_('Unable to connect'))
+        self.setIcon(AppQMessageBox.Icon.Critical)
+        self.setStandardButtons(
+            AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.No
+        )
+        self.setText(self.customText())
+
+    @staticmethod
+    def customText() -> str:
+        return (
+            _('Routing option with direct rules is not allowed in TUN mode')
+            + '\n\n'
+            + _('Switch to global and reconnect?')
+        )
+
+    def retranslate(self):
+        self.setWindowTitle(_(self.windowTitle()))
+        self.setText(self.customText())
+
+        # Ignore informative text, buttons
+
+        self.moveToCenter()
+
+
+def showDirectRulesNotAllowedMBox(**kwargs):
+    @QtCore.Slot(int)
+    def handleResultCode(code):
+        if code == PySide6Legacy.enumValueWrapper(AppQMessageBox.StandardButton.Yes):
+            APP().systemTray.RoutingAction.getGlobalAction().trigger()
+            APP().systemTray.ConnectAction.trigger()
+        else:
+            # Do nothing
+            pass
+
+    mbox = DirectRulesNotAllowedMBox(**kwargs)
+    mbox.finished.connect(handleResultCode)
+
+    if isinstance(mbox.parent(), QMainWindow):
+        mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+    else:
+        mbox.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+
+    # Show the MessageBox asynchronously
+    mbox.open()
 
 
 class UnrecognizedConfigMBox(AppQMessageBox):

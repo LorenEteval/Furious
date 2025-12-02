@@ -68,3 +68,7 @@ class RoutingAction(AppQAction):
             ),
             **kwargs,
         )
+
+    def getGlobalAction(self):
+        # 2nd action
+        return self._menu.actions()[1]
