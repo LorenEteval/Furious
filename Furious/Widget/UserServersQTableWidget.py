@@ -55,7 +55,7 @@ registerAppSettings('ServerWidgetSectionSizeTable')
 registerAppSettings('UserServersHeaderViewState')
 
 
-class UpdateSubsInfoMBox(AppQMessageBox):
+class MBoxUpdateSubsInfo(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         self.successArgs = kwargs.pop('successArgs', list())
         self.failureArgs = kwargs.pop('failureArgs', list())
@@ -176,7 +176,7 @@ class SubscriptionManager(WebGETManager):
                             APP().systemTray.ConnectAction.trigger()
 
         if showMessageBox:
-            mbox = UpdateSubsInfoMBox(
+            mbox = MBoxUpdateSubsInfo(
                 successArgs=successArgs,
                 failureArgs=failureArgs,
                 parent=kwargs.pop('parent', None),
@@ -1161,7 +1161,7 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
 
         if guiEditor is None:
             # Unrecognized.
-            showUnrecognizedConfigMBox()
+            showMBoxUnrecognizedConfig()
 
             return
 
@@ -1204,7 +1204,7 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         self.flushRow(index, factory)
 
         if modified and index == Storage.UserActivatedItemIndex():
-            showNewChangesNextTimeMBox()
+            showMBoxNewChangesNextTime()
 
         editor.accepted.disconnect()
         editor.rejected.disconnect()
@@ -1564,10 +1564,10 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
 
         if PLATFORM == 'Windows':
             # Windows
-            mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
+            mbox = MBoxQuestionDelete(icon=AppQMessageBox.Icon.Question)
         else:
             # macOS & linux
-            mbox = QuestionDeleteMBox(
+            mbox = MBoxQuestionDelete(
                 icon=AppQMessageBox.Icon.Question, parent=self.parent()
             )
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)

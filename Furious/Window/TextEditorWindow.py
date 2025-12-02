@@ -34,7 +34,7 @@ __all__ = ['TextEditorWindow']
 registerAppSettings('ServerWidgetPointSize')
 
 
-class QuestionSaveMBox(AppQMessageBox):
+class MBoxQuestionSave(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -50,7 +50,7 @@ class QuestionSaveMBox(AppQMessageBox):
         self.setDefaultButton(self.button0)
 
 
-class JSONDecodeErrorMBox(AppQMessageBox):
+class MBoxJSONDecodeError(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -250,7 +250,7 @@ class TextEditorWindow(AppQMainWindow):
         except Exception as ex:
             # Any non-exit exceptions
 
-            mbox = JSONDecodeErrorMBox(icon=AppQMessageBox.Icon.Critical, parent=self)
+            mbox = MBoxJSONDecodeError(icon=AppQMessageBox.Icon.Critical, parent=self)
             mbox.error = str(ex)
             mbox.setWindowTitle(_('Error saving configuration'))
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
@@ -276,7 +276,7 @@ class TextEditorWindow(AppQMainWindow):
                 pass
 
             if index == Storage.UserActivatedItemIndex():
-                showNewChangesNextTimeMBox(parent=self, method=showChangesMethod)
+                showMBoxNewChangesNextTime(parent=self, method=showChangesMethod)
 
             self.markAsSaved()
 
@@ -313,7 +313,7 @@ class TextEditorWindow(AppQMainWindow):
                 except Exception as ex:
                     # Any non-exit exceptions
 
-                    mbox = JSONDecodeErrorMBox(
+                    mbox = MBoxJSONDecodeError(
                         icon=AppQMessageBox.Icon.Critical, parent=self
                     )
                     mbox.error = str(ex)
@@ -358,7 +358,7 @@ class TextEditorWindow(AppQMainWindow):
 
     def closeEvent(self, event: QtCore.QEvent):
         if self.modified:
-            mbox = QuestionSaveMBox(icon=AppQMessageBox.Icon.Question, parent=self)
+            mbox = MBoxQuestionSave(icon=AppQMessageBox.Icon.Question, parent=self)
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
             def handleButtonClicked(button):

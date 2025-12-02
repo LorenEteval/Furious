@@ -158,7 +158,7 @@ class CoreManager(Mixins.CleanupOnExit):
         if routing == 'Bypass Mainland China':
             # TUN Mode handling
             if not proxyModeOnly and SystemRuntime.isTUNMode():
-                showDirectRulesNotAllowedMBox()
+                showMBoxDirectRulesNotAllowed()
 
                 return None, False
 
@@ -228,7 +228,7 @@ class CoreManager(Mixins.CleanupOnExit):
         if routing == 'Bypass Mainland China':
             # TUN Mode handling
             if not proxyModeOnly and SystemRuntime.isTUNMode():
-                showDirectRulesNotAllowedMBox()
+                showMBoxDirectRulesNotAllowed()
 
                 return None, False
 

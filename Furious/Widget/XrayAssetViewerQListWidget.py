@@ -38,7 +38,7 @@ __all__ = ['XrayAssetViewerQListWidget']
 logger = logging.getLogger(__name__)
 
 
-class AssetExistsMBox(AppQMessageBox):
+class MBoxAssetExists(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -191,7 +191,7 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
                     # Do not overwrite
                     pass
 
-            mbox = AssetExistsMBox(icon=AppQMessageBox.Icon.Question)
+            mbox = MBoxAssetExists(icon=AppQMessageBox.Icon.Question)
             mbox.setWindowTitle(_('Import'))
             mbox.setText(_('Asset file already exists. Overwrite?'))
             mbox.setInformativeText(basename)
@@ -223,10 +223,10 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
 
         if PLATFORM == 'Windows':
             # Windows
-            mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
+            mbox = MBoxQuestionDelete(icon=AppQMessageBox.Icon.Question)
         else:
             # macOS & linux
-            mbox = QuestionDeleteMBox(
+            mbox = MBoxQuestionDelete(
                 icon=AppQMessageBox.Icon.Question, parent=self.parent()
             )
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)

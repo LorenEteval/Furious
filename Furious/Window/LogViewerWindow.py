@@ -26,7 +26,7 @@ from PySide6.QtWidgets import *
 __all__ = ['LogViewerWindow']
 
 
-class SaveErrorMBox(AppQMessageBox):
+class MBoxSaveError(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -59,7 +59,7 @@ def saveAsFile(content: str):
         except Exception as ex:
             # Any non-exit exceptions
 
-            mbox = SaveErrorMBox(icon=AppQMessageBox.Icon.Critical)
+            mbox = MBoxSaveError(icon=AppQMessageBox.Icon.Critical)
             mbox.saveError = str(ex)
             mbox.setWindowTitle(_('Error saving log'))
             mbox.setText(mbox.customText())

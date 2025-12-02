@@ -65,7 +65,7 @@ class TUNModeAction(AppQAction):
         else:
             AppSettings.turnOFF('VPNMode')
 
-        showNewChangesNextTimeMBox()
+        showMBoxNewChangesNextTime()
 
 
 class SettingsChildAction(AppQAction):
@@ -130,7 +130,7 @@ class SettingsChildAction(AppQAction):
             else:
                 AppSettings.turnOFF('PowerSaveMode')
 
-            showNewChangesNextTimeMBox()
+            showMBoxNewChangesNextTime()
         elif self.textCompare('Automatically Update Asset Files'):
             if checked:
                 AppSettings.turnON_('AutoUpdateAssetFiles')
