@@ -279,9 +279,11 @@ class Application(ApplicationFactory, SingletonApplication):
 
         return backgroudColor.lightness() < 128
 
-    @staticmethod
-    def isDarkModeEnabled():
-        return AppSettings.isStateON_('DarkMode')
+    def isDarkModeEnabled(self):
+        if not SystemRuntime.isAdmin():
+            return AppSettings.isStateON_('DarkMode')
+        else:
+            return self.isDarkMode()
 
     def switchToDarkMode(self):
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyside6())
