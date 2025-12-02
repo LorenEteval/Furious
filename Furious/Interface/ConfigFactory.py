@@ -19,6 +19,8 @@ from __future__ import annotations
 
 from Furious.Interface.UserServersTableItem import *
 
+from PySide6.QtWidgets import QApplication
+
 from typing import Union
 
 import copy
@@ -130,7 +132,20 @@ class ConfigFactory(UserServersTableItem, dict):
 
     @property
     def itemSubscription(self) -> str:
-        return ''
+        try:
+            app = QApplication.instance()
+
+            if app is None:
+                return ''
+            else:
+                subsId = self.getExtras('subsId')
+                subsOb = app._userSubs.get(subsId, {})
+
+                return subsOb.get('remark', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            return ''
 
     @property
     def itemLatency(self) -> str:

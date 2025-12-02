@@ -20,7 +20,6 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Library.Encoder import *
-from Furious.Library.Storage import *
 
 from typing import Union, Tuple
 
@@ -283,7 +282,7 @@ class ConfigXray(ConfigFactory):
     def __init__(self, config: Union[str, dict] = '', **kwargs):
         super().__init__(config, **kwargs)
 
-    def coreName(self):
+    def coreName(self) -> str:
         return 'Xray-core'
 
     @staticmethod
@@ -1186,22 +1185,6 @@ class ConfigXray(ConfigFactory):
         raise ValueError(f'Unrecognized URI scheme {URI}')
 
     @property
-    def itemRemark(self) -> str:
-        return self.getExtras('remark')
-
-    @property
-    def itemSubscription(self) -> str:
-        try:
-            subsId = self.getExtras('subsId')
-            subsOb = Storage.UserSubs().get(subsId, {})
-
-            return subsOb.get('remark', '')
-        except Exception:
-            # Any non-exit exceptions
-
-            return ''
-
-    @property
     def itemProtocol(self) -> str:
         return Protocol.toEnum(self.proxyProtocol).value
 
@@ -1538,24 +1521,8 @@ class ConfigHysteria1(ConfigFactory):
     def __init__(self, config: Union[str, dict] = '', **kwargs):
         super().__init__(config, **kwargs)
 
-    def coreName(self):
+    def coreName(self) -> str:
         return 'Hysteria1'
-
-    @property
-    def itemRemark(self) -> str:
-        return self.getExtras('remark')
-
-    @property
-    def itemSubscription(self) -> str:
-        try:
-            subsId = self.getExtras('subsId')
-            subsOb = Storage.UserSubs().get(subsId, {})
-
-            return subsOb.get('remark', '')
-        except Exception:
-            # Any non-exit exceptions
-
-            return ''
 
     @property
     def itemProtocol(self) -> str:
@@ -1823,24 +1790,8 @@ class ConfigHysteria2(ConfigFactory):
     def __init__(self, config: Union[str, dict] = '', **kwargs):
         super().__init__(config, **kwargs)
 
-    def coreName(self):
+    def coreName(self) -> str:
         return 'Hysteria2'
-
-    @property
-    def itemRemark(self) -> str:
-        return self.getExtras('remark')
-
-    @property
-    def itemSubscription(self) -> str:
-        try:
-            subsId = self.getExtras('subsId')
-            subsOb = Storage.UserSubs().get(subsId, {})
-
-            return subsOb.get('remark', '')
-        except Exception:
-            # Any non-exit exceptions
-
-            return ''
 
     @property
     def itemProtocol(self) -> str:
