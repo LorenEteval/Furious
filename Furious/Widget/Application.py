@@ -18,6 +18,7 @@
 from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Qt import gettext as _
+from Furious.Library import *
 from Furious.Utility import *
 from Furious.Widget.SystemTrayIcon import *
 from Furious.Window.AppMainWindow import *
@@ -167,6 +168,17 @@ class Application(ApplicationFactory, SingletonApplication):
         self.mainWindow = None
         self.systemTray = None
 
+        # Logging window
+        self.logViewerWindowSelf = None
+        self.logViewerWindowCore = None
+        self.logViewerWindowTun_ = None
+
+        # Protected storage access
+        self._userActivatedItemIndex = None
+        self._userServers = None
+        self._userSubs = None
+        self._userTUNSettings = None
+
         # ThreadPool
         self.threadPool = QtCore.QThreadPool()
         self.threadPool.setMaxThreadCount(max(OS_CPU_COUNT // 2, 1))
@@ -248,6 +260,13 @@ class Application(ApplicationFactory, SingletonApplication):
     def addEnviron():
         # Xray environment variables
         os.environ['XRAY_LOCATION_ASSET'] = str(XRAY_ASSET_DIR)
+
+    def addStorage(self):
+        # Protected storage access
+        self._userActivatedItemIndex = Storage.UserActivatedItemIndex()
+        self._userServers = Storage.UserServers()
+        self._userSubs = Storage.UserSubs()
+        self._userTUNSettings = Storage.UserTUNSettings()
 
     def isSystemTrayConnected(self):
         if isinstance(self.systemTray, SystemTrayIcon):
@@ -349,6 +368,7 @@ class Application(ApplicationFactory, SingletonApplication):
                 )
 
             self.addEnviron()
+            self.addStorage()
             self.addCustomFont()
             self.configureLogging()
 
