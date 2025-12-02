@@ -121,7 +121,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt update
-          sudo apt install -y libxcb-cursor0 qt6-base-dev patchelf ccache
+          sudo apt install -y libxcb-cursor0 qt6-base-dev patchelf ccache zlib1g-dev
           echo "QMAKE=$(which qmake6)" >> $GITHUB_ENV
 
           if [ "$RUNNER_ARCH" == "X64" ]; then
