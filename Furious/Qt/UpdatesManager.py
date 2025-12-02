@@ -36,7 +36,7 @@ __all__ = ['UpdatesManager']
 logger = logging.getLogger(__name__)
 
 
-class QuestionUpdateMBox(AppQMessageBox):
+class MBoxQuestionUpdate(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -116,7 +116,7 @@ class UpdatesManager(WebGETManager):
                     hasNewVersionCallback(newVersion)
 
                 if showMessageBox:
-                    mbox = QuestionUpdateMBox(
+                    mbox = MBoxQuestionUpdate(
                         parent=parent,
                         icon=AppQMessageBox.Icon.Information,
                     )

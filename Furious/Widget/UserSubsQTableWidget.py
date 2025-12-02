@@ -258,10 +258,10 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
 
         if PLATFORM == 'Windows':
             # Windows
-            mbox = QuestionDeleteMBox(icon=AppQMessageBox.Icon.Question)
+            mbox = MBoxQuestionDelete(icon=AppQMessageBox.Icon.Question)
         else:
             # macOS & linux
-            mbox = QuestionDeleteMBox(
+            mbox = MBoxQuestionDelete(
                 icon=AppQMessageBox.Icon.Question, parent=self.parent()
             )
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)

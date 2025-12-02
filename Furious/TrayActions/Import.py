@@ -35,8 +35,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def showImportErrorMBox(clipboard: str):
-    mbox = ImportErrorMBox(icon=AppQMessageBox.Icon.Critical)
+def showMBoxImportError(clipboard: str):
+    mbox = MBoxImportError(icon=AppQMessageBox.Icon.Critical)
 
     if len(clipboard) > 1000:
         # Limited
@@ -54,11 +54,11 @@ def importItemFromClipboard(clipboard: str):
     factory = configFactoryFromAny(clipboard)
 
     if not factory.isValid():
-        showImportErrorMBox(clipboard)
+        showMBoxImportError(clipboard)
     else:
         APP().mainWindow.appendNewItemByFactory(factory)
 
-        mbox = ImportSuccessMBox(icon=AppQMessageBox.Icon.Information)
+        mbox = MBoxImportSuccess(icon=AppQMessageBox.Icon.Information)
         mbox.remark = factory.getExtras('remark')
         mbox.setText(mbox.customText())
 
@@ -66,7 +66,7 @@ def importItemFromClipboard(clipboard: str):
         mbox.open()
 
 
-class ImportErrorMBox(AppQMessageBox):
+class MBoxImportError(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -81,7 +81,7 @@ class ImportErrorMBox(AppQMessageBox):
         self.moveToCenter()
 
 
-class ImportMultiSuccessMBox(AppQMessageBox):
+class MBoxImportMultiSuccess(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -120,7 +120,7 @@ class ImportMultiSuccessMBox(AppQMessageBox):
         self.moveToCenter()
 
 
-class ImportSuccessMBox(AppQMessageBox):
+class MBoxImportSuccess(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -179,14 +179,14 @@ class ImportFromFileAction(AppQAction):
                 if factory.isValid():
                     APP().mainWindow.appendNewItemByFactory(factory)
 
-                    mbox = ImportSuccessMBox(icon=AppQMessageBox.Icon.Information)
+                    mbox = MBoxImportSuccess(icon=AppQMessageBox.Icon.Information)
                     mbox.remark = factory.getExtras('remark')
                     mbox.setText(mbox.customText())
 
                     # Show the MessageBox asynchronously
                     mbox.open()
                 else:
-                    mbox = ImportErrorMBox(icon=AppQMessageBox.Icon.Critical)
+                    mbox = MBoxImportError(icon=AppQMessageBox.Icon.Critical)
                     mbox.setText(_('Invalid data'))
                     mbox.setInformativeText('')
 
@@ -220,18 +220,18 @@ class ImportURIFromClipboardAction(AppQAction):
                     imported.append(factory.getExtras('remark'))
 
             if len(imported) == 0:
-                showImportErrorMBox(clipboard)
+                showMBoxImportError(clipboard)
             else:
                 if len(imported) == 1:
                     # Fall back to single
-                    mbox = ImportSuccessMBox(icon=AppQMessageBox.Icon.Information)
+                    mbox = MBoxImportSuccess(icon=AppQMessageBox.Icon.Information)
                     mbox.remark = imported[0]
                     mbox.setText(mbox.customText())
 
                     # Show the MessageBox asynchronously
                     mbox.open()
                 else:
-                    mbox = ImportMultiSuccessMBox(icon=AppQMessageBox.Icon.Information)
+                    mbox = MBoxImportMultiSuccess(icon=AppQMessageBox.Icon.Information)
                     mbox.imported = imported
                     mbox.rowCount = rowCount
                     mbox.setText(mbox.customText())

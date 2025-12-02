@@ -255,7 +255,7 @@ class GuiTUNSettings(GuiEditorWidgetQDialog):
         modified = self.inputToFactory(config)
 
         if modified and SystemRuntime.isTUNMode():
-            showNewChangesNextTimeMBox()
+            showMBoxNewChangesNextTime()
 
         self.accepted.disconnect()
         self.rejected.disconnect()

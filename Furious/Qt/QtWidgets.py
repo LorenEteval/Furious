@@ -47,13 +47,13 @@ __all__ = [
     'AppQTableWidget',
     'AppQTabWidget',
     'AppQToolBar',
-    'QuestionDeleteMBox',
-    'NewChangesNextTimeMBox',
-    'showNewChangesNextTimeMBox',
-    'DirectRulesNotAllowedMBox',
-    'showDirectRulesNotAllowedMBox',
-    'UnrecognizedConfigMBox',
-    'showUnrecognizedConfigMBox',
+    'MBoxQuestionDelete',
+    'MBoxNewChangesNextTime',
+    'MBoxDirectRulesNotAllowed',
+    'MBoxUnrecognizedConfig',
+    'showMBoxNewChangesNextTime',
+    'showMBoxDirectRulesNotAllowed',
+    'showMBoxUnrecognizedConfig',
 ]
 
 
@@ -610,7 +610,7 @@ class AppQToolBar(Mixins.QTranslatable, QToolBar):
         self.setWindowTitle(_(self.windowTitle()))
 
 
-class QuestionDeleteMBox(AppQMessageBox):
+class MBoxQuestionDelete(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -637,7 +637,7 @@ class QuestionDeleteMBox(AppQMessageBox):
         self.moveToCenter()
 
 
-class NewChangesNextTimeMBox(AppQMessageBox):
+class MBoxNewChangesNextTime(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -663,7 +663,7 @@ class NewChangesNextTimeMBox(AppQMessageBox):
         self.moveToCenter()
 
 
-def showNewChangesNextTimeMBox(**kwargs):
+def showMBoxNewChangesNextTime(**kwargs):
 
     @QtCore.Slot(int)
     def handleResultCode(code):
@@ -677,7 +677,7 @@ def showNewChangesNextTimeMBox(**kwargs):
         method = kwargs.pop('method', 'open')
 
         if APP().isSystemTrayConnected():
-            mbox = NewChangesNextTimeMBox(**kwargs)
+            mbox = MBoxNewChangesNextTime(**kwargs)
 
             if isinstance(mbox.parent(), QMainWindow):
                 mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
@@ -697,7 +697,7 @@ def showNewChangesNextTimeMBox(**kwargs):
         pass
 
 
-class DirectRulesNotAllowedMBox(AppQMessageBox):
+class MBoxDirectRulesNotAllowed(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -725,7 +725,7 @@ class DirectRulesNotAllowedMBox(AppQMessageBox):
         self.moveToCenter()
 
 
-def showDirectRulesNotAllowedMBox(**kwargs):
+def showMBoxDirectRulesNotAllowed(**kwargs):
     @QtCore.Slot(int)
     def handleResultCode(code):
         if code == PySide6Legacy.enumValueWrapper(AppQMessageBox.StandardButton.Yes):
@@ -735,7 +735,7 @@ def showDirectRulesNotAllowedMBox(**kwargs):
             # Do nothing
             pass
 
-    mbox = DirectRulesNotAllowedMBox(**kwargs)
+    mbox = MBoxDirectRulesNotAllowed(**kwargs)
     mbox.finished.connect(handleResultCode)
 
     if isinstance(mbox.parent(), QMainWindow):
@@ -747,7 +747,7 @@ def showDirectRulesNotAllowedMBox(**kwargs):
     mbox.open()
 
 
-class UnrecognizedConfigMBox(AppQMessageBox):
+class MBoxUnrecognizedConfig(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -755,8 +755,8 @@ class UnrecognizedConfigMBox(AppQMessageBox):
         self.setText(_('Unrecognized Configuration. Please modify it in the editor'))
 
 
-def showUnrecognizedConfigMBox(**kwargs):
-    mbox = UnrecognizedConfigMBox(**kwargs)
+def showMBoxUnrecognizedConfig(**kwargs):
+    mbox = MBoxUnrecognizedConfig(**kwargs)
 
     if isinstance(mbox.parent(), QMainWindow):
         mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
