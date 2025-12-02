@@ -517,7 +517,7 @@ class AppMainWindow(AppQMainWindow):
             else:
                 mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
                 mbox.setWindowTitle(_(APPLICATION_NAME))
-                mbox.setText(_('I am, the supreme authority.'))
+                mbox.setText(_('I am the supreme authority 👑'))
 
                 # Show the MessageBox asynchronously
                 mbox.open()

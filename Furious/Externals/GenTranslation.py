@@ -1750,12 +1750,12 @@ TRANSLATION = {
         "ZH": "管理员",
         "isReviewed": "True"
     },
-    "I am, the supreme authority.": {
+    "I am the supreme authority 👑": {
         "source": [
             "Furious.Window.AppMainWindow"
         ],
-        "RU": "Я — единственная высшая инстанция.",
-        "ZH": "我就是至高无上的存在。",
+        "RU": "Я — единственная высшая инстанция 👑",
+        "ZH": "我就是至高无上的存在 👑",
         "isReviewed": "True"
     }
 }
