@@ -630,7 +630,7 @@ class TestDownloadSpeedWorker(WebGETManager):
             self.factory.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
 
             # Limited to save CPU resources
-            if self.hasDataCounter % 20 == 0:
+            if self.hasDataCounter % 25 == 0:
                 self.sync()
 
     def failureCallback(self, networkReply, **kwargs):
