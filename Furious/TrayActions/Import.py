@@ -24,13 +24,21 @@ from Furious.Qt import gettext as _
 
 from PySide6.QtWidgets import QApplication, QFileDialog
 
+from PIL import Image
+
+from typing import Callable, Union
+
 import os
+import mss
+import zxingcpp
 import logging
+import functools
 
 __all__ = [
     'ImportFromFileAction',
     'ImportURIFromClipboardAction',
     'ImportJSONFromClipboardAction',
+    'ImportQRCodeOnTheScreenAction',
     'ImportAction',
 ]
 
@@ -52,7 +60,7 @@ def showMBoxImportError(clipboard: str):
     mbox.open()
 
 
-def importItemFromClipboard(clipboard: str):
+def importURIFromClipboard(clipboard: str):
     factory = configFactoryFromAny(clipboard)
 
     if not factory.isValid():
@@ -66,6 +74,40 @@ def importItemFromClipboard(clipboard: str):
 
         # Show the MessageBox asynchronously
         mbox.open()
+
+
+def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
+    imported = list()
+    rowIndex = len(Storage.UserServers())
+
+    for uri in uris:
+        factory = configFactoryFromAny(uri)
+
+        if factory.isValid():
+            APP().mainWindow.appendNewItemByFactory(factory)
+
+            imported.append(factory.getExtras('remark'))
+
+    if len(imported) == 0:
+        if callable(failureCallback):
+            failureCallback()
+    else:
+        if len(imported) == 1:
+            # Fall back to single
+            mbox = MBoxImportSuccess(icon=AppQMessageBox.Icon.Information)
+            mbox.remark = imported[0]
+            mbox.setText(mbox.customText())
+
+            # Show the MessageBox asynchronously
+            mbox.open()
+        else:
+            mbox = MBoxImportMultiSuccess(icon=AppQMessageBox.Icon.Information)
+            mbox.imported = imported
+            mbox.rowIndex = rowIndex
+            mbox.setText(mbox.customText())
+
+            # Show the MessageBox asynchronously
+            mbox.open()
 
 
 class MBoxImportError(AppQMessageBox):
@@ -87,8 +129,8 @@ class MBoxImportMultiSuccess(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.imported = []
-        self.rowCount = 0
+        self.imported = list()
+        self.rowIndex = 0
 
         self.setWindowTitle(_('Import'))
         self.setIcon(AppQMessageBox.Icon.Information)
@@ -101,7 +143,7 @@ class MBoxImportMultiSuccess(AppQMessageBox):
                 list(
                     f'{index + 1} - {remark}. '
                     + _('Imported to row')
-                    + f' {self.rowCount + index + 1}'
+                    + f' {self.rowIndex + index + 1}'
                     for index, remark in enumerate(self.imported)
                 )
             )
@@ -204,42 +246,16 @@ class ImportURIFromClipboardAction(AppQAction):
         clipboard = QApplication.clipboard().text().strip()
 
         try:
-            split = clipboard.split('\n')
+            uris = clipboard.split('\n')
         except Exception:
             # Any non-exit exceptions
 
-            importItemFromClipboard(clipboard)
+            importURIFromClipboard(clipboard)
         else:
-            imported = list()
-            rowCount = len(Storage.UserServers())
-
-            for uri in split:
-                factory = configFactoryFromAny(uri)
-
-                if factory.isValid():
-                    APP().mainWindow.appendNewItemByFactory(factory)
-
-                    imported.append(factory.getExtras('remark'))
-
-            if len(imported) == 0:
-                showMBoxImportError(clipboard)
-            else:
-                if len(imported) == 1:
-                    # Fall back to single
-                    mbox = MBoxImportSuccess(icon=AppQMessageBox.Icon.Information)
-                    mbox.remark = imported[0]
-                    mbox.setText(mbox.customText())
-
-                    # Show the MessageBox asynchronously
-                    mbox.open()
-                else:
-                    mbox = MBoxImportMultiSuccess(icon=AppQMessageBox.Icon.Information)
-                    mbox.imported = imported
-                    mbox.rowCount = rowCount
-                    mbox.setText(mbox.customText())
-
-                    # Show the MessageBox asynchronously
-                    mbox.open()
+            importURIs(
+                *uris,
+                failureCallback=functools.partial(showMBoxImportError, clipboard),
+            )
 
 
 class ImportJSONFromClipboardAction(AppQAction):
@@ -249,7 +265,39 @@ class ImportJSONFromClipboardAction(AppQAction):
     def triggeredCallback(self, checked):
         clipboard = QApplication.clipboard().text().strip()
 
-        importItemFromClipboard(clipboard)
+        importURIFromClipboard(clipboard)
+
+
+class ImportQRCodeOnTheScreenAction(AppQAction):
+    def __init__(self, **kwargs):
+        super().__init__(
+            _('Scan QR Code On The Screen'),
+            icon=bootstrapIcon('qr-code-scan.svg'),
+            **kwargs,
+        )
+
+        self.sct = mss.mss()
+
+    def triggeredCallback(self, checked):
+        uris = list()
+
+        for index, monitor in enumerate(self.sct.monitors[1:], start=1):
+            frame = self.sct.grab(monitor)
+            # Convert raw BGRA bytes to PIL Image
+            image = Image.frombytes(
+                'RGB', (frame.width, frame.height), frame.bgra, 'raw', 'BGRX'
+            )
+
+            barcodes = zxingcpp.read_barcodes(image)
+
+            for barcode in barcodes:
+                data = barcode.text
+
+                logger.debug(f'found QR code on monitor \'{index}\': {data}')
+
+                uris.append(data)
+
+        importURIs(*uris)
 
 
 class ImportAction(AppQAction):
@@ -260,6 +308,8 @@ class ImportAction(AppQAction):
             menu=AppQMenu(
                 ImportURIFromClipboardAction(),
                 ImportJSONFromClipboardAction(),
+                AppQSeperator(),
+                ImportQRCodeOnTheScreenAction(),
             ),
             useActionGroup=False,
             checkable=True,

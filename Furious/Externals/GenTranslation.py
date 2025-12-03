@@ -191,6 +191,14 @@ TRANSLATION = {
         "ZH": "从剪贴板导入JSON配置",
         "isReviewed": "True"
     },
+    "Scan QR Code On The Screen": {
+        "source": [
+            "Furious.TrayActions.Import"
+        ],
+        "RU": "Отсканируйте QR-код на экране",
+        "ZH": "扫描屏幕上的二维码",
+        "isReviewed": "True"
+    },
     "Set Indent": {
         "source": [
             "Furious.Widget.IndentSpinBox"
