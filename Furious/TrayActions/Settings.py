@@ -52,15 +52,21 @@ _TRANSLATABLE_TUN_MODE = [
 
 class TUNModeAction(AppQAction):
     def __init__(self, **kwargs):
-        if SystemRuntime.isAdmin():
+        if PLATFORM == 'Linux':
             super().__init__(_('TUN Mode'), **kwargs)
         else:
-            super().__init__(_(f'TUN Mode Disabled ({ADMINISTRATOR_NAME})'), **kwargs)
+            if SystemRuntime.isAdmin():
+                super().__init__(_('TUN Mode'), **kwargs)
+            else:
+                super().__init__(
+                    _(f'TUN Mode Disabled ({ADMINISTRATOR_NAME})'), **kwargs
+                )
 
-            self.setDisabled(True)
+                self.setDisabled(True)
 
     def triggeredCallback(self, checked):
-        assert SystemRuntime.isAdmin()
+        if PLATFORM != 'Linux':
+            assert SystemRuntime.isAdmin()
 
         if checked:
             AppSettings.turnON_('VPNMode')
@@ -156,22 +162,19 @@ class SettingsChildAction(AppQAction):
 
 class SettingsAction(AppQAction):
     def __init__(self, **kwargs):
-        if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
-            tunActions = [
-                TUNModeAction(
-                    checkable=True,
-                    checked=AppSettings.isStateON_('VPNMode'),
-                ),
-                AppQAction(
-                    _('Customize TUN Settings...'),
-                    icon=bootstrapIcon('diagram-3.svg'),
-                    checkable=False,
-                    callback=lambda: APP().mainWindow.getGuiTUNSettings().open(),
-                ),
-                AppQSeperator(),
-            ]
-        else:
-            tunActions = []
+        tunActions = [
+            TUNModeAction(
+                checkable=True,
+                checked=AppSettings.isStateON_('VPNMode'),
+            ),
+            AppQAction(
+                _('Customize TUN Settings...'),
+                icon=bootstrapIcon('diagram-3.svg'),
+                checkable=False,
+                callback=lambda: APP().mainWindow.getGuiTUNSettings().open(),
+            ),
+            AppQSeperator(),
+        ]
 
         if PLATFORM == 'Darwin':
             hideDockIconAction = [
@@ -239,9 +242,6 @@ class SettingsAction(AppQAction):
             **kwargs,
         )
 
-    def getTUNModeAction(self) -> Union[AppQAction, None]:
-        if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
-            # 1st action
-            return self._menu.actions()[0]
-        else:
-            return None
+    def getTUNModeAction(self) -> AppQAction:
+        # 1st action
+        return self._menu.actions()[0]

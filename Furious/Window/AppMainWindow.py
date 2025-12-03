@@ -238,18 +238,15 @@ class AppMainWindow(AppQMainWindow):
             ),
         ]
 
-        if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
-            customizeTUNSettingsAction = [
-                AppQAction(
-                    _('Customize TUN Settings...'),
-                    icon=bootstrapIcon('diagram-3.svg'),
-                    checkable=False,
-                    callback=lambda: self.getGuiTUNSettings().open(),
-                ),
-                AppQSeperator(),
-            ]
-        else:
-            customizeTUNSettingsAction = []
+        customizeTUNSettingsAction = [
+            AppQAction(
+                _('Customize TUN Settings...'),
+                icon=bootstrapIcon('diagram-3.svg'),
+                checkable=False,
+                callback=lambda: self.getGuiTUNSettings().open(),
+            ),
+            AppQSeperator(),
+        ]
 
         if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
             _TRANSLATABLE_RESTART_AS_ADMIN = [
