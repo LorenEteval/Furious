@@ -46,7 +46,8 @@ class SystemRuntime:
             values = dict(
                 list(line.split('='))
                 for line in filter(
-                    lambda x: x != '', result.stdout.decode().split('\n')
+                    lambda x: x != '',
+                    result.stdout.decode('utf-8', 'replace').split('\n'),
                 )
             )
 
@@ -79,7 +80,10 @@ class SystemRuntime:
 
     @staticmethod
     def isTUNMode() -> bool:
-        return SystemRuntime.isAdmin() and AppSettings.isStateON_('VPNMode')
+        if PLATFORM == 'Linux':
+            return AppSettings.isStateON_('VPNMode')
+        else:
+            return AppSettings.isStateON_('VPNMode') and SystemRuntime.isAdmin()
 
     @staticmethod
     @functools.lru_cache(None)

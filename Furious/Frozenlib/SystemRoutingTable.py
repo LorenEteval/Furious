@@ -54,6 +54,9 @@ class SystemRoutingTable:
     DEFAULT_GATEWAY_MACOS = re.compile(
         r'gateway:\s*(\S+)',
     )
+    DEFAULT_GATEWAY_LINUX = re.compile(
+        r'default\s+via\s+(\S+)\s+dev\s+(\S+)',
+    )
 
     @staticmethod
     def add(sourceIP, destinationIP):
@@ -209,6 +212,35 @@ class SystemRoutingTable:
             )
 
     @staticmethod
+    def WIN32IpconfigFindContent(content: str) -> bool:
+        assert PLATFORM == 'Windows'
+
+        try:
+            result = runExternalCommand(
+                ['ipconfig'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(
+                f'run ipconfig failed. '
+                f'{dictRepr(err.returncode, err.stdout, err.stderr)}'
+            )
+
+            return False
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'run ipconfig failed. {ex}')
+
+            return False
+        else:
+            stdout = result.stdout.decode('utf-8', 'replace').strip()
+
+            return stdout.find(content) >= 0
+
+    @staticmethod
     def DarwinGetDNSServers() -> list:
         def getNetworkServices():
             _command = runExternalCommand(
@@ -239,7 +271,7 @@ class SystemRoutingTable:
                     check=True,
                 )
 
-                dnsserver = result.stdout.decode().strip()
+                dnsserver = result.stdout.decode('utf-8', 'replace').strip()
 
                 if dnsserver.find('DNS Servers') >= 0:
                     # 'There aren't any DNS Servers set on ...'
@@ -300,6 +332,128 @@ class SystemRoutingTable:
             )
 
     @staticmethod
+    def LinuxFindTUNDevice(deviceName: str) -> bool:
+        assert PLATFORM == 'Linux'
+
+        try:
+            result = runExternalCommand(
+                'ip tuntap show'.split(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(
+                f'find TUN device {deviceName} failed. '
+                f'{dictRepr(err.returncode, err.stdout, err.stderr)}'
+            )
+
+            return False
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'find TUN device {deviceName} failed. {ex}')
+
+            return False
+        else:
+            stdout = result.stdout.decode('utf-8', 'replace').strip()
+
+            return stdout.find(deviceName) >= 0
+
+    @staticmethod
+    def LinuxDeleteTUNDevice(deviceName: str) -> bool:
+        assert PLATFORM == 'Linux'
+
+        try:
+            result = runExternalCommand(
+                'ip tuntap del mode tun dev'.split() + [deviceName],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(
+                f'delete TUN device {deviceName} failed. '
+                f'{dictRepr(err.returncode, err.stdout, err.stderr)}'
+            )
+
+            return False
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'delete TUN device {deviceName} failed. {ex}')
+
+            return False
+        else:
+            logger.info(
+                f'delete TUN device {deviceName} success. '
+                f'{dictRepr(result.returncode, result.stdout, result.stderr)}'
+            )
+
+            return True
+
+    @staticmethod
+    def LinuxExecutePrivilegedScript(filepath, shell='bash') -> bool:
+        assert PLATFORM == 'Linux'
+
+        try:
+            result = runExternalCommand(
+                ['pkexec', shell, filepath],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(
+                f'execute privileged script failed. '
+                f'{dictRepr(err.returncode, err.stdout, err.stderr)}'
+            )
+
+            return False
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'execute privileged script failed. {ex}')
+
+            return False
+        else:
+            logger.info(
+                f'execute privileged script success. '
+                f'{dictRepr(result.returncode, result.stdout, result.stderr)}'
+            )
+
+            return True
+
+    @staticmethod
+    def LinuxGetIpRoute() -> str:
+        assert PLATFORM == 'Linux'
+
+        try:
+            result = runExternalCommand(
+                'ip route show'.split(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(
+                f'show IP route failed. '
+                f'{dictRepr(err.returncode, err.stdout, err.stderr)}'
+            )
+
+            return ''
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'show IP route failed. {ex}')
+
+            return ''
+        else:
+            stdout = result.stdout.decode('utf-8', 'replace').strip()
+
+            return stdout
+
+    @staticmethod
     def getDefaultGateway() -> list:
         def _get():
             if PLATFORM == 'Windows':
@@ -325,6 +479,18 @@ class SystemRoutingTable:
                 )
 
                 return SystemRoutingTable.DEFAULT_GATEWAY_MACOS.findall(
+                    result.stdout.decode(SYSTEM_PREFERRED_ENCODING, 'replace')
+                )
+
+            if PLATFORM == 'Linux':
+                result = runExternalCommand(
+                    'ip route show default'.split(),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=True,
+                )
+
+                return SystemRoutingTable.DEFAULT_GATEWAY_LINUX.findall(
                     result.stdout.decode(SYSTEM_PREFERRED_ENCODING, 'replace')
                 )
 
@@ -437,6 +603,10 @@ class SystemRoutingTable:
                     raise
                 else:
                     return result.returncode, result.stdout, result.stderr
+
+        if PLATFORM == 'Linux':
+            # TODO: Do nothing under Linux
+            return
 
         try:
             returncode, stdout, stderr = _delete()

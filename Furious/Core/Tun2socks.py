@@ -104,9 +104,18 @@ class Tun2socks(CoreProcessWorker):
         )
 
     def stop(self):
-        SystemRoutingTable.deleteRelations()
+        if PLATFORM == 'Linux':
+            # Stop tunnel first
+            super().stop()
 
-        if callable(self.cleanup):
-            self.cleanup()
+            SystemRoutingTable.deleteRelations()
 
-        super().stop()
+            if callable(self.cleanup):
+                self.cleanup()
+        else:
+            SystemRoutingTable.deleteRelations()
+
+            if callable(self.cleanup):
+                self.cleanup()
+
+            super().stop()
