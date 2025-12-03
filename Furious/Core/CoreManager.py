@@ -21,7 +21,6 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Library import *
 from Furious.Qt import *
-from Furious.Qt import gettext as _
 from Furious.Utility import *
 from Furious.Core.CoreProcessWorker import *
 from Furious.Core.XrayCore import *
@@ -35,7 +34,6 @@ import uuid
 import logging
 import tempfile
 import functools
-import subprocess
 
 __all__ = ['CoreManager']
 
