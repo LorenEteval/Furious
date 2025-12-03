@@ -1006,6 +1006,7 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
                     QtCore.Qt.Key.Key_J,
                 ),
             ),
+            ImportQRCodeOnTheScreenAction(),
             AppQSeperator(),
             AppQAction(
                 _('Export Share Link To Clipboard'),
