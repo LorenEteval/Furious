@@ -22,8 +22,6 @@ from Furious.Qt import *
 from Furious.Qt import gettext as _
 from Furious.Utility import *
 
-from typing import Union
-
 __all__ = ['SettingsAction']
 
 registerAppSettings('VPNMode', isBinary=True)
