@@ -111,6 +111,7 @@ class AppMainWindow(AppQMainWindow):
             self.setWindowTitle(f'{_(APPLICATION_NAME)} ({_(ADMINISTRATOR_NAME)})')
         else:
             self.setWindowTitle(f'{_(APPLICATION_NAME)}')
+
         # TODO: Need this?
         # self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
 
@@ -578,6 +579,12 @@ class AppMainWindow(AppQMainWindow):
                         f'restore main window size on macOS success: '
                         f'{size.toTuple()}'
                     )
+
+    def retranslate(self):
+        if SystemRuntime.isAdmin():
+            self.setWindowTitle(f'{_(APPLICATION_NAME)} ({_(ADMINISTRATOR_NAME)})')
+        else:
+            self.setWindowTitle(f'{_(APPLICATION_NAME)}')
 
     def cleanup(self):
         AppSettings.set('AppMainWindowGeometry', self.saveGeometry())
