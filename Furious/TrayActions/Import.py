@@ -281,9 +281,6 @@ class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
         except Exception as ex:
             # Any non-exit exceptions
 
-            def classname(ob) -> str:
-                return ob.__class__.__name__
-
             logger.error(f'\'{classname(self)}\' is not supported on this platform')
 
             self.sct = None

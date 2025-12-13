@@ -35,6 +35,7 @@ __all__ = [
     'Protocol',
     'callRateLimited',
     'callOnceOnly',
+    'classname',
     'isValidIPAddress',
     'parseHostPort',
     'runExternalCommand',
@@ -119,6 +120,10 @@ def callOnceOnly(func):
         return result
 
     return wrapper
+
+
+def classname(ob) -> str:
+    return ob.__class__.__name__
 
 
 @functools.lru_cache(None)
