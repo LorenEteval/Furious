@@ -273,7 +273,7 @@ class AppMainWindow(AppQMainWindow):
             openAppFolderAction = [
                 AppQAction(
                     _('Open Application Folder'),
-                    icon=bootstrapIcon('folder2.svg'),
+                    icon=bootstrapIcon('folder2-open.svg'),
                     checkable=False,
                     callback=lambda: self.openApplicationFolder(),
                 ),
