@@ -218,9 +218,6 @@ class SubscriptionManager(WebGETManager):
         except Exception as ex:
             # Any non-exit exceptions
 
-            def classname(ob) -> str:
-                return ob.__class__.__name__
-
             logger.error(f'parse share link from \'{webURL}\' failed: {ex}')
 
             failureArgs.append({'error': classname(ex), **kwargs})
@@ -314,9 +311,6 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
         except Exception as ex:
             # Any non-exit exceptions
 
-            def classname(ob) -> str:
-                return ob.__class__.__name__
-
             self.factory.setExtras('delayResult', classname(ex))
 
             # Extra guard
@@ -366,9 +360,6 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
             )
         except Exception as ex:
             # Any non-exit exceptions
-
-            def classname(ob) -> str:
-                return ob.__class__.__name__
 
             self.factory.setExtras('delayResult', classname(ex))
 
