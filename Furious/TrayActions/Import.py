@@ -190,7 +190,7 @@ class ImportFromFileAction(AppQAction):
     def __init__(self, **kwargs):
         super().__init__(
             _('Import From File...'),
-            icon=bootstrapIcon('folder2-open.svg'),
+            icon=bootstrapIcon('folder2.svg'),
             **kwargs,
         )
 
