@@ -213,5 +213,4 @@ class SystemTrayIcon(
             self.setDisconnectedIcon()
 
     def retranslate(self):
-        # Nothing to do
-        pass
+        self.setCustomToolTip()
