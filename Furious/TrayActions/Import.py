@@ -268,7 +268,7 @@ class ImportJSONFromClipboardAction(AppQAction):
         importURIFromClipboard(clipboard)
 
 
-class ImportQRCodeOnTheScreenAction(AppQAction):
+class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
     def __init__(self, **kwargs):
         super().__init__(
             _('Scan QR Code On The Screen'),
@@ -276,9 +276,23 @@ class ImportQRCodeOnTheScreenAction(AppQAction):
             **kwargs,
         )
 
-        self.sct = mss.mss()
+        try:
+            self.sct = mss.mss()
+        except Exception as ex:
+            # Any non-exit exceptions
 
-    def triggeredCallback(self, checked):
+            def classname(ob) -> str:
+                return ob.__class__.__name__
+
+            logger.error(f'\'{classname(self)}\' is not supported on this platform')
+
+            self.sct = None
+
+    def _importFromQRCode(self):
+        if self.sct is None:
+            # Nothing to do
+            return
+
         uris = list()
 
         for index, monitor in enumerate(self.sct.monitors[1:], start=1):
@@ -299,6 +313,23 @@ class ImportQRCodeOnTheScreenAction(AppQAction):
 
         importURIs(*uris)
 
+    def triggeredCallback(self, checked):
+        try:
+            self._importFromQRCode()
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'error while importing QR code on the screen: {ex}')
+
+    def cleanup(self):
+        try:
+            if self.sct is not None:
+                self.sct.close()
+        except Exception:
+            # Any non-exit exceptions
+
+            pass
+
 
 class ImportAction(AppQAction):
     def __init__(self, **kwargs):
@@ -312,6 +343,5 @@ class ImportAction(AppQAction):
                 ImportQRCodeOnTheScreenAction(),
             ),
             useActionGroup=False,
-            checkable=True,
             **kwargs,
         )
