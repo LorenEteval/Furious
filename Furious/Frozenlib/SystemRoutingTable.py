@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib.Constants import *
 from Furious.Frozenlib.Utility import *
+from Furious.Frozenlib.SystemRuntime import *
 
 import re
 import logging
@@ -335,9 +336,14 @@ class SystemRoutingTable:
     def LinuxFindTUNDevice(deviceName: str) -> bool:
         assert PLATFORM == 'Linux'
 
+        command = 'ip tuntap show'
+
+        if SystemRuntime.flatpakID():
+            command = 'flatpak-spawn --host ' + command
+
         try:
             result = runExternalCommand(
-                'ip tuntap show'.split(),
+                command.split(),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 check=True,
@@ -364,9 +370,14 @@ class SystemRoutingTable:
     def LinuxDeleteTUNDevice(deviceName: str) -> bool:
         assert PLATFORM == 'Linux'
 
+        command = 'ip tuntap del mode tun dev'
+
+        if SystemRuntime.flatpakID():
+            command = 'flatpak-spawn --host ' + command
+
         try:
             result = runExternalCommand(
-                'ip tuntap del mode tun dev'.split() + [deviceName],
+                command.split() + [deviceName],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 check=True,
@@ -396,9 +407,14 @@ class SystemRoutingTable:
     def LinuxExecutePrivilegedScript(filepath, shell='bash') -> bool:
         assert PLATFORM == 'Linux'
 
+        command = 'pkexec'
+
+        if SystemRuntime.flatpakID():
+            command = 'flatpak-spawn --host ' + command
+
         try:
             result = runExternalCommand(
-                ['pkexec', shell, filepath],
+                command.split() + [shell, filepath],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 check=True,
@@ -428,9 +444,14 @@ class SystemRoutingTable:
     def LinuxGetIpRoute() -> str:
         assert PLATFORM == 'Linux'
 
+        command = 'ip route show'
+
+        if SystemRuntime.flatpakID():
+            command = 'flatpak-spawn --host ' + command
+
         try:
             result = runExternalCommand(
-                'ip route show'.split(),
+                command.split(),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 check=True,
@@ -483,8 +504,13 @@ class SystemRoutingTable:
                 )
 
             if PLATFORM == 'Linux':
+                command = 'ip route show default'
+
+                if SystemRuntime.flatpakID():
+                    command = 'flatpak-spawn --host ' + command
+
                 result = runExternalCommand(
-                    'ip route show default'.split(),
+                    command.split(),
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     check=True,

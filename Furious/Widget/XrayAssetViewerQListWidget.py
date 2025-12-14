@@ -20,7 +20,6 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Utility import *
 
 from PySide6 import QtCore
 from PySide6.QtGui import *

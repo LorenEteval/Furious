@@ -17,7 +17,11 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import *
+from Furious.Frozenlib.Constants import *
+from Furious.Frozenlib.Enum import *
+from Furious.Frozenlib.AppSettings import *
+from Furious.Frozenlib.Utility import *
+from Furious.Frozenlib.SystemRuntime import *
 
 import logging
 import subprocess
@@ -43,9 +47,14 @@ def handleAppSystemProxyMode() -> bool:
 
 
 def linuxProxyConfig(proxy_args, arg0, arg1):
+    command = 'gsettings'
+
+    if SystemRuntime.flatpakID():
+        command = 'flatpak-spawn --host ' + command
+
     runExternalCommand(
-        [
-            'gsettings',
+        command.split()
+        + [
             'set',
             'org.gnome.system.' + proxy_args,
             arg0,

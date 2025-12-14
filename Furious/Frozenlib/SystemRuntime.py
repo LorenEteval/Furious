@@ -17,7 +17,9 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import *
+from Furious.Frozenlib.Constants import *
+from Furious.Frozenlib.Utility import *
+from Furious.Frozenlib.AppSettings import *
 
 import os
 import sys
@@ -67,6 +69,16 @@ class SystemRuntime:
 
         if 'APPIMAGE' in os.environ:
             return os.environ['APPIMAGE']
+        else:
+            return ''
+
+    @staticmethod
+    def flatpakID() -> str:
+        if PLATFORM != 'Linux':
+            return ''
+
+        if 'FLATPAK_ID' in os.environ:
+            return os.environ['FLATPAK_ID']
         else:
             return ''
 

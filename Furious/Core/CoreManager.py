@@ -21,7 +21,6 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Library import *
 from Furious.Qt import *
-from Furious.Utility import *
 from Furious.Core.CoreProcessWorker import *
 from Furious.Core.XrayCore import *
 from Furious.Core.Hysteria1 import *
@@ -30,6 +29,7 @@ from Furious.Core.Tun2socks import *
 
 from typing import Callable, Tuple, Union
 
+import os
 import uuid
 import logging
 import tempfile
@@ -654,8 +654,13 @@ class CoreManager(Mixins.CleanupOnExit):
                     )
                 )
 
+                if SystemRuntime.flatpakID():
+                    tempdir = os.environ.get('TMPDIR')
+                else:
+                    tempdir = None
+
                 with tempfile.NamedTemporaryFile(
-                    mode='w', encoding='utf-8', suffix='.sh', delete=True
+                    mode='w', encoding='utf-8', suffix='.sh', dir=tempdir, delete=True
                 ) as file:
                     content = '\n'.join(
                         filter(

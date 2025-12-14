@@ -19,7 +19,6 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Utility import *
 
 from PySide6 import QtCore
 
