@@ -291,8 +291,10 @@ class ConnectAction(AppQAction):
             hasNewVersionCallback=newVersionCallback,
         )
 
-        if SystemRuntime.appImagePath():
-            logger.info('skipped auto assets update due to running from Linux AppImage')
+        if SystemRuntime.appImagePath() or SystemRuntime.flatpakID():
+            logger.info(
+                'skipped auto assets update due to application folder not writable'
+            )
         else:
             if AppSettings.isStateON_('AutoUpdateAssetFiles'):
                 # Automatically update assets

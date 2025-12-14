@@ -184,7 +184,7 @@ class SettingsAction(AppQAction):
         else:
             hideDockIconAction = []
 
-        if SystemRuntime.appImagePath():
+        if SystemRuntime.appImagePath() or SystemRuntime.flatpakID():
             autoUpdateAssetFilesAction = []
         else:
             autoUpdateAssetFilesAction = (
