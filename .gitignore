@@ -170,6 +170,10 @@ Furious-*/
 
 # Linux app dir
 AppDir/
+# Linux debian dir
+debian/
+# Linux flatpak dir
+flatpak/
 
 # zip files
 *.zip
@@ -177,3 +181,7 @@ AppDir/
 *.dmg
 # AppImage files
 *.AppImage
+# deb files
+*.deb
+# flatpak files
+*.flatpak

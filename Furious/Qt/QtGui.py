@@ -17,7 +17,6 @@
 
 from Furious.Frozenlib import *
 from Furious.Qt.DynamicTranslate import gettext as _
-from Furious.Utility import *
 
 from PySide6 import QtCore
 from PySide6.QtGui import *

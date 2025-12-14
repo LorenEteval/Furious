@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from Furious.Frozenlib import *
-from Furious.Utility.SystemRuntime import *
+from Furious.Frozenlib.Constants import *
+from Furious.Frozenlib.SystemRuntime import *
 
 from PySide6 import QtCore
 

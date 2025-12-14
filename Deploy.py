@@ -54,6 +54,8 @@ NUITKA_BINARY_VERSION_OPTION = (
     f'--product-version={APPLICATION_VERSION} '
 )
 
+PLATFORM_MACHINE_LOWER = PLATFORM_MACHINE.lower()
+
 if PLATFORM == 'Windows':
     NUITKA_BINARY_VERSION_OPTION += f'--file-description=\"A GUI proxy client based on PySide6. Support Xray-core & hysteria\" '
 
@@ -118,7 +120,7 @@ if PLATFORM == 'Windows':
 
     ARTIFACT_NAME = (
         f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
-        f'{winVerCompatible}-{PLATFORM_MACHINE.lower()}'
+        f'{winVerCompatible}-{PLATFORM_MACHINE_LOWER}'
     )
 
     WIN_UNZIPPED = f'{APPLICATION_NAME}-{APPLICATION_VERSION}-{winVerCompatible}'
@@ -135,7 +137,7 @@ elif PLATFORM == 'Darwin':
 
     ARTIFACT_NAME = (
         f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
-        f'{macVerCompatible}-{PLATFORM_MACHINE.lower()}'
+        f'{macVerCompatible}-{PLATFORM_MACHINE_LOWER}'
     )
 
     MAC_APP_DIR = ROOT_DIR / 'app'
@@ -159,7 +161,7 @@ elif PLATFORM == 'Linux':
     LINUX_DESKTOP_FILE = f'{APPLICATION_NAME}.desktop'
 
     ARTIFACT_NAME = (
-        f'{APPLICATION_NAME}-{APPLICATION_VERSION}-linux-{PLATFORM_MACHINE.lower()}'
+        f'{APPLICATION_NAME}-{APPLICATION_VERSION}-linux-{PLATFORM_MACHINE_LOWER}'
     )
 
     LINUX_APPIMAGE_FILENAME = f'{ARTIFACT_NAME}.AppImage'
@@ -171,6 +173,12 @@ elif PLATFORM == 'Linux':
         f'--plugin qt '
         f'--output appimage'
     )
+
+    LINUX_DEBIAN_DIR = ROOT_DIR / 'debian'
+    LINUX_DEB_FILENAME = f'{ARTIFACT_NAME}.deb'
+
+    LINUX_FLATPAK_DIR = ROOT_DIR / 'flatpak'
+    LINUX_FLATPAK_FILENAME = f'{ARTIFACT_NAME}.flatpak'
 else:
     # Deploy: Not implemented
     ARTIFACT_NAME = ''
@@ -330,6 +338,7 @@ def cleanup():
             logger.info(f'remove app dir success')
     elif PLATFORM == 'Linux':
         # More cleanup on Linux
+        # Cleanup AppImage environment
         try:
             # Remove artifact
             os.remove(ROOT_DIR / LINUX_APPIMAGE_FILENAME)
@@ -349,6 +358,48 @@ def cleanup():
             logger.error(f'remove app dir failed: {ex}')
         else:
             logger.info(f'remove app dir success')
+
+        # Cleanup deb environment
+        try:
+            # Remove artifact
+            os.remove(ROOT_DIR / LINUX_DEB_FILENAME)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove artifact failed: {ex}')
+        else:
+            logger.info(f'remove artifact success')
+
+        try:
+            # Remove debian folder
+            shutil.rmtree(LINUX_DEBIAN_DIR)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove debian dir failed: {ex}')
+        else:
+            logger.info(f'remove debian dir success')
+
+        # Cleanup flatpak environment
+        try:
+            # Remove artifact
+            os.remove(ROOT_DIR / LINUX_FLATPAK_FILENAME)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove artifact failed: {ex}')
+        else:
+            logger.info(f'remove artifact success')
+
+        try:
+            # Remove flatpak folder
+            shutil.rmtree(LINUX_FLATPAK_DIR)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove flatpak dir failed: {ex}')
+        else:
+            logger.info(f'remove flatpak dir success')
     else:
         # Deploy: Not implemented
         pass
@@ -527,20 +578,23 @@ def main():
             LINUX_APP_DIR,
         )
 
+        DESKTOP_FILE_CONTENT = (
+            f'[Desktop Entry]\n'
+            f'Type=Application\n'
+            f'Name={APPLICATION_NAME}\n'
+            f'Exec={APPLICATION_NAME}.bin\n'
+            f'Icon={iconbase}\n'
+            f'Terminal=false\n'
+            f'Categories=Utility\n'
+        )
+
         try:
             with open(
                 LINUX_APP_DIR / LINUX_DESKTOP_FILE,
                 'w',
                 encoding='utf-8',
             ) as file:
-                file.write(
-                    f'[Desktop Entry]\n'
-                    f'Type=Application\n'
-                    f'Name={APPLICATION_NAME}\n'
-                    f'Exec={APPLICATION_NAME}.bin\n'
-                    f'Icon={iconbase}\n'
-                    f'Categories=Utility\n'
-                )
+                file.write(DESKTOP_FILE_CONTENT)
         except Exception:
             # Any non-exit exceptions
 
@@ -589,6 +643,322 @@ def main():
             logger.info(f'chmod +x success: {LINUX_APPIMAGE_FILENAME}')
 
             printStandardStream(result.stdout, result.stderr)
+
+        # Create .deb package
+        logger.info('generating deb')
+
+        # Prepare package layout
+        try:
+            os.makedirs(LINUX_DEBIAN_DIR / 'DEBIAN', exist_ok=True)
+            os.makedirs(LINUX_DEBIAN_DIR / 'usr' / 'bin', exist_ok=True)
+            os.makedirs(
+                LINUX_DEBIAN_DIR / 'usr' / 'share' / APPLICATION_NAME,
+                exist_ok=True,
+            )
+            os.makedirs(
+                LINUX_DEBIAN_DIR / 'usr' / 'share' / 'applications',
+                exist_ok=True,
+            )
+            os.makedirs(
+                LINUX_DEBIAN_DIR
+                / 'usr'
+                / 'share'
+                / 'icons'
+                / 'hicolor'
+                / '512x512'
+                / 'apps',
+                exist_ok=True,
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        # Copy output
+        shutil.copytree(
+            ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
+            LINUX_DEBIAN_DIR / 'usr' / 'share' / APPLICATION_NAME,
+            dirs_exist_ok=True,
+        )
+        shutil.copy(
+            ROOT_DIR / 'Icons' / 'png' / f'{iconbase}.png',
+            LINUX_DEBIAN_DIR
+            / 'usr'
+            / 'share'
+            / 'icons'
+            / 'hicolor'
+            / '512x512'
+            / 'apps',
+        )
+
+        # Create launcher script
+        try:
+            launcherScript = LINUX_DEBIAN_DIR / 'usr' / 'bin' / APPLICATION_NAME
+
+            with open(
+                launcherScript,
+                'w',
+                encoding='utf-8',
+            ) as file:
+                file.write(
+                    f'#!/bin/bash\n'
+                    f'exec /usr/share/{APPLICATION_NAME}/{APPLICATION_NAME}.bin "$@"\n'
+                )
+
+            runExternalCommand(
+                f'chmod +x {launcherScript}',
+                shell=True,
+                check=True,
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        # Create desktop entry file
+        try:
+            with open(
+                LINUX_DEBIAN_DIR
+                / 'usr'
+                / 'share'
+                / 'applications'
+                / LINUX_DESKTOP_FILE,
+                'w',
+                encoding='utf-8',
+            ) as file:
+                file.write(DESKTOP_FILE_CONTENT)
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        # Create control file
+        try:
+            if PLATFORM_MACHINE_LOWER == 'x86_64':
+                arch = 'amd64'
+            elif PLATFORM_MACHINE_LOWER == 'aarch64':
+                arch = 'arm64'
+            else:
+                raise
+
+            with open(
+                LINUX_DEBIAN_DIR / 'DEBIAN' / 'control',
+                'w',
+                encoding='utf-8',
+            ) as file:
+                file.write(
+                    f'Package: {APPLICATION_NAME}\n'
+                    f'Version: {APPLICATION_VERSION}\n'
+                    f'Section: utils\n'
+                    f'Priority: optional\n'
+                    f'Architecture: {arch}\n'
+                    f'Depends: libc6, libstdc++6, libgl1, libxcb-cursor0, libxcb-xinerama0\n'
+                    f'Maintainer: {APPLICATION_AUTHOR_NAME} <{APPLICATION_AUTHOR_EMAIL}>\n'
+                    f'Description: A GUI proxy client based on PySide6. Support Xray-core & hysteria\n'
+                    f'Homepage: {APPLICATION_ABOUT_PAGE}\n'
+                )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        # Fix permissions
+        try:
+            runExternalCommand(
+                f'find debian -type d -exec chmod 755 {{}} \\;',
+                shell=True,
+                check=True,
+            )
+            runExternalCommand(
+                f'find debian -type f -exec chmod 644 {{}} \\;',
+                shell=True,
+                check=True,
+            )
+            runExternalCommand(
+                f'chmod 755 '
+                + (LINUX_DEBIAN_DIR / 'usr' / 'bin' / APPLICATION_NAME).as_posix(),
+                shell=True,
+                check=True,
+            )
+            runExternalCommand(
+                f'chmod 755 '
+                + (
+                    LINUX_DEBIAN_DIR
+                    / 'usr'
+                    / 'share'
+                    / APPLICATION_NAME
+                    / f'{APPLICATION_NAME}.bin'
+                ).as_posix(),
+                shell=True,
+                check=True,
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        try:
+            runExternalCommand(
+                f'dpkg-deb --build debian {LINUX_DEB_FILENAME}',
+                shell=True,
+                check=True,
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        # Create .flatpak package
+        logger.info('generating flatpak')
+
+        # Prepare package layout
+        try:
+            os.makedirs(LINUX_FLATPAK_DIR / APPLICATION_NAME, exist_ok=True)
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        # Copy output
+        shutil.copytree(
+            ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
+            LINUX_FLATPAK_DIR / APPLICATION_NAME,
+            dirs_exist_ok=True,
+        )
+        shutil.copy(
+            ROOT_DIR / 'Icons' / 'png' / f'{iconbase}.png',
+            LINUX_FLATPAK_DIR / f'{APPLICATION_FLATPAK_ID}.png',
+        )
+
+        # Create flatpak manifest file
+        try:
+            with open(
+                LINUX_FLATPAK_DIR / f'{APPLICATION_FLATPAK_ID}.yml',
+                'w',
+                encoding='utf-8',
+            ) as file:
+                file.write(
+                    f'app-id: {APPLICATION_FLATPAK_ID}\n'
+                    f'runtime: org.kde.Platform\n'
+                    f'runtime-version: \"6.8\"\n'
+                    f'sdk: org.kde.Sdk\n'
+                    f'command: {APPLICATION_NAME}\n'
+                    f'\n'
+                    f'finish-args:\n'
+                    f'  - --share=ipc\n'
+                    f'  - --share=network\n'
+                    f'  - --socket=wayland\n'
+                    f'  - --socket=fallback-x11\n'
+                    f'  - --device=dri\n'
+                    f'  - --filesystem=home\n'
+                    f'  - --talk-name=org.freedesktop.Flatpak\n'
+                    f'\n'
+                    f'modules:\n'
+                    f'  - name: mit-krb5\n'
+                    f'    buildsystem: simple\n'
+                    f'    sources:\n'
+                    f'      - type: archive\n'
+                    f'        url: https://kerberos.org/dist/krb5/1.21/krb5-1.21.3.tar.gz\n'
+                    f'        sha256: b7a4cd5ead67fb08b980b21abd150ff7217e85ea320c9ed0c6dadd304840ad35\n'
+                    f'    build-commands:\n'
+                    f'      - cd src && autoreconf -i  # Ensure Autotools files are generated\n'
+                    f'      - cd src && ./configure --prefix=/app --disable-static --enable-shared\n'
+                    f'      - cd src && make -j$(nproc)\n'
+                    f'      - cd src && make install\n'
+                    f'  - name: {APPLICATION_NAME}\n'
+                    f'    buildsystem: simple\n'
+                    f'    build-commands:\n'
+                    f'      # Script\n'
+                    f'      - install -Dm755 {APPLICATION_NAME}.sh /app/bin/{APPLICATION_NAME}\n'
+                    f'      # Whole application directory\n'
+                    f'      - mkdir -p /app/lib/{APPLICATION_NAME}/\n'
+                    f'      - cp -a . /app/lib/{APPLICATION_NAME}/\n'
+                    f'      # Desktop + icon\n'
+                    f'      - install -Dm644 {APPLICATION_FLATPAK_ID}.desktop /app/share/applications/{APPLICATION_FLATPAK_ID}.desktop\n'
+                    f'      - install -Dm644 {APPLICATION_FLATPAK_ID}.png /app/share/icons/hicolor/512x512/apps/{APPLICATION_FLATPAK_ID}.png\n'
+                    f'    sources:\n'
+                    f'      - type: file\n'
+                    f'        path: {APPLICATION_NAME}.sh\n'
+                    f'      - type: dir\n'
+                    f'        path: {APPLICATION_NAME}\n'
+                    f'      - type: file\n'
+                    f'        path: {APPLICATION_FLATPAK_ID}.desktop\n'
+                    f'      - type: file\n'
+                    f'        path: {APPLICATION_FLATPAK_ID}.png\n'
+                )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        # Create desktop entry file
+        try:
+            with open(
+                LINUX_FLATPAK_DIR / f'{APPLICATION_FLATPAK_ID}.desktop',
+                'w',
+                encoding='utf-8',
+            ) as file:
+                file.write(
+                    f'[Desktop Entry]\n'
+                    f'Type=Application\n'
+                    f'Name={APPLICATION_NAME}\n'
+                    f'Exec={APPLICATION_NAME}\n'
+                    f'Icon={APPLICATION_FLATPAK_ID}\n'
+                    f'Terminal=false\n'
+                    f'Categories=Utility\n'
+                )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        # Create launcher script
+        try:
+            with open(
+                LINUX_FLATPAK_DIR / f'{APPLICATION_NAME}.sh',
+                'w',
+                encoding='utf-8',
+            ) as file:
+                file.write(
+                    f'#!/usr/bin/env bash\n'
+                    f'exec /app/lib/{APPLICATION_NAME}/{APPLICATION_NAME}.bin \"$@\"\n'
+                )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        cwd = os.getcwd()
+
+        try:
+            os.chdir(LINUX_FLATPAK_DIR)
+
+            runExternalCommand(
+                f'flatpak-builder build-dir {APPLICATION_FLATPAK_ID}.yml --force-clean',
+                shell=True,
+                check=True,
+            )
+            runExternalCommand(
+                f'flatpak build-export repo build-dir',
+                shell=True,
+                check=True,
+            )
+            runExternalCommand(
+                f'flatpak build-bundle repo {LINUX_FLATPAK_FILENAME} {APPLICATION_FLATPAK_ID}',
+                shell=True,
+                check=True,
+            )
+
+            shutil.copy(
+                LINUX_FLATPAK_FILENAME,
+                ROOT_DIR,
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+        finally:
+            os.chdir(cwd)
     else:
         # Deploy: Not implemented
         pass

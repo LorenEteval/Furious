@@ -19,7 +19,6 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Qt import gettext as _
 from Furious.Library import *
-from Furious.Utility import *
 from Furious.Widget.SystemTrayIcon import *
 from Furious.Window.AppMainWindow import *
 from Furious.Window.LogViewerWindow import *
@@ -261,6 +260,12 @@ class Application(ApplicationFactory, SingletonApplication):
         # Xray environment variables
         os.environ['XRAY_LOCATION_ASSET'] = str(XRAY_ASSET_DIR)
 
+        if SystemRuntime.flatpakID():
+            # https://github.com/flatpak/flatpak/issues/3438
+            os.environ['TMPDIR'] = os.path.join(
+                os.environ.get('XDG_RUNTIME_DIR'), 'app', APPLICATION_FLATPAK_ID
+            )
+
     def addStorage(self):
         # Protected storage access
         self._userActivatedItemIndex = Storage.UserActivatedItemIndex()
@@ -280,6 +285,9 @@ class Application(ApplicationFactory, SingletonApplication):
         return backgroudColor.lightness() < 128
 
     def isDarkModeEnabled(self):
+        if SystemRuntime.flatpakID():
+            return self.isDarkMode()
+
         if not SystemRuntime.isAdmin():
             return AppSettings.isStateON_('DarkMode')
         else:
@@ -392,6 +400,13 @@ class Application(ApplicationFactory, SingletonApplication):
                 logger.info(f'running from Linux AppImage: \'{appImagePath}\'')
             else:
                 logger.info('not running from Linux AppImage')
+
+            flatpakId = SystemRuntime.flatpakID()
+
+            if flatpakId:
+                logger.info(f'running from Linux flatpak: \'{flatpakId}\'')
+            else:
+                logger.info('not running from Linux flatpak')
 
             logger.info(f'python version: {PLATFORM_PYTHON_VERSION}')
             logger.info(f'system version: {sys.version}')

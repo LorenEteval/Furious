@@ -19,7 +19,6 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Qt.QtGui import *
-from Furious.Utility import *
 
 __all__ = ['AppHue']
 

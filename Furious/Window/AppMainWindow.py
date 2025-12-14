@@ -22,7 +22,6 @@ from Furious.Interface import *
 from Furious.Library import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Utility import *
 from Furious.Widget.UserServersQTableWidget import *
 from Furious.Widget.GuiTUNSettings import *
 from Furious.Window.UserSubsWindow import *

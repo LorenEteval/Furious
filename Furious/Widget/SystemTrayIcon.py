@@ -18,7 +18,6 @@
 from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Utility import *
 from Furious.TrayActions import *
 
 from PySide6 import QtCore
