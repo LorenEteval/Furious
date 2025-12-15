@@ -268,7 +268,7 @@ class AppMainWindow(AppQMainWindow):
         else:
             restartAsAdminAction = []
 
-        if PLATFORM == 'Darwin':
+        if PLATFORM == 'Darwin' or SystemRuntime.flatpakID():
             openAppFolderAction = [
                 AppQSeperator(),
             ]
