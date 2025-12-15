@@ -23,7 +23,6 @@ from PySide6.QtGui import *
 
 import logging
 import functools
-import darkdetect
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +197,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
             # Fall back
             super().setIcon(icon)
         else:
-            self.setIconByTheme(darkdetect.theme())
+            self.setIconByTheme(APP().theme())
 
     def themeChangedCallback(self, theme):
         self.setIconByTheme(theme)

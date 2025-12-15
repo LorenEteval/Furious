@@ -285,13 +285,18 @@ class Application(ApplicationFactory, SingletonApplication):
         return backgroudColor.lightness() < 128
 
     def isDarkModeEnabled(self):
-        if SystemRuntime.flatpakID():
-            return self.isDarkMode()
+        # if SystemRuntime.flatpakID():
+        #     return self.isDarkMode()
+        #
+        # if not SystemRuntime.isAdmin():
+        #     return AppSettings.isStateON_('DarkMode')
+        # else:
+        #     return self.isDarkMode()
 
-        if not SystemRuntime.isAdmin():
-            return AppSettings.isStateON_('DarkMode')
-        else:
-            return self.isDarkMode()
+        return AppSettings.isStateON_('DarkMode')
+
+    def theme(self):
+        return 'Dark' if self.isDarkMode() else 'Light'
 
     def switchToDarkMode(self):
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyside6())
@@ -301,7 +306,7 @@ class Application(ApplicationFactory, SingletonApplication):
     def switchToAutoMode(self):
         self.setStyleSheet('')
 
-        Mixins.ThemeAware.callThemeChangedCallbackUnchecked(darkdetect.theme())
+        Mixins.ThemeAware.callThemeChangedCallbackUnchecked(self.theme())
 
     @staticmethod
     @callOnceOnly
@@ -416,21 +421,21 @@ class Application(ApplicationFactory, SingletonApplication):
             logger.info(f'isPythonw: {SystemRuntime.isPythonw()}')
             logger.info(f'system language is {SYSTEM_LANGUAGE}')
             logger.info(self.customFontLoadMsg)
-            logger.info(f'current theme is {darkdetect.theme()}')
+            logger.info(f'current theme is {self.theme()}')
 
             if PLATFORM != 'Windows' and not SystemRuntime.isScriptMode():
                 logger.info('theme detect method uses timer implementation')
 
                 @QtCore.Slot()
                 def handleTimeout():
-                    currentTheme = darkdetect.theme()
+                    currentTheme = self.theme()
 
                     if self.currentTheme != currentTheme:
                         self.currentTheme = currentTheme
 
                         Mixins.ThemeAware.callThemeChangedCallback(currentTheme)
 
-                self.currentTheme = darkdetect.theme()
+                self.currentTheme = self.theme()
                 self.themeDetectTimer = QtCore.QTimer()
                 self.themeDetectTimer.timeout.connect(handleTimeout)
                 self.themeDetectTimer.start(1000)

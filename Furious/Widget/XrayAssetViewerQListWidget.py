@@ -30,7 +30,6 @@ import shutil
 import logging
 import datetime
 import functools
-import darkdetect
 
 __all__ = ['XrayAssetViewerQListWidget']
 
@@ -65,7 +64,7 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
         self.setIconSize(QtCore.QSize(64, 64))
 
         if PLATFORM == 'Linux' and SystemRuntime.ubuntuRelease() == '20.04':
-            self.initialTheme = darkdetect.theme()
+            self.initialTheme = APP().theme()
         else:
             self.initialTheme = None
 
@@ -148,7 +147,7 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
             # Ubuntu 20.04. Flush by initial theme(Ubuntu 20.04 theme changes bug)
             self.flushItemByTheme(self.initialTheme)
         else:
-            self.flushItemByTheme(darkdetect.theme())
+            self.flushItemByTheme(APP().theme())
 
     def appendNewItem(self, filename: str):
         def append(_filename):
