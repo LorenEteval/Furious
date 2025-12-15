@@ -127,7 +127,7 @@ jobs:
           echo "QMAKE=$(which qmake6)" >> $GITHUB_ENV
           flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak update
-          flatpak install flathub org.kde.Platform//6.8 org.kde.Sdk//6.8
+          flatpak install -y flathub org.kde.Platform//6.8 org.kde.Sdk//6.8
 
           if [ "$RUNNER_ARCH" == "X64" ]; then
             linuxdeploy_arch="x86_64"
