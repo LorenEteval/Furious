@@ -123,6 +123,7 @@ jobs:
           sudo apt update
           sudo apt install -y libxcb-cursor0 qt6-base-dev patchelf ccache zlib1g-dev
           sudo apt install -y flatpak flatpak-builder elfutils patchelf
+          sudo apt install -y rpm
           echo "QMAKE=$(which qmake6)" >> $GITHUB_ENV
           flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak update
@@ -225,6 +226,7 @@ jobs:
             Furious-*.AppImage
             Furious-*.deb
             Furious-*.flatpak
+            Furious-*.rpm
 
   github-release:
     name: Upload to GitHub Release

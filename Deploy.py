@@ -22,8 +22,11 @@ from Furious.Frozenlib import *
 import os
 import re
 import sys
+import glob
 import shutil
 import logging
+import tarfile
+import pathlib
 import argparse
 import datetime
 import subprocess
@@ -179,6 +182,9 @@ elif PLATFORM == 'Linux':
 
     LINUX_FLATPAK_DIR = ROOT_DIR / 'flatpak'
     LINUX_FLATPAK_FILENAME = f'{ARTIFACT_NAME}.flatpak'
+
+    LINUX_RPM_DIR = ROOT_DIR / 'rpmbuild'
+    LINUX_RPM_FILENAME = f'{ARTIFACT_NAME}.rpm'
 else:
     # Deploy: Not implemented
     ARTIFACT_NAME = ''
@@ -400,6 +406,37 @@ def cleanup():
             logger.error(f'remove flatpak dir failed: {ex}')
         else:
             logger.info(f'remove flatpak dir success')
+
+        # Cleanup rpm environment
+        try:
+            # Remove artifact
+            os.remove(ROOT_DIR / LINUX_RPM_FILENAME)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove artifact failed: {ex}')
+        else:
+            logger.info(f'remove artifact success')
+
+        try:
+            # Remove rpm folder
+            shutil.rmtree(LINUX_RPM_DIR)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove rpm dir failed: {ex}')
+        else:
+            logger.info(f'remove rpm dir success')
+
+        try:
+            # Remove home rpmbuild folder
+            shutil.rmtree(pathlib.Path.home() / 'rpmbuild')
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove home rpmbuild failed: {ex}')
+        else:
+            logger.info(f'remove home rpmbuild success')
     else:
         # Deploy: Not implemented
         pass
@@ -959,6 +996,132 @@ def main():
             raise
         finally:
             os.chdir(cwd)
+
+        # Create .rpm package
+        logger.info('generating rpm')
+
+        # Prepare package layout
+        try:
+            os.makedirs(
+                LINUX_RPM_DIR / f'{APPLICATION_NAME}-{APPLICATION_VERSION}',
+                exist_ok=True,
+            )
+
+            for name in ['BUILD', 'RPMS', 'SOURCES', 'SPECS', 'SRPMS']:
+                os.makedirs(
+                    pathlib.Path.home() / 'rpmbuild' / name,
+                    exist_ok=True,
+                )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        # Copy output
+        shutil.copytree(
+            ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
+            LINUX_RPM_DIR / f'{APPLICATION_NAME}-{APPLICATION_VERSION}',
+            dirs_exist_ok=True,
+        )
+        shutil.copy(
+            ROOT_DIR / 'Icons' / 'png' / f'{iconbase}.png',
+            LINUX_RPM_DIR / f'{APPLICATION_NAME}-{APPLICATION_VERSION}',
+        )
+
+        with tarfile.open(LINUX_RPM_DIR / f'{ARTIFACT_NAME}.tar.gz', 'w:gz') as tar:
+            tar.add(
+                LINUX_RPM_DIR / f'{APPLICATION_NAME}-{APPLICATION_VERSION}',
+                arcname=f'{APPLICATION_NAME}-{APPLICATION_VERSION}',
+            )
+
+        shutil.move(
+            LINUX_RPM_DIR / f'{ARTIFACT_NAME}.tar.gz',
+            pathlib.Path.home() / 'rpmbuild' / 'SOURCES',
+        )
+
+        # Create rpm manifest file
+        try:
+            with open(
+                pathlib.Path.home() / 'rpmbuild' / 'SPECS' / f'{APPLICATION_NAME}.spec',
+                'w',
+                encoding='utf-8',
+            ) as file:
+                file.write(
+                    f'Name:           {APPLICATION_NAME}\n'
+                    f'Version:        {APPLICATION_VERSION}\n'
+                    f'Release:        1%{{?dist}}\n'
+                    f'Summary:        A GUI proxy client based on PySide6. Support Xray-core & hysteria\n'
+                    f'\n'
+                    f'License:        GPLv3\n'
+                    f'URL:            {APPLICATION_ABOUT_PAGE}\n'
+                    f'Source0:        {ARTIFACT_NAME}.tar.gz\n'
+                    f'\n'
+                    f'BuildArch:      {PLATFORM_MACHINE_LOWER}\n'
+                    f'\n'
+                    f'%description\n'
+                    f'A GUI proxy client based on PySide6. Support Xray-core & hysteria\n'
+                    f'\n'
+                    f'%prep\n'
+                    f'%autosetup\n'
+                    f'\n'
+                    f'%install\n'
+                    f'rm -rf %{{buildroot}}\n'
+                    f'\n'
+                    f'# App directory\n'
+                    f'mkdir -p %{{buildroot}}/opt/{APPLICATION_NAME}\n'
+                    f'cp -a * %{{buildroot}}/opt/{APPLICATION_NAME}/\n'
+                    f'\n'
+                    f'# Binary symlink\n'
+                    f'mkdir -p %{{buildroot}}/usr/bin\n'
+                    f'ln -s /opt/{APPLICATION_NAME}/Furious.bin %{{buildroot}}/usr/bin/{APPLICATION_NAME}\n'
+                    f'\n'
+                    f'# Desktop entry\n'
+                    f'mkdir -p %{{buildroot}}/usr/share/applications\n'
+                    f'cat > %{{buildroot}}/usr/share/applications/{APPLICATION_NAME}.desktop <<EOF\n'
+                    f'[Desktop Entry]\n'
+                    f'Type=Application\n'
+                    f'Name=Furious\n'
+                    f'Exec={APPLICATION_NAME}\n'
+                    f'Icon={iconbase}\n'
+                    f'Categories=Utility;\n'
+                    f'EOF\n'
+                    f'\n'
+                    f'mkdir -p %{{buildroot}}/usr/share/icons/hicolor/512x512/apps\n'
+                    f'cp {iconbase}.png %{{buildroot}}/usr/share/icons/hicolor/512x512/apps/{iconbase}.png\n'
+                    f'\n'
+                    f'%files\n'
+                    f'/opt/{APPLICATION_NAME}\n'
+                    f'/usr/bin/{APPLICATION_NAME}\n'
+                    f'/usr/share/applications/{APPLICATION_NAME}.desktop\n'
+                    f'/usr/share/icons/hicolor/512x512/apps/{iconbase}.png\n'
+                )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        runExternalCommand(
+            [
+                'rpmbuild',
+                '-ba',
+                pathlib.Path.home() / 'rpmbuild' / 'SPECS' / f'{APPLICATION_NAME}.spec',
+            ],
+            check=True,
+        )
+
+        for file in glob.glob(
+            (
+                pathlib.Path.home()
+                / 'rpmbuild'
+                / 'RPMS'
+                / PLATFORM_MACHINE_LOWER
+                / '*.rpm'
+            ).as_posix()
+        ):
+            shutil.copy(
+                file,
+                ROOT_DIR / LINUX_RPM_FILENAME,
+            )
     else:
         # Deploy: Not implemented
         pass
