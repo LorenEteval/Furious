@@ -25,7 +25,6 @@ from PySide6.QtWidgets import QSystemTrayIcon
 
 import logging
 import platform
-import darkdetect
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +142,7 @@ class SystemTrayIcon(
             switchMonochrome()
 
     def setMonochromeIcon(self):
-        self.setMonochromeIconByTheme(darkdetect.theme())
+        self.setMonochromeIconByTheme(APP().theme())
 
     def setDisconnectedIcon(self):
         if AppSettings.isStateON_('UseMonochromeTrayIcon'):
@@ -154,7 +153,7 @@ class SystemTrayIcon(
         if (
             PLATFORM == 'Darwin'
             or SystemRuntime.isWindows7()
-            or (PLATFORM == 'Windows' and darkdetect.theme() == 'Light')
+            or (PLATFORM == 'Windows' and APP().theme() == 'Light')
         ):
             # Darker
             self.setIcon(bootstrapIcon('rocket-takeoff-dark.svg'))
@@ -173,7 +172,7 @@ class SystemTrayIcon(
             if (
                 PLATFORM == 'Darwin'
                 or SystemRuntime.isWindows7()
-                or (PLATFORM == 'Windows' and darkdetect.theme() == 'Light')
+                or (PLATFORM == 'Windows' and APP().theme() == 'Light')
             ):
                 # Darker
                 self.setIcon(bootstrapIcon('rocket-takeoff-connected-dark.svg'))
@@ -202,7 +201,7 @@ class SystemTrayIcon(
     def themeChangedCallback(self, theme):
         if AppSettings.isStateON_('UseMonochromeTrayIcon'):
             # 'theme' is not used. Instead, always query current theme
-            self.setMonochromeIconByTheme(darkdetect.theme())
+            self.setMonochromeIconByTheme(APP().theme())
 
             return
 
