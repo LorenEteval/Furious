@@ -93,7 +93,11 @@ class SystemRuntime:
     @staticmethod
     def isTUNMode() -> bool:
         if PLATFORM == 'Linux':
-            return AppSettings.isStateON_('VPNMode')
+            if SystemRuntime.flatpakID():
+                # TUN Mode disabled in flatpak
+                return False
+            else:
+                return AppSettings.isStateON_('VPNMode')
         else:
             return AppSettings.isStateON_('VPNMode') and SystemRuntime.isAdmin()
 

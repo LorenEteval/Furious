@@ -159,19 +159,22 @@ class SettingsChildAction(AppQAction):
 
 class SettingsAction(AppQAction):
     def __init__(self, **kwargs):
-        tunActions = [
-            TUNModeAction(
-                checkable=True,
-                checked=AppSettings.isStateON_('VPNMode'),
-            ),
-            AppQAction(
-                _('Customize TUN Settings...'),
-                icon=bootstrapIcon('diagram-3.svg'),
-                checkable=False,
-                callback=lambda: APP().mainWindow.getGuiTUNSettings().open(),
-            ),
-            AppQSeperator(),
-        ]
+        if SystemRuntime.flatpakID():
+            tunActions = []
+        else:
+            tunActions = [
+                TUNModeAction(
+                    checkable=True,
+                    checked=AppSettings.isStateON_('VPNMode'),
+                ),
+                AppQAction(
+                    _('Customize TUN Settings...'),
+                    icon=bootstrapIcon('diagram-3.svg'),
+                    checkable=False,
+                    callback=lambda: APP().mainWindow.getGuiTUNSettings().open(),
+                ),
+                AppQSeperator(),
+            ]
 
         if PLATFORM == 'Darwin':
             hideDockIconAction = [
