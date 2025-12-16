@@ -46,6 +46,7 @@ logger = logging.getLogger('Deploy')
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 
+USER_HOME = pathlib.Path.home()
 DEPLOY_DIR_NAME = f'{APPLICATION_NAME}-Deploy'
 
 HYSTERIA_DATA_DIR = DATA_DIR / 'hysteria'
@@ -60,10 +61,10 @@ NUITKA_BINARY_VERSION_OPTION = (
 PLATFORM_MACHINE_LOWER = PLATFORM_MACHINE.lower()
 
 if PLATFORM == 'Windows':
-    NUITKA_BINARY_VERSION_OPTION += f'--file-description=\"A GUI proxy client based on PySide6. Support Xray-core & hysteria\" '
+    NUITKA_BINARY_VERSION_OPTION += f'--file-description=\"{APPLICATION_DESCRIPTION}\" '
 
 if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
-    NUITKA_BINARY_VERSION_OPTION += f'--copyright=\"Copyright (C) 2024–present  Loren Eteval & contributors <loren.eteval@proton.me>\" '
+    NUITKA_BINARY_VERSION_OPTION += f'--copyright=\"Copyright (C) 2024–present  {APPLICATION_AUTHOR_NAME} & contributors <{APPLICATION_AUTHOR_EMAIL}>\" '
 
 if PLATFORM == 'Windows':
     NUITKA_BUILD = (
@@ -430,7 +431,7 @@ def cleanup():
 
         try:
             # Remove home rpmbuild folder
-            shutil.rmtree(pathlib.Path.home() / 'rpmbuild')
+            shutil.rmtree(USER_HOME / 'rpmbuild')
         except Exception as ex:
             # Any non-exit exceptions
 
@@ -664,10 +665,9 @@ def main():
 
         try:
             result = runExternalCommand(
-                f'chmod +x {LINUX_APPIMAGE_FILENAME}',
+                ['chmod', '+x', LINUX_APPIMAGE_FILENAME],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                shell=True,
                 check=True,
             )
         except subprocess.CalledProcessError as err:
@@ -743,8 +743,7 @@ def main():
                 )
 
             runExternalCommand(
-                f'chmod +x {launcherScript}',
-                shell=True,
+                ['chmod', '+x', launcherScript],
                 check=True,
             )
         except Exception:
@@ -791,7 +790,7 @@ def main():
                     f'Architecture: {arch}\n'
                     f'Depends: libc6, libstdc++6, libgl1, libxcb-cursor0, libxcb-xinerama0\n'
                     f'Maintainer: {APPLICATION_AUTHOR_NAME} <{APPLICATION_AUTHOR_EMAIL}>\n'
-                    f'Description: A GUI proxy client based on PySide6. Support Xray-core & hysteria\n'
+                    f'Description: {APPLICATION_DESCRIPTION}\n'
                     f'Homepage: {APPLICATION_ABOUT_PAGE}\n'
                 )
         except Exception:
@@ -812,21 +811,19 @@ def main():
                 check=True,
             )
             runExternalCommand(
-                f'chmod 755 '
-                + (LINUX_DEBIAN_DIR / 'usr' / 'bin' / APPLICATION_NAME).as_posix(),
-                shell=True,
+                ['chmod', '755', LINUX_DEBIAN_DIR / 'usr' / 'bin' / APPLICATION_NAME],
                 check=True,
             )
             runExternalCommand(
-                f'chmod 755 '
-                + (
+                [
+                    'chmod',
+                    '755',
                     LINUX_DEBIAN_DIR
                     / 'usr'
                     / 'share'
                     / APPLICATION_NAME
-                    / f'{APPLICATION_NAME}.bin'
-                ).as_posix(),
-                shell=True,
+                    / f'{APPLICATION_NAME}.bin',
+                ],
                 check=True,
             )
         except Exception:
@@ -1009,7 +1006,7 @@ def main():
 
             for name in ['BUILD', 'RPMS', 'SOURCES', 'SPECS', 'SRPMS']:
                 os.makedirs(
-                    pathlib.Path.home() / 'rpmbuild' / name,
+                    USER_HOME / 'rpmbuild' / name,
                     exist_ok=True,
                 )
         except Exception:
@@ -1036,13 +1033,13 @@ def main():
 
         shutil.move(
             LINUX_RPM_DIR / f'{ARTIFACT_NAME}.tar.gz',
-            pathlib.Path.home() / 'rpmbuild' / 'SOURCES',
+            USER_HOME / 'rpmbuild' / 'SOURCES',
         )
 
         # Create rpm manifest file
         try:
             with open(
-                pathlib.Path.home() / 'rpmbuild' / 'SPECS' / f'{APPLICATION_NAME}.spec',
+                USER_HOME / 'rpmbuild' / 'SPECS' / f'{APPLICATION_NAME}.spec',
                 'w',
                 encoding='utf-8',
             ) as file:
@@ -1050,7 +1047,7 @@ def main():
                     f'Name:           {APPLICATION_NAME}\n'
                     f'Version:        {APPLICATION_VERSION}\n'
                     f'Release:        1%{{?dist}}\n'
-                    f'Summary:        A GUI proxy client based on PySide6. Support Xray-core & hysteria\n'
+                    f'Summary:        {APPLICATION_DESCRIPTION}\n'
                     f'\n'
                     f'License:        GPLv3\n'
                     f'URL:            {APPLICATION_ABOUT_PAGE}\n'
@@ -1059,7 +1056,7 @@ def main():
                     f'BuildArch:      {PLATFORM_MACHINE_LOWER}\n'
                     f'\n'
                     f'%description\n'
-                    f'A GUI proxy client based on PySide6. Support Xray-core & hysteria\n'
+                    f'{APPLICATION_DESCRIPTION}\n'
                     f'\n'
                     f'%prep\n'
                     f'%autosetup\n'
@@ -1073,17 +1070,17 @@ def main():
                     f'\n'
                     f'# Binary symlink\n'
                     f'mkdir -p %{{buildroot}}/usr/bin\n'
-                    f'ln -s /opt/{APPLICATION_NAME}/Furious.bin %{{buildroot}}/usr/bin/{APPLICATION_NAME}\n'
+                    f'ln -s /opt/{APPLICATION_NAME}/{APPLICATION_NAME}.bin %{{buildroot}}/usr/bin/{APPLICATION_NAME}\n'
                     f'\n'
                     f'# Desktop entry\n'
                     f'mkdir -p %{{buildroot}}/usr/share/applications\n'
                     f'cat > %{{buildroot}}/usr/share/applications/{APPLICATION_NAME}.desktop <<EOF\n'
                     f'[Desktop Entry]\n'
                     f'Type=Application\n'
-                    f'Name=Furious\n'
+                    f'Name={APPLICATION_NAME}\n'
                     f'Exec={APPLICATION_NAME}\n'
                     f'Icon={iconbase}\n'
-                    f'Categories=Utility;\n'
+                    f'Categories=Utility\n'
                     f'EOF\n'
                     f'\n'
                     f'mkdir -p %{{buildroot}}/usr/share/icons/hicolor/512x512/apps\n'
@@ -1104,18 +1101,14 @@ def main():
             [
                 'rpmbuild',
                 '-ba',
-                pathlib.Path.home() / 'rpmbuild' / 'SPECS' / f'{APPLICATION_NAME}.spec',
+                USER_HOME / 'rpmbuild' / 'SPECS' / f'{APPLICATION_NAME}.spec',
             ],
             check=True,
         )
 
         for file in glob.glob(
             (
-                pathlib.Path.home()
-                / 'rpmbuild'
-                / 'RPMS'
-                / PLATFORM_MACHINE_LOWER
-                / '*.rpm'
+                USER_HOME / 'rpmbuild' / 'RPMS' / PLATFORM_MACHINE_LOWER / '*.rpm'
             ).as_posix()
         ):
             shutil.copy(

@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from Furious.Version import __version__
+from Furious.Frozenlib.Constants import *
 
 from setuptools import setup, find_packages
 
@@ -29,12 +30,12 @@ setup(
     name='Furious-GUI',
     version=__version__,
     license='GPL v3.0',
-    description='A GUI proxy client based on PySide6. Support Xray-core & hysteria',
+    description=APPLICATION_DESCRIPTION,
     long_description=long_description,
     long_description_content_type='text/markdown',
-    author='Loren Eteval',
-    author_email='loren.eteval@proton.me',
-    url='https://github.com/LorenEteval/Furious',
+    author=APPLICATION_AUTHOR_NAME,
+    author_email=APPLICATION_AUTHOR_EMAIL,
+    url=APPLICATION_ABOUT_PAGE,
     packages=find_packages(),
     package_data={'Furious': ['Data/**']},
     include_package_data=True,
