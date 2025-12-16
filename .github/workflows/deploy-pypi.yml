@@ -159,9 +159,13 @@ jobs:
           fi
 
           winget install --id WiXToolset.WiXCLI -e --source winget --accept-package-agreements --accept-source-agreements
+          echo "C:/Program Files/WiX Toolset v6.0/bin" >> $GITHUB_PATH
+          echo "C:/Program Files/WiX Toolset v6.0/bin/${toolset_arch}" >> $GITHUB_PATH
+        if: runner.os == 'Windows'
+      - name: Check Windows dependencies
+        run: |
           wix --version
           wix extension add WixToolset.UI.wixext
-          echo "C:/Program Files/WiX Toolset v6.0/bin/${toolset_arch}" >> $GITHUB_PATH
         if: runner.os == 'Windows'
       - name: Set up Python for Windows7
         uses: LorenEteval/setup-python-win7@v1
