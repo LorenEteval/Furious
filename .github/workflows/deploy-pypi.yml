@@ -83,12 +83,12 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        os: [ ubuntu-22.04, ubuntu-22.04-arm, windows-2022, macos-15-intel, macos-14 ]
+        os: [ ubuntu-22.04, ubuntu-22.04-arm, windows-2025, macos-15-intel, macos-14 ]
         python-version: [ "3.11", "3.13" ]
         exclude:
           - os: ubuntu-22.04
             python-version: "3.11"
-          - os: windows-2022
+          - os: windows-2025
             python-version: "3.11"
           - os: macos-15-intel
             python-version: "3.11"
@@ -97,7 +97,7 @@ jobs:
           - os: ubuntu-22.04-arm
             python-version: "3.13"
         include:
-          - os: windows-2022
+          - os: windows-2025
             id: win7
     env:
       # Last PySide6 version that supports macOS 10.9 & Python 3.11
