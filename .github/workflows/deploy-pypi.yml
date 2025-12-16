@@ -28,7 +28,7 @@ jobs:
     name: Build distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install libegl1
         run: |
           sudo apt update && sudo apt install -y libegl1
@@ -106,7 +106,7 @@ jobs:
       # PySide6 has Windows ARM64 build since 6.9.0
       PYSIDE6_LATEST_VERSION: "6.9.1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install macOS dependencies
         run: |
           brew install create-dmg
