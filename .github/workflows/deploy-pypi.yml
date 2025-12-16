@@ -147,6 +147,22 @@ jobs:
           wget -P ${linuxdeploy_name} https://github.com/AppImage/appimagetool/releases/latest/download/appimagetool-${linuxdeploy_arch}.AppImage
           chmod +x ${linuxdeploy_name}/*
         if: runner.os == 'Linux'
+      - name: Install Windows dependencies
+        run: |
+          if [ "$RUNNER_ARCH" == "X64" ]; then
+            toolset_arch="x64"
+          elif [ "$RUNNER_ARCH" == "ARM64" ]; then
+            toolset_arch="arm64"
+          else
+            echo "Unknown runner architecture: $RUNNER_ARCH"
+            exit 1
+          fi
+
+          winget install --id WiXToolset.WiXCLI -e --source winget --accept-package-agreements --accept-source-agreements
+          wix --version
+          wix extension add WixToolset.UI.wixext
+          echo "C:/Program Files/WiX Toolset v6.0/bin/${toolset_arch}" >> $GITHUB_PATH
+        if: runner.os == 'Windows'
       - name: Set up Python for Windows7
         uses: LorenEteval/setup-python-win7@v1
         with:
@@ -222,6 +238,7 @@ jobs:
           name: binary-distributions-${{ matrix.os }}-Python${{ matrix.python-version }}
           path: |
             Furious-*.zip
+            Furious-*.msi
             Furious-*.dmg
             Furious-*.AppImage
             Furious-*.deb
