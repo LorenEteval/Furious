@@ -28,6 +28,9 @@ APPLICATION_NAME = 'Furious'
 APPLICATION_VERSION = __version__
 APPLICATION_AUTHOR_NAME = 'Loren Eteval'
 APPLICATION_AUTHOR_EMAIL = 'loren.eteval@proton.me'
+APPLICATION_DESCRIPTION = (
+    'A GUI proxy client based on PySide6. Support Xray-core & hysteria'
+)
 APPLICATION_MACOS_SIGNATURE = 'com.Furious'
 APPLICATION_FLATPAK_ID = 'com.Furious.Furious'
 APPLICATION_REPO_OWNER_NAME = APPLICATION_AUTHOR_NAME.replace(' ', '')

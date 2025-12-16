@@ -130,11 +130,11 @@ class AppQLabelHelpPage(AppQLabel):
 
     def setWebsiteURL(self):
         self.setText(
-            '<html><head/><body><p>'
-            '<a href=\"https://github.com/LorenEteval/Furious/wiki/TUN-Mode\">'
-            '<span style=\" text-decoration: underline; color:#007ad6;\">'
+            f'<html><head/><body><p>'
+            f'<a href=\"{APPLICATION_ABOUT_PAGE}/wiki/TUN-Mode\">'
+            f'<span style=\" text-decoration: underline; color:#007ad6;\">'
             + _('Go to help page')
-            + '</span></a></p></body></html>'
+            + f'</span></a></p></body></html>'
         )
 
     @staticmethod
