@@ -49,7 +49,7 @@ jobs:
         run: |
           python setup.py sdist bdist_wheel
       - name: Store the distribution packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: python-package-distributions
           path: |
@@ -217,7 +217,7 @@ jobs:
           fi
           python Deploy.py
       - name: Store the distribution packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binary-distributions-${{ matrix.os }}-Python${{ matrix.python-version }}
           path: |
