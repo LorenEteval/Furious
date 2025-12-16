@@ -179,6 +179,10 @@ rpmbuild/
 
 # zip files
 *.zip
+# msi files
+*.msi
+# wixpdb files
+*.wixpdb
 # dmg files
 *.dmg
 # AppImage files

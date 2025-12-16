@@ -22,6 +22,7 @@ from Furious.Frozenlib import *
 import os
 import re
 import sys
+import uuid
 import glob
 import shutil
 import logging
@@ -33,6 +34,7 @@ import subprocess
 import urllib.request
 
 from typing import AnyStr
+from xml.sax.saxutils import escape as xml_escape
 
 logging.basicConfig(
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
@@ -191,37 +193,42 @@ else:
     ARTIFACT_NAME = ''
 
 
-def downloadXrayAssets(url, filepath):
+def downloadFromURL(url, filepath):
     try:
         import requests
     except ImportError:
         raise ModuleNotFoundError('missing requests module')
 
-    try:
-        # Make sure the save directory exists
-        if not os.path.exists(XRAY_ASSET_DIR):
-            os.makedirs(XRAY_ASSET_DIR)
+    # Send an HTTP GET request to the URL
+    response = requests.get(url)
 
-        # Send an HTTP GET request to the URL
-        response = requests.get(url)
+    try:
         response.raise_for_status()  # Check if the request was successful
 
         # Open the save_path in write-binary mode and write the content of the response
         with open(filepath, 'wb') as file:
             file.write(response.content)
-
-    except Exception as ex:
+    except Exception:
         # Any non-exit exceptions
 
-        logger.error(
-            f'failed to download xray asset from {url}. Status code: {response.status_code}'
-        )
-
-        return False
+        return response.status_code, False
     else:
-        logger.info(f'xray asset downloaded successfully and saved to {filepath}')
+        return response.status_code, True
 
-        return True
+
+def downloadXrayAssets(url, filepath):
+    # Make sure the save directory exists
+    if not os.path.exists(XRAY_ASSET_DIR):
+        os.makedirs(XRAY_ASSET_DIR)
+
+    code, success = downloadFromURL(url, filepath)
+
+    if success:
+        logger.info(f'xray asset downloaded successfully and saved to {filepath}')
+    else:
+        logger.error(f'failed to download xray asset from {url}. Status code: {code}')
+
+    return success
 
 
 def downloadHy1Asset():
@@ -306,6 +313,26 @@ def cleanup():
         try:
             # Remove artifact
             os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.zip')
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove artifact failed: {ex}')
+        else:
+            logger.info(f'remove artifact success')
+
+        try:
+            # Remove artifact
+            os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.msi')
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'remove artifact failed: {ex}')
+        else:
+            logger.info(f'remove artifact success')
+
+        try:
+            # Remove artifact
+            os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.wixpdb')
         except Exception as ex:
             # Any non-exit exceptions
 
@@ -534,6 +561,15 @@ def main():
 
             raise
 
+        # Copy LICENSE to distribution folder
+        shutil.copy(
+            ROOT_DIR / 'LICENSE',
+            ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
+        )
+        shutil.copy(
+            ROOT_DIR / 'LICENSE.rtf',
+            ROOT_DIR / DEPLOY_DIR_NAME,
+        )
         shutil.copytree(
             ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
             ROOT_DIR / DEPLOY_DIR_NAME / WIN_UNZIPPED,
@@ -545,6 +581,151 @@ def main():
             WIN_UNZIPPED,
             logger=logger,
         )
+        shutil.copytree(
+            ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
+            ROOT_DIR / DEPLOY_DIR_NAME / 'SourceDir',
+        )
+
+        msifolder = ROOT_DIR / DEPLOY_DIR_NAME / 'msi'
+
+        os.makedirs(msifolder, exist_ok=True)
+
+        try:
+            # Requires "heat" in PATH
+            result = runExternalCommand(
+                'heat dir'.split()
+                + [ROOT_DIR / DEPLOY_DIR_NAME / 'SourceDir']
+                + '-cg FuriousComponents -dr INSTALLFOLDER -srd -scom -sreg -gg -out'.split()
+                + [msifolder / 'FuriousFiles.wxs'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(f'run heat failed with returncode {err.returncode}')
+
+            printStandardStream(err.stdout, err.stderr)
+
+            sys.exit(EXIT_FAILURE)
+        else:
+            logger.info(f'run heat success')
+
+            printStandardStream(result.stdout, result.stderr)
+
+        # Create Product.wxs file
+        try:
+            with open(
+                msifolder / 'Product.wxs',
+                'w',
+                encoding='utf-8',
+            ) as file:
+                file.write(
+                    f'<?xml version=\"1.0\" encoding=\"utf-8\"?>\n'
+                    f'<Wix\n'
+                    f'  xmlns=\"http://wixtoolset.org/schemas/v4/wxs\"\n'
+                    f'  xmlns:ui=\"http://wixtoolset.org/schemas/v4/wxs/ui\">\n'
+                    f'\n'
+                    f'  <Package\n'
+                    f'    Name=\"{APPLICATION_NAME}\"\n'
+                    f'    Manufacturer=\"{APPLICATION_NAME}\"\n'
+                    f'    Version=\"{APPLICATION_VERSION}\"\n'
+                    f'    UpgradeCode=\"{uuid.uuid4()}\"\n'
+                    f'    Compressed=\"yes\">\n'
+                    f'\n'
+                    f'    <!-- Major upgrade behavior -->\n'
+                    f'    <MajorUpgrade DowngradeErrorMessage=\"A newer version is already installed.\" />\n'
+                    f'    <MediaTemplate EmbedCab=\"yes\" />\n'
+                    f'\n'
+                    f'    <!-- Enable InstallDir UI -->\n'
+                    f'    <ui:WixUI Id=\"WixUI_InstallDir\" />\n'
+                    f'    <Property Id=\"WIXUI_INSTALLDIR\" Value=\"INSTALLFOLDER\" />\n'
+                    f'\n'
+                    f'    <!-- LICENSE shown in installer UI (RTF required) -->\n'
+                    f'    <WixVariable Id=\"WixUILicenseRtf\" Value=\"LICENSE.rtf\" />\n'
+                    f'\n'
+                    f'    <!-- Installation directory -->\n'
+                    f'    <StandardDirectory Id=\"ProgramFiles64Folder\">\n'
+                    f'      <Directory Id=\"INSTALLFOLDER\" Name=\"{WIN_UNZIPPED}\" />\n'
+                    f'    </StandardDirectory>\n'
+                    f'\n'
+                    f'    <!-- Features -->\n'
+                    f'    <Feature Id=\"MainFeature\" Title=\"{APPLICATION_NAME}\" Level=\"1\">\n'
+                    f'      <ComponentGroupRef Id=\"FuriousComponents\" />\n'
+                    f'      <ComponentRef Id=\"FuriousShortcut\" />\n'
+                    f'    </Feature>\n'
+                    f'\n'
+                    f'    <!-- Desktop shortcut -->\n'
+                    f'    <Component\n'
+                    f'      Id=\"FuriousShortcut\"\n'
+                    f'      Guid=\"{uuid.uuid4()}\"\n'
+                    f'      Directory=\"INSTALLFOLDER\">\n'
+                    f'\n'
+                    f'      <Shortcut\n'
+                    f'        Id=\"DesktopShortcut\"\n'
+                    f'        Directory=\"DesktopFolder\"\n'
+                    f'        Name=\"{APPLICATION_NAME}\"\n'
+                    f'        Description=\"{xml_escape(APPLICATION_DESCRIPTION)}\"\n'
+                    f'        Target=\"[INSTALLFOLDER]{APPLICATION_NAME}.exe\"\n'
+                    f'        WorkingDirectory=\"INSTALLFOLDER\" />\n'
+                    f'    </Component>\n'
+                    f'\n'
+                    f'  </Package>\n'
+                    f'\n'
+                    f'</Wix>\n'
+                )
+        except Exception:
+            # Any non-exit exceptions
+
+            raise
+
+        wixui = 'WixUI_InstallDir.wxs'
+
+        code, success = downloadFromURL(
+            f'https://raw.githubusercontent.com/LorenEteval/wix/'
+            f'refs/heads/main/src/ext/UI/wixlib/{wixui}',
+            msifolder / wixui,
+        )
+
+        if success:
+            logger.info(f'download \'{wixui}\' success\'')
+        else:
+            logger.error(f'download \'{wixui}\' failed\'. Status code: {code}')
+
+            raise
+
+        cwd = os.getcwd()
+
+        try:
+            os.chdir(ROOT_DIR / DEPLOY_DIR_NAME)
+
+            # Requires "wix extension add WixToolset.UI.wixext"
+            runExternalCommand(
+                [
+                    'wix',
+                    'build',
+                    msifolder / 'FuriousFiles.wxs',
+                    msifolder / 'Product.wxs',
+                    '-o',
+                    ROOT_DIR / f'{ARTIFACT_NAME}.msi',
+                    '-ext',
+                    'WixToolset.UI.wixext',
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(f'wix build failed with returncode {err.returncode}')
+
+            printStandardStream(err.stdout, err.stderr)
+
+            sys.exit(EXIT_FAILURE)
+        else:
+            logger.info(f'wix build success: {ARTIFACT_NAME}.msi')
+
+            printStandardStream(result.stdout, result.stderr)
+        finally:
+            os.chdir(cwd)
     elif PLATFORM == 'Darwin':
         try:
             shutil.rmtree(MAC_APP_DIR)
@@ -739,7 +920,7 @@ def main():
             ) as file:
                 file.write(
                     f'#!/bin/bash\n'
-                    f'exec /usr/share/{APPLICATION_NAME}/{APPLICATION_NAME}.bin "$@"\n'
+                    f'exec /usr/share/{APPLICATION_NAME}/{APPLICATION_NAME}.bin \"$@\"\n'
                 )
 
             runExternalCommand(
