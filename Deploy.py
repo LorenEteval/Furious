@@ -699,7 +699,7 @@ def main():
             os.chdir(ROOT_DIR / DEPLOY_DIR_NAME)
 
             # Requires "wix extension add WixToolset.UI.wixext"
-            runExternalCommand(
+            result = runExternalCommand(
                 [
                     'wix',
                     'build',
