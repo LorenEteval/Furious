@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib.Constants import *
+from Furious.Frozenlib.AppSettings import *
 
 from enum import Enum
 from typing import AnyStr, Tuple
@@ -34,6 +35,7 @@ import urllib.parse
 __all__ = [
     'Protocol',
     'callRateLimited',
+    'forceToLocalhostIfPossible',
     'callOnceOnly',
     'classname',
     'isValidIPAddress',
@@ -82,6 +84,7 @@ def callRateLimited(maxCallPerSecond):
     called = time.monotonic()
 
     def decorator(func):
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             # Previously called
             nonlocal called
@@ -96,6 +99,34 @@ def callRateLimited(maxCallPerSecond):
             called = time.monotonic()
 
             return result
+
+        return wrapper
+
+    return decorator
+
+
+def forceToLocalhostIfPossible():
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+
+            if (
+                AppSettings.isStateOFF('ForceToLocalhostWhenSettingLocalProxy')
+                or not isinstance(result, str)
+                or result == ''
+            ):
+                return result
+
+            # Force to localhost according to settings
+            try:
+                host, port = parseHostPort(result)
+
+                return f'127.0.0.1:{port}'
+            except Exception:
+                # Any non-exit exceptions
+
+                return result
 
         return wrapper
 

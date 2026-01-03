@@ -210,7 +210,13 @@ class ConnectAction(AppQAction):
         else:
             assert isinstance(config, ConfigFactory)
 
-            if not validateProxyServer(config.httpProxy()):
+            @forceToLocalhostIfPossible()
+            def getHttpProxy() -> str:
+                return config.httpProxy()
+
+            httpProxy = getHttpProxy()
+
+            if not validateProxyServer(httpProxy):
                 # Proxy server is not valid. Do not connect
 
                 AppSettings.turnOFF('Connect')
@@ -247,7 +253,7 @@ class ConnectAction(AppQAction):
 
             if self.actionQueue.empty():
                 if success:
-                    SystemProxy.set(config.httpProxy(), PROXY_SERVER_BYPASS)
+                    SystemProxy.set(httpProxy, PROXY_SERVER_BYPASS)
 
                     self.doConnected()
 
@@ -291,11 +297,13 @@ class ConnectAction(AppQAction):
             hasNewVersionCallback=newVersionCallback,
         )
 
-        if SystemRuntime.appImagePath() or SystemRuntime.flatpakID():
+        if not SystemRuntime.isAssetsFolderWritable():
             logger.info(
-                'skipped auto assets update due to application folder not writable'
+                f'skipped auto assets update due to assets folder \'{XRAY_ASSET_DIR}\' not writable'
             )
         else:
+            logger.info(f'assets folder \'{XRAY_ASSET_DIR}\' is writable. Continue')
+
             if AppSettings.isStateON_('AutoUpdateAssetFiles'):
                 # Automatically update assets
                 self.assetDownloadManager.configureHttpProxy(connectedHttpProxy)

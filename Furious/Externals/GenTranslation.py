@@ -1091,6 +1091,14 @@ TRANSLATION = {
         "ZH": "开机启动",
         "isReviewed": "True"
     },
+    "Force To 127.0.0.1 When Setting Local Proxy": {
+        "source": [
+            "Furious.TrayActions.Settings"
+        ],
+        "RU": "Принудительно 127.0.0.1 для локального прокси",
+        "ZH": "设置本地代理时强制使用127.0.0.1",
+        "isReviewed": "True"
+    },
     "Automatically Update Asset Files": {
         "source": [
             "Furious.TrayActions.Settings"

@@ -33,6 +33,11 @@ if PLATFORM == 'Darwin':
 registerAppSettings('StartupOnBoot', isBinary=True, default=AppBinarySettings.ON_)
 registerAppSettings('PowerSaveMode', isBinary=True, default=AppBinarySettings.ON_)
 registerAppSettings(
+    'ForceToLocalhostWhenSettingLocalProxy',
+    isBinary=True,
+    default=AppBinarySettings.OFF,
+)
+registerAppSettings(
     'AutoUpdateAssetFiles', isBinary=True, default=AppBinarySettings.ON_
 )
 registerAppSettings(
@@ -136,6 +141,13 @@ class SettingsChildAction(AppQAction):
                 AppSettings.turnOFF('PowerSaveMode')
 
             showMBoxNewChangesNextTime()
+        elif self.textCompare('Force To 127.0.0.1 When Setting Local Proxy'):
+            if checked:
+                AppSettings.turnON_('ForceToLocalhostWhenSettingLocalProxy')
+            else:
+                AppSettings.turnOFF('ForceToLocalhostWhenSettingLocalProxy')
+
+            showMBoxNewChangesNextTime()
         elif self.textCompare('Automatically Update Asset Files'):
             if checked:
                 AppSettings.turnON_('AutoUpdateAssetFiles')
@@ -187,7 +199,7 @@ class SettingsAction(AppQAction):
         else:
             hideDockIconAction = []
 
-        if SystemRuntime.appImagePath() or SystemRuntime.flatpakID():
+        if not SystemRuntime.isAssetsFolderWritable():
             autoUpdateAssetFilesAction = []
         else:
             autoUpdateAssetFilesAction = (
@@ -226,6 +238,13 @@ class SettingsAction(AppQAction):
                     checked=AppSettings.isStateON_('PowerSaveMode'),
                 ),
                 AppQSeperator(),
+                SettingsChildAction(
+                    _('Force To 127.0.0.1 When Setting Local Proxy'),
+                    checkable=True,
+                    checked=AppSettings.isStateON_(
+                        'ForceToLocalhostWhenSettingLocalProxy'
+                    ),
+                ),
                 *autoUpdateAssetFilesAction,
                 SettingsChildAction(
                     _('Show Progress Bar When Connecting'),
