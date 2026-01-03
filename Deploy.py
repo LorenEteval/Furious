@@ -299,172 +299,75 @@ def downloadHy1Asset():
 
 
 def cleanup():
-    try:
-        shutil.rmtree(ROOT_DIR / DEPLOY_DIR_NAME)
-    except Exception as ex:
-        # Any non-exit exceptions
+    def rmtree(path, action: str = ''):
+        try:
+            shutil.rmtree(path)
+        except Exception as ex:
+            # Any non-exit exceptions
 
-        logger.error(f'remove deployment dir failed: {ex}')
-    else:
-        logger.info(f'remove deployment dir success')
+            if action:
+                logger.error(f'{action} failed: {ex}')
+        else:
+            if action:
+                logger.info(f'{action} success')
+
+    def remove(path, action: str = ''):
+        try:
+            os.remove(path)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            if action:
+                logger.error(f'{action} failed: {ex}')
+        else:
+            if action:
+                logger.info(f'{action} success')
+
+    rmtree(ROOT_DIR / DEPLOY_DIR_NAME, 'remove deployment dir')
 
     if PLATFORM == 'Windows':
         # More cleanup on Windows
-        try:
-            # Remove artifact
-            os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.zip')
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove artifact failed: {ex}')
-        else:
-            logger.info(f'remove artifact success')
-
-        try:
-            # Remove artifact
-            os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.msi')
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove artifact failed: {ex}')
-        else:
-            logger.info(f'remove artifact success')
-
-        try:
-            # Remove artifact
-            os.remove(ROOT_DIR / f'{ARTIFACT_NAME}.wixpdb')
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove artifact failed: {ex}')
-        else:
-            logger.info(f'remove artifact success')
-
-        try:
-            # Remove unzipped folder
-            shutil.rmtree(ROOT_DIR / WIN_UNZIPPED)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove unzipped dir failed: {ex}')
-        else:
-            logger.info('remove unzipped dir success')
+        # Remove artifact
+        remove(ROOT_DIR / f'{ARTIFACT_NAME}.zip', 'remove artifact')
+        # Remove artifact
+        remove(ROOT_DIR / f'{ARTIFACT_NAME}.msi', 'remove artifact')
+        # Remove artifact
+        remove(ROOT_DIR / f'{ARTIFACT_NAME}.wixpdb', 'remove artifact')
+        # Remove unzipped folder
+        rmtree(ROOT_DIR / WIN_UNZIPPED, 'remove unzipped dir')
     elif PLATFORM == 'Darwin':
         # More cleanup on Darwin
-        try:
-            # Remove artifact
-            os.remove(ROOT_DIR / MAC_DMG_FILENAME)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove artifact failed: {ex}')
-        else:
-            logger.info(f'remove artifact success')
-
-        try:
-            # Remove app folder
-            shutil.rmtree(MAC_APP_DIR)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove app dir failed: {ex}')
-        else:
-            logger.info(f'remove app dir success')
+        # Remove artifact
+        remove(ROOT_DIR / MAC_DMG_FILENAME, 'remove artifact')
+        # Remove app folder
+        rmtree(MAC_APP_DIR, 'remove app dir')
     elif PLATFORM == 'Linux':
         # More cleanup on Linux
         # Cleanup AppImage environment
-        try:
-            # Remove artifact
-            os.remove(ROOT_DIR / LINUX_APPIMAGE_FILENAME)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove artifact failed: {ex}')
-        else:
-            logger.info(f'remove artifact success')
-
-        try:
-            # Remove app folder
-            shutil.rmtree(LINUX_APP_DIR)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove app dir failed: {ex}')
-        else:
-            logger.info(f'remove app dir success')
+        # Remove artifact
+        remove(ROOT_DIR / LINUX_APPIMAGE_FILENAME, 'remove artifact')
+        # Remove app folder
+        rmtree(LINUX_APP_DIR, 'remove app dir')
 
         # Cleanup deb environment
-        try:
-            # Remove artifact
-            os.remove(ROOT_DIR / LINUX_DEB_FILENAME)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove artifact failed: {ex}')
-        else:
-            logger.info(f'remove artifact success')
-
-        try:
-            # Remove debian folder
-            shutil.rmtree(LINUX_DEBIAN_DIR)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove debian dir failed: {ex}')
-        else:
-            logger.info(f'remove debian dir success')
+        # Remove artifact
+        remove(ROOT_DIR / LINUX_DEB_FILENAME, 'remove artifact')
+        # Remove debian folder
+        rmtree(LINUX_DEBIAN_DIR, 'remove debian dir')
 
         # Cleanup flatpak environment
-        try:
-            # Remove artifact
-            os.remove(ROOT_DIR / LINUX_FLATPAK_FILENAME)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove artifact failed: {ex}')
-        else:
-            logger.info(f'remove artifact success')
-
-        try:
-            # Remove flatpak folder
-            shutil.rmtree(LINUX_FLATPAK_DIR)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove flatpak dir failed: {ex}')
-        else:
-            logger.info(f'remove flatpak dir success')
+        # Remove artifact
+        remove(ROOT_DIR / LINUX_FLATPAK_FILENAME, 'remove artifact')
+        # Remove flatpak folder
+        rmtree(LINUX_FLATPAK_DIR, 'remove flatpak dir')
 
         # Cleanup rpm environment
-        try:
-            # Remove artifact
-            os.remove(ROOT_DIR / LINUX_RPM_FILENAME)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove artifact failed: {ex}')
-        else:
-            logger.info(f'remove artifact success')
-
-        try:
-            # Remove rpm folder
-            shutil.rmtree(LINUX_RPM_DIR)
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove rpm dir failed: {ex}')
-        else:
-            logger.info(f'remove rpm dir success')
-
-        try:
-            # Remove home rpmbuild folder
-            shutil.rmtree(USER_HOME / 'rpmbuild')
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'remove home rpmbuild failed: {ex}')
-        else:
-            logger.info(f'remove home rpmbuild success')
+        # Remove artifact
+        remove(ROOT_DIR / LINUX_RPM_FILENAME, 'remove artifact')
+        # Remove rpm folder
+        rmtree(LINUX_RPM_DIR, 'remove rpm dir')
+        # Remove home rpmbuild folder
+        rmtree(USER_HOME / 'rpmbuild', 'remove home rpmbuild')
     else:
         # Deploy: Not implemented
         pass
