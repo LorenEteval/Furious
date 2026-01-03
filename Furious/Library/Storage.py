@@ -63,6 +63,7 @@ class Storage:
 
     class Extras:
         @staticmethod
+        @forceToLocalhostIfPossible()
         def UserHttpProxy() -> Union[str, None]:
             try:
                 if APP().isSystemTrayConnected():
