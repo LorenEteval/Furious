@@ -882,7 +882,7 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
                 ),
             ),
             useActionGroup=False,
-            checkable=True,
+            checkable=False,
         )
 
         contextMenuActions = [
