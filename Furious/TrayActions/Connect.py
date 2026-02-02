@@ -263,9 +263,7 @@ class ConnectAction(AppQAction):
 
                     if AppSettings.isStateON_('PowerSaveMode'):
                         # Power optimization
-                        logger.info(f'no action queue in power save mode')
-
-                        self.actionTimer.stop()
+                        self.actionTimer.start(CORE_CHECK_ALIVE_INTERVAL * 2)
                     else:
                         self.actionTimer.start(CORE_CHECK_ALIVE_INTERVAL)
 
