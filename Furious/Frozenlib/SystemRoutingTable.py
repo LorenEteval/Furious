@@ -156,19 +156,20 @@ class SystemRoutingTable:
         try:
             if dhcp:
                 result = runExternalCommand(
-                    'netsh interface ip set dns'.split() + [f'name=\"{name}\"', 'dhcp'],
+                    f'netsh interface ip set dns name=\"{name}\" dhcp',
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
+                    shell=True,
                     check=True,
                 )
             else:
                 assert address is not None
 
                 result = runExternalCommand(
-                    'netsh interface ip set dns'.split()
-                    + [f'name=\"{name}\"', 'static', f'{address}'],
+                    f'netsh interface ip set dns name=\"{name}\" static {address}',
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
+                    shell=True,
                     check=True,
                 )
         except subprocess.CalledProcessError as err:
