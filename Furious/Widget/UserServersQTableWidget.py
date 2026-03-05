@@ -218,6 +218,21 @@ class SubscriptionManager(WebGETManager):
         except Exception as ex:
             # Any non-exit exceptions
 
+            logger.error(
+                f'parse base64 share link from \'{webURL}\' failed: {ex}. '
+                f'Try to fall back to plain text'
+            )
+
+        try:
+            uris = list(
+                filter(
+                    lambda x: x != '',
+                    data.decode().split('\n'),
+                )
+            )
+        except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'parse share link from \'{webURL}\' failed: {ex}')
 
             failureArgs.append({'error': classname(ex), **kwargs})
@@ -1524,6 +1539,10 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
                 AppSettings.set(
                     'ActivatedItemIndex', str(Storage.UserActivatedItemIndex() - 1)
                 )
+
+        # Refresh index
+        for index, item in enumerate(Storage.UserServers()):
+            item.index = index
 
         if deleteActivated:
             # Set invalid first
