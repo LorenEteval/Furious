@@ -210,7 +210,8 @@ jobs:
             go_name="go-for-win7-windows-amd64"
             go_file="${go_name}.zip"
 
-            curl -L -o ${go_file} https://github.com/XTLS/go-win7/releases/latest/download/${go_file}
+            # curl -L -o ${go_file} https://github.com/XTLS/go-win7/releases/latest/download/${go_file}
+            curl -L -o ${go_file} https://github.com/XTLS/go-win7/releases/download/patched-1.25.7/${go_file}
             7z x ${go_file} -o${go_name} -y
 
             export GOROOT="$PWD/${go_name}"
