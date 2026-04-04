@@ -23,6 +23,8 @@ from Furious.Library import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 from Furious.Widget.UserServersQTableWidget import *
+from Furious.Widget.GuiCustomizeNetworkTest import *
+from Furious.Widget.GuiCustomizeProxyBypass import *
 from Furious.Widget.GuiTUNSettings import *
 from Furious.Window.UserSubsWindow import *
 from Furious.Window.XrayAssetViewerWindow import *
@@ -129,6 +131,8 @@ class AppMainWindow(AppQMainWindow):
             ),
         )
         self.xrayAssetViewerWindow = XrayAssetViewerWindow(parent=self)
+        self.customizeProxyBypassDialog = GuiCustomizeProxyBypassDialog(parent=self)
+        self.customizeNetworkTestDialog = GuiCustomizeNetworkTestDialog(parent=self)
 
         self.mainTab = AppQTabWidget()
         self.mainTab.addTab(self.userServersQTableWidget, _('Server'))
@@ -248,7 +252,6 @@ class AppMainWindow(AppQMainWindow):
                     checkable=False,
                     callback=lambda: self.getGuiTUNSettings().open(),
                 ),
-                AppQSeperator(),
             ]
 
         if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
@@ -285,6 +288,18 @@ class AppMainWindow(AppQMainWindow):
 
         toolsActions = [
             *customizeTUNSettingsAction,
+            AppQAction(
+                _('Customize Proxy Bypass Address...'),
+                checkable=False,
+                callback=lambda: self.customizeProxyBypassDialog.open(),
+            ),
+            AppQAction(
+                _('Customize Network Test URL...'),
+                icon=bootstrapIcon('speedometer2.svg'),
+                checkable=False,
+                callback=lambda: self.customizeNetworkTestDialog.open(),
+            ),
+            AppQSeperator(),
             *restartAsAdminAction,
             *openAppFolderAction,
             AppQAction(

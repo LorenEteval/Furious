@@ -17,6 +17,8 @@
 
 from .Application import *
 from .ConnectProgressBar import *
+from .GuiCustomizeNetworkTest import *
+from .GuiCustomizeProxyBypass import *
 from .GuiHysteria1 import *
 from .GuiHysteria2 import *
 from .GuiShadowsocks import *
