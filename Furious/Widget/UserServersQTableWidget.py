@@ -906,6 +906,14 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             checkable=False,
         )
 
+        self.activateSelectedServerActionRef = AppQAction(
+            _('Activate Selected Server'),
+            callback=lambda: self.activateSelectedServer(),
+            shortcut=QtCore.QKeyCombination(
+                QtCore.Qt.Key.Key_Enter,
+            ),
+        )
+
         contextMenuActions = [
             AppQAction(
                 _('Move Up'),
@@ -944,6 +952,7 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
                 ),
             ),
             AppQSeperator(),
+            self.activateSelectedServerActionRef,
             AppQAction(
                 _('Scroll To Activated Server'),
                 callback=lambda: self.scrollToActivatedItem(),
@@ -1081,9 +1090,17 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
     @QtCore.Slot()
     def handleItemSelectionChanged(self):
         if len(self.selectedIndex) > 1:
-            self.customizeJSONConfigActionRef.setDisabled(True)
+            for action in [
+                self.customizeJSONConfigActionRef,
+                self.activateSelectedServerActionRef,
+            ]:
+                action.setDisabled(True)
         else:
-            self.customizeJSONConfigActionRef.setDisabled(False)
+            for action in [
+                self.customizeJSONConfigActionRef,
+                self.activateSelectedServerActionRef,
+            ]:
+                action.setDisabled(False)
 
     @QtCore.Slot(QTableWidgetItem)
     def handleItemActivated(self, item: QTableWidgetItem):
@@ -1618,6 +1635,22 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             Storage.UserServers()[index].toJSONString(), True
         )
         self.textEditorWindow.show()
+
+    def activateSelectedServer(self):
+        indexes = self.selectedIndex
+
+        if len(indexes) == 0:
+            # Nothing selected. Do nothing
+            return
+
+        if len(indexes) != 1:
+            # Should not reach here
+            return
+
+        item = self.item(indexes[0], 0)
+
+        if item is not None:
+            self.handleItemActivated(item)
 
     def scrollToActivatedItem(self):
         activatedItem = self.activatedItem()
