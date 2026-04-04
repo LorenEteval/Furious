@@ -253,21 +253,44 @@ class ConnectAction(AppQAction):
 
             if self.actionQueue.empty():
                 if success:
-                    SystemProxy.set(httpProxy, PROXY_SERVER_BYPASS)
+                    # Use custom proxy bypass address if possible
+                    settings = AppSettings.get('CustomProxyBypass')
 
-                    self.doConnected()
-
-                    APP().systemTray.showMessage(
-                        f'{config.coreName()}: ' + _('Connected')
-                    )
-
-                    if AppSettings.isStateON_('PowerSaveMode'):
-                        # Power optimization
-                        self.actionTimer.start(CORE_CHECK_ALIVE_INTERVAL * 2)
+                    if settings is None:
+                        proxyServerBypass = PROXY_SERVER_BYPASS
                     else:
-                        self.actionTimer.start(CORE_CHECK_ALIVE_INTERVAL)
+                        proxyServerBypass = settings
 
-                    self.doConnectedCallOnceOnly()
+                    try:
+                        SystemProxy.set(httpProxy, proxyServerBypass)
+                    except Exception as ex:
+                        # Any non-exit exceptions
+
+                        logger.error(f'error while setting http proxy: {ex}')
+                        logger.error(
+                            f'failed to connect successfully. '
+                            f'This may be due to improper proxy '
+                            f'server bypass settings: {proxyServerBypass}'
+                        )
+
+                        self.coreManager.stopAll()
+                        self.doDisconnectWithTrayMessage(
+                            f'{config.coreName()}: ' + _('Unknown error')
+                        )
+                    else:
+                        self.doConnected()
+
+                        APP().systemTray.showMessage(
+                            f'{config.coreName()}: ' + _('Connected')
+                        )
+
+                        if AppSettings.isStateON_('PowerSaveMode'):
+                            # Power optimization
+                            self.actionTimer.start(CORE_CHECK_ALIVE_INTERVAL * 2)
+                        else:
+                            self.actionTimer.start(CORE_CHECK_ALIVE_INTERVAL)
+
+                        self.doConnectedCallOnceOnly()
                 else:
                     logger.error('failed to start core manager')
 

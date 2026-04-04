@@ -596,9 +596,15 @@ class TestDownloadSpeedWorker(WebGETManager):
 
                     self.configureHttpProxy(f'127.0.0.1:{self.port}')
 
-                    self.networkReply = self.webGET(
-                        NETWORK_SPEED_TEST_URL, **self.kwargs
-                    )
+                    # Use custom network speed test URL if possible
+                    settings = AppSettings.get('CustomNetworkSpeedTestURL')
+
+                    if settings is None:
+                        url = NETWORK_SPEED_TEST_URL
+                    else:
+                        url = settings
+
+                    self.networkReply = self.webGET(url, **self.kwargs)
 
                     self.elapsedTimer.start()
                     self.timeoutTimer.start(self.timeout)

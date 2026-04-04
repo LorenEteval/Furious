@@ -73,7 +73,15 @@ class NetworkStateManager(Mixins.ConnectionAware, WebGETManager):
         self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=False))
 
     def startSingleTest(self):
-        networkReply = self.webGET(NETWORK_STATE_TEST_URL)
+        # Use custom network state test URL if possible
+        settings = AppSettings.get('CustomNetworkStateTestURL')
+
+        if settings is None:
+            url = NETWORK_SPEED_TEST_URL
+        else:
+            url = settings
+
+        networkReply = self.webGET(url)
 
         def abort(_networkReply):
             if isinstance(_networkReply, QNetworkReply):
