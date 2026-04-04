@@ -100,6 +100,93 @@ class GuiHy2ItemBasicAuth(GuiEditorItemTextInput):
             self.setText('')
 
 
+class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
+    CONGESTION_KEYS = ['type', 'bbrProfile']
+
+    def __init__(self, *args, **kwargs):
+        key = kwargs.pop('key', '')
+
+        assert key in self.CONGESTION_KEYS
+
+        super().__init__(*args, **kwargs)
+
+        self.key = key
+
+        if key == 'type':
+            # TODO: Future extension
+            self.addItems(['', 'bbr', 'reno'])
+        elif key == 'bbrProfile':
+            # TODO: Future extension
+            self.addItems(['', 'standard', 'conservative', 'aggressive'])
+        else:
+            # Should not reach here
+            raise
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        newValue = self.text()
+
+        if newValue == '':
+            congestion = config.get('congestion')
+
+            if isinstance(congestion, dict):
+                if len(congestion) > 0:
+                    if congestion.get(self.key) is not None:
+                        oldValue = congestion[self.key]
+
+                        congestion.pop(self.key, None)
+
+                        if not isinstance(oldValue, str) or oldValue != '':
+                            modified = True
+                        else:
+                            modified = False
+                    else:
+                        modified = False
+
+                    # TODO: Future extension
+                    anyValid = any(
+                        congestion.get(key, '') for key in self.CONGESTION_KEYS
+                    )
+
+                    if not anyValid:
+                        config.pop('congestion', None)
+
+                        return True
+                    else:
+                        return modified
+                else:
+                    config.pop('congestion', None)
+
+                    # Modified silently
+                    return False
+            else:
+                config.pop('congestion', None)
+
+                # Modified silently
+                return False
+        else:
+            if not isinstance(config.get('congestion'), dict):
+                config['congestion'] = {}
+
+            oldValue = config['congestion'].get(self.key, '')
+
+            if not isinstance(oldValue, str) or newValue != oldValue:
+                config['congestion'][self.key] = newValue
+
+                return True
+            else:
+                return False
+
+    def factoryToInput(self, config: ConfigFactory):
+        try:
+            value = config['congestion'][self.key]
+        except Exception:
+            # Any non-exit exceptions
+
+            value = ''
+
+        self.setText(value)
+
+
 class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -362,6 +449,12 @@ class GuiHy2GroupBoxBasic(GuiEditorWidgetQGroupBox):
             GuiEditorItemBasicRemark(title=_('Remark')),
             GuiHy2ItemBasicServer(title=_('Server')),
             GuiHy2ItemBasicAuth(title='auth', translatable=False),
+            GuiHy2ItemBasicCongestionComboBox(
+                title='congestion-type', key='type', translatable=False
+            ),
+            GuiHy2ItemBasicCongestionComboBox(
+                title='congestion-profile', key='bbrProfile', translatable=False
+            ),
         ]
 
 
