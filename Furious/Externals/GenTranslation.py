@@ -1842,5 +1842,13 @@ TRANSLATION = {
         "RU": "Введите URL теста состояния сети:",
         "ZH": "输入网络状态测试URL：",
         "isReviewed": "True"
+    },
+    "Activate Selected Server": {
+        "source": [
+            "Furious.Widget.UserServersQTableWidget"
+        ],
+        "RU": "Активировать выбранный сервер",
+        "ZH": "激活选定的服务器",
+        "isReviewed": "True"
     }
 }
