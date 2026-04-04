@@ -358,39 +358,47 @@ class ConnectAction(AppQAction):
 
         if exitcode == CoreProcessFactory.ExitCode.SystemShuttingDown.value:
             # System shutting down. Do nothing
-            return
+            return None
 
         if exitcode == CoreProcessFactory.ExitCode.ConfigurationError.value:
-            return putItem(
+            putItem(
                 functools.partial(
                     self.doDisconnectWithTrayMessage,
                     f'{core.name()}: ' + _('Invalid server configuration'),
                 )
             )
 
+            return None
+
         if exitcode == CoreProcessFactory.ExitCode.ServerStartFailure.value:
-            return putItem(
+            putItem(
                 functools.partial(
                     self.doDisconnectWithTrayMessage,
                     f'{core.name()}: ' + _('Failed to start core'),
                 )
             )
 
+            return None
+
         if isinstance(core, Hysteria1):
             if exitcode == Hysteria1.ExitCode.RemoteNetworkError.value:
-                return putItem(
+                putItem(
                     functools.partial(
                         self.doDisconnectWithTrayMessage,
                         f'{core.name()}: ' + _('Connection to server has been lost'),
                     )
                 )
 
-        return putItem(
+                return None
+
+        putItem(
             functools.partial(
                 self.doDisconnectWithTrayMessage,
                 f'{core.name()}: ' + _('Core terminated unexpectedly'),
             )
         )
+
+        return None
 
     def triggeredCallback(self, checked):
         if checked:
