@@ -30,6 +30,7 @@ __all__ = ['GuiVTransportQGroupBox']
 
 STREAM_NETWORK = [
     'tcp',
+    'raw',
     'kcp',
     'ws',
     'h2',
@@ -38,6 +39,7 @@ STREAM_NETWORK = [
     'httpupgrade',
     'splithttp',
     'xhttp',
+    'hysteria',
 ]
 
 
@@ -154,7 +156,7 @@ class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
             self.setText('')
 
 
-class GuiVTransportItemTypeTcp(GuiVTransportItemTypeXXX):
+class GuiVTransportItemTypeTcpOrRaw(GuiVTransportItemTypeXXX):
     def __init__(self, *args, **kwargs):
         networkKey = kwargs.pop('networkKey', 'tcpSettings')
 
@@ -169,17 +171,21 @@ class GuiVTransportItemTypeTcp(GuiVTransportItemTypeXXX):
         )
 
 
-class GuiVTransportItemHostTcp(GuiEditorItemTextInput):
+class GuiVTransportItemHostTcpOrRaw(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
+        networkKey = kwargs.pop('networkKey', 'tcpSettings')
+
         super().__init__(*args, **kwargs)
+
+        self.networkKey = networkKey
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
-        if not isinstance(streamSettings.get('tcpSettings'), dict):
-            streamSettings['tcpSettings'] = {}
+        if not isinstance(streamSettings.get(self.networkKey), dict):
+            streamSettings[self.networkKey] = {}
 
-        tcpObject = streamSettings['tcpSettings']
+        tcpObject = streamSettings[self.networkKey]
 
         try:
             oldHost = ','.join(tcpObject['header']['request']['headers']['Host'])
@@ -219,7 +225,7 @@ class GuiVTransportItemHostTcp(GuiEditorItemTextInput):
 
     def factoryToInput(self, config: ConfigFactory):
         try:
-            tcpObject = ConfigXray.getProxyOutboundStream(config)['tcpSettings']
+            tcpObject = ConfigXray.getProxyOutboundStream(config)[self.networkKey]
 
             self.setText(','.join(tcpObject['header']['request']['headers']['Host']))
         except Exception:
@@ -228,17 +234,21 @@ class GuiVTransportItemHostTcp(GuiEditorItemTextInput):
             self.setText('')
 
 
-class GuiVTransportItemPathTcp(GuiEditorItemTextInput):
+class GuiVTransportItemPathTcpOrRaw(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
+        networkKey = kwargs.pop('networkKey', 'tcpSettings')
+
         super().__init__(*args, **kwargs)
+
+        self.networkKey = networkKey
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
-        if not isinstance(streamSettings.get('tcpSettings'), dict):
-            streamSettings['tcpSettings'] = {}
+        if not isinstance(streamSettings.get(self.networkKey), dict):
+            streamSettings[self.networkKey] = {}
 
-        tcpObject = streamSettings['tcpSettings']
+        tcpObject = streamSettings[self.networkKey]
 
         try:
             oldPath = ','.join(tcpObject['header']['request']['path'])
@@ -275,7 +285,7 @@ class GuiVTransportItemPathTcp(GuiEditorItemTextInput):
 
     def factoryToInput(self, config: ConfigFactory):
         try:
-            tcpObject = ConfigXray.getProxyOutboundStream(config)['tcpSettings']
+            tcpObject = ConfigXray.getProxyOutboundStream(config)[self.networkKey]
 
             self.setText(','.join(tcpObject['header']['request']['path']))
         except Exception:
@@ -1280,6 +1290,158 @@ class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
             self.setText('')
 
 
+class GuiVTransportItemVersionHysteria(GuiEditorItemTextSpinBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Range. 0 means invalid
+        self.setRange(0, 2)
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('hysteriaSettings'), dict):
+            streamSettings['hysteriaSettings'] = {}
+
+        hysteriaObject = streamSettings['hysteriaSettings']
+
+        oldVersion = hysteriaObject.get('version', 0)
+        newVersion = self.value()
+
+        if isinstance(oldVersion, int):
+            if newVersion != oldVersion:
+                hysteriaObject['version'] = newVersion
+
+                return True
+            else:
+                return False
+        else:
+            hysteriaObject['version'] = newVersion
+
+            return True
+
+    def factoryToInput(self, config: ConfigFactory):
+        try:
+            hysteriaObject = ConfigXray.getProxyOutboundStream(config)[
+                'hysteriaSettings'
+            ]
+
+            self.setValue(hysteriaObject.get('version', 0))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setValue(0)
+
+
+class GuiVTransportItemAuthHysteria(GuiEditorItemTextInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('hysteriaSettings'), dict):
+            streamSettings['hysteriaSettings'] = {}
+
+        hysteriaObject = streamSettings['hysteriaSettings']
+
+        try:
+            oldAuth = hysteriaObject.get('auth', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            oldAuth = ''
+
+        newAuth = self.text()
+
+        def setNewAuth():
+            if newAuth == '':
+                hysteriaObject.pop('auth', None)
+            else:
+                hysteriaObject['auth'] = newAuth
+
+        if isinstance(oldAuth, str):
+            if newAuth != oldAuth:
+                setNewAuth()
+
+                return True
+            else:
+                return False
+        else:
+            setNewAuth()
+
+            return True
+
+    def factoryToInput(self, config: ConfigFactory):
+        try:
+            hysteriaObject = ConfigXray.getProxyOutboundStream(config)[
+                'hysteriaSettings'
+            ]
+
+            self.setText(hysteriaObject.get('auth', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
+class GuiVTransportItemPasswordHysteria(GuiEditorItemTextInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('finalmask'), dict):
+            streamSettings['finalmask'] = {}
+
+        finalmaskObject = streamSettings['finalmask']
+
+        if not isinstance(finalmaskObject.get('salamander'), dict):
+            finalmaskObject['salamander'] = {}
+
+        salamander = finalmaskObject['salamander']
+
+        try:
+            oldPassword = salamander.get('password', '')
+        except Exception:
+            # Any non-exit exceptions
+
+            oldPassword = ''
+
+        newPassword = self.text()
+
+        def setNewPassword():
+            if newPassword == '':
+                finalmaskObject.pop('salamander', None)
+            else:
+                salamander['password'] = newPassword
+
+        if isinstance(oldPassword, str):
+            if newPassword != oldPassword:
+                setNewPassword()
+
+                return True
+            else:
+                return False
+        else:
+            setNewPassword()
+
+            return True
+
+    def factoryToInput(self, config: ConfigFactory):
+        try:
+            salamander = ConfigXray.getProxyOutboundStream(config)['finalmask'][
+                'salamander'
+            ]
+
+            self.setText(salamander.get('password', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
 class GuiVTransportPageXXX(GuiEditorWidgetQWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1304,9 +1466,34 @@ class GuiVTransportPageTcp(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
-            GuiVTransportItemTypeTcp(title='Type', translatable=False),
-            GuiVTransportItemHostTcp(title='Host', translatable=False),
-            GuiVTransportItemPathTcp(title='Path', translatable=False),
+            GuiVTransportItemTypeTcpOrRaw(
+                title='Type', networkKey='tcpSettings', translatable=False
+            ),
+            GuiVTransportItemHostTcpOrRaw(
+                title='Host', networkKey='tcpSettings', translatable=False
+            ),
+            GuiVTransportItemPathTcpOrRaw(
+                title='Path', networkKey='tcpSettings', translatable=False
+            ),
+        ]
+
+
+class GuiVTransportPageRaw(GuiVTransportPageXXX):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def containerSequence(self):
+        return [
+            GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemTypeTcpOrRaw(
+                title='Type', networkKey='rawSettings', translatable=False
+            ),
+            GuiVTransportItemHostTcpOrRaw(
+                title='Host', networkKey='rawSettings', translatable=False
+            ),
+            GuiVTransportItemPathTcpOrRaw(
+                title='Path', networkKey='rawSettings', translatable=False
+            ),
         ]
 
 
@@ -1412,6 +1599,19 @@ class GuiVTransportPageGRPC(GuiVTransportPageXXX):
         ]
 
 
+class GuiVTransportPageHysteria(GuiVTransportPageXXX):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def containerSequence(self):
+        return [
+            GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemVersionHysteria(title='Version', translatable=False),
+            GuiVTransportItemAuthHysteria(title='Auth', translatable=False),
+            GuiVTransportItemPasswordHysteria(title='Password', translatable=False),
+        ]
+
+
 class GuiVTransportPageStackedWidget(QStackedWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1419,6 +1619,7 @@ class GuiVTransportPageStackedWidget(QStackedWidget):
         # Corresponds to stream network
         self._pages = [
             GuiVTransportPageTcp(),
+            GuiVTransportPageRaw(),
             GuiVTransportPageKcp(),
             GuiVTransportPageWs(),
             GuiVTransportPageH2(),
@@ -1427,7 +1628,10 @@ class GuiVTransportPageStackedWidget(QStackedWidget):
             GuiVTransportPageHttpUpgrade(),
             GuiVTransportPageSplitHttp(),
             GuiVTransportPageXHttp(),
+            GuiVTransportPageHysteria(),
         ]
+
+        assert len(STREAM_NETWORK) == len(self._pages)
 
         for page in self._pages:
             self.addWidget(page)
