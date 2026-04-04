@@ -51,7 +51,10 @@ class GuiEditorItemTextInput(GuiEditorItemWidgetContainer):
 
         super().__init__(*args, **kwargs)
 
-        self._title = AppQLabel(_(title), translatable=translatable, parent=parent)
+        if translatable:
+            title = _(title)
+
+        self._title = AppQLabel(title, translatable=translatable, parent=parent)
         self._input = QLineEdit(parent=parent)
 
     def text(self) -> str:
@@ -72,7 +75,10 @@ class GuiEditorItemTextSpinBox(GuiEditorItemWidgetContainer):
 
         super().__init__(*args, **kwargs)
 
-        self._title = AppQLabel(_(title), translatable=translatable, parent=parent)
+        if translatable:
+            title = _(title)
+
+        self._title = AppQLabel(title, translatable=translatable, parent=parent)
         self._input = QSpinBox(parent=parent)
 
     def value(self) -> int:
@@ -96,7 +102,10 @@ class GuiEditorItemTextComboBox(GuiEditorItemWidgetContainer):
 
         super().__init__(*args, **kwargs)
 
-        self._title = AppQLabel(_(title), translatable=translatable, parent=parent)
+        if translatable:
+            title = _(title)
+
+        self._title = AppQLabel(title, translatable=translatable, parent=parent)
         self._input = AppQComboBox(parent=parent, translatable=False)
 
     def text(self) -> str:
