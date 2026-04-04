@@ -32,7 +32,7 @@ __all__ = ['GuiCustomizeNetworkTestDialog']
 logger = logging.getLogger(__name__)
 
 registerAppSettings('CustomNetworkSpeedTestURL')
-registerAppSettings('CustomNetworkStateTestURL')
+registerAppSettings('CustomNetworkConnectivityTestURL')
 
 
 class GuiCustomizeNetworkTestDialog(AppQDialog):
@@ -45,22 +45,22 @@ class GuiCustomizeNetworkTestDialog(AppQDialog):
         self.speedTestURLText = AppQLabel(_('Enter network speed test URL:'))
         self.speedTestURLEdit = QLineEdit()
 
-        speedTestSettings = AppSettings.get('CustomNetworkSpeedTestURL')
+        speedTestURLSettings = AppSettings.get('CustomNetworkSpeedTestURL')
 
-        if speedTestSettings is None:
+        if speedTestURLSettings is None:
             self.speedTestURLEdit.setText(NETWORK_SPEED_TEST_URL)
         else:
-            self.speedTestURLEdit.setText(speedTestSettings)
+            self.speedTestURLEdit.setText(speedTestURLSettings)
 
-        self.stateTestURLText = AppQLabel(_('Enter network state test URL:'))
-        self.stateTestURLEdit = QLineEdit()
+        self.connectivityText = AppQLabel(_('Enter network connectivity test URL:'))
+        self.connectivityEdit = QLineEdit()
 
-        stateTestSettings = AppSettings.get('CustomNetworkStateTestURL')
+        connectivitySettings = AppSettings.get('CustomNetworkConnectivityTestURL')
 
-        if stateTestSettings is None:
-            self.stateTestURLEdit.setText(NETWORK_STATE_TEST_URL)
+        if connectivitySettings is None:
+            self.connectivityEdit.setText(NETWORK_CONNECTIVITY_TEST_URL)
         else:
-            self.stateTestURLEdit.setText(stateTestSettings)
+            self.connectivityEdit.setText(connectivitySettings)
 
         self.dialogBtns = AppQDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
         self.dialogBtns.addButton(_('OK'), AppQDialogButtonBox.ButtonRole.AcceptRole)
@@ -70,28 +70,28 @@ class GuiCustomizeNetworkTestDialog(AppQDialog):
         self.dialogBtns.accepted.connect(self.accept)
         self.dialogBtns.rejected.connect(self.reject)
 
-        self.speedTestResetBtn = AppQPushButton(_('Reset'))
-        self.speedTestResetBtn.clicked.connect(
+        self.speedTestURLResetBtn = AppQPushButton(_('Reset'))
+        self.speedTestURLResetBtn.clicked.connect(
             lambda: self.speedTestURLEdit.setText(NETWORK_SPEED_TEST_URL)
         )
-        self.stateTestResetBtn = AppQPushButton(_('Reset'))
-        self.stateTestResetBtn.clicked.connect(
-            lambda: self.stateTestURLEdit.setText(NETWORK_STATE_TEST_URL)
+        self.connectivityResetBtn = AppQPushButton(_('Reset'))
+        self.connectivityResetBtn.clicked.connect(
+            lambda: self.connectivityEdit.setText(NETWORK_CONNECTIVITY_TEST_URL)
         )
 
-        self.speedTestHboxLayout = QHBoxLayout()
-        self.speedTestHboxLayout.addWidget(self.speedTestURLEdit)
-        self.speedTestHboxLayout.addWidget(self.speedTestResetBtn)
+        self.speedTestURLHboxLayout = QHBoxLayout()
+        self.speedTestURLHboxLayout.addWidget(self.speedTestURLEdit)
+        self.speedTestURLHboxLayout.addWidget(self.speedTestURLResetBtn)
 
-        self.stateTestHboxLayout = QHBoxLayout()
-        self.stateTestHboxLayout.addWidget(self.stateTestURLEdit)
-        self.stateTestHboxLayout.addWidget(self.stateTestResetBtn)
+        self.connectivityHboxLayout = QHBoxLayout()
+        self.connectivityHboxLayout.addWidget(self.connectivityEdit)
+        self.connectivityHboxLayout.addWidget(self.connectivityResetBtn)
 
         layout = QFormLayout()
         layout.addRow(self.speedTestURLText)
-        layout.addRow(self.speedTestHboxLayout)
-        layout.addRow(self.stateTestURLText)
-        layout.addRow(self.stateTestHboxLayout)
+        layout.addRow(self.speedTestURLHboxLayout)
+        layout.addRow(self.connectivityText)
+        layout.addRow(self.connectivityHboxLayout)
         layout.addRow(self.dialogBtns)
         layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
@@ -111,10 +111,10 @@ class GuiCustomizeNetworkTestDialog(AppQDialog):
                 NETWORK_SPEED_TEST_URL,
             ),
             (
-                self.stateTestURLEdit,
-                'state test URL',
-                'CustomNetworkStateTestURL',
-                NETWORK_STATE_TEST_URL,
+                self.connectivityEdit,
+                'connectivity test URL',
+                'CustomNetworkConnectivityTestURL',
+                NETWORK_CONNECTIVITY_TEST_URL,
             ),
         ]:
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):

@@ -111,7 +111,7 @@ APPLICATION_TUN_INTERFACE_DNS_ADDRESS = '1.1.1.1'
 
 ADMINISTRATOR_NAME = 'Administrator' if PLATFORM == 'Windows' else 'Superuser'
 
-NETWORK_STATE_TEST_URL = 'http://cp.cloudflare.com'
+NETWORK_CONNECTIVITY_TEST_URL = 'http://cp.cloudflare.com'
 # Fixed to 95MB
 NETWORK_SPEED_TEST_URL = (
     f'http://speed.cloudflare.com/__down?during=download&bytes={95 * 1024 * 1024}'

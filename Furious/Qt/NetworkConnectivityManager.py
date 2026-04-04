@@ -26,22 +26,22 @@ from PySide6.QtNetwork import *
 import logging
 import functools
 
-__all__ = ['NetworkStateManager']
+__all__ = ['NetworkConnectivityManager']
 
 logger = logging.getLogger(__name__)
 
 
-class NetworkStateManager(Mixins.ConnectionAware, WebGETManager):
+class NetworkConnectivityManager(Mixins.ConnectionAware, WebGETManager):
     MIN_JOB_INTERVAL = 2500
     MAX_JOB_INTERVAL = 2000000000
 
     def __init__(self, parent=None, **kwargs):
-        actionMessage = kwargs.pop('actionMessage', 'test network state')
+        actionMessage = kwargs.pop('actionMessage', 'test network connectivity')
 
         super().__init__(parent, actionMessage=actionMessage)
 
         self.jobStatus = False
-        self.jobInterval = NetworkStateManager.MIN_JOB_INTERVAL
+        self.jobInterval = NetworkConnectivityManager.MIN_JOB_INTERVAL
 
         self.jobTimeoutTimer = QtCore.QTimer()
         self.jobArrangeTimer = QtCore.QTimer()
@@ -54,13 +54,13 @@ class NetworkStateManager(Mixins.ConnectionAware, WebGETManager):
         if self.jobStatus is jobStatus:
             self.jobInterval *= 2
         else:
-            self.jobInterval = NetworkStateManager.MIN_JOB_INTERVAL
+            self.jobInterval = NetworkConnectivityManager.MIN_JOB_INTERVAL
 
         self.jobStatus = jobStatus
 
-        if self.jobInterval >= NetworkStateManager.MAX_JOB_INTERVAL:
+        if self.jobInterval >= NetworkConnectivityManager.MAX_JOB_INTERVAL:
             # Limited
-            self.jobInterval = NetworkStateManager.MAX_JOB_INTERVAL
+            self.jobInterval = NetworkConnectivityManager.MAX_JOB_INTERVAL
 
         return self.jobInterval
 
@@ -73,11 +73,11 @@ class NetworkStateManager(Mixins.ConnectionAware, WebGETManager):
         self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=False))
 
     def startSingleTest(self):
-        # Use custom network state test URL if possible
-        settings = AppSettings.get('CustomNetworkStateTestURL')
+        # Use custom network connectivity test URL if possible
+        settings = AppSettings.get('CustomNetworkConnectivityTestURL')
 
         if settings is None:
-            url = NETWORK_SPEED_TEST_URL
+            url = NETWORK_CONNECTIVITY_TEST_URL
         else:
             url = settings
 
@@ -88,7 +88,7 @@ class NetworkStateManager(Mixins.ConnectionAware, WebGETManager):
                 _networkReply.abort()
 
         self.jobTimeoutTimer.timeout.connect(functools.partial(abort, networkReply))
-        self.jobTimeoutTimer.start(NetworkStateManager.MIN_JOB_INTERVAL - 500)
+        self.jobTimeoutTimer.start(NetworkConnectivityManager.MIN_JOB_INTERVAL - 500)
 
     def stopTest(self):
         self.jobArrangeTimer.stop()
@@ -97,11 +97,11 @@ class NetworkStateManager(Mixins.ConnectionAware, WebGETManager):
     def connectedCallback(self):
         if AppSettings.isStateON_('PowerSaveMode'):
             # Power optimization
-            logger.info('no job for network state manager in power save mode')
+            logger.info('no job for network connectivity manager in power save mode')
 
             self.stopTest()
         else:
-            self.jobInterval = NetworkStateManager.MIN_JOB_INTERVAL
+            self.jobInterval = NetworkConnectivityManager.MIN_JOB_INTERVAL
 
             self.jobArrangeTimer.start(self.jobInterval)
 

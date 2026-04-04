@@ -49,7 +49,7 @@ registerAppSettings('AppMainWindowGeometry')
 registerAppSettings('AppMainWindowState')
 
 
-class AppNetworkStateManager(NetworkStateManager):
+class AppNetworkConnectivityManager(NetworkConnectivityManager):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -117,7 +117,7 @@ class AppMainWindow(AppQMainWindow):
         # self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
 
         self.updatesManager = UpdatesManager(parent=self)
-        self.networkStateManager = AppNetworkStateManager(parent=self)
+        self.networkConnectivityManager = AppNetworkConnectivityManager(parent=self)
 
         self.userServersQTableWidget = UserServersQTableWidget(parent=self)
         self.userSubsWindow = UserSubsWindow(

@@ -1835,12 +1835,12 @@ TRANSLATION = {
         "ZH": "输入网络速度测试URL：",
         "isReviewed": "True"
     },
-    "Enter network state test URL:": {
+    "Enter network connectivity test URL:": {
         "source": [
             "Furious.Widget.GuiCustomizeNetworkTest"
         ],
-        "RU": "Введите URL теста состояния сети:",
-        "ZH": "输入网络状态测试URL：",
+        "RU": "Введите URL теста подключения к сети:",
+        "ZH": "输入网络连通性测试URL：",
         "isReviewed": "True"
     },
     "Activate Selected Server": {

@@ -19,7 +19,7 @@ from .DNSResolver import *
 from .DynamicTheme import *
 from .DynamicTranslate import *
 from .GuiEditorXXX import *
-from .NetworkStateManager import *
+from .NetworkConnectivityManager import *
 from .QtGui import *
 from .QtNetwork import *
 from .QtWidgets import *
