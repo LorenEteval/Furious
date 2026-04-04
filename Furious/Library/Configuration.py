@@ -59,7 +59,17 @@ class ConfigXrayProxyOutboundObjectV(dict):
         security,
         **kwargs,
     ):
-        networkObjectArgs, securityArgs, TLSObjectArgs = {}, {}, {}
+        (
+            networkObjectArgs,
+            securityArgs,
+            TLSObjectArgs,
+            finalmaskArgs,
+        ) = (
+            {},
+            {},
+            {},
+            {},
+        )
 
         if type_ == 'h2':
             networkKey = 'httpSettings'
@@ -83,6 +93,17 @@ class ConfigXrayProxyOutboundObjectV(dict):
                     protocol, remote_host, security, kwargs
                 )
 
+        try:
+            if kwargs.get('fm', ''):
+                finalmask = UJSONEncoder.decode(unquote(kwargs.get('fm', '')))
+
+                if finalmask:
+                    finalmaskArgs['finalmask'] = finalmask
+        except Exception:
+            # Any non-exit exceptions
+
+            pass
+
         super().__init__(
             **{
                 'tag': 'proxy',
@@ -105,6 +126,7 @@ class ConfigXrayProxyOutboundObjectV(dict):
                     **networkObjectArgs,
                     **securityArgs,
                     **TLSObjectArgs,
+                    **finalmaskArgs,
                 },
                 'mux': {
                     'enabled': False,
@@ -445,6 +467,18 @@ class ConfigXray(ConfigFactory):
             else:
                 networkKey = f'{self.proxyStreamSettingsNetwork}Settings'
 
+            # Automatically use 'tcp' or 'raw' if needed
+            if (
+                networkKey == 'tcpSettings'
+                and networkKey not in self.proxyStreamSettingsObject
+            ):
+                networkKey = 'rawSettings'
+            elif (
+                networkKey == 'rawSettings'
+                and networkKey not in self.proxyStreamSettingsObject
+            ):
+                networkKey = 'tcpSettings'
+
             return self.proxyStreamSettingsObject[networkKey]
         except Exception:
             # Any non-exit exceptions
@@ -455,6 +489,16 @@ class ConfigXray(ConfigFactory):
     def kwargsFromVMessProxyStreamSettingsNetworkObject(self) -> dict:
         kwargs = {}
 
+        try:
+            proxyStream = self.proxyStreamSettingsObject
+
+            if 'finalmask' in proxyStream:
+                kwargs['fm'] = quote(UJSONEncoder.encode(proxyStream['finalmask']))
+        except Exception:
+            # Any non-exit exceptions
+
+            pass
+
         network = self.proxyStreamSettingsNetwork
         networkObject = self.proxyStreamSettingsNetworkObject
 
@@ -464,7 +508,7 @@ class ConfigXray(ConfigFactory):
         def hasKey(key):
             return networkObject.get(key) is not None
 
-        if network == 'tcp':
+        if network == 'tcp' or network == 'raw':
             try:
                 kwargs['type'] = networkObject['header']['type']
             except Exception:
@@ -576,6 +620,16 @@ class ConfigXray(ConfigFactory):
     def kwargsFromVLESSProxyStreamSettingsNetworkObject(self) -> dict:
         kwargs = {}
 
+        try:
+            proxyStream = self.proxyStreamSettingsObject
+
+            if 'finalmask' in proxyStream:
+                kwargs['fm'] = quote(UJSONEncoder.encode(proxyStream['finalmask']))
+        except Exception:
+            # Any non-exit exceptions
+
+            pass
+
         network = self.proxyStreamSettingsNetwork
         networkObject = self.proxyStreamSettingsNetworkObject
 
@@ -585,7 +639,7 @@ class ConfigXray(ConfigFactory):
         def hasKey(key):
             return networkObject.get(key) is not None
 
-        if network == 'tcp':
+        if network == 'tcp' or network == 'raw':
             try:
                 kwargs['headerType'] = networkObject['header']['type']
             except Exception:
@@ -706,7 +760,7 @@ class ConfigXray(ConfigFactory):
         # v2rayN share standard doesn't require unquote. Still
         # unquote value according to (VMess AEAD / VLESS) standard
 
-        if type_ == 'tcp':
+        if type_ == 'tcp' or type_ == 'raw':
             TcpObject = {}
 
             if kwargs.get('headerType', 'none'):
@@ -905,6 +959,12 @@ class ConfigXray(ConfigFactory):
             if TLSObject.get('echConfigList'):
                 kwargs['ech'] = quote(TLSObject['echConfigList'])
 
+            if TLSObject.get('pinnedPeerCertSha256'):
+                kwargs['pcs'] = quote(TLSObject['pinnedPeerCertSha256'])
+
+            if TLSObject.get('verifyPeerCertByName'):
+                kwargs['vcn'] = quote(TLSObject['verifyPeerCertByName'])
+
         if TLS == 'reality':
             # More kwargs for reality
             if TLSObject.get('publicKey'):
@@ -940,6 +1000,8 @@ class ConfigXray(ConfigFactory):
                 )
             )
             ech = unquote(kwargs.get('ech', ''))
+            pcs = unquote(kwargs.get('pcs', ''))
+            vcn = unquote(kwargs.get('vcn', ''))
 
             if fp:
                 TLSObject['fingerprint'] = fp
@@ -963,6 +1025,12 @@ class ConfigXray(ConfigFactory):
 
             if ech:
                 TLSObject['echConfigList'] = ech
+
+            if pcs:
+                TLSObject['pinnedPeerCertSha256'] = pcs
+
+            if vcn:
+                TLSObject['verifyPeerCertByName'] = vcn
 
         if security == 'reality':
             # More args for reality
