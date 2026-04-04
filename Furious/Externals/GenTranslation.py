@@ -218,6 +218,8 @@ TRANSLATION = {
     "Cancel": {
         "source": [
             "Furious.Qt.GuiEditorXXX",
+            "Furious.Widget.GuiCustomizeNetworkTest",
+            "Furious.Widget.GuiCustomizeProxyBypass",
             "Furious.Widget.IndentSpinBox",
             "Furious.Window.TextEditorWindow",
             "Furious.Window.UserSubsWindow"
@@ -1430,6 +1432,8 @@ TRANSLATION = {
         "source": [
             "Furious.__main__",
             "Furious.Qt.GuiEditorXXX",
+            "Furious.Widget.GuiCustomizeNetworkTest",
+            "Furious.Widget.GuiCustomizeProxyBypass",
             "Furious.Widget.IndentSpinBox",
             "Furious.Window.UserSubsWindow"
         ],
@@ -1641,7 +1645,7 @@ TRANSLATION = {
         "source": [
             "Furious.Widget.GuiTUNSettings"
         ],
-        "RU": "Настройте параметры TUN",
+        "RU": "Настроить параметры TUN",
         "ZH": "自定义TUN设置",
         "isReviewed": "True"
     },
@@ -1650,7 +1654,7 @@ TRANSLATION = {
             "Furious.TrayActions.Settings",
             "Furious.Window.AppMainWindow"
         ],
-        "RU": "Настройте параметры TUN...",
+        "RU": "Настроить параметры TUN...",
         "ZH": "自定义TUN设置...",
         "isReviewed": "True"
     },
@@ -1699,7 +1703,7 @@ TRANSLATION = {
             "Furious.Widget.GuiTUNSettings"
         ],
         "RU": "Обход IP-адреса интерфейса адаптера TUN (через запятую)",
-        "ZH": "绕过TUN适配器接口IP（以逗号分割）",
+        "ZH": "绕过TUN适配器接口IP（以逗号分隔）",
         "isReviewed": "True"
     },
     "Disable Primary Adapter Interface DNS (Mitigating DNS leaks on Windows)": {
@@ -1772,6 +1776,71 @@ TRANSLATION = {
         ],
         "RU": "Я — единственная высшая инстанция 👑",
         "ZH": "我就是至高无上的存在 👑",
+        "isReviewed": "True"
+    },
+    "Customize Proxy Bypass Address": {
+        "source": [
+            "Furious.Widget.GuiCustomizeProxyBypass"
+        ],
+        "RU": "Настроить адреса исключений прокси",
+        "ZH": "自定义代理绕过地址",
+        "isReviewed": "True"
+    },
+    "Customize Proxy Bypass Address...": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Настроить адреса исключений прокси...",
+        "ZH": "自定义代理绕过地址...",
+        "isReviewed": "True"
+    },
+    "Reset": {
+        "source": [
+            "Furious.Widget.GuiCustomizeNetworkTest",
+            "Furious.Widget.GuiCustomizeProxyBypass"
+        ],
+        "RU": "Сбросить",
+        "ZH": "重置",
+        "isReviewed": "True"
+    },
+    "Enter proxy bypass address (separated by semicolons):": {
+        "source": [
+            "Furious.Widget.GuiCustomizeProxyBypass"
+        ],
+        "RU": "Введите адреса исключений прокси (через точку с запятой):",
+        "ZH": "输入代理绕过地址（以分号分隔）：",
+        "isReviewed": "True"
+    },
+    "Customize Network Test URL": {
+        "source": [
+            "Furious.Widget.GuiCustomizeNetworkTest"
+        ],
+        "RU": "Настроить URL теста сети",
+        "ZH": "自定义网络测试URL",
+        "isReviewed": "True"
+    },
+    "Customize Network Test URL...": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Настроить URL теста сети...",
+        "ZH": "自定义网络测试URL...",
+        "isReviewed": "True"
+    },
+    "Enter network speed test URL:": {
+        "source": [
+            "Furious.Widget.GuiCustomizeNetworkTest"
+        ],
+        "RU": "Введите URL теста скорости сети:",
+        "ZH": "输入网络速度测试URL：",
+        "isReviewed": "True"
+    },
+    "Enter network state test URL:": {
+        "source": [
+            "Furious.Widget.GuiCustomizeNetworkTest"
+        ],
+        "RU": "Введите URL теста состояния сети:",
+        "ZH": "输入网络状态测试URL：",
         "isReviewed": "True"
     }
 }
