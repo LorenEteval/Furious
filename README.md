@@ -61,9 +61,6 @@ Special thanks to [@rakleed](https://github.com/rakleed) for adding the Windows 
 
 ## Donations
 
-As a fully cross-platform client, Furious requires continuous development and testing across **Windows**, **macOS** and
-**Linux**. All feature design, implementation, debugging, polishing and release engineering are done end‑to‑end by me.
-
 If you find this project useful, donations are warmly appreciated. They help sustain development, testing and future
 improvements.
 
