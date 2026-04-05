@@ -76,10 +76,10 @@ class NetworkConnectivityManager(Mixins.ConnectionAware, WebGETManager):
         # Use custom network connectivity test URL if possible
         settings = AppSettings.get('CustomNetworkConnectivityTestURL')
 
-        if settings is None:
-            url = NETWORK_CONNECTIVITY_TEST_URL
-        else:
+        if isinstance(settings, str):
             url = settings
+        else:
+            url = NETWORK_CONNECTIVITY_TEST_URL
 
         networkReply = self.webGET(url)
 

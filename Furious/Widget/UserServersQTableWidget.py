@@ -599,10 +599,10 @@ class TestDownloadSpeedWorker(WebGETManager):
                     # Use custom network speed test URL if possible
                     settings = AppSettings.get('CustomNetworkSpeedTestURL')
 
-                    if settings is None:
-                        url = NETWORK_SPEED_TEST_URL
-                    else:
+                    if isinstance(settings, str):
                         url = settings
+                    else:
+                        url = NETWORK_SPEED_TEST_URL
 
                     self.networkReply = self.webGET(url, **self.kwargs)
 
