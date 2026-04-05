@@ -48,10 +48,10 @@ class GuiCustomizeProxyBypassDialog(AppQDialog):
 
         settings = AppSettings.get('CustomProxyBypass')
 
-        if settings is None:
-            self.proxyBypassEdit.setText(PROXY_SERVER_BYPASS)
-        else:
+        if isinstance(settings, str):
             self.proxyBypassEdit.setText(settings)
+        else:
+            self.proxyBypassEdit.setText(PROXY_SERVER_BYPASS)
 
         self.dialogBtns = AppQDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
         self.dialogBtns.addButton(_('OK'), AppQDialogButtonBox.ButtonRole.AcceptRole)
@@ -83,13 +83,24 @@ class GuiCustomizeProxyBypassDialog(AppQDialog):
 
     def handleResultCode(self, code):
         if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
-            value = self.proxyBypassEdit.text()
+            oldValue = AppSettings.get('CustomProxyBypass')
+            newValue = self.proxyBypassEdit.text()
 
-            logger.info(f'setting custom proxy bypass address to \'{value}\'')
+            def writeNewSettings(value):
+                logger.info(f'setting custom proxy bypass address to \'{value}\'')
 
-            AppSettings.set('CustomProxyBypass', value)
+                AppSettings.set('CustomProxyBypass', value)
 
-            showMBoxNewChangesNextTime()
+                showMBoxNewChangesNextTime()
+
+            if not isinstance(oldValue, str):
+                if newValue == PROXY_SERVER_BYPASS:
+                    return
+                else:
+                    writeNewSettings(newValue)
+            else:
+                if oldValue != newValue:
+                    writeNewSettings(newValue)
         else:
             try:
                 settings = AppSettings.get('CustomProxyBypass')
@@ -103,5 +114,6 @@ class GuiCustomizeProxyBypassDialog(AppQDialog):
 
                 logger.error(f'error restoring proxy bypass address: {ex}')
 
+    @QtCore.Slot()
     def handleResetButtonClicked(self):
         self.proxyBypassEdit.setText(PROXY_SERVER_BYPASS)

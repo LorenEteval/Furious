@@ -256,10 +256,10 @@ class ConnectAction(AppQAction):
                     # Use custom proxy bypass address if possible
                     settings = AppSettings.get('CustomProxyBypass')
 
-                    if settings is None:
-                        proxyServerBypass = PROXY_SERVER_BYPASS
-                    else:
+                    if isinstance(settings, str):
                         proxyServerBypass = settings
+                    else:
+                        proxyServerBypass = PROXY_SERVER_BYPASS
 
                     try:
                         SystemProxy.set(httpProxy, proxyServerBypass)

@@ -47,20 +47,20 @@ class GuiCustomizeNetworkTestDialog(AppQDialog):
 
         speedTestURLSettings = AppSettings.get('CustomNetworkSpeedTestURL')
 
-        if speedTestURLSettings is None:
-            self.speedTestURLEdit.setText(NETWORK_SPEED_TEST_URL)
-        else:
+        if isinstance(speedTestURLSettings, str):
             self.speedTestURLEdit.setText(speedTestURLSettings)
+        else:
+            self.speedTestURLEdit.setText(NETWORK_SPEED_TEST_URL)
 
         self.connectivityText = AppQLabel(_('Enter network connectivity test URL:'))
         self.connectivityEdit = QLineEdit()
 
         connectivitySettings = AppSettings.get('CustomNetworkConnectivityTestURL')
 
-        if connectivitySettings is None:
-            self.connectivityEdit.setText(NETWORK_CONNECTIVITY_TEST_URL)
-        else:
+        if isinstance(connectivitySettings, str):
             self.connectivityEdit.setText(connectivitySettings)
+        else:
+            self.connectivityEdit.setText(NETWORK_CONNECTIVITY_TEST_URL)
 
         self.dialogBtns = AppQDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
         self.dialogBtns.addButton(_('OK'), AppQDialogButtonBox.ButtonRole.AcceptRole)
@@ -127,8 +127,8 @@ class GuiCustomizeNetworkTestDialog(AppQDialog):
                 try:
                     settings = AppSettings.get(settingsName)
 
-                    if settings is not None:
-                        widget.setText(str(settings))
+                    if isinstance(settings, str):
+                        widget.setText(settings)
                     else:
                         widget.setText(reset)
                 except Exception as ex:
