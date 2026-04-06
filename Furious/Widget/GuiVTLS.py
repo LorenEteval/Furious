@@ -279,9 +279,14 @@ class GuiVTLSItemTLSAlpn(GuiEditorItemTextInput):
             self.setText('')
 
 
-class GuiVTLSItemTLSEch(GuiEditorItemTextInput):
+class GuiVTLSItemTLSXXXTextInput(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
+        # Mandatory
+        key = kwargs.pop('key')
+
         super().__init__(*args, **kwargs)
+
+        self.key = key
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
         streamSettings = ConfigXray.getProxyOutboundStream(config)
@@ -291,24 +296,24 @@ class GuiVTLSItemTLSEch(GuiEditorItemTextInput):
 
         tlsObject = streamSettings['tlsSettings']
 
-        oldEch = tlsObject.get('echConfigList', '')
-        newEch = self.text()
+        oldValue = tlsObject.get(self.key, '')
+        newValue = self.text()
 
-        def setNewEch():
-            if newEch == '':
-                tlsObject.pop('echConfigList', None)
+        def setNewTLSXXXValue():
+            if newValue == '':
+                tlsObject.pop(self.key, None)
             else:
-                tlsObject['echConfigList'] = newEch
+                tlsObject[self.key] = newValue
 
-        if isinstance(oldEch, str):
-            if newEch != oldEch:
-                setNewEch()
+        if isinstance(oldValue, str):
+            if newValue != oldValue:
+                setNewTLSXXXValue()
 
                 return True
             else:
                 return False
         else:
-            setNewEch()
+            setNewTLSXXXValue()
 
             return True
 
@@ -316,7 +321,7 @@ class GuiVTLSItemTLSEch(GuiEditorItemTextInput):
         try:
             tlsObject = ConfigXray.getProxyOutboundStream(config)['tlsSettings']
 
-            self.setText(tlsObject.get('echConfigList', ''))
+            self.setText(tlsObject.get(self.key, ''))
         except Exception:
             # Any non-exit exceptions
 
@@ -500,7 +505,21 @@ class GuiVTLSPageTLS(GuiVTLSPageXXX):
             GuiVTLSItemTLSServerName(title='SNI', translatable=False),
             GuiVTLSItemTLSFingerprint(title='Fingerprint', translatable=False),
             GuiVTLSItemTLSAlpn(title='Alpn', translatable=False),
-            GuiVTLSItemTLSEch(title='Ech', translatable=False),
+            GuiVTLSItemTLSXXXTextInput(
+                title='EchConfigList',
+                key='echConfigList',
+                translatable=False,
+            ),
+            GuiVTLSItemTLSXXXTextInput(
+                title='VerifyPeerCertByName',
+                key='verifyPeerCertByName',
+                translatable=False,
+            ),
+            GuiVTLSItemTLSXXXTextInput(
+                title='PinnedPeerCertSha256',
+                key='pinnedPeerCertSha256',
+                translatable=False,
+            ),
             GuiVTLSItemTLSAllowInsecure(title='AllowInsecure', translatable=False),
         ]
 
