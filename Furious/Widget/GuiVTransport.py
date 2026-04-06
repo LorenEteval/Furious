@@ -99,6 +99,63 @@ class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
             self.setText('')
 
 
+class GuiVTransportItemFinalMask(GuiEditorItemTextInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
+
+        if not isinstance(streamSettings.get('finalmask'), dict):
+            streamSettings['finalmask'] = {}
+
+        oldFinalMaskObject = streamSettings['finalmask']
+
+        try:
+            oldFinalMaskText = UJSONEncoder.encode(oldFinalMaskObject)
+        except Exception:
+            # Any non-exit exceptions
+
+            oldFinalMaskText = ''
+
+        newFinalMaskText = self.text()
+
+        def setNewFinalMaskObject():
+            if newFinalMaskText == '':
+                streamSettings.pop('finalmask', None)
+            else:
+                try:
+                    newFinalMaskObject = UJSONEncoder.decode(newFinalMaskText)
+                except Exception as ex:
+                    # Any non-exit exceptions
+
+                    newFinalMaskObject = {}
+
+                streamSettings['finalmask'] = newFinalMaskObject
+
+        if isinstance(oldFinalMaskText, str):
+            if newFinalMaskText != oldFinalMaskText:
+                setNewFinalMaskObject()
+
+                return True
+            else:
+                return False
+        else:
+            setNewFinalMaskObject()
+
+            return True
+
+    def factoryToInput(self, config: ConfigFactory):
+        try:
+            finalMaskObject = ConfigXray.getProxyOutboundStream(config)['finalmask']
+
+            self.setText(UJSONEncoder.encode(finalMaskObject))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
 class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
     def __init__(self, *args, **kwargs):
         networkKey = kwargs.pop('networkKey', '')
@@ -1466,6 +1523,7 @@ class GuiVTransportPageTcp(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemTypeTcpOrRaw(
                 title='Type', networkKey='tcpSettings', translatable=False
             ),
@@ -1485,6 +1543,7 @@ class GuiVTransportPageRaw(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemTypeTcpOrRaw(
                 title='Type', networkKey='rawSettings', translatable=False
             ),
@@ -1504,6 +1563,7 @@ class GuiVTransportPageKcp(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemTypeKcp(title='Type', translatable=False),
             GuiVTransportItemSeedKcp(title='KCP seed', translatable=False),
         ]
@@ -1516,6 +1576,7 @@ class GuiVTransportPageWs(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemHostWs(title='Host', translatable=False),
             GuiVTransportItemPathWs(title='Path', translatable=False),
         ]
@@ -1528,6 +1589,7 @@ class GuiVTransportPageHttpUpgrade(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemHostHttpUpgrade(title='Host', translatable=False),
             GuiVTransportItemPathHttpUpgrade(title='Path', translatable=False),
         ]
@@ -1540,6 +1602,7 @@ class GuiVTransportPageSplitHttp(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemHostSplitHttp(title='Host', translatable=False),
             GuiVTransportItemPathSplitHttp(title='Path', translatable=False),
         ]
@@ -1552,6 +1615,7 @@ class GuiVTransportPageXHttp(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemHostXHttp(title='Host', translatable=False),
             GuiVTransportItemPathXHttp(title='Path', translatable=False),
             GuiVTransportItemModeXHttp(title='Mode', translatable=False),
@@ -1566,6 +1630,7 @@ class GuiVTransportPageH2(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemHostH2(title='Host', translatable=False),
             GuiVTransportItemPathH2(title='Path', translatable=False),
         ]
@@ -1578,6 +1643,7 @@ class GuiVTransportPageQuic(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemTypeQuic(title='Type', translatable=False),
             GuiVTransportItemSecurityQuic(title='QUIC Security', translatable=False),
             GuiVTransportItemKeyQuic(title='QUIC Key', translatable=False),
@@ -1591,6 +1657,7 @@ class GuiVTransportPageGRPC(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemModeGRPC(title='gRPC mode', translatable=False),
             GuiVTransportItemAuthorityGRPC(title='gRPC authority', translatable=False),
             GuiVTransportItemServiceNameGRPC(
@@ -1606,9 +1673,10 @@ class GuiVTransportPageHysteria(GuiVTransportPageXXX):
     def containerSequence(self):
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
+            GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemVersionHysteria(title='Version', translatable=False),
             GuiVTransportItemAuthHysteria(title='Auth', translatable=False),
-            GuiVTransportItemPasswordHysteria(title='Password', translatable=False),
+            # GuiVTransportItemPasswordHysteria(title='Password', translatable=False),
         ]
 
 
