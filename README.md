@@ -45,6 +45,14 @@ pip install Furious-GUI
 * 🔄 [Subscription Management](https://github.com/LorenEteval/Furious/wiki/Subscription-Management)
 * 📦 [Install From PyPI](https://github.com/LorenEteval/Furious/wiki/Install-From-PyPI)
 
+### Windows TUN (`wintun.dll`)
+
+The Windows release is **amd64 (x64)** only. The [official Wintun](https://www.wintun.net/) package ships **one `wintun.dll` per CPU architecture** under `wintun\bin\` (for example `amd64`, `arm`, `arm64`, and `x86`).
+
+You must use the DLL from **`wintun\bin\amd64\wintun.dll`**. Loading a DLL from another architecture (for example `arm64` or `x86`) can **crash TUN mode**.
+
+Full setup (including where to place the file and administrator steps) is documented in **[TUN Mode](https://github.com/LorenEteval/Furious/wiki/TUN-Mode)**.
+
 ## Contributing
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/LorenEteval/Furious)
