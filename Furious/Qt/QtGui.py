@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     'bootstrapIcon',
+    'bootstrapIconMask',
+    'bootstrapIconWithOpacity',
     'bootstrapIconWhite',
     'AppQIcon',
     'AppQAction',
@@ -53,6 +55,49 @@ def iconFn(prefix, name):
 
 bootstrapIcon = functools.partial(iconFn, 'bootstrap')
 bootstrapIconWhite = functools.partial(iconFn, 'bootstrap/white')
+
+
+def setIconAsMask(icon):
+    if hasattr(icon, 'setIsMask'):
+        icon.setIsMask(True)
+
+    return icon
+
+
+@functools.lru_cache(None)
+def bootstrapIconMask(name):
+    return setIconAsMask(bootstrapIconWhite(name))
+
+
+@functools.lru_cache(None)
+def bootstrapIconWithOpacity(name, opacity, isMask=False):
+    sourceIcon = bootstrapIconWhite(name)
+    icon = AppQIcon('')
+
+    for iconSize in (16, 18, 22, 24, 32, 64):
+        sourcePixmap = sourceIcon.pixmap(QtCore.QSize(iconSize, iconSize))
+
+        if sourcePixmap.isNull():
+            continue
+
+        pixmap = QPixmap(sourcePixmap.size())
+        pixmap.setDevicePixelRatio(sourcePixmap.devicePixelRatio())
+        pixmap.fill(QtCore.Qt.GlobalColor.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setOpacity(opacity)
+        painter.drawPixmap(0, 0, sourcePixmap)
+        painter.end()
+
+        icon.addPixmap(pixmap)
+
+    if icon.isNull():
+        return sourceIcon
+
+    if isMask:
+        return setIconAsMask(icon)
+    else:
+        return icon
 
 
 class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
