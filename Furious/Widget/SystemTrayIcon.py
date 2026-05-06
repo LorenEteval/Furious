@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 
 __all__ = ['SystemTrayIcon']
 
+_MACOS_DISCONNECTED_MONOCHROME_OPACITY = 0.55
+
 _TRANSLATABLE_ADMIN = [
     _('Administrator'),
 ]
@@ -142,11 +144,31 @@ class SystemTrayIcon(
             switchMonochrome()
 
     def setMonochromeIcon(self):
-        self.setMonochromeIconByTheme(APP().theme())
+        if APP().isSystemTrayConnected():
+            self.setConnectedMonochromeIcon()
+        else:
+            self.setDisconnectedMonochromeIcon()
+
+    def setConnectedMonochromeIcon(self):
+        if PLATFORM == 'Darwin':
+            self.setIcon(bootstrapIconMask('monochrome-rocket-takeoff.svg'))
+        else:
+            self.setMonochromeIconByTheme(APP().theme())
+
+    def setDisconnectedMonochromeIcon(self):
+        if PLATFORM == 'Darwin':
+            icon = bootstrapIconWithOpacity(
+                'monochrome-rocket-takeoff.svg',
+                _MACOS_DISCONNECTED_MONOCHROME_OPACITY,
+                isMask=True,
+            )
+            self.setIcon(icon)
+        else:
+            self.setMonochromeIconByTheme(APP().theme())
 
     def setDisconnectedIcon(self):
         if AppSettings.isStateON_('UseMonochromeTrayIcon'):
-            self.setMonochromeIcon()
+            self.setDisconnectedMonochromeIcon()
 
             return
 
@@ -162,7 +184,7 @@ class SystemTrayIcon(
 
     def setConnectedIcon(self):
         if AppSettings.isStateON_('UseMonochromeTrayIcon'):
-            self.setMonochromeIcon()
+            self.setConnectedMonochromeIcon()
 
             return
 
@@ -201,7 +223,7 @@ class SystemTrayIcon(
     def themeChangedCallback(self, theme):
         if AppSettings.isStateON_('UseMonochromeTrayIcon'):
             # 'theme' is not used. Instead, always query current theme
-            self.setMonochromeIconByTheme(APP().theme())
+            self.setMonochromeIcon()
 
             return
 
