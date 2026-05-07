@@ -87,6 +87,7 @@ class TextEditorWindow(AppQMainWindow):
                 | QtCore.Qt.WindowType.WindowMinimizeButtonHint
                 | QtCore.Qt.WindowType.WindowCloseButtonHint
             )
+            self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
         else:
             self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setFixedSize(450, int(450 * GOLDEN_RATIO))
