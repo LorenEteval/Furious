@@ -208,34 +208,44 @@ class SubscriptionManager(WebGETManager):
 
         data = networkReply.readAll().data()
 
+        uris = None
+        lastException = None
+
         try:
-            uris = list(
-                filter(
-                    lambda x: x != '',
-                    PyBase64Encoder.decode(data).decode().split('\n'),
-                )
-            )
+            decoded = PyBase64Encoder.decode(data).decode()
         except Exception as ex:
             # Any non-exit exceptions
+
+            lastException = ex
 
             logger.error(
                 f'parse base64 share link from \'{webURL}\' failed: {ex}. '
                 f'Try to fall back to plain text'
             )
+        else:
+            # pybase64 decodes leniently and happily turns plain text into
+            # garbage bytes, so only accept the base64 result when it actually
+            # looks like share links.
+            if '://' in decoded:
+                uris = list(filter(lambda x: x != '', decoded.split('\n')))
 
-        try:
-            uris = list(
-                filter(
-                    lambda x: x != '',
-                    data.decode().split('\n'),
+        if uris is None:
+            try:
+                uris = list(
+                    filter(
+                        lambda x: x != '',
+                        data.decode().split('\n'),
+                    )
                 )
-            )
-        except Exception as ex:
-            # Any non-exit exceptions
+            except Exception as ex:
+                # Any non-exit exceptions
 
-            logger.error(f'parse share link from \'{webURL}\' failed: {ex}')
+                lastException = ex
 
-            failureArgs.append({'error': classname(ex), **kwargs})
+                logger.error(f'parse share link from \'{webURL}\' failed: {ex}')
+
+        if uris is None:
+            failureArgs.append({'error': classname(lastException), **kwargs})
         else:
             logger.info(
                 f'update subs ({remark}, {webURL}) success. Got {len(uris)} share link'
@@ -264,7 +274,15 @@ class SubscriptionManager(WebGETManager):
 
         logActionMessage = kwargs.pop('logActionMessage', False)
 
-        self.webGET(url, logActionMessage=logActionMessage, **kwargs)
+        # Some providers reject the default Qt User-Agent (e.g. with 503),
+        # so identify ourselves explicitly.
+        request = QNetworkRequest(QtCore.QUrl(url))
+        request.setRawHeader(
+            b'User-Agent',
+            f'{APPLICATION_NAME}/{APPLICATION_VERSION}'.encode(),
+        )
+
+        self.webGET(request, logActionMessage=logActionMessage, **kwargs)
 
     def updateSubsByUnique(self, unique: str, **kwargs):
         depthMap = kwargs.get('depthMap', {'depth': 1})
