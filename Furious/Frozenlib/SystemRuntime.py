@@ -83,7 +83,6 @@ class SystemRuntime:
             return ''
 
     @staticmethod
-    @functools.lru_cache(None)
     def isAssetsFolderWritable() -> bool:
         return os.access(XRAY_ASSET_DIR, os.W_OK)
 
