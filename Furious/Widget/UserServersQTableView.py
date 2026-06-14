@@ -40,11 +40,11 @@ from PySide6.QtNetwork import *
 
 from typing import Callable, Union, MutableSequence
 
+import re
 import queue
 import logging
 import icmplib
 import functools
-import re
 
 __all__ = ['UserServersQTableWidget']
 
@@ -701,43 +701,17 @@ class TestDownloadSpeedWorker(WebGETManager):
         self.sync()
 
 
-class UserServersQTableWidgetHorizontalHeader(AppQHeaderView):
-    class SortOrder:
-        Ascending_ = QtCore.Qt.SortOrder.AscendingOrder
-        Descending = QtCore.Qt.SortOrder.DescendingOrder
-
+class UserServersQTableViewHorizontalHeader(AppQHeaderView):
     def __init__(self, *args, **kwargs):
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
 
-        self.sortOrderTable = list(
-            self.SortOrder.Ascending_ for i in range(self.columnCount)
-        )
 
-        self.sectionClicked.connect(self.handleSectionClicked)
-
-    @QtCore.Slot(int)
-    def handleSectionClicked(self, clickedIndex: int):
-        parent = self.parent()
-
-        if isinstance(parent, QTableView):
-            order = self.sortOrderTable[clickedIndex]
-
-            parent.sortByColumn(clickedIndex, order)
-
-            self.setSortIndicator(clickedIndex, order)
-
-            if order == self.SortOrder.Ascending_:
-                self.sortOrderTable[clickedIndex] = self.SortOrder.Descending
-            else:
-                self.sortOrderTable[clickedIndex] = self.SortOrder.Ascending_
-
-
-class UserServersQTableWidgetVerticalHeader(AppQHeaderView):
+class UserServersQTableViewVerticalHeader(AppQHeaderView):
     def __init__(self, *args, **kwargs):
         super().__init__(QtCore.Qt.Orientation.Vertical, *args, **kwargs)
 
 
-class UserServersQTableWidgetHeaders:
+class UserServersQTableViewHeaders:
     def __init__(self, name: str, func: Callable[[ConfigFactory], str] = None):
         self.name = name
         self.func = func
@@ -758,7 +732,7 @@ class UserServersQTableWidgetHeaders:
 class UserServersTableModel(QtCore.QAbstractTableModel):
     SortRole = QtCore.Qt.ItemDataRole.UserRole + 1
 
-    def __init__(self, headers: list[UserServersQTableWidgetHeaders], parent=None):
+    def __init__(self, headers: list[UserServersQTableViewHeaders], parent=None):
         super().__init__(parent)
 
         self.headers = headers
@@ -816,7 +790,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
             if row == Storage.UserActivatedItemIndex():
                 return QColor(AppHue.currentColor())
 
-            return QBrush()
+            return None
 
         if role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
             if str(header) == 'Latency' or str(header) == 'Speed':
@@ -975,24 +949,21 @@ _TRANSLATABLE_HEADERS = [
 ]
 
 
-class UserServersQTableWidget(Mixins.QTranslatable, Mixins.ConnectionAware, QTableView):
+class UserServersQTableWidget(Mixins.QTranslatable, AppQTableView):
     Headers = [
-        UserServersQTableWidgetHeaders('Remark'),
-        UserServersQTableWidgetHeaders('Protocol'),
-        UserServersQTableWidgetHeaders('Address'),
-        UserServersQTableWidgetHeaders('Port'),
-        UserServersQTableWidgetHeaders('Transport'),
-        UserServersQTableWidgetHeaders('TLS'),
-        UserServersQTableWidgetHeaders('Subscription'),
-        UserServersQTableWidgetHeaders('Latency'),
-        UserServersQTableWidgetHeaders('Speed'),
+        UserServersQTableViewHeaders('Remark'),
+        UserServersQTableViewHeaders('Protocol'),
+        UserServersQTableViewHeaders('Address'),
+        UserServersQTableViewHeaders('Port'),
+        UserServersQTableViewHeaders('Transport'),
+        UserServersQTableViewHeaders('TLS'),
+        UserServersQTableViewHeaders('Subscription'),
+        UserServersQTableViewHeaders('Latency'),
+        UserServersQTableViewHeaders('Speed'),
     ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.setWordWrap(False)
-        self.setAlternatingRowColors(True)
 
         self.sourceModel = UserServersTableModel(self.Headers, parent=self)
         self.proxyModel = UserServersSortFilterProxyModel(parent=self)
@@ -1019,18 +990,19 @@ class UserServersQTableWidget(Mixins.QTranslatable, Mixins.ConnectionAware, QTab
 
         # Install custom header
         self.setHorizontalHeader(
-            UserServersQTableWidgetHorizontalHeader(
+            UserServersQTableViewHorizontalHeader(
                 parent=self,
                 legacySectionSizeSettingsName='ServerWidgetSectionSizeTable',
                 sectionSizeSettingsName='UserServersHeaderViewState',
             )
         )
-        self.setVerticalHeader(UserServersQTableWidgetVerticalHeader(self))
+        self.setVerticalHeader(UserServersQTableViewVerticalHeader(self))
 
         self.horizontalHeader().setCustomSectionResizeMode()
         self.horizontalHeader().restoreSectionSize()
 
-        self.setSortingEnabled(False)
+        self.setSortingEnabled(True)
+        self.proxyModel.sort(-1)
 
         # Selection
         self.setSelectionColor(AppHue.disconnectedColor())
@@ -1257,13 +1229,6 @@ class UserServersQTableWidget(Mixins.QTranslatable, Mixins.ConnectionAware, QTab
             self.setCurrentIndex(self.activatedIndex())
             self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
 
-    @staticmethod
-    def getStyleSheet(color):
-        return f'QTableView {{ selection-background-color: {color}; }}'
-
-    def setSelectionColor(self, color):
-        self.setStyleSheet(self.getStyleSheet(color))
-
     @property
     def selectedIndex(self):
         indexes = list(
@@ -1320,12 +1285,12 @@ class UserServersQTableWidget(Mixins.QTranslatable, Mixins.ConnectionAware, QTab
         )
 
     def disconnectedCallback(self):
-        self.setSelectionColor(AppHue.disconnectedColor())
+        super().disconnectedCallback()
 
         self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
 
     def connectedCallback(self):
-        self.setSelectionColor(AppHue.connectedColor())
+        super().connectedCallback()
 
         self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
 

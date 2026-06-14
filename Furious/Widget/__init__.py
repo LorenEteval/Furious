@@ -28,6 +28,6 @@ from .GuiVLESS import *
 from .GuiVMess import *
 from .IndentSpinBox import *
 from .SystemTrayIcon import *
-from .UserServersQTableWidget import *
+from .UserServersQTableView import *
 from .UserSubsQTableWidget import *
 from .XrayAssetViewerQListWidget import *
