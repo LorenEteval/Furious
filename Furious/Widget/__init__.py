@@ -29,5 +29,5 @@ from .GuiVMess import *
 from .IndentSpinBox import *
 from .SystemTrayIcon import *
 from .UserServersQTableView import *
-from .UserSubsQTableWidget import *
+from .UserSubsQTableView import *
 from .XrayAssetViewerQListWidget import *

@@ -20,7 +20,7 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Widget.UserSubsQTableWidget import *
+from Furious.Widget.UserSubsQTableView import *
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import *
@@ -86,7 +86,7 @@ class UserSubsWindow(AppQMainWindow):
 
         self.setWindowTitle(_('Edit Subscription'))
 
-        self.userSubsQTableWidget = UserSubsQTableWidget(
+        self.userSubsQTableWidget = UserSubsQTableView(
             deleteUniqueCallback=callback, parent=self
         )
 

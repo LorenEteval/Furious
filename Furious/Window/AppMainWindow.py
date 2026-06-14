@@ -119,7 +119,7 @@ class AppMainWindow(AppQMainWindow):
         self.updatesManager = UpdatesManager(parent=self)
         self.networkConnectivityManager = AppNetworkConnectivityManager(parent=self)
 
-        self.userServersQTableWidget = UserServersQTableWidget(parent=self)
+        self.userServersQTableWidget = UserServersQTableView(parent=self)
         self.userSubsWindow = UserSubsWindow(
             parent=self,
             deleteUniqueCallback=lambda unique: self.userServersQTableWidget.deleteItemByIndex(

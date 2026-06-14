@@ -1,4 +1,4 @@
-# Copyright (C) 2024–present  Loren Eteval & contributors <loren.eteval@proton.me>
+# Copyright (C) 2024-present  Loren Eteval & contributors <loren.eteval@proton.me>
 #
 # This file is part of Furious.
 #
@@ -33,24 +33,24 @@ import functools
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['UserSubsQTableWidget']
+__all__ = ['UserSubsQTableView']
 
 # Migrate legacy settings
 registerAppSettings('SubscriptionWidgetSectionSizeTable')
 registerAppSettings('UserSubsHeaderViewState')
 
 
-class UserSubsQTableWidgetHorizontalHeader(AppQHeaderView):
+class UserSubsQTableViewHorizontalHeader(AppQHeaderView):
     def __init__(self, *args, **kwargs):
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
 
 
-class UserSubsQTableWidgetVerticalHeader(AppQHeaderView):
+class UserSubsQTableViewVerticalHeader(AppQHeaderView):
     def __init__(self, *args, **kwargs):
         super().__init__(QtCore.Qt.Orientation.Vertical, *args, **kwargs)
 
 
-class UserSubsQTableWidgetHeaders:
+class UserSubsQTableViewHeaders:
     def __init__(self, name: str, func: Callable[[dict], str] = None):
         self.name = name
         self.func = func
@@ -78,6 +78,143 @@ class UserSubsAppQComboBox(AppQComboBox):
             super().retranslate()
 
 
+class UserSubsTableModel(QtCore.QAbstractTableModel):
+    def __init__(
+        self,
+        headers: list[UserSubsQTableViewHeaders],
+        itemKey: list[str],
+        parent=None,
+    ):
+        super().__init__(parent)
+
+        self.headers = headers
+        self.itemKey = itemKey
+
+    def rowCount(self, parent=QtCore.QModelIndex()) -> int:
+        if parent.isValid():
+            return 0
+
+        return len(Storage.UserSubs())
+
+    def columnCount(self, parent=QtCore.QModelIndex()) -> int:
+        if parent.isValid():
+            return 0
+
+        return len(self.headers)
+
+    def flags(self, index):
+        if not index.isValid():
+            return QtCore.Qt.ItemFlag.NoItemFlags
+
+        flags = QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
+
+        if self.itemKey[index.column()] not in ['autoupdate', 'proxy']:
+            flags |= QtCore.Qt.ItemFlag.ItemIsEditable
+
+        return flags
+
+    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if not index.isValid():
+            return None
+
+        row = index.row()
+        column = index.column()
+
+        if row < 0 or row >= len(Storage.UserSubs()):
+            return None
+
+        if column < 0 or column >= len(self.headers):
+            return None
+
+        subsob = self.subsObjectByRow(row)
+        text = self.headers[column](subsob)
+
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
+            if self.itemKey[column] in ['autoupdate', 'proxy']:
+                return _(text)
+
+            return text
+
+        if role == QtCore.Qt.ItemDataRole.EditRole:
+            return text
+
+        if role == QtCore.Qt.ItemDataRole.ToolTipRole:
+            return text
+
+        if role == QtCore.Qt.ItemDataRole.FontRole:
+            return QFont(AppFontName())
+
+        return None
+
+    def setData(self, index, value, role=QtCore.Qt.ItemDataRole.EditRole) -> bool:
+        if role != QtCore.Qt.ItemDataRole.EditRole or not index.isValid():
+            return False
+
+        row = index.row()
+        column = index.column()
+
+        if row < 0 or row >= len(Storage.UserSubs()):
+            return False
+
+        mapped = self.itemKey[column]
+
+        if mapped in ['autoupdate', 'proxy']:
+            return False
+
+        self.subsObjectByRow(row)[mapped] = str(value)
+        self.dataChanged.emit(index, index, [])
+
+        return True
+
+    def headerData(
+        self,
+        section: int,
+        orientation: QtCore.Qt.Orientation,
+        role=QtCore.Qt.ItemDataRole.DisplayRole,
+    ):
+        if role != QtCore.Qt.ItemDataRole.DisplayRole:
+            return None
+
+        if orientation == QtCore.Qt.Orientation.Horizontal:
+            if 0 <= section < len(self.headers):
+                return _(str(self.headers[section]))
+
+            return None
+
+        return section + 1
+
+    @staticmethod
+    def uniqueByRow(row: int) -> str:
+        return list(Storage.UserSubs().keys())[row]
+
+    @classmethod
+    def subsObjectByRow(cls, row: int) -> dict:
+        return Storage.UserSubs()[cls.uniqueByRow(row)]
+
+    def emitRowChanged(self, row: int, column: Union[int, None] = None):
+        if row < 0 or row >= self.rowCount():
+            return
+
+        if column is None:
+            left = self.index(row, 0)
+            right = self.index(row, self.columnCount() - 1)
+        else:
+            left = self.index(row, column)
+            right = left
+
+        self.dataChanged.emit(left, right, [])
+
+    def emitAllChanged(self):
+        if self.rowCount() == 0 or self.columnCount() == 0:
+            return
+
+        self.dataChanged.emit(
+            self.index(0, 0),
+            self.index(self.rowCount() - 1, self.columnCount() - 1),
+            [],
+        )
+
+
 # Headers VALUE
 _TRANSLATABLE_HEADERS = [
     _('Never'),
@@ -103,7 +240,7 @@ _TRANSLATABLE_HEADERS = [
 ]
 
 
-class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
+class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
     AutoUpdateOptions = {
         '': None,
         'Never': None,
@@ -130,12 +267,12 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
     }
 
     Headers = [
-        UserSubsQTableWidgetHeaders('Remark', lambda item: item.get('remark', '')),
-        UserSubsQTableWidgetHeaders('URL', lambda item: item.get('webURL', '')),
-        UserSubsQTableWidgetHeaders(
+        UserSubsQTableViewHeaders('Remark', lambda item: item.get('remark', '')),
+        UserSubsQTableViewHeaders('URL', lambda item: item.get('webURL', '')),
+        UserSubsQTableViewHeaders(
             'Auto Update', lambda item: item.get('autoupdate', '')
         ),
-        UserSubsQTableWidgetHeaders(
+        UserSubsQTableViewHeaders(
             'Auto Update Use Proxy', lambda item: item.get('proxy', '')
         ),
     ]
@@ -149,32 +286,29 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         super().__init__(*args, **kwargs)
 
         self.timers = list(QtCore.QTimer() for i in range(len(Storage.UserSubs())))
-
-        # Must set before flush all
-        self.setColumnCount(len(self.Headers))
-
-        # Flush all data to table
-        self.flushAll()
+        self.timerConnected = list(False for i in range(len(Storage.UserSubs())))
+        self.sourceModel = UserSubsTableModel(self.Headers, self.ItemKey, parent=self)
+        self.setModel(self.sourceModel)
 
         # Install custom header
         self.setHorizontalHeader(
-            UserSubsQTableWidgetHorizontalHeader(
+            UserSubsQTableViewHorizontalHeader(
                 parent=self,
                 legacySectionSizeSettingsName='SubscriptionWidgetSectionSizeTable',
                 sectionSizeSettingsName='UserSubsHeaderViewState',
             )
         )
-        self.setVerticalHeader(UserSubsQTableWidgetVerticalHeader(self))
+        self.setVerticalHeader(UserSubsQTableViewVerticalHeader(self))
 
         self.horizontalHeader().setCustomSectionResizeMode()
         self.horizontalHeader().restoreSectionSize()
 
-        self.setHorizontalHeaderLabels(list(_(str(header)) for header in self.Headers))
+        self.setSortingEnabled(False)
 
         # Selection
         self.setSelectionColor(AppHue.disconnectedColor())
-        self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
         # No drag and drop
         self.setDragEnabled(False)
@@ -193,20 +327,16 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
 
         # Signals
-        self.itemChanged.connect(self.handleItemChanged)
         self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
 
-    @QtCore.Slot(QTableWidgetItem)
-    def handleItemChanged(self, item: QTableWidgetItem):
-        unique = list(Storage.UserSubs().keys())[item.row()]
-        mapped = UserSubsQTableWidget.ItemKey[item.column()]
+        # Flush all data to table
+        self.flushAll()
 
-        # 'autoupdate', 'proxy' is not triggered here
-        assert mapped not in ['autoupdate', 'proxy']
-
-        item.setToolTip(item.text())
-
-        Storage.UserSubs()[unique][mapped] = item.text()
+    @property
+    def selectedIndex(self):
+        return sorted(
+            list(set(index.row() for index in self.selectionModel().selectedRows()))
+        )
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
@@ -227,7 +357,11 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
                     deleteIndex = _indexes[i] - i
                     deleteUnique = list(Storage.UserSubs().keys())[deleteIndex]
 
-                    self.removeRow(deleteIndex)
+                    self.sourceModel.beginRemoveRows(
+                        QtCore.QModelIndex(),
+                        deleteIndex,
+                        deleteIndex,
+                    )
 
                     Storage.UserSubs().pop(deleteUnique)
 
@@ -236,22 +370,28 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
 
                     assert isinstance(qtimer, QtCore.QTimer)
 
-                    try:
-                        qtimer.timeout.disconnect()
-                    except Exception as ex:
-                        # Any non-exit exceptions
+                    if self.timerConnected[deleteIndex]:
+                        try:
+                            qtimer.timeout.disconnect()
+                        except Exception as ex:
+                            # Any non-exit exceptions
 
-                        # Disconnect all previous signals if possible
-                        pass
+                            # Disconnect all previous signals if possible
+                            pass
 
                     qtimer.stop()
                     # End timer cleanup
 
                     # Remove timer from list
                     self.timers.pop(deleteIndex)
+                    self.timerConnected.pop(deleteIndex)
+
+                    self.sourceModel.endRemoveRows()
 
                     if callable(self.deleteUniqueCallback):
                         self.deleteUniqueCallback(deleteUnique)
+
+                self.flushAll()
             else:
                 # Do not delete
                 pass
@@ -267,7 +407,10 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         mbox.isMulti = bool(len(indexes) > 1)
-        mbox.possibleRemark = self.item(indexes[0], 0).text()
+        mbox.possibleRemark = self.sourceModel.data(
+            self.sourceModel.index(indexes[0], 0),
+            QtCore.Qt.ItemDataRole.DisplayRole,
+        )
         mbox.setText(mbox.customText())
         mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
@@ -308,13 +451,14 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             def getHttpProxy(_subsob):
                 return self.ProxyOptions[_subsob.get('proxy', '')]()
 
-            try:
-                qtimer.timeout.disconnect()
-            except Exception as ex:
-                # Any non-exit exceptions
+            if self.timerConnected[row]:
+                try:
+                    qtimer.timeout.disconnect()
+                except Exception as ex:
+                    # Any non-exit exceptions
 
-                # Disconnect all previous signals if possible
-                pass
+                    # Disconnect all previous signals if possible
+                    pass
 
             qtimer.timeout.connect(
                 functools.partial(
@@ -323,22 +467,27 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
                     httpProxy=functools.partial(getHttpProxy, subsob),
                 )
             )
+            self.timerConnected[row] = True
             qtimer.start(timems)
         else:
             logger.info(f'stop auto update job for subscription ({remark}, {webURL})')
 
-            try:
-                qtimer.timeout.disconnect()
-            except Exception as ex:
-                # Any non-exit exceptions
+            if self.timerConnected[row]:
+                try:
+                    qtimer.timeout.disconnect()
+                except Exception as ex:
+                    # Any non-exit exceptions
 
-                # Disconnect all previous signals if possible
-                pass
+                    # Disconnect all previous signals if possible
+                    pass
+
+                self.timerConnected[row] = False
 
             qtimer.stop()
 
         # Write to subs object
         subsob['autoupdate'] = textEnglish
+        self.sourceModel.emitRowChanged(row, self.Headers.index('Auto Update'))
 
         # Return potentially fixed value
         return textEnglish
@@ -366,31 +515,32 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
 
         # Write to subs object
         subsob['proxy'] = textEnglish
+        self.sourceModel.emitRowChanged(
+            row, self.Headers.index('Auto Update Use Proxy')
+        )
 
         # Return potentially fixed value
         return textEnglish
 
     def flushItem(self, row, column, item):
+        if row < 0 or row >= self.sourceModel.rowCount():
+            return
+
+        index = self.sourceModel.index(row, column)
+
         if column == self.Headers.index('Auto Update'):
             header = self.Headers[column]
 
-            oldItem = self.item(row, column)
             newItem = UserSubsAppQComboBox()
             newItem.addItems(list(_(key) for key in self.AutoUpdateOptions.keys()))
+            newItem.setFont(QFont(AppFontName()))
 
-            if oldItem is None:
-                # Item does not exist
-                newItem.setFont(QFont(AppFontName()))
-            else:
-                # Use existing
-                newItem.setFont(oldItem.font())
-
-            index = newItem.findText(
+            itemIndex = newItem.findText(
                 _(self.handleAutoUpdateComboBoxCurrentTextChanged(header(item), row))
             )
 
-            if index >= 0:
-                newItem.setCurrentIndex(index)
+            if itemIndex >= 0:
+                newItem.setCurrentIndex(itemIndex)
 
             newItem.currentTextChanged.connect(
                 functools.partial(
@@ -399,27 +549,21 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
                 )
             )
 
-            self.setCellWidget(row, column, newItem)
+            self.setIndexWidget(index, newItem)
+            self.sourceModel.emitRowChanged(row, column)
         elif column == self.Headers.index('Auto Update Use Proxy'):
             header = self.Headers[column]
 
-            oldItem = self.item(row, column)
             newItem = UserSubsAppQComboBox()
             newItem.addItems(list(_(key) for key in self.ProxyOptions.keys()))
+            newItem.setFont(QFont(AppFontName()))
 
-            if oldItem is None:
-                # Item does not exist
-                newItem.setFont(QFont(AppFontName()))
-            else:
-                # Use existing
-                newItem.setFont(oldItem.font())
-
-            index = newItem.findText(
+            itemIndex = newItem.findText(
                 _(self.handleProxyComboBoxCurrentTextChanged(header(item), row))
             )
 
-            if index >= 0:
-                newItem.setCurrentIndex(index)
+            if itemIndex >= 0:
+                newItem.setCurrentIndex(itemIndex)
 
             newItem.currentTextChanged.connect(
                 functools.partial(
@@ -428,48 +572,20 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
                 )
             )
 
-            self.setCellWidget(row, column, newItem)
+            self.setIndexWidget(index, newItem)
+            self.sourceModel.emitRowChanged(row, column)
         else:
-            header = self.Headers[column]
-            text = header(item)
-
-            oldItem = self.item(row, column)
-            newItem = QTableWidgetItem(text)
-            newItem.setToolTip(text)
-
-            if oldItem is None:
-                # Item does not exist
-                newItem.setFont(QFont(AppFontName()))
-            else:
-                # Use existing
-                newItem.setFont(oldItem.font())
-                newItem.setForeground(oldItem.foreground())
-
-                if oldItem.textAlignment() != 0:
-                    newItem.setTextAlignment(oldItem.textAlignment())
-
-                # Editable
-                newItem.setFlags(
-                    QtCore.Qt.ItemFlag.ItemIsEnabled
-                    | QtCore.Qt.ItemFlag.ItemIsSelectable
-                    | QtCore.Qt.ItemFlag.ItemIsEditable
-                )
-
-            self.setItem(row, column, newItem)
+            self.sourceModel.emitRowChanged(row, column)
 
     def flushRow(self, row, item):
-        for column in list(range(self.columnCount())):
+        for column in list(range(self.sourceModel.columnCount())):
             self.flushItem(row, column, item)
 
     def flushAll(self):
-        if self.rowCount() == 0:
-            # Should insert row
-            for index, key in enumerate(Storage.UserSubs()):
-                self.insertRow(index)
-                self.flushRow(index, Storage.UserSubs()[key])
-        else:
-            for index, key in enumerate(Storage.UserSubs()):
-                self.flushRow(index, Storage.UserSubs()[key])
+        self.sourceModel.emitAllChanged()
+
+        for index, key in enumerate(Storage.UserSubs()):
+            self.flushRow(index, Storage.UserSubs()[key])
 
     def appendNewItem(self, **kwargs):
         unique, remark, webURL, autoupdate, proxy = (
@@ -491,18 +607,22 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             }
         }
 
-        # 'unique' should be unique in subscription storage,
-        # but protect it anyway.
-        if unique not in Storage.UserSubs():
+        if unique in Storage.UserSubs():
+            row = list(Storage.UserSubs().keys()).index(unique)
+            Storage.UserSubs().update(subsob)
+            self.flushRow(row, subsob[unique])
+        else:
+            row = self.sourceModel.rowCount()
+
             # Add timer
             self.timers.append(QtCore.QTimer())
+            self.timerConnected.append(False)
 
-        Storage.UserSubs().update(subsob)
+            self.sourceModel.beginInsertRows(QtCore.QModelIndex(), row, row)
+            Storage.UserSubs().update(subsob)
+            self.sourceModel.endInsertRows()
 
-        row = self.rowCount()
-
-        self.insertRow(row)
-        self.flushRow(row, subsob[unique])
+            self.flushRow(row, subsob[unique])
 
     @staticmethod
     def updateSubsByUnique(
@@ -530,4 +650,8 @@ class UserSubsQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         )
 
     def retranslate(self):
-        self.setHorizontalHeaderLabels(list(_(str(header)) for header in self.Headers))
+        self.sourceModel.headerDataChanged.emit(
+            QtCore.Qt.Orientation.Horizontal,
+            0,
+            len(self.Headers) - 1,
+        )
