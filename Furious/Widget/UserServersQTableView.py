@@ -869,6 +869,51 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
         for index, item in enumerate(Storage.UserServers()):
             item.index = index
 
+    def sort(
+        self,
+        column: int,
+        order: QtCore.Qt.SortOrder = QtCore.Qt.SortOrder.AscendingOrder,
+    ):
+        if column < 0 or column >= self.columnCount():
+            return
+
+        activatedIndex = Storage.UserActivatedItemIndex()
+
+        if 0 <= activatedIndex < len(Storage.UserServers()):
+            activatedServerId = id(Storage.UserServers()[activatedIndex])
+        else:
+            activatedServerId = None
+
+        header = self.headers[column]
+
+        def keyFn(factory: ConfigFactory):
+            data = header(factory)
+
+            if str(header) == 'Latency':
+                return self.testResultSortValue(data, 'ms')
+
+            if str(header) == 'Speed':
+                return self.testResultSortValue(data, ' MiB/s')
+
+            return data
+
+        self.layoutAboutToBeChanged.emit()
+
+        Storage.UserServers().sort(
+            key=keyFn,
+            reverse=order == QtCore.Qt.SortOrder.DescendingOrder,
+        )
+        self.refreshIndexes()
+
+        if activatedServerId is not None:
+            for index, server in enumerate(Storage.UserServers()):
+                if id(server) == activatedServerId:
+                    AppSettings.set('ActivatedItemIndex', str(index))
+
+                    break
+
+        self.layoutChanged.emit()
+
 
 class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
     def __init__(self, parent=None):
@@ -878,9 +923,31 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
         self.searchCaseSensitive = False
         self.searchUseRegex = True
         self.searchRegex = None
+        self.sortSuspended = False
 
         self.setSortRole(UserServersTableModel.SortRole)
         self.setDynamicSortFilter(True)
+
+    def sort(
+        self,
+        column: int,
+        order: QtCore.Qt.SortOrder = QtCore.Qt.SortOrder.AscendingOrder,
+    ):
+        if self.sortSuspended:
+            super().sort(-1, order)
+
+            return
+
+        if column < 0:
+            super().sort(column, order)
+
+            return
+
+        model = self.sourceModel()
+
+        if model is not None:
+            model.sort(column, order)
+            self.invalidate()
 
     def setSearchPattern(
         self,
@@ -933,6 +1000,20 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
         )
 
         return self.searchRegex.search(searchableText) is not None
+
+    def headerData(
+        self,
+        section: int,
+        orientation: QtCore.Qt.Orientation,
+        role=QtCore.Qt.ItemDataRole.DisplayRole,
+    ):
+        if (
+            orientation == QtCore.Qt.Orientation.Vertical
+            and role == QtCore.Qt.ItemDataRole.DisplayRole
+        ):
+            return section + 1
+
+        return super().headerData(section, orientation, role)
 
 
 # ALL Headers VALUE
@@ -1001,7 +1082,9 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableView):
         self.horizontalHeader().setCustomSectionResizeMode()
         self.horizontalHeader().restoreSectionSize()
 
+        self.proxyModel.sortSuspended = True
         self.setSortingEnabled(True)
+        self.proxyModel.sortSuspended = False
         self.proxyModel.sort(-1)
 
         # Selection
@@ -1770,10 +1853,9 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableView):
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         mbox.isMulti = bool(len(indexes) > 1)
-        mbox.possibleRemark = (
-            f'{indexes[0] + 1} - '
-            + Storage.UserServers()[indexes[0]].getExtras('remark')
-        )
+        mbox.possibleRemark = f'{indexes[0] + 1} - ' + Storage.UserServers()[
+            indexes[0]
+        ].getExtras('remark')
         mbox.setText(mbox.customText())
         mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
