@@ -440,7 +440,20 @@ class AppMainWindow(AppQMainWindow):
 
         self._widget = QWidget()
         self._layout = QVBoxLayout(self._widget)
+        self.searchLayout = QHBoxLayout()
+        self.searchLineEdit = QLineEdit()
+        self.searchButton = AppQPushButton(_('Search'))
+        self.searchLayout.addWidget(self.searchLineEdit)
+        self.searchLayout.addWidget(self.searchButton)
+        self._layout.addLayout(self.searchLayout)
         self._layout.addWidget(self.mainTab)
+
+        self.searchButton.clicked.connect(
+            lambda: self.userServersQTableWidget.search(self.searchLineEdit.text())
+        )
+        self.searchLineEdit.returnPressed.connect(
+            lambda: self.userServersQTableWidget.search(self.searchLineEdit.text())
+        )
 
         self.setCentralWidget(self._widget)
 

@@ -166,9 +166,14 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
 
         parent = self.parent()
 
-        assert isinstance(parent, QTableWidget)
+        assert isinstance(parent, QTableWidget) or isinstance(parent, QTableView)
 
-        self.columnCount = parent.columnCount()
+        if isinstance(parent, QTableWidget):
+            self.columnCount = parent.columnCount()
+        elif parent.model() is not None:
+            self.columnCount = parent.model().columnCount()
+        else:
+            self.columnCount = 0
         self.sectionSizeTable = {}
 
         self.setSectionsClickable(True)
