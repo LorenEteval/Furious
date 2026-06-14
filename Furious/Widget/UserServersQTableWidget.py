@@ -44,6 +44,7 @@ import queue
 import logging
 import icmplib
 import functools
+import re
 
 __all__ = ['UserServersQTableWidget']
 
@@ -702,17 +703,10 @@ class TestDownloadSpeedWorker(WebGETManager):
 
 class UserServersQTableWidgetHorizontalHeader(AppQHeaderView):
     class SortOrder:
-        Ascending_ = False
-        Descending = True
-
-    @staticmethod
-    def emptyClickGuard():
-        return False
+        Ascending_ = QtCore.Qt.SortOrder.AscendingOrder
+        Descending = QtCore.Qt.SortOrder.DescendingOrder
 
     def __init__(self, *args, **kwargs):
-        self.clickGuardFn = kwargs.pop('clickGuardFn', self.emptyClickGuard)
-        self.customSortFn = kwargs.pop('customSortFn', None)
-
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
 
         self.sortOrderTable = list(
@@ -721,55 +715,21 @@ class UserServersQTableWidgetHorizontalHeader(AppQHeaderView):
 
         self.sectionClicked.connect(self.handleSectionClicked)
 
-    def customSort(self, clickedIndex):
-        self.customSortFn(clickedIndex, reverse=self.sortOrderTable[clickedIndex])
-        # Toggle
-        self.sortOrderTable[clickedIndex] = not self.sortOrderTable[clickedIndex]
-
     @QtCore.Slot(int)
     def handleSectionClicked(self, clickedIndex: int):
-        if callable(self.clickGuardFn) and self.clickGuardFn():
-            # Guarded. Do nothing
-            return
-
-        if self.customSortFn is None:
-            # Sorting is not supported
-            return
-
         parent = self.parent()
 
-        if isinstance(parent, AppQTableWidget):
-            # Support item activation
-            activatedIndex = Storage.UserActivatedItemIndex()
+        if isinstance(parent, QTableView):
+            order = self.sortOrderTable[clickedIndex]
 
-            if activatedIndex < 0:
-                activatedServerId = None
+            parent.sortByColumn(clickedIndex, order)
+
+            self.setSortIndicator(clickedIndex, order)
+
+            if order == self.SortOrder.Ascending_:
+                self.sortOrderTable[clickedIndex] = self.SortOrder.Descending
             else:
-                activatedServerId = id(Storage.UserServers()[activatedIndex])
-
-                # De-activated temporarily for sorting
-                parent.activateItemByIndex(activatedIndex, False)
-
-            self.customSort(clickedIndex)
-
-            if activatedServerId is not None:
-                foundActivatedItem = False
-
-                for index, server in enumerate(Storage.UserServers()):
-                    if activatedServerId == id(server):
-                        foundActivatedItem = True
-
-                        parent.setCurrentItem(parent.item(index, 0))
-                        parent.activateItemByIndex(index, True)
-
-                        break
-
-                # Object id should be found
-                assert foundActivatedItem
-
-        else:
-            # Not yet implemented
-            pass
+                self.sortOrderTable[clickedIndex] = self.SortOrder.Ascending_
 
 
 class UserServersQTableWidgetVerticalHeader(AppQHeaderView):
@@ -795,6 +755,212 @@ class UserServersQTableWidgetHeaders:
         return self.name
 
 
+class UserServersTableModel(QtCore.QAbstractTableModel):
+    SortRole = QtCore.Qt.ItemDataRole.UserRole + 1
+
+    def __init__(self, headers: list[UserServersQTableWidgetHeaders], parent=None):
+        super().__init__(parent)
+
+        self.headers = headers
+
+    def rowCount(self, parent=QtCore.QModelIndex()) -> int:
+        if parent.isValid():
+            return 0
+
+        return len(Storage.UserServers())
+
+    def columnCount(self, parent=QtCore.QModelIndex()) -> int:
+        if parent.isValid():
+            return 0
+
+        return len(self.headers)
+
+    def flags(self, index):
+        if not index.isValid():
+            return QtCore.Qt.ItemFlag.NoItemFlags
+
+        return QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
+
+    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if not index.isValid():
+            return None
+
+        row = index.row()
+        column = index.column()
+
+        if row < 0 or row >= len(Storage.UserServers()):
+            return None
+
+        if column < 0 or column >= len(self.headers):
+            return None
+
+        server = Storage.UserServers()[row]
+        header = self.headers[column]
+        text = header(server)
+
+        if (
+            role == QtCore.Qt.ItemDataRole.DisplayRole
+            or role == QtCore.Qt.ItemDataRole.ToolTipRole
+        ):
+            return text
+
+        if role == QtCore.Qt.ItemDataRole.FontRole:
+            font = QFont(AppFontName())
+
+            if row == Storage.UserActivatedItemIndex():
+                font.setBold(True)
+
+            return font
+
+        if role == QtCore.Qt.ItemDataRole.ForegroundRole:
+            if row == Storage.UserActivatedItemIndex():
+                return QColor(AppHue.currentColor())
+
+            return QBrush()
+
+        if role == QtCore.Qt.ItemDataRole.TextAlignmentRole:
+            if str(header) == 'Latency' or str(header) == 'Speed':
+                return (
+                    QtCore.Qt.AlignmentFlag.AlignRight
+                    | QtCore.Qt.AlignmentFlag.AlignVCenter
+                )
+
+            return None
+
+        if role == self.SortRole:
+            if str(header) == 'Latency':
+                return self.testResultSortValue(text, 'ms')
+
+            if str(header) == 'Speed':
+                return self.testResultSortValue(text, ' MiB/s')
+
+            return text
+
+        return None
+
+    def headerData(
+        self,
+        section: int,
+        orientation: QtCore.Qt.Orientation,
+        role=QtCore.Qt.ItemDataRole.DisplayRole,
+    ):
+        if role != QtCore.Qt.ItemDataRole.DisplayRole:
+            return None
+
+        if orientation == QtCore.Qt.Orientation.Horizontal:
+            if 0 <= section < len(self.headers):
+                return _(str(self.headers[section]))
+
+            return None
+
+        return section + 1
+
+    @staticmethod
+    def testResultSortValue(text: str, suffix: str):
+        if text.endswith(suffix):
+            text = text[: -len(suffix)]
+
+        try:
+            return float(text)
+        except Exception:
+            # Any non-exit exceptions
+
+            return abs(hash(text)) + 2**20
+
+    def emitRowChanged(self, row: int, column: Union[int, None] = None):
+        if row < 0 or row >= self.rowCount():
+            return
+
+        if column is None:
+            left = self.index(row, 0)
+            right = self.index(row, self.columnCount() - 1)
+        else:
+            left = self.index(row, column)
+            right = left
+
+        self.dataChanged.emit(left, right, [])
+
+    def emitAllChanged(self):
+        if self.rowCount() == 0 or self.columnCount() == 0:
+            return
+
+        self.dataChanged.emit(
+            self.index(0, 0),
+            self.index(self.rowCount() - 1, self.columnCount() - 1),
+            [],
+        )
+
+    @staticmethod
+    def refreshIndexes():
+        for index, item in enumerate(Storage.UserServers()):
+            item.index = index
+
+
+class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.searchPattern = ''
+        self.searchCaseSensitive = False
+        self.searchUseRegex = True
+        self.searchRegex = None
+
+        self.setSortRole(UserServersTableModel.SortRole)
+        self.setDynamicSortFilter(True)
+
+    def setSearchPattern(
+        self,
+        pattern: str,
+        *,
+        caseSensitive: bool = False,
+        regex: bool = True,
+    ):
+        self.searchPattern = str(pattern or '')
+        self.searchCaseSensitive = caseSensitive
+        self.searchUseRegex = regex
+        self.searchRegex = None
+
+        if self.searchPattern:
+            flags = 0 if caseSensitive else re.IGNORECASE
+            regexPattern = (
+                self.searchPattern if regex else re.escape(self.searchPattern)
+            )
+
+            try:
+                self.searchRegex = re.compile(regexPattern, flags)
+            except re.error as ex:
+                logger.error(
+                    f'invalid user servers search regex: {ex}. '
+                    f'Fall back to literal matching'
+                )
+
+                self.searchRegex = re.compile(re.escape(self.searchPattern), flags)
+
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, sourceRow: int, sourceParent) -> bool:
+        if not self.searchPattern or self.searchRegex is None:
+            return True
+
+        model = self.sourceModel()
+
+        if model is None:
+            return True
+
+        searchableText = '\n'.join(
+            str(
+                model.data(
+                    model.index(sourceRow, column, sourceParent),
+                    QtCore.Qt.ItemDataRole.DisplayRole,
+                )
+                or ''
+            )
+            for column in range(model.columnCount(sourceParent))
+        )
+
+        return self.searchRegex.search(searchableText) is not None
+
+
 # ALL Headers VALUE
 _TRANSLATABLE_HEADERS = [
     _('Remark'),
@@ -809,7 +975,7 @@ _TRANSLATABLE_HEADERS = [
 ]
 
 
-class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
+class UserServersQTableWidget(Mixins.QTranslatable, Mixins.ConnectionAware, QTableView):
     Headers = [
         UserServersQTableWidgetHeaders('Remark'),
         UserServersQTableWidgetHeaders('Protocol'),
@@ -824,6 +990,14 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.setWordWrap(False)
+        self.setAlternatingRowColors(True)
+
+        self.sourceModel = UserServersTableModel(self.Headers, parent=self)
+        self.proxyModel = UserServersSortFilterProxyModel(parent=self)
+        self.proxyModel.setSourceModel(self.sourceModel)
+        self.setModel(self.proxyModel)
 
         self.subsManager = SubscriptionManager(parent=self)
 
@@ -843,18 +1017,10 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         # Text Editor Window
         self.textEditorWindow = TextEditorWindow(parent=self.parent())
 
-        # Must set before flush all
-        self.setColumnCount(len(self.Headers))
-
-        # Flush all data to table
-        self.flushAll()
-
         # Install custom header
         self.setHorizontalHeader(
             UserServersQTableWidgetHorizontalHeader(
                 parent=self,
-                clickGuardFn=lambda: False,
-                customSortFn=self.customSortFn,
                 legacySectionSizeSettingsName='ServerWidgetSectionSizeTable',
                 sectionSizeSettingsName='UserServersHeaderViewState',
             )
@@ -864,12 +1030,12 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         self.horizontalHeader().setCustomSectionResizeMode()
         self.horizontalHeader().restoreSectionSize()
 
-        self.setHorizontalHeaderLabels(list(_(str(header)) for header in self.Headers))
+        self.setSortingEnabled(False)
 
         # Selection
         self.setSelectionColor(AppHue.disconnectedColor())
-        self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
         # No drag and drop
         self.setDragEnabled(False)
@@ -1081,32 +1247,89 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         self.doubleClickedFlag = False
 
         # Signals
-        self.itemChanged.connect(self.handleItemChanged)
-        self.itemSelectionChanged.connect(self.handleItemSelectionChanged)
-        self.itemActivated.connect(self.handleItemActivated)
-        self.itemDoubleClicked.connect(self.handleItemDoubleClicked)
+        self.selectionModel().selectionChanged.connect(self.handleItemSelectionChanged)
+        self.activated.connect(self.handleItemActivated)
+        self.doubleClicked.connect(self.handleItemDoubleClicked)
 
-        if self.activatedItem() is not None:
-            self.setCurrentItem(self.activatedItem())
+        self.flushAll()
+
+        if self.activatedIndex().isValid():
+            self.setCurrentIndex(self.activatedIndex())
             self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
 
-    @QtCore.Slot(QTableWidgetItem)
-    def handleItemChanged(self, item: QTableWidgetItem):
-        pass
+    @staticmethod
+    def getStyleSheet(color):
+        return f'QTableView {{ selection-background-color: {color}; }}'
 
-        # TODO: In use?
-        # index = item.row()
-        #
-        # if self.item(index, 0) is None:
-        #     return
-        #
-        # itemText = self.item(index, 0).text()
-        #
-        # if Storage.UserServers()[index].getExtras('remark') != itemText:
-        #     Storage.UserServers()[index].setExtras('remark', itemText)
+    def setSelectionColor(self, color):
+        self.setStyleSheet(self.getStyleSheet(color))
 
-    @QtCore.Slot()
-    def handleItemSelectionChanged(self):
+    @property
+    def selectedIndex(self):
+        indexes = list(
+            self.sourceRowFromProxyIndex(index)
+            for index in self.selectionModel().selectedRows()
+        )
+
+        return sorted(list(set(index for index in indexes if index >= 0)))
+
+    def sourceIndexFromProxyIndex(self, index: QtCore.QModelIndex):
+        if not index.isValid():
+            return QtCore.QModelIndex()
+
+        return self.proxyModel.mapToSource(index)
+
+    def proxyIndexFromSourceIndex(self, index: QtCore.QModelIndex):
+        if not index.isValid():
+            return QtCore.QModelIndex()
+
+        return self.proxyModel.mapFromSource(index)
+
+    def sourceRowFromProxyIndex(self, index: QtCore.QModelIndex) -> int:
+        sourceIndex = self.sourceIndexFromProxyIndex(index)
+
+        if sourceIndex.isValid():
+            return sourceIndex.row()
+
+        return -1
+
+    def sourceRowFromProxyRow(self, row: int) -> int:
+        return self.sourceRowFromProxyIndex(self.proxyModel.index(row, 0))
+
+    def proxyIndexFromSourceRow(self, row: int, column: int = 0):
+        if row < 0 or row >= self.sourceModel.rowCount():
+            return QtCore.QModelIndex()
+
+        return self.proxyIndexFromSourceIndex(self.sourceModel.index(row, column))
+
+    def selectMultipleRows(self, indexes: list[int], clearCurrentSelection: bool):
+        if clearCurrentSelection:
+            self.selectionModel().clearSelection()
+
+        selection = self.selectionModel().selection()
+
+        for index in indexes:
+            proxyIndex0 = self.proxyIndexFromSourceRow(index, 0)
+            proxyIndex1 = self.proxyIndexFromSourceRow(index, len(self.Headers) - 1)
+
+            if proxyIndex0.isValid() and proxyIndex1.isValid():
+                selection.select(proxyIndex0, proxyIndex1)
+
+        self.selectionModel().select(
+            selection, QtCore.QItemSelectionModel.SelectionFlag.Select
+        )
+
+    def disconnectedCallback(self):
+        self.setSelectionColor(AppHue.disconnectedColor())
+
+        self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
+
+    def connectedCallback(self):
+        self.setSelectionColor(AppHue.connectedColor())
+
+        self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
+
+    def handleItemSelectionChanged(self, *args):
         if len(self.selectedIndex) > 1:
             for action in [
                 self.customizeJSONConfigActionRef,
@@ -1120,8 +1343,8 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             ]:
                 action.setDisabled(False)
 
-    @QtCore.Slot(QTableWidgetItem)
-    def handleItemActivated(self, item: QTableWidgetItem):
+    @QtCore.Slot(QtCore.QModelIndex)
+    def handleItemActivated(self, index: QtCore.QModelIndex):
         if self.doubleClickedFlag:
             # Ignore double-click
             self.doubleClickedFlag = False
@@ -1129,7 +1352,10 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             return
 
         oldIndex = Storage.UserActivatedItemIndex()
-        newIndex = item.row()
+        newIndex = self.sourceRowFromProxyIndex(index)
+
+        if newIndex < 0:
+            return
 
         if oldIndex == newIndex:
             # Same item activated. Do nothing
@@ -1197,11 +1423,15 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
     def _(self, factory, **kwargs):
         return self.getGuiEditorByProtocol(Protocol.Hysteria2, **kwargs)
 
-    @QtCore.Slot(QTableWidgetItem)
-    def handleItemDoubleClicked(self, item: QTableWidgetItem):
+    @QtCore.Slot(QtCore.QModelIndex)
+    def handleItemDoubleClicked(self, modelIndex: QtCore.QModelIndex):
         self.doubleClickedFlag = True
 
-        index = item.row()
+        index = self.sourceRowFromProxyIndex(modelIndex)
+
+        if index < 0:
+            return
+
         factory = Storage.UserServers()[index]
 
         # Do not translate window title
@@ -1267,48 +1497,25 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         self.contextMenu.exec(self.mapToGlobal(point))
 
     def customSortFn(self, clickedIndex, **kwargs):
-        def keyFn(server):
-            data = self.Headers[clickedIndex](server)
+        order = (
+            QtCore.Qt.SortOrder.DescendingOrder
+            if kwargs.get('reverse', False)
+            else QtCore.Qt.SortOrder.AscendingOrder
+        )
 
-            if clickedIndex == self.Headers.index('Latency'):
-                if data.endswith('ms'):
-                    # Strip value
-                    data = data[:-2]
+        self.sortByColumn(clickedIndex, order)
 
-                try:
-                    return float(data)
-                except Exception:
-                    # Any non-exit exceptions
-
-                    return abs(hash(data)) + 2**20
-
-            if clickedIndex == self.Headers.index('Speed'):
-                if data.endswith(' MiB/s'):
-                    # Strip value
-                    data = data[:-6]
-
-                try:
-                    return float(data)
-                except Exception:
-                    # Any non-exit exceptions
-
-                    return abs(hash(data)) + 2**20
-
-            return data
-
-        Storage.UserServers().sort(key=keyFn, **kwargs)
-
-        # Index is refreshed by calling flushAll()
-        self.flushAll()
-
-    def activatedItem(self) -> QTableWidgetItem:
-        return self.item(Storage.UserActivatedItemIndex(), 0)
+    def activatedIndex(self):
+        return self.proxyIndexFromSourceRow(Storage.UserActivatedItemIndex(), 0)
 
     def activateItemByIndex(self, index, activate):
-        super().activateItemByIndex(index, activate)
+        oldIndex = Storage.UserActivatedItemIndex()
 
         if activate:
             AppSettings.set('ActivatedItemIndex', str(index))
+
+        self.sourceModel.emitRowChanged(oldIndex)
+        self.sourceModel.emitRowChanged(index)
 
     def flushItem(self, row: int, column: int, item: ConfigFactory):
         itemIndex = item.index
@@ -1346,52 +1553,23 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         else:
             pass
 
-        header = self.Headers[column]
-        text = header(item)
+        self.sourceModel.emitRowChanged(row, column)
 
-        oldItem = self.item(row, column)
-        newItem = QTableWidgetItem(text)
-        newItem.setToolTip(text)
-
-        if oldItem is None:
-            # Item does not exist
-            newItem.setFont(QFont(AppFontName()))
-
-            if str(header) == 'Latency' or str(header) == 'Speed':
-                # Test results. Align right and vcenter
-                newItem.setTextAlignment(
-                    QtCore.Qt.AlignmentFlag.AlignRight
-                    | QtCore.Qt.AlignmentFlag.AlignVCenter
-                )
-        else:
-            # Use existing
-            newItem.setFont(oldItem.font())
-            newItem.setForeground(oldItem.foreground())
-
-            if oldItem.textAlignment() != 0:
-                newItem.setTextAlignment(oldItem.textAlignment())
-
-        #
-        # Legacy flags. Not used
-        #
-        # if str(header) == 'Remark':
-        #     # Remark is editable
-        #     newItem.setFlags(
-        #         QtCore.Qt.ItemFlag.ItemIsEnabled
-        #         | QtCore.Qt.ItemFlag.ItemIsSelectable
-        #         | QtCore.Qt.ItemFlag.ItemIsEditable
-        #     )
-        # else:
-        #     newItem.setFlags(
-        #         QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
-        #     )
-
-        # Remark is now editable via GUI window
-        newItem.setFlags(
-            QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
+    def search(
+        self,
+        pattern: str,
+        *,
+        caseSensitive: bool = False,
+        regex: bool = True,
+    ):
+        self.proxyModel.setSearchPattern(
+            pattern,
+            caseSensitive=caseSensitive,
+            regex=regex,
         )
 
-        self.setItem(row, column, newItem)
+    def clearSearch(self):
+        self.search('')
 
     def addServerViaGui(
         self,
@@ -1448,22 +1626,21 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         editor.rejected.disconnect()
 
     def flushRow(self, row: int, item: ConfigFactory):
-        for column in list(range(self.columnCount())):
-            self.flushItem(row, column, item)
+        itemIndex = item.index
+
+        if item.deleted or itemIndex < 0 or itemIndex >= len(Storage.UserServers()):
+            # Invalid item. Do nothing
+            return
+
+        if row != itemIndex:
+            row = itemIndex
+
+        self.sourceModel.emitRowChanged(row)
 
     def flushAll(self):
         # Refresh index
-        for index, item in enumerate(Storage.UserServers()):
-            item.index = index
-
-        if self.rowCount() == 0:
-            # Should insert row
-            for index, item in enumerate(Storage.UserServers()):
-                self.insertRow(index)
-                self.flushRow(index, item)
-        else:
-            for index, item in enumerate(Storage.UserServers()):
-                self.flushRow(index, item)
+        self.sourceModel.refreshIndexes()
+        self.sourceModel.emitAllChanged()
 
     def swapItem(self, index0: int, index1: int):
         def swapSequenceItem(sequence: MutableSequence, param0: int, param1: int):
@@ -1472,23 +1649,21 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             sequence[param0] = sequence[param1]
             sequence[param1] = swap
 
+        activatedIndex = Storage.UserActivatedItemIndex()
+
+        self.sourceModel.layoutAboutToBeChanged.emit()
+
         swapSequenceItem(Storage.UserServers(), index0, index1)
 
         # Refresh index
-        Storage.UserServers()[index0].index = index1
-        Storage.UserServers()[index1].index = index0
+        self.sourceModel.refreshIndexes()
 
-        self.flushRow(index0, Storage.UserServers()[index0])
-        self.flushRow(index1, Storage.UserServers()[index1])
+        self.sourceModel.layoutChanged.emit()
 
-        if index0 == Storage.UserActivatedItemIndex():
-            # De-activate
-            self.activateItemByIndex(index0, False)
+        if index0 == activatedIndex:
             # Activate
             self.activateItemByIndex(index1, True)
-        elif index1 == Storage.UserActivatedItemIndex():
-            # De-activate
-            self.activateItemByIndex(index1, False)
+        elif index1 == activatedIndex:
             # Activate
             self.activateItemByIndex(index0, True)
 
@@ -1513,7 +1688,7 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             self.moveUpItemByIndex(index)
 
         with Mixins.QBlockSignalContext(self):
-            self.setCurrentIndex(self.indexFromItem(self.item(indexes[-1] - 1, 0)))
+            self.setCurrentIndex(self.proxyIndexFromSourceRow(indexes[-1] - 1))
 
         self.selectMultipleRows(list(index - 1 for index in indexes), True)
 
@@ -1535,7 +1710,7 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             self.moveDownItemByIndex(index)
 
         with Mixins.QBlockSignalContext(self):
-            self.setCurrentIndex(self.indexFromItem(self.item(indexes[0] + 1, 0)))
+            self.setCurrentIndex(self.proxyIndexFromSourceRow(indexes[0] + 1))
 
         self.selectMultipleRows(list(index + 1 for index in indexes), True)
 
@@ -1570,11 +1745,16 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         for i in range(len(indexes)):
             deleteIndex = indexes[i] - i
 
-            with Mixins.QBlockSignalContext(self):
-                self.removeRow(deleteIndex)
+            self.sourceModel.beginRemoveRows(
+                QtCore.QModelIndex(),
+                deleteIndex,
+                deleteIndex,
+            )
 
             Storage.UserServers()[deleteIndex].deleted = True
             Storage.UserServers().pop(deleteIndex)
+
+            self.sourceModel.endRemoveRows()
 
             if not deleteActivated and deleteIndex < Storage.UserActivatedItemIndex():
                 AppSettings.set(
@@ -1582,8 +1762,8 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
                 )
 
         # Refresh index
-        for index, item in enumerate(Storage.UserServers()):
-            item.index = index
+        self.sourceModel.refreshIndexes()
+        self.sourceModel.emitAllChanged()
 
         if deleteActivated:
             # Set invalid first
@@ -1625,7 +1805,10 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         mbox.isMulti = bool(len(indexes) > 1)
-        mbox.possibleRemark = f'{indexes[0] + 1} - {self.item(indexes[0], 0).text()}'
+        mbox.possibleRemark = (
+            f'{indexes[0] + 1} - '
+            + Storage.UserServers()[indexes[0]].getExtras('remark')
+        )
         mbox.setText(mbox.customText())
         mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
@@ -1665,16 +1848,17 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
             # Should not reach here
             return
 
-        item = self.item(indexes[0], 0)
+        item = self.proxyIndexFromSourceRow(indexes[0])
 
-        if item is not None:
+        if item.isValid():
             self.handleItemActivated(item)
 
     def scrollToActivatedItem(self):
-        activatedItem = self.activatedItem()
+        activatedItem = self.activatedIndex()
 
-        self.setCurrentItem(activatedItem)
-        self.scrollToItem(activatedItem)
+        if activatedItem.isValid():
+            self.setCurrentIndex(activatedItem)
+            self.scrollTo(activatedItem)
 
     def testSelectedItemPingLatency(self):
         indexes = self.selectedIndex
@@ -1955,18 +2139,18 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         # Set index
         factory.index = index
 
+        self.sourceModel.beginInsertRows(QtCore.QModelIndex(), index, index)
+
         Storage.UserServers().append(factory)
 
-        row = self.rowCount()
+        self.sourceModel.endInsertRows()
+        self.sourceModel.refreshIndexes()
 
-        assert index == row
-
-        self.insertRow(row)
-        self.flushRow(row, factory)
+        self.flushRow(index, factory)
 
         if index == 0:
             # The first one. Click it
-            self.setCurrentItem(self.item(0, 0))
+            self.setCurrentIndex(self.proxyIndexFromSourceRow(0))
 
             # Try to be user-friendly in some extreme cases
             if not APP().isSystemTrayConnected():
@@ -2052,21 +2236,15 @@ class UserServersQTableWidget(Mixins.QTranslatable, AppQTableWidget):
         if event.key() == QtCore.Qt.Key.Key_Return:
             if PLATFORM == 'Darwin':
                 # Activate by Enter key on macOS
-                self.itemActivated.emit(self.currentItem())
+                self.handleItemActivated(self.currentIndex())
             else:
                 super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)
 
-    def disconnectedCallback(self):
-        super().disconnectedCallback()
-
-        self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
-
-    def connectedCallback(self):
-        super().connectedCallback()
-
-        self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
-
     def retranslate(self):
-        self.setHorizontalHeaderLabels(list(_(str(header)) for header in self.Headers))
+        self.sourceModel.headerDataChanged.emit(
+            QtCore.Qt.Orientation.Horizontal,
+            0,
+            len(self.Headers) - 1,
+        )
