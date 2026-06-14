@@ -193,3 +193,5 @@ rpmbuild/
 *.flatpak
 # rpm files
 *.rpm
+
+uv.lock

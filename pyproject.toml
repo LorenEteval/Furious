@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Furious-GUI"
+dynamic = ["version"]
+description = "A GUI proxy client based on PySide6. Support Xray-core & hysteria"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+    { name = "Loren Eteval", email = "loren.eteval@proton.me" },
+]
+dependencies = [
+    "PySide6-Essentials",
+    "qdarkstyle",
+    "ujson",
+    "pybase64",
+    "pyqrcode",
+    "pypng",
+    "icmplib",
+    "mss",
+    "zxing-cpp",
+    "pillow",
+    "sysproxy; sys_platform == 'win32'",
+    "win32session; sys_platform == 'win32'",
+    "darkdetect; sys_platform != 'darwin'",
+    "darkdetect[macos-listener]; sys_platform == 'darwin'",
+    "pyobjc-core; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Operating System :: OS Independent",
+    "Topic :: Internet",
+    "Topic :: Internet :: Proxy Servers",
+]
+
+[project.urls]
+Homepage = "https://github.com/LorenEteval/Furious"
+
+[project.gui-scripts]
+Furious = "Furious.__main__:main"
+
+[tool.setuptools]
+packages = { find = {} }
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = { attr = "Furious.Version.__version__" }
+
+[tool.setuptools.package-data]
+Furious = ["Data/**"]
+
+[tool.uv.extra-build-dependencies]
+Furious-GUI = ["PySide6-Essentials"]
+
+[tool.black]
+skip-string-normalization = true
