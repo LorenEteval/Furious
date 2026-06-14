@@ -38,12 +38,14 @@ __all__ = [
     'AppQGroupBox',
     'AppQHeaderView',
     'AppQLabel',
+    'AppQLineEdit',
     'AppQListWidget',
     'AppQMainWindow',
     'AppQMenu',
     'AppQMenuBar',
     'AppQMessageBox',
     'AppQPushButton',
+    'AppQTableView',
     'AppQTableWidget',
     'AppQTabWidget',
     'AppQToolBar',
@@ -272,6 +274,14 @@ class AppQLabel(Mixins.QTranslatable, QLabel):
         self.setText(_(self.text()))
 
 
+class AppQLineEdit(Mixins.QTranslatable, QLineEdit):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def retranslate(self):
+        self.setPlaceholderText(_(self.placeholderText()))
+
+
 class AppQListWidget(Mixins.ConnectionAware, QListWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -484,6 +494,29 @@ class AppQPushButton(Mixins.QTranslatable, QPushButton):
 
     def retranslate(self):
         self.setText(_(self.text()))
+
+
+class AppQTableView(Mixins.ConnectionAware, QTableView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setWordWrap(False)
+        self.setAlternatingRowColors(True)
+
+    @staticmethod
+    def getStyleSheet(color):
+        return f'QTableView {{ selection-background-color: {color}; }}'
+
+    def setSelectionColor(self, color):
+        # self.setStyleSheet(self.getStyleSheet(color))
+
+        pass
+
+    def disconnectedCallback(self):
+        self.setSelectionColor(AppHue.disconnectedColor())
+
+    def connectedCallback(self):
+        self.setSelectionColor(AppHue.connectedColor())
 
 
 class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):

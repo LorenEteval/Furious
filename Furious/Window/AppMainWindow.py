@@ -22,7 +22,7 @@ from Furious.Interface import *
 from Furious.Library import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Widget.UserServersQTableWidget import *
+from Furious.Widget.UserServersQTableView import *
 from Furious.Widget.GuiCustomizeNetworkTest import *
 from Furious.Widget.GuiCustomizeProxyBypass import *
 from Furious.Widget.GuiTUNSettings import *
@@ -441,7 +441,8 @@ class AppMainWindow(AppQMainWindow):
         self._widget = QWidget()
         self._layout = QVBoxLayout(self._widget)
         self.searchLayout = QHBoxLayout()
-        self.searchLineEdit = QLineEdit()
+        self.searchLineEdit = AppQLineEdit()
+        self.searchLineEdit.setPlaceholderText(_('Search servers, e.g. vmess|trojan'))
         self.searchButton = AppQPushButton(_('Search'))
         self.searchLayout.addWidget(self.searchLineEdit)
         self.searchLayout.addWidget(self.searchButton)
@@ -454,8 +455,16 @@ class AppMainWindow(AppQMainWindow):
         self.searchLineEdit.returnPressed.connect(
             lambda: self.userServersQTableWidget.search(self.searchLineEdit.text())
         )
+        self.searchLineEdit.textChanged.connect(
+            self.handleUserServersSearchTextChanged
+        )
 
         self.setCentralWidget(self._widget)
+
+    @QtCore.Slot(str)
+    def handleUserServersSearchTextChanged(self, text: str):
+        if not text:
+            self.userServersQTableWidget.clearSearch()
 
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
         self.userServersQTableWidget.updateSubsByUnique(unique, httpProxy, **kwargs)

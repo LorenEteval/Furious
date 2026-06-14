@@ -2,7 +2,7 @@ TRANSLATION = {
     "Delete": {
         "source": [
             "Furious.Qt.QtWidgets",
-            "Furious.Widget.UserServersQTableWidget",
+            "Furious.Widget.UserServersQTableView",
             "Furious.Widget.UserSubsQTableWidget",
             "Furious.Widget.XrayAssetViewerQListWidget",
             "Furious.Window.UserSubsWindow"
@@ -338,7 +338,7 @@ TRANSLATION = {
     },
     "Select All": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget",
+            "Furious.Widget.UserServersQTableView",
             "Furious.Window.LogViewerWindow",
             "Furious.Window.TextEditorWindow"
         ],
@@ -440,7 +440,7 @@ TRANSLATION = {
             "Furious.Widget.GuiTrojan",
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess",
-            "Furious.Widget.UserServersQTableWidget",
+            "Furious.Widget.UserServersQTableView",
             "Furious.Widget.UserSubsQTableWidget"
         ],
         "RU": "Примечание",
@@ -450,7 +450,7 @@ TRANSLATION = {
     "Protocol": {
         "source": [
             "Furious.Widget.GuiHysteria1",
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Протокол",
         "ZH": "协议",
@@ -462,7 +462,7 @@ TRANSLATION = {
             "Furious.Widget.GuiTrojan",
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess",
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Адрес",
         "ZH": "地址",
@@ -474,7 +474,7 @@ TRANSLATION = {
             "Furious.Widget.GuiTrojan",
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess",
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Порт",
         "ZH": "端口",
@@ -483,7 +483,7 @@ TRANSLATION = {
     "Transport": {
         "source": [
             "Furious.Widget.GuiVTransport",
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Способ передачи",
         "ZH": "传输方式",
@@ -491,7 +491,7 @@ TRANSLATION = {
     },
     "TLS": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "TLS",
         "ZH": "TLS",
@@ -499,7 +499,7 @@ TRANSLATION = {
     },
     "Subscription": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget",
+            "Furious.Widget.UserServersQTableView",
             "Furious.Window.AppMainWindow"
         ],
         "RU": "Подписка",
@@ -508,7 +508,7 @@ TRANSLATION = {
     },
     "Latency": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Задержка",
         "ZH": "延迟",
@@ -517,7 +517,7 @@ TRANSLATION = {
     "Speed": {
         "source": [
             "Furious.Widget.GuiHysteria1",
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Скорость",
         "ZH": "速度",
@@ -533,7 +533,7 @@ TRANSLATION = {
     },
     "Move Up": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Переместить вверх",
         "ZH": "上移",
@@ -541,7 +541,7 @@ TRANSLATION = {
     },
     "Move Down": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Переместить вниз",
         "ZH": "下移",
@@ -549,7 +549,7 @@ TRANSLATION = {
     },
     "Duplicate": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Дубликат",
         "ZH": "克隆",
@@ -557,7 +557,7 @@ TRANSLATION = {
     },
     "Scroll To Activated Server": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Перейдите к активированному серверу",
         "ZH": "滚动到激活的服务器",
@@ -565,7 +565,7 @@ TRANSLATION = {
     },
     "Test Ping Latency": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Измерить задержку (ping)",
         "ZH": "测试Ping延迟",
@@ -573,7 +573,7 @@ TRANSLATION = {
     },
     "Test Download Speed": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Измерить скорость загрузки",
         "ZH": "测试下行速度",
@@ -581,7 +581,7 @@ TRANSLATION = {
     },
     "Test Download Speed (Multithreaded)": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Измерить скорость загрузки (многопоточная)",
         "ZH": "测试下行速度（多线程）",
@@ -589,7 +589,7 @@ TRANSLATION = {
     },
     "Clear Test Results": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Очистить результаты тестирования",
         "ZH": "清除测试结果",
@@ -597,7 +597,7 @@ TRANSLATION = {
     },
     "New Empty Configuration": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget",
+            "Furious.Widget.UserServersQTableView",
             "Furious.Window.AppMainWindow"
         ],
         "RU": "Создать новую пустую конфигурацию",
@@ -606,7 +606,7 @@ TRANSLATION = {
     },
     "Export Share Link To Clipboard": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Копировать ссылку в буфер обмена",
         "ZH": "导出分享链接至剪贴板",
@@ -614,7 +614,7 @@ TRANSLATION = {
     },
     "Export As QR Code": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Экспорт в виде QR-кода",
         "ZH": "导出为二维码",
@@ -622,7 +622,7 @@ TRANSLATION = {
     },
     "Export JSON Configuration To Clipboard": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Копировать JSON конфигурацию в буфер обмена",
         "ZH": "导出JSON配置至剪贴板",
@@ -631,7 +631,7 @@ TRANSLATION = {
     "Connecting": {
         "source": [
             "Furious.TrayActions.Connect",
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Подключение",
         "ZH": "正在连接",
@@ -639,7 +639,7 @@ TRANSLATION = {
     },
     "Connecting. Please wait...": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Подключение. Пожалуйста, подождите...",
         "ZH": "正在连接。请稍候",
@@ -647,7 +647,7 @@ TRANSLATION = {
     },
     "Untitled": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Без названия",
         "ZH": "未命名",
@@ -819,7 +819,7 @@ TRANSLATION = {
     },
     "Show Furious Log...": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget",
+            "Furious.Widget.UserServersQTableView",
             "Furious.Window.AppMainWindow"
         ],
         "RU": "Показать журнал Furious...",
@@ -828,7 +828,7 @@ TRANSLATION = {
     },
     "Show Core Log...": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget",
+            "Furious.Widget.UserServersQTableView",
             "Furious.Window.AppMainWindow"
         ],
         "RU": "Показать журнал ядра...",
@@ -837,7 +837,7 @@ TRANSLATION = {
     },
     "Show Tun2socks Log...": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget",
+            "Furious.Widget.UserServersQTableView",
             "Furious.Window.AppMainWindow"
         ],
         "RU": "Показать журнал Tun2socks...",
@@ -1247,7 +1247,7 @@ TRANSLATION = {
     },
     "Test Tcping Latency": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Измерить задержку (Tсping)",
         "ZH": "测试Tcping延迟",
@@ -1342,7 +1342,7 @@ TRANSLATION = {
     },
     "Customize JSON Configuration...": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Редактировать JSON конфигурацию...",
         "ZH": "自定义JSON配置...",
@@ -1443,7 +1443,7 @@ TRANSLATION = {
     },
     "Advanced...": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Расширенные...",
         "ZH": "高级...",
@@ -1459,7 +1459,7 @@ TRANSLATION = {
     },
     "Update subscription completed": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Подписка на обновление завершена",
         "ZH": "更新订阅完成",
@@ -1467,7 +1467,7 @@ TRANSLATION = {
     },
     "Update subscription failed": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Обновить подписку не удалось",
         "ZH": "更新订阅失败",
@@ -1475,7 +1475,7 @@ TRANSLATION = {
     },
     "Configuration has been updated": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Конфигурация обновлена",
         "ZH": "配置已更新",
@@ -1483,7 +1483,7 @@ TRANSLATION = {
     },
     "Configuration update failed": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Обновление конфигурации не удалось",
         "ZH": "配置更新失败",
@@ -1845,10 +1845,26 @@ TRANSLATION = {
     },
     "Activate Selected Server": {
         "source": [
-            "Furious.Widget.UserServersQTableWidget"
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Активировать выбранный сервер",
         "ZH": "激活选定的服务器",
+        "isReviewed": "True"
+    },
+    "Search servers, e.g. vmess|trojan": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Поиск серверов, например: vmess|trojan",
+        "ZH": "查找服务器，例如 vmess|trojan",
+        "isReviewed": "True"
+    },
+    "Search": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Поиск",
+        "ZH": "查找",
         "isReviewed": "True"
     }
 }
