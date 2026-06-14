@@ -455,9 +455,7 @@ class AppMainWindow(AppQMainWindow):
         self.searchLineEdit.returnPressed.connect(
             lambda: self.userServersQTableWidget.search(self.searchLineEdit.text())
         )
-        self.searchLineEdit.textChanged.connect(
-            self.handleUserServersSearchTextChanged
-        )
+        self.searchLineEdit.textChanged.connect(self.handleUserServersSearchTextChanged)
 
         self.setCentralWidget(self._widget)
 
