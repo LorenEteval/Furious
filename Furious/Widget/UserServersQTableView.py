@@ -46,7 +46,7 @@ import logging
 import icmplib
 import functools
 
-__all__ = ['UserServersQTableWidget']
+__all__ = ['UserServersQTableView']
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +137,7 @@ class SubscriptionManager(WebGETManager):
 
             parent = self.parent()
 
-            if isinstance(parent, UserServersQTableWidget):
+            if isinstance(parent, UserServersQTableView):
                 isConnected = APP().isSystemTrayConnected()
 
                 subsIndexes = list(
@@ -450,7 +450,7 @@ class TestDownloadSpeedWorker(WebGETManager):
         parent = self.parent()
 
         # parent must be properly set
-        assert isinstance(parent, UserServersQTableWidget)
+        assert isinstance(parent, UserServersQTableView)
 
         return parent.testDownloadSpeedMultiSema
 
@@ -1030,7 +1030,7 @@ _TRANSLATABLE_HEADERS = [
 ]
 
 
-class UserServersQTableWidget(Mixins.QTranslatable, AppQTableView):
+class UserServersQTableView(Mixins.QTranslatable, AppQTableView):
     Headers = [
         UserServersQTableViewHeaders('Remark'),
         UserServersQTableViewHeaders('Protocol'),

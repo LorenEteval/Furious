@@ -3,7 +3,7 @@ TRANSLATION = {
         "source": [
             "Furious.Qt.QtWidgets",
             "Furious.Widget.UserServersQTableView",
-            "Furious.Widget.UserSubsQTableWidget",
+            "Furious.Widget.UserSubsQTableView",
             "Furious.Widget.XrayAssetViewerQListWidget",
             "Furious.Window.UserSubsWindow"
         ],
@@ -441,7 +441,7 @@ TRANSLATION = {
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess",
             "Furious.Widget.UserServersQTableView",
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Примечание",
         "ZH": "别名",
@@ -1491,7 +1491,7 @@ TRANSLATION = {
     },
     "Auto Update": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Автообновление",
         "ZH": "自动更新",
@@ -1499,7 +1499,7 @@ TRANSLATION = {
     },
     "Auto Update Use Proxy": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Автообновление (используя прокси)",
         "ZH": "自动更新使用代理",
@@ -1507,7 +1507,7 @@ TRANSLATION = {
     },
     "Never": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Никогда",
         "ZH": "从不",
@@ -1515,7 +1515,7 @@ TRANSLATION = {
     },
     "Every 5 mins": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 5 минут",
         "ZH": "每5分钟",
@@ -1523,7 +1523,7 @@ TRANSLATION = {
     },
     "Every 10 mins": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 10 минут",
         "ZH": "每10分钟",
@@ -1531,7 +1531,7 @@ TRANSLATION = {
     },
     "Every 15 mins": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 15 минут",
         "ZH": "每15分钟",
@@ -1539,7 +1539,7 @@ TRANSLATION = {
     },
     "Every 30 mins": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 30 минут",
         "ZH": "每30分钟",
@@ -1547,7 +1547,7 @@ TRANSLATION = {
     },
     "Every 45 mins": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 45 минут",
         "ZH": "每45分钟",
@@ -1555,7 +1555,7 @@ TRANSLATION = {
     },
     "Every 1 hour": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждый 1 час",
         "ZH": "每1小时",
@@ -1563,7 +1563,7 @@ TRANSLATION = {
     },
     "Every 2 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 2 часа",
         "ZH": "每2小时",
@@ -1571,7 +1571,7 @@ TRANSLATION = {
     },
     "Every 3 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 3 часа",
         "ZH": "每3小时",
@@ -1579,7 +1579,7 @@ TRANSLATION = {
     },
     "Every 6 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 6 часов",
         "ZH": "每6小时",
@@ -1587,7 +1587,7 @@ TRANSLATION = {
     },
     "Every 8 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 8 часов",
         "ZH": "每8小时",
@@ -1595,7 +1595,7 @@ TRANSLATION = {
     },
     "Every 10 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 10 часов",
         "ZH": "每10小时",
@@ -1603,7 +1603,7 @@ TRANSLATION = {
     },
     "Every 12 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 12 часов",
         "ZH": "每12小时",
@@ -1611,7 +1611,7 @@ TRANSLATION = {
     },
     "Every 24 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Каждые 24 часа",
         "ZH": "每24小时",
@@ -1619,7 +1619,7 @@ TRANSLATION = {
     },
     "Use current proxy": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Использовать текущий прокси-сервер",
         "ZH": "使用当前代理",
@@ -1627,7 +1627,7 @@ TRANSLATION = {
     },
     "Force proxy": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Обязательно через прокси-сервер",
         "ZH": "强制代理",
@@ -1635,7 +1635,7 @@ TRANSLATION = {
     },
     "No proxy": {
         "source": [
-            "Furious.Widget.UserSubsQTableWidget"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Не использовать прокси",
         "ZH": "无代理",
