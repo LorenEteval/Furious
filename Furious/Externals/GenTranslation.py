@@ -1851,12 +1851,12 @@ TRANSLATION = {
         "ZH": "激活选定的服务器",
         "isReviewed": "True"
     },
-    "Search servers, e.g. vmess|trojan": {
+    "Search servers with text or regex, e.g. trojan, hk|jp, ^vmess, (us|sg).*tls": {
         "source": [
             "Furious.Window.AppMainWindow"
         ],
-        "RU": "Поиск серверов, например: vmess|trojan",
-        "ZH": "查找服务器，例如 vmess|trojan",
+        "RU": "Поиск серверов по тексту или регулярному выражению, например: trojan, hk|jp, ^vmess, (us|sg).*tls",
+        "ZH": "使用文本或正则表达式搜索服务器，例如：trojan、hk|jp、^vmess、(us|sg).*tls",
         "isReviewed": "True"
     },
     "Search": {
