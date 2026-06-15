@@ -318,6 +318,14 @@ class CoreManager(Mixins.CleanupOnExit):
         else:
             configcopy = config
 
+        def abortStart(message: str = ''):
+            if message:
+                logger.error(message)
+
+            self.stopAll()
+
+            return False
+
         process, success = self._startCore(
             configcopy,
             routing,
@@ -335,7 +343,9 @@ class CoreManager(Mixins.CleanupOnExit):
             if isinstance(process, CoreProcessWorker):
                 logger.error(f'core {process.name()} start failed')
 
-            return success
+            self.stopAll()
+
+            return False
 
         # TUN Mode handling
         if not proxyModeOnly and SystemRuntime.isTUNMode():
@@ -376,9 +386,7 @@ class CoreManager(Mixins.CleanupOnExit):
                     )
 
                 if len(defaultGateway) != 1:
-                    logger.error(f'bad default gateway: {defaultGateway}')
-
-                    return False
+                    return abortStart(f'bad default gateway: {defaultGateway}')
 
                 if PLATFORM == 'Windows' or PLATFORM == 'Linux':
                     # On Linux the 'interface' is a name
@@ -386,9 +394,7 @@ class CoreManager(Mixins.CleanupOnExit):
                 elif PLATFORM == 'Darwin':
                     gateway, interface = defaultGateway[0], None
                 else:
-                    logger.error(f'unrecognized platform: {PLATFORM}')
-
-                    return False
+                    return abortStart(f'unrecognized platform: {PLATFORM}')
 
             tun = Tun2socks(exitCallback=exitCallback, msgCallback=msgCallbackTUN_)
             self.processesPool.append(tun)
@@ -440,7 +446,7 @@ class CoreManager(Mixins.CleanupOnExit):
             if PLATFORM != 'Linux':
                 # Windows & macOS: bring up TUN first
                 if not startTUN():
-                    return False
+                    return abortStart(f'core {Tun2socks.name()} start failed')
 
             # Handle user defined settings
             bypassTUN = userBypassTUNAdapterInterfaceIP()
@@ -457,7 +463,7 @@ class CoreManager(Mixins.CleanupOnExit):
 
                     SystemRoutingTable.Relations.clear()
 
-                    return False
+                    return abortStart()
                 else:
                     for bypass in bypassSplit:
                         if isValidIPAddress(bypass):
@@ -472,7 +478,7 @@ class CoreManager(Mixins.CleanupOnExit):
 
                             SystemRoutingTable.Relations.clear()
 
-                            return False
+                            return abortStart()
             else:
                 logger.info(
                     f'automatically fetching TUN settings: '
@@ -487,11 +493,9 @@ class CoreManager(Mixins.CleanupOnExit):
                     error, resolved = DNSResolver.resolve(address)
 
                     if error:
-                        logger.error(f'DNS resolution failed: {address}')
-
                         SystemRoutingTable.Relations.clear()
 
-                        return False
+                        return abortStart(f'DNS resolution failed: {address}')
                     else:
                         for address in resolved:
                             SystemRoutingTable.Relations.append([address, gateway])
@@ -504,7 +508,7 @@ class CoreManager(Mixins.CleanupOnExit):
                     SystemRoutingTable.WIN32IpconfigFindContent,
                     APPLICATION_TUN_DEVICE_NAME,
                 ):
-                    return False
+                    return abortStart()
 
                 # Handle user defined settings
                 userInterfaceName = userPrimaryAdapterInterfaceName()
@@ -675,17 +679,17 @@ class CoreManager(Mixins.CleanupOnExit):
                     if not SystemRoutingTable.LinuxExecutePrivilegedScript(
                         file.name, shell='bash'
                     ):
-                        return False
+                        return abortStart()
 
                     if not self.waitForTUNDeviceBroughtUp(
                         SystemRoutingTable.LinuxFindTUNDevice,
                         APPLICATION_TUN_DEVICE_NAME,
                     ):
-                        return False
+                        return abortStart()
 
                 # Now bring up TUN
                 if not startTUN():
-                    return False
+                    return abortStart(f'core {Tun2socks.name()} start failed')
 
         return True
 
@@ -696,11 +700,16 @@ class CoreManager(Mixins.CleanupOnExit):
         return any(process.isAlive() for process in self.processesPool)
 
     def stopAll(self):
-        if self.processesPool:
-            for process in self.processesPool:
-                if isinstance(process, CoreProcessFactory):
-                    process.stop()
+        try:
+            for process in list(self.processesPool):
+                if not isinstance(process, CoreProcessFactory):
+                    continue
 
+                try:
+                    process.stop()
+                except Exception as ex:
+                    logger.error(f'error stopping core process: {ex}')
+        finally:
             self.processesPool.clear()
 
     def cleanup(self):

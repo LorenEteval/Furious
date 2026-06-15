@@ -75,7 +75,7 @@ class Tun2socks(CoreProcessWorker):
 
             return '0.0.0'
 
-    def start(
+    def launchSpec(
         self,
         device: str,
         networkInterface: str,
@@ -86,8 +86,8 @@ class Tun2socks(CoreProcessWorker):
         tcpReceiveBufferSize: str = '',
         tcpAutoTuning: bool = False,
         **kwargs,
-    ) -> bool:
-        return super().start(
+    ) -> CoreLaunchSpec:
+        return CoreLaunchSpec(
             target=startTun2socks,
             args=(
                 self.msgQueue,
@@ -100,8 +100,34 @@ class Tun2socks(CoreProcessWorker):
                 tcpReceiveBufferSize,
                 tcpAutoTuning,
             ),
+            processKwargs=kwargs,
+        )
+
+    def start(
+        self,
+        device: str,
+        networkInterface: str,
+        logLevel: str,
+        proxy: str,
+        restAPI: str,
+        tcpSendBufferSize: str = '',
+        tcpReceiveBufferSize: str = '',
+        tcpAutoTuning: bool = False,
+        **kwargs,
+    ) -> bool:
+        launchSpec = self.launchSpec(
+            device,
+            networkInterface,
+            logLevel,
+            proxy,
+            restAPI,
+            tcpSendBufferSize,
+            tcpReceiveBufferSize,
+            tcpAutoTuning,
             **kwargs,
         )
+
+        return self.startWithSpec(launchSpec)
 
     def stop(self):
         if PLATFORM == 'Linux':

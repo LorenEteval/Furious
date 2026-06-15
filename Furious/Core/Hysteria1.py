@@ -64,16 +64,16 @@ class Hysteria1(CoreProcessWorker):
         super().__init__(**kwargs)
 
     @staticmethod
-    def rule(rulePath):
-        if isinstance(rulePath, str) and rulePath == '':
+    def loadOptionalFile(pathLike, fileType: str):
+        if isinstance(pathLike, str) and pathLike == '':
             return ''
 
         try:
-            path = absolutePath(str(rulePath))
+            path = absolutePath(str(pathLike))
         except Exception:
             # Any non-exit exceptions
 
-            logger.error('invalid hysteria1 rule path. Fall back to empty')
+            logger.error(f'invalid hysteria1 {fileType} path. Fall back to empty')
 
             return ''
 
@@ -81,47 +81,26 @@ class Hysteria1(CoreProcessWorker):
             with open(path, 'rb') as file:
                 data = file.read()
 
-            logger.info(f'hysteria1 rule \'{path}\' load success')
+            logger.info(f'hysteria1 {fileType} \'{path}\' load success')
 
             return data
         except Exception as ex:
             # Any non-exit exceptions
 
             logger.error(
-                f'hysteria1 rule \'{path}\' load failed. {ex}. Fall back to empty'
+                f'hysteria1 {fileType} \'{path}\' load failed. {ex}. '
+                f'Fall back to empty'
             )
 
             return ''
 
     @staticmethod
+    def rule(rulePath):
+        return Hysteria1.loadOptionalFile(rulePath, 'rule')
+
+    @staticmethod
     def mmdb(mmdbPath):
-        if isinstance(mmdbPath, str) and mmdbPath == '':
-            return ''
-
-        try:
-            path = absolutePath(str(mmdbPath))
-        except Exception:
-            # Any non-exit exceptions
-
-            logger.error('invalid hysteria1 mmdb path. Fall back to empty')
-
-            return ''
-
-        try:
-            with open(path, 'rb') as file:
-                data = file.read()
-
-            logger.info(f'hysteria1 mmdb \'{path}\' load success')
-
-            return data
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(
-                f'hysteria1 mmdb \'{path}\' load failed. {ex}. Fall back to empty'
-            )
-
-            return ''
+        return Hysteria1.loadOptionalFile(mmdbPath, 'mmdb')
 
     @staticmethod
     def name() -> str:
@@ -138,19 +117,29 @@ class Hysteria1(CoreProcessWorker):
 
             return '0.0.0'
 
-    def start(self, config: Union[str, dict], rule, mmdb, **kwargs) -> bool:
+    def launchSpec(
+        self, config: Union[str, dict], rule, mmdb, **kwargs
+    ) -> Union[CoreLaunchSpec, None]:
         param = self.toJSONString(config)
 
-        if param:
-            return super().start(
-                target=startHysteria1,
-                args=(
-                    param,
-                    rule,
-                    mmdb,
-                    self.msgQueue,
-                ),
-                **kwargs,
-            )
-        else:
+        if not param:
+            return None
+
+        return CoreLaunchSpec(
+            target=startHysteria1,
+            args=(
+                param,
+                rule,
+                mmdb,
+                self.msgQueue,
+            ),
+            processKwargs=kwargs,
+        )
+
+    def start(self, config: Union[str, dict], rule, mmdb, **kwargs) -> bool:
+        launchSpec = self.launchSpec(config, rule, mmdb, **kwargs)
+
+        if launchSpec is None:
             return False
+
+        return self.startWithSpec(launchSpec)
