@@ -17,6 +17,7 @@
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
+from Furious.Qt import AppStyleSheet
 from Furious.Qt import gettext as _
 from Furious.Library import *
 from Furious.Widget.SystemTrayIcon import *
@@ -35,7 +36,6 @@ import platform
 import threading
 import functools
 import traceback
-import qdarkstyle
 import darkdetect
 
 logger = logging.getLogger(__name__)
@@ -284,6 +284,17 @@ class Application(ApplicationFactory, SingletonApplication):
 
         return backgroudColor.lightness() < 128
 
+    def systemTheme(self):
+        try:
+            theme = darkdetect.theme()
+        except Exception:
+            theme = None
+
+        if theme in [AppStyleSheet.Dark, AppStyleSheet.Light]:
+            return theme
+
+        return AppStyleSheet.Dark if self.isDarkMode() else AppStyleSheet.Light
+
     def isDarkModeEnabled(self):
         # if SystemRuntime.flatpakID():
         #     return self.isDarkMode()
@@ -296,17 +307,35 @@ class Application(ApplicationFactory, SingletonApplication):
         return AppSettings.isStateON_('DarkMode')
 
     def theme(self):
-        return 'Dark' if self.isDarkMode() else 'Light'
+        if self.isDarkModeEnabled():
+            return AppStyleSheet.Dark
+
+        return self.systemTheme()
+
+    def applyStyleSheetForTheme(self, theme):
+        self.setStyleSheet(AppStyleSheet.forTheme(theme))
 
     def switchToDarkMode(self):
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyside6())
+        self.applyStyleSheetForTheme(AppStyleSheet.Dark)
 
-        Mixins.ThemeAware.callThemeChangedCallbackUnchecked('Dark')
+        Mixins.ThemeAware.callThemeChangedCallbackUnchecked(AppStyleSheet.Dark)
 
     def switchToAutoMode(self):
-        self.setStyleSheet('')
+        theme = self.systemTheme()
 
-        Mixins.ThemeAware.callThemeChangedCallbackUnchecked(self.theme())
+        self.applyStyleSheetForTheme(theme)
+
+        Mixins.ThemeAware.callThemeChangedCallbackUnchecked(theme)
+
+    @QtCore.Slot(str)
+    def handleSystemThemeChanged(self, theme):
+        if theme not in [AppStyleSheet.Dark, AppStyleSheet.Light]:
+            theme = self.systemTheme()
+
+        if not self.isDarkModeEnabled():
+            self.applyStyleSheetForTheme(theme)
+
+        Mixins.ThemeAware.callThemeChangedCallback(theme)
 
     @staticmethod
     @callOnceOnly
@@ -428,14 +457,14 @@ class Application(ApplicationFactory, SingletonApplication):
 
                 @QtCore.Slot()
                 def handleTimeout():
-                    currentTheme = self.theme()
+                    currentTheme = self.systemTheme()
 
                     if self.currentTheme != currentTheme:
                         self.currentTheme = currentTheme
 
-                        Mixins.ThemeAware.callThemeChangedCallback(currentTheme)
+                        self.handleSystemThemeChanged(currentTheme)
 
-                self.currentTheme = self.theme()
+                self.currentTheme = self.systemTheme()
                 self.themeDetectTimer = QtCore.QTimer()
                 self.themeDetectTimer.timeout.connect(handleTimeout)
                 self.themeDetectTimer.start(1000)
@@ -454,7 +483,7 @@ class Application(ApplicationFactory, SingletonApplication):
 
                 self.themeDetector = ApplicationThemeDetector()
                 self.themeDetector.themeChanged.connect(
-                    Mixins.ThemeAware.callThemeChangedCallback
+                    self.handleSystemThemeChanged
                 )
 
                 self.themeListenerThread = threading.Thread(
