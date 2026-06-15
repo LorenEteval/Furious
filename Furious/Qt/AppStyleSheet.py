@@ -23,6 +23,7 @@ __all__ = ['AppStyleSheet']
 class AppStyleSheet:
     Light = 'Light'
     Dark = 'Dark'
+    FontPointSize = 10
 
     Palettes = {
         Light: {
@@ -134,7 +135,8 @@ class AppStyleSheet:
             }}
 
             QMenuBar::item {{
-                padding: 6px 10px;
+                min-height: 24px;
+                padding: 9px 14px;
                 border-radius: 4px;
                 background: transparent;
             }}
@@ -146,7 +148,7 @@ class AppStyleSheet:
             }}
 
             QMenu {{
-                padding: 6px;
+                padding: 8px;
                 border: 1px solid {palette['border']};
                 border-radius: 6px;
                 background-color: {palette['panel']};
@@ -154,13 +156,14 @@ class AppStyleSheet:
 
             QMenu::separator {{
                 height: 1px;
-                margin: 5px 8px;
+                margin: 6px 8px;
                 background-color: {palette['border']};
             }}
 
             QMenu::item {{
-                min-width: 120px;
-                padding: 6px 24px 6px 12px;
+                min-width: 132px;
+                min-height: 18px;
+                padding: 9px 28px 9px 14px;
                 border-radius: 4px;
                 background-color: transparent;
             }}

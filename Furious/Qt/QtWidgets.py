@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Library import *
+from Furious.Qt.AppStyleSheet import *
 from Furious.Qt.DynamicTheme import *
 from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Qt.QtGui import *
@@ -370,7 +371,7 @@ class AppQMainWindow(
         pass
 
 
-class AppQMenu(Mixins.QTranslatable, Mixins.ConnectionAware, QMenu):
+class AppQMenu(Mixins.QTranslatable, QMenu):
     def __init__(self, *actions, **kwargs):
         super().__init__(**kwargs)
 
@@ -390,67 +391,13 @@ class AppQMenu(Mixins.QTranslatable, Mixins.ConnectionAware, QMenu):
                 # Do nothing
                 pass
 
-        self.setStyleSheet(self.getStyleSheet(AppHue.currentColor()))
-
-    @staticmethod
-    def getStyleSheet(color):
-        return (
-            f'QMenu {{'
-            f'    padding: 6px;'
-            f'}}'
-            f''
-            f'QMenu::item {{'
-            f'    padding: 6px 12px;'
-            # f'    background-color: solid;'
-            f'}}'
-            # f''
-            # f'QMenu::item:selected {{'
-            # f'    background-color: {color};'
-            # f'}}'
-        )
-
     def retranslate(self):
         self.setTitle(_(self.title()))
 
-    def disconnectedCallback(self):
-        # self.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
 
-        pass
-
-    def connectedCallback(self):
-        # self.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
-
-        pass
-
-
-class AppQMenuBar(Mixins.ConnectionAware, QMenuBar):
+class AppQMenuBar(QMenuBar):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.setSelectionColor(AppHue.currentColor())
-
-    @staticmethod
-    def getStyleSheet(color):
-        return (
-            f'QMenuBar::item:selected {{'
-            f'    background: {color};'
-            f'}}'
-            f''
-            f'QMenuBar::item:hover {{'
-            f'    background: {color};'
-            f'}}'
-        )
-
-    def setSelectionColor(self, color):
-        # self.setStyleSheet(self.getStyleSheet(color))
-
-        pass
-
-    def disconnectedCallback(self):
-        self.setSelectionColor(AppHue.disconnectedColor())
-
-    def connectedCallback(self):
-        self.setSelectionColor(AppHue.connectedColor())
 
 
 class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):

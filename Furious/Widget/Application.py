@@ -255,6 +255,12 @@ class Application(ApplicationFactory, SingletonApplication):
             # Delayed
             self.customFontLoadMsg = f'custom font {fontName} load failed'
 
+    def configureApplicationFont(self):
+        font = self.font()
+        font.setPointSize(AppStyleSheet.FontPointSize)
+
+        self.setFont(font)
+
     @staticmethod
     def addEnviron():
         # Xray environment variables
@@ -284,14 +290,16 @@ class Application(ApplicationFactory, SingletonApplication):
 
         return backgroudColor.lightness() < 128
 
-    def systemTheme(self):
+    def systemTheme(self) -> str:
         try:
             theme = darkdetect.theme()
-        except Exception:
-            theme = None
 
-        if theme in [AppStyleSheet.Dark, AppStyleSheet.Light]:
-            return theme
+            if theme in [AppStyleSheet.Dark, AppStyleSheet.Light]:
+                return theme
+        except Exception:
+            # Any non-exit exceptions
+
+            logger.error('darkdetect.theme() is not implemented on this platform')
 
         return AppStyleSheet.Dark if self.isDarkMode() else AppStyleSheet.Light
 
@@ -414,6 +422,7 @@ class Application(ApplicationFactory, SingletonApplication):
             self.addEnviron()
             self.addStorage()
             self.addCustomFont()
+            # self.configureApplicationFont()
             self.configureLogging()
 
             logger.info(f'application version: {APPLICATION_VERSION}')
@@ -482,9 +491,7 @@ class Application(ApplicationFactory, SingletonApplication):
                         )
 
                 self.themeDetector = ApplicationThemeDetector()
-                self.themeDetector.themeChanged.connect(
-                    self.handleSystemThemeChanged
-                )
+                self.themeDetector.themeChanged.connect(self.handleSystemThemeChanged)
 
                 self.themeListenerThread = threading.Thread(
                     target=listener,
