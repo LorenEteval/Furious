@@ -141,17 +141,27 @@ class XrayCore(CoreProcessWorker):
 
             return '0.0.0'
 
-    def start(self, config: Union[str, ConfigFactory, dict], **kwargs) -> bool:
+    def launchSpec(
+        self, config: Union[str, ConfigFactory, dict], **kwargs
+    ) -> Union[CoreLaunchSpec, None]:
         param = self.toJSONString(config)
 
-        if param:
-            return super().start(
-                target=startXrayCore,
-                args=(
-                    param,
-                    self.msgQueue,
-                ),
-                **kwargs,
-            )
-        else:
+        if not param:
+            return None
+
+        return CoreLaunchSpec(
+            target=startXrayCore,
+            args=(
+                param,
+                self.msgQueue,
+            ),
+            processKwargs=kwargs,
+        )
+
+    def start(self, config: Union[str, ConfigFactory, dict], **kwargs) -> bool:
+        launchSpec = self.launchSpec(config, **kwargs)
+
+        if launchSpec is None:
             return False
+
+        return self.startWithSpec(launchSpec)

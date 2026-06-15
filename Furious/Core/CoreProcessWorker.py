@@ -23,7 +23,9 @@ from Furious.Interface import *
 from PySide6 import QtCore
 
 from abc import ABC
-from typing import Callable, Union
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Callable, Dict, Tuple, Union
 
 import os
 import sys
@@ -34,9 +36,71 @@ import threading
 import multiprocessing
 import multiprocessing.queues
 
-__all__ = ['MsgQueue', 'CoreProcessWorker', 'ProcessOutputRedirector']
+__all__ = [
+    'MsgQueue',
+    'CoreLaunchSpec',
+    'CoreProcessState',
+    'CoreProcessMonitor',
+    'CoreProcessWorker',
+    'ProcessOutputRedirector',
+]
 
 logger = logging.getLogger(__name__)
+
+
+class CoreProcessState(Enum):
+    Idle = 'idle'
+    Starting = 'starting'
+    Running = 'running'
+    Stopping = 'stopping'
+    Exited = 'exited'
+    Failed = 'failed'
+
+
+@dataclass
+class CoreLaunchSpec:
+    target: Callable
+    args: Tuple[Any, ...] = field(default_factory=tuple)
+    processKwargs: Dict[str, Any] = field(default_factory=dict)
+    daemon: bool = True
+    waitCore: bool = True
+    waitTime: int = 2500
+
+    def __post_init__(self):
+        self.args = tuple(self.args)
+        self.processKwargs = dict(self.processKwargs)
+
+        self.daemon = self.processKwargs.pop('daemon', self.daemon)
+        self.waitCore = self.processKwargs.pop('waitCore', self.waitCore)
+        self.waitTime = self.processKwargs.pop('waitTime', self.waitTime)
+
+    @classmethod
+    def fromProcessKwargs(cls, **kwargs):
+        daemon = kwargs.pop('daemon', True)
+        waitCore = kwargs.pop('waitCore', True)
+        waitTime = kwargs.pop('waitTime', 2500)
+        target = kwargs.pop('target', None)
+        args = kwargs.pop('args', tuple())
+
+        return cls(
+            target=target,
+            args=args,
+            processKwargs=kwargs,
+            daemon=daemon,
+            waitCore=waitCore,
+            waitTime=waitTime,
+        )
+
+    def toProcessKwargs(self):
+        kwargs = dict(self.processKwargs)
+        kwargs.update(
+            {
+                'target': self.target,
+                'args': tuple(self.args),
+            }
+        )
+
+        return kwargs
 
 
 class MsgQueue(multiprocessing.queues.Queue):
@@ -122,12 +186,16 @@ class MsgQueue(multiprocessing.queues.Queue):
 
 
 class CoreProcessMonitor(CoreProcessFactory, ABC):
+    StopJoinTimeout = 3
+
     def __init__(self, **kwargs):
         exitCallback = kwargs.pop('exitCallback', None)
 
         super().__init__(exitCallback)
 
         self._process = None
+        self._state = CoreProcessState.Idle
+        self._lastExitCode = None
 
         self._daemon = QtCore.QTimer()
         self._daemon.timeout.connect(self.queryIsAlive)
@@ -144,6 +212,20 @@ class CoreProcessMonitor(CoreProcessFactory, ABC):
     def daemon(self) -> QtCore.QTimer:
         return self._daemon
 
+    @property
+    def state(self) -> CoreProcessState:
+        return self._state
+
+    def setState(self, state: CoreProcessState):
+        self._state = state
+
+    @property
+    def lastExitCode(self):
+        return self._lastExitCode
+
+    def setLastExitCode(self, exitCode):
+        self._lastExitCode = exitCode
+
     def isAlive(self) -> bool:
         if isinstance(self.process, multiprocessing.Process):
             return self.process.is_alive()
@@ -155,14 +237,24 @@ class CoreProcessMonitor(CoreProcessFactory, ABC):
             if self.process.is_alive():
                 return True
             else:
-                self.handleInteralProcessStopped()
+                self.handleInternalProcessStopped()
 
                 return False
         else:
             return False
 
-    def handleInteralProcessStopped(self, *args, **kwargs):
+    def handleInternalProcessStopped(self, *args, **kwargs):
         raise NotImplementedError
+
+    def closeProcess(self):
+        if isinstance(self.process, multiprocessing.Process):
+            try:
+                self.process.close()
+            except Exception:
+                # close() can fail if the process handle is still considered active.
+                pass
+
+        self.process = None
 
 
 class CoreProcessWorker(CoreProcessMonitor, ABC):
@@ -177,37 +269,73 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
             msgCallback=msgCallback, backgroundOptimizer=backgroundOptimizer
         )
 
-    def handleInteralProcessStopped(self):
-        logger.error(
-            f'{self.name()} stopped unexpectedly with exitcode {self.process.exitcode}'
-        )
+    def handleInternalProcessStopped(self):
+        exitcode = self.process.exitcode
+
+        logger.error(f'{self.name()} stopped unexpectedly with exitcode {exitcode}')
 
         self.msgQueue.stopTimer()
         self.daemon.stop()
 
-        self.callExitCallback(self.process.exitcode)
+        self.setLastExitCode(exitcode)
+        self.setState(CoreProcessState.Failed)
+        self.callExitCallback(exitcode)
 
         # Reset internal process
-        self.process = None
+        self.closeProcess()
 
     def start(self, **kwargs) -> bool:
-        daemon = kwargs.pop('daemon', True)
-        waitCore = kwargs.pop('waitCore', True)
-        waitTime = kwargs.pop('waitTime', 2500)
+        return self.startWithSpec(CoreLaunchSpec.fromProcessKwargs(**kwargs))
 
-        self.process = multiprocessing.Process(**kwargs, daemon=daemon)
-        self.process.start()
+    def startWithSpec(self, launchSpec: CoreLaunchSpec) -> bool:
+        if not isinstance(launchSpec, CoreLaunchSpec):
+            logger.error(f'invalid launch spec for {self.name()}: {launchSpec}')
+
+            self.setState(CoreProcessState.Failed)
+
+            return False
+
+        if not callable(launchSpec.target):
+            logger.error(
+                f'invalid launch target for {self.name()}: {launchSpec.target}'
+            )
+
+            self.setState(CoreProcessState.Failed)
+
+            return False
+
+        if self.isAlive():
+            logger.warning(f'{self.name()} is already running. Stop it before restart')
+
+            self.stop()
+
+        self.setState(CoreProcessState.Starting)
+
+        try:
+            self.process = multiprocessing.Process(
+                **launchSpec.toProcessKwargs(), daemon=launchSpec.daemon
+            )
+            self.process.start()
+        except Exception as ex:
+            logger.error(f'{self.name()} start failed: {ex}')
+
+            self.setState(CoreProcessState.Failed)
+            self.closeProcess()
+
+            return False
 
         logger.info(f'{self.name()} {self.version()} started')
 
         self.msgQueue.setTimeout(MsgQueue.MSG_PRODUCE_THRESHOLD)
         self.msgQueue.startTimer()
 
-        if waitCore:
+        if launchSpec.waitCore:
             # Wait for the core to start up completely
-            PySide6Legacy.eventLoopWait(waitTime)
+            PySide6Legacy.eventLoopWait(launchSpec.waitTime)
 
         if self.queryIsAlive():
+            self.setState(CoreProcessState.Running)
+
             # Start core daemon
             self.daemon.start(CORE_CHECK_ALIVE_INTERVAL)
 
@@ -216,19 +344,34 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
             return False
 
     def stop(self):
-        if self.isAlive():
-            self.msgQueue.stopTimer()
-            self.daemon.stop()
+        self.msgQueue.stopTimer()
+        self.daemon.stop()
 
+        if not isinstance(self.process, multiprocessing.Process):
+            return
+
+        self.setState(CoreProcessState.Stopping)
+
+        if self.process.is_alive():
             self.process.terminate()
-            self.process.join()
+            self.process.join(CoreProcessMonitor.StopJoinTimeout)
 
-            logger.info(
-                f'{self.name()} terminated with exitcode {self.process.exitcode}'
-            )
-        else:
-            # Do nothing
-            pass
+            if self.process.is_alive():
+                logger.warning(
+                    f'{self.name()} did not terminate in '
+                    f'{CoreProcessMonitor.StopJoinTimeout}s. Kill it'
+                )
+
+                self.process.kill()
+                self.process.join(CoreProcessMonitor.StopJoinTimeout)
+
+        exitcode = self.process.exitcode
+
+        logger.info(f'{self.name()} terminated with exitcode {exitcode}')
+
+        self.setLastExitCode(exitcode)
+        self.setState(CoreProcessState.Exited)
+        self.closeProcess()
 
 
 class ProcessOutputRedirector:
