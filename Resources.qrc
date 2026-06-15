@@ -44,6 +44,7 @@
         <file alias="tools.svg">Icons/bootstrap/tools.svg</file>
         <file alias="unlock-fill.svg">Icons/bootstrap/unlock-fill.svg</file>
         <file alias="wifi.svg">Icons/bootstrap/wifi.svg</file>
+        <file alias="wifi-off.svg">Icons/bootstrap/wifi-off.svg</file>
     </qresource>
     <qresource prefix="Icons/bootstrap/white">
         <file alias="arrow-clockwise.svg">Icons/bootstrap/white/arrow-clockwise.svg</file>
@@ -83,5 +84,6 @@
         <file alias="tools.svg">Icons/bootstrap/white/tools.svg</file>
         <file alias="unlock-fill.svg">Icons/bootstrap/white/unlock-fill.svg</file>
         <file alias="wifi.svg">Icons/bootstrap/white/wifi.svg</file>
+        <file alias="wifi-off.svg">Icons/bootstrap/white/wifi-off.svg</file>
     </qresource>
 </RCC>
