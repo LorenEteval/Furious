@@ -118,6 +118,3 @@ NETWORK_CONNECTIVITY_TEST_URL = 'http://cp.cloudflare.com'
 NETWORK_SPEED_TEST_URL = (
     f'http://speed.cloudflare.com/__down?during=download&bytes={95 * 1024 * 1024}'
 )
-
-UNICODE_LARGE_RED_CIRCLE = '\U0001f534'
-UNICODE_LARGE_GREEN_CIRCLE = '\U0001f7e2'

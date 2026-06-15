@@ -47,6 +47,9 @@ class AppStyleSheet:
             'input': '#FFFFFF',
             'input_focus': '#F7FBFF',
             'danger': '#D9514E',
+            'danger_soft': '#FDECEC',
+            'success': '#2F817D',
+            'success_soft': '#DDF1EF',
             'scroll_handle': '#B4C0CC',
             'scroll_handle_hover': '#96A5B4',
         },
@@ -69,6 +72,9 @@ class AppStyleSheet:
             'input': '#232427',
             'input_focus': '#282D2F',
             'danger': '#F07178',
+            'danger_soft': '#4A2528',
+            'success': '#4FB6B2',
+            'success_soft': '#1F3A3A',
             'scroll_handle': '#5B6067',
             'scroll_handle_hover': '#70767F',
         },
@@ -470,6 +476,27 @@ class AppStyleSheet:
             QStatusBar {{
                 border-top: 1px solid {palette['border']};
                 background-color: {palette['panel']};
+            }}
+
+            QLabel#NetworkStateLabel {{
+                min-height: 22px;
+                padding: 3px 10px;
+                border: 1px solid {palette['border']};
+                border-radius: 5px;
+                background-color: {palette['raised']};
+                color: {palette['muted']};
+            }}
+
+            QLabel#NetworkStateLabel[networkState="success"] {{
+                border-left: 4px solid {palette['success']};
+                background-color: {palette['success_soft']};
+                color: {palette['text']};
+            }}
+
+            QLabel#NetworkStateLabel[networkState="failure"] {{
+                border-left: 4px solid {palette['danger']};
+                background-color: {palette['danger_soft']};
+                color: {palette['text']};
             }}
 
             QSplitter::handle {{
