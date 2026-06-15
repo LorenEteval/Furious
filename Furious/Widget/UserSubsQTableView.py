@@ -241,6 +241,8 @@ _TRANSLATABLE_HEADERS = [
 
 
 class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
+    RowHeight = 42
+
     AutoUpdateOptions = {
         '': None,
         'Never': None,
@@ -299,6 +301,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
             )
         )
         self.setVerticalHeader(UserSubsQTableViewVerticalHeader(self))
+        self.setDefaultRowHeight(self.RowHeight)
 
         self.horizontalHeader().setCustomSectionResizeMode()
         self.horizontalHeader().restoreSectionSize()

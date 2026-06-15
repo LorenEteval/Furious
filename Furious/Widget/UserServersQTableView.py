@@ -1031,6 +1031,8 @@ _TRANSLATABLE_HEADERS = [
 
 
 class UserServersQTableView(Mixins.QTranslatable, AppQTableView):
+    RowHeight = 42
+
     Headers = [
         UserServersQTableViewHeaders('Remark'),
         UserServersQTableViewHeaders('Protocol'),
@@ -1078,6 +1080,7 @@ class UserServersQTableView(Mixins.QTranslatable, AppQTableView):
             )
         )
         self.setVerticalHeader(UserServersQTableViewVerticalHeader(self))
+        self.setDefaultRowHeight(self.RowHeight)
 
         self.horizontalHeader().setCustomSectionResizeMode()
         self.horizontalHeader().restoreSectionSize()

@@ -517,6 +517,10 @@ class AppQTableView(Mixins.ConnectionAware, QTableView):
         self.setWordWrap(False)
         self.setAlternatingRowColors(True)
 
+    def setDefaultRowHeight(self, height: int):
+        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+        self.verticalHeader().setDefaultSectionSize(height)
+
     @staticmethod
     def getStyleSheet(color):
         return f'QTableView {{ selection-background-color: {color}; }}'
