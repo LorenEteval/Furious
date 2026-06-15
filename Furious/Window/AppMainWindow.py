@@ -99,6 +99,114 @@ class AppNetworkConnectivityManager(NetworkConnectivityManager):
         super().disconnectedCallback()
 
 
+class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
+    DefaultIconFileName = 'wifi.svg'
+    StateIconFileName = {
+        'success': 'wifi.svg',
+        'failure': 'wifi-off.svg',
+    }
+    IconSize = QtCore.QSize(16, 16)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.currentIconFileName = self.DefaultIconFileName
+        self.currentState = ''
+        self.currentRemark = ''
+        self.currentErrorString = ''
+
+        self.setObjectName('NetworkStateBadge')
+        self.setProperty('networkState', '')
+        self.setVisible(False)
+
+        self.iconLabel = QLabel(parent=self)
+        self.textLabel = AppQLabel(translatable=False, parent=self)
+
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(10, 3, 10, 3)
+        self._layout.setSpacing(7)
+        self._layout.addWidget(self.iconLabel)
+        self._layout.addWidget(self.textLabel)
+
+        self.setIconByTheme(APP().theme())
+
+    def setIconByTheme(self, theme: str, iconFileName: Union[str, None] = None):
+        iconFileName = iconFileName or self.currentIconFileName
+
+        if theme == AppStyleSheet.Dark:
+            icon = bootstrapIconWhite(iconFileName)
+        else:
+            icon = bootstrapIcon(iconFileName)
+
+        self.iconLabel.setPixmap(icon.pixmap(self.IconSize))
+
+    def statusText(self):
+        if self.currentState == 'success':
+            return f'{_("Network OK")} - {self.currentRemark}'
+
+        if self.currentState == 'failure':
+            return f'{_("Network error")} - {self.currentRemark}'
+
+        return ''
+
+    def statusToolTip(self):
+        if self.currentState == 'success':
+            return self.currentRemark
+
+        if self.currentState == 'failure':
+            return f'{self.currentRemark}\n{self.currentErrorString}'.strip()
+
+        return ''
+
+    def updateStatusText(self):
+        text = self.statusText()
+        tooltip = self.statusToolTip()
+
+        self.textLabel.setText(text)
+        self.setToolTip(tooltip)
+        self.iconLabel.setToolTip(tooltip)
+        self.textLabel.setToolTip(tooltip)
+
+    def setStatus(self, state: str, remark: str, errorString: str = ''):
+        self.currentState = state
+        self.currentRemark = remark
+        self.currentErrorString = errorString
+
+        self.updateStatusText()
+        self.setProperty('networkState', state)
+        self.currentIconFileName = self.StateIconFileName.get(
+            state, self.DefaultIconFileName
+        )
+        self.setIconByTheme(APP().theme())
+        self.refreshStyle()
+
+    def clearStatus(self):
+        self.currentState = ''
+        self.currentRemark = ''
+        self.currentErrorString = ''
+
+        self.updateStatusText()
+        self.setProperty('networkState', '')
+        self.currentIconFileName = self.DefaultIconFileName
+        self.setIconByTheme(APP().theme())
+        self.setVisible(False)
+        self.refreshStyle()
+
+    def refreshStyle(self):
+        for widget in [self, self.iconLabel, self.textLabel]:
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+            widget.update()
+
+        self.setVisible(bool(self.textLabel.text()))
+
+    def themeChangedCallback(self, theme: str):
+        self.setIconByTheme(theme)
+
+    def retranslate(self):
+        self.updateStatusText()
+
+
 class AppMainWindow(AppQMainWindow):
     DEFAULT_WINDOW_SIZE_DARWIN = QtCore.QSize(1500, 780)
     DEFAULT_WINDOW_SIZE = (
@@ -434,9 +542,7 @@ class AppMainWindow(AppQMainWindow):
         # TODO: Custom status tip
         # self.setStatusBar(QStatusBar(self))
 
-        self.networkState = AppQLabel(translatable=False)
-        self.networkState.setObjectName('NetworkStateLabel')
-        self.networkState.setVisible(False)
+        self.networkState = NetworkStateBadge(parent=self)
 
         self.statusBar().addPermanentWidget(self.networkState)
 
@@ -502,12 +608,7 @@ class AppMainWindow(AppQMainWindow):
         self.updatesManager.checkForUpdates(**kwargs)
 
     def resetNetworkState(self):
-        self.networkState.setText('')
-        self.networkState.setToolTip('')
-        self.networkState.setProperty('networkState', '')
-        self.networkState.setVisible(False)
-
-        self.refreshNetworkStateStyle()
+        self.networkState.clearStatus()
 
     def setNetworkState(self, success: bool, **kwargs):
         remark = Storage.Extras.UserServerRemark()
@@ -518,26 +619,20 @@ class AppMainWindow(AppQMainWindow):
             return
 
         if success:
-            self.networkState.setText(f'{_("Network OK")} - {remark}')
-            self.networkState.setToolTip(remark)
-            self.networkState.setProperty('networkState', 'success')
-
-            self.refreshNetworkStateStyle()
+            self.networkState.setStatus(
+                'success',
+                remark,
+            )
 
             return
 
         errorString = kwargs.pop('errorString', '')
 
-        self.networkState.setText(f'{_("Network error")} - {remark}')
-        self.networkState.setToolTip(f'{remark}\n{errorString}'.strip())
-        self.networkState.setProperty('networkState', 'failure')
-
-        self.refreshNetworkStateStyle()
-
-    def refreshNetworkStateStyle(self):
-        self.networkState.style().unpolish(self.networkState)
-        self.networkState.style().polish(self.networkState)
-        self.networkState.setVisible(bool(self.networkState.text()))
+        self.networkState.setStatus(
+            'failure',
+            remark,
+            errorString,
+        )
 
     @staticmethod
     def openApplicationFolder():
