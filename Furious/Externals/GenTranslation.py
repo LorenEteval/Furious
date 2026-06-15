@@ -1866,5 +1866,21 @@ TRANSLATION = {
         "RU": "Поиск",
         "ZH": "查找",
         "isReviewed": "True"
+    },
+    "Network OK": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Сеть работает",
+        "ZH": "网络正常",
+        "isReviewed": "True"
+    },
+    "Network error": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Ошибка сети",
+        "ZH": "网络异常",
+        "isReviewed": "True"
     }
 }

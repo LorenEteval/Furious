@@ -478,25 +478,39 @@ class AppStyleSheet:
                 background-color: {palette['panel']};
             }}
 
-            QLabel#NetworkStateLabel {{
+            QWidget#NetworkStateBadge {{
                 min-height: 22px;
-                padding: 3px 10px;
                 border: 1px solid {palette['border']};
                 border-radius: 5px;
                 background-color: {palette['raised']};
                 color: {palette['muted']};
             }}
 
-            QLabel#NetworkStateLabel[networkState="success"] {{
+            QWidget#NetworkStateBadge QLabel {{
+                border: 0;
+                padding: 0;
+                background-color: transparent;
+                color: {palette['muted']};
+            }}
+
+            QWidget#NetworkStateBadge[networkState="success"] {{
                 border-left: 4px solid {palette['success']};
                 background-color: {palette['success_soft']};
                 color: {palette['text']};
             }}
 
-            QLabel#NetworkStateLabel[networkState="failure"] {{
+            QWidget#NetworkStateBadge[networkState="success"] QLabel {{
+                color: {palette['text']};
+            }}
+
+            QWidget#NetworkStateBadge[networkState="failure"] {{
                 border-left: 4px solid {palette['danger']};
                 background-color: {palette['danger_soft']};
                 color: {palette['text']};
+            }}
+
+            QWidget#NetworkStateBadge[networkState="failure"] QLabel {{
+                color: {palette['danger']};
             }}
 
             QSplitter::handle {{
