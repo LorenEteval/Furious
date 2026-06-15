@@ -179,7 +179,7 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
         self.sectionSizeTable = {}
 
         self.setSectionsClickable(True)
-        self.setStyleSheet(self.getStyleSheet(AppHue.currentColor()))
+        # self.setStyleSheet(self.getStyleSheet(AppHue.currentColor()))
         self.setFont(QFont(AppFontName()))
 
         # self.sectionResized.connect(self.handleSectionResized)
@@ -240,10 +240,14 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
         return f'QHeaderView::section:hover {{ background-color: {color}; }}'
 
     def disconnectedCallback(self):
-        self.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
+        # self.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
+
+        pass
 
     def connectedCallback(self):
-        self.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
+        # self.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
+
+        pass
 
     # Legacy method. Not used
     # @QtCore.Slot(int, int, int)
@@ -286,7 +290,7 @@ class AppQListWidget(Mixins.ConnectionAware, QListWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setSelectionColor(AppHue.disconnectedColor())
+        # self.setSelectionColor(AppHue.disconnectedColor())
 
     def setSelectionColor(self, color):
         self.setStyleSheet(
@@ -304,10 +308,14 @@ class AppQListWidget(Mixins.ConnectionAware, QListWidget):
         return sorted(list(set(index.row() for index in self.selectedIndexes())))
 
     def disconnectedCallback(self):
-        self.setSelectionColor(AppHue.disconnectedColor())
+        # self.setSelectionColor(AppHue.disconnectedColor())
+
+        pass
 
     def connectedCallback(self):
-        self.setSelectionColor(AppHue.connectedColor())
+        # self.setSelectionColor(AppHue.connectedColor())
+
+        pass
 
 
 class AppQMainWindow(
@@ -393,22 +401,26 @@ class AppQMenu(Mixins.QTranslatable, Mixins.ConnectionAware, QMenu):
             f''
             f'QMenu::item {{'
             f'    padding: 6px 12px;'
-            f'    background-color: solid;'
+            # f'    background-color: solid;'
             f'}}'
-            f''
-            f'QMenu::item:selected {{'
-            f'    background-color: {color};'
-            f'}}'
+            # f''
+            # f'QMenu::item:selected {{'
+            # f'    background-color: {color};'
+            # f'}}'
         )
 
     def retranslate(self):
         self.setTitle(_(self.title()))
 
     def disconnectedCallback(self):
-        self.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
+        # self.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
+
+        pass
 
     def connectedCallback(self):
-        self.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
+        # self.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
+
+        pass
 
 
 class AppQMenuBar(Mixins.ConnectionAware, QMenuBar):
@@ -430,7 +442,9 @@ class AppQMenuBar(Mixins.ConnectionAware, QMenuBar):
         )
 
     def setSelectionColor(self, color):
-        self.setStyleSheet(self.getStyleSheet(color))
+        # self.setStyleSheet(self.getStyleSheet(color))
+
+        pass
 
     def disconnectedCallback(self):
         self.setSelectionColor(AppHue.disconnectedColor())
@@ -535,7 +549,9 @@ class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):
         return f'QTableWidget {{ selection-background-color: {color}; }}'
 
     def setSelectionColor(self, color):
-        self.setStyleSheet(self.getStyleSheet(color))
+        # self.setStyleSheet(self.getStyleSheet(color))
+
+        pass
 
     def activateItemByIndex(self, index, activate):
         if activate:

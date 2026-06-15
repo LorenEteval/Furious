@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from .DNSResolver import *
+from .AppStyleSheet import *
 from .DynamicTheme import *
 from .DynamicTranslate import *
 from .GuiEditorXXX import *
