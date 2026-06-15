@@ -435,6 +435,8 @@ class AppMainWindow(AppQMainWindow):
         # self.setStatusBar(QStatusBar(self))
 
         self.networkState = AppQLabel(translatable=False)
+        self.networkState.setObjectName('NetworkStateLabel')
+        self.networkState.setVisible(False)
 
         self.statusBar().addPermanentWidget(self.networkState)
 
@@ -501,24 +503,41 @@ class AppMainWindow(AppQMainWindow):
 
     def resetNetworkState(self):
         self.networkState.setText('')
+        self.networkState.setToolTip('')
+        self.networkState.setProperty('networkState', '')
+        self.networkState.setVisible(False)
+
+        self.refreshNetworkStateStyle()
 
     def setNetworkState(self, success: bool, **kwargs):
         remark = Storage.Extras.UserServerRemark()
 
-        if success:
-            if remark:
-                self.networkState.setText(f'{remark} {UNICODE_LARGE_GREEN_CIRCLE}')
-            else:
-                self.resetNetworkState()
-        else:
-            errorString = kwargs.pop('errorString', '')
+        if not remark:
+            self.resetNetworkState()
 
-            if remark:
-                self.networkState.setText(
-                    f'{remark} - {errorString} {UNICODE_LARGE_RED_CIRCLE}'
-                )
-            else:
-                self.resetNetworkState()
+            return
+
+        if success:
+            self.networkState.setText(f'{_("Network OK")} - {remark}')
+            self.networkState.setToolTip(remark)
+            self.networkState.setProperty('networkState', 'success')
+
+            self.refreshNetworkStateStyle()
+
+            return
+
+        errorString = kwargs.pop('errorString', '')
+
+        self.networkState.setText(f'{_("Network error")} - {remark}')
+        self.networkState.setToolTip(f'{remark}\n{errorString}'.strip())
+        self.networkState.setProperty('networkState', 'failure')
+
+        self.refreshNetworkStateStyle()
+
+    def refreshNetworkStateStyle(self):
+        self.networkState.style().unpolish(self.networkState)
+        self.networkState.style().polish(self.networkState)
+        self.networkState.setVisible(bool(self.networkState.text()))
 
     @staticmethod
     def openApplicationFolder():
