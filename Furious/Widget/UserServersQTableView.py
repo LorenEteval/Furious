@@ -41,10 +41,10 @@ from PySide6.QtNetwork import *
 from typing import Callable, Union, MutableSequence
 
 import re
-import queue
 import logging
 import icmplib
 import functools
+import collections
 
 __all__ = ['UserServersQTableView']
 
@@ -413,6 +413,7 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
 
 class TestDownloadSpeedWorker(WebGETManager):
     progressed = QtCore.Signal()
+    finished = QtCore.Signal(object)
 
     def __init__(
         self,
@@ -445,17 +446,9 @@ class TestDownloadSpeedWorker(WebGETManager):
         self.timeoutTimer.setSingleShot(True)
         self.timeoutTimer.timeout.connect(self.handleTimeout)
 
-    @property
-    def sema(self):
-        parent = self.parent()
-
-        # parent must be properly set
-        assert isinstance(parent, UserServersQTableView)
-
-        return parent.testDownloadSpeedMultiSema
-
     def mustCall(self):
-        self.sema.release(1)
+        self.timeoutTimer.stop()
+        self.finished.emit(self)
 
     def sync(self):
         # Extra guard
@@ -699,6 +692,163 @@ class TestDownloadSpeedWorker(WebGETManager):
 
         self.coreManager.stopAll()
         self.sync()
+
+
+class DownloadSpeedTestJob:
+    def __init__(
+        self,
+        index: int,
+        factory: ConfigFactory,
+        timeout: int,
+        logActionMessage=False,
+    ):
+        super().__init__()
+
+        self.index = index
+        self.factory = factory
+        self.timeout = timeout
+        self.logActionMessage = logActionMessage
+
+
+class DownloadSpeedTestScheduler(QtCore.QObject):
+    SinglePort = 20809
+    MultiPortStart = 30000
+    MultiPortStop = 40000
+
+    def __init__(self, table, isMulti: bool, parent=None):
+        super().__init__(parent)
+
+        self.table = table
+        self.isMulti = isMulti
+        self.maxConcurrency = max(OS_CPU_COUNT // 2, 1) if isMulti else 1
+
+        self.queue = collections.deque()
+        self.activeJobs = {}
+        self.activePorts = set()
+        self.nextMultiPort = self.MultiPortStart
+        self.drainScheduled = False
+
+    def enqueue(
+        self,
+        index: int,
+        factory: ConfigFactory,
+        timeout: int,
+        logActionMessage=False,
+    ):
+        self.queue.append(
+            DownloadSpeedTestJob(index, factory, timeout, logActionMessage)
+        )
+        self.scheduleDrain()
+
+    def enqueueMany(self, jobs: list[DownloadSpeedTestJob]):
+        self.queue.extend(jobs)
+
+        self.scheduleDrain()
+
+    def cancelAll(self):
+        self.queue.clear()
+
+        for worker, _, _ in list(self.activeJobs.values()):
+            assert isinstance(worker, TestDownloadSpeedWorker)
+
+            if not worker.isFinished():
+                worker.abort()
+
+            worker.coreManager.stopAll()
+            worker.must()
+
+    def scheduleDrain(self):
+        if self.drainScheduled:
+            return
+
+        self.drainScheduled = True
+
+        QtCore.QTimer.singleShot(0, self.drain)
+
+    def drain(self):
+        self.drainScheduled = False
+
+        if APP().isExiting():
+            self.cancelAll()
+
+            return
+
+        while self.queue and len(self.activeJobs) < self.maxConcurrency:
+            job = self.queue.popleft()
+
+            assert isinstance(job.factory, ConfigFactory)
+
+            if job.factory.deleted:
+                continue
+
+            port = self.allocatePort()
+
+            if port is None:
+                self.queue.appendleft(job)
+
+                break
+
+            self.startJob(job, port)
+
+    def allocatePort(self) -> Union[int, None]:
+        if not self.isMulti:
+            if self.activeJobs:
+                return None
+
+            return self.SinglePort
+
+        portRange = self.MultiPortStop - self.MultiPortStart
+
+        for _ in range(portRange):
+            port = self.nextMultiPort
+            self.nextMultiPort += 1
+
+            if self.nextMultiPort >= self.MultiPortStop:
+                self.nextMultiPort = self.MultiPortStart
+
+            if port not in self.activePorts:
+                self.activePorts.add(port)
+
+                return port
+
+        return None
+
+    def releasePort(self, port: int):
+        self.activePorts.discard(port)
+
+    def startJob(self, job: DownloadSpeedTestJob, port: int):
+        worker = TestDownloadSpeedWorker(
+            job.factory,
+            port,
+            job.timeout,
+            parent=self,
+            logActionMessage=job.logActionMessage,
+        )
+        worker.progressed.connect(
+            functools.partial(
+                self.table.flushDownloadSpeedItem,
+                job.index,
+                job.factory,
+            )
+        )
+
+        self.activeJobs[id(worker)] = (worker, job, port)
+
+        worker.finished.connect(self.handleWorkerFinished)
+        worker.start()
+
+    @QtCore.Slot(object)
+    def handleWorkerFinished(self, worker):
+        workerId = id(worker)
+
+        try:
+            _, _, port = self.activeJobs.pop(workerId)
+        except KeyError:
+            return
+
+        self.releasePort(port)
+        worker.deleteLater()
+        self.scheduleDrain()
 
 
 class UserServersQTableViewHorizontalHeader(AppQHeaderView):
@@ -1030,7 +1180,11 @@ _TRANSLATABLE_HEADERS = [
 ]
 
 
-class UserServersQTableView(Mixins.QTranslatable, AppQTableView):
+class UserServersQTableView(
+    Mixins.QTranslatable,
+    Mixins.CleanupOnExit,
+    AppQTableView,
+):
     RowHeight = 42
 
     Headers = [
@@ -1055,18 +1209,16 @@ class UserServersQTableView(Mixins.QTranslatable, AppQTableView):
 
         self.subsManager = SubscriptionManager(parent=self)
 
-        self.testDownloadSpeedQueue = queue.Queue()
-        self.testDownloadSpeedTimer = QtCore.QTimer()
-        self.testDownloadSpeedTimer.timeout.connect(self.handleTestDownloadSpeedJob)
-
-        self.testDownloadSpeedQueueMulti = queue.Queue()
-        self.testDownloadSpeedTimerMulti = QtCore.QTimer()
-        self.testDownloadSpeedTimerMulti.timeout.connect(
-            self.handleTestDownloadSpeedJobMulti
+        self.downloadSpeedScheduler = DownloadSpeedTestScheduler(
+            self,
+            isMulti=False,
+            parent=self,
         )
-
-        self.testDownloadSpeedMultiPort = 30000
-        self.testDownloadSpeedMultiSema = QtCore.QSemaphore(max(OS_CPU_COUNT // 2, 1))
+        self.downloadSpeedMultiScheduler = DownloadSpeedTestScheduler(
+            self,
+            isMulti=True,
+            parent=self,
+        )
 
         # Text Editor Window
         self.textEditorWindow = TextEditorWindow(parent=self.parent())
@@ -1910,6 +2062,33 @@ class UserServersQTableView(Mixins.QTranslatable, AppQTableView):
             self.setCurrentIndex(activatedItem)
             self.scrollTo(activatedItem)
 
+    def rowFromFactory(self, fallbackIndex: int, factory: ConfigFactory) -> int:
+        if (
+            0 <= factory.index < len(Storage.UserServers())
+            and Storage.UserServers()[factory.index] is factory
+        ):
+            return factory.index
+
+        if (
+            0 <= fallbackIndex < len(Storage.UserServers())
+            and Storage.UserServers()[fallbackIndex] is factory
+        ):
+            return fallbackIndex
+
+        for index, item in enumerate(Storage.UserServers()):
+            if item is factory:
+                return index
+
+        return -1
+
+    def flushDownloadSpeedItem(self, fallbackIndex: int, factory: ConfigFactory):
+        index = self.rowFromFactory(fallbackIndex, factory)
+
+        if index < 0:
+            return
+
+        self.flushItem(index, self.Headers.index('Speed'), factory)
+
     def testSelectedItemPingLatency(self):
         indexes = self.selectedIndex
 
@@ -1985,137 +2164,14 @@ class UserServersQTableView(Mixins.QTranslatable, AppQTableView):
         step=100,
         logActionMessage=False,
     ):
-        worker = TestDownloadSpeedWorker(
-            factory,
-            port,
-            timeout,
-            parent=self,
-            logActionMessage=logActionMessage,
+        scheduler = (
+            self.downloadSpeedMultiScheduler if isMulti else self.downloadSpeedScheduler
         )
-        worker.progressed.connect(
-            functools.partial(
-                self.flushItem,
-                index,
-                self.Headers.index('Speed'),
-                factory,
-            )
-        )
-        worker.start()
-
-        if not isMulti:
-            while (
-                not APP().isExiting() and not worker.isFinished() and counter < timeout
-            ):
-                PySide6Legacy.eventLoopWait(step)
-
-                counter += step
-
-            if not worker.isFinished():
-                worker.abort()
-
-                while not worker.isFinished():
-                    PySide6Legacy.eventLoopWait(step)
-
-        if APP().isExiting():
-            if not worker.isFinished():
-                worker.abort()
-
-            # Stop timer
-            self.testDownloadSpeedTimer.stop()
-            self.testDownloadSpeedTimerMulti.stop()
-
-    def handleTestDownloadSpeedJobXXX(
-        self,
-        jobQueue: queue.Queue,
-        jobTimer: QtCore.QTimer,
-        isMulti: bool,
-    ):
-        if APP().isExiting():
-            jobTimer.stop()
-
-            return
-
-        if isMulti and not self.testDownloadSpeedMultiSema.tryAcquire(1):
-            return
-
-        try:
-            index, factory, timeout = jobQueue.get_nowait()
-        except queue.Empty:
-            # Queue is empty
-
-            if isMulti:
-                self.testDownloadSpeedMultiSema.release(1)
-
-            # Power Optimization. Timer gets fired only when needed
-            jobTimer.stop()
-
-            return
-
-        def fetchNextJob():
-            if not APP().isExiting():
-                # Fetch next job.
-                if self.isVisible():
-                    interval = max(1.0, 1000 / len(Storage.UserServers()))
-                    interval = min(interval, 50)
-
-                    jobTimer.start(int(interval))
-                else:
-                    jobTimer.start(50)
-            else:
-                jobTimer.stop()
-
-        if isMulti:
-            if self.testDownloadSpeedMultiPort >= 40000:
-                self.testDownloadSpeedMultiPort = 30000
-
-            testDownloadSpeedPort = self.testDownloadSpeedMultiPort
-
-            self.testDownloadSpeedMultiPort += 1
-
-            fetchNextJob()
-        else:
-            testDownloadSpeedPort = 20809
-
-        assert isinstance(factory, ConfigFactory)
-
-        if factory.deleted:
-            # Invalid item. Do nothing.
-            if isMulti:
-                self.testDownloadSpeedMultiSema.release(1)
-
-            fetchNextJob()
-        else:
-            if not APP().isExiting():
-                self.testDownloadSpeedByFactory(
-                    index,
-                    factory,
-                    testDownloadSpeedPort,
-                    timeout,
-                    isMulti,
-                )
-
-            fetchNextJob()
-
-    @QtCore.Slot()
-    def handleTestDownloadSpeedJob(self):
-        self.handleTestDownloadSpeedJobXXX(
-            self.testDownloadSpeedQueue,
-            self.testDownloadSpeedTimer,
-            False,
-        )
-
-    @QtCore.Slot()
-    def handleTestDownloadSpeedJobMulti(self):
-        self.handleTestDownloadSpeedJobXXX(
-            self.testDownloadSpeedQueueMulti,
-            self.testDownloadSpeedTimerMulti,
-            True,
-        )
+        scheduler.enqueue(index, factory, timeout, logActionMessage)
 
     def testSelectedItemDownloadSpeedWithTimeoutXXX(
         self,
-        jobQueue: queue.Queue,
-        jobTimer: QtCore.QTimer,
+        scheduler: DownloadSpeedTestScheduler,
         timeout: int,
     ):
         indexes = self.selectedIndex
@@ -2126,31 +2182,22 @@ class UserServersQTableView(Mixins.QTranslatable, AppQTableView):
 
         # Real selected factory
         references = list(Storage.UserServers()[index] for index in indexes)
+        jobs = list()
 
         for index, reference in zip(indexes, references):
-            try:
-                # Served by FIFO
-                jobQueue.put_nowait((index, reference, timeout))
-            except Exception:
-                # Any non-exit exceptions
+            jobs.append(DownloadSpeedTestJob(index, reference, timeout))
 
-                pass
-
-        if not jobTimer.isActive():
-            # # Power Optimization. Timer gets fired only when needed
-            jobTimer.start(250)
+        scheduler.enqueueMany(jobs)
 
     def testSelectedItemDownloadSpeedWithTimeout(self, timeout: int):
         self.testSelectedItemDownloadSpeedWithTimeoutXXX(
-            self.testDownloadSpeedQueue,
-            self.testDownloadSpeedTimer,
+            self.downloadSpeedScheduler,
             timeout,
         )
 
     def testSelectedItemDownloadSpeedWithTimeoutMulti(self, timeout: int):
         self.testSelectedItemDownloadSpeedWithTimeoutXXX(
-            self.testDownloadSpeedQueueMulti,
-            self.testDownloadSpeedTimerMulti,
+            self.downloadSpeedMultiScheduler,
             timeout,
         )
 
@@ -2174,6 +2221,10 @@ class UserServersQTableView(Mixins.QTranslatable, AppQTableView):
 
             self.flushItem(index, self.Headers.index('Latency'), factory)
             self.flushItem(index, self.Headers.index('Speed'), factory)
+
+    def cleanup(self):
+        self.downloadSpeedScheduler.cancelAll()
+        self.downloadSpeedMultiScheduler.cancelAll()
 
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
         self.subsManager.configureHttpProxy(httpProxy)
