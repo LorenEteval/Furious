@@ -56,6 +56,20 @@ registerAppSettings('ServerWidgetSectionSizeTable')
 registerAppSettings('UserServersHeaderViewState')
 
 
+def appIsExiting() -> bool:
+    app = APP()
+
+    if app is None:
+        return True
+    else:
+        isExiting = getattr(app, 'isExiting', None)
+
+        if callable(isExiting):
+            return isExiting()
+        else:
+            return True
+
+
 class MBoxUpdateSubsInfo(AppQMessageBox):
     def __init__(self, *args, **kwargs):
         self.successArgs = kwargs.pop('successArgs', list())
@@ -346,10 +360,6 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
             # Any non-exit exceptions
 
             self.factory.setExtras('delayResult', classname(ex))
-
-            # Extra guard
-            if APP() is not None and not APP().isExiting():
-                self.finished.emit()
         else:
             # Result address should not be empty
             if result.address and result.is_alive:
@@ -359,9 +369,9 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
                     self.factory.setExtras('delayResult', 'Timeout')
                 else:
                     self.factory.setExtras('delayResult', 'Error')
-
+        finally:
             # Extra guard
-            if APP() is not None and not APP().isExiting():
+            if not appIsExiting():
                 self.finished.emit()
 
 
@@ -396,18 +406,14 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
             # Any non-exit exceptions
 
             self.factory.setExtras('delayResult', classname(ex))
-
-            # Extra guard
-            if APP() is not None and not APP().isExiting():
-                self.finished.emit()
         else:
             if rtts:
                 self.factory.setExtras('delayResult', f'{round(rtts[0] * 1000)}ms')
             else:
                 self.factory.setExtras('delayResult', 'Timeout')
-
+        finally:
             # Extra guard
-            if APP() is not None and not APP().isExiting():
+            if not appIsExiting():
                 self.finished.emit()
 
 
@@ -452,7 +458,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
     def sync(self):
         # Extra guard
-        if APP() is not None and not APP().isExiting():
+        if not appIsExiting():
             self.progressed.emit()
 
     def isFinished(self) -> bool:
@@ -543,7 +549,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
             pass
 
-        self.coreManager.start(
+        return self.coreManager.start(
             configcopy,
             AppBuiltinRouting.Global.value,
             self.coreExitCallback,
@@ -552,8 +558,6 @@ class TestDownloadSpeedWorker(WebGETManager):
             proxyModeOnly=True,
             log=False,
         )
-
-        return True
 
     @_startCore.register(ConfigHysteria1)
     @_startCore.register(ConfigHysteria2)
@@ -571,7 +575,7 @@ class TestDownloadSpeedWorker(WebGETManager):
         # No socks inbounds
         configcopy.pop('socks5', '')
 
-        self.coreManager.start(
+        return self.coreManager.start(
             configcopy,
             AppBuiltinRouting.Global.value,
             self.coreExitCallback,
@@ -581,45 +585,41 @@ class TestDownloadSpeedWorker(WebGETManager):
             log=False,
         )
 
-        return True
-
     def start(self):
         try:
-            if not APP().isExiting():
-                index = self.factory.index
+            if appIsExiting():
+                raise
 
-                if (
-                    self.factory.deleted
-                    or index < 0
-                    or index >= len(Storage.UserServers())
-                ):
-                    # Invalid item. Do nothing
+            index = self.factory.index
+
+            if self.factory.deleted or index < 0 or index >= len(Storage.UserServers()):
+                # Invalid item. Do nothing
+                return
+
+            assert isinstance(self.factory, ConfigFactory)
+
+            if not self.factory.isValid():
+                # Configuration is invalid
+                self.factory.setExtras('speedResult', 'Invalid')
+                self.sync()
+            else:
+                if not self._startCore(self.factory) or appIsExiting():
                     return
 
-                assert isinstance(self.factory, ConfigFactory)
+                self.configureHttpProxy(f'127.0.0.1:{self.port}')
 
-                if not self.factory.isValid():
-                    # Configuration is invalid
-                    self.factory.setExtras('speedResult', 'Invalid')
-                    self.sync()
+                # Use custom network speed test URL if possible
+                settings = AppSettings.get('CustomNetworkSpeedTestURL')
+
+                if isinstance(settings, str):
+                    url = settings
                 else:
-                    if not self._startCore(self.factory) or APP().isExiting():
-                        return
+                    url = NETWORK_SPEED_TEST_URL
 
-                    self.configureHttpProxy(f'127.0.0.1:{self.port}')
+                self.networkReply = self.webGET(url, **self.kwargs)
 
-                    # Use custom network speed test URL if possible
-                    settings = AppSettings.get('CustomNetworkSpeedTestURL')
-
-                    if isinstance(settings, str):
-                        url = settings
-                    else:
-                        url = NETWORK_SPEED_TEST_URL
-
-                    self.networkReply = self.webGET(url, **self.kwargs)
-
-                    self.elapsedTimer.start()
-                    self.timeoutTimer.start(self.timeout)
+                self.elapsedTimer.start()
+                self.timeoutTimer.start(self.timeout)
         finally:
             if self.networkReply is None:
                 self.must()
@@ -768,7 +768,7 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
     def drain(self):
         self.drainScheduled = False
 
-        if APP().isExiting():
+        if appIsExiting():
             self.cancelAll()
 
             return
@@ -847,7 +847,6 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
             return
 
         self.releasePort(port)
-        worker.deleteLater()
         self.scheduleDrain()
 
 
@@ -2100,7 +2099,7 @@ class UserServersQTableView(
         references = list(Storage.UserServers()[index] for index in indexes)
 
         for index, reference in zip(indexes, references):
-            if APP().isExiting():
+            if appIsExiting():
                 break
 
             assert isinstance(reference, ConfigFactory)
@@ -2132,7 +2131,7 @@ class UserServersQTableView(
         references = list(Storage.UserServers()[index] for index in indexes)
 
         for index, reference in zip(indexes, references):
-            if APP().isExiting():
+            if appIsExiting():
                 break
 
             assert isinstance(reference, ConfigFactory)
