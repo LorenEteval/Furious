@@ -534,7 +534,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
         if column == self.Headers.index('Auto Update'):
             header = self.Headers[column]
 
-            newItem = UserSubsAppQComboBox()
+            newItem = UserSubsAppQComboBox(parent=self.viewport())
             newItem.addItems(list(_(key) for key in self.AutoUpdateOptions.keys()))
             newItem.setFont(QFont(AppFontName()))
 
@@ -557,7 +557,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
         elif column == self.Headers.index('Auto Update Use Proxy'):
             header = self.Headers[column]
 
-            newItem = UserSubsAppQComboBox()
+            newItem = UserSubsAppQComboBox(parent=self.viewport())
             newItem.addItems(list(_(key) for key in self.ProxyOptions.keys()))
             newItem.setFont(QFont(AppFontName()))
 
