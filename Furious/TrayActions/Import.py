@@ -21,12 +21,15 @@ from Furious.Frozenlib import *
 from Furious.Library import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
+from Furious.Widget.WaitingSpinner import WaitingSpinner
 
-from PySide6.QtWidgets import QApplication, QFileDialog
+from PySide6 import QtCore
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QVBoxLayout
 
 from PIL import Image
 
-from typing import Callable, Union
+from typing import Callable, Tuple, Union
 
 import os
 import mss
@@ -77,11 +80,21 @@ def importURIFromClipboard(clipboard: str):
 
 
 def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
+    if len(uris) > 1:
+        dialog = ImportURIsProgressDialog(
+            uris,
+            failureCallback=failureCallback,
+            parent=getattr(APP(), 'mainWindow', None),
+        )
+        dialog.open()
+
+        return
+
     imported = list()
     rowIndex = len(Storage.UserServers())
 
     for uri in uris:
-        factory = configFactoryFromAny(uri)
+        factory = configFactoryFromAny(uri.strip())
 
         if factory.isValid():
             APP().mainWindow.appendNewItemByFactory(factory)
@@ -108,6 +121,169 @@ def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
 
             # Show the MessageBox asynchronously
             mbox.open()
+
+
+class ImportURIsProgressDialog(AppQDialog):
+    ActiveDialogs = list()
+
+    def __init__(
+        self,
+        uris: Tuple[str, ...],
+        failureCallback: Union[Callable[[], None], None] = None,
+        parent=None,
+    ):
+        super().__init__(parent)
+
+        self.uris = uris
+        self.failureCallback = failureCallback
+        self.imported = list()
+        self.rowIndex = len(Storage.UserServers())
+        self.currentIndex = 0
+        self.currentRemark = ''
+        self.canceled = False
+        self.finishedImport = False
+
+        self.setWindowTitle(_('Import'))
+        self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+
+        self.spinner = WaitingSpinner(
+            self,
+            center_on_parent=False,
+            lines=12,
+            line_length=7,
+            line_width=3,
+            radius=7,
+            color=QColor(96, 160, 255),
+        )
+        self.statusLabel = AppQLabel()
+        self.detailLabel = AppQLabel()
+        self.detailLabel.setWordWrap(True)
+        self.cancelButton = AppQPushButton(_('Cancel'))
+        self.cancelButton.clicked.connect(self.cancel)
+
+        statusLayout = QHBoxLayout()
+        statusLayout.addWidget(self.spinner)
+        statusLayout.addWidget(self.statusLabel, 1)
+
+        layout = QVBoxLayout()
+        layout.addLayout(statusLayout)
+        layout.addWidget(self.detailLabel)
+        layout.addWidget(self.cancelButton)
+
+        self.setLayout(layout)
+
+        self.updateStatus()
+
+    def setWidthAndHeight(self):
+        self.resize(420, 150)
+
+    def open(self):
+        ImportURIsProgressDialog.ActiveDialogs.append(self)
+
+        result = super().open()
+
+        self.spinner.start()
+
+        QtCore.QTimer.singleShot(0, self.importNext)
+
+        return result
+
+    def reject(self):
+        self.cancel()
+
+    def cancel(self):
+        self.canceled = True
+        self.cancelButton.setEnabled(False)
+        self.updateStatus()
+
+    def updateStatus(self):
+        total = len(self.uris)
+        processed = min(self.currentIndex, total)
+
+        if self.canceled:
+            self.statusLabel.setText(_('Canceling import') + f'... {processed}/{total}')
+        else:
+            self.statusLabel.setText(_('Importing') + f'... {processed}/{total}')
+
+        if self.currentRemark:
+            self.detailLabel.setText(_('Current') + f': {self.currentRemark}')
+        else:
+            self.detailLabel.setText('')
+
+    @staticmethod
+    def limitedRemark(remark: str) -> str:
+        remark = str(remark).strip()
+
+        if len(remark) <= 120:
+            return remark
+
+        return remark[:117] + '...'
+
+    def importNext(self):
+        if self.canceled or self.currentIndex >= len(self.uris):
+            self.finishImport()
+
+            return
+
+        uri = self.uris[self.currentIndex]
+        self.currentIndex += 1
+
+        factory = configFactoryFromAny(uri.strip())
+
+        if factory.isValid():
+            remark = factory.getExtras('remark')
+
+            self.currentRemark = self.limitedRemark(remark)
+
+            APP().mainWindow.appendNewItemByFactory(factory)
+
+            self.imported.append(remark)
+        else:
+            self.currentRemark = _('Invalid data')
+
+        self.updateStatus()
+
+        QtCore.QTimer.singleShot(0, self.importNext)
+
+    def finishImport(self):
+        if self.finishedImport:
+            return
+
+        self.finishedImport = True
+        self.spinner.stop()
+        self.accept()
+
+        try:
+            ImportURIsProgressDialog.ActiveDialogs.remove(self)
+        except ValueError:
+            pass
+
+        if self.canceled:
+            return
+
+        if len(self.imported) == 0:
+            if callable(self.failureCallback):
+                self.failureCallback()
+        elif len(self.imported) == 1:
+            mbox = MBoxImportSuccess(icon=AppQMessageBox.Icon.Information)
+            mbox.remark = self.imported[0]
+            mbox.setText(mbox.customText())
+
+            # Show the MessageBox asynchronously
+            mbox.open()
+        else:
+            mbox = MBoxImportMultiSuccess(icon=AppQMessageBox.Icon.Information)
+            mbox.imported = self.imported
+            mbox.rowIndex = self.rowIndex
+            mbox.setText(mbox.customText())
+
+            # Show the MessageBox asynchronously
+            mbox.open()
+
+    def retranslate(self):
+        self.setWindowTitle(_(self.windowTitle()))
+        self.cancelButton.setText(_(self.cancelButton.text()))
+        self.updateStatus()
 
 
 class MBoxImportError(AppQMessageBox):

@@ -218,6 +218,7 @@ TRANSLATION = {
     "Cancel": {
         "source": [
             "Furious.Qt.GuiEditorXXX",
+            "Furious.TrayActions.Import",
             "Furious.Widget.GuiCustomizeNetworkTest",
             "Furious.Widget.GuiCustomizeProxyBypass",
             "Furious.Widget.IndentSpinBox",
@@ -1881,6 +1882,30 @@ TRANSLATION = {
         ],
         "RU": "Ошибка сети",
         "ZH": "网络异常",
+        "isReviewed": "True"
+    },
+    "Canceling import": {
+        "source": [
+            "Furious.TrayActions.Import"
+        ],
+        "RU": "Отмена импорта",
+        "ZH": "正在取消导入",
+        "isReviewed": "True"
+    },
+    "Importing": {
+        "source": [
+            "Furious.TrayActions.Import"
+        ],
+        "RU": "Импорт",
+        "ZH": "正在导入",
+        "isReviewed": "True"
+    },
+    "Current": {
+        "source": [
+            "Furious.TrayActions.Import"
+        ],
+        "RU": "Текущий",
+        "ZH": "当前",
         "isReviewed": "True"
     }
 }

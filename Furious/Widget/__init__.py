@@ -32,4 +32,5 @@ from .IndentSpinBox import *
 from .SystemTrayIcon import *
 from .UserServersQTableView import *
 from .UserSubsQTableView import *
+from .WaitingSpinner import *
 from .XrayAssetViewerQListWidget import *
