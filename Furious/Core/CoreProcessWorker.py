@@ -70,17 +70,21 @@ class CoreLaunchSpec:
         self.args = tuple(self.args)
         self.processKwargs = dict(self.processKwargs)
 
-        self.daemon = self.processKwargs.pop('daemon', self.daemon)
-        self.waitCore = self.processKwargs.pop('waitCore', self.waitCore)
-        self.waitTime = self.processKwargs.pop('waitTime', self.waitTime)
+        self.daemon, self.waitCore, self.waitTime = (
+            self.processKwargs.pop('daemon', self.daemon),
+            self.processKwargs.pop('waitCore', self.waitCore),
+            self.processKwargs.pop('waitTime', self.waitTime),
+        )
 
     @classmethod
     def fromProcessKwargs(cls, **kwargs):
-        daemon = kwargs.pop('daemon', True)
-        waitCore = kwargs.pop('waitCore', True)
-        waitTime = kwargs.pop('waitTime', 2500)
-        target = kwargs.pop('target', None)
-        args = kwargs.pop('args', tuple())
+        daemon, waitCore, waitTime, target, args = (
+            kwargs.pop('daemon', True),
+            kwargs.pop('waitCore', True),
+            kwargs.pop('waitTime', 2500),
+            kwargs.pop('target', None),
+            kwargs.pop('args', tuple()),
+        )
 
         return cls(
             target=target,
