@@ -288,8 +288,10 @@ class WaitingSpinner(QWidget):
     ) -> int:
         """Return the amount of lines from _current_counter."""
         distance = primary - current
+
         if distance < 0:
             distance += total_nr_of_lines
+
         return distance
 
     @staticmethod
@@ -302,12 +304,15 @@ class WaitingSpinner(QWidget):
     ) -> QColor:
         """Returns the current color for the WaitingSpinner."""
         color = QColor(color_input)
+
         if count_distance == 0:
             return color
+
         min_alpha_f = min_opacity / 100.0
         distance_threshold = int(
             math.ceil((total_nr_of_lines - 1) * trail_fade_perc / 100.0)
         )
+
         if count_distance > distance_threshold:
             color.setAlphaF(min_alpha_f)
         else:
@@ -317,4 +322,5 @@ class WaitingSpinner(QWidget):
             # If alpha is out of bounds, clip it.
             result_alpha = min(1.0, max(0.0, result_alpha))
             color.setAlphaF(result_alpha)
+
         return color
