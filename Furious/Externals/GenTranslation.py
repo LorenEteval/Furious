@@ -222,6 +222,7 @@ TRANSLATION = {
             "Furious.Widget.GuiCustomizeNetworkTest",
             "Furious.Widget.GuiCustomizeProxyBypass",
             "Furious.Widget.IndentSpinBox",
+            "Furious.Widget.UserServersQTableView",
             "Furious.Window.TextEditorWindow",
             "Furious.Window.UserSubsWindow"
         ],
@@ -1902,10 +1903,27 @@ TRANSLATION = {
     },
     "Current": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.TrayActions.Import",
+            "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Текущий",
         "ZH": "当前",
+        "isReviewed": "True"
+    },
+    "Canceling delete": {
+        "source": [
+            "Furious.Widget.UserServersQTableView"
+        ],
+        "RU": "Отмена удаления",
+        "ZH": "正在取消删除",
+        "isReviewed": "True"
+    },
+    "Deleting": {
+        "source": [
+            "Furious.Widget.UserServersQTableView"
+        ],
+        "RU": "Удаление",
+        "ZH": "正在删除",
         "isReviewed": "True"
     }
 }

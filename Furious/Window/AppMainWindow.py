@@ -235,7 +235,8 @@ class AppMainWindow(AppQMainWindow):
                     index
                     for index, server in enumerate(Storage.UserServers())
                     if server.getExtras('subsId') == unique
-                )
+                ),
+                showProgress=False,
             ),
         )
         self.xrayAssetViewerWindow = XrayAssetViewerWindow(parent=self)

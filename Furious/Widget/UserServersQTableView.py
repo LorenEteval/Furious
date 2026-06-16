@@ -30,6 +30,7 @@ from Furious.Widget.GuiShadowsocks import *
 from Furious.Widget.GuiTrojan import *
 from Furious.Widget.GuiVLESS import *
 from Furious.Widget.GuiVMess import *
+from Furious.Widget.WaitingSpinner import *
 from Furious.Window.QRCodeWindow import *
 from Furious.Window.TextEditorWindow import *
 
@@ -172,7 +173,9 @@ class SubscriptionManager(WebGETManager):
                             break
 
                 parent.deleteItemByIndex(
-                    subsIndexes, showTrayMessage=bool(subsGroupIndex < 0)
+                    subsIndexes,
+                    showTrayMessage=bool(subsGroupIndex < 0),
+                    showProgress=False,
                 )
 
                 remaining = len(Storage.UserServers())
@@ -848,6 +851,169 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
 
         self.releasePort(port)
         self.scheduleDrain()
+
+
+class DeleteServersProgressDialog(AppQDialog):
+    def __init__(self, table, indexes, showTrayMessage=True, parent=None):
+        super().__init__(parent)
+
+        self.table = table
+        self.indexes = list(indexes)
+        self.showTrayMessage = showTrayMessage
+        self.total = len(self.indexes)
+        self.nextIndex = 0
+        self.deletedCount = 0
+        self.deletedActivated = False
+        self.canceled = False
+        self.finishedDeletion = False
+        self.currentRemark = ''
+
+        self.setWindowTitle(_('Delete'))
+        self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+
+        self.spinner = WaitingSpinner(
+            self,
+            center_on_parent=False,
+            lines=12,
+            line_length=7,
+            line_width=3,
+            radius=7,
+            color=QColor(96, 160, 255),
+        )
+        self.statusLabel = AppQLabel()
+        self.detailLabel = AppQLabel()
+        self.detailLabel.setWordWrap(True)
+        self.cancelButton = AppQPushButton(_('Cancel'))
+        self.cancelButton.clicked.connect(self.cancel)
+
+        statusLayout = QHBoxLayout()
+        statusLayout.addWidget(self.spinner)
+        statusLayout.addWidget(self.statusLabel, 1)
+
+        layout = QVBoxLayout()
+        layout.addLayout(statusLayout)
+        layout.addWidget(self.detailLabel)
+        layout.addWidget(self.cancelButton)
+
+        self.setLayout(layout)
+
+        self.updateStatus()
+
+    def setWidthAndHeight(self):
+        self.resize(420, 150)
+
+    def exec(self):
+        self.spinner.start()
+
+        QtCore.QTimer.singleShot(0, self.deleteNext)
+
+        return super().exec()
+
+    def reject(self):
+        self.cancel()
+
+    def cancel(self):
+        self.canceled = True
+        self.cancelButton.setEnabled(False)
+        self.updateStatus()
+
+    def updateStatus(self):
+        if self.canceled:
+            self.statusLabel.setText(
+                _('Canceling delete') + f'... {self.deletedCount}/{self.total}'
+            )
+        else:
+            self.statusLabel.setText(
+                _('Deleting') + f'... {self.deletedCount}/{self.total}'
+            )
+
+        if self.currentRemark:
+            self.detailLabel.setText(_('Current') + f': {self.currentRemark}')
+        else:
+            self.detailLabel.setText('')
+
+    @staticmethod
+    def limitedRemark(remark: str) -> str:
+        remark = str(remark).strip()
+
+        if len(remark) <= 120:
+            return remark
+
+        return remark[:117] + '...'
+
+    def deleteNext(self):
+        if self.canceled or self.nextIndex >= self.total:
+            self.finishDeletion()
+
+            return
+
+        originalIndex = self.indexes[self.nextIndex]
+        self.nextIndex += 1
+        deleteIndex = originalIndex - self.deletedCount
+
+        if deleteIndex < 0 or deleteIndex >= len(Storage.UserServers()):
+            self.updateStatus()
+            QtCore.QTimer.singleShot(0, self.deleteNext)
+
+            return
+
+        factory = Storage.UserServers()[deleteIndex]
+
+        self.currentRemark = self.limitedRemark(factory.getExtras('remark'))
+
+        if originalIndex == Storage.UserActivatedItemIndex():
+            self.deletedActivated = True
+
+        self.table.sourceModel.beginRemoveRows(
+            QtCore.QModelIndex(),
+            deleteIndex,
+            deleteIndex,
+        )
+
+        factory.deleted = True
+
+        Storage.UserServers().pop(deleteIndex)
+
+        self.table.sourceModel.endRemoveRows()
+
+        if not self.deletedActivated and deleteIndex < Storage.UserActivatedItemIndex():
+            AppSettings.set(
+                'ActivatedItemIndex', str(Storage.UserActivatedItemIndex() - 1)
+            )
+
+        self.deletedCount += 1
+        self.updateStatus()
+
+        QtCore.QTimer.singleShot(0, self.deleteNext)
+
+    def finishDeletion(self):
+        if self.finishedDeletion:
+            return
+
+        self.finishedDeletion = True
+        self.spinner.stop()
+
+        self.table.sourceModel.refreshIndexes()
+        self.table.sourceModel.emitAllChanged()
+
+        if self.deletedActivated:
+            # Set invalid first
+            AppSettings.set('ActivatedItemIndex', str(-1))
+
+            if APP().isSystemTrayConnected():
+                if self.showTrayMessage:
+                    # Trigger disconnect
+                    APP().systemTray.ConnectAction.trigger()
+                else:
+                    # Trigger disconnect silently
+                    APP().systemTray.ConnectAction.doDisconnect()
+
+        self.accept()
+
+    def retranslate(self):
+        self.setWindowTitle(_(self.windowTitle()))
+        self.cancelButton.setText(_(self.cancelButton.text()))
+        self.updateStatus()
 
 
 class UserServersQTableViewHorizontalHeader(AppQHeaderView):
@@ -1933,10 +2099,25 @@ class UserServersQTableView(
                     config=deepcopy,
                 )
 
-    def deleteItemByIndex(self, indexes, showTrayMessage=True) -> int:
+    def deleteItemByIndex(
+        self, indexes, showTrayMessage=True, showProgress=True
+    ) -> int:
+        indexes = sorted(set(indexes))
+
         if len(indexes) == 0:
             # Nothing selected. Do nothing
             return 0
+
+        if showProgress and len(indexes) > 1:
+            dialog = DeleteServersProgressDialog(
+                self,
+                indexes,
+                showTrayMessage=showTrayMessage,
+                parent=self.window(),
+            )
+            dialog.exec()
+
+            return dialog.deletedCount
 
         if Storage.UserActivatedItemIndex() in indexes:
             deleteActivated = True
