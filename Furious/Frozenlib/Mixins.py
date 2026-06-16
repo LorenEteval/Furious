@@ -20,7 +20,10 @@ from __future__ import annotations
 from PySide6 import QtCore
 from PySide6.QtWidgets import QApplication
 
+from shiboken6 import isValid as isValidQObject
+
 import logging
+import weakref
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +31,16 @@ __all__ = ['Mixins']
 
 
 class Mixins:
+    @staticmethod
+    def qObjectIsValid(qobject) -> bool:
+        if not isinstance(qobject, QtCore.QObject):
+            return True
+
+        try:
+            return isValidQObject(qobject)
+        except RuntimeError:
+            return False
+
     class ConnectionAware:
         ObjectsPool = list()
 
@@ -132,11 +145,15 @@ class Mixins:
             self.qobject = qobject
 
         def __enter__(self):
-            if hasattr(self.qobject, 'setDisabled'):
+            if Mixins.qObjectIsValid(self.qobject) and hasattr(
+                self.qobject, 'setDisabled'
+            ):
                 self.qobject.setDisabled(True)
 
         def __exit__(self, exceptionType, exceptionValue, tb):
-            if hasattr(self.qobject, 'setDisabled'):
+            if Mixins.qObjectIsValid(self.qobject) and hasattr(
+                self.qobject, 'setDisabled'
+            ):
                 self.qobject.setDisabled(False)
 
     class QBlockSignalContext:
@@ -144,11 +161,15 @@ class Mixins:
             self.qobject = qobject
 
         def __enter__(self):
-            if hasattr(self.qobject, 'blockSignals'):
+            if Mixins.qObjectIsValid(self.qobject) and hasattr(
+                self.qobject, 'blockSignals'
+            ):
                 self.qobject.blockSignals(True)
 
         def __exit__(self, exceptionType, exceptionValue, tb):
-            if hasattr(self.qobject, 'blockSignals'):
+            if Mixins.qObjectIsValid(self.qobject) and hasattr(
+                self.qobject, 'blockSignals'
+            ):
                 self.qobject.blockSignals(False)
 
     class QTranslatable:
@@ -162,12 +183,35 @@ class Mixins:
 
             Mixins.QTranslatable.ObjectsPool.append(self)
 
+            if isinstance(self, QtCore.QObject):
+                selfref = weakref.ref(self)
+                self.destroyed.connect(
+                    lambda *_args, _selfref=selfref: Mixins.QTranslatable.unregister(
+                        _selfref()
+                    )
+                )
+
         def retranslate(self):
             raise NotImplementedError
 
         @staticmethod
+        def unregister(ob):
+            try:
+                Mixins.QTranslatable.ObjectsPool.remove(ob)
+            except ValueError:
+                pass
+
+        @staticmethod
+        def pruneObjectsPool():
+            Mixins.QTranslatable.ObjectsPool = list(
+                filter(Mixins.qObjectIsValid, Mixins.QTranslatable.ObjectsPool)
+            )
+
+        @staticmethod
         def retranslateAll():
-            for ob in Mixins.QTranslatable.ObjectsPool:
+            Mixins.QTranslatable.pruneObjectsPool()
+
+            for ob in list(Mixins.QTranslatable.ObjectsPool):
                 assert isinstance(ob, Mixins.QTranslatable)
 
                 if ob.translatable:
