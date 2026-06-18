@@ -89,7 +89,17 @@ class AppStyleSheet:
 
     @staticmethod
     def forTheme(theme):
-        palette = AppStyleSheet.Palettes[AppStyleSheet.normalizeTheme(theme)]
+        normalizedTheme = AppStyleSheet.normalizeTheme(theme)
+        palette = AppStyleSheet.Palettes[normalizedTheme]
+        iconPrefix = ':/Icons/bootstrap'
+
+        if normalizedTheme == AppStyleSheet.Dark:
+            iconPrefix += '/white'
+
+        caretDownIcon, caretUpIcon = (
+            f'{iconPrefix}/caret-down-fill.svg',
+            f'{iconPrefix}/caret-up-fill.svg',
+        )
 
         return dedent(f"""
             * {{
@@ -304,9 +314,28 @@ class AppStyleSheet:
             }}
 
             QComboBox::drop-down {{
+                subcontrol-origin: border;
+                subcontrol-position: top right;
                 width: 24px;
                 border: 0;
                 border-left: 1px solid {palette['border']};
+                border-top-right-radius: 5px;
+                border-bottom-right-radius: 5px;
+                background-color: transparent;
+            }}
+
+            QComboBox {{
+                padding-right: 31px;
+            }}
+
+            QComboBox::down-arrow {{
+                width: 10px;
+                height: 10px;
+                image: url("{caretDownIcon}");
+            }}
+
+            QComboBox::down-arrow:disabled {{
+                image: url("{caretDownIcon}");
             }}
 
             QComboBox QAbstractItemView {{
@@ -315,6 +344,65 @@ class AppStyleSheet:
                 background-color: {palette['panel']};
                 selection-background-color: {palette['selection']};
                 selection-color: {palette['selection_text']};
+            }}
+
+            QSpinBox,
+            QDoubleSpinBox {{
+                padding-right: 30px;
+            }}
+
+            QSpinBox::up-button,
+            QDoubleSpinBox::up-button {{
+                subcontrol-origin: border;
+                subcontrol-position: top right;
+                width: 27px;
+                height: 15px;
+                border-left: 1px solid {palette['border']};
+                border-bottom: 1px solid {palette['border']};
+                border-top-right-radius: 5px;
+                background-color: transparent;
+            }}
+
+            QSpinBox::down-button,
+            QDoubleSpinBox::down-button {{
+                subcontrol-origin: border;
+                subcontrol-position: bottom right;
+                width: 27px;
+                height: 15px;
+                border-left: 1px solid {palette['border']};
+                border-bottom-right-radius: 5px;
+                background-color: transparent;
+            }}
+
+            QSpinBox::up-button:hover,
+            QSpinBox::down-button:hover,
+            QDoubleSpinBox::up-button:hover,
+            QDoubleSpinBox::down-button:hover {{
+                background-color: {palette['raised']};
+            }}
+
+            QSpinBox::up-arrow,
+            QDoubleSpinBox::up-arrow {{
+                width: 8px;
+                height: 8px;
+                image: url("{caretUpIcon}");
+            }}
+
+            QSpinBox::down-arrow,
+            QDoubleSpinBox::down-arrow {{
+                width: 8px;
+                height: 8px;
+                image: url("{caretDownIcon}");
+            }}
+
+            QSpinBox::up-arrow:disabled,
+            QDoubleSpinBox::up-arrow:disabled {{
+                image: url("{caretUpIcon}");
+            }}
+
+            QSpinBox::down-arrow:disabled,
+            QDoubleSpinBox::down-arrow:disabled {{
+                image: url("{caretDownIcon}");
             }}
 
             QTabWidget::pane {{
