@@ -21,6 +21,7 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Library.UserServers import UserServers
 from Furious.Library.UserSubs import UserSubs
+from Furious.Library.UserRoutings import UserRoutings
 from Furious.Library.UserTUNSettings import UserTUNSettings
 
 from typing import Union
@@ -60,6 +61,13 @@ class Storage:
         assert APP() is not None
 
         return UserTUNSettings().data()
+
+    @staticmethod
+    @functools.lru_cache(None)
+    def UserRoutings() -> dict[str, dict]:
+        assert APP() is not None
+
+        return UserRoutings().data()
 
     class Extras:
         @staticmethod

@@ -5,6 +5,7 @@ TRANSLATION = {
             "Furious.Widget.UserServersQTableView",
             "Furious.Widget.UserSubsQTableView",
             "Furious.Widget.XrayAssetViewerQListWidget",
+            "Furious.Window.UserRoutingWindow",
             "Furious.Window.UserSubsWindow"
         ],
         "RU": "Удалить",
@@ -224,6 +225,7 @@ TRANSLATION = {
             "Furious.Widget.IndentSpinBox",
             "Furious.Widget.UserServersQTableView",
             "Furious.Window.TextEditorWindow",
+            "Furious.Window.UserRoutingWindow",
             "Furious.Window.UserSubsWindow"
         ],
         "RU": "Отмена",
@@ -443,7 +445,8 @@ TRANSLATION = {
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess",
             "Furious.Widget.UserServersQTableView",
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.UserSubsQTableView",
+            "Furious.Window.UserRoutingWindow"
         ],
         "RU": "Примечание",
         "ZH": "别名",
@@ -697,6 +700,7 @@ TRANSLATION = {
     },
     "Add": {
         "source": [
+            "Furious.Window.UserRoutingWindow",
             "Furious.Window.UserSubsWindow"
         ],
         "RU": "Добавить",
@@ -1041,7 +1045,8 @@ TRANSLATION = {
     },
     "Routing": {
         "source": [
-            "Furious.TrayActions.Routing"
+            "Furious.TrayActions.Routing",
+            "Furious.Window.AppMainWindow"
         ],
         "RU": "Маршрутизация",
         "ZH": "路由",
@@ -1437,6 +1442,7 @@ TRANSLATION = {
             "Furious.Widget.GuiCustomizeNetworkTest",
             "Furious.Widget.GuiCustomizeProxyBypass",
             "Furious.Widget.IndentSpinBox",
+            "Furious.Window.UserRoutingWindow",
             "Furious.Window.UserSubsWindow"
         ],
         "RU": "OK",
@@ -1924,6 +1930,206 @@ TRANSLATION = {
         ],
         "RU": "Удаление",
         "ZH": "正在删除",
+        "isReviewed": "True"
+    },
+    "Edit Routing Rule": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Редактировать правило маршрутизации",
+        "ZH": "编辑路由规则",
+        "isReviewed": "True"
+    },
+    "Domain (one per line or comma-separated)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Domain (по одному в строке или через запятую)",
+        "ZH": "Domain（每行一个或以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "IP (one per line or comma-separated)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "IP (по одному в строке или через запятую)",
+        "ZH": "IP（每行一个或以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "Port (comma/range, e.g. 53,443,1000-2000)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Port (через запятую/диапазон, например: 53,443,1000-2000)",
+        "ZH": "Port（逗号/范围，例如：53,443,1000-2000）",
+        "isReviewed": "True"
+    },
+    "VLESS Route (comma/range, e.g. 53,443,1000-2000)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "VLESS Route (через запятую/диапазон, например: 53,443,1000-2000)",
+        "ZH": "VLESS Route（逗号/范围，例如：53,443,1000-2000）",
+        "isReviewed": "True"
+    },
+    "Source IP (one per line or comma-separated)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Source IP (по одному в строке или через запятую)",
+        "ZH": "Source IP（每行一个或以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "Source Port (comma/range, e.g. 53,443,1000-2000)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Source Port (через запятую/диапазон, например: 53,443,1000-2000)",
+        "ZH": "Source Port（逗号/范围，例如：53,443,1000-2000）",
+        "isReviewed": "True"
+    },
+    "Local IP (one per line or comma-separated)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Local IP (по одному в строке или через запятую)",
+        "ZH": "Local IP（每行一个或以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "Local Port (comma/range, e.g. 53,443,1000-2000)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Local Port (через запятую/диапазон, например: 53,443,1000-2000)",
+        "ZH": "Local Port（逗号/范围，例如：53,443,1000-2000）",
+        "isReviewed": "True"
+    },
+    "User (one per line or comma-separated)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "User (по одному в строке или через запятую)",
+        "ZH": "User（每行一个或以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "Inbound Tag (one per line or comma-separated)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Inbound Tag (по одному в строке или через запятую)",
+        "ZH": "Inbound Tag（每行一个或以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "Process (one per line or comma-separated)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Process (по одному в строке или через запятую)",
+        "ZH": "Process（每行一个或以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "Protocol (one per line or comma-separated)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Protocol (по одному в строке или через запятую)",
+        "ZH": "Protocol（每行一个或以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "Edit Routing Remark": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Редактировать примечание к маршруту",
+        "ZH": "编辑路由备注",
+        "isReviewed": "True"
+    },
+    "Add Routing": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Добавить маршрут",
+        "ZH": "添加路由",
+        "isReviewed": "True"
+    },
+    "Routing Rules": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Правила маршрутизации",
+        "ZH": "路由规则",
+        "isReviewed": "True"
+    },
+    "Edit Routing": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Редактировать маршрут",
+        "ZH": "编辑路由",
+        "isReviewed": "True"
+    },
+    "Edit Text": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Редактировать текст",
+        "ZH": "编辑文本",
+        "isReviewed": "True"
+    },
+    "Rename": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Переименовать",
+        "ZH": "重命名",
+        "isReviewed": "True"
+    },
+    "Double-click to enlarge": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Дважды щёлкните, чтобы увеличить",
+        "ZH": "双击放大",
+        "isReviewed": "True"
+    },
+    "State": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Состояние",
+        "ZH": "状态",
+        "isReviewed": "True"
+    },
+    "Enabled": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Включено",
+        "ZH": "已启用",
+        "isReviewed": "True"
+    },
+    "Disabled": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Отключено",
+        "ZH": "已禁用",
+        "isReviewed": "True"
+    },
+    "New Routing": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Новый маршрут",
+        "ZH": "新路由",
+        "isReviewed": "True"
+    },
+    "Routing Documentation": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Документация по маршрутизации",
+        "ZH": "路由文档",
         "isReviewed": "True"
     }
 }

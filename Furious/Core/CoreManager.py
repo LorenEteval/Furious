@@ -83,6 +83,103 @@ def fixLogObjectPath(config: ConfigFactory, attr: str, value: str, log=True):
         )
 
 
+def cleanRoutingRule(rule: dict):
+    if not isinstance(rule, dict):
+        return None
+
+    result = {'type': 'field'}
+    outboundTag = rule.get('outboundTag', 'proxy')
+
+    if outboundTag not in ['proxy', 'direct', 'block']:
+        outboundTag = 'proxy'
+
+    result['outboundTag'] = outboundTag
+
+    for key in [
+        'domain',
+        'ip',
+        'sourceIP',
+        'localIP',
+        'user',
+        'protocol',
+        'inboundTag',
+        'process',
+    ]:
+        value = rule.get(key, [])
+
+        if isinstance(value, list):
+            value = list(str(item).strip() for item in value if str(item).strip())
+
+            if value:
+                result[key] = value
+
+    for key in [
+        'port',
+        'sourcePort',
+        'localPort',
+        'network',
+        'vlessRoute',
+        'balancerTag',
+        'ruleTag',
+    ]:
+        value = str(rule.get(key, '')).strip()
+
+        if value:
+            result[key] = value
+
+    if len(result) <= 2:
+        return None
+
+    return result
+
+
+def customRoutingObjectFromSettings(routing: str):
+    prefix = 'Custom:'
+
+    if not isinstance(routing, str) or not routing.startswith(prefix):
+        return None
+
+    unique = routing[len(prefix) :]
+    routingProfile = Storage.UserRoutings().get(unique)
+
+    if not isinstance(routingProfile, dict):
+        return None
+
+    if not routingProfile.get('enabled', True):
+        return None
+
+    domainStrategy = routingProfile.get('domainStrategy', 'AsIs')
+
+    if domainStrategy not in ['AsIs', 'IPIfNonMatch', 'IPOnDemand']:
+        domainStrategy = 'AsIs'
+
+    rules = list(
+        filter(
+            lambda rule: rule is not None,
+            list(cleanRoutingRule(rule) for rule in routingProfile.get('rules', [])),
+        )
+    )
+
+    return {
+        'domainStrategy': domainStrategy,
+        'domainMatcher': 'hybrid',
+        'rules': rules,
+    }
+
+
+def routingObjectHasDirectRule(routingObject: dict) -> bool:
+    try:
+        return any(
+            rule.get('outboundTag') == 'direct'
+            for rule in routingObject.get('rules', [])
+            if isinstance(rule, dict)
+        )
+    except Exception:
+        # Any non-exit exceptions
+
+        return False
+
+
 def getUserTUNSettings(*args, **kwargs):
     return Storage.UserTUNSettings().get(*args, **kwargs)
 
@@ -196,6 +293,17 @@ class CoreManager(Mixins.CleanupOnExit):
             }
         elif routing == AppBuiltinRouting.Global.value:
             routingObject = {}
+        elif customRoutingObjectFromSettings(routing) is not None:
+            routingObject = customRoutingObjectFromSettings(routing)
+
+            if (
+                routingObjectHasDirectRule(routingObject)
+                and not proxyModeOnly
+                and SystemRuntime.isTUNMode()
+            ):
+                showMBoxDirectRulesNotAllowed()
+
+                return None, False
         elif routing == AppBuiltinRouting.Custom.value:
             routingObject = config.get('routing', {})
         else:
