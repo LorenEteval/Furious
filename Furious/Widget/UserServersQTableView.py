@@ -902,12 +902,12 @@ class DeleteServersProgressDialog(AppQDialog):
     def setWidthAndHeight(self):
         self.resize(420, 150)
 
-    def exec(self):
+    def open(self):
         self.spinner.start()
 
         QtCore.QTimer.singleShot(0, self.deleteNext)
 
-        return super().exec()
+        return super().open()
 
     def reject(self):
         self.cancel()
@@ -2115,9 +2115,9 @@ class UserServersQTableView(
                 showTrayMessage=showTrayMessage,
                 parent=self.window(),
             )
-            dialog.exec()
+            dialog.open()
 
-            return dialog.deletedCount
+            return 0
 
         if Storage.UserActivatedItemIndex() in indexes:
             deleteActivated = True
@@ -2411,6 +2411,8 @@ class UserServersQTableView(
         self.subsManager.updateSubsByUnique(unique, **kwargs)
 
     def updateSubs(self, httpProxy: Union[str, None], **kwargs):
+        self.selectionModel().clearSelection()
+
         self.subsManager.configureHttpProxy(httpProxy)
         self.subsManager.updateSubs(**kwargs)
 
