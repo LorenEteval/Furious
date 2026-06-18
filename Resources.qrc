@@ -5,6 +5,8 @@
         <file alias="arrow-return-left.svg">Icons/bootstrap/arrow-return-left.svg</file>
         <file alias="arrow-return-right.svg">Icons/bootstrap/arrow-return-right.svg</file>
         <file alias="box-arrow-in-left.svg">Icons/bootstrap/box-arrow-in-left.svg</file>
+        <file alias="caret-down-fill.svg">Icons/bootstrap/caret-down-fill.svg</file>
+        <file alias="caret-up-fill.svg">Icons/bootstrap/caret-up-fill.svg</file>
         <file alias="collection.svg">Icons/bootstrap/collection.svg</file>
         <file alias="database.svg">Icons/bootstrap/database.svg</file>
         <file alias="diagram-3.svg">Icons/bootstrap/diagram-3.svg</file>
@@ -51,6 +53,8 @@
         <file alias="arrow-return-left.svg">Icons/bootstrap/white/arrow-return-left.svg</file>
         <file alias="arrow-return-right.svg">Icons/bootstrap/white/arrow-return-right.svg</file>
         <file alias="box-arrow-in-left.svg">Icons/bootstrap/white/box-arrow-in-left.svg</file>
+        <file alias="caret-down-fill.svg">Icons/bootstrap/white/caret-down-fill.svg</file>
+        <file alias="caret-up-fill.svg">Icons/bootstrap/white/caret-up-fill.svg</file>
         <file alias="collection.svg">Icons/bootstrap/white/collection.svg</file>
         <file alias="database.svg">Icons/bootstrap/white/database.svg</file>
         <file alias="diagram-3.svg">Icons/bootstrap/white/diagram-3.svg</file>
