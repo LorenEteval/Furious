@@ -27,6 +27,7 @@ from Furious.Widget.GuiCustomizeNetworkTest import *
 from Furious.Widget.GuiCustomizeProxyBypass import *
 from Furious.Widget.GuiTUNSettings import *
 from Furious.Window.UserSubsWindow import *
+from Furious.Window.UserRoutingWindow import *
 from Furious.Window.XrayAssetViewerWindow import *
 
 from PySide6 import QtCore
@@ -239,6 +240,7 @@ class AppMainWindow(AppQMainWindow):
                 showProgress=False,
             ),
         )
+        self.userRoutingWindow = UserRoutingWindow(parent=self)
         self.xrayAssetViewerWindow = XrayAssetViewerWindow(parent=self)
         self.customizeProxyBypassDialog = GuiCustomizeProxyBypassDialog(parent=self)
         self.customizeNetworkTestDialog = GuiCustomizeNetworkTestDialog(parent=self)
@@ -444,6 +446,13 @@ class AppMainWindow(AppQMainWindow):
                     useSetMenu=False,
                     useActionGroup=False,
                     checkable=False,
+                ),
+                AppQSeperator(),
+                AppQAction(
+                    _('Routing'),
+                    icon=bootstrapIcon('shuffle.svg'),
+                    checkable=False,
+                    callback=lambda: self.userRoutingWindow.show(),
                 ),
                 AppQSeperator(),
                 AppQAction(

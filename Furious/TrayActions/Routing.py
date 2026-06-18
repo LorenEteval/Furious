@@ -18,14 +18,13 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
+from Furious.Library import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
 __all__ = ['RoutingAction']
 
-registerAppSettings(
-    'Routing', validRange=list(routing.value for routing in AppBuiltinRouting)
-)
+registerAppSettings('Routing', default=AppBuiltinRouting.BypassMainlandChina.value)
 
 # ALL BUILTIN ROUTING VALUE
 _TRANSLATABLE_BUILTIN_ROUTING = [
@@ -37,10 +36,12 @@ _TRANSLATABLE_BUILTIN_ROUTING = [
 
 class RoutingChildAction(AppQAction):
     def __init__(self, *args, **kwargs):
+        self.routingValue = kwargs.pop('routingValue', None)
+
         super().__init__(*args, **kwargs)
 
     def triggeredCallback(self, checked):
-        textEnglish = self.textEnglish
+        textEnglish = self.routingValue or self.textEnglish
 
         if AppSettings.get('Routing') != textEnglish:
             AppSettings.set('Routing', textEnglish)
@@ -58,18 +59,51 @@ class RoutingAction(AppQAction):
         super().__init__(
             _('Routing'),
             icon=bootstrapIcon('shuffle.svg'),
-            menu=AppQMenu(
-                *list(
-                    RoutingChildAction(
-                        _(routing.value),
-                        checkable=True,
-                        checked=AppSettings.get('Routing') == routing.value,
-                    )
-                    for routing in AppBuiltinRouting
-                ),
-            ),
+            menu=AppQMenu(),
             **kwargs,
         )
+        self.rebuildMenu()
+        self._menu.aboutToShow.connect(self.rebuildMenu)
+
+    def routingActions(self):
+        actions = list(
+            RoutingChildAction(
+                _(routing.value),
+                checkable=True,
+                checked=AppSettings.get('Routing') == routing.value,
+            )
+            for routing in AppBuiltinRouting
+        )
+
+        customActions = list()
+
+        for unique, routing in Storage.UserRoutings().items():
+            if not routing.get('enabled', True):
+                continue
+
+            action = RoutingChildAction(
+                routing.get('remark', ''),
+                routingValue=f'Custom:{unique}',
+                checkable=True,
+                checked=AppSettings.get('Routing') == f'Custom:{unique}',
+            )
+            customActions.append(action)
+
+        if customActions:
+            actions.extend([AppQSeperator(), *customActions])
+
+        return actions
+
+    def rebuildMenu(self):
+        self._menu.clear()
+        self._actionGroup = AppQActionGroup(self)
+
+        for action in self.routingActions():
+            if isinstance(action, AppQSeperator):
+                self._menu.addSeparator()
+            else:
+                self._menu.addAction(action)
+                self._actionGroup.addAction(action)
 
     def getGlobalAction(self):
         # 2nd action

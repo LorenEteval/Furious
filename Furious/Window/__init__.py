@@ -22,4 +22,5 @@ from .LogViewerWindow import *
 from .QRCodeWindow import *
 from .TextEditorWindow import *
 from .UserSubsWindow import *
+from .UserRoutingWindow import *
 from .XrayAssetViewerWindow import *
