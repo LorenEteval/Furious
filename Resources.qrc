@@ -8,6 +8,8 @@
         <file alias="caret-down-fill.svg">Icons/bootstrap/caret-down-fill.svg</file>
         <file alias="caret-up-fill.svg">Icons/bootstrap/caret-up-fill.svg</file>
         <file alias="collection.svg">Icons/bootstrap/collection.svg</file>
+        <file alias="dash.svg">Icons/bootstrap/dash.svg</file>
+        <file alias="dash-lg.svg">Icons/bootstrap/dash-lg.svg</file>
         <file alias="database.svg">Icons/bootstrap/database.svg</file>
         <file alias="diagram-3.svg">Icons/bootstrap/diagram-3.svg</file>
         <file alias="display.svg">Icons/bootstrap/display.svg</file>
@@ -28,8 +30,12 @@
         <file alias="pencil-square.svg">Icons/bootstrap/pencil-square.svg</file>
         <file alias="person-gear.svg">Icons/bootstrap/person-gear.svg</file>
         <file alias="pin-angle.svg">Icons/bootstrap/pin-angle.svg</file>
+        <file alias="plus.svg">Icons/bootstrap/plus.svg</file>
+        <file alias="plus-lg.svg">Icons/bootstrap/plus-lg.svg</file>
         <file alias="qr-code.svg">Icons/bootstrap/qr-code.svg</file>
         <file alias="qr-code-scan.svg">Icons/bootstrap/qr-code-scan.svg</file>
+        <file alias="reception-0.svg">Icons/bootstrap/reception-0.svg</file>
+        <file alias="reception-4.svg">Icons/bootstrap/reception-4.svg</file>
         <file alias="rocket-takeoff.svg">Icons/bootstrap/rocket-takeoff.svg</file>
         <file alias="rocket-takeoff-admin-connected.svg">Icons/bootstrap/rocket-takeoff-admin-connected.svg</file>
         <file alias="rocket-takeoff-connected.svg">Icons/bootstrap/rocket-takeoff-connected.svg</file>
@@ -56,6 +62,8 @@
         <file alias="caret-down-fill.svg">Icons/bootstrap/white/caret-down-fill.svg</file>
         <file alias="caret-up-fill.svg">Icons/bootstrap/white/caret-up-fill.svg</file>
         <file alias="collection.svg">Icons/bootstrap/white/collection.svg</file>
+        <file alias="dash.svg">Icons/bootstrap/white/dash.svg</file>
+        <file alias="dash-lg.svg">Icons/bootstrap/white/dash-lg.svg</file>
         <file alias="database.svg">Icons/bootstrap/white/database.svg</file>
         <file alias="diagram-3.svg">Icons/bootstrap/white/diagram-3.svg</file>
         <file alias="display.svg">Icons/bootstrap/white/display.svg</file>
@@ -76,8 +84,12 @@
         <file alias="pencil-square.svg">Icons/bootstrap/white/pencil-square.svg</file>
         <file alias="person-gear.svg">Icons/bootstrap/white/person-gear.svg</file>
         <file alias="pin-angle.svg">Icons/bootstrap/white/pin-angle.svg</file>
+        <file alias="plus.svg">Icons/bootstrap/white/plus.svg</file>
+        <file alias="plus-lg.svg">Icons/bootstrap/white/plus-lg.svg</file>
         <file alias="qr-code.svg">Icons/bootstrap/white/qr-code.svg</file>
         <file alias="qr-code-scan.svg">Icons/bootstrap/white/qr-code-scan.svg</file>
+        <file alias="reception-0.svg">Icons/bootstrap/white/reception-0.svg</file>
+        <file alias="reception-4.svg">Icons/bootstrap/white/reception-4.svg</file>
         <file alias="router.svg">Icons/bootstrap/white/router.svg</file>
         <file alias="save.svg">Icons/bootstrap/white/save.svg</file>
         <file alias="scissors.svg">Icons/bootstrap/white/scissors.svg</file>
