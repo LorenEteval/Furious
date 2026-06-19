@@ -76,6 +76,7 @@ class TextEditorWindow(AppQMainWindow):
         super().__init__(*args, **kwargs)
 
         self.customWindowTitle = ''
+
         if PLATFORM == 'Darwin':
             # Window-modal child windows are rendered as macOS sheets
             # without traffic-light controls.
@@ -90,6 +91,7 @@ class TextEditorWindow(AppQMainWindow):
             self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
         else:
             self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+
         self.setFixedSize(450, int(450 * GOLDEN_RATIO))
 
         # Current editing index
