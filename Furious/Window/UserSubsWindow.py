@@ -93,22 +93,25 @@ class UserSubsWindow(AppQMainWindow):
         self.userSubsTab = AppQTabWidget(self)
         self.userSubsTab.addTab(self.userSubsQTableWidget, _('Subscription List'))
 
-        # Buttons
-        self.addButton = AppQPushButton(_('Add'))
-        self.addButton.clicked.connect(lambda: self.addSubs())
-        self.deleteButton = AppQPushButton(_('Delete'))
-        self.deleteButton.clicked.connect(lambda: self.deleteSelectedItem())
-
-        # Button Layout
-        self.buttonWidget = QWidget()
-        self.buttonWidgetLayout = QGridLayout(parent=self.buttonWidget)
-        self.buttonWidgetLayout.addWidget(self.addButton, 0, 0)
-        self.buttonWidgetLayout.addWidget(self.deleteButton, 0, 1)
+        self.toolbar = AppQToolBar(
+            AppQAction(
+                _('Add'),
+                icon=bootstrapIcon('plus-lg.svg'),
+                callback=lambda: self.addSubs(),
+            ),
+            AppQAction(
+                _('Delete'),
+                icon=bootstrapIcon('dash-lg.svg'),
+                callback=lambda: self.deleteSelectedItem(),
+            ),
+            parent=self,
+        )
+        self.toolbar.setObjectName('UserSubsWindow_AppQToolBar')
+        self.addToolBar(self.toolbar)
 
         self.fakeCentralWidget = QWidget()
         self.fakeCentralWidgetLayout = QVBoxLayout(self.fakeCentralWidget)
         self.fakeCentralWidgetLayout.addWidget(self.userSubsTab)
-        self.fakeCentralWidgetLayout.addWidget(self.buttonWidget)
 
         self.setCentralWidget(self.fakeCentralWidget)
 
