@@ -30,6 +30,8 @@ from PySide6.QtWidgets import *
 
 from typing import Union
 
+import functools
+
 __all__ = [
     'moveToCenter',
     'AppQCheckBox',
@@ -449,9 +451,63 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
         self.setWindowIcon(AppHue.connectedWindowIcon())
 
 
-class AppQPushButton(Mixins.QTranslatable, QPushButton):
+class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
     def __init__(self, *args, **kwargs):
+        icon = kwargs.pop('icon', None)
+
         super().__init__(*args, **kwargs)
+
+        self.iconFileName = ''
+
+        if icon is not None:
+            self.setIcon(icon)
+
+    @staticmethod
+    @functools.lru_cache(None)
+    def getIconFileName(fileName):
+        try:
+            return fileName.split('/')[-1]
+        except Exception:
+            # Any non-exit exceptions
+
+            return ''
+
+    def setIconByTheme(self, theme):
+        if not self.iconFileName:
+            return
+
+        if AppSettings.isStateON_('DarkMode'):
+            # Custom dark mode
+            super().setIcon(bootstrapIconWhite(self.iconFileName))
+
+            return
+
+        if theme == 'Dark':
+            if PLATFORM == 'Windows':
+                # Windows
+                if versionToValue(PYSIDE6_VERSION) < versionToValue('6.7.0'):
+                    # PySide6 < 6.7.0 has no system theme handling on Windows.
+                    # Always use black icon
+                    super().setIcon(bootstrapIcon(self.iconFileName))
+                else:
+                    # PySide6 has system theme handling.
+                    super().setIcon(bootstrapIconWhite(self.iconFileName))
+            else:
+                super().setIcon(bootstrapIconWhite(self.iconFileName))
+        else:
+            super().setIcon(bootstrapIcon(self.iconFileName))
+
+    def setIcon(self, icon: AppQIcon):
+        self.iconFileName = self.getIconFileName(icon.iconFileName)
+
+        if not self.iconFileName:
+            # Fall back
+            super().setIcon(icon)
+        else:
+            self.setIconByTheme(APP().theme())
+
+    def themeChangedCallback(self, theme):
+        self.setIconByTheme(theme)
 
     def retranslate(self):
         self.setText(_(self.text()))
