@@ -29,6 +29,7 @@ __all__ = [
 class AppBuiltinCommand(Enum):
     Empty = 'empty'
     RunAs = 'runas'
+    Clear = 'clear'
 
 
 class AppBuiltinRouting(Enum):
