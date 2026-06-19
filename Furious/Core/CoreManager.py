@@ -35,7 +35,7 @@ import logging
 import tempfile
 import functools
 
-__all__ = ['CoreManager']
+__all__ = ['cleanRoutingRule', 'CoreManager']
 
 logger = logging.getLogger(__name__)
 
@@ -87,13 +87,10 @@ def cleanRoutingRule(rule: dict):
     if not isinstance(rule, dict):
         return None
 
-    result = {'type': 'field'}
-    outboundTag = rule.get('outboundTag', 'proxy')
-
-    if outboundTag not in ['proxy', 'direct', 'block']:
-        outboundTag = 'proxy'
-
-    result['outboundTag'] = outboundTag
+    result = {
+        'type': 'field',
+        'outboundTag': str(rule.get('outboundTag', 'proxy')).strip() or 'proxy',
+    }
 
     for key in [
         'domain',

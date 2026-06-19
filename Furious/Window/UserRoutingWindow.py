@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
+from Furious.Core.CoreManager import cleanRoutingRule
 from Furious.Library import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
@@ -26,6 +27,7 @@ from PySide6 import QtCore
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import *
 
+import copy
 import uuid
 import logging
 import functools
@@ -88,6 +90,66 @@ def comboCurrentData(combo: QComboBox, default=''):
         return default
 
     return data
+
+
+def routingObjectFromProfile(routingProfile: dict):
+    if not isinstance(routingProfile, dict):
+        routingProfile = dict()
+
+    domainStrategy = routingProfile.get('domainStrategy', 'AsIs')
+
+    if domainStrategy not in DOMAIN_STRATEGIES:
+        domainStrategy = 'AsIs'
+
+    rules = list(
+        filter(
+            lambda rule: rule is not None,
+            list(cleanRoutingRule(rule) for rule in routingProfile.get('rules', [])),
+        )
+    )
+
+    return {
+        'domainStrategy': domainStrategy,
+        'domainMatcher': 'hybrid',
+        'rules': rules,
+    }
+
+
+class RoutingPreviewDialog(AppQDialog):
+    def __init__(self, routingProfile: dict, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle(_('Preview Routing'))
+
+        if PLATFORM == 'Darwin':
+            # Window-modal child windows are rendered as macOS sheets
+            # without traffic-light controls.
+            self.setWindowFlags(
+                self.windowFlags()
+                | QtCore.Qt.WindowType.Window
+                | QtCore.Qt.WindowType.WindowTitleHint
+                | QtCore.Qt.WindowType.WindowSystemMenuHint
+                | QtCore.Qt.WindowType.WindowMinimizeButtonHint
+                | QtCore.Qt.WindowType.WindowCloseButtonHint
+            )
+            self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        else:
+            self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+
+        self.textEditor = DraculaJSONTextEditor(fontFamily=AppFontName())
+        self.textEditor.setLineWrapMode(DraculaJSONTextEditor.LineWrapMode.NoWrap)
+        self.textEditor.setPlainText(
+            UJSONEncoder.encode(routingObjectFromProfile(routingProfile), indent=4)
+        )
+        self.textEditor.setReadOnly(True)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.textEditor)
+
+        self.setLayout(layout)
+
+    def setWidthAndHeight(self):
+        self.setFixedSize(450, int(450 * GOLDEN_RATIO))
 
 
 class RoutingTextEditDialog(AppQDialog):
@@ -279,10 +341,8 @@ class RoutingRuleEditDialog(AppQDialog):
 
         self.ruleTagEdit = self.lineEdit(self.rule.get('ruleTag', ''))
 
-        self.outboundCombo = AppQComboBox(translatable=False)
-        self.outboundCombo.addItems(['proxy', 'direct', 'block'])
-        self.outboundCombo.setCurrentText(self.rule.get('outboundTag', 'proxy'))
-        self.outboundCombo.setMaximumWidth(self.ShortInputWidth)
+        self.outboundEdit = self.lineEdit(self.rule.get('outboundTag', 'proxy'))
+        self.outboundEdit.setMaximumWidth(360)
 
         self.balancerTagEdit = self.lineEdit(str(self.rule.get('balancerTag', '')))
 
@@ -327,8 +387,8 @@ class RoutingRuleEditDialog(AppQDialog):
             self.ruleTagEdit,
         )
         generalLayout.addRow(
-            AppQLabel('Outbound', translatable=False),
-            self.outboundCombo,
+            AppQLabel(_('OutBound (e.g. proxy/direct/block)')),
+            self.outboundEdit,
         )
         generalLayout.addRow(
             AppQLabel('Balancer Tag', translatable=False),
@@ -440,7 +500,10 @@ class RoutingRuleEditDialog(AppQDialog):
         self.setFixedSize(int(760 * GOLDEN_RATIO), 760)
 
     def routingRule(self):
-        rule = {'type': 'field', 'outboundTag': self.outboundCombo.currentText()}
+        rule = {
+            'type': 'field',
+            'outboundTag': self.outboundEdit.text().strip() or 'proxy',
+        }
 
         for key, value in [
             ('ruleTag', self.ruleTagEdit.text().strip()),
@@ -552,6 +615,87 @@ class RoutingProfileEditDialog(AppQDialog):
         }
 
 
+class RoutingRulesQListWidget(AppQListWidget):
+    editRequested, deleteRequested = (
+        QtCore.Signal(),
+        QtCore.Signal(),
+    )
+
+    def __init__(self, routing: dict, parent=None):
+        super().__init__(parent)
+
+        self.routing = routing
+
+        self.setAlternatingRowColors(True)
+        self.setSelectionBehavior(AppQListWidget.SelectionBehavior.SelectRows)
+        self.setSelectionMode(AppQListWidget.SelectionMode.ExtendedSelection)
+        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+
+        self.itemDoubleClicked.connect(lambda _item: self.editRequested.emit())
+        self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
+
+        self.contextDeleteAction = AppQAction(
+            _('Delete'),
+            callback=lambda: self.deleteRequested.emit(),
+        )
+        self.contextMenu = AppQMenu(self.contextDeleteAction, parent=self)
+
+        self.flushAll()
+
+    def rules(self):
+        rules = self.routing.setdefault('rules', list())
+
+        if not isinstance(rules, list):
+            self.routing['rules'] = rules = list()
+
+        return rules
+
+    def ruleAt(self, index: int):
+        return self.rules()[index]
+
+    def ruleText(self, rule: dict) -> str:
+        name, outbound, domains, ips = (
+            rule.get('ruleTag', '') or 'Untitled Rule',
+            rule.get('outboundTag', 'proxy'),
+            len(rule.get('domain', [])),
+            len(rule.get('ip', [])),
+        )
+
+        return f'{name} -> {outbound} ({domains} domains, {ips} IPs)'
+
+    def selectedRuleText(self):
+        indexes = self.selectedIndex
+
+        if not indexes:
+            return ''
+
+        return self.ruleText(self.ruleAt(indexes[0]))
+
+    def appendRule(self, rule: dict):
+        self.rules().append(rule)
+        self.flushAll()
+
+    def setRule(self, index: int, rule: dict):
+        self.rules()[index] = rule
+        self.flushAll()
+
+    def deleteRules(self, indexes: list[int]):
+        for i in range(len(indexes)):
+            self.rules().pop(indexes[i] - i)
+
+        self.flushAll()
+
+    def flushAll(self):
+        self.clear()
+
+        for rule in self.rules():
+            self.addItem(self.ruleText(rule))
+
+    @QtCore.Slot(QtCore.QPoint)
+    def handleCustomContextMenuRequested(self, point):
+        self.contextMenu.exec(self.mapToGlobal(point))
+
+
 class RoutingRulesDialog(AppQDialog):
     def __init__(self, routing: dict, parent=None):
         super().__init__(parent)
@@ -560,8 +704,9 @@ class RoutingRulesDialog(AppQDialog):
         self.setWindowTitle(_('Routing Rules'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        self.listWidget = QListWidget()
-        self.listWidget.itemDoubleClicked.connect(lambda _item: self.editRule())
+        self.listWidget = RoutingRulesQListWidget(self.routing, parent=self)
+        self.listWidget.editRequested.connect(self.editRule)
+        self.listWidget.deleteRequested.connect(self.deleteRule)
 
         self.addButton = AppQPushButton(_('Add'))
         self.addButton.clicked.connect(self.addRule)
@@ -579,37 +724,8 @@ class RoutingRulesDialog(AppQDialog):
 
         self.setLayout(layout)
 
-        self.flushAll()
-
     def setWidthAndHeight(self):
         self.setFixedSize(760, 470)
-
-    def rules(self):
-        rules = self.routing.setdefault('rules', list())
-
-        if not isinstance(rules, list):
-            self.routing['rules'] = rules = list()
-
-        return rules
-
-    def ruleText(self, rule: dict) -> str:
-        name, outbound, domains, ips = (
-            rule.get('ruleTag', '') or 'Untitled Rule',
-            rule.get('outboundTag', 'proxy'),
-            len(rule.get('domain', [])),
-            len(rule.get('ip', [])),
-        )
-
-        return f'{name} -> {outbound} ({domains} domains, {ips} IPs)'
-
-    def flushAll(self):
-        self.listWidget.clear()
-
-        for rule in self.rules():
-            self.listWidget.addItem(self.ruleText(rule))
-
-    def currentRow(self) -> int:
-        return self.listWidget.currentRow()
 
     def addRule(self):
         rule = {'type': 'field', 'outboundTag': 'proxy', 'ruleTag': 'New Rule'}
@@ -617,40 +733,38 @@ class RoutingRulesDialog(AppQDialog):
 
         def handleResultCode(code):
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
-                self.rules().append(dialog.routingRule())
-                self.flushAll()
+                self.listWidget.appendRule(dialog.routingRule())
 
         dialog.finished.connect(handleResultCode)
         dialog.open()
 
     def editRule(self):
-        row = self.currentRow()
+        indexes = self.listWidget.selectedIndex
 
-        if row < 0 or row >= len(self.rules()):
+        if len(indexes) != 1:
             return
 
-        dialog = RoutingRuleEditDialog(self.rules()[row], parent=self)
+        index = indexes[0]
+        dialog = RoutingRuleEditDialog(self.listWidget.ruleAt(index), parent=self)
 
-        def handleResultCode(_row, code):
+        def handleResultCode(_index, code):
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
-                self.rules()[_row] = dialog.routingRule()
-                self.flushAll()
+                self.listWidget.setRule(_index, dialog.routingRule())
 
-        dialog.finished.connect(functools.partial(handleResultCode, row))
+        dialog.finished.connect(functools.partial(handleResultCode, index))
         dialog.open()
 
     def deleteRule(self):
-        row = self.currentRow()
+        indexes = self.listWidget.selectedIndex
 
-        if row < 0 or row >= len(self.rules()):
+        if len(indexes) == 0:
             return
 
-        def handleResultCode(_row, code):
+        def handleResultCode(_indexes, code):
             if code == PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
-                self.rules().pop(_row)
-                self.flushAll()
+                self.listWidget.deleteRules(_indexes)
             else:
                 # Do not delete
                 pass
@@ -666,9 +780,10 @@ class RoutingRulesDialog(AppQDialog):
             )
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        mbox.possibleRemark = self.ruleText(self.rules()[row])
+        mbox.isMulti = bool(len(indexes) > 1)
+        mbox.possibleRemark = self.listWidget.selectedRuleText()
         mbox.setText(mbox.customText())
-        mbox.finished.connect(functools.partial(handleResultCode, row))
+        mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
         # Show the MessageBox asynchronously
         mbox.open()
@@ -699,6 +814,28 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setSortingEnabled(False)
         self.doubleClicked.connect(self.editSelectedRules)
+        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
+
+        self.contextPreviewAction = AppQAction(
+            _('Preview'),
+            callback=lambda: self.previewSelectedItem(),
+        )
+        self.contextRenameAction = AppQAction(
+            _('Rename'),
+            callback=lambda: self.renameSelectedItem(),
+        )
+        self.contextDeleteAction = AppQAction(
+            _('Delete'),
+            callback=lambda: self.deleteSelectedItem(),
+        )
+        self.contextMenu = AppQMenu(
+            self.contextPreviewAction,
+            self.contextRenameAction,
+            AppQSeperator(),
+            self.contextDeleteAction,
+            parent=self,
+        )
 
         self.setDefaultRowHeight(self.RowHeight)
         self.configureHeader()
@@ -719,6 +856,17 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
 
     def routingUniqueByRow(self, row):
         return self.sourceModel.routingUniqueByRow(row)
+
+    @QtCore.Slot(QtCore.QPoint)
+    def handleCustomContextMenuRequested(self, point):
+        indexes = self.selectedIndex
+
+        isUniqueFlag = len(indexes) == 1
+
+        for action in [self.contextPreviewAction, self.contextRenameAction]:
+            action.setEnabled(isUniqueFlag)
+
+        self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def flushItem(self, row: int, column: int):
         index = self.sourceModel.index(row, column)
@@ -808,29 +956,29 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         dialog.open()
 
     def deleteSelectedItem(self):
-        rows = self.selectedIndex
+        indexes = self.selectedIndex
 
-        if not rows:
+        if not indexes:
             # Nothing selected. Do nothing
             return
 
-        def handleResultCode(_rows, code):
+        def handleResultCode(_indexes, code):
             if code != PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
                 return
 
-            for index, row in enumerate(_rows):
-                deleteRow = row - index
-                unique = self.routingUniqueByRow(deleteRow)
+            for i in range(len(_indexes)):
+                deleteIndex = _indexes[i] - i
+                deleteUnique = self.routingUniqueByRow(deleteIndex)
 
                 self.sourceModel.beginRemoveRows(
                     QtCore.QModelIndex(),
-                    deleteRow,
-                    deleteRow,
+                    deleteIndex,
+                    deleteIndex,
                 )
 
-                Storage.UserRoutings().pop(unique)
+                Storage.UserRoutings().pop(deleteUnique)
 
                 self.sourceModel.endRemoveRows()
 
@@ -847,29 +995,29 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
             )
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        mbox.isMulti = bool(len(rows) > 1)
+        mbox.isMulti = bool(len(indexes) > 1)
         mbox.possibleRemark = self.sourceModel.data(
-            self.sourceModel.index(rows[0], 0),
+            self.sourceModel.index(indexes[0], 0),
             QtCore.Qt.ItemDataRole.DisplayRole,
         )
         mbox.setText(mbox.customText())
-        mbox.finished.connect(functools.partial(handleResultCode, rows))
+        mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
         # Show the MessageBox asynchronously
         mbox.open()
 
     def renameSelectedItem(self):
-        rows = self.selectedIndex
+        indexes = self.selectedIndex
 
-        if not rows:
+        if not indexes:
             # Nothing selected. Do nothing
             return
 
-        if len(rows) > 1:
+        if len(indexes) > 1:
             # Multiple items selected. Do nothing
             return
 
-        routing = self.sourceModel.routingByRow(rows[0])
+        routing = self.sourceModel.routingByRow(indexes[0])
 
         dialog = RoutingRemarkEditDialog(routing.get('remark', ''), parent=self)
 
@@ -886,18 +1034,29 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         dialog.finished.connect(handleResultCode)
         dialog.open()
 
-    def editSelectedRules(self):
-        rows = self.selectedIndex
+    def previewSelectedItem(self):
+        indexes = self.selectedIndex
 
-        if not rows:
+        if len(indexes) != 1:
+            return
+
+        routing = copy.deepcopy(self.sourceModel.routingByRow(indexes[0]))
+
+        dialog = RoutingPreviewDialog(routing, parent=self)
+        dialog.open()
+
+    def editSelectedRules(self):
+        indexes = self.selectedIndex
+
+        if not indexes:
             # Nothing selected. Do nothing
             return
 
-        if len(rows) > 1:
+        if len(indexes) > 1:
             # Multiple items selected. Do nothing
             return
 
-        routing = self.sourceModel.routingByRow(rows[0])
+        routing = self.sourceModel.routingByRow(indexes[0])
 
         dialog = RoutingRulesDialog(routing, parent=self)
         dialog.finished.connect(lambda _code: self.flushAll())
@@ -913,23 +1072,26 @@ class UserRoutingWindow(AppQMainWindow):
         self.setWindowTitle(_('Edit Routing'))
 
         self.tableView = UserRoutingTableView(parent=self)
-        self.addButton = AppQPushButton(_('Add'))
-        self.addButton.clicked.connect(self.tableView.appendNewItem)
-        self.renameButton = AppQPushButton(_('Rename'))
-        self.renameButton.clicked.connect(self.tableView.renameSelectedItem)
-        self.deleteButton = AppQPushButton(_('Delete'))
-        self.deleteButton.clicked.connect(self.tableView.deleteSelectedItem)
-
-        buttonLayout = QHBoxLayout()
-        buttonLayout.addWidget(self.addButton)
-        buttonLayout.addWidget(self.renameButton)
-        buttonLayout.addWidget(self.deleteButton)
+        self.toolbar = AppQToolBar(
+            AppQAction(
+                _('Add'),
+                icon=bootstrapIcon('plus-lg.svg'),
+                callback=lambda: self.tableView.appendNewItem(),
+            ),
+            AppQAction(
+                _('Delete'),
+                icon=bootstrapIcon('dash-lg.svg'),
+                callback=lambda: self.tableView.deleteSelectedItem(),
+            ),
+            parent=self,
+        )
+        self.toolbar.setObjectName('UserRoutingWindow_AppQToolBar')
+        self.addToolBar(self.toolbar)
 
         centralWidget = QWidget()
 
         layout = QVBoxLayout(centralWidget)
         layout.addWidget(self.tableView)
-        layout.addLayout(buttonLayout)
 
         self.setCentralWidget(centralWidget)
 
