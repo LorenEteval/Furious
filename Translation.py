@@ -173,6 +173,34 @@ def main():
                 # Set 'isReviewed' field to "False"
                 translation[text]['isReviewed'] = 'False'
 
+    translationReverseMap = dict()
+
+    for text in translation.keys():
+        targetText = translation[text].get(target, '')
+
+        if not targetText:
+            continue
+
+        translationReverseMap.setdefault(targetText, list()).append(text)
+
+    duplicateTranslations = dict(
+        (targetText, texts)
+        for targetText, texts in translationReverseMap.items()
+        if len(set(texts)) > 1
+    )
+
+    for targetText, texts in duplicateTranslations.items():
+        logger.error(
+            f'translation collision in target language \'{target}\': '
+            f'{texts} --{target}--> \'{targetText}\''
+        )
+
+    if duplicateTranslations:
+        logger.error(
+            f'have {len(duplicateTranslations)} duplicate target translation(s) '
+            f'in language \'{target}\''
+        )
+
     try:
         # Write back to file
         with open(GEN_TRANSLATION_FILE, 'w', encoding='utf-8') as file:
