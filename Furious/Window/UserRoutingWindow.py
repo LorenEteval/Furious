@@ -819,6 +819,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
 
         self.contextPreviewAction = AppQAction(
             _('Preview'),
+            icon=bootstrapIcon('file-earmark-text.svg'),
             callback=lambda: self.previewSelectedItem(),
         )
         self.contextRenameAction = AppQAction(

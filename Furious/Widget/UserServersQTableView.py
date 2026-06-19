@@ -1420,7 +1420,7 @@ class UserServersQTableView(
 
         self.customizeJSONConfigActionRef = AppQAction(
             _('Customize JSON Configuration...'),
-            icon=bootstrapIcon('pencil-square.svg'),
+            icon=bootstrapIcon('braces.svg'),
             callback=lambda: self.editSelectedItemConfiguration(),
             shortcut=QtCore.QKeyCombination(
                 QtCore.Qt.KeyboardModifier.ControlModifier,
