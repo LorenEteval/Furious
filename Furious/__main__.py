@@ -38,6 +38,22 @@ __all__ = ['main']
 logger = logging.getLogger(__name__)
 
 
+def runClearSettings():
+    app = QtCore.QCoreApplication(sys.argv)
+    app.setApplicationName(APPLICATION_NAME)
+    app.setApplicationVersion(APPLICATION_VERSION)
+    app.setOrganizationName(ORGANIZATION_NAME)
+    app.setOrganizationDomain(ORGANIZATION_DOMAIN)
+
+    settings = QtCore.QSettings()
+    settings.clear()
+    settings.sync()
+
+    logger.info('application settings have been cleared')
+
+    sys.exit(0)
+
+
 def runAppMain():
     process = AppMainProcess(functools.partial(Application, sys.argv))
 
@@ -142,7 +158,10 @@ def runAppMain():
 
 def main():
     try:
-        runAppMain()
+        if len(sys.argv) > 1 and sys.argv[1] == AppBuiltinCommand.Clear.value:
+            runClearSettings()
+        else:
+            runAppMain()
     except Exception:
         # Any non-exit exceptions
 
