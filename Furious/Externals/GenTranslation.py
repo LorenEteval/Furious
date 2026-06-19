@@ -354,7 +354,7 @@ TRANSLATION = {
         "source": [
             "Furious.Window.TextEditorWindow"
         ],
-        "RU": "Отступ",
+        "RU": "Настройка отступа...",
         "ZH": "缩进...",
         "isReviewed": "True"
     },
@@ -1903,7 +1903,7 @@ TRANSLATION = {
         "source": [
             "Furious.TrayActions.Import"
         ],
-        "RU": "Импорт",
+        "RU": "Импортирование",
         "ZH": "正在导入",
         "isReviewed": "True"
     },
@@ -2130,6 +2130,30 @@ TRANSLATION = {
         ],
         "RU": "Документация по маршрутизации",
         "ZH": "路由文档",
+        "isReviewed": "True"
+    },
+    "Preview Routing": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Предпросмотр маршрутизации",
+        "ZH": "预览路由",
+        "isReviewed": "True"
+    },
+    "OutBound (e.g. proxy/direct/block)": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "OutBound (например: proxy/direct/block)",
+        "ZH": "OutBound（例如：proxy/direct/block）",
+        "isReviewed": "True"
+    },
+    "Preview": {
+        "source": [
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Предпросмотр",
+        "ZH": "预览",
         "isReviewed": "True"
     }
 }
