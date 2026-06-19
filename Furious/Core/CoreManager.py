@@ -293,14 +293,17 @@ class CoreManager(Mixins.CleanupOnExit):
         elif customRoutingObjectFromSettings(routing) is not None:
             routingObject = customRoutingObjectFromSettings(routing)
 
-            if (
-                routingObjectHasDirectRule(routingObject)
-                and not proxyModeOnly
-                and SystemRuntime.isTUNMode()
-            ):
-                showMBoxDirectRulesNotAllowed()
-
-                return None, False
+            #
+            # TODO: Warning: no check for custom routing
+            #
+            # if (
+            #     routingObjectHasDirectRule(routingObject)
+            #     and not proxyModeOnly
+            #     and SystemRuntime.isTUNMode()
+            # ):
+            #     showMBoxDirectRulesNotAllowed()
+            #
+            #     return None, False
         elif routing == AppBuiltinRouting.Custom.value:
             routingObject = config.get('routing', {})
         else:
