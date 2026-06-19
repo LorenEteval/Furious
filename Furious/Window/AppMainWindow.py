@@ -101,10 +101,10 @@ class AppNetworkConnectivityManager(NetworkConnectivityManager):
 
 
 class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
-    DefaultIconFileName = 'wifi.svg'
+    DefaultIconFileName = 'reception-4.svg'
     StateIconFileName = {
-        'success': 'wifi.svg',
-        'failure': 'wifi-off.svg',
+        'success': 'reception-4.svg',
+        'failure': 'reception-0.svg',
     }
     IconSize = QtCore.QSize(16, 16)
 
