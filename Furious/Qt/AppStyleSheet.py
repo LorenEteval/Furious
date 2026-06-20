@@ -191,6 +191,11 @@ class AppStyleSheet:
                 color: {palette['selection_text']};
             }}
 
+            QMenu::item:disabled {{
+                color: {palette['disabled']};
+                background-color: transparent;
+            }}
+
             QToolBar {{
                 padding: 5px;
                 spacing: 5px;
@@ -222,6 +227,12 @@ class AppStyleSheet:
             QToolButton:checked {{
                 border-color: {palette['accent']};
                 background-color: {palette['accent_soft']};
+            }}
+
+            QToolButton:disabled {{
+                color: {palette['disabled']};
+                border-color: transparent;
+                background-color: transparent;
             }}
 
             QPushButton {{
