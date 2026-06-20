@@ -180,9 +180,9 @@ class SystemTrayIcon(
             or (PLATFORM == 'Windows' and APP().theme() == 'Light')
         ):
             # Darker
-            self.setIcon(bootstrapIcon('rocket-takeoff-dark.svg'))
+            self.setIcon(bootstrapIcon('rocket-takeoff-disconnected-dark.svg'))
         else:
-            self.setIcon(bootstrapIcon('rocket-takeoff.svg'))
+            self.setIcon(bootstrapIcon('rocket-takeoff-disconnected.svg'))
 
     def setConnectedIcon(self):
         if AppSettings.isStateON_('UseMonochromeTrayIcon'):
@@ -191,7 +191,7 @@ class SystemTrayIcon(
             return
 
         if SystemRuntime.isAdmin():
-            self.setIcon(bootstrapIcon('rocket-takeoff-admin-connected.svg'))
+            self.setIcon(bootstrapIcon('rocket-takeoff-connected-admin.svg'))
         else:
             if (
                 PLATFORM == 'Darwin'
