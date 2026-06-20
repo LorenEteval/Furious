@@ -24,7 +24,7 @@ from Furious.Qt import *
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 import copy
@@ -136,8 +136,18 @@ class RoutingPreviewDialog(AppQDialog):
         else:
             self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
+        self.lineColumnLabel = QLabel('1:1 0')
+        self.statusBar = QStatusBar()
+        self.statusBar.addPermanentWidget(self.lineColumnLabel)
+
+        def cursorChangedCallback(cursor: QTextCursor):
+            self.lineColumnLabel.setText(
+                f'{cursor.blockNumber() + 1}:{cursor.columnNumber() + 1} {cursor.position()}'
+            )
+
         self.textEditor = DraculaJSONTextEditor(fontFamily=AppFontName())
         self.textEditor.setLineWrapMode(DraculaJSONTextEditor.LineWrapMode.NoWrap)
+        self.textEditor.registerCursorPositionChangedCb(cursorChangedCallback)
         self.textEditor.setPlainText(
             UJSONEncoder.encode(routingObjectFromProfile(routingProfile), indent=4)
         )
@@ -145,6 +155,7 @@ class RoutingPreviewDialog(AppQDialog):
 
         layout = QVBoxLayout()
         layout.addWidget(self.textEditor)
+        layout.addWidget(self.statusBar)
 
         self.setLayout(layout)
 
@@ -497,7 +508,7 @@ class RoutingRuleEditDialog(AppQDialog):
         self.setLayout(layout)
 
     def setWidthAndHeight(self):
-        self.setFixedSize(int(760 * GOLDEN_RATIO), 760)
+        self.resize(int(800 * GOLDEN_RATIO), 800)
 
     def routingRule(self):
         rule = {
@@ -693,7 +704,7 @@ class RoutingRulesQListWidget(AppQListWidget):
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
-        self.contextMenu.exec(self.mapToGlobal(point))
+        self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
 
 class RoutingRulesDialog(AppQDialog):
