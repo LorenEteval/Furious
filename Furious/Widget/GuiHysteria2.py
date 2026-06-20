@@ -33,6 +33,8 @@ __all__ = ['GuiHysteria2']
 
 logger = logging.getLogger(__name__)
 
+HY2_OBFS_TYPES = ['', 'salamander', 'gecko']
+
 
 class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
@@ -191,8 +193,7 @@ class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # TODO: Only 'salamander' is currently supported by hy2
-        self.addItems(['', 'salamander'])
+        self.addItems(HY2_OBFS_TYPES)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
         try:
@@ -235,15 +236,16 @@ class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
 
             obfsType = ''
 
-        # TODO: Only 'salamander' is currently supported by hy2
-        if isinstance(obfsType, str) and obfsType != 'salamander':
-            self.setText('')
+        if isinstance(obfsType, str) and obfsType in HY2_OBFS_TYPES:
+            self.setText(obfsType)
         else:
-            self.setText('salamander')
+            self.setText('')
 
 
 class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
+        self.obfsType = kwargs.pop('obfsType', 'salamander')
+
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
@@ -256,15 +258,8 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
 
             obfsType = ''
 
-        # TODO: Only 'salamander' is currently supported by hy2
-        if not isinstance(obfsType, str) or obfsType != 'salamander':
-            if config.get('obfs') is None:
-                return False
-            else:
-                # Remove obfs field
-                config.pop('obfs', None)
-
-                return True
+        if not isinstance(obfsType, str) or obfsType != self.obfsType:
+            return False
 
         modified = False
 
@@ -300,8 +295,7 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
 
             obfsType = ''
 
-        # TODO: Only 'salamander' is currently supported by hy2
-        if not isinstance(obfsType, str) or obfsType != 'salamander':
+        if not isinstance(obfsType, str) or obfsType != self.obfsType:
             self.setText('')
 
             return
@@ -314,6 +308,170 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
             obfsPassword = ''
 
         self.setText(obfsPassword)
+
+
+class GuiHy2ItemObfsPacketSize(GuiEditorItemTextSpinBox):
+    def __init__(self, *args, **kwargs):
+        self.obfsType, self.key, self.default = (
+            kwargs.pop('obfsType', 'gecko'),
+            kwargs.pop('key', ''),
+            kwargs.pop('default', 0),
+        )
+
+        super().__init__(*args, **kwargs)
+
+        self.setRange(1, 2048)
+        self.setValue(self.default)
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        try:
+            obfsType = config['obfs']['type']
+        except Exception:
+            # Any non-exit exceptions
+
+            obfsType = ''
+
+        if not isinstance(obfsType, str) or obfsType != self.obfsType:
+            return False
+
+        if not isinstance(config.get('obfs'), dict):
+            config['obfs'] = {}
+
+        if not isinstance(config['obfs'].get(obfsType), dict):
+            config['obfs'][obfsType] = {}
+
+        oldValue = config['obfs'][obfsType].get(self.key)
+        newValue = self.value()
+
+        if not isinstance(oldValue, int) or newValue != oldValue:
+            config['obfs'][obfsType][self.key] = newValue
+
+            return True
+
+        return False
+
+    def factoryToInput(self, config: ConfigFactory):
+        try:
+            obfsType = config['obfs']['type']
+        except Exception:
+            # Any non-exit exceptions
+
+            obfsType = ''
+
+        if not isinstance(obfsType, str) or obfsType != self.obfsType:
+            self.setValue(self.default)
+
+            return
+
+        try:
+            value = config['obfs'][obfsType][self.key]
+        except Exception:
+            # Any non-exit exceptions
+
+            value = self.default
+
+        if not isinstance(value, int):
+            value = self.default
+
+        self.setValue(value)
+
+
+class GuiHy2PageObfsXXX(GuiEditorWidgetQWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def setObfsTypeText(self, text: str):
+        obfsType = self._containers[0]
+
+        if isinstance(obfsType, GuiEditorItemTextComboBox):
+            obfsType.setText(text)
+
+    def connectActivated(self, func):
+        obfsType = self._containers[0]
+
+        if isinstance(obfsType, GuiEditorItemTextComboBox):
+            obfsType.connectActivated(func)
+
+
+class GuiHy2PageObfsEmpty(GuiHy2PageObfsXXX):
+    def containerSequence(self):
+        return [
+            GuiHy2ItemObfsType(title='obfs-type', translatable=False),
+        ]
+
+
+class GuiHy2PageObfsSalamander(GuiHy2PageObfsXXX):
+    def containerSequence(self):
+        return [
+            GuiHy2ItemObfsType(title='obfs-type', translatable=False),
+            GuiHy2ItemObfsPassword(
+                title='obfs-password',
+                obfsType='salamander',
+                translatable=False,
+            ),
+        ]
+
+
+class GuiHy2PageObfsGecko(GuiHy2PageObfsXXX):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.minPacketSizeItem = self._containers[2]
+        self.maxPacketSizeItem = self._containers[3]
+        self.minPacketSizeItem._input.valueChanged.connect(
+            self.handleMinPacketSizeChanged
+        )
+
+        self.handleMinPacketSizeChanged(self.minPacketSizeItem.value())
+
+    def containerSequence(self):
+        return [
+            GuiHy2ItemObfsType(title='obfs-type', translatable=False),
+            GuiHy2ItemObfsPassword(
+                title='obfs-password',
+                obfsType='gecko',
+                translatable=False,
+            ),
+            GuiHy2ItemObfsPacketSize(
+                title='minPacketSize',
+                key='minPacketSize',
+                default=512,
+                translatable=False,
+            ),
+            GuiHy2ItemObfsPacketSize(
+                title='maxPacketSize',
+                key='maxPacketSize',
+                default=1200,
+                translatable=False,
+            ),
+        ]
+
+    def handleMinPacketSizeChanged(self, value: int):
+        self.maxPacketSizeItem._input.setMinimum(value)
+
+        if self.maxPacketSizeItem.value() < value:
+            self.maxPacketSizeItem.setValue(value)
+
+
+class GuiHy2ObfsPageStackedWidget(QStackedWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._pages = [
+            GuiHy2PageObfsEmpty(),
+            GuiHy2PageObfsSalamander(),
+            GuiHy2PageObfsGecko(),
+        ]
+
+        for page in self._pages:
+            self.addWidget(page)
+
+    def page(self, index: int) -> GuiHy2PageObfsXXX:
+        return self._pages[index]
+
+    def connectActivated(self, func):
+        for page in self._pages:
+            page.connectActivated(func)
 
 
 class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
@@ -469,17 +627,90 @@ class GuiHy2GroupBoxProxy(GuiEditorWidgetQGroupBox):
         ]
 
 
-class GuiHy2GroupBoxObfs(GuiEditorWidgetQGroupBox):
+class GuiHy2GroupBoxObfs(GuiEditorItemFactory, AppQGroupBox):
     def __init__(self, **kwargs):
-        super().__init__('obfs', **kwargs)
+        translatable = kwargs.pop('translatable', False)
 
-        self.translatable = False
+        super().__init__('obfs', **kwargs, translatable=translatable)
 
-    def containerSequence(self):
-        return [
-            GuiHy2ItemObfsType(title='obfs-type', translatable=False),
-            GuiHy2ItemObfsPassword(title='obfs-password', translatable=False),
-        ]
+        self._config = ConfigFactory()
+
+        self._widget = GuiHy2ObfsPageStackedWidget()
+        self._widget.connectActivated(self.handleActivated)
+
+        layout = QFormLayout()
+        layout.addRow(self._widget)
+
+        self.setLayout(layout)
+
+    def currentIndex(self) -> int:
+        return self._widget.currentIndex()
+
+    def setCurrentIndex(self, index: int):
+        self._widget.setCurrentIndex(index)
+
+    def page(self, index: int) -> GuiHy2PageObfsXXX:
+        return self._widget.page(index)
+
+    def handleActivated(self, index: int):
+        page = self.page(index)
+        page.factoryToInput(self._config)
+        page.setObfsTypeText(HY2_OBFS_TYPES[index])
+
+        self.setCurrentIndex(index)
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        oldObfs = config.get('obfs')
+        oldObfsType = ''
+
+        if isinstance(oldObfs, dict):
+            oldObfsType = oldObfs.get('type', '')
+
+        newObfsType = HY2_OBFS_TYPES[self.currentIndex()]
+
+        if newObfsType == '':
+            if isinstance(oldObfs, dict):
+                config.pop('obfs', None)
+
+                return True
+
+            return False
+
+        if newObfsType not in HY2_OBFS_TYPES:
+            return False
+
+        if not isinstance(config.get('obfs'), dict):
+            config['obfs'] = {}
+
+        modified = oldObfsType != newObfsType
+        config['obfs']['type'] = newObfsType
+
+        for obfsType in HY2_OBFS_TYPES:
+            if obfsType and obfsType != newObfsType:
+                config['obfs'].pop(obfsType, None)
+
+        modified |= self.page(self.currentIndex()).inputToFactory(config)
+
+        return modified
+
+    def factoryToInput(self, config: ConfigFactory):
+        self._config = config
+
+        try:
+            obfsType = config['obfs']['type']
+        except Exception:
+            # Any non-exit exceptions
+
+            obfsType = ''
+
+        if not isinstance(obfsType, str) or obfsType not in HY2_OBFS_TYPES:
+            obfsType = ''
+
+        index = HY2_OBFS_TYPES.index(obfsType)
+
+        self.page(index).factoryToInput(config)
+        self.page(index).setObfsTypeText(obfsType)
+        self.setCurrentIndex(index)
 
 
 class GuiHy2GroupBoxTLS(GuiEditorWidgetQGroupBox):
