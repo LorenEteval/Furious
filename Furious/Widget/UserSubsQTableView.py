@@ -343,7 +343,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
-        self.contextMenu.exec(self.mapToGlobal(point))
+        self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def deleteSelectedItem(self):
         indexes = self.selectedIndex
