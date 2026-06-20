@@ -82,7 +82,20 @@ class AppSettings:
         value = QtCore.QSettings().value(settings.name)
 
         if settings.validate(value):
-            return value
+            if value is None:
+                if settings.default is not None:
+                    logger.info(
+                        f'detected settings \'{settings.name}\' was not set, '
+                        f'but has a default value. Set to default \'{settings.default}\''
+                    )
+
+                    AppSettings.set(key, settings.default)
+
+                    return settings.default
+                else:
+                    return value
+            else:
+                return value
         else:
             logger.error(
                 f'settings \'{settings.name}\' has value \'{value}\', '
