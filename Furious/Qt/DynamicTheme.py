@@ -49,7 +49,7 @@ class AppHue:
         if not SystemRuntime.isAdmin():
             return bootstrapIcon('rocket-takeoff-connected-dark.svg')
         else:
-            return bootstrapIcon('rocket-takeoff-admin-connected.svg')
+            return bootstrapIcon('rocket-takeoff-connected-admin.svg')
 
     @staticmethod
     def currentColor() -> str:
