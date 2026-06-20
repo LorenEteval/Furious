@@ -89,7 +89,7 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
-        self.contextMenu.exec(self.mapToGlobal(point))
+        self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def flushItemByTheme(self, theme: str):
         self.clear()
