@@ -208,6 +208,21 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.updateStatusText()
 
 
+class SearchButton(AppQPushButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setText(self.customText())
+        self.setIcon(bootstrapIcon('search.svg'))
+
+    @staticmethod
+    def customText():
+        return ' ' * 2 + _('Search')
+
+    def retranslate(self):
+        self.setText(self.customText())
+
+
 class AppMainWindow(AppQMainWindow):
     DEFAULT_WINDOW_SIZE_DARWIN = QtCore.QSize(1500, 780)
     DEFAULT_WINDOW_SIZE = (
@@ -432,7 +447,7 @@ class AppMainWindow(AppQMainWindow):
                 AppQSeperator(),
                 AppQAction(
                     _('Server'),
-                    icon=bootstrapIcon('database.svg'),
+                    icon=bootstrapIcon('server.svg'),
                     menu=AppQMenu(*serverActions),
                     useSetMenu=False,
                     useActionGroup=False,
@@ -450,7 +465,7 @@ class AppMainWindow(AppQMainWindow):
                 AppQSeperator(),
                 AppQAction(
                     _('Routing'),
-                    icon=bootstrapIcon('shuffle.svg'),
+                    icon=bootstrapIcon('signpost.svg'),
                     checkable=False,
                     callback=lambda: self.userRoutingWindow.show(),
                 ),
@@ -567,9 +582,8 @@ class AppMainWindow(AppQMainWindow):
                 'Search servers with text or regex, e.g. trojan, hk|jp, ^vmess, (us|sg).*tls'
             )
         )
-        self.searchButton = AppQPushButton(
-            _('Search'), icon=bootstrapIcon('search.svg')
-        )
+
+        self.searchButton = SearchButton()
 
         self.searchLayout.addWidget(self.searchLineEdit)
         self.searchLayout.addWidget(self.searchButton)
