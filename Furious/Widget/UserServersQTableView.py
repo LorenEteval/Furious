@@ -1420,7 +1420,7 @@ class UserServersQTableView(
 
         self.customizeJSONConfigActionRef = AppQAction(
             _('Customize JSON Configuration...'),
-            icon=bootstrapIcon('braces.svg'),
+            icon=bootstrapIcon('braces-asterisk.svg'),
             callback=lambda: self.editSelectedItemConfiguration(),
             shortcut=QtCore.QKeyCombination(
                 QtCore.Qt.KeyboardModifier.ControlModifier,
@@ -1862,7 +1862,7 @@ class UserServersQTableView(
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
-        self.contextMenu.exec(self.mapToGlobal(point))
+        self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def customSortFn(self, clickedIndex, **kwargs):
         order = (
