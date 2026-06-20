@@ -33,6 +33,15 @@ parse_qsl = functools.partial(urllib.parse.parse_qsl)
 urlparse = functools.partial(urllib.parse.urlparse)
 urlunparse = functools.partial(urllib.parse.urlunparse)
 
+
+def queryStringFromItems(items):
+    return urllib.parse.urlencode(
+        list((key, value) for key, value in items if value != '' and value is not None),
+        doseq=True,
+        safe='%',
+    )
+
+
 __all__ = [
     'BLANK_CONFIG_XRAY',
     'BLANK_CONFIG_HYSTERIA1',
@@ -1345,9 +1354,8 @@ class ConfigXray(ConfigFactory):
                 + str(self.proxyServerObject['port'])
             )
 
-            query = '&'.join(
-                f'{key}={value}'
-                for key, value in {
+            query = queryStringFromItems(
+                {
                     'encryption': self.proxyUserObject['encryption'],
                     'type': self.proxyStreamSettingsNetwork,
                     'security': self.proxyStreamSettingsTLS,
@@ -1378,9 +1386,8 @@ class ConfigXray(ConfigFactory):
 
             netloc = f'{quote(password)}@{address}:{port}'
 
-            query = '&'.join(
-                f'{key}={value}'
-                for key, value in {
+            query = queryStringFromItems(
+                {
                     'type': self.proxyStreamSettingsNetwork,
                     'security': self.proxyStreamSettingsTLS,
                     # kwargs
@@ -1688,9 +1695,8 @@ class ConfigHysteria1(ConfigFactory):
         else:
             obfsParamArgs = {}
 
-        query = '&'.join(
-            f'{key}={value}'
-            for key, value in {
+        query = queryStringFromItems(
+            {
                 **mportArgs,
                 'protocol': protocol,
                 **authArgs,
@@ -1908,13 +1914,24 @@ class ConfigHysteria2(ConfigFactory):
 
         return super().toJSONString(indent=indent)
 
+    @staticmethod
+    def splitHysteria2RealmQueryItems(queryItems):
+        realmItems = []
+        hysteria2Items = []
+
+        for key, value in queryItems:
+            if key in ['stun', 'lport']:
+                realmItems.append((key, value))
+            else:
+                hysteria2Items.append((key, value))
+
+        return realmItems, hysteria2Items
+
     def toURI(self, remark: str = '') -> str:
         if remark == '':
             override = self.itemRemark
         else:
             override = remark
-
-        netloc = self['auth'] + '@' + self['server']
 
         TLSArg, obfsArg = {}, {}
 
@@ -1936,12 +1953,33 @@ class ConfigHysteria2(ConfigFactory):
             obfsArg['obfs'] = obfsType
             obfsArg['obfs-password'] = self['obfs'][obfsType]['password']
 
-        query = '&'.join(
-            f'{key}={value}'
-            for key, value in {
-                **TLSArg,
-                **obfsArg,
-            }.items()
+        if self['server'].startswith(('realm://', 'realm+http://')):
+            result = urlparse(self['server'])
+
+            if result.scheme == 'realm+http':
+                scheme = 'hysteria2+realm+http'
+            else:
+                scheme = 'hysteria2+realm'
+
+            realmItems, _hysteria2Items = self.splitHysteria2RealmQueryItems(
+                parse_qsl(result.query)
+            )
+            query = queryStringFromItems(
+                [
+                    ('auth', self['auth']),
+                    *TLSArg.items(),
+                    *obfsArg.items(),
+                    *realmItems,
+                ]
+            )
+
+            return urlunparse(
+                [scheme, result.netloc, result.path, '', query, quote(override)]
+            )
+
+        netloc, query = (
+            self['auth'] + '@' + self['server'],
+            queryStringFromItems([*TLSArg.items(), *obfsArg.items()]),
         )
 
         return urlunparse(['hysteria2', netloc, '', '', query, quote(override)])
@@ -1950,12 +1988,40 @@ class ConfigHysteria2(ConfigFactory):
         try:
             result = urlparse(URI)
             remark = unquote(result.fragment)
-            queryObject = {key: value for key, value in parse_qsl(result.query)}
+            queryItems = parse_qsl(result.query)
+            queryObject = {key: value for key, value in queryItems}
 
-            if result.scheme != 'hysteria2' and result.scheme != 'hy2':
+            if result.scheme not in [
+                'hysteria2',
+                'hy2',
+                'hysteria2+realm',
+                'hysteria2+realm+http',
+            ]:
                 raise ValueError('Invalid hysteria2 URI scheme')
 
-            auth, server = result.netloc.split('@')
+            if result.scheme in ['hysteria2+realm', 'hysteria2+realm+http']:
+                auth = queryObject.get('auth', '')
+                realmItems, _hysteria2Items = self.splitHysteria2RealmQueryItems(
+                    queryItems
+                )
+
+                if result.scheme == 'hysteria2+realm+http':
+                    realmScheme = 'realm+http'
+                else:
+                    realmScheme = 'realm'
+
+                server = urlunparse(
+                    [
+                        realmScheme,
+                        result.netloc,
+                        result.path,
+                        '',
+                        queryStringFromItems(realmItems),
+                        '',
+                    ]
+                )
+            else:
+                auth, server = result.netloc.split('@')
 
             obfs = queryObject.get('obfs', '')
             obfsPassword = queryObject.get('obfs-password', '')
@@ -2173,7 +2239,8 @@ def configFactoryFromDict(config: dict, **kwargs) -> ConfigFactory:
         ):
             return ConfigHysteria1(config, **kwargs)
         if (
-            hasField('tls')
+            hasField('auth')
+            or hasField('tls')
             or hasField('transport')
             or hasField('quic')
             or hasField('bandwidth')
@@ -2193,16 +2260,25 @@ def configFactoryFromDict(config: dict, **kwargs) -> ConfigFactory:
 
 def configFactoryFromAny(config: Union[str, dict], **kwargs) -> ConfigFactory:
     if isinstance(config, str):
-        if (
-            config.startswith('vmess://')
-            or config.startswith('vless://')
-            or config.startswith('ss://')
-            or config.startswith('trojan://')
+        if config.startswith(
+            (
+                'vmess://',
+                'vless://',
+                'ss://',
+                'trojan://',
+            )
         ):
             return ConfigXray(config, **kwargs)
         if config.startswith('hysteria://'):
             return ConfigHysteria1(config, **kwargs)
-        if config.startswith('hy2://') or config.startswith('hysteria2://'):
+        if config.startswith(
+            (
+                'hy2://',
+                'hysteria2://',
+                'hysteria2+realm://',
+                'hysteria2+realm+http://',
+            )
+        ):
             return ConfigHysteria2(config, **kwargs)
 
         try:
