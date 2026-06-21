@@ -515,7 +515,7 @@ class GuiVTLSPageTLS(GuiVTLSPageXXX):
             widgets = self._containers[index].widgets()
 
             if len(widgets) == 1:
-                layout.addWidget(widgets[0], row, 1, 1, 3)
+                layout.addWidget(widgets[0], row, 0, 1, 4)
             else:
                 label, inputWidget = widgets
 
