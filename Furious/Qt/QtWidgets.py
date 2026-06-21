@@ -48,6 +48,7 @@ __all__ = [
     'AppQMenuBar',
     'AppQMessageBox',
     'AppQPushButton',
+    'AppQSpinBox',
     'AppQTableView',
     'AppQTableWidget',
     'AppQTabWidget',
@@ -63,12 +64,16 @@ __all__ = [
 
 
 def moveToCenter(widget, parent=None):
-    geometry = widget.geometry()
+    geometry = widget.frameGeometry()
 
-    if parent is None:
-        center = QApplication.primaryScreen().availableGeometry().center()
+    if parent is not None:
+        if parent.isWindow():
+            center = parent.frameGeometry().center()
+        else:
+            center = parent.mapToGlobal(parent.rect().center())
     else:
-        center = parent.geometry().center()
+        screen = widget.screen() or QApplication.primaryScreen()
+        center = screen.availableGeometry().center()
 
     geometry.moveCenter(center)
 
@@ -511,6 +516,24 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
 
     def retranslate(self):
         self.setText(_(self.text()))
+
+
+class AppQSpinBox(QSpinBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def resizeHints(self):
+        self.setMinimumWidth(
+            max(
+                self.sizeHint().width(),
+                self.fontMetrics().horizontalAdvance(str(self.maximum())) + 100,
+            )
+        )
+
+    def setRange(self, *args, **kwargs):
+        super().setRange(*args, **kwargs)
+
+        self.resizeHints()
 
 
 class AppQTableView(Mixins.ConnectionAware, QTableView):
