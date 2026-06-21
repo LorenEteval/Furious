@@ -292,15 +292,8 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        layout = QFormLayout()
-        layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
-
-        for container in self._containers:
-            layout.addRow(*container.widgets())
-
         page = QWidget()
-        page.setLayout(layout)
+        page.setLayout(self.setupPageLayout())
 
         # Align
         self._widget = QStackedWidget()
@@ -310,6 +303,16 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
         vboxLayout.addWidget(self._widget)
 
         self.setLayout(vboxLayout)
+
+    def setupPageLayout(self):
+        layout = QFormLayout()
+        layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+
+        for container in self._containers:
+            layout.addRow(*container.widgets())
+
+        return layout
 
 
 class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
