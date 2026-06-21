@@ -499,6 +499,40 @@ class GuiVTLSPageTLS(GuiVTLSPageXXX):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def setupLayout(self):
+        layout = QGridLayout()
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(3, 1)
+        layout.setHorizontalSpacing(12)
+
+        def addPair(index: int, row: int, column: int):
+            label, inputWidget = self._containers[index].widgets()
+
+            layout.addWidget(label, row, column)
+            layout.addWidget(inputWidget, row, column + 1)
+
+        def addFullRow(index: int, row: int):
+            widgets = self._containers[index].widgets()
+
+            if len(widgets) == 1:
+                layout.addWidget(widgets[0], row, 1, 1, 3)
+            else:
+                label, inputWidget = widgets
+
+                layout.addWidget(label, row, 0)
+                layout.addWidget(inputWidget, row, 1, 1, 3)
+
+        addPair(0, 0, 0)
+        addPair(2, 0, 2)
+        addPair(1, 1, 0)
+        addPair(3, 1, 2)
+        addFullRow(4, 2)
+        addFullRow(5, 3)
+        addFullRow(6, 4)
+        addFullRow(7, 5)
+
+        self.setLayout(layout)
+
     def containerSequence(self):
         return [
             GuiVTLSItemSecurity(title='TLS', translatable=False),
@@ -527,6 +561,34 @@ class GuiVTLSPageTLS(GuiVTLSPageXXX):
 class GuiVTLSPageReality(GuiVTLSPageXXX):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def setupLayout(self):
+        layout = QGridLayout()
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(3, 1)
+        layout.setHorizontalSpacing(12)
+
+        def addPair(index: int, row: int, column: int):
+            label, inputWidget = self._containers[index].widgets()
+
+            layout.addWidget(label, row, column)
+            layout.addWidget(inputWidget, row, column + 1)
+
+        def addFullRow(index: int, row: int):
+            label, inputWidget = self._containers[index].widgets()
+
+            layout.addWidget(label, row, 0)
+            layout.addWidget(inputWidget, row, 1, 1, 3)
+
+        addPair(0, 0, 0)
+        addPair(2, 0, 2)
+        addPair(1, 1, 0)
+        addPair(4, 1, 2)
+        addFullRow(3, 2)
+        addFullRow(5, 3)
+        addFullRow(6, 4)
+
+        self.setLayout(layout)
 
     def containerSequence(self):
         return [
