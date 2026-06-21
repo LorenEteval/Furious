@@ -34,7 +34,7 @@ class IndentSpinBox(AppQDialog):
 
         self.indentText = AppQLabel(_('Indent:'))
 
-        self.indentSpin = QSpinBox()
+        self.indentSpin = AppQSpinBox()
         self.indentSpin.setRange(0, 8)
         self.indentSpin.setValue(2)
 

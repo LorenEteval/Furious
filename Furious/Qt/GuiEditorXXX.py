@@ -79,7 +79,7 @@ class GuiEditorItemTextSpinBox(GuiEditorItemWidgetContainer):
             title = _(title)
 
         self._title = AppQLabel(title, translatable=translatable, parent=parent)
-        self._input = QSpinBox(parent=parent)
+        self._input = AppQSpinBox(parent=parent)
 
     def value(self) -> int:
         return self._input.value()
