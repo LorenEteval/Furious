@@ -255,6 +255,52 @@ class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
     def __init__(self, **kwargs):
         super().__init__(_('Basic Configuration'), **kwargs)
 
+    def setupPageLayout(self):
+        layout = QGridLayout()
+        layout.setColumnStretch(4, 1)
+
+        def keepSpinBoxCompact(widget: QWidget):
+            if isinstance(widget, QSpinBox):
+                widget.setSizePolicy(
+                    QSizePolicy.Policy.Fixed,
+                    widget.sizePolicy().verticalPolicy(),
+                )
+
+        def keepComboBoxCompact(widget: QWidget):
+            if isinstance(widget, QComboBox):
+                widget.setSizePolicy(
+                    QSizePolicy.Policy.Fixed,
+                    widget.sizePolicy().verticalPolicy(),
+                )
+
+        def addPair(index: int, row: int, column: int):
+            label, inputWidget = self._containers[index].widgets()
+
+            keepSpinBoxCompact(inputWidget)
+
+            layout.addWidget(label, row, column)
+            layout.addWidget(inputWidget, row, column + 1)
+
+        def addFullRow(index: int, row: int):
+            label, inputWidget = self._containers[index].widgets()
+
+            keepSpinBoxCompact(inputWidget)
+
+            layout.addWidget(label, row, 0)
+            layout.addWidget(inputWidget, row, 1, 1, 4)
+
+        addFullRow(0, 0)
+        addFullRow(1, 1)
+        addPair(2, 2, 0)
+        addPair(4, 2, 2)
+        addFullRow(3, 3)
+        keepComboBoxCompact(self._containers[5].widgets()[1])
+        addFullRow(5, 4)
+
+        layout.setRowStretch(5, 1)
+
+        return layout
+
     def containerSequence(self):
         return [
             GuiEditorItemBasicRemark(title=_('Remark')),
