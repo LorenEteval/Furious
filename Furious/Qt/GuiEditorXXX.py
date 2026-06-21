@@ -317,13 +317,15 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
 
 class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
     def __init__(self, *args, **kwargs):
-        tabText = kwargs.pop('tabText', '')
-        tabTranslatable = kwargs.pop('tabTranslatable', False)
-        style = kwargs.pop('style', 'grid')
+        tabText, tabTranslatable, style = (
+            kwargs.pop('tabText', ''),
+            kwargs.pop('tabTranslatable', False),
+            kwargs.pop('style', 'grid'),
+        )
 
         super().__init__(*args, **kwargs)
 
-        dialogHeight = 480 * GOLDEN_RATIO
+        dialogHeight = 770
 
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setFixedSize(int(dialogHeight * GOLDEN_RATIO), int(dialogHeight))
