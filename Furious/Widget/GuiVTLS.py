@@ -21,6 +21,7 @@ from Furious.Interface import *
 from Furious.Library import *
 from Furious.Qt import *
 
+from PySide6 import QtCore
 from PySide6.QtWidgets import *
 
 from typing import Callable
@@ -500,36 +501,47 @@ class GuiVTLSPageTLS(GuiVTLSPageXXX):
         super().__init__(*args, **kwargs)
 
     def setupLayout(self):
-        layout = QGridLayout()
-        layout.setColumnStretch(1, 1)
-        layout.setColumnStretch(3, 1)
-        layout.setHorizontalSpacing(12)
+        layout = QFormLayout()
+        layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+
+        basicLayout = QGridLayout()
+        basicLayout.setColumnStretch(1, 1)
+        basicLayout.setColumnStretch(3, 1)
 
         def addPair(index: int, row: int, column: int):
             label, inputWidget = self._containers[index].widgets()
 
-            layout.addWidget(label, row, column)
-            layout.addWidget(inputWidget, row, column + 1)
+            basicLayout.addWidget(label, row, column)
+            basicLayout.addWidget(inputWidget, row, column + 1)
 
-        def addFullRow(index: int, row: int):
+        def addBasicFullRow(index: int, row: int):
+            label, inputWidget = self._containers[index].widgets()
+
+            basicLayout.addWidget(label, row, 0)
+            basicLayout.addWidget(inputWidget, row, 1, 1, 3)
+
+        def addFullRow(index: int):
             widgets = self._containers[index].widgets()
 
             if len(widgets) == 1:
-                layout.addWidget(widgets[0], row, 0, 1, 4)
+                layout.addRow(widgets[0])
             else:
                 label, inputWidget = widgets
 
-                layout.addWidget(label, row, 0)
-                layout.addWidget(inputWidget, row, 1, 1, 3)
+                layout.addRow(label, inputWidget)
 
         addPair(0, 0, 0)
         addPair(2, 0, 2)
         addPair(1, 1, 0)
         addPair(3, 1, 2)
-        addFullRow(4, 2)
-        addFullRow(5, 3)
-        addFullRow(6, 4)
-        addFullRow(7, 5)
+        addBasicFullRow(4, 2)
+
+        layout.addRow(basicLayout)
+
+        addFullRow(5)
+        addFullRow(6)
+        addFullRow(7)
 
         self.setLayout(layout)
 
