@@ -320,7 +320,7 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
 
         super().__init__(*args, **kwargs)
 
-        dialogHeight = 500 * GOLDEN_RATIO
+        dialogHeight = 480 * GOLDEN_RATIO
 
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         self.setFixedSize(int(dialogHeight * GOLDEN_RATIO), int(dialogHeight))
