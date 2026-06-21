@@ -381,6 +381,7 @@ class AppStyleSheet:
                 width: 27px;
                 height: 15px;
                 border-left: 1px solid {palette['border']};
+                border-top: 1px solid {palette['border']};
                 border-bottom-right-radius: 5px;
                 background-color: transparent;
             }}
@@ -390,6 +391,7 @@ class AppStyleSheet:
             QDoubleSpinBox::up-button:hover,
             QDoubleSpinBox::down-button:hover {{
                 background-color: {palette['raised']};
+                border: 1px solid {palette['accent']};
             }}
 
             QSpinBox::up-arrow,
