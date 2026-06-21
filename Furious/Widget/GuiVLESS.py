@@ -25,6 +25,9 @@ from Furious.Qt import gettext as _
 from Furious.Widget.GuiVTransport import *
 from Furious.Widget.GuiVTLS import *
 
+from PySide6.QtWidgets import *
+
+import uuid
 import functools
 
 __all__ = ['GuiVLESS']
@@ -118,6 +121,22 @@ class GuiVLESSItemBasicPort(GuiEditorItemTextSpinBox):
 class GuiVLESSItemBasicId(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.generateButton = AppQPushButton(_('Generate'))
+        self.generateButton.clicked.connect(self.generateUUID)
+
+        self._widget = QWidget()
+
+        layout = QHBoxLayout(self._widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._input)
+        layout.addWidget(self.generateButton)
+
+    def generateUUID(self):
+        self.setText(str(uuid.uuid4()))
+
+    def widgets(self):
+        return self._title, self._widget
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
         proxyOutboundUser = getProxyOutboundUser(config)

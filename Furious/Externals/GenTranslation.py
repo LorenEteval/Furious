@@ -2164,5 +2164,14 @@ TRANSLATION = {
         "RU": "Закрыть",
         "ZH": "关闭",
         "isReviewed": "True"
+    },
+    "Generate": {
+        "source": [
+            "Furious.Widget.GuiVLESS",
+            "Furious.Widget.GuiVMess"
+        ],
+        "RU": "Сгенерировать",
+        "ZH": "生成",
+        "isReviewed": "True"
     }
 }
