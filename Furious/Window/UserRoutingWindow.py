@@ -120,47 +120,38 @@ class RoutingPreviewDialog(AppQDialog):
         super().__init__(parent)
 
         self.setWindowTitle(_('Preview Routing'))
+        self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         if PLATFORM == 'Darwin':
-            # Window-modal child windows are rendered as macOS sheets
-            # without traffic-light controls.
-            self.setWindowFlags(
-                self.windowFlags()
-                | QtCore.Qt.WindowType.Window
-                | QtCore.Qt.WindowType.WindowTitleHint
-                | QtCore.Qt.WindowType.WindowSystemMenuHint
-                | QtCore.Qt.WindowType.WindowMinimizeButtonHint
-                | QtCore.Qt.WindowType.WindowCloseButtonHint
+            self.toolbar = AppQToolBar(
+                AppQAction(
+                    _('Close'),
+                    icon=bootstrapIcon('window-x.svg'),
+                    callback=lambda: self.close(),
+                ),
+                parent=self,
             )
-            self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
         else:
-            self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
-
-        self.lineColumnLabel = QLabel('1:1 0')
-        self.statusBar = QStatusBar()
-        self.statusBar.addPermanentWidget(self.lineColumnLabel)
-
-        def cursorChangedCallback(cursor: QTextCursor):
-            self.lineColumnLabel.setText(
-                f'{cursor.blockNumber() + 1}:{cursor.columnNumber() + 1} {cursor.position()}'
-            )
+            self.toolbar = None
 
         self.textEditor = DraculaJSONTextEditor(fontFamily=AppFontName())
         self.textEditor.setLineWrapMode(DraculaJSONTextEditor.LineWrapMode.NoWrap)
-        self.textEditor.registerCursorPositionChangedCb(cursorChangedCallback)
         self.textEditor.setPlainText(
             UJSONEncoder.encode(routingObjectFromProfile(routingProfile), indent=4)
         )
         self.textEditor.setReadOnly(True)
 
         layout = QVBoxLayout()
+
+        if self.toolbar is not None:
+            layout.addWidget(self.toolbar)
+
         layout.addWidget(self.textEditor)
-        layout.addWidget(self.statusBar)
 
         self.setLayout(layout)
 
     def setWidthAndHeight(self):
-        self.setFixedSize(450, int(450 * GOLDEN_RATIO))
+        self.setFixedSize(400, int(400 * GOLDEN_RATIO))
 
 
 class RoutingTextEditDialog(AppQDialog):
@@ -347,6 +338,7 @@ class RoutingRuleEditDialog(AppQDialog):
         super().__init__(parent)
 
         self.rule = dict(rule)
+
         self.setWindowTitle(_('Edit Routing Rule'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
@@ -715,6 +707,18 @@ class RoutingRulesDialog(AppQDialog):
         self.setWindowTitle(_('Routing Rules'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
+        if PLATFORM == 'Darwin':
+            self.toolbar = AppQToolBar(
+                AppQAction(
+                    _('Close'),
+                    icon=bootstrapIcon('window-x.svg'),
+                    callback=lambda: self.close(),
+                ),
+                parent=self,
+            )
+        else:
+            self.toolbar = None
+
         self.listWidget = RoutingRulesQListWidget(self.routing, parent=self)
         self.listWidget.editRequested.connect(self.editRule)
         self.listWidget.deleteRequested.connect(self.deleteRule)
@@ -730,6 +734,10 @@ class RoutingRulesDialog(AppQDialog):
         buttonLayout.addWidget(self.deleteButton)
 
         layout = QVBoxLayout()
+
+        if self.toolbar is not None:
+            layout.addWidget(self.toolbar)
+
         layout.addWidget(self.listWidget)
         layout.addLayout(buttonLayout)
 
@@ -740,7 +748,7 @@ class RoutingRulesDialog(AppQDialog):
 
     def addRule(self):
         rule = {'type': 'field', 'outboundTag': 'proxy', 'ruleTag': 'New Rule'}
-        dialog = RoutingRuleEditDialog(rule, parent=self)
+        dialog = RoutingRuleEditDialog(rule, parent=None)
 
         def handleResultCode(code):
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
@@ -756,7 +764,7 @@ class RoutingRulesDialog(AppQDialog):
             return
 
         index = indexes[0]
-        dialog = RoutingRuleEditDialog(self.listWidget.ruleAt(index), parent=self)
+        dialog = RoutingRuleEditDialog(self.listWidget.ruleAt(index), parent=None)
 
         def handleResultCode(_index, code):
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
@@ -1111,19 +1119,22 @@ class UserRoutingWindow(AppQMainWindow):
         if AppSettings.get('UserRoutingWindowGeometry') is None:
             self.resize(UserRoutingWindow.DEFAULT_WINDOW_SIZE)
         else:
-            try:
-                self.restoreGeometry(AppSettings.get('UserRoutingWindowGeometry'))
-            except Exception:
-                # Any non-exit exceptions
-
+            if PLATFORM == 'Darwin':
                 self.resize(UserRoutingWindow.DEFAULT_WINDOW_SIZE)
+            else:
+                try:
+                    self.restoreGeometry(AppSettings.get('UserRoutingWindowGeometry'))
+                except Exception:
+                    # Any non-exit exceptions
 
-            try:
-                self.restoreState(AppSettings.get('UserRoutingWindowState'))
-            except Exception:
-                # Any non-exit exceptions
+                    self.resize(UserRoutingWindow.DEFAULT_WINDOW_SIZE)
 
-                pass
+                try:
+                    self.restoreState(AppSettings.get('UserRoutingWindowState'))
+                except Exception:
+                    # Any non-exit exceptions
+
+                    pass
 
     def cleanup(self):
         AppSettings.set('UserRoutingWindowGeometry', self.saveGeometry())
