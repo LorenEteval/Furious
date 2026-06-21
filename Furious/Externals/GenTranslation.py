@@ -2155,5 +2155,14 @@ TRANSLATION = {
         "RU": "Предпросмотр",
         "ZH": "预览",
         "isReviewed": "True"
+    },
+    "Close": {
+        "source": [
+            "Furious.Window.TextEditorWindow",
+            "Furious.Window.UserRoutingWindow"
+        ],
+        "RU": "Закрыть",
+        "ZH": "关闭",
+        "isReviewed": "True"
     }
 }
