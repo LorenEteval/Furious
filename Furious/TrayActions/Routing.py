@@ -62,8 +62,8 @@ class RoutingAction(AppQAction):
             menu=AppQMenu(),
             **kwargs,
         )
+
         self.rebuildMenu()
-        self._menu.aboutToShow.connect(self.rebuildMenu)
 
     def routingActions(self):
         actions = list(
@@ -96,12 +96,15 @@ class RoutingAction(AppQAction):
 
     def rebuildMenu(self):
         self._menu.clear()
+        self._menu._actions.clear()
         self._actionGroup = AppQActionGroup(self)
 
         for action in self.routingActions():
             if isinstance(action, AppQSeperator):
+                self._menu._actions.append(action)
                 self._menu.addSeparator()
             else:
+                self._menu._actions.append(action)
                 self._menu.addAction(action)
                 self._actionGroup.addAction(action)
 

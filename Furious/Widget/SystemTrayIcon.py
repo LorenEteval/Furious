@@ -62,6 +62,9 @@ class SystemTrayIcon(
             ExitAction(isTrayAction=True),
         ]
 
+        self._actions = actions
+        self._dynamicMenuRefs = []
+
         # Some old version PySide6 does not have setMenu method
         # for QAction. Protect it. Currently only used in SystemTrayIcon
         if hasattr(AppQAction, 'setMenu'):
@@ -96,14 +99,31 @@ class SystemTrayIcon(
                         menu.setIcon(action.icon())
 
                         self._refs.append(menu)
+                        self._dynamicMenuRefs.append((action, menu))
                         self._menu.addMenu(menu)
                 else:
                     self._menu.addSeparator()
 
             self.setContextMenu(self._menu)
 
+        self._menu.aboutToShow.connect(self.rebuildDynamicMenus)
+
         self.setDisconnectedIcon()
         self.activated.connect(self.handleActivated)
+
+    def rebuildDynamicMenus(self):
+        for action in self._actions:
+            if hasattr(action, 'rebuildMenu'):
+                action.rebuildMenu()
+
+        for action, menu in self._dynamicMenuRefs:
+            menu.clear()
+
+            for childAction in action._menu._actions:
+                if isinstance(childAction, AppQSeperator):
+                    menu.addSeparator()
+                elif isinstance(childAction, AppQAction):
+                    menu.addAction(childAction)
 
     def bootstrap(self):
         if AppSettings.isStateON_('StartupOnBoot'):
