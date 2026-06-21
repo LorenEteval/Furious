@@ -174,6 +174,33 @@ class ConfigXrayProxyOutboundObjectSS(dict):
         )
 
 
+class ConfigXrayProxyOutboundObjectSocks(dict):
+    def __init__(self, address, port, user='', password=''):
+        settings = {
+            'address': address,
+            'port': int(port),
+        }
+
+        if user != '' or password != '':
+            settings['user'] = user
+            settings['pass'] = password
+
+        super().__init__(
+            **{
+                'tag': 'proxy',
+                'protocol': 'socks',
+                'settings': settings,
+                'streamSettings': {
+                    'network': 'tcp',
+                },
+                'mux': {
+                    'enabled': False,
+                    'concurrency': -1,
+                },
+            }
+        )
+
+
 class ConfigXrayProxyOutboundObjectTrojan(dict):
     def __init__(self, password, address, port, type_, security, **kwargs):
         networkObjectArgs, securityArgs, TLSObjectArgs = {}, {}, {}
@@ -353,6 +380,8 @@ class ConfigXray(ConfigFactory):
         try:
             if value == 'vless' or value == 'vmess':
                 server = proxyOutbound['settings']['vnext'][0]
+            elif value == 'socks':
+                server = proxyOutbound['settings']
             elif value == 'shadowsocks' or value == 'trojan':
                 server = proxyOutbound['settings']['servers'][0]
             else:
@@ -411,6 +440,9 @@ class ConfigXray(ConfigFactory):
             if proxyProtocol == 'vmess' or proxyProtocol == 'vless':
                 return self.proxyOutboundObject['settings']['vnext'][0]
 
+            if proxyProtocol == 'socks':
+                return self.proxyOutboundObject['settings']
+
             if proxyProtocol == 'shadowsocks' or proxyProtocol == 'trojan':
                 return self.proxyOutboundObject['settings']['servers'][0]
 
@@ -423,6 +455,9 @@ class ConfigXray(ConfigFactory):
     @property
     def proxyUserObject(self) -> dict:
         try:
+            if self.proxyProtocol.lower() == 'socks':
+                return self.proxyServerObject
+
             return self.proxyServerObject['users'][0]
         except Exception:
             # Any non-exit exceptions
@@ -1225,6 +1260,24 @@ class ConfigXray(ConfigFactory):
         )
 
     @staticmethod
+    def URI2ProxyOutboundObjectSocks(URI: str) -> Tuple[str, dict]:
+        result = urlparse(URI)
+        remark = unquote(result.fragment)
+
+        address = result.hostname or ''
+        port = result.port or 0
+        user = unquote(result.username or '')
+        password = unquote(result.password or '')
+
+        if address == '' or port == 0:
+            raise ValueError(f'Invalid SOCKS URI format {URI}')
+
+        return (
+            remark,
+            ConfigXrayProxyOutboundObjectSocks(address, port, user, password),
+        )
+
+    @staticmethod
     def URI2ProxyOutboundObjectTrojan(URI: str) -> Tuple[str, dict]:
         result = urlparse(URI)
         remark = unquote(result.fragment)
@@ -1255,6 +1308,9 @@ class ConfigXray(ConfigFactory):
 
         if URI.startswith('ss://'):
             return ConfigXray.URI2ProxyOutboundObjectSS(URI)
+
+        if URI.startswith(('socks://', 'socks5://', 'socks5h://')):
+            return ConfigXray.URI2ProxyOutboundObjectSocks(URI)
 
         if URI.startswith('trojan://'):
             return ConfigXray.URI2ProxyOutboundObjectTrojan(URI)
@@ -1377,6 +1433,20 @@ class ConfigXray(ConfigFactory):
             netloc = f'{quote(method)}:{quote(password)}@{address}:{port}'
 
             return urlunparse(['ss', netloc, '', '', '', quote(override)])
+
+        if protocol == 'socks':
+            address, port = list(
+                self.proxyServerObject[value] for value in ['address', 'port']
+            )
+            user = self.proxyUserObject.get('user', '')
+            password = self.proxyUserObject.get('pass', '')
+
+            if user != '' or password != '':
+                netloc = f'{quote(user)}:{quote(password)}@{address}:{port}'
+            else:
+                netloc = f'{address}:{port}'
+
+            return urlunparse(['socks5', netloc, '', '', '', quote(override)])
 
         if protocol == 'trojan':
             password, address, port = list(
@@ -2185,6 +2255,22 @@ def configXrayEmptyProxyOutboundObject(protocol: Protocol) -> dict:
                 'concurrency': -1,
             },
         }
+    elif value == 'socks':
+        return {
+            'tag': 'proxy',
+            'protocol': 'socks',
+            'settings': {
+                'address': '',
+                'port': 0,
+            },
+            'streamSettings': {
+                'network': 'tcp',
+            },
+            'mux': {
+                'enabled': False,
+                'concurrency': -1,
+            },
+        }
     elif value == 'trojan':
         return {
             'tag': 'proxy',
@@ -2266,6 +2352,9 @@ def configFactoryFromAny(config: Union[str, dict], **kwargs) -> ConfigFactory:
                 'vless://',
                 'ss://',
                 'trojan://',
+                'socks://',
+                'socks5://',
+                'socks5h://',
             )
         ):
             return ConfigXray(config, **kwargs)
@@ -2306,6 +2395,16 @@ def configFactoryBlank(protocol: Protocol) -> ConfigFactory:
                 'users': [{'email': PROXY_OUTBOUND_USER_EMAIL}],
             },
         ]
+
+        return factory
+
+    if protocol == Protocol.Socks:
+        factory = configFactoryFromDict(BLANK_CONFIG_XRAY)
+        factory['outbounds'][0]['protocol'] = protocol.value.lower()
+        factory['outbounds'][0]['settings'] = {
+            'address': '',
+            'port': 0,
+        }
 
         return factory
 

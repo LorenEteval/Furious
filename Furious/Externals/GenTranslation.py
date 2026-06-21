@@ -441,6 +441,7 @@ TRANSLATION = {
             "Furious.Widget.GuiHysteria1",
             "Furious.Widget.GuiHysteria2",
             "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiSocks",
             "Furious.Widget.GuiTrojan",
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess",
@@ -464,6 +465,7 @@ TRANSLATION = {
     "Address": {
         "source": [
             "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiSocks",
             "Furious.Widget.GuiTrojan",
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess",
@@ -476,6 +478,7 @@ TRANSLATION = {
     "Port": {
         "source": [
             "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiSocks",
             "Furious.Widget.GuiTrojan",
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess",
@@ -1265,6 +1268,7 @@ TRANSLATION = {
             "Furious.Widget.GuiHysteria1",
             "Furious.Widget.GuiHysteria2",
             "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiSocks",
             "Furious.Widget.GuiTrojan",
             "Furious.Widget.GuiTUNSettings",
             "Furious.Widget.GuiVLESS",
@@ -1279,6 +1283,7 @@ TRANSLATION = {
             "Furious.Widget.GuiHysteria1",
             "Furious.Widget.GuiHysteria2",
             "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiSocks",
             "Furious.Widget.GuiTrojan",
             "Furious.Widget.GuiVLESS",
             "Furious.Widget.GuiVMess"
@@ -1317,6 +1322,7 @@ TRANSLATION = {
     "Password": {
         "source": [
             "Furious.Widget.GuiShadowsocks",
+            "Furious.Widget.GuiSocks",
             "Furious.Widget.GuiTrojan"
         ],
         "RU": "Пароль",
@@ -2172,6 +2178,22 @@ TRANSLATION = {
         ],
         "RU": "Сгенерировать",
         "ZH": "生成",
+        "isReviewed": "True"
+    },
+    "Username": {
+        "source": [
+            "Furious.Widget.GuiSocks"
+        ],
+        "RU": "Имя пользователя",
+        "ZH": "用户名",
+        "isReviewed": "True"
+    },
+    "Add SOCKS Server...": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Добавить сервер SOCKS...",
+        "ZH": "添加SOCKS服务器...",
         "isReviewed": "True"
     }
 }

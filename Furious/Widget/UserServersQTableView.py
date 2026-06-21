@@ -27,6 +27,7 @@ from Furious.TrayActions.Import import *
 from Furious.Widget.GuiHysteria1 import *
 from Furious.Widget.GuiHysteria2 import *
 from Furious.Widget.GuiShadowsocks import *
+from Furious.Widget.GuiSocks import *
 from Furious.Widget.GuiTrojan import *
 from Furious.Widget.GuiVLESS import *
 from Furious.Widget.GuiVMess import *
@@ -1762,6 +1763,8 @@ class UserServersQTableView(
             return GuiVLESS(parent=self, **kwargs)
         if protocol == Protocol.Shadowsocks:
             return GuiShadowsocks(parent=self, **kwargs)
+        if protocol == Protocol.Socks:
+            return GuiSocks(parent=self, **kwargs)
         if protocol == Protocol.Trojan:
             return GuiTrojan(parent=self, **kwargs)
         if protocol == Protocol.Hysteria2:

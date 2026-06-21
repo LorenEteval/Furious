@@ -333,6 +333,13 @@ class AppMainWindow(AppQMainWindow):
             ),
             AppQSeperator(),
             AppQAction(
+                _('Add SOCKS Server...'),
+                callback=lambda: self.userServersQTableWidget.addServerViaGui(
+                    Protocol.Socks, _('Add SOCKS Server...')
+                ),
+            ),
+            AppQSeperator(),
+            AppQAction(
                 _('New Empty Configuration'),
                 callback=lambda: self.userServersQTableWidget.newEmptyItem(),
             ),

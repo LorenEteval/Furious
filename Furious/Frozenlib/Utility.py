@@ -51,6 +51,7 @@ class Protocol(Enum):
     VMess = 'VMess'
     VLESS = 'VLESS'
     Shadowsocks = 'Shadowsocks'
+    Socks = 'SOCKS'
     Trojan = 'Trojan'
     Hysteria1 = 'hysteria1'
     Hysteria2 = 'hysteria2'
@@ -69,6 +70,9 @@ class Protocol(Enum):
 
         if protocol.lower() == 'shadowsocks':
             return Protocol.Shadowsocks
+
+        if protocol.lower() == 'socks':
+            return Protocol.Socks
 
         if protocol.lower() == 'trojan':
             return Protocol.Trojan
