@@ -24,6 +24,7 @@ from Furious.Qt import *
 from Furious.Qt import gettext as _
 
 from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 
 import logging
 import functools
@@ -161,6 +162,33 @@ class GuiTUNSettingsItemHelpPage(GuiEditorItemWidgetContainer):
 class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
     def __init__(self, **kwargs):
         super().__init__(_('Basic Configuration'), **kwargs)
+
+    def setupPageLayout(self):
+        layout = QFormLayout()
+        layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+
+        pairsLayout = QGridLayout()
+        pairsLayout.setColumnStretch(1, 1)
+        pairsLayout.setColumnStretch(3, 1)
+
+        def addPair(index: int, row: int, column: int):
+            label, inputWidget = self._containers[index].widgets()
+
+            pairsLayout.addWidget(label, row, column)
+            pairsLayout.addWidget(inputWidget, row, column + 1)
+
+        addPair(0, 0, 0)
+        addPair(1, 0, 2)
+        addPair(2, 1, 0)
+        addPair(3, 1, 2)
+
+        layout.addRow(pairsLayout)
+        layout.addRow(*self._containers[4].widgets())
+        layout.addRow(*self._containers[5].widgets())
+        layout.addRow(*self._containers[6].widgets())
+
+        return layout
 
     def containerSequence(self):
         return [
