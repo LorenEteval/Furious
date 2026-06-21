@@ -106,44 +106,35 @@ class GuiVTransportItemFinalMask(GuiEditorItemTextInput):
     def inputToFactory(self, config: ConfigFactory) -> bool:
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
-        if not isinstance(streamSettings.get('finalmask'), dict):
-            streamSettings['finalmask'] = {}
+        oldFinalMaskObject = streamSettings.get('finalmask')
+        newFinalMaskText = self.text().strip()
 
-        oldFinalMaskObject = streamSettings['finalmask']
+        if newFinalMaskText == '':
+            if 'finalmask' in streamSettings:
+                streamSettings.pop('finalmask', None)
+
+                return True
+
+            return False
 
         try:
-            oldFinalMaskText = UJSONEncoder.encode(oldFinalMaskObject)
+            newFinalMaskObject = UJSONEncoder.decode(newFinalMaskText)
         except Exception:
             # Any non-exit exceptions
 
-            oldFinalMaskText = ''
+            newFinalMaskObject = {}
 
-        newFinalMaskText = self.text()
-
-        def setNewFinalMaskObject():
-            if newFinalMaskText == '':
-                streamSettings.pop('finalmask', None)
-            else:
-                try:
-                    newFinalMaskObject = UJSONEncoder.decode(newFinalMaskText)
-                except Exception as ex:
-                    # Any non-exit exceptions
-
-                    newFinalMaskObject = {}
-
-                streamSettings['finalmask'] = newFinalMaskObject
-
-        if isinstance(oldFinalMaskText, str):
-            if newFinalMaskText != oldFinalMaskText:
-                setNewFinalMaskObject()
-
-                return True
-            else:
-                return False
-        else:
-            setNewFinalMaskObject()
+        if not isinstance(oldFinalMaskObject, dict):
+            streamSettings['finalmask'] = newFinalMaskObject
 
             return True
+
+        if newFinalMaskObject != oldFinalMaskObject:
+            streamSettings['finalmask'] = newFinalMaskObject
+
+            return True
+
+        return False
 
     def factoryToInput(self, config: ConfigFactory):
         try:
