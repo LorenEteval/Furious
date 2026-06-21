@@ -275,6 +275,9 @@ class GuiEditorWidgetQWidget(GuiEditorWidget, QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.setupLayout()
+
+    def setupLayout(self):
         layout = QFormLayout()
         layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
         layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
@@ -317,10 +320,10 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
 
         super().__init__(*args, **kwargs)
 
+        dialogHeight = 500 * GOLDEN_RATIO
+
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
-        self.setFixedSize(
-            int(520 * GOLDEN_RATIO * GOLDEN_RATIO), int(520 * GOLDEN_RATIO)
-        )
+        self.setFixedSize(int(dialogHeight * GOLDEN_RATIO), int(dialogHeight))
 
         self.tabCentralWidget = QWidget()
         self.tabCentralWidgetLayout = QGridLayout(self.tabCentralWidget)
