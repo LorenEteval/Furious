@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for qt GUI."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -41,13 +43,16 @@ __all__ = [
 
 
 class AppQIcon(QIcon):
+    """Represent app q icon."""
     def __init__(self, iconFileName: str):
+        """Initialize the AppQIcon."""
         super().__init__(iconFileName)
 
         self.iconFileName = iconFileName
 
 
 def iconFn(prefix, name):
+    """Return the icon fn value used by the application."""
     if name.startswith('rocket-takeoff'):
         # Colorful. Use default
         return AppQIcon(f':/Icons/bootstrap/{name}')
@@ -60,6 +65,7 @@ bootstrapIconWhite = functools.partial(iconFn, 'bootstrap/white')
 
 
 def setIconAsMask(icon):
+    """Set icon as mask."""
     if hasattr(icon, 'setIsMask'):
         icon.setIsMask(True)
 
@@ -68,11 +74,13 @@ def setIconAsMask(icon):
 
 @functools.lru_cache(None)
 def bootstrapIconMask(name):
+    """Return the bootstrap icon mask value used by the application."""
     return setIconAsMask(bootstrapIconWhite(name))
 
 
 @functools.lru_cache(None)
 def bootstrapIconWithOpacity(name, opacity, isMask=False):
+    """Return the bootstrap icon with opacity value used by the application."""
     sourceIcon = bootstrapIconWhite(name)
     icon = AppQIcon('')
 
@@ -103,6 +111,7 @@ def bootstrapIconWithOpacity(name, opacity, isMask=False):
 
 
 class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
+    """Handle the app q action."""
     def __init__(
         self,
         text,
@@ -118,6 +127,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
         isTrayAction=False,
         **kwargs,
     ):
+        """Initialize the AppQAction."""
         super().__init__(text=text, **kwargs)
 
         # Do not use QProtection because it's been managed somewhere else!!!
@@ -164,6 +174,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
 
         @QtCore.Slot(bool)
         def triggerSignal(paramChecked):
+            """Handle trigger signal for the app q action."""
             logger.info(f'action is \'{self.textEnglish}\'. Checked is {paramChecked}')
 
             if callable(self.callback):
@@ -174,6 +185,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
         self.triggered.connect(triggerSignal)
 
     def addAction(self, action):
+        """Add action."""
         if self._menu is not None:
             self._menu.addAction(action)
 
@@ -181,6 +193,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
                 self._actionGroup.addAction(action)
 
     def removeAction(self, action):
+        """Remove action."""
         if self._menu is not None:
             self._menu.removeAction(action)
 
@@ -189,17 +202,21 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
 
     @property
     def textEnglish(self):
+        """Return the text english value."""
         return _(self.text(), 'EN')
 
     def __str__(self):
+        """Return the display text for the app q action."""
         return self.__class__.__name__
 
     def textCompare(self, compare):
+        """Return the text compare value used by the app q action."""
         return self.textEnglish == compare
 
     @staticmethod
     @functools.lru_cache(None)
     def getIconFileName(fileName):
+        """Return icon file name."""
         try:
             return fileName.split('/')[-1]
         except Exception:
@@ -208,6 +225,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
             return ''
 
     def setIconByTheme(self, theme):
+        """Set icon by theme."""
         if not self.iconFileName:
             return
 
@@ -238,6 +256,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
             super().setIcon(bootstrapIcon(self.iconFileName))
 
     def setIcon(self, icon: AppQIcon):
+        """Set icon."""
         self.iconFileName = self.getIconFileName(icon.iconFileName)
 
         if not self.iconFileName:
@@ -247,10 +266,13 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
             self.setIconByTheme(APP().theme())
 
     def themeChangedCallback(self, theme):
+        """Update the app q action for a theme change."""
         self.setIconByTheme(theme)
 
     def retranslate(self):
+        """Refresh translated text for the app q action."""
         def recursiveTranslate(action, memo):
+            """Handle recursive translate for the app q action."""
             if action not in memo and not action.isSeparator() and action.translatable:
                 action.setText(_(action.text()))
                 action.setStatusTip(_(action.statusTip()))
@@ -268,11 +290,14 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
 
     def triggeredCallback(self, checked):
         # Not a mandatory re-implementation in child class
+        """Handle activation of the action."""
         pass
 
 
 class AppQActionGroup(QActionGroup):
+    """Represent app q action group."""
     def __init__(self, parent, *actions):
+        """Initialize the AppQActionGroup."""
         super().__init__(parent)
 
         for action in actions:
@@ -280,5 +305,7 @@ class AppQActionGroup(QActionGroup):
 
 
 class AppQSeperator(QAction):
+    """Represent app q seperator."""
     def __init__(self):
+        """Initialize the AppQSeperator."""
         super().__init__()

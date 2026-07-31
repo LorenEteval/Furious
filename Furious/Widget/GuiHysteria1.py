@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for GUI hysteria1."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -35,7 +37,9 @@ logger = logging.getLogger(__name__)
 
 
 class GuiHy1ItemTextInput(GuiEditorItemTextInput):
+    """Represent GUI hy1 item text input."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy1ItemTextInput."""
         key = kwargs.pop('key', '')
 
         super().__init__(*args, **kwargs)
@@ -43,6 +47,7 @@ class GuiHy1ItemTextInput(GuiEditorItemTextInput):
         self.key = key
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         oldValue = config.get(self.key, '')
         newValue = self.text()
 
@@ -63,6 +68,7 @@ class GuiHy1ItemTextInput(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             self.setText(config.get(self.key, ''))
         except Exception:
@@ -72,12 +78,15 @@ class GuiHy1ItemTextInput(GuiEditorItemTextInput):
 
 
 class GuiHy1ItemBasicProtocol(GuiEditorItemTextComboBox):
+    """Represent GUI hy1 item basic protocol."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy1ItemBasicProtocol."""
         super().__init__(*args, **kwargs)
 
         self.addItems(['', 'udp', 'wechat-video', 'faketcp'])
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         oldProtocol = config.get('protocol', '')
         newProtocol = self.text()
 
@@ -94,6 +103,7 @@ class GuiHy1ItemBasicProtocol(GuiEditorItemTextComboBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             self.setText(config.get('protocol', 'udp'))
         except Exception:
@@ -103,13 +113,16 @@ class GuiHy1ItemBasicProtocol(GuiEditorItemTextComboBox):
 
 
 class GuiHy1ItemSpeedUpMbps(GuiEditorItemTextSpinBox):
+    """Represent GUI hy1 item speed up mbps."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy1ItemSpeedUpMbps."""
         super().__init__(*args, **kwargs)
 
         # Range
         self.setRange(0, 1048576)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         oldUpMbps = config.get('up_mbps')
         newUpMbps = self.value()
 
@@ -126,6 +139,7 @@ class GuiHy1ItemSpeedUpMbps(GuiEditorItemTextSpinBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             self.setValue(config.get('up_mbps'))
         except Exception:
@@ -135,13 +149,16 @@ class GuiHy1ItemSpeedUpMbps(GuiEditorItemTextSpinBox):
 
 
 class GuiHy1ItemSpeedDownMbps(GuiEditorItemTextSpinBox):
+    """Represent GUI hy1 item speed down mbps."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy1ItemSpeedDownMbps."""
         super().__init__(*args, **kwargs)
 
         # Range
         self.setRange(0, 1048576)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         oldDownMbps = config.get('down_mbps')
         newDownMbps = self.value()
 
@@ -158,6 +175,7 @@ class GuiHy1ItemSpeedDownMbps(GuiEditorItemTextSpinBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             self.setValue(config.get('down_mbps'))
         except Exception:
@@ -167,10 +185,13 @@ class GuiHy1ItemSpeedDownMbps(GuiEditorItemTextSpinBox):
 
 
 class GuiHy1ItemTLSInsecure(GuiEditorItemTextCheckBox):
+    """Represent GUI hy1 item TLS insecure."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy1ItemTLSInsecure."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         try:
             oldChecked = config.get('insecure')
         except Exception:
@@ -202,6 +223,7 @@ class GuiHy1ItemTLSInsecure(GuiEditorItemTextCheckBox):
             return False
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             checked = config['insecure']
         except Exception:
@@ -216,13 +238,16 @@ class GuiHy1ItemTLSInsecure(GuiEditorItemTextCheckBox):
 
 
 class GuiHy1ProjectWebsiteURL(AppQLabel):
+    """Represent GUI hy1 project website URL."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy1ProjectWebsiteURL."""
         super().__init__(*args, **kwargs)
 
         self.setWebsiteURL()
         self.linkActivated.connect(self.handleLinkActivated)
 
     def setWebsiteURL(self):
+        """Set website URL."""
         self.setText(
             '<html><head/><body><p>'
             '<a href=\"https://v1.hysteria.network/\">'
@@ -233,20 +258,25 @@ class GuiHy1ProjectWebsiteURL(AppQLabel):
 
     @staticmethod
     def handleLinkActivated(link: str):
+        """Handle link activated."""
         if QDesktopServices.openUrl(QtCore.QUrl(link)):
             logger.info(f'open link \'{link}\' success')
         else:
             logger.error(f'open link \'{link}\' failed')
 
     def retranslate(self):
+        """Refresh translated text for the GUI hy1 project website URL."""
         self.setWebsiteURL()
 
 
 class GuiHy1GroupBoxBasic(GuiEditorWidgetQGroupBox):
+    """Represent GUI hy1 group box basic."""
     def __init__(self, **kwargs):
+        """Initialize the GuiHy1GroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemBasicRemark(title=_('Remark')),
             GuiHy1ItemTextInput(title=_('Server'), key='server'),
@@ -257,10 +287,13 @@ class GuiHy1GroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 
 class GuiHy1GroupBoxProxy(GuiEditorWidgetQGroupBox):
+    """Represent GUI hy1 group box proxy."""
     def __init__(self, **kwargs):
+        """Initialize the GuiHy1GroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemProxyHttp(title='http', translatable=False),
             GuiEditorItemProxySocks(title='socks', translatable=False),
@@ -268,10 +301,13 @@ class GuiHy1GroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 
 class GuiHy1GroupBoxSpeed(GuiEditorWidgetQGroupBox):
+    """Represent GUI hy1 group box speed."""
     def __init__(self, **kwargs):
+        """Initialize the GuiHy1GroupBoxSpeed."""
         super().__init__(_('Speed'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiHy1ItemSpeedUpMbps(title='up_mbps', translatable=False),
             GuiHy1ItemSpeedDownMbps(title='down_mbps', translatable=False),
@@ -279,12 +315,15 @@ class GuiHy1GroupBoxSpeed(GuiEditorWidgetQGroupBox):
 
 
 class GuiHy1GroupBoxTLS(GuiEditorWidgetQGroupBox):
+    """Represent GUI hy1 group box TLS."""
     def __init__(self, **kwargs):
+        """Initialize the GuiHy1GroupBoxTLS."""
         super().__init__('TLS', **kwargs)
 
         self.translatable = False
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiHy1ItemTextInput(title='sni', translatable=False, key='server_name'),
             GuiHy1ItemTextInput(title='alpn', translatable=False, key='alpn'),
@@ -294,7 +333,9 @@ class GuiHy1GroupBoxTLS(GuiEditorWidgetQGroupBox):
 
 
 class GuiHy1GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):
+    """Represent GUI hy1 group box other."""
     def __init__(self, **kwargs):
+        """Initialize the GuiHy1GroupBoxOther."""
         super().__init__(_('Other'), **kwargs)
 
         self._website = GuiHy1ProjectWebsiteURL()
@@ -305,20 +346,25 @@ class GuiHy1GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):
         self.setLayout(layout)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         return False
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         pass
 
 
 class GuiHysteria1(GuiEditorWidgetQDialog):
+    """Represent GUI hysteria1."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHysteria1."""
         super().__init__(*args, **kwargs)
 
         self.setTabText(Protocol.Hysteria1.value)
 
     @functools.lru_cache(None)
     def groupBoxSequence(self):
+        """Return the configuration group boxes in display order."""
         return [
             GuiHy1GroupBoxBasic(),
             GuiHy1GroupBoxProxy(),

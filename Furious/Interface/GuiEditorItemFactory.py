@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Define configuration-editor binding interfaces."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -23,19 +25,26 @@ __all__ = ['GuiEditorItemFactory', 'GuiEditorItemWidgetContainer']
 
 
 class GuiEditorItemFactory:
+    """Define the interface and shared behavior for GUI editor item objects."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorItemFactory."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, *args, **kwargs) -> Any:
+        """Apply the current editor value to the configuration."""
         raise NotImplementedError
 
     def factoryToInput(self, *args, **kwargs) -> Any:
+        """Load the configuration value into the editor."""
         raise NotImplementedError
 
 
 class GuiEditorItemWidgetContainer(GuiEditorItemFactory):
+    """Bind one or more editor widgets to configuration data."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorItemWidgetContainer."""
         super().__init__(*args, **kwargs)
 
     def widgets(self) -> Any:
+        """Return the widgets owned by this editor item."""
         raise NotImplementedError

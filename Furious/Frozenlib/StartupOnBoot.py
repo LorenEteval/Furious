@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide bundled startup on boot."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib.Constants import *
@@ -33,9 +35,12 @@ logger = logging.getLogger(__name__)
 
 
 class StartupOnBoot:
+    """Represent startup on boot."""
     @staticmethod
     def on_():
+        """Enable the startup on boot."""
         def _on_():
+            """Return the on value used by the startup on boot."""
             if SystemRuntime.isScriptMode():
                 # Script mode
                 logger.info('ignore turn on StartupOnBoot in script mode')
@@ -143,7 +148,9 @@ class StartupOnBoot:
 
     @staticmethod
     def off():
+        """Disable the startup on boot."""
         def _off():
+            """Return the off value used by the startup on boot."""
             if PLATFORM == 'Windows':
                 settings = QtCore.QSettings(
                     'HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run',

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide bundled system routing table."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib.Constants import *
@@ -39,6 +41,7 @@ else:
 
 
 def dictRepr(returncode, stdout, stderr):
+    """Return the dict repr value used by the application."""
     return {
         'returncode': returncode,
         'stdout': stdout.decode(SYSTEM_PREFERRED_ENCODING, 'replace').strip(),
@@ -47,6 +50,7 @@ def dictRepr(returncode, stdout, stderr):
 
 
 class SystemRoutingTable:
+    """Represent system routing table."""
     Relations = list()
 
     DEFAULT_GATEWAY_WIN32 = re.compile(
@@ -61,7 +65,9 @@ class SystemRoutingTable:
 
     @staticmethod
     def add(sourceIP, destinationIP):
+        """Add the system routing table."""
         def _add():
+            """Return the add value used by the system routing table."""
             if PLATFORM == 'Windows':
                 try:
                     result = runExternalCommand(
@@ -112,11 +118,13 @@ class SystemRoutingTable:
 
     @staticmethod
     def addRelations():
+        """Add relations."""
         for sourceIP, destinationIP in SystemRoutingTable.Relations:
             SystemRoutingTable.add(sourceIP, destinationIP)
 
     @staticmethod
     def WIN32GetInterfaceAliasByIP(ipaddress) -> str:
+        """Return the win32 get interface alias by ip value."""
         assert PLATFORM == 'Windows'
 
         try:
@@ -151,6 +159,7 @@ class SystemRoutingTable:
 
     @staticmethod
     def WIN32SetInterfaceDNS(name, address=None, dhcp=True):
+        """Return the win32 set interface DNS value."""
         assert PLATFORM == 'Windows'
 
         try:
@@ -189,6 +198,7 @@ class SystemRoutingTable:
 
     @staticmethod
     def WIN32FlushDNSCache():
+        """Return the win32 flush DNS cache value."""
         assert PLATFORM == 'Windows'
 
         try:
@@ -215,6 +225,7 @@ class SystemRoutingTable:
 
     @staticmethod
     def WIN32IpconfigFindContent(content: str) -> bool:
+        """Return the win32 ipconfig find content value."""
         assert PLATFORM == 'Windows'
 
         try:
@@ -244,7 +255,9 @@ class SystemRoutingTable:
 
     @staticmethod
     def DarwinGetDNSServers() -> list:
+        """Return the darwin get DNS servers value."""
         def getNetworkServices():
+            """Return network services."""
             _command = runExternalCommand(
                 ['networksetup', '-listallnetworkservices'],
                 stdout=subprocess.PIPE,
@@ -295,6 +308,7 @@ class SystemRoutingTable:
 
     @staticmethod
     def DarwinSetDNSServers(service: str, dnsserver: str):
+        """Return the darwin set DNS servers value."""
         assert PLATFORM == 'Darwin'
 
         dnsserverRepr = [dnsserver]
@@ -335,6 +349,7 @@ class SystemRoutingTable:
 
     @staticmethod
     def LinuxFindTUNDevice(deviceName: str) -> bool:
+        """Return the linux find TUN device value."""
         assert PLATFORM == 'Linux'
 
         command = 'ip tuntap show'
@@ -369,6 +384,7 @@ class SystemRoutingTable:
 
     @staticmethod
     def LinuxDeleteTUNDevice(deviceName: str) -> bool:
+        """Return the linux delete TUN device value."""
         assert PLATFORM == 'Linux'
 
         command = 'ip tuntap del mode tun dev'
@@ -406,6 +422,7 @@ class SystemRoutingTable:
 
     @staticmethod
     def LinuxExecutePrivilegedScript(filepath, shell='bash') -> bool:
+        """Return the linux execute privileged script value."""
         assert PLATFORM == 'Linux'
 
         command = 'pkexec'
@@ -443,6 +460,7 @@ class SystemRoutingTable:
 
     @staticmethod
     def LinuxGetIpRoute() -> str:
+        """Return the linux get ip route value."""
         assert PLATFORM == 'Linux'
 
         command = 'ip route show'
@@ -477,7 +495,9 @@ class SystemRoutingTable:
 
     @staticmethod
     def getDefaultGateway() -> list:
+        """Return default gateway."""
         def _get():
+            """Return the get value used by the system routing table."""
             if PLATFORM == 'Windows':
                 # Note: On Windows interface IP is also captured
 
@@ -543,7 +563,9 @@ class SystemRoutingTable:
 
     @staticmethod
     def setDeviceGateway(deviceName, deviceIP, deviceGateway):
+        """Set device gateway."""
         def _set():
+            """Return the set value used by the system routing table."""
             if PLATFORM == 'Windows':
                 try:
                     result = runExternalCommand(
@@ -602,7 +624,9 @@ class SystemRoutingTable:
 
     @staticmethod
     def delete(sourceIP, destinationIP):
+        """Delete the system routing table."""
         def _delete():
+            """Return the delete value used by the system routing table."""
             if PLATFORM == 'Windows':
                 try:
                     result = runExternalCommand(
@@ -657,6 +681,7 @@ class SystemRoutingTable:
 
     @staticmethod
     def deleteRelations(clear=True):
+        """Delete relations."""
         if PLATFORM == 'Windows':
             if len(SystemRoutingTable.Relations):
                 SystemRoutingTable.delete('0.0.0.0', APPLICATION_TUN_GATEWAY_ADDRESS)

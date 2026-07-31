@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Implement tray actions for exit."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -25,7 +27,9 @@ __all__ = ['ExitAction']
 
 
 class ExitAction(AppQAction):
+    """Handle the exit action."""
     def __init__(self, **kwargs):
+        """Initialize the ExitAction."""
         super().__init__(
             _('Exit'),
             icon=bootstrapIcon('box-arrow-in-left.svg'),
@@ -33,4 +37,5 @@ class ExitAction(AppQAction):
         )
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         APP().exit()

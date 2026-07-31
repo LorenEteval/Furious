@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for DNS resolver."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -34,13 +36,16 @@ logger = logging.getLogger(__name__)
 
 
 class _DNSResolver(WebGETManager):
+    """Represent DNS resolver."""
     def __init__(self, parent=None, **kwargs):
+        """Initialize the _DNSResolver."""
         actionMessage = kwargs.pop('actionMessage', 'DNS resolution')
 
         super().__init__(parent, actionMessage=actionMessage)
 
     @staticmethod
     def request(address) -> QNetworkRequest:
+        """Return the request value used by the DNS resolver."""
         request = QNetworkRequest(
             QtCore.QUrl(f'https://cloudflare-dns.com/dns-query?name={address}')
         )
@@ -49,6 +54,7 @@ class _DNSResolver(WebGETManager):
         return request
 
     def successCallback(self, networkReply, **kwargs):
+        """Handle a successful network operation."""
         domain = kwargs.pop('domain', '')
         resultMap = kwargs.pop('resultMap', {})
 
@@ -87,6 +93,7 @@ class _DNSResolver(WebGETManager):
         resultMap['depth'] -= 1
 
     def failureCallback(self, networkReply: QNetworkReply, **kwargs):
+        """Handle a failed network operation."""
         domain = kwargs.pop('domain', '')
         resultMap = kwargs.pop('resultMap', {})
 
@@ -98,6 +105,7 @@ class _DNSResolver(WebGETManager):
         resultMap['depth'] -= 1
 
     def resolve(self, domain, timeout=30000) -> Tuple[bool, list[str]]:
+        """Resolve the DNS resolver."""
         resultMap = {
             'domain': domain,
             'depth': 0,
@@ -123,6 +131,7 @@ class _DNSResolver(WebGETManager):
 
     @staticmethod
     def wait(resultMap, startCounter=0, timeout=30000, step=100):
+        """Wait for the DNS resolver operation to complete."""
         domain = resultMap.get('domain', '')
 
         if not domain:

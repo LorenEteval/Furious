@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide process utilities for app main process."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -43,7 +45,9 @@ else:
 
 
 class AppMainProcess(ProcessContext.Process):
+    """Represent app main process."""
     def __init__(self, func: Callable[[], ApplicationFactory], **kwargs):
+        """Initialize the AppMainProcess."""
         super().__init__(**kwargs)
 
         self.startupTime = str(datetime.datetime.now()).replace(':', '')
@@ -54,6 +58,7 @@ class AppMainProcess(ProcessContext.Process):
         self.application = None
 
     def exceptHook(self, exceptionType, exceptionValue, tb):
+        """Handle except hook for the app main process."""
         if logger.level < logging.CRITICAL:
             traceback.print_exception(exceptionType, exceptionValue, tb)
 
@@ -72,6 +77,7 @@ class AppMainProcess(ProcessContext.Process):
             sys.exit(exitcode)
 
     def saveCrashLog(self, exceptionType, exceptionValue, tb):
+        """Save crash log."""
         try:
             os.mkdir(CRASH_LOG_DIR)
         except FileExistsError:
@@ -104,11 +110,13 @@ class AppMainProcess(ProcessContext.Process):
             pass
 
     def handler(self, signum, frame):
+        """Handle r."""
         logger.info(f'received signal {signal.Signals(signum).name}. Exit application')
 
         self.application.exit()
 
     def run(self):
+        """Run the app main process task."""
         sys.excepthook = self.exceptHook
 
         self.application = self.func()

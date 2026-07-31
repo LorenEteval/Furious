@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for connect progress bar."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -28,7 +30,9 @@ __all__ = ['ConnectProgressBar']
 
 
 class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
+    """Represent auto update progress bar."""
     def __init__(self, **kwargs):
+        """Initialize the AutoUpdateProgressBar."""
         super().__init__(**kwargs)
 
         self.setRange(0, 100)
@@ -36,6 +40,7 @@ class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
         @QtCore.Slot()
         def update():
             # Update the progress bar value
+            """Update the auto update progress bar."""
             if self.value() < 90:
                 self.setValue(self.value() + 1)
 
@@ -49,13 +54,16 @@ class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
         self.setStyleSheet(self.getStyleSheet())
 
     def start(self, msec: int):
+        """Start the auto update progress bar."""
         self.timer.start(msec)
 
     def stop(self):
+        """Stop the auto update progress bar."""
         self.timer.stop()
 
     @staticmethod
     def getStyleSheet():
+        """Return style sheet."""
         return (
             f'QProgressBar {{'
             f'    border-radius: 2px;'
@@ -73,14 +81,18 @@ class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
         )
 
     def disconnectedCallback(self):
+        """Update the auto update progress bar for a disconnected state."""
         pass
 
     def connectedCallback(self):
+        """Update the auto update progress bar for a connected state."""
         pass
 
 
 class ConnectProgressBar(Mixins.QTranslatable, Mixins.ConnectionAware, QWidget):
+    """Provide the connect progress bar widget."""
     def __init__(self, parent=None):
+        """Initialize the ConnectProgressBar."""
         super().__init__(parent)
 
         self.setWindowTitle(_(APPLICATION_NAME))
@@ -97,19 +109,25 @@ class ConnectProgressBar(Mixins.QTranslatable, Mixins.ConnectionAware, QWidget):
         self.setLayout(self._layout)
 
     def setValue(self, value: int):
+        """Set value."""
         self._widget.setValue(value)
 
     def start(self, msec: int):
+        """Start the connect progress bar."""
         self._widget.start(msec)
 
     def stop(self):
+        """Stop the connect progress bar."""
         self._widget.stop()
 
     def disconnectedCallback(self):
+        """Update the connect progress bar for a disconnected state."""
         self.setWindowIcon(AppHue.disconnectedWindowIcon())
 
     def connectedCallback(self):
+        """Update the connect progress bar for a connected state."""
         self.setWindowIcon(AppHue.connectedWindowIcon())
 
     def retranslate(self):
+        """Refresh translated text for the connect progress bar."""
         self.setWindowTitle(_(self.windowTitle()))

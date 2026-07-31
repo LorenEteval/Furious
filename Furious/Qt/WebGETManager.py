@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for web get manager."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -34,7 +36,9 @@ logger = logging.getLogger(__name__)
 
 
 class WebGETManager(AppQNetworkAccessManager):
+    """Coordinate web get operations."""
     def __init__(self, parent=None, actionMessage='web GET', **kwargs):
+        """Initialize the WebGETManager."""
         super().__init__(parent)
 
         self.actionMessage = actionMessage
@@ -43,19 +47,25 @@ class WebGETManager(AppQNetworkAccessManager):
         self.mustCalled = False
 
     def successCallback(self, networkReply: QNetworkReply, **kwargs):
+        """Handle a successful network operation."""
         pass
 
     def hasDataCallback(self, networkReply: QNetworkReply, **kwargs):
+        """Handle newly available network response data."""
         pass
 
     def failureCallback(self, networkReply: QNetworkReply, **kwargs):
+        """Handle a failed network operation."""
         pass
 
     def mustCall(self, **kwargs):
+        """Perform the required completion hook."""
         pass
 
     def must(self, **kwargs):
+        """Run the required completion hook according to its call policy."""
         def call():
+            """Invoke the registered completion callback."""
             try:
                 self.mustCall(**kwargs)
             except Exception as ex:
@@ -71,9 +81,11 @@ class WebGETManager(AppQNetworkAccessManager):
             call()
 
     def handleReadyReadByNetworkReply(self, networkReply: QNetworkReply, **kwargs):
+        """Handle ready read by network reply."""
         self.hasDataCallback(networkReply, **kwargs)
 
     def handleFinishedByNetworkReply(self, networkReply: QNetworkReply, **kwargs):
+        """Handle finished by network reply."""
         try:
             if not isinstance(networkReply, QNetworkReply):
                 # Some PySide6 version does not have networkReply as
@@ -102,6 +114,7 @@ class WebGETManager(AppQNetworkAccessManager):
             self.must(**kwargs)
 
     def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
+        """Configure HTTP proxy."""
         useProxy = super().configureHttpProxy(httpProxy)
 
         if useProxy:
@@ -112,6 +125,7 @@ class WebGETManager(AppQNetworkAccessManager):
         return useProxy
 
     def webGET(self, request: Union[QNetworkRequest, str], **kwargs) -> QNetworkReply:
+        """Return the web get value used by the web get manager."""
         if isinstance(request, QNetworkRequest):
             networkReply = self.get(request)
         else:

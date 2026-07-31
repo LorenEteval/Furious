@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide bundled py side6 legacy."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib.Constants import *
@@ -27,9 +29,11 @@ __all__ = ['PySide6Legacy']
 
 
 class PySide6Legacy:
+    """Represent py side6 legacy."""
     @staticmethod
     def enumValueWrapper(enum) -> int:
         # Protect PySide6 enum wrapper behavior changes
+        """Return the enum value wrapper value used by the py side6 legacy."""
         if versionToValue(PYSIDE6_VERSION) < versionToValue('6.2.2'):
             return enum
         else:
@@ -39,6 +43,7 @@ class PySide6Legacy:
     def eventLoopWait(ms) -> None:
         # Protect qWait method does not exist in some
         # old PySide6 version
+        """Handle event loop wait for the py side6 legacy."""
         if versionToValue(PYSIDE6_VERSION) < versionToValue('6.3.1'):
             for counter in range(0, ms, 10):
                 time.sleep(10 / 1000)

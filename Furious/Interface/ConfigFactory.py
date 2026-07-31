@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Define the shared configuration model and conversion interface."""
+
 from __future__ import annotations
 
 from Furious.Interface.UserServersTableItem import *
@@ -57,10 +59,12 @@ class ConfigFactory(UserServersTableItem, dict):
 
     @functools.singledispatchmethod
     def _init_dispatch(self, config):
+        """Initialize the configuration from a supported input type."""
         super().__init__()
 
     @_init_dispatch.register(str)
     def _(self, config):
+        """Handle the registered singledispatch variant."""
         try:
             jsonObject = ujson.loads(config)
         except Exception:
@@ -77,61 +81,75 @@ class ConfigFactory(UserServersTableItem, dict):
 
     @_init_dispatch.register(dict)
     def _(self, config):
+        """Handle the registered singledispatch variant."""
         super().__init__(**config)
 
     def __getitem__(self, item: str):
+        """Return an item from the config factory."""
         if not isinstance(item, str):
             raise TypeError(f'Bad type {type(item)} for __getitem__ call')
 
         return super().__getitem__(item)
 
     def __setitem__(self, item: str, value):
+        """Set an item on the config factory."""
         if not isinstance(item, str):
             raise TypeError(f'Bad type {type(item)} for __setitem__ call')
 
         return super().__setitem__(item, value)
 
     def deepcopy(self) -> ConfigFactory:
+        """Return an independent copy of the configuration."""
         return copy.deepcopy(self)
 
     def coreName(self) -> str:
+        """Return the core implementation name."""
         return 'Unknown'
 
     def isValid(self) -> bool:
+        """Return whether valid."""
         return bool(self)
 
     def getExtras(self, item):
+        """Return non-core metadata associated with the configuration."""
         return self.kwargs.get(item, '')
 
     def setExtras(self, item, value):
+        """Store non-core metadata associated with the configuration."""
         self.kwargs[item] = value
 
     @property
     def index(self) -> int:
+        """Return the index value."""
         return self._index
 
     @index.setter
     def index(self, value: int):
+        """Set the index value."""
         assert isinstance(value, int)
 
         self._index = value
 
     @property
     def deleted(self) -> bool:
+        """Return the deleted value."""
         return self._deleted
 
     @deleted.setter
     def deleted(self, value: bool):
+        """Set the deleted value."""
         assert isinstance(value, bool)
 
         self._deleted = value
 
     @property
     def itemRemark(self) -> str:
+        """Return the item remark value."""
         return self.getExtras('remark')
 
     @property
     def itemSubscription(self) -> str:
+        """Return the item subscription value."""
         try:
             app = QApplication.instance()
 
@@ -149,10 +167,12 @@ class ConfigFactory(UserServersTableItem, dict):
 
     @property
     def itemLatency(self) -> str:
+        """Return the item latency value."""
         return self.getExtras('delayResult')
 
     @property
     def itemSpeed(self) -> str:
+        """Return the item speed value."""
         return self.getExtras('speedResult')
 
     def toJSONString(self, **kwargs) -> str:
@@ -182,6 +202,7 @@ class ConfigFactory(UserServersTableItem, dict):
             return ''
 
     def toStorageObject(self) -> dict:
+        """Build the persisted representation of the configuration."""
         if self.kwargs.get('remark') is None:
             # compatibility: remark field is mandatory in previous application version
             self.kwargs['remark'] = ''

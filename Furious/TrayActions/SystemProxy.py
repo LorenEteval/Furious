@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Implement tray actions for system proxy."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -29,10 +31,13 @@ registerAppSettings(
 
 
 class SystemProxyChildAction(AppQAction):
+    """Handle the system proxy child action."""
     def __init__(self, *args, **kwargs):
+        """Initialize the SystemProxyChildAction."""
         super().__init__(*args, **kwargs)
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         if self.textCompare('Automatically Configure System Proxy'):
             AppSettings.set('SystemProxyMode', AppBuiltinProxyMode.Auto.value)
         elif self.textCompare('Do Not Change System Proxy'):
@@ -40,7 +45,9 @@ class SystemProxyChildAction(AppQAction):
 
 
 class SystemProxyAction(AppQAction):
+    """Handle the system proxy action."""
     def __init__(self, **kwargs):
+        """Initialize the SystemProxyAction."""
         super().__init__(
             _('System Proxy'),
             icon=bootstrapIcon('hdd-network.svg'),

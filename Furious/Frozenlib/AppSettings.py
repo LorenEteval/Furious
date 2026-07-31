@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Register, validate, read, and write persistent application settings."""
+
 from __future__ import annotations
 
 from PySide6 import QtCore
@@ -31,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class AppBinarySettings:
+    """Store and validate app binary settings."""
     OFF = '0'
     ON_ = '1'
 
@@ -38,6 +41,7 @@ class AppBinarySettings:
 
 
 class AppSettings:
+    """Store and validate app settings."""
     SettingsPool: dict[str, AppSettings] = dict()
 
     def __init__(
@@ -47,6 +51,7 @@ class AppSettings:
         validRange: list = None,
         default=None,
     ):
+        """Initialize the AppSettings."""
         self.name = name
         self.isBinary = isBinary
 
@@ -65,6 +70,7 @@ class AppSettings:
             raise ValueError(f'\'{name}\' already exists in AppSettings')
 
     def validate(self, value) -> bool:
+        """Validate the app settings."""
         if self.validRange is None:
             return True
         else:
@@ -72,6 +78,7 @@ class AppSettings:
 
     @staticmethod
     def get(key: str):
+        """Return data managed by the app settings."""
         settings = AppSettings.SettingsPool.get(key)
 
         if settings is None:
@@ -110,6 +117,7 @@ class AppSettings:
 
     @staticmethod
     def isStateON_(key: str) -> bool:
+        """Return whether state on."""
         value = AppSettings.get(key)
 
         if value == AppBinarySettings.ON_:
@@ -119,6 +127,7 @@ class AppSettings:
 
     @staticmethod
     def isStateOFF(key: str) -> bool:
+        """Return whether state off."""
         value = AppSettings.get(key)
 
         if value == AppBinarySettings.OFF:
@@ -128,6 +137,7 @@ class AppSettings:
 
     @staticmethod
     def set(key: str, value):
+        """Set data managed by the app settings."""
         settings = AppSettings.SettingsPool.get(key)
 
         if settings is None:
@@ -143,12 +153,15 @@ class AppSettings:
 
     @staticmethod
     def turnON_(key: str):
+        """Handle turn on for the app settings."""
         AppSettings.set(key, AppBinarySettings.ON_)
 
     @staticmethod
     def turnOFF(key: str):
+        """Handle turn off for the app settings."""
         AppSettings.set(key, AppBinarySettings.OFF)
 
 
 def registerAppSettings(name: str, *args, **kwargs):
+    """Handle register app settings for the application."""
     AppSettings.SettingsPool[name] = AppSettings(name, *args, **kwargs)

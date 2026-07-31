@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Wrap the embedded Hysteria 1 core process."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -34,6 +36,7 @@ __all__ = ['Hysteria1']
 
 
 def startHysteria1(jsonString, rule, mmdb, msgQueue: multiprocessing.Queue):
+    """Start hysteria1."""
     try:
         import hysteria
     except ImportError:
@@ -54,17 +57,21 @@ def startHysteria1(jsonString, rule, mmdb, msgQueue: multiprocessing.Queue):
 
 
 class Hysteria1(CoreProcessWorker):
+    """Manage the embedded Hysteria 1 core subprocess."""
     class ExitCode(Enum):
+        """Enumerate process exit codes."""
         ConfigurationError = 23
         RemoteNetworkError = 3
         # Windows shutting down
         SystemShuttingDown = 0x40010004
 
     def __init__(self, **kwargs):
+        """Initialize the Hysteria1."""
         super().__init__(**kwargs)
 
     @staticmethod
     def loadOptionalFile(pathLike, fileType: str):
+        """Load optional file."""
         if isinstance(pathLike, str) and pathLike == '':
             return ''
 
@@ -96,18 +103,22 @@ class Hysteria1(CoreProcessWorker):
 
     @staticmethod
     def rule(rulePath):
+        """Return the rule value."""
         return Hysteria1.loadOptionalFile(rulePath, 'rule')
 
     @staticmethod
     def mmdb(mmdbPath):
+        """Return the mmdb value."""
         return Hysteria1.loadOptionalFile(mmdbPath, 'mmdb')
 
     @staticmethod
     def name() -> str:
+        """Return the process implementation name."""
         return 'Hysteria1'
 
     @staticmethod
     def version() -> str:
+        """Return the bundled core version."""
         try:
             import hysteria
 
@@ -120,6 +131,7 @@ class Hysteria1(CoreProcessWorker):
     def launchSpec(
         self, config: Union[str, dict], rule, mmdb, **kwargs
     ) -> Union[CoreLaunchSpec, None]:
+        """Build the child-process launch specification."""
         param = self.toJSONString(config)
 
         if not param:
@@ -137,6 +149,7 @@ class Hysteria1(CoreProcessWorker):
         )
 
     def start(self, config: Union[str, dict], rule, mmdb, **kwargs) -> bool:
+        """Start the hysteria1."""
         launchSpec = self.launchSpec(config, rule, mmdb, **kwargs)
 
         if launchSpec is None:

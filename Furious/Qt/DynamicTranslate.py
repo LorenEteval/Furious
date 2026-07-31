@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for dynamic translate."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -29,13 +31,16 @@ __all__ = [
 
 
 class Translator:
+    """Represent translator."""
     def __init__(self):
+        """Initialize the Translator."""
         super().__init__()
 
         self.translation = dict()
         self.dictEnglish = dict()
 
     def install(self, translation):
+        """Handle install for the translator."""
         self.translation = translation
 
         for key, value in translation.items():
@@ -51,6 +56,7 @@ class Translator:
         self.dictEnglish.update(dict(list((key, key) for key in translation.keys())))
 
     def translate(self, source, locale):
+        """Return the translate value used by the translator."""
         try:
             return self.translation[self.dictEnglish[source]][locale]
         except Exception:
@@ -64,10 +70,12 @@ translator = Translator()
 
 
 def installTranslation(translation):
+    """Handle install translation for the application."""
     translator.install(translation)
 
 
 def gettext(source, locale=None):
+    """Return text."""
     if locale is None:
         if APP() is None:
             # Normally should not reach here if performing a translation

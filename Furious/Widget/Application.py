@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for application."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -48,36 +50,46 @@ registerAppSettings('LogViewerWidgetPointSizeTun_')
 
 
 class SystemTrayUnavailable(Exception):
+    """Represent system tray unavailable."""
     pass
 
 
 class AppLogHandler(logging.Handler):
+    """Represent app log handler."""
     def __init__(self, emitCallback):
+        """Initialize the AppLogHandler."""
         super().__init__()
 
         self.emitCallback = emitCallback
 
     def emit(self, record):
+        """Emit the current app log handler event or message."""
         if callable(self.emitCallback):
             self.emitCallback(self.format(record))
 
 
 class ApplicationExitHelper(QApplication):
+    """Represent application exit helper."""
     def __init__(self, argv):
+        """Initialize the ApplicationExitHelper."""
         super().__init__(argv)
 
         # Exiting flag
         self._exiting = False
 
     def setExitingFlag(self, value: bool):
+        """Set exiting flag."""
         self._exiting = value
 
     def isExiting(self) -> bool:
+        """Return whether exiting."""
         return self._exiting is True
 
 
 class SingletonApplication(ApplicationExitHelper):
+    """Represent singleton application."""
     def __init__(self, argv):
+        """Initialize the SingletonApplication."""
         super().__init__(argv)
 
         self.serverName = LOCAL_SERVER_NAME
@@ -86,6 +98,7 @@ class SingletonApplication(ApplicationExitHelper):
         self.server = QLocalServer(self)
 
     def hasRunningApp(self) -> bool:
+        """Return whether running app."""
         self.socket.connectToServer(self.serverName)
 
         if self.socket.waitForConnected(1000):
@@ -134,18 +147,23 @@ class SingletonApplication(ApplicationExitHelper):
 
     @QtCore.Slot()
     def handleNewConnection(self):
+        """Handle new connection."""
         raise NotImplementedError
 
 
 class ApplicationThemeDetector(QtCore.QObject):
+    """Represent application theme detector."""
     themeChanged = QtCore.Signal(str)
 
     def __init__(self, *args, **kwargs):
+        """Initialize the ApplicationThemeDetector."""
         super().__init__(*args, **kwargs)
 
 
 class Application(ApplicationFactory, SingletonApplication):
+    """Represent application."""
     def __init__(self, argv):
+        """Initialize the Application."""
         super().__init__(argv)
 
         self.setApplicationName(APPLICATION_NAME)
@@ -187,11 +205,13 @@ class Application(ApplicationFactory, SingletonApplication):
     @callRateLimited(maxCallPerSecond=2)
     @QtCore.Slot()
     def handleNewConnection(self):
+        """Handle new connection."""
         socket = self.server.nextPendingConnection()
         socket.readyRead.connect(functools.partial(self.handleNewData, socket))
 
     @QtCore.Slot(QLocalSocket)
     def handleNewData(self, socket: QLocalSocket):
+        """Handle new data."""
         data = socket.readAll().data()
 
         if isinstance(data, bytes):
@@ -216,6 +236,7 @@ class Application(ApplicationFactory, SingletonApplication):
             pass
 
     def configureLogging(self):
+        """Configure logging."""
         self.logViewerWindowSelf = LogViewerWindow(
             tabTitle=_('Furious Log'),
             fontFamily=self.customFontName,
@@ -245,6 +266,7 @@ class Application(ApplicationFactory, SingletonApplication):
         logging.raiseExceptions = False
 
     def addCustomFont(self):
+        """Add custom font."""
         fontFile = str(DATA_DIR / 'font' / 'CascadiaMono')
         fontName = 'Cascadia Mono'
 
@@ -258,6 +280,7 @@ class Application(ApplicationFactory, SingletonApplication):
             self.customFontLoadMsg = f'custom font {fontName} load failed'
 
     def configureApplicationFont(self):
+        """Configure application font."""
         font = self.font()
         font.setPointSize(AppStyleSheet.FontPointSize)
 
@@ -266,6 +289,7 @@ class Application(ApplicationFactory, SingletonApplication):
     @staticmethod
     def addEnviron():
         # Xray environment variables
+        """Add environ."""
         os.environ['XRAY_LOCATION_ASSET'] = str(XRAY_ASSET_DIR)
 
         if SystemRuntime.flatpakID():
@@ -276,23 +300,27 @@ class Application(ApplicationFactory, SingletonApplication):
 
     def addStorage(self):
         # Protected storage access
+        """Add storage."""
         self._userActivatedItemIndex = Storage.UserActivatedItemIndex()
         self._userServers = Storage.UserServers()
         self._userSubs = Storage.UserSubs()
         self._userTUNSettings = Storage.UserTUNSettings()
 
     def isSystemTrayConnected(self):
+        """Return whether system tray connected."""
         if isinstance(self.systemTray, SystemTrayIcon):
             return self.systemTray.ConnectAction.isConnected()
         else:
             return False
 
     def isDarkMode(self):
+        """Return whether dark mode."""
         backgroudColor = self.palette().color(QPalette.ColorRole.Window)
 
         return backgroudColor.lightness() < 128
 
     def systemTheme(self) -> str:
+        """Return the system theme value used by the application."""
         try:
             theme = darkdetect.theme()
 
@@ -314,23 +342,28 @@ class Application(ApplicationFactory, SingletonApplication):
         # else:
         #     return self.isDarkMode()
 
+        """Return whether dark mode enabled."""
         return AppSettings.isStateON_('DarkMode')
 
     def theme(self):
+        """Return the theme value used by the application."""
         if self.isDarkModeEnabled():
             return AppStyleSheet.Dark
 
         return self.systemTheme()
 
     def applyStyleSheetForTheme(self, theme):
+        """Handle apply style sheet for theme for the application."""
         self.setStyleSheet(AppStyleSheet.forTheme(theme))
 
     def switchToDarkMode(self):
+        """Handle switch to dark mode for the application."""
         self.applyStyleSheetForTheme(AppStyleSheet.Dark)
 
         Mixins.ThemeAware.callThemeChangedCallbackUnchecked(AppStyleSheet.Dark)
 
     def switchToAutoMode(self):
+        """Handle switch to auto mode for the application."""
         theme = self.systemTheme()
 
         self.applyStyleSheetForTheme(theme)
@@ -339,6 +372,7 @@ class Application(ApplicationFactory, SingletonApplication):
 
     @QtCore.Slot(str)
     def handleSystemThemeChanged(self, theme):
+        """Handle system theme changed."""
         if theme not in [AppStyleSheet.Dark, AppStyleSheet.Light]:
             theme = self.systemTheme()
 
@@ -351,6 +385,7 @@ class Application(ApplicationFactory, SingletonApplication):
     @callOnceOnly
     @QtCore.Slot()
     def cleanup():
+        """Release resources owned by the application."""
         Mixins.CleanupOnExit.cleanupAll()
 
         if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:
@@ -364,6 +399,7 @@ class Application(ApplicationFactory, SingletonApplication):
 
     @staticmethod
     def setDockIconVisible(visible: bool):
+        """Set dock icon visible."""
         if PLATFORM != 'Darwin':
             return
 
@@ -375,6 +411,7 @@ class Application(ApplicationFactory, SingletonApplication):
     def eventFilter(self, watched, event):
         # Show Dock icon on macOS when window is shown
         # and hide only when window is closed (not minimized)
+        """Return the event filter value used by the application."""
         if PLATFORM == 'Darwin' and watched is self.mainWindow:
             if event.type() == QtCore.QEvent.Type.Show:
                 self.setDockIconVisible(True)
@@ -386,6 +423,7 @@ class Application(ApplicationFactory, SingletonApplication):
         return super().eventFilter(watched, event)
 
     def installDockIconVisibilityFeature(self, remove=False):
+        """Handle install dock icon visibility feature for the application."""
         if remove:
             self.mainWindow.removeEventFilter(self)
             self.setDockIconVisible(True)
@@ -397,6 +435,7 @@ class Application(ApplicationFactory, SingletonApplication):
                 self.setDockIconVisible(False)
 
     def exit(self, exitcode=0):
+        """Shut down and exit the application."""
         self.setExitingFlag(True)
 
         self.threadPool.clear()
@@ -408,6 +447,7 @@ class Application(ApplicationFactory, SingletonApplication):
         super().exit(exitcode)
 
     def run(self):
+        """Run the application task."""
         try:
             if self.hasRunningApp():
                 # See: https://github.com/python/cpython/issues/79908
@@ -468,6 +508,7 @@ class Application(ApplicationFactory, SingletonApplication):
 
                 @QtCore.Slot()
                 def handleTimeout():
+                    """Handle timeout."""
                     currentTheme = self.systemTheme()
 
                     if self.currentTheme != currentTheme:
@@ -483,6 +524,7 @@ class Application(ApplicationFactory, SingletonApplication):
                 logger.info('theme detect method uses listener implementation')
 
                 def listener(*args, **kwargs):
+                    """Handle listener for the application."""
                     try:
                         darkdetect.listener(*args, **kwargs)
                     except NotImplementedError:
@@ -524,6 +566,7 @@ class Application(ApplicationFactory, SingletonApplication):
                     self.installDockIconVisibilityFeature()
 
                 def onApplicationStateChange(state):
+                    """Handle on application state change for the application."""
                     if state == QtCore.Qt.ApplicationState.ApplicationActive:
                         if (
                             not self.mainWindow.isVisible()

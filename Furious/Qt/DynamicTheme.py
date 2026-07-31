@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for dynamic theme."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -24,21 +26,26 @@ __all__ = ['AppHue']
 
 
 class AppHue:
+    """Represent app hue."""
     class ColorRGB:
+        """Represent color rgb."""
         LIGHT_BLUE = '#43ACED'
         LIGHT_RED = '#FF7276'
         LIGHT_PURPLE = '#DA70D6'
 
     @staticmethod
     def disconnectedColor() -> str:
+        """Disconnect ed color."""
         return AppHue.ColorRGB.LIGHT_BLUE
 
     @staticmethod
     def disconnectedWindowIcon() -> AppQIcon:
+        """Disconnect ed window icon."""
         return bootstrapIcon('rocket-takeoff-window.svg')
 
     @staticmethod
     def connectedColor() -> str:
+        """Connect ed color."""
         if not SystemRuntime.isAdmin():
             return AppHue.ColorRGB.LIGHT_RED
         else:
@@ -46,6 +53,7 @@ class AppHue:
 
     @staticmethod
     def connectedWindowIcon() -> AppQIcon:
+        """Connect ed window icon."""
         if not SystemRuntime.isAdmin():
             return bootstrapIcon('rocket-takeoff-connected-dark.svg')
         else:
@@ -53,6 +61,7 @@ class AppHue:
 
     @staticmethod
     def currentColor() -> str:
+        """Return the current color value."""
         if APP().isSystemTrayConnected():
             return AppHue.connectedColor()
         else:
@@ -60,6 +69,7 @@ class AppHue:
 
     @staticmethod
     def currentWindowIcon() -> AppQIcon:
+        """Return the current window icon value."""
         if APP().isSystemTrayConnected():
             return AppHue.connectedWindowIcon()
         else:

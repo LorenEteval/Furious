@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for user servers Qt table view."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -59,6 +61,7 @@ registerAppSettings('UserServersHeaderViewState')
 
 
 def appIsExiting() -> bool:
+    """Return the app is exiting value used by the application."""
     app = APP()
 
     if app is None:
@@ -73,7 +76,9 @@ def appIsExiting() -> bool:
 
 
 class MBoxUpdateSubsInfo(AppQMessageBox):
+    """Represent m box update subs info."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxUpdateSubsInfo."""
         self.successArgs = kwargs.pop('successArgs', list())
         self.failureArgs = kwargs.pop('failureArgs', list())
 
@@ -82,6 +87,7 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
         self.setWindowTitle(_(APPLICATION_NAME))
 
     def customText(self):
+        """Return the user-facing message text for the m box update subs info."""
         if self.successArgs:
             text = _('Update subscription completed') + '\n\n'
         else:
@@ -120,6 +126,7 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
         return text
 
     def setColumnMinWidth(self):
+        """Set column min width."""
         if PLATFORM == 'Windows':
             self.findChild(QGridLayout).setColumnMinimumWidth(
                 2,
@@ -128,6 +135,7 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
             )
 
     def retranslate(self):
+        """Refresh translated text for the m box update subs info."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
         self.setColumnMinWidth()
@@ -138,12 +146,15 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
 
 
 class SubscriptionManager(WebGETManager):
+    """Coordinate subscription operations."""
     def __init__(self, parent, **kwargs):
+        """Initialize the SubscriptionManager."""
         actionMessage = kwargs.pop('actionMessage', 'update subs')
 
         super().__init__(parent, actionMessage=actionMessage, mustCallOnce=False)
 
     def handleItemDeletionAndInsertion(self, **kwargs):
+        """Handle item deletion and insertion."""
         successArgs = kwargs.pop('successArgs', list())
         failureArgs = kwargs.pop('failureArgs', list())
         showMessageBox = kwargs.pop('showMessageBox', True)
@@ -213,6 +224,7 @@ class SubscriptionManager(WebGETManager):
             mbox.open()
 
     def mustCall(self, **kwargs):
+        """Perform the required completion hook."""
         depthMap = kwargs.get('depthMap', {})
         depthMap['depth'] -= 1
 
@@ -220,6 +232,7 @@ class SubscriptionManager(WebGETManager):
             self.handleItemDeletionAndInsertion(**kwargs)
 
     def successCallback(self, networkReply, **kwargs):
+        """Handle a successful network operation."""
         remark = kwargs.get('remark', '')
         webURL = kwargs.get('webURL', '')
         successArgs = kwargs.get('successArgs', list())
@@ -273,6 +286,7 @@ class SubscriptionManager(WebGETManager):
             successArgs.append({'uris': uris, **kwargs})
 
     def failureCallback(self, networkReply, **kwargs):
+        """Handle a failed network operation."""
         remark = kwargs.get('remark', '')
         webURL = kwargs.get('webURL', '')
         successArgs = kwargs.get('successArgs', list())
@@ -285,6 +299,7 @@ class SubscriptionManager(WebGETManager):
         failureArgs.append({'error': networkReply.errorString(), **kwargs})
 
     def updateSubsByWebGET(self, **kwargs):
+        """Update subs by web get."""
         url = kwargs.get('webURL', '')
 
         if not url:
@@ -304,6 +319,7 @@ class SubscriptionManager(WebGETManager):
         self.webGET(request, logActionMessage=logActionMessage, **kwargs)
 
     def updateSubsByUnique(self, unique: str, **kwargs):
+        """Update subs by unique."""
         depthMap = kwargs.get('depthMap', {'depth': 1})
         successArgs = kwargs.get('successArgs', list())
         failureArgs = kwargs.get('failureArgs', list())
@@ -320,6 +336,7 @@ class SubscriptionManager(WebGETManager):
         self.updateSubsByWebGET(unique=unique, **Storage.UserSubs()[unique], **kwargs)
 
     def updateSubs(self, **kwargs):
+        """Update subs."""
         depthMap = {'depth': len(Storage.UserSubs())}
         successArgs = list()
         failureArgs = list()
@@ -335,16 +352,19 @@ class SubscriptionManager(WebGETManager):
 
 
 class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
+    """Run test ping latency work in the background."""
     finished = QtCore.Signal()
 
     def __init__(self, factory: ConfigFactory):
         # Explictly called __init__
+        """Initialize the TestPingLatencyWorker."""
         QtCore.QObject.__init__(self)
         QtCore.QRunnable.__init__(self)
 
         self.factory = factory
 
     def run(self):
+        """Run the test ping latency worker task."""
         index = self.factory.index
 
         if self.factory.deleted or index < 0 or index >= len(Storage.UserServers()):
@@ -380,16 +400,19 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
 
 
 class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
+    """Run test tcping latency work in the background."""
     finished = QtCore.Signal()
 
     def __init__(self, factory: ConfigFactory):
         # Explictly called __init__
+        """Initialize the TestTcpingLatencyWorker."""
         QtCore.QObject.__init__(self)
         QtCore.QRunnable.__init__(self)
 
         self.factory = factory
 
     def run(self):
+        """Run the test tcping latency worker task."""
         index = self.factory.index
 
         if self.factory.deleted or index < 0 or index >= len(Storage.UserServers()):
@@ -422,6 +445,7 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
 
 
 class TestDownloadSpeedWorker(WebGETManager):
+    """Run test download speed work in the background."""
     progressed = QtCore.Signal()
     finished = QtCore.Signal(object)
 
@@ -433,6 +457,7 @@ class TestDownloadSpeedWorker(WebGETManager):
         parent=None,
         **kwargs,
     ):
+        """Initialize the TestDownloadSpeedWorker."""
         actionMessage = kwargs.pop('actionMessage', 'test download speed')
 
         super().__init__(parent, actionMessage=actionMessage)
@@ -457,25 +482,30 @@ class TestDownloadSpeedWorker(WebGETManager):
         self.timeoutTimer.timeout.connect(self.handleTimeout)
 
     def mustCall(self):
+        """Perform the required completion hook."""
         self.timeoutTimer.stop()
         self.finished.emit(self)
 
     def sync(self):
         # Extra guard
+        """Persist the current test download speed worker data."""
         if not appIsExiting():
             self.progressed.emit()
 
     def isFinished(self) -> bool:
+        """Return whether finished."""
         if isinstance(self.networkReply, QNetworkReply):
             return self.networkReply.isFinished()
         else:
             return True
 
     def abort(self):
+        """Cancel the active test download speed worker operation."""
         if isinstance(self.networkReply, QNetworkReply):
             self.networkReply.abort()
 
     def handleTimeout(self):
+        """Handle timeout."""
         try:
             if not self.isFinished():
                 self.abort()
@@ -483,6 +513,7 @@ class TestDownloadSpeedWorker(WebGETManager):
             self.must()
 
     def coreExitCallback(self, config: ConfigFactory, exitcode: int):
+        """Handle the core exit callback."""
         try:
             if exitcode == CoreProcessFactory.ExitCode.ConfigurationError.value:
                 self.factory.setExtras('speedResult', f'Invalid')
@@ -500,6 +531,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
     @staticmethod
     def coreMsgCallback(line):
+        """Handle the core msg callback."""
         try:
             AppLoggerWindow.Core().appendLine(line)
         except Exception:
@@ -509,6 +541,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
     @functools.singledispatchmethod
     def _startCore(self, config) -> bool:
+        """Return the start core value used by the test download speed worker."""
         self.factory.setExtras('speedResult', 'Invalid')
         self.sync()
 
@@ -517,6 +550,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
     @_startCore.register(ConfigXray)
     def _(self, config) -> bool:
+        """Handle the registered singledispatch variant."""
         self.factory.setExtras('speedResult', 'Starting')
         self.sync()
 
@@ -566,6 +600,7 @@ class TestDownloadSpeedWorker(WebGETManager):
     @_startCore.register(ConfigHysteria1)
     @_startCore.register(ConfigHysteria2)
     def _(self, config) -> bool:
+        """Handle the registered singledispatch variant."""
         self.factory.setExtras('speedResult', 'Starting')
         self.sync()
 
@@ -590,6 +625,7 @@ class TestDownloadSpeedWorker(WebGETManager):
         )
 
     def start(self):
+        """Start the test download speed worker."""
         try:
             if appIsExiting():
                 raise
@@ -629,6 +665,7 @@ class TestDownloadSpeedWorker(WebGETManager):
                 self.must()
 
     def successCallback(self, networkReply, **kwargs):
+        """Handle a successful network operation."""
         if self.coreManager.allRunning():
             self.totalBytesRead += networkReply.readAll().length()
 
@@ -644,6 +681,7 @@ class TestDownloadSpeedWorker(WebGETManager):
         self.sync()
 
     def hasDataCallback(self, networkReply, **kwargs):
+        """Handle newly available network response data."""
         self.hasDataCounter += 1
 
         if self.coreManager.allRunning():
@@ -662,6 +700,7 @@ class TestDownloadSpeedWorker(WebGETManager):
                 self.sync()
 
     def failureCallback(self, networkReply, **kwargs):
+        """Handle a failed network operation."""
         if not self.hasSpeedResult:
             if not self.coreManager.allRunning():
                 # Core ExitCallback has been called
@@ -699,6 +738,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
 
 class DownloadSpeedTestJob:
+    """Represent download speed test job."""
     def __init__(
         self,
         index: int,
@@ -706,6 +746,7 @@ class DownloadSpeedTestJob:
         timeout: int,
         logActionMessage=False,
     ):
+        """Initialize the DownloadSpeedTestJob."""
         super().__init__()
 
         self.index = index
@@ -715,11 +756,13 @@ class DownloadSpeedTestJob:
 
 
 class DownloadSpeedTestScheduler(QtCore.QObject):
+    """Schedule and coordinate download speed test jobs."""
     SinglePort = 20809
     MultiPortStart = 30000
     MultiPortStop = 40000
 
     def __init__(self, table, isMulti: bool, parent=None):
+        """Initialize the DownloadSpeedTestScheduler."""
         super().__init__(parent)
 
         self.table = table
@@ -739,17 +782,20 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
         timeout: int,
         logActionMessage=False,
     ):
+        """Handle enqueue for the download speed test scheduler."""
         self.queue.append(
             DownloadSpeedTestJob(index, factory, timeout, logActionMessage)
         )
         self.scheduleDrain()
 
     def enqueueMany(self, jobs: list[DownloadSpeedTestJob]):
+        """Handle enqueue many for the download speed test scheduler."""
         self.queue.extend(jobs)
 
         self.scheduleDrain()
 
     def cancelAll(self):
+        """Return whether cel all."""
         self.queue.clear()
 
         for worker, _, _ in list(self.activeJobs.values()):
@@ -762,6 +808,7 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
             worker.must()
 
     def scheduleDrain(self):
+        """Handle schedule drain for the download speed test scheduler."""
         if self.drainScheduled:
             return
 
@@ -770,6 +817,7 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
         QtCore.QTimer.singleShot(0, self.drain)
 
     def drain(self):
+        """Handle drain for the download speed test scheduler."""
         self.drainScheduled = False
 
         if appIsExiting():
@@ -795,6 +843,7 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
             self.startJob(job, port)
 
     def allocatePort(self) -> Union[int, None]:
+        """Return whether allocate port."""
         if not self.isMulti:
             if self.activeJobs:
                 return None
@@ -818,9 +867,11 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
         return None
 
     def releasePort(self, port: int):
+        """Handle release port for the download speed test scheduler."""
         self.activePorts.discard(port)
 
     def startJob(self, job: DownloadSpeedTestJob, port: int):
+        """Start job."""
         worker = TestDownloadSpeedWorker(
             job.factory,
             port,
@@ -843,6 +894,7 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
 
     @QtCore.Slot(object)
     def handleWorkerFinished(self, worker):
+        """Handle worker finished."""
         workerId = id(worker)
 
         try:
@@ -855,7 +907,9 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
 
 
 class DeleteServersProgressDialog(AppQDialog):
+    """Present progress and cancellation controls for delete servers."""
     def __init__(self, table, indexes, showTrayMessage=True, parent=None):
+        """Initialize the DeleteServersProgressDialog."""
         super().__init__(parent)
 
         self.table = table
@@ -901,9 +955,11 @@ class DeleteServersProgressDialog(AppQDialog):
         self.updateStatus()
 
     def setWidthAndHeight(self):
+        """Apply the default size for the delete servers progress dialog."""
         self.resize(420, 150)
 
     def open(self):
+        """Open the delete servers progress dialog asynchronously."""
         self.spinner.start()
 
         QtCore.QTimer.singleShot(0, self.deleteNext)
@@ -911,14 +967,17 @@ class DeleteServersProgressDialog(AppQDialog):
         return super().open()
 
     def reject(self):
+        """Reject the current delete servers progress dialog values."""
         self.cancel()
 
     def cancel(self):
+        """Cancel the delete servers progress dialog operation."""
         self.canceled = True
         self.cancelButton.setEnabled(False)
         self.updateStatus()
 
     def updateStatus(self):
+        """Update status."""
         if self.canceled:
             self.statusLabel.setText(
                 _('Canceling delete') + f'... {self.deletedCount}/{self.total}'
@@ -935,6 +994,7 @@ class DeleteServersProgressDialog(AppQDialog):
 
     @staticmethod
     def limitedRemark(remark: str) -> str:
+        """Return the limited remark value used by the delete servers progress dialog."""
         remark = str(remark).strip()
 
         if len(remark) <= 120:
@@ -943,6 +1003,7 @@ class DeleteServersProgressDialog(AppQDialog):
         return remark[:117] + '...'
 
     def deleteNext(self):
+        """Delete next."""
         if self.canceled or self.nextIndex >= self.total:
             self.finishDeletion()
 
@@ -988,6 +1049,7 @@ class DeleteServersProgressDialog(AppQDialog):
         QtCore.QTimer.singleShot(0, self.deleteNext)
 
     def finishDeletion(self):
+        """Handle finish deletion for the delete servers progress dialog."""
         if self.finishedDeletion:
             return
 
@@ -1012,66 +1074,82 @@ class DeleteServersProgressDialog(AppQDialog):
         self.accept()
 
     def retranslate(self):
+        """Refresh translated text for the delete servers progress dialog."""
         self.setWindowTitle(_(self.windowTitle()))
         self.cancelButton.setText(_(self.cancelButton.text()))
         self.updateStatus()
 
 
 class UserServersQTableViewHorizontalHeader(AppQHeaderView):
+    """Provide the user servers Qt table view horizontal table header."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserServersQTableViewHorizontalHeader."""
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
 
 
 class UserServersQTableViewVerticalHeader(AppQHeaderView):
+    """Provide the user servers Qt table view vertical table header."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserServersQTableViewVerticalHeader."""
         super().__init__(QtCore.Qt.Orientation.Vertical, *args, **kwargs)
 
 
 class UserServersQTableViewHeaders:
+    """Describe and render user servers Qt table view table columns."""
     def __init__(self, name: str, func: Callable[[ConfigFactory], str] = None):
+        """Initialize the UserServersQTableViewHeaders."""
         self.name = name
         self.func = func
 
     def __call__(self, item: ConfigFactory) -> str:
+        """Invoke the user servers Qt table view headers as a callable."""
         if callable(self.func):
             return self.func(item)
         else:
             return getattr(item, f'item{self}')
 
     def __eq__(self, other):
+        """Compare the user servers Qt table view headers with another value."""
         return str(self) == str(other)
 
     def __str__(self):
+        """Return the display text for the user servers Qt table view headers."""
         return self.name
 
 
 class UserServersTableModel(QtCore.QAbstractTableModel):
+    """Expose user servers table data through a Qt item model."""
     SortRole = QtCore.Qt.ItemDataRole.UserRole + 1
 
     def __init__(self, headers: list[UserServersQTableViewHeaders], parent=None):
+        """Initialize the UserServersTableModel."""
         super().__init__(parent)
 
         self.headers = headers
 
     def rowCount(self, parent=QtCore.QModelIndex()) -> int:
+        """Return the number of rows exposed by the model."""
         if parent.isValid():
             return 0
 
         return len(Storage.UserServers())
 
     def columnCount(self, parent=QtCore.QModelIndex()) -> int:
+        """Return the number of columns exposed by the model."""
         if parent.isValid():
             return 0
 
         return len(self.headers)
 
     def flags(self, index):
+        """Return the Qt item flags for a model index."""
         if not index.isValid():
             return QtCore.Qt.ItemFlag.NoItemFlags
 
         return QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
 
     def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        """Return the data managed by the user servers table model."""
         if not index.isValid():
             return None
 
@@ -1134,6 +1212,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
         orientation: QtCore.Qt.Orientation,
         role=QtCore.Qt.ItemDataRole.DisplayRole,
     ):
+        """Return display data for a table header section."""
         if role != QtCore.Qt.ItemDataRole.DisplayRole:
             return None
 
@@ -1147,6 +1226,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
 
     @staticmethod
     def testResultSortValue(text: str, suffix: str):
+        """Return the test result sort value value used by the user servers table model."""
         if text.endswith(suffix):
             text = text[: -len(suffix)]
 
@@ -1158,6 +1238,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
             return abs(hash(text)) + 2**20
 
     def emitRowChanged(self, row: int, column: Union[int, None] = None):
+        """Handle emit row changed for the user servers table model."""
         if row < 0 or row >= self.rowCount():
             return
 
@@ -1171,6 +1252,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
         self.dataChanged.emit(left, right, [])
 
     def emitAllChanged(self):
+        """Handle emit all changed for the user servers table model."""
         if self.rowCount() == 0 or self.columnCount() == 0:
             return
 
@@ -1182,6 +1264,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
 
     @staticmethod
     def refreshIndexes():
+        """Refresh indexes."""
         for index, item in enumerate(Storage.UserServers()):
             item.index = index
 
@@ -1190,6 +1273,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
         column: int,
         order: QtCore.Qt.SortOrder = QtCore.Qt.SortOrder.AscendingOrder,
     ):
+        """Sort the user servers table model."""
         if column < 0 or column >= self.columnCount():
             return
 
@@ -1203,6 +1287,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
         header = self.headers[column]
 
         def keyFn(factory: ConfigFactory):
+            """Return the key fn value used by the user servers table model."""
             data = header(factory)
 
             if str(header) == 'Latency':
@@ -1232,7 +1317,9 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
 
 
 class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
+    """Filter and sort user servers sort filter data."""
     def __init__(self, parent=None):
+        """Initialize the UserServersSortFilterProxyModel."""
         super().__init__(parent)
 
         self.searchPattern = ''
@@ -1249,6 +1336,7 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
         column: int,
         order: QtCore.Qt.SortOrder = QtCore.Qt.SortOrder.AscendingOrder,
     ):
+        """Sort the user servers sort filter proxy model."""
         if self.sortSuspended:
             super().sort(-1, order)
 
@@ -1272,6 +1360,7 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
         caseSensitive: bool = False,
         regex: bool = True,
     ):
+        """Set search pattern."""
         self.searchPattern = str(pattern or '')
         self.searchCaseSensitive = caseSensitive
         self.searchUseRegex = regex
@@ -1296,6 +1385,7 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
         self.invalidateFilter()
 
     def filterAcceptsRow(self, sourceRow: int, sourceParent) -> bool:
+        """Filter accepts row."""
         if not self.searchPattern or self.searchRegex is None:
             return True
 
@@ -1323,6 +1413,7 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
         orientation: QtCore.Qt.Orientation,
         role=QtCore.Qt.ItemDataRole.DisplayRole,
     ):
+        """Return display data for a table header section."""
         if (
             orientation == QtCore.Qt.Orientation.Vertical
             and role == QtCore.Qt.ItemDataRole.DisplayRole
@@ -1351,6 +1442,7 @@ class UserServersQTableView(
     Mixins.CleanupOnExit,
     AppQTableView,
 ):
+    """Represent user servers Qt table view."""
     RowHeight = 42
 
     Headers = [
@@ -1366,6 +1458,7 @@ class UserServersQTableView(
     ]
 
     def __init__(self, *args, **kwargs):
+        """Initialize the UserServersQTableView."""
         super().__init__(*args, **kwargs)
 
         self.sourceModel = UserServersTableModel(self.Headers, parent=self)
@@ -1635,6 +1728,7 @@ class UserServersQTableView(
 
     @property
     def selectedIndex(self):
+        """Return the selected index value."""
         indexes = list(
             self.sourceRowFromProxyIndex(index)
             for index in self.selectionModel().selectedRows()
@@ -1643,18 +1737,21 @@ class UserServersQTableView(
         return sorted(list(set(index for index in indexes if index >= 0)))
 
     def sourceIndexFromProxyIndex(self, index: QtCore.QModelIndex):
+        """Return the source index from proxy index value used by the user servers Qt table view."""
         if not index.isValid():
             return QtCore.QModelIndex()
 
         return self.proxyModel.mapToSource(index)
 
     def proxyIndexFromSourceIndex(self, index: QtCore.QModelIndex):
+        """Return the proxy index from source index value used by the user servers Qt table view."""
         if not index.isValid():
             return QtCore.QModelIndex()
 
         return self.proxyModel.mapFromSource(index)
 
     def sourceRowFromProxyIndex(self, index: QtCore.QModelIndex) -> int:
+        """Return the source row from proxy index value used by the user servers Qt table view."""
         sourceIndex = self.sourceIndexFromProxyIndex(index)
 
         if sourceIndex.isValid():
@@ -1663,15 +1760,18 @@ class UserServersQTableView(
         return -1
 
     def sourceRowFromProxyRow(self, row: int) -> int:
+        """Return the source row from proxy row value used by the user servers Qt table view."""
         return self.sourceRowFromProxyIndex(self.proxyModel.index(row, 0))
 
     def proxyIndexFromSourceRow(self, row: int, column: int = 0):
+        """Return the proxy index from source row value used by the user servers Qt table view."""
         if row < 0 or row >= self.sourceModel.rowCount():
             return QtCore.QModelIndex()
 
         return self.proxyIndexFromSourceIndex(self.sourceModel.index(row, column))
 
     def selectMultipleRows(self, indexes: list[int], clearCurrentSelection: bool):
+        """Select multiple rows."""
         if clearCurrentSelection:
             self.selectionModel().clearSelection()
 
@@ -1689,16 +1789,19 @@ class UserServersQTableView(
         )
 
     def disconnectedCallback(self):
+        """Update the user servers Qt table view for a disconnected state."""
         super().disconnectedCallback()
 
         self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
 
     def connectedCallback(self):
+        """Update the user servers Qt table view for a connected state."""
         super().connectedCallback()
 
         self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
 
     def handleItemSelectionChanged(self, *args):
+        """Handle item selection changed."""
         if len(self.selectedIndex) > 1:
             for action in [
                 self.customizeJSONConfigActionRef,
@@ -1714,6 +1817,7 @@ class UserServersQTableView(
 
     @QtCore.Slot(QtCore.QModelIndex)
     def handleItemActivated(self, index: QtCore.QModelIndex):
+        """Handle item activated."""
         if self.doubleClickedFlag:
             # Ignore double-click
             self.doubleClickedFlag = False
@@ -1755,6 +1859,7 @@ class UserServersQTableView(
 
     @functools.lru_cache(None)
     def getGuiEditorByProtocol(self, protocol: Protocol, **kwargs):
+        """Return GUI editor by protocol."""
         logger.debug(f'getGuiEditorByProtocol called with protocol {protocol.value}')
 
         if protocol == Protocol.VMess:
@@ -1778,24 +1883,29 @@ class UserServersQTableView(
     def getGuiEditorByFactory(
         self, factory, **kwargs
     ) -> Union[GuiEditorWidgetQDialog, None]:
+        """Return GUI editor by factory."""
         return None
 
     @getGuiEditorByFactory.register(ConfigXray)
     def _(self, factory, **kwargs):
+        """Handle the registered singledispatch variant."""
         return self.getGuiEditorByProtocol(
             Protocol.toEnum(factory.proxyProtocol), **kwargs
         )
 
     @getGuiEditorByFactory.register(ConfigHysteria1)
     def _(self, factory, **kwargs):
+        """Handle the registered singledispatch variant."""
         return self.getGuiEditorByProtocol(Protocol.Hysteria1, **kwargs)
 
     @getGuiEditorByFactory.register(ConfigHysteria2)
     def _(self, factory, **kwargs):
+        """Handle the registered singledispatch variant."""
         return self.getGuiEditorByProtocol(Protocol.Hysteria2, **kwargs)
 
     @QtCore.Slot(QtCore.QModelIndex)
     def handleItemDoubleClicked(self, modelIndex: QtCore.QModelIndex):
+        """Handle item double clicked."""
         self.doubleClickedFlag = True
 
         index = self.sourceRowFromProxyIndex(modelIndex)
@@ -1845,6 +1955,7 @@ class UserServersQTableView(
         index: int,
         factory: ConfigFactory,
     ):
+        """Handle GUI editor accepted."""
         logger.debug(f'guiEditor accepted with index {index}')
 
         modified = editor.inputToFactory(factory)
@@ -1860,14 +1971,17 @@ class UserServersQTableView(
 
     @staticmethod
     def handleGuiEditorRejected(editor: GuiEditorWidgetQDialog):
+        """Handle GUI editor rejected."""
         editor.accepted.disconnect()
         editor.rejected.disconnect()
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
+        """Handle custom context menu requested."""
         self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def customSortFn(self, clickedIndex, **kwargs):
+        """Handle custom sort fn for the user servers Qt table view."""
         order = (
             QtCore.Qt.SortOrder.DescendingOrder
             if kwargs.get('reverse', False)
@@ -1877,9 +1991,11 @@ class UserServersQTableView(
         self.sortByColumn(clickedIndex, order)
 
     def activatedIndex(self):
+        """Activate d index."""
         return self.proxyIndexFromSourceRow(Storage.UserActivatedItemIndex(), 0)
 
     def activateItemByIndex(self, index, activate):
+        """Activate item by index."""
         oldIndex = Storage.UserActivatedItemIndex()
 
         if activate:
@@ -1889,6 +2005,7 @@ class UserServersQTableView(
         self.sourceModel.emitRowChanged(index)
 
     def flushItem(self, row: int, column: int, item: ConfigFactory):
+        """Refresh item."""
         itemIndex = item.index
 
         if item.deleted or itemIndex < 0 or itemIndex >= len(Storage.UserServers()):
@@ -1896,6 +2013,7 @@ class UserServersQTableView(
             return
 
         def searchIndex(start, stop, step=1):
+            """Search index."""
             nonlocal itemIndex
 
             for _index in range(start, stop, step):
@@ -1933,6 +2051,7 @@ class UserServersQTableView(
         caseSensitive: bool = False,
         regex: bool = True,
     ):
+        """Search the user servers Qt table view."""
         self.proxyModel.setSearchPattern(
             pattern,
             caseSensitive=caseSensitive,
@@ -1940,6 +2059,7 @@ class UserServersQTableView(
         )
 
     def clearSearch(self):
+        """Clear search."""
         self.search('')
 
     def addServerViaGui(
@@ -1948,6 +2068,7 @@ class UserServersQTableView(
         windowTitle: str = APPLICATION_NAME,
         **kwargs,
     ):
+        """Add server via GUI."""
         factory = configFactoryBlank(protocol)
 
         guiEditor = self.getGuiEditorByFactory(factory, **kwargs)
@@ -1985,6 +2106,7 @@ class UserServersQTableView(
         editor: GuiEditorWidgetQDialog,
         factory: ConfigFactory,
     ):
+        """Handle add server via GUI accepted."""
         editor.inputToFactory(factory)
 
         self.appendNewItemByFactory(factory)
@@ -1993,10 +2115,12 @@ class UserServersQTableView(
         editor.rejected.disconnect()
 
     def handleAddServerViaGuiRejected(self, editor: GuiEditorWidgetQDialog):
+        """Handle add server via GUI rejected."""
         editor.accepted.disconnect()
         editor.rejected.disconnect()
 
     def flushRow(self, row: int, item: ConfigFactory):
+        """Refresh row."""
         itemIndex = item.index
 
         if item.deleted or itemIndex < 0 or itemIndex >= len(Storage.UserServers()):
@@ -2010,11 +2134,14 @@ class UserServersQTableView(
 
     def flushAll(self):
         # Refresh index
+        """Refresh all."""
         self.sourceModel.refreshIndexes()
         self.sourceModel.emitAllChanged()
 
     def swapItem(self, index0: int, index1: int):
+        """Handle swap item for the user servers Qt table view."""
         def swapSequenceItem(sequence: MutableSequence, param0: int, param1: int):
+            """Handle swap sequence item for the user servers Qt table view."""
             swap = sequence[param0]
 
             sequence[param0] = sequence[param1]
@@ -2039,9 +2166,11 @@ class UserServersQTableView(
             self.activateItemByIndex(index0, True)
 
     def newEmptyItem(self):
+        """Handle new empty item for the user servers Qt table view."""
         self.appendNewItem(remark=_('Untitled'), acceptInvalid=True)
 
     def moveUpItemByIndex(self, index):
+        """Move up item by index."""
         if index <= 0 or index >= len(Storage.UserServers()):
             # The top item, or does not exist. Do nothing
             return
@@ -2049,6 +2178,7 @@ class UserServersQTableView(
         self.swapItem(index, index - 1)
 
     def moveUpSelectedItem(self):
+        """Move up selected item."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2064,6 +2194,7 @@ class UserServersQTableView(
         self.selectMultipleRows(list(index - 1 for index in indexes), True)
 
     def moveDownItemByIndex(self, index):
+        """Move down item by index."""
         if index < 0 or index >= len(Storage.UserServers()) - 1:
             # The bottom item, or does not exist. Do nothing
             return
@@ -2071,6 +2202,7 @@ class UserServersQTableView(
         self.swapItem(index, index + 1)
 
     def moveDownSelectedItem(self):
+        """Move down selected item."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2086,6 +2218,7 @@ class UserServersQTableView(
         self.selectMultipleRows(list(index + 1 for index in indexes), True)
 
     def duplicateSelectedItem(self):
+        """Handle duplicate selected item for the user servers Qt table view."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2105,6 +2238,7 @@ class UserServersQTableView(
     def deleteItemByIndex(
         self, indexes, showTrayMessage=True, showProgress=True
     ) -> int:
+        """Delete item by index."""
         indexes = sorted(set(indexes))
 
         if len(indexes) == 0:
@@ -2166,6 +2300,7 @@ class UserServersQTableView(
         return len(indexes)
 
     def deleteSelectedItem(self):
+        """Delete selected item."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2173,6 +2308,7 @@ class UserServersQTableView(
             return
 
         def handleResultCode(_indexes, code):
+            """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
@@ -2201,6 +2337,7 @@ class UserServersQTableView(
         mbox.open()
 
     def editSelectedItemConfiguration(self):
+        """Handle edit selected item configuration for the user servers Qt table view."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2223,6 +2360,7 @@ class UserServersQTableView(
         self.textEditorWindow.show()
 
     def activateSelectedServer(self):
+        """Activate selected server."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2239,6 +2377,7 @@ class UserServersQTableView(
             self.handleItemActivated(item)
 
     def scrollToActivatedItem(self):
+        """Handle scroll to activated item for the user servers Qt table view."""
         activatedItem = self.activatedIndex()
 
         if activatedItem.isValid():
@@ -2246,6 +2385,7 @@ class UserServersQTableView(
             self.scrollTo(activatedItem)
 
     def rowFromFactory(self, fallbackIndex: int, factory: ConfigFactory) -> int:
+        """Return the row from factory value."""
         if (
             0 <= factory.index < len(Storage.UserServers())
             and Storage.UserServers()[factory.index] is factory
@@ -2265,6 +2405,7 @@ class UserServersQTableView(
         return -1
 
     def flushDownloadSpeedItem(self, fallbackIndex: int, factory: ConfigFactory):
+        """Refresh download speed item."""
         index = self.rowFromFactory(fallbackIndex, factory)
 
         if index < 0:
@@ -2273,6 +2414,7 @@ class UserServersQTableView(
         self.flushItem(index, self.Headers.index('Speed'), factory)
 
     def testSelectedItemPingLatency(self):
+        """Handle test selected item ping latency for the user servers Qt table view."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2305,6 +2447,7 @@ class UserServersQTableView(
             AppThreadPool().start(worker)
 
     def testSelectedItemTcpingLatency(self):
+        """Handle test selected item tcping latency for the user servers Qt table view."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2347,6 +2490,7 @@ class UserServersQTableView(
         step=100,
         logActionMessage=False,
     ):
+        """Handle test download speed by factory for the user servers Qt table view."""
         scheduler = (
             self.downloadSpeedMultiScheduler if isMulti else self.downloadSpeedScheduler
         )
@@ -2357,6 +2501,7 @@ class UserServersQTableView(
         scheduler: DownloadSpeedTestScheduler,
         timeout: int,
     ):
+        """Handle test selected item download speed with timeout xxx for the user servers Qt table view."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2373,24 +2518,29 @@ class UserServersQTableView(
         scheduler.enqueueMany(jobs)
 
     def testSelectedItemDownloadSpeedWithTimeout(self, timeout: int):
+        """Handle test selected item download speed with timeout for the user servers Qt table view."""
         self.testSelectedItemDownloadSpeedWithTimeoutXXX(
             self.downloadSpeedScheduler,
             timeout,
         )
 
     def testSelectedItemDownloadSpeedWithTimeoutMulti(self, timeout: int):
+        """Handle test selected item download speed with timeout multi for the user servers Qt table view."""
         self.testSelectedItemDownloadSpeedWithTimeoutXXX(
             self.downloadSpeedMultiScheduler,
             timeout,
         )
 
     def testSelectedItemDownloadSpeed(self):
+        """Handle test selected item download speed for the user servers Qt table view."""
         self.testSelectedItemDownloadSpeedWithTimeout(5000)
 
     def testSelectedItemDownloadSpeedMulti(self):
+        """Handle test selected item download speed multi for the user servers Qt table view."""
         self.testSelectedItemDownloadSpeedWithTimeoutMulti(5000)
 
     def clearSelectedItemTestResult(self):
+        """Clear selected item test result."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2406,20 +2556,24 @@ class UserServersQTableView(
             self.flushItem(index, self.Headers.index('Speed'), factory)
 
     def cleanup(self):
+        """Release resources owned by the user servers Qt table view."""
         self.downloadSpeedScheduler.cancelAll()
         self.downloadSpeedMultiScheduler.cancelAll()
 
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
+        """Update subs by unique."""
         self.subsManager.configureHttpProxy(httpProxy)
         self.subsManager.updateSubsByUnique(unique, **kwargs)
 
     def updateSubs(self, httpProxy: Union[str, None], **kwargs):
+        """Update subs."""
         self.selectionModel().clearSelection()
 
         self.subsManager.configureHttpProxy(httpProxy)
         self.subsManager.updateSubs(**kwargs)
 
     def appendNewItemByFactory(self, factory: ConfigFactory):
+        """Append new item by factory."""
         index = len(Storage.UserServers())
 
         # Set index
@@ -2444,6 +2598,7 @@ class UserServersQTableView(
                 self.activateItemByIndex(0, True)
 
     def appendNewItem(self, **kwargs):
+        """Append new item."""
         acceptInvalid = kwargs.pop('acceptInvalid', False)
 
         model = {
@@ -2464,6 +2619,7 @@ class UserServersQTableView(
                 logger.error(f'invalid item: {tostr}')
 
     def exportSelectedItemURI(self):
+        """Export selected item URI."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2471,6 +2627,7 @@ class UserServersQTableView(
             return
 
         def toURI(factory) -> str:
+            """Export the configuration as a share URI."""
             assert isinstance(factory, ConfigFactory)
 
             try:
@@ -2486,6 +2643,7 @@ class UserServersQTableView(
         )
 
     def exportSelectedItemQR(self):
+        """Export selected item QR."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2499,6 +2657,7 @@ class UserServersQTableView(
             window.show()
 
     def exportSelectedItemJSON(self):
+        """Export selected item JSON."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -2513,12 +2672,15 @@ class UserServersQTableView(
         )
 
     def showTabAndSpaces(self):
+        """Show tab and spaces."""
         self.textEditorWindow.showTabAndSpaces()
 
     def hideTabAndSpaces(self):
+        """Hide tab and spaces."""
         self.textEditorWindow.hideTabAndSpaces()
 
     def keyPressEvent(self, event):
+        """Handle a key press for the user servers Qt table view."""
         if event.key() == QtCore.Qt.Key.Key_Return:
             if PLATFORM == 'Darwin':
                 # Activate by Enter key on macOS
@@ -2529,6 +2691,7 @@ class UserServersQTableView(
             super().keyPressEvent(event)
 
     def retranslate(self):
+        """Refresh translated text for the user servers Qt table view."""
         self.sourceModel.headerDataChanged.emit(
             QtCore.Qt.Orientation.Horizontal,
             0,

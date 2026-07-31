@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for GUI customize proxy bypass."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -35,7 +37,9 @@ registerAppSettings('CustomProxyBypass')
 
 
 class GuiCustomizeProxyBypassDialog(AppQDialog):
+    """Present the GUI customize proxy bypass dialog."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiCustomizeProxyBypassDialog."""
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_('Customize Proxy Bypass Address'))
@@ -79,14 +83,17 @@ class GuiCustomizeProxyBypassDialog(AppQDialog):
         self.finished.connect(functools.partial(self.handleResultCode))
 
     def setWidthAndHeight(self):
+        """Apply the default size for the GUI customize proxy bypass dialog."""
         self.resize(656, 125)
 
     def handleResultCode(self, code):
+        """Handle result code."""
         if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
             oldValue = AppSettings.get('CustomProxyBypass')
             newValue = self.proxyBypassEdit.text()
 
             def writeNewSettings(value):
+                """Handle write new settings for the GUI customize proxy bypass dialog."""
                 logger.info(f'setting custom proxy bypass address to \'{value}\'')
 
                 AppSettings.set('CustomProxyBypass', value)
@@ -116,4 +123,5 @@ class GuiCustomizeProxyBypassDialog(AppQDialog):
 
     @QtCore.Slot()
     def handleResetButtonClicked(self):
+        """Handle reset button clicked."""
         self.proxyBypassEdit.setText(PROXY_SERVER_BYPASS)

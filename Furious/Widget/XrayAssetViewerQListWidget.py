@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for Xray asset viewer Qt list widget."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -37,7 +39,9 @@ logger = logging.getLogger(__name__)
 
 
 class MBoxAssetExists(AppQMessageBox):
+    """Represent m box asset exists."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxAssetExists."""
         super().__init__(*args, **kwargs)
 
         self.setStandardButtons(
@@ -45,6 +49,7 @@ class MBoxAssetExists(AppQMessageBox):
         )
 
     def retranslate(self):
+        """Refresh translated text for the m box asset exists."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(_(self.text()))
 
@@ -54,7 +59,9 @@ class MBoxAssetExists(AppQMessageBox):
 
 
 class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
+    """Provide the Xray asset viewer Qt list widget."""
     def __init__(self, *args, **kwargs):
+        """Initialize the XrayAssetViewerQListWidget."""
         super().__init__(*args, **kwargs)
 
         self.setAlternatingRowColors(True)
@@ -89,9 +96,11 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
+        """Handle custom context menu requested."""
         self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def flushItemByTheme(self, theme: str):
+        """Refresh item by theme."""
         self.clear()
 
         maxlen = max(
@@ -141,6 +150,7 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
                 self.addItem(item)
 
     def flushItem(self):
+        """Refresh item."""
         if PLATFORM == 'Linux' and SystemRuntime.ubuntuRelease() == '20.04':
             assert self.initialTheme is not None
 
@@ -150,7 +160,9 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
             self.flushItemByTheme(APP().theme())
 
     def appendNewItem(self, filename: str):
+        """Append new item."""
         def append(_filename):
+            """Append the Xray asset viewer Qt list widget."""
             try:
                 shutil.copy(_filename, XRAY_ASSET_DIR)
             except shutil.SameFileError:
@@ -181,6 +193,7 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
         if os.path.isfile(XRAY_ASSET_DIR / basename):
 
             def handleResultCode(_filename, code):
+                """Handle result code."""
                 if code == PySide6Legacy.enumValueWrapper(
                     AppQMessageBox.StandardButton.Yes
                 ):
@@ -201,6 +214,7 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
             append(filename)
 
     def deleteSelectedItem(self):
+        """Delete selected item."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -208,6 +222,7 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
             return
 
         def handleResultCode(_indexes, code):
+            """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
@@ -238,12 +253,14 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
         mbox.open()
 
     def keyPressEvent(self, event):
+        """Handle a key press for the Xray asset viewer Qt list widget."""
         if event.key() == QtCore.Qt.Key.Key_Delete:
             self.deleteSelectedItem()
         else:
             super().keyPressEvent(event)
 
     def themeChangedCallback(self, theme):
+        """Update the Xray asset viewer Qt list widget for a theme change."""
         if PLATFORM == 'Linux' and SystemRuntime.ubuntuRelease() == '20.04':
             # Ubuntu 20.04 system dark theme does not
             # change menu color. Do nothing

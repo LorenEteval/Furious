@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide bundled globals."""
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import QApplication
@@ -32,6 +34,7 @@ APP = functools.partial(QApplication.instance)
 
 
 def getAppAttributes(name: str):
+    """Return app attributes."""
     return getattr(APP(), name)
 
 
@@ -45,6 +48,7 @@ def getAppAttributes(name: str):
 
 
 class AppLoggerWindow:
+    """Present the app logger window."""
     Self = functools.partial(getAppAttributes, 'logViewerWindowSelf')
     Core = functools.partial(getAppAttributes, 'logViewerWindowCore')
     TUN_ = functools.partial(getAppAttributes, 'logViewerWindowTun_')

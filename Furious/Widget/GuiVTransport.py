@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for GUI v transport."""
+
 from __future__ import annotations
 
 from Furious.Interface import *
@@ -44,12 +46,15 @@ STREAM_NETWORK = [
 
 
 class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
+    """Represent GUI v transport item network."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemNetwork."""
         super().__init__(*args, **kwargs)
 
         self.addItems(STREAM_NETWORK)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         try:
@@ -62,6 +67,7 @@ class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
         newNetwork = self.text()
 
         def setNewNetwork():
+            """Set new network."""
             streamSettings['network'] = newNetwork
 
             for network in STREAM_NETWORK:
@@ -89,6 +95,7 @@ class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -100,10 +107,13 @@ class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
 
 
 class GuiVTransportItemFinalMask(GuiEditorItemTextInput):
+    """Represent GUI v transport item final mask."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemFinalMask."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         oldFinalMaskObject = streamSettings.get('finalmask')
@@ -137,6 +147,7 @@ class GuiVTransportItemFinalMask(GuiEditorItemTextInput):
         return False
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             finalMaskObject = ConfigXray.getProxyOutboundStream(config)['finalmask']
 
@@ -148,7 +159,9 @@ class GuiVTransportItemFinalMask(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
+    """Represent GUI v transport item type xxx."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemTypeXXX."""
         networkKey = kwargs.pop('networkKey', '')
 
         super().__init__(*args, **kwargs)
@@ -156,6 +169,7 @@ class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
         self.networkKey = networkKey
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get(self.networkKey), dict):
@@ -173,6 +187,7 @@ class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
         newType = self.text()
 
         def setNewType():
+            """Set new type."""
             if not isinstance(xxxObject.get('header'), dict):
                 xxxObject['header'] = {}
 
@@ -194,6 +209,7 @@ class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             xxxObject = ConfigXray.getProxyOutboundStream(config)[self.networkKey]
 
@@ -205,7 +221,9 @@ class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
 
 
 class GuiVTransportItemTypeTcpOrRaw(GuiVTransportItemTypeXXX):
+    """Represent GUI v transport item type TCP or raw."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemTypeTcpOrRaw."""
         networkKey = kwargs.pop('networkKey', 'tcpSettings')
 
         super().__init__(*args, **kwargs, networkKey=networkKey)
@@ -220,7 +238,9 @@ class GuiVTransportItemTypeTcpOrRaw(GuiVTransportItemTypeXXX):
 
 
 class GuiVTransportItemHostTcpOrRaw(GuiEditorItemTextInput):
+    """Represent GUI v transport item host TCP or raw."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemHostTcpOrRaw."""
         networkKey = kwargs.pop('networkKey', 'tcpSettings')
 
         super().__init__(*args, **kwargs)
@@ -228,6 +248,7 @@ class GuiVTransportItemHostTcpOrRaw(GuiEditorItemTextInput):
         self.networkKey = networkKey
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get(self.networkKey), dict):
@@ -245,6 +266,7 @@ class GuiVTransportItemHostTcpOrRaw(GuiEditorItemTextInput):
         newHost = self.text()
 
         def setNewHost():
+            """Set new host."""
             if not isinstance(tcpObject.get('header'), dict):
                 tcpObject['header'] = {}
 
@@ -272,6 +294,7 @@ class GuiVTransportItemHostTcpOrRaw(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             tcpObject = ConfigXray.getProxyOutboundStream(config)[self.networkKey]
 
@@ -283,7 +306,9 @@ class GuiVTransportItemHostTcpOrRaw(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemPathTcpOrRaw(GuiEditorItemTextInput):
+    """Represent GUI v transport item path TCP or raw."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemPathTcpOrRaw."""
         networkKey = kwargs.pop('networkKey', 'tcpSettings')
 
         super().__init__(*args, **kwargs)
@@ -291,6 +316,7 @@ class GuiVTransportItemPathTcpOrRaw(GuiEditorItemTextInput):
         self.networkKey = networkKey
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get(self.networkKey), dict):
@@ -308,6 +334,7 @@ class GuiVTransportItemPathTcpOrRaw(GuiEditorItemTextInput):
         newPath = self.text()
 
         def setNewPath():
+            """Set new path."""
             if not isinstance(tcpObject.get('header'), dict):
                 tcpObject['header'] = {}
 
@@ -332,6 +359,7 @@ class GuiVTransportItemPathTcpOrRaw(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             tcpObject = ConfigXray.getProxyOutboundStream(config)[self.networkKey]
 
@@ -343,7 +371,9 @@ class GuiVTransportItemPathTcpOrRaw(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemTypeKcp(GuiVTransportItemTypeXXX):
+    """Represent GUI v transport item type kcp."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemTypeKcp."""
         networkKey = kwargs.pop('networkKey', 'kcpSettings')
 
         super().__init__(*args, **kwargs, networkKey=networkKey)
@@ -363,10 +393,13 @@ class GuiVTransportItemTypeKcp(GuiVTransportItemTypeXXX):
 
 
 class GuiVTransportItemSeedKcp(GuiEditorItemTextInput):
+    """Represent GUI v transport item seed kcp."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemSeedKcp."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('kcpSettings'), dict):
@@ -384,6 +417,7 @@ class GuiVTransportItemSeedKcp(GuiEditorItemTextInput):
         newSeed = self.text()
 
         def setNewSeed():
+            """Set new seed."""
             if newSeed == '':
                 kcpObject.pop('seed', None)
             else:
@@ -402,6 +436,7 @@ class GuiVTransportItemSeedKcp(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             kcpObject = ConfigXray.getProxyOutboundStream(config)['kcpSettings']
 
@@ -413,10 +448,13 @@ class GuiVTransportItemSeedKcp(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemHostWs(GuiEditorItemTextInput):
+    """Represent GUI v transport item host ws."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemHostWs."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('wsSettings'), dict):
@@ -434,6 +472,7 @@ class GuiVTransportItemHostWs(GuiEditorItemTextInput):
         newHost = self.text()
 
         def setNewHost():
+            """Set new host."""
             if not isinstance(wsObject.get('headers'), dict):
                 wsObject['headers'] = {}
 
@@ -455,6 +494,7 @@ class GuiVTransportItemHostWs(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             wsObject = ConfigXray.getProxyOutboundStream(config)['wsSettings']
 
@@ -466,10 +506,13 @@ class GuiVTransportItemHostWs(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemPathWs(GuiEditorItemTextInput):
+    """Represent GUI v transport item path ws."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemPathWs."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('wsSettings'), dict):
@@ -487,6 +530,7 @@ class GuiVTransportItemPathWs(GuiEditorItemTextInput):
         newPath = self.text()
 
         def setNewPath():
+            """Set new path."""
             if newPath == '':
                 wsObject.pop('path', None)
             else:
@@ -505,6 +549,7 @@ class GuiVTransportItemPathWs(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             wsObject = ConfigXray.getProxyOutboundStream(config)['wsSettings']
 
@@ -516,10 +561,13 @@ class GuiVTransportItemPathWs(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemHostHttpUpgrade(GuiEditorItemTextInput):
+    """Represent GUI v transport item host HTTP upgrade."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemHostHttpUpgrade."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('httpupgradeSettings'), dict):
@@ -537,6 +585,7 @@ class GuiVTransportItemHostHttpUpgrade(GuiEditorItemTextInput):
         newHost = self.text()
 
         def setNewHost():
+            """Set new host."""
             if newHost == '':
                 httpUpgradeObject.pop('host', None)
             else:
@@ -555,6 +604,7 @@ class GuiVTransportItemHostHttpUpgrade(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             httpUpgradeObject = ConfigXray.getProxyOutboundStream(config)[
                 'httpupgradeSettings'
@@ -568,10 +618,13 @@ class GuiVTransportItemHostHttpUpgrade(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
+    """Represent GUI v transport item path HTTP upgrade."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemPathHttpUpgrade."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('httpupgradeSettings'), dict):
@@ -589,6 +642,7 @@ class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
         newPath = self.text()
 
         def setNewPath():
+            """Set new path."""
             if newPath == '':
                 httpUpgradeObject.pop('path', None)
             else:
@@ -607,6 +661,7 @@ class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             httpUpgradeObject = ConfigXray.getProxyOutboundStream(config)[
                 'httpupgradeSettings'
@@ -620,10 +675,13 @@ class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
+    """Represent GUI v transport item host split HTTP."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemHostSplitHttp."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('splithttpSettings'), dict):
@@ -641,6 +699,7 @@ class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
         newHost = self.text()
 
         def setNewHost():
+            """Set new host."""
             if newHost == '':
                 splitHttpObject.pop('host', None)
             else:
@@ -659,6 +718,7 @@ class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             splitHttpObject = ConfigXray.getProxyOutboundStream(config)[
                 'splithttpSettings'
@@ -672,10 +732,13 @@ class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
+    """Represent GUI v transport item path split HTTP."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemPathSplitHttp."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('splithttpSettings'), dict):
@@ -693,6 +756,7 @@ class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
         newPath = self.text()
 
         def setNewPath():
+            """Set new path."""
             if newPath == '':
                 splitHttpObject.pop('path', None)
             else:
@@ -711,6 +775,7 @@ class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             splitHttpObject = ConfigXray.getProxyOutboundStream(config)[
                 'splithttpSettings'
@@ -724,10 +789,13 @@ class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
+    """Represent GUI v transport item host x HTTP."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemHostXHttp."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('xhttpSettings'), dict):
@@ -745,6 +813,7 @@ class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
         newHost = self.text()
 
         def setNewHost():
+            """Set new host."""
             if newHost == '':
                 xhttpObject.pop('host', None)
             else:
@@ -763,6 +832,7 @@ class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
 
@@ -774,10 +844,13 @@ class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
+    """Represent GUI v transport item path x HTTP."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemPathXHttp."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('xhttpSettings'), dict):
@@ -795,6 +868,7 @@ class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
         newPath = self.text()
 
         def setNewPath():
+            """Set new path."""
             if newPath == '':
                 xhttpObject.pop('path', None)
             else:
@@ -813,6 +887,7 @@ class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
 
@@ -824,7 +899,9 @@ class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
+    """Represent GUI v transport item mode x HTTP."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemModeXHttp."""
         super().__init__(*args, **kwargs)
 
         self.addItems(
@@ -837,6 +914,7 @@ class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
         )
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('xhttpSettings'), dict):
@@ -854,6 +932,7 @@ class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
         newMode = self.text()
 
         def setNewMode():
+            """Set new mode."""
             if newMode == '':
                 xhttpObject.pop('mode', None)
             else:
@@ -872,6 +951,7 @@ class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
 
@@ -883,10 +963,13 @@ class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
 
 
 class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
+    """Represent GUI v transport item extra x HTTP."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemExtraXHttp."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('xhttpSettings'), dict):
@@ -907,6 +990,7 @@ class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
         newExtra = self.text()
 
         def setNewExtra():
+            """Set new extra."""
             if newExtra == '':
                 xhttpObject.pop('extra', None)
             else:
@@ -930,6 +1014,7 @@ class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
 
@@ -944,10 +1029,13 @@ class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemHostH2(GuiEditorItemTextInput):
+    """Represent GUI v transport item host h2."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemHostH2."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('httpSettings'), dict):
@@ -965,6 +1053,7 @@ class GuiVTransportItemHostH2(GuiEditorItemTextInput):
         newHost = self.text()
 
         def setNewHost():
+            """Set new host."""
             if newHost == '':
                 httpObject.pop('host', None)
             else:
@@ -983,6 +1072,7 @@ class GuiVTransportItemHostH2(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             httpObject = ConfigXray.getProxyOutboundStream(config)['httpSettings']
 
@@ -994,10 +1084,13 @@ class GuiVTransportItemHostH2(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemPathH2(GuiEditorItemTextInput):
+    """Represent GUI v transport item path h2."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemPathH2."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('httpSettings'), dict):
@@ -1015,6 +1108,7 @@ class GuiVTransportItemPathH2(GuiEditorItemTextInput):
         newPath = self.text()
 
         def setNewPath():
+            """Set new path."""
             if newPath == '':
                 httpObject.pop('path', None)
             else:
@@ -1033,6 +1127,7 @@ class GuiVTransportItemPathH2(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             httpObject = ConfigXray.getProxyOutboundStream(config)['httpSettings']
 
@@ -1044,7 +1139,9 @@ class GuiVTransportItemPathH2(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemTypeQuic(GuiVTransportItemTypeXXX):
+    """Represent GUI v transport item type quic."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemTypeQuic."""
         networkKey = kwargs.pop('networkKey', 'quicSettings')
 
         super().__init__(*args, **kwargs, networkKey=networkKey)
@@ -1063,7 +1160,9 @@ class GuiVTransportItemTypeQuic(GuiVTransportItemTypeXXX):
 
 
 class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
+    """Represent GUI v transport item security quic."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemSecurityQuic."""
         super().__init__(*args, **kwargs)
 
         self.addItems(
@@ -1076,6 +1175,7 @@ class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
         )
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('quicSettings'), dict):
@@ -1093,6 +1193,7 @@ class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
         newSecurity = self.text()
 
         def setNewSecurity():
+            """Set new security."""
             quicObject['security'] = newSecurity
 
         if isinstance(oldSecurity, str):
@@ -1108,6 +1209,7 @@ class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             quicObject = ConfigXray.getProxyOutboundStream(config)['quicSettings']
 
@@ -1119,10 +1221,13 @@ class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
 
 
 class GuiVTransportItemKeyQuic(GuiEditorItemTextInput):
+    """Represent GUI v transport item key quic."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemKeyQuic."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('quicSettings'), dict):
@@ -1140,6 +1245,7 @@ class GuiVTransportItemKeyQuic(GuiEditorItemTextInput):
         newKey = self.text()
 
         def setNewKey():
+            """Set new key."""
             if newKey == '':
                 quicObject.pop('key', None)
             else:
@@ -1158,6 +1264,7 @@ class GuiVTransportItemKeyQuic(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             quicObject = ConfigXray.getProxyOutboundStream(config)['quicSettings']
 
@@ -1169,7 +1276,9 @@ class GuiVTransportItemKeyQuic(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
+    """Represent GUI v transport item mode grpc."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemModeGRPC."""
         super().__init__(*args, **kwargs)
 
         self.addItems(
@@ -1181,6 +1290,7 @@ class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
         )
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('grpcSettings'), dict):
@@ -1203,6 +1313,7 @@ class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
         newMode = self.text()
 
         def setNewMode():
+            """Set new mode."""
             if newMode == 'multi':
                 grpcObject['multiMode'] = True
             else:
@@ -1221,6 +1332,7 @@ class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             grpcObject = ConfigXray.getProxyOutboundStream(config)['grpcSettings']
 
@@ -1239,10 +1351,13 @@ class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
 
 
 class GuiVTransportItemAuthorityGRPC(GuiEditorItemTextInput):
+    """Represent GUI v transport item authority grpc."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemAuthorityGRPC."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('grpcSettings'), dict):
@@ -1260,6 +1375,7 @@ class GuiVTransportItemAuthorityGRPC(GuiEditorItemTextInput):
         newAuthority = self.text()
 
         def setNewAuthority():
+            """Set new authority."""
             if newAuthority == '':
                 grpcObject.pop('authority', None)
             else:
@@ -1278,6 +1394,7 @@ class GuiVTransportItemAuthorityGRPC(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             grpcObject = ConfigXray.getProxyOutboundStream(config)['grpcSettings']
 
@@ -1289,10 +1406,13 @@ class GuiVTransportItemAuthorityGRPC(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
+    """Represent GUI v transport item service name grpc."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemServiceNameGRPC."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('grpcSettings'), dict):
@@ -1310,6 +1430,7 @@ class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
         newServiceName = self.text()
 
         def setNewServiceName():
+            """Set new service name."""
             if newServiceName == '':
                 grpcObject.pop('serviceName', None)
             else:
@@ -1328,6 +1449,7 @@ class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             grpcObject = ConfigXray.getProxyOutboundStream(config)['grpcSettings']
 
@@ -1339,13 +1461,16 @@ class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemVersionHysteria(GuiEditorItemTextSpinBox):
+    """Represent GUI v transport item version hysteria."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemVersionHysteria."""
         super().__init__(*args, **kwargs)
 
         # Range. 0 means invalid
         self.setRange(0, 2)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('hysteriaSettings'), dict):
@@ -1369,6 +1494,7 @@ class GuiVTransportItemVersionHysteria(GuiEditorItemTextSpinBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             hysteriaObject = ConfigXray.getProxyOutboundStream(config)[
                 'hysteriaSettings'
@@ -1382,10 +1508,13 @@ class GuiVTransportItemVersionHysteria(GuiEditorItemTextSpinBox):
 
 
 class GuiVTransportItemAuthHysteria(GuiEditorItemTextInput):
+    """Represent GUI v transport item auth hysteria."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemAuthHysteria."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('hysteriaSettings'), dict):
@@ -1403,6 +1532,7 @@ class GuiVTransportItemAuthHysteria(GuiEditorItemTextInput):
         newAuth = self.text()
 
         def setNewAuth():
+            """Set new auth."""
             if newAuth == '':
                 hysteriaObject.pop('auth', None)
             else:
@@ -1421,6 +1551,7 @@ class GuiVTransportItemAuthHysteria(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             hysteriaObject = ConfigXray.getProxyOutboundStream(config)[
                 'hysteriaSettings'
@@ -1434,10 +1565,13 @@ class GuiVTransportItemAuthHysteria(GuiEditorItemTextInput):
 
 
 class GuiVTransportItemPasswordHysteria(GuiEditorItemTextInput):
+    """Represent GUI v transport item password hysteria."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportItemPasswordHysteria."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
         if not isinstance(streamSettings.get('finalmask'), dict):
@@ -1460,6 +1594,7 @@ class GuiVTransportItemPasswordHysteria(GuiEditorItemTextInput):
         newPassword = self.text()
 
         def setNewPassword():
+            """Set new password."""
             if newPassword == '':
                 finalmaskObject.pop('salamander', None)
             else:
@@ -1478,6 +1613,7 @@ class GuiVTransportItemPasswordHysteria(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             salamander = ConfigXray.getProxyOutboundStream(config)['finalmask'][
                 'salamander'
@@ -1491,16 +1627,20 @@ class GuiVTransportItemPasswordHysteria(GuiEditorItemTextInput):
 
 
 class GuiVTransportPageXXX(GuiEditorWidgetQWidget):
+    """Represent GUI v transport page xxx."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageXXX."""
         super().__init__(*args, **kwargs)
 
     def setNetworkText(self, text: str):
+        """Set network text."""
         network = self._containers[0]
 
         if isinstance(network, GuiEditorItemTextComboBox):
             network.setText(text)
 
     def connectActivated(self, func: Callable):
+        """Connect activated."""
         network = self._containers[0]
 
         if isinstance(network, GuiEditorItemTextComboBox):
@@ -1508,10 +1648,13 @@ class GuiVTransportPageXXX(GuiEditorWidgetQWidget):
 
 
 class GuiVTransportPageTcp(GuiVTransportPageXXX):
+    """Represent GUI v transport page TCP."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageTcp."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1528,10 +1671,13 @@ class GuiVTransportPageTcp(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageRaw(GuiVTransportPageXXX):
+    """Represent GUI v transport page raw."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageRaw."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1548,10 +1694,13 @@ class GuiVTransportPageRaw(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageKcp(GuiVTransportPageXXX):
+    """Represent GUI v transport page kcp."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageKcp."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1561,10 +1710,13 @@ class GuiVTransportPageKcp(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageWs(GuiVTransportPageXXX):
+    """Represent GUI v transport page ws."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageWs."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1574,10 +1726,13 @@ class GuiVTransportPageWs(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageHttpUpgrade(GuiVTransportPageXXX):
+    """Represent GUI v transport page HTTP upgrade."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageHttpUpgrade."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1587,10 +1742,13 @@ class GuiVTransportPageHttpUpgrade(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageSplitHttp(GuiVTransportPageXXX):
+    """Represent GUI v transport page split HTTP."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageSplitHttp."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1600,10 +1758,13 @@ class GuiVTransportPageSplitHttp(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageXHttp(GuiVTransportPageXXX):
+    """Represent GUI v transport page x HTTP."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageXHttp."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1615,10 +1776,13 @@ class GuiVTransportPageXHttp(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageH2(GuiVTransportPageXXX):
+    """Represent GUI v transport page h2."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageH2."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1628,10 +1792,13 @@ class GuiVTransportPageH2(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageQuic(GuiVTransportPageXXX):
+    """Represent GUI v transport page quic."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageQuic."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1642,10 +1809,13 @@ class GuiVTransportPageQuic(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageGRPC(GuiVTransportPageXXX):
+    """Represent GUI v transport page grpc."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageGRPC."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1658,10 +1828,13 @@ class GuiVTransportPageGRPC(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageHysteria(GuiVTransportPageXXX):
+    """Represent GUI v transport page hysteria."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageHysteria."""
         super().__init__(*args, **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiVTransportItemNetwork(title='Network', translatable=False),
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
@@ -1672,7 +1845,9 @@ class GuiVTransportPageHysteria(GuiVTransportPageXXX):
 
 
 class GuiVTransportPageStackedWidget(QStackedWidget):
+    """Provide the GUI v transport page stacked widget."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVTransportPageStackedWidget."""
         super().__init__(*args, **kwargs)
 
         # Corresponds to stream network
@@ -1696,15 +1871,19 @@ class GuiVTransportPageStackedWidget(QStackedWidget):
             self.addWidget(page)
 
     def page(self, index: int) -> GuiVTransportPageXXX:
+        """Return the page value."""
         return self._pages[index]
 
     def connectActivated(self, func: Callable):
+        """Connect activated."""
         for page in self._pages:
             page.connectActivated(func)
 
 
 class GuiVTransportQGroupBox(GuiEditorItemFactory, AppQGroupBox):
+    """Group the GUI v transport q editor controls."""
     def __init__(self, **kwargs):
+        """Initialize the GuiVTransportQGroupBox."""
         super().__init__(_('Transport'), **kwargs)
 
         self._config = ConfigFactory()
@@ -1718,15 +1897,19 @@ class GuiVTransportQGroupBox(GuiEditorItemFactory, AppQGroupBox):
         self.setLayout(layout)
 
     def currentIndex(self) -> int:
+        """Return the current index value."""
         return self._widget.currentIndex()
 
     def setCurrentIndex(self, index: int):
+        """Set current index."""
         self._widget.setCurrentIndex(index)
 
     def page(self, index: int) -> GuiVTransportPageXXX:
+        """Return the page value."""
         return self._widget.page(index)
 
     def handleActivated(self, index: int):
+        """Handle activated."""
         page = self.page(index)
         page.factoryToInput(self._config)
         page.setNetworkText(STREAM_NETWORK[index])
@@ -1734,10 +1917,12 @@ class GuiVTransportQGroupBox(GuiEditorItemFactory, AppQGroupBox):
         self.setCurrentIndex(index)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         return self.page(self.currentIndex()).inputToFactory(config)
 
     def factoryToInput(self, config: ConfigFactory):
         # Shallow copy
+        """Load the configuration value into the editor."""
         self._config = config
 
         streamSettings = ConfigXray.getProxyOutboundStream(config)
@@ -1747,6 +1932,7 @@ class GuiVTransportQGroupBox(GuiEditorItemFactory, AppQGroupBox):
             return
 
         def alterNetwork(sourceNetwork, targetNetwork):
+            """Handle alter network for the GUI v transport q group box."""
             nonlocal network
 
             if network == sourceNetwork:

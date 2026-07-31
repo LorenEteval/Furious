@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for indent spin box."""
+
 from __future__ import annotations
 
 from Furious.Qt import *
@@ -27,7 +29,9 @@ __all__ = ['IndentSpinBox']
 
 
 class IndentSpinBox(AppQDialog):
+    """Represent indent spin box."""
     def __init__(self, parent=None):
+        """Initialize the IndentSpinBox."""
         super().__init__(parent)
 
         self.setWindowTitle(_('Set Indent'))
@@ -54,4 +58,5 @@ class IndentSpinBox(AppQDialog):
         self.setLayout(layout)
 
     def value(self):
+        """Return the value value."""
         return self.indentSpin.value()

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Wrap the embedded tun2socks process used by TUN mode."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -28,6 +30,7 @@ __all__ = ['Tun2socks']
 
 
 def startTun2socks(msgQueue: multiprocessing.Queue, *args):
+    """Start tun2socks."""
     try:
         import tun2socks
     except ImportError:
@@ -48,12 +51,15 @@ def startTun2socks(msgQueue: multiprocessing.Queue, *args):
 
 
 class Tun2socks(CoreProcessWorker):
+    """Manage the tun2socks subprocess used by TUN mode."""
     class ExitCode:
         # Windows shutting down
+        """Enumerate process exit codes."""
         SystemShuttingDown = 0x40010004
 
     def __init__(self, **kwargs):
         # Optimizer is AppLoggerWindow.TUN_ window
+        """Initialize the Tun2socks."""
         backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLoggerWindow.TUN_)
 
         super().__init__(**kwargs, backgroundOptimizer=backgroundOptimizer)
@@ -62,10 +68,12 @@ class Tun2socks(CoreProcessWorker):
 
     @staticmethod
     def name() -> str:
+        """Return the process implementation name."""
         return 'Tun2socks'
 
     @staticmethod
     def version() -> str:
+        """Return the bundled core version."""
         try:
             import tun2socks
 
@@ -87,6 +95,7 @@ class Tun2socks(CoreProcessWorker):
         tcpAutoTuning: bool = False,
         **kwargs,
     ) -> CoreLaunchSpec:
+        """Build the child-process launch specification."""
         return CoreLaunchSpec(
             target=startTun2socks,
             args=(
@@ -115,6 +124,7 @@ class Tun2socks(CoreProcessWorker):
         tcpAutoTuning: bool = False,
         **kwargs,
     ) -> bool:
+        """Start the tun2socks."""
         launchSpec = self.launchSpec(
             device,
             networkInterface,
@@ -130,6 +140,7 @@ class Tun2socks(CoreProcessWorker):
         return self.startWithSpec(launchSpec)
 
     def stop(self):
+        """Stop the tun2socks."""
         if PLATFORM == 'Linux':
             # Stop tunnel first
             super().stop()

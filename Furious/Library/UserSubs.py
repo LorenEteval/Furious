@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Persist subscription definitions."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -27,6 +29,7 @@ registerAppSettings('CustomSubscription')
 
 
 class UserSubEntry:
+    """Describe one user sub entry."""
     remark: str
     webURL: str
     autoupdate: str
@@ -34,15 +37,19 @@ class UserSubEntry:
 
 
 class UserSub:
+    """Represent user sub."""
     unique: dict[str, dict]
 
 
 class UserSubs(Mixins.CleanupOnExit, StorageFactory):
     # unique: { remark, webURL }
+    """Manage the persisted subscription collection."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserSubs."""
         super().__init__(*args, **kwargs)
 
         def restore():
+            """Restore the user subs."""
             try:
                 return UJSONEncoder.decode(
                     PyBase64Encoder.decode(AppSettings.get('CustomSubscription'))
@@ -55,6 +62,7 @@ class UserSubs(Mixins.CleanupOnExit, StorageFactory):
         self._data = restore()
 
     def sync(self):
+        """Persist the current user subs data."""
         AppSettings.set(
             'CustomSubscription',
             PyBase64Encoder.encode(
@@ -64,7 +72,9 @@ class UserSubs(Mixins.CleanupOnExit, StorageFactory):
 
     def data(self) -> dict[str, dict]:
         # Shallow copy
+        """Return the data managed by the user subs."""
         return self._data
 
     def cleanup(self):
+        """Release resources owned by the user subs."""
         self.sync()

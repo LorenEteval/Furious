@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for user subs Qt table view."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -41,68 +43,85 @@ registerAppSettings('UserSubsHeaderViewState')
 
 
 class UserSubsQTableViewHorizontalHeader(AppQHeaderView):
+    """Provide the user subs Qt table view horizontal table header."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserSubsQTableViewHorizontalHeader."""
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
 
 
 class UserSubsQTableViewVerticalHeader(AppQHeaderView):
+    """Provide the user subs Qt table view vertical table header."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserSubsQTableViewVerticalHeader."""
         super().__init__(QtCore.Qt.Orientation.Vertical, *args, **kwargs)
 
 
 class UserSubsQTableViewHeaders:
+    """Describe and render user subs Qt table view table columns."""
     def __init__(self, name: str, func: Callable[[dict], str] = None):
+        """Initialize the UserSubsQTableViewHeaders."""
         self.name = name
         self.func = func
 
     def __call__(self, item: dict) -> str:
+        """Invoke the user subs Qt table view headers as a callable."""
         if callable(self.func):
             return self.func(item)
         else:
             return ''
 
     def __eq__(self, other):
+        """Compare the user subs Qt table view headers with another value."""
         return str(self) == str(other)
 
     def __str__(self):
+        """Return the display text for the user subs Qt table view headers."""
         return self.name
 
 
 class UserSubsAppQComboBox(AppQComboBox):
+    """Represent user subs app q combo box."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserSubsAppQComboBox."""
         super().__init__(*args, **kwargs)
 
     def retranslate(self):
         # Do not emit 'currentTextChanged' when retranslate
+        """Refresh translated text for the user subs app q combo box."""
         with Mixins.QBlockSignalContext(self):
             super().retranslate()
 
 
 class UserSubsTableModel(QtCore.QAbstractTableModel):
+    """Expose user subs table data through a Qt item model."""
     def __init__(
         self,
         headers: list[UserSubsQTableViewHeaders],
         itemKey: list[str],
         parent=None,
     ):
+        """Initialize the UserSubsTableModel."""
         super().__init__(parent)
 
         self.headers = headers
         self.itemKey = itemKey
 
     def rowCount(self, parent=QtCore.QModelIndex()) -> int:
+        """Return the number of rows exposed by the model."""
         if parent.isValid():
             return 0
 
         return len(Storage.UserSubs())
 
     def columnCount(self, parent=QtCore.QModelIndex()) -> int:
+        """Return the number of columns exposed by the model."""
         if parent.isValid():
             return 0
 
         return len(self.headers)
 
     def flags(self, index):
+        """Return the Qt item flags for a model index."""
         if not index.isValid():
             return QtCore.Qt.ItemFlag.NoItemFlags
 
@@ -114,6 +133,7 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
         return flags
 
     def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        """Return the data managed by the user subs table model."""
         if not index.isValid():
             return None
 
@@ -147,6 +167,7 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
         return None
 
     def setData(self, index, value, role=QtCore.Qt.ItemDataRole.EditRole) -> bool:
+        """Update model data for the requested role."""
         if role != QtCore.Qt.ItemDataRole.EditRole or not index.isValid():
             return False
 
@@ -172,6 +193,7 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
         orientation: QtCore.Qt.Orientation,
         role=QtCore.Qt.ItemDataRole.DisplayRole,
     ):
+        """Return display data for a table header section."""
         if role != QtCore.Qt.ItemDataRole.DisplayRole:
             return None
 
@@ -185,13 +207,16 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
 
     @staticmethod
     def uniqueByRow(row: int) -> str:
+        """Return the unique by row value used by the user subs table model."""
         return list(Storage.UserSubs().keys())[row]
 
     @classmethod
     def subsObjectByRow(cls, row: int) -> dict:
+        """Return the subs object by row value used by the user subs table model."""
         return Storage.UserSubs()[cls.uniqueByRow(row)]
 
     def emitRowChanged(self, row: int, column: Union[int, None] = None):
+        """Handle emit row changed for the user subs table model."""
         if row < 0 or row >= self.rowCount():
             return
 
@@ -205,6 +230,7 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
         self.dataChanged.emit(left, right, [])
 
     def emitAllChanged(self):
+        """Handle emit all changed for the user subs table model."""
         if self.rowCount() == 0 or self.columnCount() == 0:
             return
 
@@ -241,6 +267,7 @@ _TRANSLATABLE_HEADERS = [
 
 
 class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
+    """Represent user subs Qt table view."""
     RowHeight = 42
 
     AutoUpdateOptions = {
@@ -283,6 +310,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
     ItemKey = ['remark', 'webURL', 'autoupdate', 'proxy']
 
     def __init__(self, *args, **kwargs):
+        """Initialize the UserSubsQTableView."""
         self.deleteUniqueCallback = kwargs.pop('deleteUniqueCallback', None)
 
         super().__init__(*args, **kwargs)
@@ -337,15 +365,18 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
 
     @property
     def selectedIndex(self):
+        """Return the selected index value."""
         return sorted(
             list(set(index.row() for index in self.selectionModel().selectedRows()))
         )
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
+        """Handle custom context menu requested."""
         self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def deleteSelectedItem(self):
+        """Delete selected item."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
@@ -353,6 +384,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
             return
 
         def handleResultCode(_indexes, code):
+            """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
@@ -421,6 +453,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
         mbox.open()
 
     def handleAutoUpdateComboBoxCurrentTextChanged(self, text: str, row: int):
+        """Handle auto update combo box current text changed."""
         textEnglish = _(text, 'EN')
 
         unique = list(Storage.UserSubs().keys())[row]
@@ -452,6 +485,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
             )
 
             def getHttpProxy(_subsob):
+                """Return HTTP proxy."""
                 return self.ProxyOptions[_subsob.get('proxy', '')]()
 
             if self.timerConnected[row]:
@@ -496,6 +530,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
         return textEnglish
 
     def handleProxyComboBoxCurrentTextChanged(self, text: str, row: int):
+        """Handle proxy combo box current text changed."""
         textEnglish = _(text, 'EN')
 
         unique = list(Storage.UserSubs().keys())[row]
@@ -526,6 +561,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
         return textEnglish
 
     def flushItem(self, row, column, item):
+        """Refresh item."""
         if row < 0 or row >= self.sourceModel.rowCount():
             return
 
@@ -581,16 +617,19 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
             self.sourceModel.emitRowChanged(row, column)
 
     def flushRow(self, row, item):
+        """Refresh row."""
         for column in list(range(self.sourceModel.columnCount())):
             self.flushItem(row, column, item)
 
     def flushAll(self):
+        """Refresh all."""
         self.sourceModel.emitAllChanged()
 
         for index, key in enumerate(Storage.UserSubs()):
             self.flushRow(index, Storage.UserSubs()[key])
 
     def appendNewItem(self, **kwargs):
+        """Append new item."""
         unique, remark, webURL, autoupdate, proxy = (
             kwargs.pop('unique', ''),
             kwargs.pop('remark', ''),
@@ -631,6 +670,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
     def updateSubsByUnique(
         unique: str, httpProxy: Union[str, Callable, None], **kwargs
     ):
+        """Update subs by unique."""
         showMessageBox = kwargs.pop('showMessageBox', False)
 
         if callable(httpProxy):
@@ -653,6 +693,7 @@ class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
         )
 
     def retranslate(self):
+        """Refresh translated text for the user subs Qt table view."""
         self.sourceModel.headerDataChanged.emit(
             QtCore.Qt.Orientation.Horizontal,
             0,

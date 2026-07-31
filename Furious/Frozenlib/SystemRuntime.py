@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide bundled system runtime."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib.Constants import *
@@ -31,9 +33,11 @@ __all__ = ['SystemRuntime']
 
 
 class SystemRuntime:
+    """Represent system runtime."""
     @staticmethod
     @functools.lru_cache(None)
     def ubuntuRelease() -> str:
+        """Return the ubuntu release value used by the system runtime."""
         try:
             if PLATFORM != 'Linux':
                 return ''
@@ -64,6 +68,7 @@ class SystemRuntime:
 
     @staticmethod
     def appImagePath() -> str:
+        """Return the app image path value used by the system runtime."""
         if PLATFORM != 'Linux':
             return ''
 
@@ -74,6 +79,7 @@ class SystemRuntime:
 
     @staticmethod
     def flatpakID() -> str:
+        """Return the flatpak id value used by the system runtime."""
         if PLATFORM != 'Linux':
             return ''
 
@@ -84,11 +90,13 @@ class SystemRuntime:
 
     @staticmethod
     def isAssetsFolderWritable() -> bool:
+        """Return whether assets folder writable."""
         return os.access(XRAY_ASSET_DIR, os.W_OK)
 
     @staticmethod
     @functools.lru_cache(None)
     def isAdmin() -> bool:
+        """Return whether admin."""
         if PLATFORM == 'Windows':
             return ctypes.windll.shell32.IsUserAnAdmin() == 1
         else:
@@ -96,6 +104,7 @@ class SystemRuntime:
 
     @staticmethod
     def isTUNMode() -> bool:
+        """Return whether TUN mode."""
         if PLATFORM == 'Linux':
             if SystemRuntime.flatpakID():
                 # TUN Mode disabled in flatpak
@@ -108,12 +117,15 @@ class SystemRuntime:
     @staticmethod
     @functools.lru_cache(None)
     def isScriptMode() -> bool:
+        """Return whether script mode."""
         return sys.argv[0].endswith('.py')
 
     @staticmethod
     @functools.lru_cache(None)
     def isPythonw() -> bool:
+        """Return whether pythonw."""
         def isRealFile(file):
+            """Return whether real file."""
             if not hasattr(file, 'fileno'):
                 return False
 
@@ -134,4 +146,5 @@ class SystemRuntime:
     @staticmethod
     @functools.lru_cache(None)
     def isWindows7() -> bool:
+        """Return whether windows7."""
         return PLATFORM == 'Windows' and PLATFORM_RELEASE == '7'

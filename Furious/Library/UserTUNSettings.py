@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Persist user-defined TUN settings."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -27,10 +29,13 @@ registerAppSettings('CustomTUNSettings')
 
 
 class UserTUNSettings(Mixins.CleanupOnExit, StorageFactory):
+    """Manage persisted TUN customization values."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserTUNSettings."""
         super().__init__(*args, **kwargs)
 
         def restore():
+            """Restore the user TUN settings."""
             try:
                 return UJSONEncoder.decode(
                     PyBase64Encoder.decode(AppSettings.get('CustomTUNSettings'))
@@ -43,6 +48,7 @@ class UserTUNSettings(Mixins.CleanupOnExit, StorageFactory):
         self._data = restore()
 
     def sync(self):
+        """Persist the current user TUN settings data."""
         AppSettings.set(
             'CustomTUNSettings',
             PyBase64Encoder.encode(
@@ -52,7 +58,9 @@ class UserTUNSettings(Mixins.CleanupOnExit, StorageFactory):
 
     def data(self) -> dict[str, str]:
         # Shallow copy
+        """Return the data managed by the user TUN settings."""
         return self._data
 
     def cleanup(self):
+        """Release resources owned by the user TUN settings."""
         self.sync()

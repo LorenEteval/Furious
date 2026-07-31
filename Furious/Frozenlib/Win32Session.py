@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide bundled win32 session."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib.Constants import *
@@ -30,11 +32,14 @@ logger = logging.getLogger(__name__)
 
 
 class _Win32Session:
+    """Represent win32 session."""
     def __init__(self):
+        """Initialize the _Win32Session."""
         self._daemonThread = None
 
     @staticmethod
     def set(callback: Callable[[], None]) -> bool:
+        """Set data managed by the win32 session."""
         if PLATFORM == 'Windows':
             import win32session
 
@@ -45,6 +50,7 @@ class _Win32Session:
             return False
 
     def off(self) -> bool:
+        """Disable the win32 session."""
         if PLATFORM == 'Windows':
             import win32session
 
@@ -62,6 +68,7 @@ class _Win32Session:
             return False
 
     def run(self) -> bool:
+        """Run the win32 session task."""
         if PLATFORM == 'Windows':
             import win32session
 

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide bundled system proxy."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib.Constants import *
@@ -32,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 def handleAppSystemProxyMode() -> bool:
+    """Handle app system proxy mode."""
     try:
         if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:
             # Automatically configure
@@ -47,6 +50,7 @@ def handleAppSystemProxyMode() -> bool:
 
 
 def linuxProxyConfig(proxy_args, arg0, arg1):
+    """Handle linux proxy config for the application."""
     command = 'gsettings'
 
     if SystemRuntime.flatpakID():
@@ -67,7 +71,9 @@ def linuxProxyConfig(proxy_args, arg0, arg1):
 
 
 def darwinProxyConfig(operation, *args):
+    """Return the darwin proxy config value used by the application."""
     def getNetworkServices():
+        """Return network services."""
         command = runExternalCommand(
             ['networksetup', '-listallnetworkservices'],
             stdout=subprocess.PIPE,
@@ -92,12 +98,16 @@ def darwinProxyConfig(operation, *args):
 
 
 class _SystemProxy:
+    """Represent system proxy."""
     def __init__(self):
+        """Initialize the _SystemProxy."""
         self._daemonThread = None
 
     @staticmethod
     def pac(pac_url):
+        """Configure the system proxy with a PAC URL."""
         def _pac():
+            """Return the pac value used by the system proxy."""
             if PLATFORM == 'Windows':
                 try:
                     import sysproxy
@@ -141,7 +151,9 @@ class _SystemProxy:
 
     @staticmethod
     def set(server, bypass):
+        """Set data managed by the system proxy."""
         def _set():
+            """Return the set value used by the system proxy."""
             if PLATFORM == 'Windows':
                 try:
                     import sysproxy
@@ -198,7 +210,9 @@ class _SystemProxy:
 
     @staticmethod
     def off():
+        """Disable the system proxy."""
         def _off():
+            """Return the off value used by the system proxy."""
             if PLATFORM == 'Windows':
                 try:
                     import sysproxy
@@ -242,7 +256,9 @@ class _SystemProxy:
             logger.error('turn off proxy failed')
 
     def daemonOn_(self):
+        """Return the daemon on value used by the system proxy."""
         def _daemonOn_():
+            """Return the daemon on value used by the system proxy."""
             if PLATFORM == 'Windows':
                 try:
                     import sysproxy
@@ -273,7 +289,9 @@ class _SystemProxy:
             logger.error('turn on proxy daemon failed')
 
     def daemonOff(self):
+        """Return the daemon off value used by the system proxy."""
         def _daemonOff():
+            """Return the daemon off value used by the system proxy."""
             if PLATFORM == 'Windows':
                 try:
                     import sysproxy

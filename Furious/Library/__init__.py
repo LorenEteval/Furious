@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Expose configuration, encoding, and storage services."""
+
 from __future__ import annotations
 
 from .Encoder import *

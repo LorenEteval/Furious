@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Implement tray actions for routing."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -35,12 +37,15 @@ _TRANSLATABLE_BUILTIN_ROUTING = [
 
 
 class RoutingChildAction(AppQAction):
+    """Handle the routing child action."""
     def __init__(self, *args, **kwargs):
+        """Initialize the RoutingChildAction."""
         self.routingValue = kwargs.pop('routingValue', None)
 
         super().__init__(*args, **kwargs)
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         textEnglish = self.routingValue or self.textEnglish
 
         if AppSettings.get('Routing') != textEnglish:
@@ -51,7 +56,9 @@ class RoutingChildAction(AppQAction):
 
 
 class RoutingAction(AppQAction):
+    """Handle the routing action."""
     def __init__(self, **kwargs):
+        """Initialize the RoutingAction."""
         if AppSettings.get('Routing') == 'Bypass':
             # Update value for backward compatibility
             AppSettings.set('Routing', AppBuiltinRouting.BypassMainlandChina.value)
@@ -66,6 +73,7 @@ class RoutingAction(AppQAction):
         self.rebuildMenu()
 
     def routingActions(self):
+        """Return the routing actions value used by the routing action."""
         actions = list(
             RoutingChildAction(
                 _(routing.value),
@@ -95,6 +103,7 @@ class RoutingAction(AppQAction):
         return actions
 
     def rebuildMenu(self):
+        """Handle rebuild menu for the routing action."""
         self._menu.clear()
         self._menu._actions.clear()
         self._actionGroup = AppQActionGroup(self)
@@ -110,4 +119,5 @@ class RoutingAction(AppQAction):
 
     def getGlobalAction(self):
         # 2nd action
+        """Return global action."""
         return self._menu.actions()[1]

@@ -1,3 +1,5 @@
+"""Define source strings and translations used by the localization workflow."""
+
 TRANSLATION = {
     "Delete": {
         "source": [

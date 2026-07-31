@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for GUI TUN settings."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -35,12 +37,15 @@ logger = logging.getLogger(__name__)
 
 
 class GuiTUNSettingsItemXXX(GuiEditorItemTextInput):
+    """Represent GUI TUN settings item xxx."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiTUNSettingsItemXXX."""
         self.key = kwargs.pop('key', '')
 
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: dict) -> bool:
+        """Apply the current editor value to the configuration."""
         oldItem = config.get(self.key, '')
         newItem = self.text()
 
@@ -54,11 +59,14 @@ class GuiTUNSettingsItemXXX(GuiEditorItemTextInput):
             return False
 
     def factoryToInput(self, config: dict):
+        """Load the configuration value into the editor."""
         self.setText(config.get(self.key, ''))
 
 
 class GuiTUNSettingsItemSpinBoxBufferSizeXXX(GuiEditorItemTextSpinBox):
+    """Represent GUI TUN settings item spin box buffer size xxx."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiTUNSettingsItemSpinBoxBufferSizeXXX."""
         self.key = kwargs.pop('key', '')
         self.default = kwargs.pop('default', 1)
         self.start = kwargs.pop('start', 1)
@@ -70,6 +78,7 @@ class GuiTUNSettingsItemSpinBoxBufferSizeXXX(GuiEditorItemTextSpinBox):
         self.setRange(self.start, self.end)
 
     def inputToFactory(self, config: dict) -> bool:
+        """Apply the current editor value to the configuration."""
         oldValue = config.get(self.key, self.default)
         newValue = self.value()
 
@@ -86,6 +95,7 @@ class GuiTUNSettingsItemSpinBoxBufferSizeXXX(GuiEditorItemTextSpinBox):
             return False
 
     def factoryToInput(self, config: dict):
+        """Load the configuration value into the editor."""
         oldValue = config.get(self.key, self.default)
 
         if not isinstance(oldValue, int):
@@ -95,13 +105,16 @@ class GuiTUNSettingsItemSpinBoxBufferSizeXXX(GuiEditorItemTextSpinBox):
 
 
 class GuiTUNSettingsItemCheckBoxXXX(GuiEditorItemTextCheckBox):
+    """Represent GUI TUN settings item check box xxx."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiTUNSettingsItemCheckBoxXXX."""
         self.key = kwargs.pop('key', '')
         self.default = kwargs.pop('default', 'False')
 
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: dict) -> bool:
+        """Apply the current editor value to the configuration."""
         oldItem = config.get(self.key, self.default)
         newItem = self.isChecked()
 
@@ -119,17 +132,21 @@ class GuiTUNSettingsItemCheckBoxXXX(GuiEditorItemTextCheckBox):
             return False
 
     def factoryToInput(self, config: dict):
+        """Load the configuration value into the editor."""
         self.setChecked(config.get(self.key, self.default) == 'True')
 
 
 class AppQLabelHelpPage(AppQLabel):
+    """Represent app q label help page."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQLabelHelpPage."""
         super().__init__(*args, **kwargs)
 
         self.setWebsiteURL()
         self.linkActivated.connect(self.handleLinkActivated)
 
     def setWebsiteURL(self):
+        """Set website URL."""
         self.setText(
             f'<html><head/><body><p>'
             f'<a href=\"{APPLICATION_ABOUT_PAGE}/wiki/TUN-Mode\">'
@@ -140,30 +157,38 @@ class AppQLabelHelpPage(AppQLabel):
 
     @staticmethod
     def handleLinkActivated(link: str):
+        """Handle link activated."""
         if QDesktopServices.openUrl(QtCore.QUrl(link)):
             logger.info(f'open link \'{link}\' success')
         else:
             logger.error(f'open link \'{link}\' failed')
 
     def retranslate(self):
+        """Refresh translated text for the app q label help page."""
         self.setWebsiteURL()
 
 
 class GuiTUNSettingsItemHelpPage(GuiEditorItemWidgetContainer):
+    """Provide the TUN settings item help configuration editor page."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiTUNSettingsItemHelpPage."""
         super().__init__(*args, **kwargs)
 
         self._page = AppQLabelHelpPage()
 
     def widgets(self):
+        """Return the widgets owned by this editor item."""
         return [self._page]
 
 
 class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
+    """Represent GUI TUN settings group box basic."""
     def __init__(self, **kwargs):
+        """Initialize the GuiTUNSettingsGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
 
     def setupPageLayout(self):
+        """Set up page layout."""
         layout = QFormLayout()
         layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
         layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
@@ -173,6 +198,7 @@ class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
         pairsLayout.setColumnStretch(3, 1)
 
         def addPair(index: int, row: int, column: int):
+            """Add pair."""
             label, inputWidget = self._containers[index].widgets()
 
             pairsLayout.addWidget(label, row, column)
@@ -191,6 +217,7 @@ class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
         return layout
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiTUNSettingsItemXXX(
                 title=_('Primary Adapter Interface Name'),
@@ -224,10 +251,13 @@ class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 
 class GuiTUNSettingsGroupBoxMemory(GuiEditorWidgetQGroupBox):
+    """Represent GUI TUN settings group box memory."""
     def __init__(self, **kwargs):
+        """Initialize the GuiTUNSettingsGroupBoxMemory."""
         super().__init__(_('Memory Optimization'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiTUNSettingsItemSpinBoxBufferSizeXXX(
                 title=_('TCP Send Buffer Size (MiB)'),
@@ -252,7 +282,9 @@ class GuiTUNSettingsGroupBoxMemory(GuiEditorWidgetQGroupBox):
 
 
 class GuiTUNSettings(GuiEditorWidgetQDialog):
+    """Store and validate GUI TUN settings."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiTUNSettings."""
         tabTranslatable = kwargs.pop('tabTranslatable', True)
         style = kwargs.pop('style', 'portrait')
 
@@ -279,6 +311,7 @@ class GuiTUNSettings(GuiEditorWidgetQDialog):
         self.rejected.connect(functools.partial(self.handleRejected))
 
     def handleAccepted(self, config: dict):
+        """Handle accepted."""
         modified = self.inputToFactory(config)
 
         if modified and SystemRuntime.isTUNMode():
@@ -288,10 +321,12 @@ class GuiTUNSettings(GuiEditorWidgetQDialog):
         self.rejected.disconnect()
 
     def handleRejected(self):
+        """Handle rejected."""
         self.accepted.disconnect()
         self.rejected.disconnect()
 
     def inputToFactory(self, config: dict) -> bool:
+        """Apply the current editor value to the configuration."""
         modified = False
 
         for groupBox in self.groupBoxSequence():
@@ -300,11 +335,13 @@ class GuiTUNSettings(GuiEditorWidgetQDialog):
         return modified
 
     def factoryToInput(self, config: dict):
+        """Load the configuration value into the editor."""
         for groupBox in self.groupBoxSequence():
             groupBox.factoryToInput(config)
 
     @functools.lru_cache(None)
     def groupBoxSequence(self):
+        """Return the configuration group boxes in display order."""
         return [
             GuiTUNSettingsGroupBoxBasic(),
             GuiTUNSettingsGroupBoxMemory(),

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide bundled utility."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib.Constants import *
@@ -47,6 +49,7 @@ __all__ = [
 
 
 class Protocol(Enum):
+    """Enumerate proxy protocols recognized by Furious."""
     Unknown = 'Unknown'
     VMess = 'VMess'
     VLESS = 'VLESS'
@@ -59,6 +62,7 @@ class Protocol(Enum):
     @staticmethod
     @functools.lru_cache(None)
     def toEnum(protocol: str):
+        """Return the to enum value used by the protocol."""
         if not isinstance(protocol, str):
             return Protocol.Unknown
 
@@ -88,9 +92,11 @@ def callRateLimited(maxCallPerSecond):
     called = time.monotonic()
 
     def decorator(func):
+        """Decorate a callable with the enclosing behavior."""
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             # Previously called
+            """Invoke the wrapped callable with the enclosing behavior."""
             nonlocal called
 
             elapsed = time.monotonic() - called
@@ -110,9 +116,12 @@ def callRateLimited(maxCallPerSecond):
 
 
 def forceToLocalhostIfPossible():
+    """Return the force to localhost if possible value used by the application."""
     def decorator(func):
+        """Decorate a callable with the enclosing behavior."""
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            """Invoke the wrapped callable with the enclosing behavior."""
             result = func(*args, **kwargs)
 
             if (
@@ -146,6 +155,7 @@ def callOnceOnly(func):
     called = False
 
     def wrapper(*args, **kwargs):
+        """Invoke the wrapped callable with the enclosing behavior."""
         nonlocal result, called
 
         if not called:
@@ -158,11 +168,13 @@ def callOnceOnly(func):
 
 
 def classname(ob) -> str:
+    """Return the classname value used by the application."""
     return ob.__class__.__name__
 
 
 @functools.lru_cache(None)
 def isValidIPAddress(address) -> bool:
+    """Return whether valid ip address."""
     try:
         ipaddress.ip_address(address)
     except Exception:
@@ -176,6 +188,7 @@ def isValidIPAddress(address) -> bool:
 # Can throw exceptions
 @functools.lru_cache(None)
 def parseHostPort(address: str) -> Tuple[AnyStr | None, str | None]:
+    """Parse host port."""
     if address.find('//') == -1:
         result = urllib.parse.urlsplit('//' + address)
     else:
@@ -195,6 +208,7 @@ def parseHostPort(address: str) -> Tuple[AnyStr | None, str | None]:
 
 
 def runExternalCommand(*args, **kwargs):
+    """Run external command."""
     if PLATFORM == 'Windows':
         creationflags = kwargs.pop('creationflags', subprocess.CREATE_NO_WINDOW)
 
@@ -205,13 +219,16 @@ def runExternalCommand(*args, **kwargs):
 
 @functools.lru_cache(None)
 def absolutePath(path) -> pathlib.Path:
+    """Return the absolute path value used by the application."""
     return pathlib.Path(path) if os.path.isabs(path) else ROOT_DIR / path
 
 
 @functools.lru_cache(None)
 def versionToValue(version: str) -> int:
+    """Return the version to value value used by the application."""
     def split():
         # x or x.y or x.y.z or x.y.z.u
+        """Split the application."""
         result = version.split('.')
 
         while len(result) < 4:

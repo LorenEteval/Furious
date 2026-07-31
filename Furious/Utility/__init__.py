@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Expose application process utilities."""
+
 from __future__ import annotations
 
 from .AppMainProcess import *

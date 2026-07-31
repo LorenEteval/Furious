@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Wrap the embedded Xray core process."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -35,6 +37,7 @@ __all__ = ['XrayCore']
 
 
 def startXrayCore(jsonString: str, msgQueue: multiprocessing.Queue):
+    """Start Xray core."""
     try:
         import xray
     except ImportError:
@@ -91,6 +94,7 @@ def startXrayCore(jsonString: str, msgQueue: multiprocessing.Queue):
                         fileStreams.append(stream)
 
             def produceMsg():
+                """Forward one process-output message to the shared queue."""
                 while True:
                     for file in fileStreams:
                         for line in iter(file.readline, b''):
@@ -116,7 +120,9 @@ def startXrayCore(jsonString: str, msgQueue: multiprocessing.Queue):
 
 
 class XrayCore(CoreProcessWorker):
+    """Manage the embedded Xray core subprocess."""
     class ExitCode(Enum):
+        """Enumerate process exit codes."""
         ConfigurationError = 23
         # Windows: 4294967295. Darwin, Linux: 255 (-1)
         ServerStartFailure = 4294967295 if PLATFORM == 'Windows' else 255
@@ -124,14 +130,17 @@ class XrayCore(CoreProcessWorker):
         SystemShuttingDown = 0x40010004
 
     def __init__(self, **kwargs):
+        """Initialize the XrayCore."""
         super().__init__(**kwargs)
 
     @staticmethod
     def name() -> str:
+        """Return the process implementation name."""
         return 'Xray-core'
 
     @staticmethod
     def version() -> str:
+        """Return the bundled core version."""
         try:
             import xray
 
@@ -144,6 +153,7 @@ class XrayCore(CoreProcessWorker):
     def launchSpec(
         self, config: Union[str, ConfigFactory, dict], **kwargs
     ) -> Union[CoreLaunchSpec, None]:
+        """Build the child-process launch specification."""
         param = self.toJSONString(config)
 
         if not param:
@@ -159,6 +169,7 @@ class XrayCore(CoreProcessWorker):
         )
 
     def start(self, config: Union[str, ConfigFactory, dict], **kwargs) -> bool:
+        """Start the Xray core."""
         launchSpec = self.launchSpec(config, **kwargs)
 
         if launchSpec is None:

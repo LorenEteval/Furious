@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Implement tray actions for language."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -38,10 +40,13 @@ registerAppSettings(
 
 
 class LanguageChildAction(AppQAction):
+    """Handle the language child action."""
     def __init__(self, *args, **kwargs):
+        """Initialize the LanguageChildAction."""
         super().__init__(*args, **kwargs)
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         abbr = LANGUAGE_TO_ABBR[self.text()]
 
         if AppSettings.get('Language') != abbr:
@@ -53,11 +58,14 @@ class LanguageChildAction(AppQAction):
 
     def retranslate(self):
         # Nothing to do
+        """Refresh translated text for the language child action."""
         pass
 
 
 class LanguageAction(AppQAction):
+    """Handle the language action."""
     def __init__(self, **kwargs):
+        """Initialize the LanguageAction."""
         super().__init__(
             _('Language'),
             icon=bootstrapIcon('globe2.svg'),

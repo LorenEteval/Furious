@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for GUI customize network test."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -36,7 +38,9 @@ registerAppSettings('CustomNetworkConnectivityTestURL')
 
 
 class GuiCustomizeNetworkTestDialog(AppQDialog):
+    """Present the GUI customize network test dialog."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiCustomizeNetworkTestDialog."""
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_('Customize Network Test URL'))
@@ -100,9 +104,11 @@ class GuiCustomizeNetworkTestDialog(AppQDialog):
         self.finished.connect(functools.partial(self.handleResultCode))
 
     def setWidthAndHeight(self):
+        """Apply the default size for the GUI customize network test dialog."""
         self.resize(656, 180)
 
     def handleResultCode(self, code):
+        """Handle result code."""
         for widget, info, settingsName, reset in [
             (
                 self.speedTestURLEdit,
