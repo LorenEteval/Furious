@@ -1941,27 +1941,36 @@ class ConfigHysteria2(ConfigFactory):
     def itemProtocol(self) -> str:
         return Protocol.Hysteria2.value
 
-    @property
-    def itemAddress(self) -> str:
-        server = self.get('server', '')
+    @staticmethod
+    def splitServerAddressPort(server: str) -> Tuple[str, str]:
+        if server.startswith(('realm://', 'realm+http://')):
+            result = urlparse(server)
+
+            try:
+                port = result.port
+            except ValueError:
+                port = None
+
+            return result.hostname or '', str(port) if port is not None else ''
 
         pos = server.rfind(':')
 
         if pos == -1:
-            return server
+            return server, ''
         else:
-            return server[:pos]
+            return server[:pos], server[pos + 1 :]
+
+    @property
+    def itemAddress(self) -> str:
+        address, _port = self.splitServerAddressPort(self.get('server', ''))
+
+        return address
 
     @property
     def itemPort(self) -> str:
-        server = self.get('server', '')
+        _address, port = self.splitServerAddressPort(self.get('server', ''))
 
-        pos = server.rfind(':')
-
-        if pos == -1:
-            return ''
-        else:
-            return server[pos + 1 :]
+        return port
 
     @property
     def itemTransport(self) -> str:
