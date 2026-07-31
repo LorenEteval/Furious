@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for GUI shadowsocks."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -37,7 +39,9 @@ getProxyOutboundServer = functools.partial(
 
 
 class GuiSSItemTextInput(GuiEditorItemTextInput):
+    """Represent GUI ss item text input."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiSSItemTextInput."""
         key = kwargs.pop('key', '')
 
         super().__init__(*args, **kwargs)
@@ -45,6 +49,7 @@ class GuiSSItemTextInput(GuiEditorItemTextInput):
         self.key = key
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldValue = proxyOutboundServer.get(self.key, '')
@@ -67,6 +72,7 @@ class GuiSSItemTextInput(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -78,13 +84,16 @@ class GuiSSItemTextInput(GuiEditorItemTextInput):
 
 
 class GuiSSItemBasicPort(GuiEditorItemTextSpinBox):
+    """Represent GUI ss item basic port."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiSSItemBasicPort."""
         super().__init__(*args, **kwargs)
 
         # Range
         self.setRange(0, 65535)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldPort = proxyOutboundServer.get('port')
@@ -103,6 +112,7 @@ class GuiSSItemBasicPort(GuiEditorItemTextSpinBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -114,7 +124,9 @@ class GuiSSItemBasicPort(GuiEditorItemTextSpinBox):
 
 
 class GuiSSItemBasicMethod(GuiEditorItemTextComboBox):
+    """Represent GUI ss item basic method."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiSSItemBasicMethod."""
         super().__init__(*args, **kwargs)
 
         self.addItems(
@@ -135,6 +147,7 @@ class GuiSSItemBasicMethod(GuiEditorItemTextComboBox):
         )
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldMethod = proxyOutboundServer.get('method', '')
@@ -153,6 +166,7 @@ class GuiSSItemBasicMethod(GuiEditorItemTextComboBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -164,10 +178,13 @@ class GuiSSItemBasicMethod(GuiEditorItemTextComboBox):
 
 
 class GuiSSGroupBoxBasic(GuiEditorWidgetQGroupBox):
+    """Represent GUI ss group box basic."""
     def __init__(self, **kwargs):
+        """Initialize the GuiSSGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemBasicRemark(title=_('Remark')),
             GuiSSItemTextInput(title=_('Address'), key='address'),
@@ -178,10 +195,13 @@ class GuiSSGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 
 class GuiSSGroupBoxProxy(GuiEditorWidgetQGroupBox):
+    """Represent GUI ss group box proxy."""
     def __init__(self, **kwargs):
+        """Initialize the GuiSSGroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemProxyHttp(title='http', translatable=False),
             GuiEditorItemProxySocks(title='socks', translatable=False),
@@ -189,13 +209,16 @@ class GuiSSGroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 
 class GuiShadowsocks(GuiEditorWidgetQDialog):
+    """Represent GUI shadowsocks."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiShadowsocks."""
         super().__init__(*args, **kwargs)
 
         self.setTabText(Protocol.Shadowsocks.value)
 
     @functools.lru_cache(None)
     def groupBoxSequence(self):
+        """Return the configuration group boxes in display order."""
         return [
             GuiSSGroupBoxBasic(),
             GuiSSGroupBoxProxy(),

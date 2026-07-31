@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Define the common data encoder interface."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -24,10 +26,13 @@ __all__ = ['EncoderFactory']
 
 
 class EncoderFactory(ABC):
+    """Define the interface and shared behavior for encoder objects."""
     @abstractmethod
     def encode(self, data: Any, **kwargs) -> Any:
+        """Encode data with the encoder factory."""
         raise NotImplementedError
 
     @abstractmethod
     def decode(self, data: Any, **kwargs) -> Any:
+        """Decode data with the encoder factory."""
         raise NotImplementedError

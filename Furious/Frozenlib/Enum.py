@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide bundled enum."""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -27,17 +29,20 @@ __all__ = [
 
 
 class AppBuiltinCommand(Enum):
+    """Enumerate app builtin command."""
     Empty = 'empty'
     RunAs = 'runas'
     Clear = 'clear'
 
 
 class AppBuiltinRouting(Enum):
+    """Enumerate app builtin routing."""
     BypassMainlandChina = 'Bypass Mainland China'
     Global = 'Global'
     Custom = 'Custom'
 
 
 class AppBuiltinProxyMode(Enum):
+    """Enumerate app builtin proxy mode."""
     Auto = 'Auto'
     NoChanges = 'NoChanges'

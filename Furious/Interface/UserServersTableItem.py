@@ -15,47 +15,60 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Define display fields for server-table rows."""
+
 from __future__ import annotations
 
 __all__ = ['UserServersTableItem']
 
 
 class UserServersTableItem:
+    """Define the display fields required by a server-table row."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserServersTableItem."""
         super().__init__(*args, **kwargs)
 
     @property
     def itemRemark(self) -> str:
+        """Return the item remark value."""
         return ''
 
     @property
     def itemProtocol(self) -> str:
+        """Return the item protocol value."""
         return ''
 
     @property
     def itemAddress(self) -> str:
+        """Return the item address value."""
         return ''
 
     @property
     def itemPort(self) -> str:
+        """Return the item port value."""
         return ''
 
     @property
     def itemTransport(self) -> str:
+        """Return the item transport value."""
         return ''
 
     @property
     def itemTLS(self) -> str:
+        """Return the item TLS value."""
         return ''
 
     @property
     def itemSubscription(self) -> str:
+        """Return the item subscription value."""
         return ''
 
     @property
     def itemLatency(self) -> str:
+        """Return the item latency value."""
         return ''
 
     @property
     def itemSpeed(self) -> str:
+        """Return the item speed value."""
         return ''

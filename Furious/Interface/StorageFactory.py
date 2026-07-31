@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Define the persistent storage collection interface."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -24,10 +26,13 @@ __all__ = ['StorageFactory']
 
 
 class StorageFactory(ABC):
+    """Define the interface and shared behavior for storage objects."""
     @abstractmethod
     def sync(self):
+        """Persist the current storage factory data."""
         raise NotImplementedError
 
     @abstractmethod
     def data(self) -> Any:
+        """Return the data managed by the storage factory."""
         raise NotImplementedError

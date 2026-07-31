@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for GUI editor xxx."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -44,7 +46,9 @@ __all__ = [
 
 
 class GuiEditorItemTextInput(GuiEditorItemWidgetContainer):
+    """Represent GUI editor item text input."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorItemTextInput."""
         title = kwargs.pop('title', '')
         translatable = kwargs.pop('translatable', True)
         parent = kwargs.pop('parent', None)
@@ -58,17 +62,22 @@ class GuiEditorItemTextInput(GuiEditorItemWidgetContainer):
         self._input = QLineEdit(parent=parent)
 
     def text(self) -> str:
+        """Return the text value."""
         return self._input.text()
 
     def setText(self, text: str):
+        """Set text."""
         self._input.setText(text)
 
     def widgets(self):
+        """Return the widgets owned by this editor item."""
         return self._title, self._input
 
 
 class GuiEditorItemTextSpinBox(GuiEditorItemWidgetContainer):
+    """Represent GUI editor item text spin box."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorItemTextSpinBox."""
         title = kwargs.pop('title', '')
         translatable = kwargs.pop('translatable', True)
         parent = kwargs.pop('parent', None)
@@ -82,20 +91,26 @@ class GuiEditorItemTextSpinBox(GuiEditorItemWidgetContainer):
         self._input = AppQSpinBox(parent=parent)
 
     def value(self) -> int:
+        """Return the value value."""
         return self._input.value()
 
     def setValue(self, value: int):
+        """Set value."""
         self._input.setValue(value)
 
     def setRange(self, minRange: int, maxRange: int):
+        """Set range."""
         self._input.setRange(minRange, maxRange)
 
     def widgets(self):
+        """Return the widgets owned by this editor item."""
         return self._title, self._input
 
 
 class GuiEditorItemTextComboBox(GuiEditorItemWidgetContainer):
+    """Represent GUI editor item text combo box."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorItemTextComboBox."""
         title = kwargs.pop('title', '')
         translatable = kwargs.pop('translatable', True)
         parent = kwargs.pop('parent', None)
@@ -109,23 +124,30 @@ class GuiEditorItemTextComboBox(GuiEditorItemWidgetContainer):
         self._input = AppQComboBox(parent=parent, translatable=False)
 
     def text(self) -> str:
+        """Return the text value."""
         return self._input.currentText()
 
     def setText(self, text: str):
+        """Set text."""
         self._input.setCurrentText(text)
 
     def addItems(self, texts: Sequence[str]):
+        """Add items."""
         self._input.addItems(texts)
 
     def connectActivated(self, func: Callable):
+        """Connect activated."""
         self._input.activated.connect(func)
 
     def widgets(self):
+        """Return the widgets owned by this editor item."""
         return self._title, self._input
 
 
 class GuiEditorItemTextCheckBox(GuiEditorItemWidgetContainer):
+    """Represent GUI editor item text check box."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorItemTextCheckBox."""
         title = kwargs.pop('title', '')
         translatable = kwargs.pop('translatable', True)
         parent = kwargs.pop('parent', None)
@@ -135,20 +157,26 @@ class GuiEditorItemTextCheckBox(GuiEditorItemWidgetContainer):
         self._input = AppQCheckBox(_(title), translatable=translatable, parent=parent)
 
     def isChecked(self) -> bool:
+        """Return whether checked."""
         return self._input.isChecked()
 
     def setChecked(self, checked: bool):
+        """Set checked."""
         self._input.setChecked(checked)
 
     def widgets(self):
+        """Return the widgets owned by this editor item."""
         return (self._input,)
 
 
 class GuiEditorItemBasicRemark(GuiEditorItemTextInput):
+    """Represent GUI editor item basic remark."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorItemBasicRemark."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         oldRemark = config.getExtras('remark')
         newRemark = self.text()
 
@@ -162,14 +190,18 @@ class GuiEditorItemBasicRemark(GuiEditorItemTextInput):
             return False
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         self.setText(config.getExtras('remark'))
 
 
 class GuiEditorItemProxyHttp(GuiEditorItemTextInput):
+    """Represent GUI editor item proxy HTTP."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorItemProxyHttp."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         oldHttp = config.httpProxy()
         newHttp = self.text()
 
@@ -194,6 +226,7 @@ class GuiEditorItemProxyHttp(GuiEditorItemTextInput):
                 return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             self.setText(config.httpProxy())
         except Exception:
@@ -203,10 +236,13 @@ class GuiEditorItemProxyHttp(GuiEditorItemTextInput):
 
 
 class GuiEditorItemProxySocks(GuiEditorItemTextInput):
+    """Represent GUI editor item proxy SOCKS."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorItemProxySocks."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         oldSocks = config.socksProxy()
         newSocks = self.text()
 
@@ -231,6 +267,7 @@ class GuiEditorItemProxySocks(GuiEditorItemTextInput):
                 return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             self.setText(config.socksProxy())
         except Exception:
@@ -240,15 +277,19 @@ class GuiEditorItemProxySocks(GuiEditorItemTextInput):
 
 
 class GuiEditorWidget(GuiEditorItemFactory):
+    """Provide the GUI editor widget."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorWidget."""
         super().__init__(*args, **kwargs)
 
         self._containers = self.containerSequence()
 
     def containerSequence(self) -> Sequence[GuiEditorItemWidgetContainer]:
+        """Return the editor item containers in display order."""
         raise NotImplementedError
 
     def inputToFactory(self, config: dict) -> bool:
+        """Apply the current editor value to the configuration."""
         modified = False
 
         for container in self._containers:
@@ -262,6 +303,7 @@ class GuiEditorWidget(GuiEditorItemFactory):
         return modified
 
     def factoryToInput(self, config: dict):
+        """Load the configuration value into the editor."""
         for container in self._containers:
             try:
                 container.factoryToInput(config)
@@ -272,12 +314,15 @@ class GuiEditorWidget(GuiEditorItemFactory):
 
 
 class GuiEditorWidgetQWidget(GuiEditorWidget, QWidget):
+    """Provide the GUI editor  Qt widget."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorWidgetQWidget."""
         super().__init__(*args, **kwargs)
 
         self.setupLayout()
 
     def setupLayout(self):
+        """Set up layout."""
         layout = QFormLayout()
         layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
         layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
@@ -289,7 +334,9 @@ class GuiEditorWidgetQWidget(GuiEditorWidget, QWidget):
 
 
 class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
+    """Group the GUI editor widget q editor controls."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorWidgetQGroupBox."""
         super().__init__(*args, **kwargs)
 
         page = QWidget()
@@ -305,6 +352,7 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
         self.setLayout(vboxLayout)
 
     def setupPageLayout(self):
+        """Set up page layout."""
         layout = QFormLayout()
         layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
         layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
@@ -316,7 +364,9 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
 
 
 class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
+    """Present the GUI editor widget Qt dialog."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiEditorWidgetQDialog."""
         tabText, tabTranslatable, style = (
             kwargs.pop('tabText', ''),
             kwargs.pop('tabTranslatable', False),
@@ -357,9 +407,11 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
 
     @functools.lru_cache(None)
     def groupBoxSequence(self) -> Sequence[GuiEditorWidgetQGroupBox]:
+        """Return the configuration group boxes in display order."""
         raise NotImplementedError
 
     def setGroupBoxStyle(self, style: str):
+        """Set group box style."""
         if style == 'grid':
             for index, groupBox in enumerate(self.groupBoxSequence()):
                 self.tabCentralWidgetLayout.addWidget(groupBox, index // 2, index % 2)
@@ -371,13 +423,16 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
                 self.tabCentralWidgetLayout.addWidget(groupBox, index, 0)
 
     def setTabText(self, text: str):
+        """Set tab text."""
         self.tabWidget.setTabText(0, text)
 
     def closeEvent(self, event):
+        """Handle closure of the GUI editor widget Qt dialog."""
         self.accepted.disconnect()
         self.rejected.disconnect()
 
     def inputToFactory(self, config: dict) -> bool:
+        """Apply the current editor value to the configuration."""
         modified = False
 
         for groupBox in self.groupBoxSequence():
@@ -386,5 +441,6 @@ class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
         return modified
 
     def factoryToInput(self, config: dict):
+        """Load the configuration value into the editor."""
         for groupBox in self.groupBoxSequence():
             groupBox.factoryToInput(config)

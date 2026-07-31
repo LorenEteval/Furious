@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for text editor theme."""
+
 from __future__ import annotations
 
 from Furious.Core import *
@@ -30,7 +32,9 @@ __all__ = [
 
 
 class EditorHighlightRules:
+    """Represent editor highlight rules."""
     def __init__(self, regex, color, isBold=False, isItalic=False, isJSONKey=False):
+        """Initialize the EditorHighlightRules."""
         self.regex = QtCore.QRegularExpression(regex)
         self.color = QColor(color)
 
@@ -47,20 +51,26 @@ class EditorHighlightRules:
 
 
 class EditorTheme:
+    """Represent editor theme."""
     def __init__(self, *args, **kwargs):
+        """Initialize the EditorTheme."""
         super().__init__(*args, **kwargs)
 
     @staticmethod
     def getStyleSheet(*args, **kwargs):
+        """Return style sheet."""
         raise NotImplementedError
 
 
 class DraculaEditorTheme(EditorTheme):
+    """Represent dracula editor theme."""
     def __init__(self, *args, **kwargs):
+        """Initialize the DraculaEditorTheme."""
         super().__init__(*args, **kwargs)
 
     @staticmethod
     def getStyleSheet(widgetName, fontFamily):
+        """Return style sheet."""
         return (
             f'{widgetName} {{'
             f'    background-color: #282A36;'
@@ -71,12 +81,15 @@ class DraculaEditorTheme(EditorTheme):
 
 
 class AppQSyntaxHighlighter(QSyntaxHighlighter):
+    """Apply syntax highlighting for app q syntax text."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQSyntaxHighlighter."""
         super().__init__(*args, **kwargs)
 
         self.highlightRules = list()
 
     def highlightBlock(self, text):
+        """Handle highlight block for the app q syntax highlighter."""
         for highlightRule in self.highlightRules:
             iterator = highlightRule.regex.globalMatch(text)
 
@@ -110,7 +123,9 @@ class AppQSyntaxHighlighter(QSyntaxHighlighter):
 
 
 class DraculaJSONSyntaxHighlighter(AppQSyntaxHighlighter):
+    """Apply syntax highlighting for dracula JSON syntax text."""
     def __init__(self, *args, **kwargs):
+        """Initialize the DraculaJSONSyntaxHighlighter."""
         super().__init__(*args, **kwargs)
 
         self.highlightRules = [
@@ -133,6 +148,7 @@ class DraculaJSONSyntaxHighlighter(AppQSyntaxHighlighter):
 
 class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
     # https://ihateregex.io/expr/ip/
+    """Apply syntax highlighting for dracula logger syntax text."""
     IPV4_REGEX = (
         r'(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)'
         r'(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}(?::\d{1,5})?\b'
@@ -159,6 +175,7 @@ class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
     )
 
     def __init__(self, *args, **kwargs):
+        """Initialize the DraculaLoggerSyntaxHighlighter."""
         super().__init__(*args, **kwargs)
 
         self.highlightRules = [

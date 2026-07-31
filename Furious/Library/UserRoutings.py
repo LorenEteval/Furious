@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Persist custom routing definitions."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -27,10 +29,13 @@ registerAppSettings('CustomRouting')
 
 
 class UserRoutings(Mixins.CleanupOnExit, StorageFactory):
+    """Manage the persisted custom-routing collection."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserRoutings."""
         super().__init__(*args, **kwargs)
 
         def restore():
+            """Restore the user routings."""
             try:
                 data = UJSONEncoder.decode(
                     PyBase64Encoder.decode(AppSettings.get('CustomRouting'))
@@ -48,6 +53,7 @@ class UserRoutings(Mixins.CleanupOnExit, StorageFactory):
         self._data = restore()
 
     def sync(self):
+        """Persist the current user routings data."""
         AppSettings.set(
             'CustomRouting',
             PyBase64Encoder.encode(UJSONEncoder.encode(self._data).encode()),
@@ -55,7 +61,9 @@ class UserRoutings(Mixins.CleanupOnExit, StorageFactory):
 
     def data(self) -> dict[str, dict]:
         # Shallow copy
+        """Return the data managed by the user routings."""
         return self._data
 
     def cleanup(self):
+        """Release resources owned by the user routings."""
         self.sync()

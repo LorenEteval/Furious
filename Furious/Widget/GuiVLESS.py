@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for GUI VLESS."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -46,10 +48,13 @@ getProxyOutboundUser = functools.partial(
 
 
 class GuiVLESSItemBasicAddress(GuiEditorItemTextInput):
+    """Represent GUI VLESS item basic address."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESSItemBasicAddress."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldAddress = proxyOutboundServer.get('address', '')
@@ -72,6 +77,7 @@ class GuiVLESSItemBasicAddress(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -83,13 +89,16 @@ class GuiVLESSItemBasicAddress(GuiEditorItemTextInput):
 
 
 class GuiVLESSItemBasicPort(GuiEditorItemTextSpinBox):
+    """Represent GUI VLESS item basic port."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESSItemBasicPort."""
         super().__init__(*args, **kwargs)
 
         # Range
         self.setRange(0, 65535)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldPort = proxyOutboundServer.get('port')
@@ -108,6 +117,7 @@ class GuiVLESSItemBasicPort(GuiEditorItemTextSpinBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -119,7 +129,9 @@ class GuiVLESSItemBasicPort(GuiEditorItemTextSpinBox):
 
 
 class GuiVLESSItemBasicId(GuiEditorItemTextInput):
+    """Represent GUI VLESS item basic id."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESSItemBasicId."""
         super().__init__(*args, **kwargs)
 
         self.generateButton = AppQPushButton(_('Generate'))
@@ -133,12 +145,15 @@ class GuiVLESSItemBasicId(GuiEditorItemTextInput):
         layout.addWidget(self.generateButton)
 
     def generateUUID(self):
+        """Handle generate uuid for the GUI VLESS item basic id."""
         self.setText(str(uuid.uuid4()))
 
     def widgets(self):
+        """Return the widgets owned by this editor item."""
         return self._title, self._widget
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundUser = getProxyOutboundUser(config)
 
         oldId = proxyOutboundUser.get('id', '')
@@ -161,6 +176,7 @@ class GuiVLESSItemBasicId(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -172,10 +188,13 @@ class GuiVLESSItemBasicId(GuiEditorItemTextInput):
 
 
 class GuiVLESSItemBasicEncryption(GuiEditorItemTextInput):
+    """Represent GUI VLESS item basic encryption."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESSItemBasicEncryption."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundUser = getProxyOutboundUser(config)
 
         oldEncryption = proxyOutboundUser.get('encryption', '')
@@ -198,6 +217,7 @@ class GuiVLESSItemBasicEncryption(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -209,7 +229,9 @@ class GuiVLESSItemBasicEncryption(GuiEditorItemTextInput):
 
 
 class GuiVLESSItemBasicFlow(GuiEditorItemTextComboBox):
+    """Represent GUI VLESS item basic flow."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESSItemBasicFlow."""
         super().__init__(*args, **kwargs)
 
         self.addItems(
@@ -222,6 +244,7 @@ class GuiVLESSItemBasicFlow(GuiEditorItemTextComboBox):
         )
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundUser = getProxyOutboundUser(config)
 
         oldFlow = proxyOutboundUser.get('flow', '')
@@ -240,6 +263,7 @@ class GuiVLESSItemBasicFlow(GuiEditorItemTextComboBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -251,15 +275,19 @@ class GuiVLESSItemBasicFlow(GuiEditorItemTextComboBox):
 
 
 class GuiVLESSGroupBoxBasic(GuiEditorWidgetQGroupBox):
+    """Represent GUI VLESS group box basic."""
     def __init__(self, **kwargs):
+        """Initialize the GuiVLESSGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
 
     def setupPageLayout(self):
+        """Set up page layout."""
         layout = QGridLayout()
         layout.setColumnStretch(1, 1)
         layout.setColumnStretch(3, 1)
 
         def keepSpinBoxCompact(widget: QWidget):
+            """Handle keep spin box compact for the GUI VLESS group box basic."""
             if isinstance(widget, QSpinBox):
                 widget.setSizePolicy(
                     QSizePolicy.Policy.Fixed,
@@ -267,6 +295,7 @@ class GuiVLESSGroupBoxBasic(GuiEditorWidgetQGroupBox):
                 )
 
         def addPair(index: int, row: int, column: int):
+            """Add pair."""
             label, inputWidget = self._containers[index].widgets()
 
             keepSpinBoxCompact(inputWidget)
@@ -275,6 +304,7 @@ class GuiVLESSGroupBoxBasic(GuiEditorWidgetQGroupBox):
             layout.addWidget(inputWidget, row, column + 1)
 
         def addFullRow(index: int, row: int):
+            """Add full row."""
             label, inputWidget = self._containers[index].widgets()
 
             keepSpinBoxCompact(inputWidget)
@@ -294,6 +324,7 @@ class GuiVLESSGroupBoxBasic(GuiEditorWidgetQGroupBox):
         return layout
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemBasicRemark(title=_('Remark')),
             GuiVLESSItemBasicAddress(title=_('Address')),
@@ -305,10 +336,13 @@ class GuiVLESSGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 
 class GuiVLESSGroupBoxProxy(GuiEditorWidgetQGroupBox):
+    """Represent GUI VLESS group box proxy."""
     def __init__(self, **kwargs):
+        """Initialize the GuiVLESSGroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemProxyHttp(title='http', translatable=False),
             GuiEditorItemProxySocks(title='socks', translatable=False),
@@ -316,13 +350,16 @@ class GuiVLESSGroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 
 class GuiVLESS(GuiEditorWidgetQDialog):
+    """Represent GUI VLESS."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESS."""
         super().__init__(*args, **kwargs)
 
         self.setTabText(Protocol.VLESS.value)
 
     @functools.lru_cache(None)
     def groupBoxSequence(self):
+        """Return the configuration group boxes in display order."""
         return [
             GuiVLESSGroupBoxBasic(),
             GuiVLESSGroupBoxProxy(),

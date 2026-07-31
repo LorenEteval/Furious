@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Implement tray actions for edit configuration."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -25,7 +27,9 @@ __all__ = ['EditConfigurationAction']
 
 
 class EditConfigurationAction(AppQAction):
+    """Handle the edit configuration action."""
     def __init__(self, **kwargs):
+        """Initialize the EditConfigurationAction."""
         super().__init__(
             _('Edit Configuration...'),
             icon=bootstrapIcon('pencil-square.svg'),
@@ -33,4 +37,5 @@ class EditConfigurationAction(AppQAction):
         )
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         APP().mainWindow.show()

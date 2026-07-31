@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for system tray icon."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -45,7 +47,9 @@ class SystemTrayIcon(
     Mixins.ThemeAware,
     QSystemTrayIcon,
 ):
+    """Represent system tray icon."""
     def __init__(self, *args, **kwargs):
+        """Initialize the SystemTrayIcon."""
         super().__init__(*args, **kwargs)
 
         actions = [
@@ -112,6 +116,7 @@ class SystemTrayIcon(
         self.activated.connect(self.handleActivated)
 
     def rebuildDynamicMenus(self):
+        """Handle rebuild dynamic menus for the system tray icon."""
         for action in self._actions:
             if hasattr(action, 'rebuildMenu'):
                 action.rebuildMenu()
@@ -126,6 +131,7 @@ class SystemTrayIcon(
                     menu.addAction(childAction)
 
     def bootstrap(self):
+        """Handle bootstrap for the system tray icon."""
         if AppSettings.isStateON_('StartupOnBoot'):
             # Rrefresh startup application location
             StartupOnBoot.on_()
@@ -134,11 +140,14 @@ class SystemTrayIcon(
             self.ConnectAction.trigger()
 
     def showMessage(self, message: str, *args, **kwargs):
+        """Show message."""
         if message:
             super().showMessage(_(APPLICATION_NAME), message, *args, **kwargs)
 
     def setMonochromeIconByTheme(self, theme):
+        """Set monochrome icon by theme."""
         def switchMonochrome():
+            """Handle switch monochrome for the system tray icon."""
             if theme == 'Dark':
                 self.setIcon(bootstrapIconWhite('monochrome-rocket-takeoff.svg'))
             else:
@@ -166,18 +175,21 @@ class SystemTrayIcon(
             switchMonochrome()
 
     def setMonochromeIcon(self):
+        """Set monochrome icon."""
         if APP().isSystemTrayConnected():
             self.setConnectedMonochromeIcon()
         else:
             self.setDisconnectedMonochromeIcon()
 
     def setConnectedMonochromeIcon(self):
+        """Set connected monochrome icon."""
         if PLATFORM == 'Darwin':
             self.setIcon(bootstrapIconMask('monochrome-rocket-takeoff.svg'))
         else:
             self.setMonochromeIconByTheme(APP().theme())
 
     def setDisconnectedMonochromeIcon(self):
+        """Set disconnected monochrome icon."""
         if PLATFORM == 'Darwin':
             icon = bootstrapIconWithOpacity(
                 'monochrome-rocket-takeoff.svg',
@@ -189,6 +201,7 @@ class SystemTrayIcon(
             self.setMonochromeIconByTheme(APP().theme())
 
     def setDisconnectedIcon(self):
+        """Set disconnected icon."""
         if AppSettings.isStateON_('UseMonochromeTrayIcon'):
             self.setDisconnectedMonochromeIcon()
 
@@ -205,6 +218,7 @@ class SystemTrayIcon(
             self.setIcon(bootstrapIcon('rocket-takeoff-disconnected.svg'))
 
     def setConnectedIcon(self):
+        """Set connected icon."""
         if AppSettings.isStateON_('UseMonochromeTrayIcon'):
             self.setConnectedMonochromeIcon()
 
@@ -225,10 +239,12 @@ class SystemTrayIcon(
 
     @QtCore.Slot(QSystemTrayIcon.ActivationReason)
     def handleActivated(self, reason):
+        """Handle activated."""
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             APP().mainWindow.show()
 
     def setCustomToolTip(self):
+        """Set custom tool tip."""
         if SystemRuntime.isAdmin():
             self.setToolTip(
                 f'{_(APPLICATION_NAME)} {APPLICATION_VERSION} ({_(ADMINISTRATOR_NAME)})'
@@ -237,12 +253,15 @@ class SystemTrayIcon(
             self.setToolTip(f'{_(APPLICATION_NAME)} {APPLICATION_VERSION}')
 
     def disconnectedCallback(self):
+        """Update the system tray icon for a disconnected state."""
         self.setDisconnectedIcon()
 
     def connectedCallback(self):
+        """Update the system tray icon for a connected state."""
         self.setConnectedIcon()
 
     def themeChangedCallback(self, theme):
+        """Update the system tray icon for a theme change."""
         if AppSettings.isStateON_('UseMonochromeTrayIcon'):
             # 'theme' is not used. Instead, always query current theme
             self.setMonochromeIcon()
@@ -255,4 +274,5 @@ class SystemTrayIcon(
             self.setDisconnectedIcon()
 
     def retranslate(self):
+        """Refresh translated text for the system tray icon."""
         self.setCustomToolTip()

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for Xray asset download manager."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -35,27 +37,33 @@ logger = logging.getLogger(__name__)
 
 
 class SHA256Worker(QtCore.QObject, QtCore.QRunnable):
+    """Run SHA-256 work in the background."""
     finished = QtCore.Signal(str)
 
     def __init__(self, string=b''):
         # Explictly called __init__
+        """Initialize the SHA256Worker."""
         QtCore.QObject.__init__(self)
         QtCore.QRunnable.__init__(self)
 
         self.string = string
 
     def run(self):
+        """Run the SHA-256 worker task."""
         self.finished.emit(hashlib.sha256(self.string).hexdigest())
 
 
 class XrayAssetSHA256DownloadManager(WebGETManager):
+    """Coordinate Xray asset SHA-256 download operations."""
     def __init__(self, parent=None, **kwargs):
+        """Initialize the XrayAssetSHA256DownloadManager."""
         actionMessage = kwargs.pop('actionMessage', 'download sha256')
 
         super().__init__(parent, actionMessage=actionMessage)
 
     @staticmethod
     def fileContent(filepath, mode='rb') -> AnyStr:
+        """Return the file content value used by the Xray asset SHA-256 download manager."""
         try:
             with open(filepath, mode) as file:
                 return file.read()
@@ -65,6 +73,7 @@ class XrayAssetSHA256DownloadManager(WebGETManager):
             return b''
 
     def successCallback(self, networkReply, **kwargs):
+        """Handle a successful network operation."""
         filepath = kwargs.pop('filepath', '')
         downloadCallback = kwargs.pop('downloadCallback', None)
 
@@ -84,6 +93,7 @@ class XrayAssetSHA256DownloadManager(WebGETManager):
         basename = os.path.basename(filepath)
 
         def handleFinished(_digest, _value=''):
+            """Handle finished."""
             logger.debug(
                 f'computed digest is \'{_digest}\' while repo digest is \'{_value}\''
             )
@@ -104,6 +114,7 @@ class XrayAssetSHA256DownloadManager(WebGETManager):
         AppThreadPool().start(worker)
 
     def download(self, url, filepath, downloadCallback: Callable[[], None]):
+        """Download the Xray asset SHA-256 download manager."""
         self.webGET(
             url,
             filepath=str(filepath),
@@ -112,12 +123,15 @@ class XrayAssetSHA256DownloadManager(WebGETManager):
 
 
 class XrayAssetAssetsDownloadManager(WebGETManager):
+    """Coordinate Xray asset assets download operations."""
     def __init__(self, parent=None, **kwargs):
+        """Initialize the XrayAssetAssetsDownloadManager."""
         actionMessage = kwargs.pop('actionMessage', 'download assets')
 
         super().__init__(parent, actionMessage=actionMessage)
 
     def successCallback(self, networkReply, **kwargs):
+        """Handle a successful network operation."""
         filepath = kwargs.pop('filepath', '')
 
         saveFile = QtCore.QSaveFile(filepath)
@@ -139,11 +153,14 @@ class XrayAssetAssetsDownloadManager(WebGETManager):
                 logger.info(f'save file to \'{filepath}\' success')
 
     def download(self, url, filepath):
+        """Download the Xray asset assets download manager."""
         self.webGET(url, filepath=str(filepath))
 
 
 class XrayAssetPairDownloadHelper:
+    """Represent Xray asset pair download helper."""
     def __init__(self, *args, **kwargs):
+        """Initialize the XrayAssetPairDownloadHelper."""
         sha256ActionMessage = kwargs.pop('sha256ActionMessage', 'download sha256')
         assetsActionMessage = kwargs.pop('assetsActionMessage', 'download assets')
 
@@ -157,6 +174,7 @@ class XrayAssetPairDownloadHelper:
         )
 
     def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
+        """Configure HTTP proxy."""
         return all(
             [
                 self.sha256Downloader.configureHttpProxy(httpProxy),
@@ -165,6 +183,7 @@ class XrayAssetPairDownloadHelper:
         )
 
     def download(self, sha256URL, assetsURL, filepath):
+        """Download the Xray asset pair download helper."""
         self.sha256Downloader.download(
             url=sha256URL,
             filepath=filepath,
@@ -175,7 +194,9 @@ class XrayAssetPairDownloadHelper:
 
 
 class XrayAssetDownloadManager:
+    """Coordinate Xray asset download operations."""
     def __init__(self, *args, **kwargs):
+        """Initialize the XrayAssetDownloadManager."""
         super().__init__(*args, **kwargs)
 
         self.downloadHelperGeosite = XrayAssetPairDownloadHelper(
@@ -188,6 +209,7 @@ class XrayAssetDownloadManager:
         )
 
     def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
+        """Configure HTTP proxy."""
         return all(
             [
                 self.downloadHelperGeosite.configureHttpProxy(httpProxy),
@@ -196,6 +218,7 @@ class XrayAssetDownloadManager:
         )
 
     def download(self):
+        """Download the Xray asset download manager."""
         self.downloadHelperGeosite.download(
             sha256URL=URL_GEOSITE_SHA256,
             assetsURL=URL_GEOSITE,

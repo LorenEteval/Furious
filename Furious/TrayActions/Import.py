@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Implement tray actions for import."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -49,6 +51,7 @@ logger = logging.getLogger(__name__)
 
 
 def showMBoxImportError(clipboard: str):
+    """Show m box import error."""
     mbox = MBoxImportError(icon=AppQMessageBox.Icon.Critical)
 
     if len(clipboard) > 1000:
@@ -64,6 +67,7 @@ def showMBoxImportError(clipboard: str):
 
 
 def importURIFromClipboard(clipboard: str):
+    """Import URI from clipboard."""
     factory = configFactoryFromAny(clipboard)
 
     if not factory.isValid():
@@ -80,6 +84,7 @@ def importURIFromClipboard(clipboard: str):
 
 
 def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
+    """Import ur is."""
     if len(uris) > 1:
         dialog = ImportURIsProgressDialog(
             uris,
@@ -124,6 +129,7 @@ def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
 
 
 class ImportURIsProgressDialog(AppQDialog):
+    """Present progress and cancellation controls for import ur is."""
     ActiveDialogs = list()
 
     def __init__(
@@ -132,6 +138,7 @@ class ImportURIsProgressDialog(AppQDialog):
         failureCallback: Union[Callable[[], None], None] = None,
         parent=None,
     ):
+        """Initialize the ImportURIsProgressDialog."""
         super().__init__(parent)
 
         self.uris = uris
@@ -175,9 +182,11 @@ class ImportURIsProgressDialog(AppQDialog):
         self.updateStatus()
 
     def setWidthAndHeight(self):
+        """Apply the default size for the import ur is progress dialog."""
         self.resize(420, 150)
 
     def open(self):
+        """Open the import ur is progress dialog asynchronously."""
         ImportURIsProgressDialog.ActiveDialogs.append(self)
 
         result = super().open()
@@ -189,14 +198,17 @@ class ImportURIsProgressDialog(AppQDialog):
         return result
 
     def reject(self):
+        """Reject the current import ur is progress dialog values."""
         self.cancel()
 
     def cancel(self):
+        """Cancel the import ur is progress dialog operation."""
         self.canceled = True
         self.cancelButton.setEnabled(False)
         self.updateStatus()
 
     def updateStatus(self):
+        """Update status."""
         total = len(self.uris)
         processed = min(self.currentIndex, total)
 
@@ -212,6 +224,7 @@ class ImportURIsProgressDialog(AppQDialog):
 
     @staticmethod
     def limitedRemark(remark: str) -> str:
+        """Return the limited remark value used by the import ur is progress dialog."""
         remark = str(remark).strip()
 
         if len(remark) <= 120:
@@ -220,6 +233,7 @@ class ImportURIsProgressDialog(AppQDialog):
         return remark[:117] + '...'
 
     def importNext(self):
+        """Import next."""
         if self.canceled or self.currentIndex >= len(self.uris):
             self.finishImport()
 
@@ -246,6 +260,7 @@ class ImportURIsProgressDialog(AppQDialog):
         QtCore.QTimer.singleShot(0, self.importNext)
 
     def finishImport(self):
+        """Handle finish import for the import ur is progress dialog."""
         if self.finishedImport:
             return
 
@@ -281,18 +296,22 @@ class ImportURIsProgressDialog(AppQDialog):
             mbox.open()
 
     def retranslate(self):
+        """Refresh translated text for the import ur is progress dialog."""
         self.setWindowTitle(_(self.windowTitle()))
         self.cancelButton.setText(_(self.cancelButton.text()))
         self.updateStatus()
 
 
 class MBoxImportError(AppQMessageBox):
+    """Represent m box import error."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxImportError."""
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_('Import'))
 
     def retranslate(self):
+        """Refresh translated text for the m box import error."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(_(self.text()))
 
@@ -302,7 +321,9 @@ class MBoxImportError(AppQMessageBox):
 
 
 class MBoxImportMultiSuccess(AppQMessageBox):
+    """Represent m box import multi success."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxImportMultiSuccess."""
         super().__init__(*args, **kwargs)
 
         self.imported = list()
@@ -312,6 +333,7 @@ class MBoxImportMultiSuccess(AppQMessageBox):
         self.setIcon(AppQMessageBox.Icon.Information)
 
     def customText(self):
+        """Return the user-facing message text for the m box import multi success."""
         text = (
             _('Import share link success')
             + '\n\n'
@@ -332,6 +354,7 @@ class MBoxImportMultiSuccess(AppQMessageBox):
             return _('Import share link success') + f'\n\n...'
 
     def retranslate(self):
+        """Refresh translated text for the m box import multi success."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
@@ -341,19 +364,23 @@ class MBoxImportMultiSuccess(AppQMessageBox):
 
 
 class MBoxImportSuccess(AppQMessageBox):
+    """Represent m box import success."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxImportSuccess."""
         super().__init__(*args, **kwargs)
 
         self.remark = ''
         self.setWindowTitle(_('Import'))
 
     def customText(self):
+        """Return the user-facing message text for the m box import success."""
         if self.remark:
             return _('Import success') + f': {self.remark}'
         else:
             return _('Import success')
 
     def retranslate(self):
+        """Refresh translated text for the m box import success."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
@@ -363,7 +390,9 @@ class MBoxImportSuccess(AppQMessageBox):
 
 
 class ImportFromFileAction(AppQAction):
+    """Handle the import from file action."""
     def __init__(self, **kwargs):
+        """Initialize the ImportFromFileAction."""
         super().__init__(
             _('Import From File...'),
             icon=bootstrapIcon('folder2.svg'),
@@ -371,6 +400,7 @@ class ImportFromFileAction(AppQAction):
         )
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         filename, selectedFilter = QFileDialog.getOpenFileName(
             None,
             _('Import File'),
@@ -415,10 +445,13 @@ class ImportFromFileAction(AppQAction):
 
 
 class ImportURIFromClipboardAction(AppQAction):
+    """Handle the import URI from clipboard action."""
     def __init__(self, **kwargs):
+        """Initialize the ImportURIFromClipboardAction."""
         super().__init__(_('Import Share Link From Clipboard'), **kwargs)
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         clipboard = QApplication.clipboard().text().strip()
 
         try:
@@ -435,17 +468,22 @@ class ImportURIFromClipboardAction(AppQAction):
 
 
 class ImportJSONFromClipboardAction(AppQAction):
+    """Handle the import JSON from clipboard action."""
     def __init__(self, **kwargs):
+        """Initialize the ImportJSONFromClipboardAction."""
         super().__init__(_('Import JSON Configuration From Clipboard'), **kwargs)
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         clipboard = QApplication.clipboard().text().strip()
 
         importURIFromClipboard(clipboard)
 
 
 class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
+    """Handle the import QR code on the screen action."""
     def __init__(self, **kwargs):
+        """Initialize the ImportQRCodeOnTheScreenAction."""
         super().__init__(
             _('Scan QR Code On The Screen'),
             icon=bootstrapIcon('qr-code-scan.svg'),
@@ -462,6 +500,7 @@ class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
             self.sct = None
 
     def _importFromQRCode(self):
+        """Handle import from QR code for the import QR code on the screen action."""
         if self.sct is None:
             # Nothing to do
             return
@@ -487,6 +526,7 @@ class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
         importURIs(*uris)
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         try:
             self._importFromQRCode()
         except Exception as ex:
@@ -495,6 +535,7 @@ class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
             logger.error(f'error while importing QR code on the screen: {ex}')
 
     def cleanup(self):
+        """Release resources owned by the import QR code on the screen action."""
         try:
             if self.sct is not None:
                 self.sct.close()
@@ -505,7 +546,9 @@ class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
 
 
 class ImportAction(AppQAction):
+    """Handle the import action."""
     def __init__(self, **kwargs):
+        """Initialize the ImportAction."""
         super().__init__(
             _('Import'),
             icon=bootstrapIcon('lightning-charge.svg'),

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Wrap the embedded Hysteria 2 core process."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -34,6 +36,7 @@ __all__ = ['Hysteria2']
 
 
 def startHysteria2(jsonString: str, msgQueue: multiprocessing.Queue):
+    """Start hysteria2."""
     try:
         import hysteria2
     except ImportError:
@@ -54,7 +57,9 @@ def startHysteria2(jsonString: str, msgQueue: multiprocessing.Queue):
 
 
 class Hysteria2(CoreProcessWorker):
+    """Manage the embedded Hysteria 2 core subprocess."""
     class ExitCode(Enum):
+        """Enumerate process exit codes."""
         ConfigurationError = 23
         # Windows: 4294967295. Darwin, Linux: 255 (-1)
         ServerStartFailure = 4294967295 if PLATFORM == 'Windows' else 255
@@ -62,14 +67,17 @@ class Hysteria2(CoreProcessWorker):
         SystemShuttingDown = 0x40010004
 
     def __init__(self, **kwargs):
+        """Initialize the Hysteria2."""
         super().__init__(**kwargs)
 
     @staticmethod
     def name() -> str:
+        """Return the process implementation name."""
         return 'Hysteria2'
 
     @staticmethod
     def version() -> str:
+        """Return the bundled core version."""
         try:
             import hysteria2
 
@@ -82,6 +90,7 @@ class Hysteria2(CoreProcessWorker):
     def launchSpec(
         self, config: Union[str, dict], **kwargs
     ) -> Union[CoreLaunchSpec, None]:
+        """Build the child-process launch specification."""
         param = self.toJSONString(config)
 
         if not param:
@@ -97,6 +106,7 @@ class Hysteria2(CoreProcessWorker):
         )
 
     def start(self, config: Union[str, dict], **kwargs) -> bool:
+        """Start the hysteria2."""
         launchSpec = self.launchSpec(config, **kwargs)
 
         if launchSpec is None:

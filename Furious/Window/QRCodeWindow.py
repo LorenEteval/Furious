@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide the application window for QR code window."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -33,7 +35,9 @@ __all__ = ['QRCodeWindow']
 
 
 class QRCodeWindow(AppQMainWindow):
+    """Present the QR code window."""
     def __init__(self, *args, **kwargs):
+        """Initialize the QRCodeWindow."""
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_(APPLICATION_NAME))
@@ -46,9 +50,11 @@ class QRCodeWindow(AppQMainWindow):
         self.setCentralWidget(self.tabWidget)
 
     def tabCount(self) -> int:
+        """Return the tab count value used by the QR code window."""
         return self.tabWidget.count()
 
     def initTabByIndex(self, indexes):
+        """Handle init tab by index for the QR code window."""
         self.tabWidget.clear()
 
         for index in indexes:
@@ -79,6 +85,7 @@ class QRCodeWindow(AppQMainWindow):
 
     @QtCore.Slot(int)
     def handleTabCloseRequested(self, index):
+        """Handle tab close requested."""
         self.tabWidget.removeTab(index)
 
         if self.tabWidget.count() == 0:

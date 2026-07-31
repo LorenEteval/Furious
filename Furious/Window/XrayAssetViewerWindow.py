@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide the application window for Xray asset viewer window."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -33,7 +35,9 @@ logger = logging.getLogger(__name__)
 
 
 class XrayAssetViewerWindow(AppQMainWindow):
+    """Present the Xray asset viewer window."""
     def __init__(self, *args, **kwargs):
+        """Initialize the XrayAssetViewerWindow."""
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_('Xray-core Asset File'))
@@ -83,19 +87,23 @@ class XrayAssetViewerWindow(AppQMainWindow):
         self.menuBar().addMenu(self.fileMenu)
 
     def setWidthAndHeight(self):
+        """Apply the default size for the Xray asset viewer window."""
         self.resize(360, 360 * GOLDEN_RATIO)
 
     def flushItem(self):
+        """Refresh item."""
         self.xrayAssetViewerWidget.flushItem()
 
     @staticmethod
     def openAssetDirectory():
+        """Open asset directory."""
         if QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(XRAY_ASSET_DIR)):
             logger.info(f'open Xray-core asset dir success')
         else:
             logger.error(f'open Xray-core asset dir failed')
 
     def appendNewItem(self):
+        """Append new item."""
         filename, selectedFilter = QFileDialog.getOpenFileName(
             None, _('Import File'), filter=_('All files (*)')
         )

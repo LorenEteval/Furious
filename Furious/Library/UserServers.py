@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Persist and reconstruct user server configurations."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -28,6 +30,7 @@ registerAppSettings('Configuration')
 
 
 class UserServer:
+    """Represent user server."""
     remark: str
     config: str
     subsId: str
@@ -35,10 +38,13 @@ class UserServer:
 
 class UserServers(Mixins.CleanupOnExit, StorageFactory):
     # remark, config, subsId. (subsId corresponds to unique in user subscription)
+    """Manage the persisted list of server configurations."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserServers."""
         super().__init__(*args, **kwargs)
 
         def restore():
+            """Restore the user servers."""
             try:
                 return UJSONEncoder.decode(
                     PyBase64Encoder.decode(AppSettings.get('Configuration'))
@@ -55,6 +61,7 @@ class UserServers(Mixins.CleanupOnExit, StorageFactory):
         )
 
     def sync(self):
+        """Persist the current user servers data."""
         AppSettings.set(
             'Configuration',
             PyBase64Encoder.encode(
@@ -66,7 +73,9 @@ class UserServers(Mixins.CleanupOnExit, StorageFactory):
 
     def data(self) -> list[ConfigFactory]:
         # Shallow copy
+        """Return the data managed by the user servers."""
         return self._list
 
     def cleanup(self):
+        """Release resources owned by the user servers."""
         self.sync()

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide bundled tcping."""
+
 from __future__ import annotations
 
 from typing import Tuple
@@ -34,6 +36,7 @@ def tcping(
     count: int,
     interval: float,
 ) -> Tuple[int, list]:
+    """Return the tcping value used by the application."""
     host = socket.gethostbyname(address)
     addressobject = ipaddress.ip_address(host)
 

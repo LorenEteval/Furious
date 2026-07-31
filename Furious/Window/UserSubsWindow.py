@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide the application window for user subs window."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -37,7 +39,9 @@ registerAppSettings('UserSubsWindowState')
 
 
 class AddSubsDialog(AppQDialog):
+    """Present the add subs dialog."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AddSubsDialog."""
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_('Add Subscription'))
@@ -67,19 +71,24 @@ class AddSubsDialog(AppQDialog):
         self.setLayout(layout)
 
     def setWidthAndHeight(self):
+        """Apply the default size for the add subs dialog."""
         self.resize(456, 150)
 
     def subsRemark(self):
+        """Return the subs remark value used by the add subs dialog."""
         return self.remarkEdit.text()
 
     def subsWebURL(self):
+        """Return the subs web URL value used by the add subs dialog."""
         return self.webURLEdit.text()
 
 
 class UserSubsWindow(AppQMainWindow):
+    """Present the user subs window."""
     DEFAULT_WINDOW_SIZE = QtCore.QSize(1120, 600)
 
     def __init__(self, *args, **kwargs):
+        """Initialize the UserSubsWindow."""
         callback = kwargs.pop('deleteUniqueCallback', None)
 
         super().__init__(*args, **kwargs)
@@ -116,7 +125,9 @@ class UserSubsWindow(AppQMainWindow):
         self.setCentralWidget(self.fakeCentralWidget)
 
     def addSubs(self):
+        """Add subs."""
         def handleResultCode(_addSubsDialog, code):
+            """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
                 remark = _addSubsDialog.subsRemark()
                 webURL = _addSubsDialog.subsWebURL()
@@ -142,15 +153,18 @@ class UserSubsWindow(AppQMainWindow):
         addSubsDialog.open()
 
     def deleteSelectedItem(self):
+        """Delete selected item."""
         self.userSubsQTableWidget.deleteSelectedItem()
 
     def keyPressEvent(self, event):
+        """Handle a key press for the user subs window."""
         if event.key() == QtCore.Qt.Key.Key_Delete:
             self.deleteSelectedItem()
         else:
             super().keyPressEvent(event)
 
     def setWidthAndHeight(self):
+        """Apply the default size for the user subs window."""
         if AppSettings.get('UserSubsWindowGeometry') is None:
             # Migrate legacy settings
             try:
@@ -185,5 +199,6 @@ class UserSubsWindow(AppQMainWindow):
                     pass
 
     def cleanup(self):
+        """Release resources owned by the user subs window."""
         AppSettings.set('UserSubsWindowGeometry', self.saveGeometry())
         AppSettings.set('UserSubsWindowState', self.saveState())

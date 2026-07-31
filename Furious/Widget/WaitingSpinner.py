@@ -54,6 +54,7 @@ class WaitingSpinner(QWidget):
         speed: float = math.pi / 2,
         color: QColor = QColor(0, 0, 0),
     ) -> None:
+        """Initialize the WaitingSpinner."""
         super().__init__(parent)
 
         self._center_on_parent: bool = center_on_parent

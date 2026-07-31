@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide the application window for log viewer window."""
+
 from __future__ import annotations
 
 from Furious.Qt import *
@@ -27,18 +29,22 @@ __all__ = ['LogViewerWindow']
 
 
 class MBoxSaveError(AppQMessageBox):
+    """Represent m box save error."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxSaveError."""
         super().__init__(*args, **kwargs)
 
         self.saveError = ''
 
     def customText(self):
+        """Return the user-facing message text for the m box save error."""
         if self.saveError:
             return _('Unable to save log') + f'\n\n{self.saveError}'
         else:
             return _('Unable to save log')
 
     def retranslate(self):
+        """Refresh translated text for the m box save error."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
@@ -48,6 +54,7 @@ class MBoxSaveError(AppQMessageBox):
 
 
 def saveAsFile(content: str):
+    """Save as file."""
     filename, selectedFilter = QFileDialog.getSaveFileName(
         None, _('Save File'), filter=_('Text files (*.txt);;All files (*)')
     )
@@ -69,7 +76,9 @@ def saveAsFile(content: str):
 
 
 class LogViewerWindow(AppQMainWindow):
+    """Present the log viewer window."""
     def __init__(self, *args, **kwargs):
+        """Initialize the LogViewerWindow."""
         tabTitle = kwargs.pop('tabTitle', '')
         fontFamily = kwargs.pop('fontFamily', '')
         pointSizeSettingsName = kwargs.pop('pointSizeSettingsName', '')
@@ -152,10 +161,13 @@ class LogViewerWindow(AppQMainWindow):
         self.menuBar().addMenu(self._viewMenu)
 
     def plainText(self) -> str:
+        """Return the plain text value used by the log viewer window."""
         return self.textBrowser.toPlainText()
 
     def appendLine(self, line: str):
+        """Append line."""
         self.textBrowser.appendLine(line)
 
     def clear(self):
+        """Remove all data from the log viewer window."""
         self.textBrowser.clear()

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for qt network."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -27,10 +29,13 @@ __all__ = ['AppQNetworkAccessManager']
 
 
 class AppQNetworkAccessManager(QNetworkAccessManager):
+    """Coordinate app q network access operations."""
     def __init__(self, parent=None):
+        """Initialize the AppQNetworkAccessManager."""
         super().__init__(parent)
 
     def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
+        """Configure HTTP proxy."""
         if httpProxy is None:
             useProxy = False
         else:

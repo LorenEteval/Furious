@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide the application window for text editor window."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -35,7 +37,9 @@ registerAppSettings('ServerWidgetPointSize')
 
 
 class MBoxQuestionSave(AppQMessageBox):
+    """Represent m box question save."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxQuestionSave."""
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_('Save Changes'))
@@ -51,18 +55,22 @@ class MBoxQuestionSave(AppQMessageBox):
 
 
 class MBoxJSONDecodeError(AppQMessageBox):
+    """Represent m box JSON decode error."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxJSONDecodeError."""
         super().__init__(*args, **kwargs)
 
         self.error = ''
 
     def customText(self):
+        """Return the user-facing message text for the m box JSON decode error."""
         return (
             _('Please check if the configuration is in valid JSON format')
             + f'\n\n{self.error}'
         )
 
     def retranslate(self):
+        """Refresh translated text for the m box JSON decode error."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
@@ -72,7 +80,9 @@ class MBoxJSONDecodeError(AppQMessageBox):
 
 
 class TextEditorWindow(AppQMainWindow):
+    """Present the text editor window."""
     def __init__(self, *args, **kwargs):
+        """Initialize the TextEditorWindow."""
         super().__init__(*args, **kwargs)
 
         self.customWindowTitle = ''
@@ -90,9 +100,11 @@ class TextEditorWindow(AppQMainWindow):
         self.statusBar().addPermanentWidget(self.lineColumnLabel)
 
         def modificationCallback():
+            """Handle the modification callback."""
             self.markAsModified()
 
         def cursorChangedCallback(cursor: QTextCursor):
+            """Handle the cursor changed callback."""
             self.lineColumnLabel.setText(
                 f'{cursor.blockNumber() + 1}:{cursor.columnNumber() + 1} {cursor.position()}'
             )
@@ -233,14 +245,17 @@ class TextEditorWindow(AppQMainWindow):
         self.menuBar().addMenu(self.viewMenu)
 
     def markAsModified(self):
+        """Handle mark as modified for the text editor window."""
         self.modified = True
         self.setWindowTitle(self.customWindowTitle + self.modifiedMark)
 
     def markAsSaved(self):
+        """Handle mark as saved for the text editor window."""
         self.modified = False
         self.setWindowTitle(self.customWindowTitle)
 
     def setPlainText(self, text: str, blockSignals: bool):
+        """Set plain text."""
         if blockSignals:
             with Mixins.QBlockSignalContext(self.jsonEditor):
                 self.jsonEditor.setPlainText(text)
@@ -248,6 +263,7 @@ class TextEditorWindow(AppQMainWindow):
             self.jsonEditor.setPlainText(text)
 
     def save(self, showChangesMethod='open') -> bool:
+        """Save the text editor window."""
         index = self.currentIndex
 
         if index < 0:
@@ -296,6 +312,7 @@ class TextEditorWindow(AppQMainWindow):
             return True
 
     def saveAsFile(self):
+        """Save as file."""
         filename, selectedFilter = QFileDialog.getSaveFileName(
             None, _('Save File'), filter=_('Text files (*.json);;All files (*)')
         )
@@ -317,7 +334,9 @@ class TextEditorWindow(AppQMainWindow):
                 mbox.open()
 
     def setIndent(self):
+        """Set indent."""
         def handleResultCode(_indentSpinBox, code):
+            """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
                 plain = self.jsonEditor.toPlainText()
 
@@ -353,6 +372,7 @@ class TextEditorWindow(AppQMainWindow):
         indentSpinBox.open()
 
     def showTabAndSpaces(self):
+        """Show tab and spaces."""
         textOption = QTextOption()
         textOption.setFlags(QTextOption.Flag.ShowTabsAndSpaces)
 
@@ -362,6 +382,7 @@ class TextEditorWindow(AppQMainWindow):
         self.jsonEditor.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 
     def hideTabAndSpaces(self):
+        """Hide tab and spaces."""
         textOption = QTextOption()
 
         self.jsonEditor.document().setDefaultTextOption(textOption)
@@ -370,11 +391,13 @@ class TextEditorWindow(AppQMainWindow):
         self.jsonEditor.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 
     def closeEvent(self, event: QtCore.QEvent):
+        """Handle closure of the text editor window."""
         if self.modified:
             mbox = MBoxQuestionSave(icon=AppQMessageBox.Icon.Question, parent=self)
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
             def handleButtonClicked(button):
+                """Handle button clicked."""
                 if button == mbox.button0:
                     # Save
                     if self.save(showChangesMethod='exec'):
@@ -403,4 +426,5 @@ class TextEditorWindow(AppQMainWindow):
 
     def retranslate(self):
         # Do nothing
+        """Refresh translated text for the text editor window."""
         pass

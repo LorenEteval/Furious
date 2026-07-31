@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for app style sheet."""
+
 from __future__ import annotations
 
 from textwrap import dedent
@@ -23,6 +25,7 @@ __all__ = ['AppStyleSheet']
 
 
 class AppStyleSheet:
+    """Represent app style sheet."""
     Light = 'Light'
     Dark = 'Dark'
     FontPointSize = 10
@@ -82,6 +85,7 @@ class AppStyleSheet:
 
     @staticmethod
     def normalizeTheme(theme):
+        """Return the normalize theme value used by the app style sheet."""
         if theme == AppStyleSheet.Dark:
             return AppStyleSheet.Dark
 
@@ -89,6 +93,7 @@ class AppStyleSheet:
 
     @staticmethod
     def forTheme(theme):
+        """Return the for theme value used by the app style sheet."""
         normalizedTheme = AppStyleSheet.normalizeTheme(theme)
         palette = AppStyleSheet.Palettes[normalizedTheme]
         iconPrefix = ':/Icons/bootstrap'

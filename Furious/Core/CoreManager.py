@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Coordinate proxy cores, TUN mode, DNS, and platform routing."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -41,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 def fixLogObjectPath(config: ConfigFactory, attr: str, value: str, log=True):
+    """Resolve and normalize one log-file path in a core configuration."""
     try:
         path = config['log'][attr]
     except Exception:
@@ -84,6 +87,7 @@ def fixLogObjectPath(config: ConfigFactory, attr: str, value: str, log=True):
 
 
 def cleanRoutingRule(rule: dict):
+    """Remove empty match fields from an Xray routing rule."""
     if not isinstance(rule, dict):
         return None
 
@@ -131,6 +135,7 @@ def cleanRoutingRule(rule: dict):
 
 
 def customRoutingObjectFromSettings(routing: str):
+    """Load a named custom routing object from persistent settings."""
     prefix = 'Custom:'
 
     if not isinstance(routing, str) or not routing.startswith(prefix):
@@ -165,6 +170,7 @@ def customRoutingObjectFromSettings(routing: str):
 
 
 def routingObjectHasDirectRule(routingObject: dict) -> bool:
+    """Return whether an Xray routing object contains a direct rule."""
     try:
         return any(
             rule.get('outboundTag') == 'direct'
@@ -178,6 +184,7 @@ def routingObjectHasDirectRule(routingObject: dict) -> bool:
 
 
 def getUserTUNSettings(*args, **kwargs):
+    """Return one user-defined TUN setting or its fallback value."""
     return Storage.UserTUNSettings().get(*args, **kwargs)
 
 
@@ -205,7 +212,9 @@ def getUserTUNSettings(*args, **kwargs):
 
 
 class CoreManager(Mixins.CleanupOnExit):
+    """Coordinate proxy cores, TUN setup, DNS changes, and routing cleanup."""
     def __init__(self, *args, **kwargs):
+        """Initialize the CoreManager."""
         super().__init__(*args, **kwargs)
 
         self.uniqueCleanup = False
@@ -222,6 +231,7 @@ class CoreManager(Mixins.CleanupOnExit):
         log=True,
         **kwargs,
     ) -> Tuple[Union[CoreProcessWorker, None], bool]:
+        """Return the start core value used by the core manager."""
         return None, False
 
     @_startCore.register(ConfigXray)
@@ -235,6 +245,7 @@ class CoreManager(Mixins.CleanupOnExit):
         log=True,
         **kwargs,
     ):
+        """Handle the registered singledispatch variant."""
         if config.get('log') is None or not isinstance(config['log'], dict):
             config['log'] = {
                 'access': '',
@@ -332,6 +343,7 @@ class CoreManager(Mixins.CleanupOnExit):
         log=True,
         **kwargs,
     ):
+        """Handle the registered singledispatch variant."""
         if routing == AppBuiltinRouting.BypassMainlandChina.value:
             # TUN Mode handling
             if not proxyModeOnly and SystemRuntime.isTUNMode():
@@ -385,6 +397,7 @@ class CoreManager(Mixins.CleanupOnExit):
         log=True,
         **kwargs,
     ):
+        """Handle the registered singledispatch variant."""
         if log:
             logger.info(f'core {Hysteria2.name()} configured')
 
@@ -395,6 +408,7 @@ class CoreManager(Mixins.CleanupOnExit):
 
     @staticmethod
     def waitForTUNDeviceBroughtUp(func: Callable[[str], bool], deviceName: str) -> bool:
+        """Wait for the platform to expose the configured TUN device."""
         for counter in range(0, 10000, 100):
             if func(deviceName):
                 logger.info(
@@ -421,12 +435,14 @@ class CoreManager(Mixins.CleanupOnExit):
         log=True,
         **kwargs,
     ) -> bool:
+        """Start the selected proxy core and configure TUN mode when requested."""
         if deepcopy:
             configcopy = config.deepcopy()
         else:
             configcopy = config
 
         def abortStart(message: str = ''):
+            """Return the abort start value used by the core manager."""
             if message:
                 logger.error(message)
 
@@ -639,6 +655,7 @@ class CoreManager(Mixins.CleanupOnExit):
                 if alias:
 
                     def _windowsCleanup(_alias):
+                        """Handle windows cleanup for the core manager."""
                         SystemRoutingTable.WIN32SetInterfaceDNS(_alias)
                         SystemRoutingTable.WIN32FlushDNSCache()
 
@@ -693,6 +710,7 @@ class CoreManager(Mixins.CleanupOnExit):
                 servers = SystemRoutingTable.DarwinGetDNSServers()
 
                 def _darwinCleanup(_servers):
+                    """Handle darwin cleanup for the core manager."""
                     for _service, _dnsserver in _servers:
                         SystemRoutingTable.DarwinSetDNSServers(_service, _dnsserver)
 
@@ -726,6 +744,7 @@ class CoreManager(Mixins.CleanupOnExit):
             if PLATFORM == 'Linux':
 
                 def _linuxCleanup():
+                    """Handle linux cleanup for the core manager."""
                     SystemRoutingTable.LinuxDeleteTUNDevice(APPLICATION_TUN_DEVICE_NAME)
 
                 tun.cleanup = functools.partial(_linuxCleanup)
@@ -754,6 +773,7 @@ class CoreManager(Mixins.CleanupOnExit):
                 )
 
                 def route(source, destination) -> str:
+                    """Configure platform routing for the active proxy connection."""
                     return f'{source} via {destination} dev {interface}'
 
                 iproute = SystemRoutingTable.LinuxGetIpRoute()
@@ -802,12 +822,15 @@ class CoreManager(Mixins.CleanupOnExit):
         return True
 
     def allRunning(self) -> bool:
+        """Return whether every managed process is running."""
         return all(process.isAlive() for process in self.processesPool)
 
     def anyRunning(self) -> bool:
+        """Return whether any managed process is running."""
         return any(process.isAlive() for process in self.processesPool)
 
     def stopAll(self):
+        """Stop every managed proxy and TUN process."""
         try:
             for process in list(self.processesPool):
                 if not isinstance(process, CoreProcessFactory):
@@ -821,4 +844,5 @@ class CoreManager(Mixins.CleanupOnExit):
             self.processesPool.clear()
 
     def cleanup(self):
+        """Release resources owned by the core manager."""
         self.stopAll()

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Implement tray actions for connect."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -39,6 +41,7 @@ registerAppSettings('Connect', isBinary=True)
 
 
 def validateProxyServer(server) -> bool:
+    """Validate proxy server."""
     try:
         host, port = parseHostPort(server)
 
@@ -53,7 +56,9 @@ def validateProxyServer(server) -> bool:
 
 
 class ConnectAction(AppQAction):
+    """Handle the connect action."""
     def __init__(self, **kwargs):
+        """Initialize the ConnectAction."""
         super().__init__(
             _('Connect'),
             icon=bootstrapIcon('unlock-fill.svg'),
@@ -72,6 +77,7 @@ class ConnectAction(AppQAction):
         self.assetDownloadManager = XrayAssetDownloadManager()
 
     def reset(self):
+        """Restore the connect action to its initial state."""
         self.hideProgressBar(True)
         self.setText(_('Connect'))
         self.setIcon(bootstrapIcon('unlock-fill.svg'))
@@ -83,6 +89,7 @@ class ConnectAction(AppQAction):
         self.setDisabledAction(False)
 
     def showProgressBar(self):
+        """Show progress bar."""
         if AppSettings.isStateON_('ShowProgressBarWhenConnecting'):
             self.progressBar.setValue(0)
             # Update the progress bar every 50ms
@@ -92,6 +99,7 @@ class ConnectAction(AppQAction):
         return self
 
     def hideProgressBar(self, done: bool):
+        """Hide progress bar."""
         if done:
             self.progressBar.setValue(100)
 
@@ -101,6 +109,7 @@ class ConnectAction(AppQAction):
         return self
 
     def setDisabledAction(self, value):
+        """Set disabled action."""
         self.setDisabled(value)
 
         APP().systemTray.RoutingAction.setDisabled(value)
@@ -112,12 +121,15 @@ class ConnectAction(AppQAction):
             TUNModeAction.setDisabled(value)
 
     def isConnected(self) -> bool:
+        """Return whether connected."""
         return self.textCompare('Disconnect')
 
     def isConnecting(self):
+        """Return whether connecting."""
         return self.textCompare('Connecting')
 
     def doConnecting(self):
+        """Handle do connecting for the connect action."""
         self.setText(_('Connecting'))
         self.setIcon(bootstrapIcon('lock-fill.svg'))
         # Do not accept new action
@@ -125,6 +137,7 @@ class ConnectAction(AppQAction):
         self.showProgressBar()
 
     def doConnected(self):
+        """Handle do connected for the connect action."""
         self.hideProgressBar(True)
         # Connected
         self.setText(_('Disconnect'))
@@ -137,6 +150,7 @@ class ConnectAction(AppQAction):
         self.setDisabledAction(False)
 
     def doDisconnect(self):
+        """Handle do disconnect for the connect action."""
         SystemProxy.off()
 
         self.actionTimer.stop()
@@ -155,16 +169,19 @@ class ConnectAction(AppQAction):
         Mixins.ConnectionAware.callDisconnectedCallback()
 
     def doDisconnectWithTrayMessage(self, message: str):
+        """Handle do disconnect with tray message for the connect action."""
         self.doDisconnect()
 
         APP().systemTray.showMessage(message)
 
     def doReconnect(self, message=''):
+        """Handle do reconnect for the connect action."""
         self.doDisconnectWithTrayMessage(message)
         self.trigger()
 
     def doConnect(self):
         # Connect action
+        """Return the do connect value used by the connect action."""
         assert self.textCompare('Connect')
 
         if not Storage.UserServers():
@@ -212,6 +229,7 @@ class ConnectAction(AppQAction):
 
             @forceToLocalhostIfPossible()
             def getHttpProxy() -> str:
+                """Return HTTP proxy."""
                 return config.httpProxy()
 
             httpProxy = getHttpProxy()
@@ -304,7 +322,9 @@ class ConnectAction(AppQAction):
 
     @callOnceOnly
     def doConnectedCallOnceOnly(self):
+        """Handle do connected call once only for the connect action."""
         def newVersionCallback(newVersion):
+            """Handle the new version callback."""
             APP().systemTray.showMessage(
                 f'{APPLICATION_NAME} {newVersion} ' + _('is available to download')
             )
@@ -333,6 +353,7 @@ class ConnectAction(AppQAction):
                 logger.info('skipped auto assets update due to settings')
 
     def callActionFromQueue(self):
+        """Call action from queue."""
         try:
             action = self.actionQueue.get_nowait()
         except queue.Empty:
@@ -348,7 +369,9 @@ class ConnectAction(AppQAction):
                 action()
 
     def coreExitCallback(self, core: CoreProcessFactory, exitcode: int):
+        """Handle the core exit callback."""
         def putItem(item):
+            """Handle put item for the connect action."""
             try:
                 self.actionQueue.put_nowait(item)
             except Exception:
@@ -401,6 +424,7 @@ class ConnectAction(AppQAction):
         return None
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         if checked:
             self.doConnect()
         else:

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for qt widgets."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -64,6 +66,7 @@ __all__ = [
 
 
 def moveToCenter(widget, parent=None):
+    """Move to center."""
     geometry = widget.frameGeometry()
 
     if parent is not None:
@@ -81,24 +84,32 @@ def moveToCenter(widget, parent=None):
 
 
 class AppQCheckBox(Mixins.QTranslatable, QCheckBox):
+    """Represent app q check box."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQCheckBox."""
         super().__init__(*args, **kwargs)
 
     def retranslate(self):
+        """Refresh translated text for the app q check box."""
         self.setText(_(self.text()))
 
 
 class AppQComboBox(Mixins.QTranslatable, QComboBox):
+    """Represent app q combo box."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQComboBox."""
         super().__init__(*args, **kwargs)
 
     def retranslate(self):
+        """Refresh translated text for the app q combo box."""
         for index in range(self.count()):
             self.setItemText(index, _(self.itemText(index)))
 
 
 class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
+    """Present the app Qt dialog."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQDialog."""
         super().__init__(*args, **kwargs)
 
         self._firstShowCall = True
@@ -109,19 +120,23 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         self.setWindowIcon(AppHue.currentWindowIcon())
 
     def setWidthAndHeight(self):
+        """Apply the default size for the app Qt dialog."""
         pass
 
     def exec(self):
+        """Show and execute the app Qt dialog modally."""
         self.show()
 
         return super().exec()
 
     def open(self):
+        """Open the app Qt dialog asynchronously."""
         self.show()
 
         return super().open()
 
     def show(self):
+        """Show and position the app Qt dialog."""
         super().show()
 
         if PLATFORM == 'Darwin':
@@ -133,40 +148,52 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         moveToCenter(self)
 
     def retranslate(self):
+        """Refresh translated text for the app Qt dialog."""
         self.setWindowTitle(_(self.windowTitle()))
 
     def disconnectedCallback(self):
+        """Update the app Qt dialog for a disconnected state."""
         self.setWindowIcon(AppHue.disconnectedWindowIcon())
 
     def connectedCallback(self):
+        """Update the app Qt dialog for a connected state."""
         self.setWindowIcon(AppHue.connectedWindowIcon())
 
 
 class AppQDialogButtonBox(Mixins.QTranslatable, QDialogButtonBox):
+    """Represent app Qt dialog button box."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQDialogButtonBox."""
         super().__init__(*args, **kwargs)
 
     def retranslate(self):
+        """Refresh translated text for the app Qt dialog button box."""
         for button in self.buttons():
             button.setText(_(button.text()))
 
 
 class AppQGroupBox(Mixins.QTranslatable, QGroupBox):
+    """Group the app q editor controls."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQGroupBox."""
         super().__init__(*args, **kwargs)
 
     def retranslate(self):
+        """Refresh translated text for the app q group box."""
         self.setTitle(_(self.title()))
 
 
 class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
+    """Represent app q header view."""
     def sectionSizeSettingsEmpty(self):
+        """Return the section size settings empty value used by the app q header view."""
         return (
             self.legacySectionSizeSettingsName == ''
             and self.sectionSizeSettingsName == ''
         )
 
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQHeaderView."""
         self.legacySectionSizeSettingsName = kwargs.pop(
             'legacySectionSizeSettingsName', ''
         )
@@ -193,6 +220,7 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
         # self.sectionResized.connect(self.handleSectionResized)
 
     def restoreSectionSize(self):
+        """Restore section size."""
         if self.sectionSizeSettingsEmpty():
             return
 
@@ -237,6 +265,7 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
 
     def setCustomSectionResizeMode(self):
         # Horizontal header resize mode
+        """Set custom section resize mode."""
         for index in range(self.columnCount):
             if index < self.columnCount - 1:
                 self.setSectionResizeMode(index, AppQHeaderView.ResizeMode.Interactive)
@@ -245,16 +274,19 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
 
     @staticmethod
     def getStyleSheet(color):
+        """Return style sheet."""
         return f'QHeaderView::section:hover {{ background-color: {color}; }}'
 
     def disconnectedCallback(self):
         # self.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
 
+        """Update the app q header view for a disconnected state."""
         pass
 
     def connectedCallback(self):
         # self.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
 
+        """Update the app q header view for a connected state."""
         pass
 
     # Legacy method. Not used
@@ -267,6 +299,7 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
     #     self.sectionSizeTable[str(index)] = newSize
 
     def cleanup(self):
+        """Release resources owned by the app q header view."""
         if self.sectionSizeSettingsEmpty():
             return
 
@@ -279,28 +312,37 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
 
 
 class AppQLabel(Mixins.QTranslatable, QLabel):
+    """Represent app q label."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQLabel."""
         super().__init__(*args, **kwargs)
 
     def retranslate(self):
+        """Refresh translated text for the app q label."""
         self.setText(_(self.text()))
 
 
 class AppQLineEdit(Mixins.QTranslatable, QLineEdit):
+    """Represent app q line edit."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQLineEdit."""
         super().__init__(*args, **kwargs)
 
     def retranslate(self):
+        """Refresh translated text for the app q line edit."""
         self.setPlaceholderText(_(self.placeholderText()))
 
 
 class AppQListWidget(Mixins.ConnectionAware, QListWidget):
+    """Provide the app Qt list widget."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQListWidget."""
         super().__init__(*args, **kwargs)
 
         # self.setSelectionColor(AppHue.disconnectedColor())
 
     def setSelectionColor(self, color):
+        """Set selection color."""
         self.setStyleSheet(
             f'QListWidget::item:selected {{'
             f'    background: {color};'
@@ -313,16 +355,19 @@ class AppQListWidget(Mixins.ConnectionAware, QListWidget):
 
     @property
     def selectedIndex(self):
+        """Return the selected index value."""
         return sorted(list(set(index.row() for index in self.selectedIndexes())))
 
     def disconnectedCallback(self):
         # self.setSelectionColor(AppHue.disconnectedColor())
 
+        """Update the app Qt list widget for a disconnected state."""
         pass
 
     def connectedCallback(self):
         # self.setSelectionColor(AppHue.connectedColor())
 
+        """Update the app Qt list widget for a connected state."""
         pass
 
 
@@ -332,7 +377,9 @@ class AppQMainWindow(
     Mixins.CleanupOnExit,
     QMainWindow,
 ):
+    """Present the app q main window."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQMainWindow."""
         super().__init__(*args, **kwargs)
 
         self._firstShowCall = True
@@ -346,9 +393,11 @@ class AppQMainWindow(
             self.setWidthAndHeight()
 
     def setWidthAndHeight(self):
+        """Apply the default size for the app q main window."""
         pass
 
     def show(self):
+        """Show and position the app q main window."""
         super().show()
 
         if PLATFORM == 'Darwin':
@@ -366,20 +415,26 @@ class AppQMainWindow(
             self.raise_()
 
     def retranslate(self):
+        """Refresh translated text for the app q main window."""
         self.setWindowTitle(_(self.windowTitle()))
 
     def disconnectedCallback(self):
+        """Update the app q main window for a disconnected state."""
         self.setWindowIcon(AppHue.disconnectedWindowIcon())
 
     def connectedCallback(self):
+        """Update the app q main window for a connected state."""
         self.setWindowIcon(AppHue.connectedWindowIcon())
 
     def cleanup(self):
+        """Release resources owned by the app q main window."""
         pass
 
 
 class AppQMenu(Mixins.QTranslatable, QMenu):
+    """Represent app q menu."""
     def __init__(self, *actions, **kwargs):
+        """Initialize the AppQMenu."""
         super().__init__(**kwargs)
 
         # In some old version PySide6, the self.actions() method
@@ -399,38 +454,47 @@ class AppQMenu(Mixins.QTranslatable, QMenu):
                 pass
 
     def retranslate(self):
+        """Refresh translated text for the app q menu."""
         self.setTitle(_(self.title()))
 
 
 class AppQMenuBar(QMenuBar):
+    """Represent app q menu bar."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQMenuBar."""
         super().__init__(*args, **kwargs)
 
 
 class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
+    """Represent app q message box."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQMessageBox."""
         super().__init__(*args, **kwargs)
 
         self.setWindowIcon(AppHue.currentWindowIcon())
 
     def moveToCenter(self):
+        """Move to center."""
         moveToCenter(self, self.parentWidget())
 
         return self
 
     def exec(self):
+        """Show and execute the app q message box modally."""
         self.show()
         self.moveToCenter()
 
         return super().exec()
 
     def open(self):
+        """Open the app q message box asynchronously."""
         self.show()
         self.moveToCenter()
 
         return super().open()
 
     def retranslate(self):
+        """Refresh translated text for the app q message box."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(_(self.text()))
 
@@ -450,14 +514,18 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
         self.moveToCenter()
 
     def disconnectedCallback(self):
+        """Update the app q message box for a disconnected state."""
         self.setWindowIcon(AppHue.disconnectedWindowIcon())
 
     def connectedCallback(self):
+        """Update the app q message box for a connected state."""
         self.setWindowIcon(AppHue.connectedWindowIcon())
 
 
 class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
+    """Represent app q push button."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQPushButton."""
         icon = kwargs.pop('icon', None)
 
         super().__init__(*args, **kwargs)
@@ -470,6 +538,7 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
     @staticmethod
     @functools.lru_cache(None)
     def getIconFileName(fileName):
+        """Return icon file name."""
         try:
             return fileName.split('/')[-1]
         except Exception:
@@ -478,6 +547,7 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
             return ''
 
     def setIconByTheme(self, theme):
+        """Set icon by theme."""
         if not self.iconFileName:
             return
 
@@ -503,6 +573,7 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
             super().setIcon(bootstrapIcon(self.iconFileName))
 
     def setIcon(self, icon: AppQIcon):
+        """Set icon."""
         self.iconFileName = self.getIconFileName(icon.iconFileName)
 
         if not self.iconFileName:
@@ -512,17 +583,22 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
             self.setIconByTheme(APP().theme())
 
     def themeChangedCallback(self, theme):
+        """Update the app q push button for a theme change."""
         self.setIconByTheme(theme)
 
     def retranslate(self):
+        """Refresh translated text for the app q push button."""
         self.setText(_(self.text()))
 
 
 class AppQSpinBox(QSpinBox):
+    """Represent app q spin box."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQSpinBox."""
         super().__init__(*args, **kwargs)
 
     def resizeHints(self):
+        """Handle resize hints for the app q spin box."""
         self.setMinimumWidth(
             max(
                 self.sizeHint().width(),
@@ -531,40 +607,50 @@ class AppQSpinBox(QSpinBox):
         )
 
     def setRange(self, *args, **kwargs):
+        """Set range."""
         super().setRange(*args, **kwargs)
 
         self.resizeHints()
 
 
 class AppQTableView(Mixins.ConnectionAware, QTableView):
+    """Represent app Qt table view."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQTableView."""
         super().__init__(*args, **kwargs)
 
         self.setWordWrap(False)
         self.setAlternatingRowColors(True)
 
     def setDefaultRowHeight(self, height: int):
+        """Set default row height."""
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.verticalHeader().setDefaultSectionSize(height)
 
     @staticmethod
     def getStyleSheet(color):
+        """Return style sheet."""
         return f'QTableView {{ selection-background-color: {color}; }}'
 
     def setSelectionColor(self, color):
         # self.setStyleSheet(self.getStyleSheet(color))
 
+        """Set selection color."""
         pass
 
     def disconnectedCallback(self):
+        """Update the app Qt table view for a disconnected state."""
         self.setSelectionColor(AppHue.disconnectedColor())
 
     def connectedCallback(self):
+        """Update the app Qt table view for a connected state."""
         self.setSelectionColor(AppHue.connectedColor())
 
 
 class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):
+    """Provide the app Qt table widget."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQTableWidget."""
         super().__init__(*args, **kwargs)
 
         self.setWordWrap(False)
@@ -572,18 +658,22 @@ class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):
 
     @property
     def selectedIndex(self):
+        """Return the selected index value."""
         return sorted(list(set(index.row() for index in self.selectedIndexes())))
 
     @staticmethod
     def getStyleSheet(color):
+        """Return style sheet."""
         return f'QTableWidget {{ selection-background-color: {color}; }}'
 
     def setSelectionColor(self, color):
         # self.setStyleSheet(self.getStyleSheet(color))
 
+        """Set selection color."""
         pass
 
     def activateItemByIndex(self, index, activate):
+        """Activate item by index."""
         if activate:
             for column in range(self.columnCount()):
                 item = self.item(int(index), column)
@@ -612,6 +702,7 @@ class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):
                 item.setForeground(QBrush())
 
     def selectMultipleRows(self, indexes: list[int], clearCurrentSelection: bool):
+        """Select multiple rows."""
         if clearCurrentSelection:
             self.selectionModel().clearSelection()
 
@@ -628,23 +719,30 @@ class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):
         )
 
     def disconnectedCallback(self):
+        """Update the app Qt table widget for a disconnected state."""
         self.setSelectionColor(AppHue.disconnectedColor())
 
     def connectedCallback(self):
+        """Update the app Qt table widget for a connected state."""
         self.setSelectionColor(AppHue.connectedColor())
 
 
 class AppQTabWidget(Mixins.QTranslatable, QTabWidget):
+    """Provide the app q tab widget."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQTabWidget."""
         super().__init__(*args, **kwargs)
 
     def retranslate(self):
+        """Refresh translated text for the app q tab widget."""
         for index in range(self.count()):
             self.setTabText(index, _(self.tabText(index)))
 
 
 class AppQToolBar(Mixins.QTranslatable, QToolBar):
+    """Represent app q tool bar."""
     def __init__(self, *actions, **kwargs):
+        """Initialize the AppQToolBar."""
         super().__init__(**kwargs)
 
         self._actions = []
@@ -666,8 +764,10 @@ class AppQToolBar(Mixins.QTranslatable, QToolBar):
 
     @QtCore.Slot(AppQAction)
     def showMenuBelow(self, action: AppQAction):
+        """Show menu below."""
         def toolBarWidgetForAction() -> Union[QWidget | None]:
             # Walk through the toolbar to find the widget for the action
+            """Return the tool bar widget for action value used by the app q tool bar."""
             for child in self.children():
                 if hasattr(child, 'defaultAction'):
                     # PySide6.QtWidgets.QMenu.defaultAction
@@ -688,14 +788,18 @@ class AppQToolBar(Mixins.QTranslatable, QToolBar):
 
     @staticmethod
     def getStyleSheet():
+        """Return style sheet."""
         return f'QToolBar {{ spacing: 5px; }}'
 
     def retranslate(self):
+        """Refresh translated text for the app q tool bar."""
         self.setWindowTitle(_(self.windowTitle()))
 
 
 class MBoxQuestionDelete(AppQMessageBox):
+    """Represent m box question delete."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxQuestionDelete."""
         super().__init__(*args, **kwargs)
 
         self.isMulti = False
@@ -707,12 +811,14 @@ class MBoxQuestionDelete(AppQMessageBox):
         )
 
     def customText(self) -> str:
+        """Return the user-facing message text for the m box question delete."""
         if self.isMulti:
             return _('Delete these items?')
         else:
             return _('Delete this item?') + f'\n\n{self.possibleRemark}'
 
     def retranslate(self):
+        """Refresh translated text for the m box question delete."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
@@ -722,7 +828,9 @@ class MBoxQuestionDelete(AppQMessageBox):
 
 
 class MBoxNewChangesNextTime(AppQMessageBox):
+    """Represent m box new changes next time."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxNewChangesNextTime."""
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_(APPLICATION_NAME))
@@ -734,11 +842,13 @@ class MBoxNewChangesNextTime(AppQMessageBox):
 
     @staticmethod
     def customText() -> str:
+        """Return the user-facing message text for the m box new changes next time."""
         return (
             _('New changes will take effect next time') + '\n\n' + _('Reconnect now?')
         )
 
     def retranslate(self):
+        """Refresh translated text for the m box new changes next time."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
@@ -749,8 +859,10 @@ class MBoxNewChangesNextTime(AppQMessageBox):
 
 def showMBoxNewChangesNextTime(**kwargs):
 
+    """Show m box new changes next time."""
     @QtCore.Slot(int)
     def handleResultCode(code):
+        """Handle result code."""
         if code == PySide6Legacy.enumValueWrapper(AppQMessageBox.StandardButton.Yes):
             APP().systemTray.ConnectAction.doReconnect()
         else:
@@ -782,7 +894,9 @@ def showMBoxNewChangesNextTime(**kwargs):
 
 
 class MBoxDirectRulesNotAllowed(AppQMessageBox):
+    """Represent m box direct rules not allowed."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxDirectRulesNotAllowed."""
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_('Unable to connect'))
@@ -794,6 +908,7 @@ class MBoxDirectRulesNotAllowed(AppQMessageBox):
 
     @staticmethod
     def customText() -> str:
+        """Return the user-facing message text for the m box direct rules not allowed."""
         return (
             _('Routing option with direct rules is not allowed in TUN mode')
             + '\n\n'
@@ -801,6 +916,7 @@ class MBoxDirectRulesNotAllowed(AppQMessageBox):
         )
 
     def retranslate(self):
+        """Refresh translated text for the m box direct rules not allowed."""
         self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
@@ -810,8 +926,10 @@ class MBoxDirectRulesNotAllowed(AppQMessageBox):
 
 
 def showMBoxDirectRulesNotAllowed(**kwargs):
+    """Show m box direct rules not allowed."""
     @QtCore.Slot(int)
     def handleResultCode(code):
+        """Handle result code."""
         if code == PySide6Legacy.enumValueWrapper(AppQMessageBox.StandardButton.Yes):
             APP().systemTray.RoutingAction.getGlobalAction().trigger()
             APP().systemTray.ConnectAction.trigger()
@@ -832,7 +950,9 @@ def showMBoxDirectRulesNotAllowed(**kwargs):
 
 
 class MBoxUnrecognizedConfig(AppQMessageBox):
+    """Represent m box unrecognized config."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxUnrecognizedConfig."""
         super().__init__(*args, **kwargs)
 
         self.setIcon(AppQMessageBox.Icon.Critical)
@@ -840,6 +960,7 @@ class MBoxUnrecognizedConfig(AppQMessageBox):
 
 
 def showMBoxUnrecognizedConfig(**kwargs):
+    """Show m box unrecognized config."""
     mbox = MBoxUnrecognizedConfig(**kwargs)
 
     if isinstance(mbox.parent(), QMainWindow):

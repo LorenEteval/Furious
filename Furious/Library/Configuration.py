@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Parse, build, import, and export supported proxy configurations."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -35,6 +37,7 @@ urlunparse = functools.partial(urllib.parse.urlunparse)
 
 
 def queryStringFromItems(items):
+    """Encode non-empty query items as a URI query string."""
     return urllib.parse.urlencode(
         list((key, value) for key, value in items if value != '' and value is not None),
         doseq=True,
@@ -57,6 +60,7 @@ __all__ = [
 
 
 class ConfigXrayProxyOutboundObjectV(dict):
+    """Represent and transform Xray proxy outbound object v configuration data."""
     def __init__(
         self,
         protocol,
@@ -68,6 +72,7 @@ class ConfigXrayProxyOutboundObjectV(dict):
         security,
         **kwargs,
     ):
+        """Initialize the ConfigXrayProxyOutboundObjectV."""
         (
             networkObjectArgs,
             securityArgs,
@@ -146,7 +151,9 @@ class ConfigXrayProxyOutboundObjectV(dict):
 
 
 class ConfigXrayProxyOutboundObjectSS(dict):
+    """Represent and transform Xray proxy outbound object ss configuration data."""
     def __init__(self, method, password, address, port):
+        """Initialize the ConfigXrayProxyOutboundObjectSS."""
         super().__init__(
             **{
                 'tag': 'proxy',
@@ -175,7 +182,9 @@ class ConfigXrayProxyOutboundObjectSS(dict):
 
 
 class ConfigXrayProxyOutboundObjectSocks(dict):
+    """Represent and transform Xray proxy outbound object SOCKS configuration data."""
     def __init__(self, address, port, user='', password=''):
+        """Initialize the ConfigXrayProxyOutboundObjectSocks."""
         settings = {
             'address': address,
             'port': int(port),
@@ -202,7 +211,9 @@ class ConfigXrayProxyOutboundObjectSocks(dict):
 
 
 class ConfigXrayProxyOutboundObjectTrojan(dict):
+    """Represent and transform Xray proxy outbound object trojan configuration data."""
     def __init__(self, password, address, port, type_, security, **kwargs):
+        """Initialize the ConfigXrayProxyOutboundObjectTrojan."""
         networkObjectArgs, securityArgs, TLSObjectArgs = {}, {}, {}
 
         if type_ == 'h2':
@@ -337,14 +348,18 @@ BLANK_CONFIG_XRAY = {
 
 
 class ConfigXray(ConfigFactory):
+    """Represent Xray configuration and supported share-link formats."""
     def __init__(self, config: Union[str, dict] = '', **kwargs):
+        """Initialize the ConfigXray."""
         super().__init__(config, **kwargs)
 
     def coreName(self) -> str:
+        """Return the core implementation name."""
         return 'Xray-core'
 
     @staticmethod
     def getProxyOutboundObject(config: dict, default=None) -> dict:
+        """Return proxy outbound object."""
         if not isinstance(config.get('outbounds'), list):
             config['outbounds'] = []
 
@@ -363,6 +378,7 @@ class ConfigXray(ConfigFactory):
 
     @staticmethod
     def getProxyOutboundStream(config: dict, **kwargs) -> dict:
+        """Return proxy outbound stream."""
         proxyOutbound = ConfigXray.getProxyOutboundObject(config, **kwargs)
 
         if not isinstance(proxyOutbound.get('streamSettings'), dict):
@@ -372,6 +388,7 @@ class ConfigXray(ConfigFactory):
 
     @staticmethod
     def getProxyOutboundServer(config: dict, protocol: Protocol, **kwargs) -> dict:
+        """Return proxy outbound server."""
         value, proxyOutbound = (
             protocol.value.lower(),
             ConfigXray.getProxyOutboundObject(config, **kwargs),
@@ -398,6 +415,7 @@ class ConfigXray(ConfigFactory):
 
     @staticmethod
     def getProxyOutboundUser(config: dict, protocol: Protocol, **kwargs) -> dict:
+        """Return proxy outbound user."""
         proxyOutboundServer = ConfigXray.getProxyOutboundServer(
             config, protocol, **kwargs
         )
@@ -416,6 +434,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def proxyOutboundObject(self) -> dict:
+        """Return the proxy outbound object value."""
         try:
             return ConfigXray.getProxyOutboundObject(self)
         except Exception:
@@ -425,6 +444,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def proxyProtocol(self) -> str:
+        """Return the proxy protocol value."""
         try:
             return self.proxyOutboundObject['protocol']
         except Exception:
@@ -434,6 +454,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def proxyServerObject(self) -> dict:
+        """Return the proxy server object value."""
         try:
             proxyProtocol = self.proxyProtocol.lower()
 
@@ -454,6 +475,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def proxyUserObject(self) -> dict:
+        """Return the proxy user object value."""
         try:
             if self.proxyProtocol.lower() == 'socks':
                 return self.proxyServerObject
@@ -466,6 +488,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def proxyStreamSettingsObject(self) -> dict:
+        """Return the proxy stream settings object value."""
         try:
             return ConfigXray.getProxyOutboundStream(self)
         except Exception:
@@ -475,6 +498,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def proxyStreamSettingsTLS(self) -> str:
+        """Return the proxy stream settings TLS value."""
         try:
             return self.proxyStreamSettingsObject.get('security', 'none')
         except Exception:
@@ -484,6 +508,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def proxyStreamSettingsTLSObject(self) -> dict:
+        """Return the proxy stream settings TLS object value."""
         try:
             # tlsSettings, realitySettings
             TLSKey = f'{self.proxyStreamSettingsTLS}Settings'
@@ -496,6 +521,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def proxyStreamSettingsNetwork(self) -> str:
+        """Return the proxy stream settings network value."""
         try:
             return self.proxyStreamSettingsObject['network']
         except Exception:
@@ -505,6 +531,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def proxyStreamSettingsNetworkObject(self) -> dict:
+        """Return the proxy stream settings network object value."""
         try:
             if self.proxyStreamSettingsNetwork == 'h2':
                 networkKey = 'httpSettings'
@@ -531,6 +558,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def kwargsFromVMessProxyStreamSettingsNetworkObject(self) -> dict:
+        """Return the kwargs from v mess proxy stream settings network object value."""
         kwargs = {}
 
         try:
@@ -550,6 +578,7 @@ class ConfigXray(ConfigFactory):
             return kwargs
 
         def hasKey(key):
+            """Return whether key."""
             return networkObject.get(key) is not None
 
         if network == 'tcp' or network == 'raw':
@@ -662,6 +691,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def kwargsFromVLESSProxyStreamSettingsNetworkObject(self) -> dict:
+        """Return the kwargs from VLESS proxy stream settings network object value."""
         kwargs = {}
 
         try:
@@ -681,6 +711,7 @@ class ConfigXray(ConfigFactory):
             return kwargs
 
         def hasKey(key):
+            """Return whether key."""
             return networkObject.get(key) is not None
 
         if network == 'tcp' or network == 'raw':
@@ -804,6 +835,7 @@ class ConfigXray(ConfigFactory):
         # v2rayN share standard doesn't require unquote. Still
         # unquote value according to (VMess AEAD / VLESS) standard
 
+        """Build Xray transport settings from share-link keyword arguments."""
         if type_ == 'tcp' or type_ == 'raw':
             TcpObject = {}
 
@@ -982,6 +1014,7 @@ class ConfigXray(ConfigFactory):
 
     @property
     def kwargsFromProxyStreamSettingsTLSObject(self) -> dict:
+        """Return the kwargs from proxy stream settings TLS object value."""
         kwargs = {}
 
         TLS = self.proxyStreamSettingsTLS
@@ -1029,6 +1062,7 @@ class ConfigXray(ConfigFactory):
     def kwargs2ProxyStreamSettingsTLSObject(
         protocol, remote_host, security, kwargs
     ) -> dict:
+        """Build Xray TLS or REALITY settings from share-link keyword arguments."""
         TLSObject = {}
 
         if security == 'reality' or security == 'tls':
@@ -1094,6 +1128,7 @@ class ConfigXray(ConfigFactory):
 
     @staticmethod
     def kwargs2ProxyUserObject(protocol, uuid_, encryption, kwargs) -> dict:
+        """Build an Xray proxy user object from share-link values."""
         if protocol == 'vmess':
             UserObject = {
                 'id': uuid_,
@@ -1125,6 +1160,7 @@ class ConfigXray(ConfigFactory):
 
     @staticmethod
     def URI2ProxyOutboundObjectVMess(URI: str) -> Tuple[str, dict]:
+        """Parse a VMess URI into a remark and Xray proxy outbound."""
         try:
             myHead, myBody = URI.split('://')
         except Exception:
@@ -1142,6 +1178,7 @@ class ConfigXray(ConfigFactory):
         else:
 
             def getOrDefault(key, default=''):
+                """Return or default."""
                 return myJSON.get(key, default)
 
             remark = unquote(getOrDefault('ps'))
@@ -1176,6 +1213,7 @@ class ConfigXray(ConfigFactory):
 
     @staticmethod
     def URI2ProxyOutboundObjectVLESS(URI: str, **kwargs) -> Tuple[str, dict]:
+        """Parse a VLESS URI into a remark and Xray proxy outbound."""
         result = urlparse(URI)
         remark = unquote(result.fragment)
         queryObject = {key: value for key, value in parse_qsl(result.query)}
@@ -1205,6 +1243,7 @@ class ConfigXray(ConfigFactory):
 
     @staticmethod
     def URI2ProxyOutboundObjectSS(URI: str) -> Tuple[str, dict]:
+        """Parse a Shadowsocks URI into a remark and Xray proxy outbound."""
         try:
             result = urlparse(URI)
             remark = unquote(result.fragment)
@@ -1215,6 +1254,7 @@ class ConfigXray(ConfigFactory):
 
         def getSSParams():
             # Begin SIP002...
+            """Return ss params."""
             try:
                 # Try pack with 3 element
                 userinfo, server = result.netloc.split('@')
@@ -1261,6 +1301,7 @@ class ConfigXray(ConfigFactory):
 
     @staticmethod
     def URI2ProxyOutboundObjectSocks(URI: str) -> Tuple[str, dict]:
+        """Parse a SOCKS URI into a remark and Xray proxy outbound."""
         result = urlparse(URI)
         remark = unquote(result.fragment)
 
@@ -1279,6 +1320,7 @@ class ConfigXray(ConfigFactory):
 
     @staticmethod
     def URI2ProxyOutboundObjectTrojan(URI: str) -> Tuple[str, dict]:
+        """Parse a Trojan URI into a remark and Xray proxy outbound."""
         result = urlparse(URI)
         remark = unquote(result.fragment)
         queryObject = {key: value for key, value in parse_qsl(result.query)}
@@ -1300,6 +1342,7 @@ class ConfigXray(ConfigFactory):
 
     @staticmethod
     def URI2ProxyOutboundObject(URI: str) -> Tuple[str, dict]:
+        """Dispatch a supported share URI to its Xray outbound parser."""
         if URI.startswith('vmess://'):
             return ConfigXray.URI2ProxyOutboundObjectVMess(URI)
 
@@ -1319,44 +1362,53 @@ class ConfigXray(ConfigFactory):
 
     @property
     def itemProtocol(self) -> str:
+        """Return the item protocol value."""
         return Protocol.toEnum(self.proxyProtocol).value
 
     @property
     def itemAddress(self) -> str:
+        """Return the item address value."""
         addr = self.proxyServerObject.get('address', '')
 
         return str(addr)
 
     @property
     def itemPort(self) -> str:
+        """Return the item port value."""
         port = self.proxyServerObject.get('port', '')
 
         return str(port)
 
     @property
     def itemTransport(self) -> str:
+        """Return the item transport value."""
         return self.proxyStreamSettingsNetwork
 
     @property
     def itemTLS(self) -> str:
+        """Return the item TLS value."""
         return self.proxyStreamSettingsTLS
 
     @property
     def itemLatency(self) -> str:
         # Backward compatibility
+        """Return the item latency value."""
         return self.getExtras('delayResult')
 
     @property
     def itemSpeed(self) -> str:
         # Backward compatibility
+        """Return the item speed value."""
         return self.getExtras('speedResult')
 
     def toJSONString(self, **kwargs) -> str:
+        """Serialize the configuration as JSON text."""
         indent = kwargs.pop('indent', 2)
 
         return super().toJSONString(indent=indent)
 
     def toURI(self, remark: str = '') -> str:
+        """Export the configuration as a share URI."""
         if remark == '':
             override = self.itemRemark
         else:
@@ -1472,6 +1524,7 @@ class ConfigXray(ConfigFactory):
         return ''
 
     def fromURI(self, URI: str) -> bool:
+        """Populate the configuration from a share URI."""
         try:
             remark, proxyOutboundObject = ConfigXray.URI2ProxyOutboundObject(URI)
 
@@ -1508,6 +1561,7 @@ class ConfigXray(ConfigFactory):
             return False
 
     def httpProxy(self) -> str:
+        """Return the configured local HTTP proxy endpoint."""
         try:
             for inbound in self['inbounds']:
                 if inbound['protocol'] == 'http':
@@ -1522,6 +1576,7 @@ class ConfigXray(ConfigFactory):
             return ''
 
     def socksProxy(self) -> str:
+        """Return the configured local SOCKS proxy endpoint."""
         try:
             for inbound in self['inbounds']:
                 if inbound['protocol'] == 'socks':
@@ -1536,6 +1591,7 @@ class ConfigXray(ConfigFactory):
             return ''
 
     def setHttpProxy(self, endpoint: str) -> bool:
+        """Set the local HTTP proxy endpoint."""
         try:
             if self.get('inbounds') is None:
                 self['inbounds'] = []
@@ -1593,6 +1649,7 @@ class ConfigXray(ConfigFactory):
             return False
 
     def setSocksProxy(self, endpoint: str) -> bool:
+        """Set the local SOCKS proxy endpoint."""
         try:
             if self.get('inbounds') is None:
                 self['inbounds'] = []
@@ -1663,18 +1720,23 @@ BLANK_CONFIG_HYSTERIA1 = {
 
 
 class ConfigHysteria1(ConfigFactory):
+    """Represent Hysteria 1 client configuration and share links."""
     def __init__(self, config: Union[str, dict] = '', **kwargs):
+        """Initialize the ConfigHysteria1."""
         super().__init__(config, **kwargs)
 
     def coreName(self) -> str:
+        """Return the core implementation name."""
         return 'Hysteria1'
 
     @property
     def itemProtocol(self) -> str:
+        """Return the item protocol value."""
         return Protocol.Hysteria1.value
 
     @property
     def itemAddress(self) -> str:
+        """Return the item address value."""
         server = self.get('server', '')
 
         pos = server.rfind(':')
@@ -1686,6 +1748,7 @@ class ConfigHysteria1(ConfigFactory):
 
     @property
     def itemPort(self) -> str:
+        """Return the item port value."""
         server = self.get('server', '')
 
         pos = server.rfind(':')
@@ -1697,26 +1760,32 @@ class ConfigHysteria1(ConfigFactory):
 
     @property
     def itemTransport(self) -> str:
+        """Return the item transport value."""
         return ''
 
     @property
     def itemTLS(self) -> str:
+        """Return the item TLS value."""
         return ''
 
     @property
     def itemLatency(self) -> str:
+        """Return the item latency value."""
         return self.getExtras('delayResult')
 
     @property
     def itemSpeed(self) -> str:
+        """Return the item speed value."""
         return self.getExtras('speedResult')
 
     def toJSONString(self, **kwargs) -> str:
+        """Serialize the configuration as JSON text."""
         indent = kwargs.pop('indent', 4)
 
         return super().toJSONString(indent=indent)
 
     def toURI(self, remark: str = '') -> str:
+        """Export the configuration as a share URI."""
         if remark == '':
             override = self.itemRemark
         else:
@@ -1782,6 +1851,7 @@ class ConfigHysteria1(ConfigFactory):
         return urlunparse(['hysteria', netloc, '', '', query, quote(override)])
 
     def fromURI(self, URI: str) -> bool:
+        """Populate the configuration from a share URI."""
         try:
             result = urlparse(URI)
             remark = unquote(result.fragment)
@@ -1864,6 +1934,7 @@ class ConfigHysteria1(ConfigFactory):
             return False
 
     def httpProxy(self) -> str:
+        """Return the configured local HTTP proxy endpoint."""
         try:
             return self['http']['listen']
         except Exception:
@@ -1872,6 +1943,7 @@ class ConfigHysteria1(ConfigFactory):
             return ''
 
     def socksProxy(self) -> str:
+        """Return the configured local SOCKS proxy endpoint."""
         try:
             return self['socks5']['listen']
         except Exception:
@@ -1880,6 +1952,7 @@ class ConfigHysteria1(ConfigFactory):
             return ''
 
     def setHttpProxy(self, endpoint: str) -> bool:
+        """Set the local HTTP proxy endpoint."""
         try:
             if endpoint == '':
                 self.pop('http', None)
@@ -1898,6 +1971,7 @@ class ConfigHysteria1(ConfigFactory):
             return False
 
     def setSocksProxy(self, endpoint: str) -> bool:
+        """Set the local SOCKS proxy endpoint."""
         try:
             if endpoint == '':
                 self.pop('socks5', None)
@@ -1931,18 +2005,23 @@ BLANK_CONFIG_HYSTERIA2 = {
 
 
 class ConfigHysteria2(ConfigFactory):
+    """Represent Hysteria 2 client configuration and share links."""
     def __init__(self, config: Union[str, dict] = '', **kwargs):
+        """Initialize the ConfigHysteria2."""
         super().__init__(config, **kwargs)
 
     def coreName(self) -> str:
+        """Return the core implementation name."""
         return 'Hysteria2'
 
     @property
     def itemProtocol(self) -> str:
+        """Return the item protocol value."""
         return Protocol.Hysteria2.value
 
     @staticmethod
     def splitServerAddressPort(server: str) -> Tuple[str, str]:
+        """Split a standard or Realm-mode server value into display fields."""
         if server.startswith(('realm://', 'realm+http://')):
             result = urlparse(server)
 
@@ -1962,39 +2041,47 @@ class ConfigHysteria2(ConfigFactory):
 
     @property
     def itemAddress(self) -> str:
+        """Return the item address value."""
         address, _port = self.splitServerAddressPort(self.get('server', ''))
 
         return address
 
     @property
     def itemPort(self) -> str:
+        """Return the item port value."""
         _address, port = self.splitServerAddressPort(self.get('server', ''))
 
         return port
 
     @property
     def itemTransport(self) -> str:
+        """Return the item transport value."""
         return ''
 
     @property
     def itemTLS(self) -> str:
+        """Return the item TLS value."""
         return ''
 
     @property
     def itemLatency(self) -> str:
+        """Return the item latency value."""
         return self.getExtras('delayResult')
 
     @property
     def itemSpeed(self) -> str:
+        """Return the item speed value."""
         return self.getExtras('speedResult')
 
     def toJSONString(self, **kwargs) -> str:
+        """Serialize the configuration as JSON text."""
         indent = kwargs.pop('indent', 4)
 
         return super().toJSONString(indent=indent)
 
     @staticmethod
     def splitHysteria2RealmQueryItems(queryItems):
+        """Separate Realm transport parameters from Hysteria 2 parameters."""
         realmItems = []
         hysteria2Items = []
 
@@ -2007,6 +2094,7 @@ class ConfigHysteria2(ConfigFactory):
         return realmItems, hysteria2Items
 
     def toURI(self, remark: str = '') -> str:
+        """Export the configuration as a share URI."""
         if remark == '':
             override = self.itemRemark
         else:
@@ -2064,6 +2152,7 @@ class ConfigHysteria2(ConfigFactory):
         return urlunparse(['hysteria2', netloc, '', '', query, quote(override)])
 
     def fromURI(self, URI: str) -> bool:
+        """Populate the configuration from a share URI."""
         try:
             result = urlparse(URI)
             remark = unquote(result.fragment)
@@ -2160,6 +2249,7 @@ class ConfigHysteria2(ConfigFactory):
             return False
 
     def httpProxy(self) -> str:
+        """Return the configured local HTTP proxy endpoint."""
         try:
             return self['http']['listen']
         except Exception:
@@ -2168,6 +2258,7 @@ class ConfigHysteria2(ConfigFactory):
             return ''
 
     def socksProxy(self) -> str:
+        """Return the configured local SOCKS proxy endpoint."""
         try:
             return self['socks5']['listen']
         except Exception:
@@ -2176,6 +2267,7 @@ class ConfigHysteria2(ConfigFactory):
             return ''
 
     def setHttpProxy(self, endpoint: str) -> bool:
+        """Set the local HTTP proxy endpoint."""
         try:
             if endpoint == '':
                 self.pop('http', None)
@@ -2194,6 +2286,7 @@ class ConfigHysteria2(ConfigFactory):
             return False
 
     def setSocksProxy(self, endpoint: str) -> bool:
+        """Set the local SOCKS proxy endpoint."""
         try:
             if endpoint == '':
                 self.pop('socks5', None)
@@ -2213,6 +2306,7 @@ class ConfigHysteria2(ConfigFactory):
 
 
 def configXrayEmptyProxyOutboundObject(protocol: Protocol) -> dict:
+    """Return the config Xray empty proxy outbound object value used by the application."""
     value = protocol.value.lower()
 
     if value == 'vless' or value == 'vmess':
@@ -2307,10 +2401,12 @@ def configXrayEmptyProxyOutboundObject(protocol: Protocol) -> dict:
 
 
 def configFactoryFromDict(config: dict, **kwargs) -> ConfigFactory:
+    """Return the config factory from dict value used by the application."""
     if not isinstance(config, dict):
         return ConfigFactory()
 
     def hasField(field):
+        """Return whether field."""
         return config.get(field) is not None
 
     if hasField('inbounds') or hasField('outbounds'):
@@ -2354,6 +2450,7 @@ def configFactoryFromDict(config: dict, **kwargs) -> ConfigFactory:
 
 
 def configFactoryFromAny(config: Union[str, dict], **kwargs) -> ConfigFactory:
+    """Return the config factory from any value used by the application."""
     if isinstance(config, str):
         if config.startswith(
             (
@@ -2394,6 +2491,7 @@ def configFactoryFromAny(config: Union[str, dict], **kwargs) -> ConfigFactory:
 
 
 def configFactoryBlank(protocol: Protocol) -> ConfigFactory:
+    """Return the config factory blank value used by the application."""
     if protocol == Protocol.VMess or protocol == Protocol.VLESS:
         factory = configFactoryFromDict(BLANK_CONFIG_XRAY)
         factory['outbounds'][0]['protocol'] = protocol.value.lower()

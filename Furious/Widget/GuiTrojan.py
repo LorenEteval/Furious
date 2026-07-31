@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for GUI trojan."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -37,7 +39,9 @@ getProxyOutboundServer = functools.partial(
 
 
 class GuiTrojanItemTextInput(GuiEditorItemTextInput):
+    """Represent GUI trojan item text input."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiTrojanItemTextInput."""
         key = kwargs.pop('key', '')
 
         super().__init__(*args, **kwargs)
@@ -45,6 +49,7 @@ class GuiTrojanItemTextInput(GuiEditorItemTextInput):
         self.key = key
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldValue = proxyOutboundServer.get(self.key, '')
@@ -67,6 +72,7 @@ class GuiTrojanItemTextInput(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -78,13 +84,16 @@ class GuiTrojanItemTextInput(GuiEditorItemTextInput):
 
 
 class GuiTrojanItemBasicPort(GuiEditorItemTextSpinBox):
+    """Represent GUI trojan item basic port."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiTrojanItemBasicPort."""
         super().__init__(*args, **kwargs)
 
         # Range
         self.setRange(0, 65535)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldPort = proxyOutboundServer.get('port')
@@ -103,6 +112,7 @@ class GuiTrojanItemBasicPort(GuiEditorItemTextSpinBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -114,10 +124,13 @@ class GuiTrojanItemBasicPort(GuiEditorItemTextSpinBox):
 
 
 class GuiTrojanGroupBoxBasic(GuiEditorWidgetQGroupBox):
+    """Represent GUI trojan group box basic."""
     def __init__(self, **kwargs):
+        """Initialize the GuiTrojanGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemBasicRemark(title=_('Remark')),
             GuiTrojanItemTextInput(title=_('Address'), key='address'),
@@ -127,10 +140,13 @@ class GuiTrojanGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 
 class GuiTrojanGroupBoxProxy(GuiEditorWidgetQGroupBox):
+    """Represent GUI trojan group box proxy."""
     def __init__(self, **kwargs):
+        """Initialize the GuiTrojanGroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemProxyHttp(title='http', translatable=False),
             GuiEditorItemProxySocks(title='socks', translatable=False),
@@ -138,13 +154,16 @@ class GuiTrojanGroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 
 class GuiTrojan(GuiEditorWidgetQDialog):
+    """Represent GUI trojan."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiTrojan."""
         super().__init__(*args, **kwargs)
 
         self.setTabText(Protocol.Trojan.value)
 
     @functools.lru_cache(None)
     def groupBoxSequence(self):
+        """Return the configuration group boxes in display order."""
         return [
             GuiTrojanGroupBoxBasic(),
             GuiTrojanGroupBoxProxy(),

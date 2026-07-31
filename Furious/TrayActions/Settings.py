@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Implement tray actions for settings."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -53,7 +55,9 @@ _TRANSLATABLE_TUN_MODE = [
 
 
 class TUNModeAction(AppQAction):
+    """Handle the TUN mode action."""
     def __init__(self, **kwargs):
+        """Initialize the TUNModeAction."""
         if PLATFORM == 'Linux':
             super().__init__(_('TUN Mode'), **kwargs)
         else:
@@ -67,6 +71,7 @@ class TUNModeAction(AppQAction):
                 self.setDisabled(True)
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         if PLATFORM != 'Linux':
             assert SystemRuntime.isAdmin()
 
@@ -79,10 +84,13 @@ class TUNModeAction(AppQAction):
 
 
 class SettingsChildAction(AppQAction):
+    """Handle the settings child action."""
     def __init__(self, *args, **kwargs):
+        """Initialize the SettingsChildAction."""
         super().__init__(*args, **kwargs)
 
     def triggeredCallback(self, checked):
+        """Handle activation of the action."""
         if self.textCompare('Dark Mode'):
             # Settings turn on/off order matters here
             if checked:
@@ -170,7 +178,9 @@ class SettingsChildAction(AppQAction):
 
 
 class SettingsAction(AppQAction):
+    """Handle the settings action."""
     def __init__(self, **kwargs):
+        """Initialize the SettingsAction."""
         if SystemRuntime.flatpakID():
             tunActions = []
         else:
@@ -263,4 +273,5 @@ class SettingsAction(AppQAction):
 
     def getTUNModeAction(self) -> AppQAction:
         # 1st action
+        """Return TUN mode action."""
         return self._menu.actions()[0]

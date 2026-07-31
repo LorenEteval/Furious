@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for GUI hysteria2."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -37,10 +39,13 @@ HY2_OBFS_TYPES = ['', 'salamander', 'gecko']
 
 
 class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
+    """Represent GUI hy2 item basic server."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2ItemBasicServer."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         oldServer = config.get('server', '')
         newServer = self.text()
 
@@ -57,6 +62,7 @@ class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             self.setText(config.get('server', ''))
         except Exception:
@@ -66,10 +72,13 @@ class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
 
 
 class GuiHy2ItemBasicAuth(GuiEditorItemTextInput):
+    """Represent GUI hy2 item basic auth."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2ItemBasicAuth."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         oldAuth = config.get('auth')
         newAuth = self.text()
 
@@ -94,6 +103,7 @@ class GuiHy2ItemBasicAuth(GuiEditorItemTextInput):
                 return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             self.setText(config.get('auth', ''))
         except Exception:
@@ -103,9 +113,11 @@ class GuiHy2ItemBasicAuth(GuiEditorItemTextInput):
 
 
 class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
+    """Represent GUI hy2 item basic congestion combo box."""
     CONGESTION_KEYS = ['type', 'bbrProfile']
 
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2ItemBasicCongestionComboBox."""
         key = kwargs.pop('key', '')
 
         assert key in self.CONGESTION_KEYS
@@ -125,6 +137,7 @@ class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
             raise
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         newValue = self.text()
 
         if newValue == '':
@@ -179,6 +192,7 @@ class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
                 return False
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             value = config['congestion'][self.key]
         except Exception:
@@ -190,12 +204,15 @@ class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
 
 
 class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
+    """Represent GUI hy2 item obfs type."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2ItemObfsType."""
         super().__init__(*args, **kwargs)
 
         self.addItems(HY2_OBFS_TYPES)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         try:
             oldObfsType = config['obfs']['type']
         except Exception:
@@ -229,6 +246,7 @@ class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
                 return False
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             obfsType = config['obfs']['type']
         except Exception:
@@ -243,12 +261,15 @@ class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
 
 
 class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
+    """Represent GUI hy2 item obfs password."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2ItemObfsPassword."""
         self.obfsType = kwargs.pop('obfsType', 'salamander')
 
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         newObfsPassword = self.text()
 
         try:
@@ -288,6 +309,7 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
             return modified
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             obfsType = config['obfs']['type']
         except Exception:
@@ -311,7 +333,9 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
 
 
 class GuiHy2ItemObfsPacketSize(GuiEditorItemTextSpinBox):
+    """Represent GUI hy2 item obfs packet size."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2ItemObfsPacketSize."""
         self.obfsType, self.key, self.default = (
             kwargs.pop('obfsType', 'gecko'),
             kwargs.pop('key', ''),
@@ -324,6 +348,7 @@ class GuiHy2ItemObfsPacketSize(GuiEditorItemTextSpinBox):
         self.setValue(self.default)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         try:
             obfsType = config['obfs']['type']
         except Exception:
@@ -351,6 +376,7 @@ class GuiHy2ItemObfsPacketSize(GuiEditorItemTextSpinBox):
         return False
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             obfsType = config['obfs']['type']
         except Exception:
@@ -377,16 +403,20 @@ class GuiHy2ItemObfsPacketSize(GuiEditorItemTextSpinBox):
 
 
 class GuiHy2PageObfsXXX(GuiEditorWidgetQWidget):
+    """Represent GUI hy2 page obfs xxx."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2PageObfsXXX."""
         super().__init__(*args, **kwargs)
 
     def setObfsTypeText(self, text: str):
+        """Set obfs type text."""
         obfsType = self._containers[0]
 
         if isinstance(obfsType, GuiEditorItemTextComboBox):
             obfsType.setText(text)
 
     def connectActivated(self, func):
+        """Connect activated."""
         obfsType = self._containers[0]
 
         if isinstance(obfsType, GuiEditorItemTextComboBox):
@@ -394,14 +424,18 @@ class GuiHy2PageObfsXXX(GuiEditorWidgetQWidget):
 
 
 class GuiHy2PageObfsEmpty(GuiHy2PageObfsXXX):
+    """Represent GUI hy2 page obfs empty."""
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiHy2ItemObfsType(title='obfs-type', translatable=False),
         ]
 
 
 class GuiHy2PageObfsSalamander(GuiHy2PageObfsXXX):
+    """Represent GUI hy2 page obfs salamander."""
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiHy2ItemObfsType(title='obfs-type', translatable=False),
             GuiHy2ItemObfsPassword(
@@ -413,7 +447,9 @@ class GuiHy2PageObfsSalamander(GuiHy2PageObfsXXX):
 
 
 class GuiHy2PageObfsGecko(GuiHy2PageObfsXXX):
+    """Represent GUI hy2 page obfs gecko."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2PageObfsGecko."""
         super().__init__(*args, **kwargs)
 
         self.minPacketSizeItem = self._containers[2]
@@ -425,6 +461,7 @@ class GuiHy2PageObfsGecko(GuiHy2PageObfsXXX):
         self.handleMinPacketSizeChanged(self.minPacketSizeItem.value())
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiHy2ItemObfsType(title='obfs-type', translatable=False),
             GuiHy2ItemObfsPassword(
@@ -447,6 +484,7 @@ class GuiHy2PageObfsGecko(GuiHy2PageObfsXXX):
         ]
 
     def handleMinPacketSizeChanged(self, value: int):
+        """Handle min packet size changed."""
         self.maxPacketSizeItem._input.setMinimum(value)
 
         if self.maxPacketSizeItem.value() < value:
@@ -454,7 +492,9 @@ class GuiHy2PageObfsGecko(GuiHy2PageObfsXXX):
 
 
 class GuiHy2ObfsPageStackedWidget(QStackedWidget):
+    """Provide the GUI hy2 obfs page stacked widget."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2ObfsPageStackedWidget."""
         super().__init__(*args, **kwargs)
 
         self._pages = [
@@ -467,15 +507,19 @@ class GuiHy2ObfsPageStackedWidget(QStackedWidget):
             self.addWidget(page)
 
     def page(self, index: int) -> GuiHy2PageObfsXXX:
+        """Return the page value."""
         return self._pages[index]
 
     def connectActivated(self, func):
+        """Connect activated."""
         for page in self._pages:
             page.connectActivated(func)
 
 
 class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
+    """Represent GUI hy2 item TLS text input."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2ItemTLSTextInput."""
         key = kwargs.pop('key', '')
 
         super().__init__(*args, **kwargs)
@@ -483,6 +527,7 @@ class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
         self.key = key
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         newValue = self.text()
 
         if newValue == '':
@@ -539,6 +584,7 @@ class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
                 return False
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             value = config['tls'][self.key]
         except Exception:
@@ -550,10 +596,13 @@ class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
 
 
 class GuiHy2ItemTLSInsecure(GuiEditorItemTextCheckBox):
+    """Represent GUI hy2 item TLS insecure."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2ItemTLSInsecure."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         try:
             oldChecked = config['tls']['insecure']
         except Exception:
@@ -585,6 +634,7 @@ class GuiHy2ItemTLSInsecure(GuiEditorItemTextCheckBox):
                 return False
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             checked = config['tls']['insecure']
         except Exception:
@@ -599,10 +649,13 @@ class GuiHy2ItemTLSInsecure(GuiEditorItemTextCheckBox):
 
 
 class GuiHy2GroupBoxBasic(GuiEditorWidgetQGroupBox):
+    """Represent GUI hy2 group box basic."""
     def __init__(self, **kwargs):
+        """Initialize the GuiHy2GroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemBasicRemark(title=_('Remark')),
             GuiHy2ItemBasicServer(title=_('Server')),
@@ -617,10 +670,13 @@ class GuiHy2GroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 
 class GuiHy2GroupBoxProxy(GuiEditorWidgetQGroupBox):
+    """Represent GUI hy2 group box proxy."""
     def __init__(self, **kwargs):
+        """Initialize the GuiHy2GroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemProxyHttp(title='http', translatable=False),
             GuiEditorItemProxySocks(title='socks', translatable=False),
@@ -628,7 +684,9 @@ class GuiHy2GroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 
 class GuiHy2GroupBoxObfs(GuiEditorItemFactory, AppQGroupBox):
+    """Represent GUI hy2 group box obfs."""
     def __init__(self, **kwargs):
+        """Initialize the GuiHy2GroupBoxObfs."""
         translatable = kwargs.pop('translatable', False)
 
         super().__init__('obfs', **kwargs, translatable=translatable)
@@ -644,15 +702,19 @@ class GuiHy2GroupBoxObfs(GuiEditorItemFactory, AppQGroupBox):
         self.setLayout(layout)
 
     def currentIndex(self) -> int:
+        """Return the current index value."""
         return self._widget.currentIndex()
 
     def setCurrentIndex(self, index: int):
+        """Set current index."""
         self._widget.setCurrentIndex(index)
 
     def page(self, index: int) -> GuiHy2PageObfsXXX:
+        """Return the page value."""
         return self._widget.page(index)
 
     def handleActivated(self, index: int):
+        """Handle activated."""
         page = self.page(index)
         page.factoryToInput(self._config)
         page.setObfsTypeText(HY2_OBFS_TYPES[index])
@@ -660,6 +722,7 @@ class GuiHy2GroupBoxObfs(GuiEditorItemFactory, AppQGroupBox):
         self.setCurrentIndex(index)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         oldObfs = config.get('obfs')
         oldObfsType = ''
 
@@ -694,6 +757,7 @@ class GuiHy2GroupBoxObfs(GuiEditorItemFactory, AppQGroupBox):
         return modified
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         self._config = config
 
         try:
@@ -714,12 +778,15 @@ class GuiHy2GroupBoxObfs(GuiEditorItemFactory, AppQGroupBox):
 
 
 class GuiHy2GroupBoxTLS(GuiEditorWidgetQGroupBox):
+    """Represent GUI hy2 group box TLS."""
     def __init__(self, **kwargs):
+        """Initialize the GuiHy2GroupBoxTLS."""
         super().__init__('TLS', **kwargs)
 
         self.translatable = False
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiHy2ItemTLSTextInput(title='sni', key='sni', translatable=False),
             GuiHy2ItemTLSTextInput(
@@ -731,13 +798,16 @@ class GuiHy2GroupBoxTLS(GuiEditorWidgetQGroupBox):
 
 
 class GuiHy2ProjectWebsiteURL(AppQLabel):
+    """Represent GUI hy2 project website URL."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHy2ProjectWebsiteURL."""
         super().__init__(*args, **kwargs)
 
         self.setWebsiteURL()
         self.linkActivated.connect(self.handleLinkActivated)
 
     def setWebsiteURL(self):
+        """Set website URL."""
         self.setText(
             '<html><head/><body><p>'
             '<a href=\"https://v2.hysteria.network/\">'
@@ -748,17 +818,21 @@ class GuiHy2ProjectWebsiteURL(AppQLabel):
 
     @staticmethod
     def handleLinkActivated(link: str):
+        """Handle link activated."""
         if QDesktopServices.openUrl(QtCore.QUrl(link)):
             logger.info(f'open link \'{link}\' success')
         else:
             logger.error(f'open link \'{link}\' failed')
 
     def retranslate(self):
+        """Refresh translated text for the GUI hy2 project website URL."""
         self.setWebsiteURL()
 
 
 class GuiHy2GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):
+    """Represent GUI hy2 group box other."""
     def __init__(self, **kwargs):
+        """Initialize the GuiHy2GroupBoxOther."""
         super().__init__(_('Other'), **kwargs)
 
         self._website = GuiHy2ProjectWebsiteURL()
@@ -769,20 +843,25 @@ class GuiHy2GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):
         self.setLayout(layout)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         return False
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         pass
 
 
 class GuiHysteria2(GuiEditorWidgetQDialog):
+    """Represent GUI hysteria2."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiHysteria2."""
         super().__init__(*args, **kwargs)
 
         self.setTabText(Protocol.Hysteria2.value)
 
     @functools.lru_cache(None)
     def groupBoxSequence(self):
+        """Return the configuration group boxes in display order."""
         return [
             GuiHy2GroupBoxBasic(),
             GuiHy2GroupBoxProxy(),

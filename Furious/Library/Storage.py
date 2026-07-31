@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide cached access to persisted user data collections."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -32,8 +34,10 @@ __all__ = ['Storage']
 
 
 class Storage:
+    """Provide cached access to persisted user configuration collections."""
     @staticmethod
     def UserActivatedItemIndex() -> int:
+        """Return the user activated item index value."""
         try:
             return int(AppSettings.get('ActivatedItemIndex'))
         except Exception:
@@ -44,6 +48,7 @@ class Storage:
     @staticmethod
     @functools.lru_cache(None)
     def UserServers() -> list[ConfigFactory]:
+        """Return the user servers value."""
         assert APP() is not None
 
         return UserServers().data()
@@ -51,6 +56,7 @@ class Storage:
     @staticmethod
     @functools.lru_cache(None)
     def UserSubs() -> dict[str, dict]:
+        """Return the user subs value."""
         assert APP() is not None
 
         return UserSubs().data()
@@ -58,6 +64,7 @@ class Storage:
     @staticmethod
     @functools.lru_cache(None)
     def UserTUNSettings() -> dict[str, str]:
+        """Return the user TUN settings value."""
         assert APP() is not None
 
         return UserTUNSettings().data()
@@ -65,14 +72,17 @@ class Storage:
     @staticmethod
     @functools.lru_cache(None)
     def UserRoutings() -> dict[str, dict]:
+        """Return the user routings value."""
         assert APP() is not None
 
         return UserRoutings().data()
 
     class Extras:
+        """Derive display and proxy values from the active server."""
         @staticmethod
         @forceToLocalhostIfPossible()
         def UserHttpProxy() -> Union[str, None]:
+            """Return the user HTTP proxy value."""
             try:
                 if APP().isSystemTrayConnected():
                     index, servers = (
@@ -94,6 +104,7 @@ class Storage:
 
         @staticmethod
         def UserServerRemark() -> Union[str, None]:
+            """Return the user server remark value."""
             try:
                 if APP().isSystemTrayConnected():
                     index, servers = (

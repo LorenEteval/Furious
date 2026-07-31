@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide widgets for GUI v mess."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -46,10 +48,13 @@ getProxyOutboundUser = functools.partial(
 
 
 class GuiVMessItemBasicAddress(GuiEditorItemTextInput):
+    """Represent GUI v mess item basic address."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVMessItemBasicAddress."""
         super().__init__(*args, **kwargs)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldAddress = proxyOutboundServer.get('address', '')
@@ -72,6 +77,7 @@ class GuiVMessItemBasicAddress(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -83,13 +89,16 @@ class GuiVMessItemBasicAddress(GuiEditorItemTextInput):
 
 
 class GuiVMessItemBasicPort(GuiEditorItemTextSpinBox):
+    """Represent GUI v mess item basic port."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVMessItemBasicPort."""
         super().__init__(*args, **kwargs)
 
         # Range
         self.setRange(0, 65535)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
         oldPort = proxyOutboundServer.get('port')
@@ -108,6 +117,7 @@ class GuiVMessItemBasicPort(GuiEditorItemTextSpinBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -119,7 +129,9 @@ class GuiVMessItemBasicPort(GuiEditorItemTextSpinBox):
 
 
 class GuiVMessItemBasicId(GuiEditorItemTextInput):
+    """Represent GUI v mess item basic id."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVMessItemBasicId."""
         super().__init__(*args, **kwargs)
 
         self.generateButton = AppQPushButton(_('Generate'))
@@ -133,12 +145,15 @@ class GuiVMessItemBasicId(GuiEditorItemTextInput):
         layout.addWidget(self.generateButton)
 
     def generateUUID(self):
+        """Handle generate uuid for the GUI v mess item basic id."""
         self.setText(str(uuid.uuid4()))
 
     def widgets(self):
+        """Return the widgets owned by this editor item."""
         return self._title, self._widget
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundUser = getProxyOutboundUser(config)
 
         oldId = proxyOutboundUser.get('id', '')
@@ -161,6 +176,7 @@ class GuiVMessItemBasicId(GuiEditorItemTextInput):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -172,13 +188,16 @@ class GuiVMessItemBasicId(GuiEditorItemTextInput):
 
 
 class GuiVMessItemBasicAlterId(GuiEditorItemTextSpinBox):
+    """Represent GUI v mess item basic alter id."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVMessItemBasicAlterId."""
         super().__init__(*args, **kwargs)
 
         # Range
         self.setRange(0, 65535)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundUser = getProxyOutboundUser(config)
 
         oldAlterId = proxyOutboundUser.get('alterId')
@@ -197,6 +216,7 @@ class GuiVMessItemBasicAlterId(GuiEditorItemTextSpinBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -208,7 +228,9 @@ class GuiVMessItemBasicAlterId(GuiEditorItemTextSpinBox):
 
 
 class GuiVMessItemBasicSecurity(GuiEditorItemTextComboBox):
+    """Represent GUI v mess item basic security."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVMessItemBasicSecurity."""
         super().__init__(*args, **kwargs)
 
         self.addItems(
@@ -223,6 +245,7 @@ class GuiVMessItemBasicSecurity(GuiEditorItemTextComboBox):
         )
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
         proxyOutboundUser = getProxyOutboundUser(config)
 
         oldSecurity = proxyOutboundUser.get('security', '')
@@ -241,6 +264,7 @@ class GuiVMessItemBasicSecurity(GuiEditorItemTextComboBox):
             return True
 
     def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -252,14 +276,18 @@ class GuiVMessItemBasicSecurity(GuiEditorItemTextComboBox):
 
 
 class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
+    """Represent GUI v mess group box basic."""
     def __init__(self, **kwargs):
+        """Initialize the GuiVMessGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
 
     def setupPageLayout(self):
+        """Set up page layout."""
         layout = QGridLayout()
         layout.setColumnStretch(4, 1)
 
         def keepSpinBoxCompact(widget: QWidget):
+            """Handle keep spin box compact for the GUI v mess group box basic."""
             if isinstance(widget, QSpinBox):
                 widget.setSizePolicy(
                     QSizePolicy.Policy.Fixed,
@@ -267,6 +295,7 @@ class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
                 )
 
         def keepComboBoxCompact(widget: QWidget):
+            """Handle keep combo box compact for the GUI v mess group box basic."""
             if isinstance(widget, QComboBox):
                 widget.setSizePolicy(
                     QSizePolicy.Policy.Fixed,
@@ -274,6 +303,7 @@ class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
                 )
 
         def addPair(index: int, row: int, column: int):
+            """Add pair."""
             label, inputWidget = self._containers[index].widgets()
 
             keepSpinBoxCompact(inputWidget)
@@ -282,6 +312,7 @@ class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
             layout.addWidget(inputWidget, row, column + 1)
 
         def addFullRow(index: int, row: int):
+            """Add full row."""
             label, inputWidget = self._containers[index].widgets()
 
             keepSpinBoxCompact(inputWidget)
@@ -302,6 +333,7 @@ class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
         return layout
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemBasicRemark(title=_('Remark')),
             GuiVMessItemBasicAddress(title=_('Address')),
@@ -313,10 +345,13 @@ class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 
 class GuiVMessGroupBoxProxy(GuiEditorWidgetQGroupBox):
+    """Represent GUI v mess group box proxy."""
     def __init__(self, **kwargs):
+        """Initialize the GuiVMessGroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
 
     def containerSequence(self):
+        """Return the editor item containers in display order."""
         return [
             GuiEditorItemProxyHttp(title='http', translatable=False),
             GuiEditorItemProxySocks(title='socks', translatable=False),
@@ -324,13 +359,16 @@ class GuiVMessGroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 
 class GuiVMess(GuiEditorWidgetQDialog):
+    """Represent GUI v mess."""
     def __init__(self, *args, **kwargs):
+        """Initialize the GuiVMess."""
         super().__init__(*args, **kwargs)
 
         self.setTabText(Protocol.VMess.value)
 
     @functools.lru_cache(None)
     def groupBoxSequence(self):
+        """Return the configuration group boxes in display order."""
         return [
             GuiVMessGroupBoxBasic(),
             GuiVMessGroupBoxProxy(),

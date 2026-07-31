@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide the application window for app main window."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -51,10 +53,13 @@ registerAppSettings('AppMainWindowState')
 
 
 class AppNetworkConnectivityManager(NetworkConnectivityManager):
+    """Coordinate app network connectivity operations."""
     def __init__(self, parent=None):
+        """Initialize the AppNetworkConnectivityManager."""
         super().__init__(parent)
 
     def successCallback(self, networkReply, **kwargs):
+        """Handle a successful network operation."""
         parent = self.parent()
 
         if isinstance(parent, AppMainWindow):
@@ -63,6 +68,7 @@ class AppNetworkConnectivityManager(NetworkConnectivityManager):
         super().successCallback(networkReply, **kwargs)
 
     def failureCallback(self, networkReply, **kwargs):
+        """Handle a failed network operation."""
         parent = self.parent()
 
         if isinstance(parent, AppMainWindow):
@@ -71,6 +77,7 @@ class AppNetworkConnectivityManager(NetworkConnectivityManager):
         super().failureCallback(networkReply, **kwargs)
 
     def startSingleTest(self):
+        """Start single test."""
         if not APP().isSystemTrayConnected():
             parent = self.parent()
 
@@ -92,6 +99,7 @@ class AppNetworkConnectivityManager(NetworkConnectivityManager):
             super().startSingleTest()
 
     def disconnectedCallback(self):
+        """Update the app network connectivity manager for a disconnected state."""
         parent = self.parent()
 
         if isinstance(parent, AppMainWindow):
@@ -101,6 +109,7 @@ class AppNetworkConnectivityManager(NetworkConnectivityManager):
 
 
 class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
+    """Provide the network state badge widget."""
     DefaultIconFileName = 'reception-4.svg'
     StateIconFileName = {
         'success': 'reception-4.svg',
@@ -109,6 +118,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
     IconSize = QtCore.QSize(16, 16)
 
     def __init__(self, parent=None):
+        """Initialize the NetworkStateBadge."""
         super().__init__(parent)
 
         self.currentIconFileName = self.DefaultIconFileName
@@ -132,6 +142,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.setIconByTheme(APP().theme())
 
     def setIconByTheme(self, theme: str, iconFileName: Union[str, None] = None):
+        """Set icon by theme."""
         iconFileName = iconFileName or self.currentIconFileName
 
         if theme == AppStyleSheet.Dark:
@@ -142,6 +153,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.iconLabel.setPixmap(icon.pixmap(self.IconSize))
 
     def statusText(self):
+        """Return the status text value used by the network state badge."""
         if self.currentState == 'success':
             return f'{_("Network OK")} - {self.currentRemark}'
 
@@ -151,6 +163,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         return ''
 
     def statusToolTip(self):
+        """Return the status tool tip value used by the network state badge."""
         if self.currentState == 'success':
             return self.currentRemark
 
@@ -160,6 +173,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         return ''
 
     def updateStatusText(self):
+        """Update status text."""
         text = self.statusText()
         tooltip = self.statusToolTip()
 
@@ -169,6 +183,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.textLabel.setToolTip(tooltip)
 
     def setStatus(self, state: str, remark: str, errorString: str = ''):
+        """Set status."""
         self.currentState = state
         self.currentRemark = remark
         self.currentErrorString = errorString
@@ -182,6 +197,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.refreshStyle()
 
     def clearStatus(self):
+        """Clear status."""
         self.currentState = ''
         self.currentRemark = ''
         self.currentErrorString = ''
@@ -194,6 +210,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.refreshStyle()
 
     def refreshStyle(self):
+        """Refresh style."""
         for widget in [self, self.iconLabel, self.textLabel]:
             widget.style().unpolish(widget)
             widget.style().polish(widget)
@@ -202,14 +219,18 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.setVisible(bool(self.textLabel.text()))
 
     def themeChangedCallback(self, theme: str):
+        """Update the network state badge for a theme change."""
         self.setIconByTheme(theme)
 
     def retranslate(self):
+        """Refresh translated text for the network state badge."""
         self.updateStatusText()
 
 
 class SearchButton(AppQPushButton):
+    """Represent search button."""
     def __init__(self, *args, **kwargs):
+        """Initialize the SearchButton."""
         super().__init__(*args, **kwargs)
 
         self.setText(self.customText())
@@ -217,19 +238,23 @@ class SearchButton(AppQPushButton):
 
     @staticmethod
     def customText():
+        """Return the user-facing message text for the search button."""
         return ' ' * 2 + _('Search')
 
     def retranslate(self):
+        """Refresh translated text for the search button."""
         self.setText(self.customText())
 
 
 class AppMainWindow(AppQMainWindow):
+    """Present the app main window."""
     DEFAULT_WINDOW_SIZE_DARWIN = QtCore.QSize(1500, 780)
     DEFAULT_WINDOW_SIZE = (
         QtCore.QSize(1800, 960) if PLATFORM != 'Darwin' else DEFAULT_WINDOW_SIZE_DARWIN
     )
 
     def __init__(self, *args, **kwargs):
+        """Initialize the AppMainWindow."""
         super().__init__(*args, **kwargs)
 
         if SystemRuntime.isAdmin():
@@ -610,27 +635,35 @@ class AppMainWindow(AppQMainWindow):
 
     @QtCore.Slot(str)
     def handleUserServersSearchTextChanged(self, text: str):
+        """Handle user servers search text changed."""
         if not text:
             self.userServersQTableWidget.clearSearch()
 
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
+        """Update subs by unique."""
         self.userServersQTableWidget.updateSubsByUnique(unique, httpProxy, **kwargs)
 
     def appendNewItemByFactory(self, factory: ConfigFactory):
+        """Append new item by factory."""
         self.userServersQTableWidget.appendNewItemByFactory(factory)
 
     def flushRow(self, row: int, item: ConfigFactory):
+        """Refresh row."""
         self.userServersQTableWidget.flushRow(row, item)
 
     def showTabAndSpaces(self):
+        """Show tab and spaces."""
         self.userServersQTableWidget.showTabAndSpaces()
 
     def hideTabAndSpaces(self):
+        """Hide tab and spaces."""
         self.userServersQTableWidget.hideTabAndSpaces()
 
     def getGuiTUNSettings(self, **kwargs):
+        """Return GUI TUN settings."""
         @functools.lru_cache(None)
         def cachedGuiTUNSettings():
+            """Return the cached GUI TUN settings value used by the app main window."""
             parent = kwargs.pop('parent', self)
 
             return GuiTUNSettings(parent=parent, **kwargs)
@@ -641,13 +674,16 @@ class AppMainWindow(AppQMainWindow):
         return guiTUNSettings
 
     def checkForUpdates(self, **kwargs):
+        """Check for updates."""
         self.updatesManager.configureHttpProxy(Storage.Extras.UserHttpProxy())
         self.updatesManager.checkForUpdates(**kwargs)
 
     def resetNetworkState(self):
+        """Reset network state."""
         self.networkState.clearStatus()
 
     def setNetworkState(self, success: bool, **kwargs):
+        """Set network state."""
         remark = Storage.Extras.UserServerRemark()
 
         if not remark:
@@ -673,6 +709,7 @@ class AppMainWindow(AppQMainWindow):
 
     @staticmethod
     def openApplicationFolder():
+        """Open application folder."""
         appFolder = os.path.dirname(APP().applicationFilePath())
 
         if QDesktopServices.openUrl(QtCore.QUrl(appFolder)):
@@ -682,6 +719,7 @@ class AppMainWindow(AppQMainWindow):
 
     @staticmethod
     def restartAsAdmin():
+        """Handle restart as admin for the app main window."""
         if not SystemRuntime.isScriptMode():
             if not SystemRuntime.isAdmin():
                 process = QtCore.QProcess()
@@ -718,12 +756,14 @@ class AppMainWindow(AppQMainWindow):
 
     @staticmethod
     def openAboutPage():
+        """Open about page."""
         if QDesktopServices.openUrl(QtCore.QUrl(APPLICATION_ABOUT_PAGE)):
             logger.info('open about page success')
         else:
             logger.error('open about page failed')
 
     def setWidthAndHeight(self):
+        """Apply the default size for the app main window."""
         if AppSettings.get('AppMainWindowGeometry') is None:
             # Migrate legacy settings
             try:
@@ -773,11 +813,13 @@ class AppMainWindow(AppQMainWindow):
                     )
 
     def retranslate(self):
+        """Refresh translated text for the app main window."""
         if SystemRuntime.isAdmin():
             self.setWindowTitle(f'{_(APPLICATION_NAME)} ({_(ADMINISTRATOR_NAME)})')
         else:
             self.setWindowTitle(f'{_(APPLICATION_NAME)}')
 
     def cleanup(self):
+        """Release resources owned by the app main window."""
         AppSettings.set('AppMainWindowGeometry', self.saveGeometry())
         AppSettings.set('AppMainWindowState', self.saveState())

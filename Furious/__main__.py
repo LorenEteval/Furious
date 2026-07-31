@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide the Furious GUI application entry point."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -39,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 def runClearSettings():
+    """Run clear settings."""
     app = QtCore.QCoreApplication(sys.argv)
     app.setApplicationName(APPLICATION_NAME)
     app.setApplicationVersion(APPLICATION_VERSION)
@@ -55,6 +58,7 @@ def runClearSettings():
 
 
 def runAppMain():
+    """Run app main."""
     process = AppMainProcess(functools.partial(Application, sys.argv))
 
     process.start()
@@ -130,6 +134,7 @@ def runAppMain():
             button1 = mbox.addButton(_('OK'), AppQMessageBox.ButtonRole.RejectRole)
 
             def handleButtonClicked(button):
+                """Handle button clicked."""
                 if button == button0:
                     # Open
                     if QDesktopServices.openUrl(
@@ -157,6 +162,7 @@ def runAppMain():
 
 
 def main():
+    """Run the module command-line entry point."""
     try:
         if len(sys.argv) > 1 and sys.argv[1] == AppBuiltinCommand.Clear.value:
             runClearSettings()

@@ -3,6 +3,8 @@
 # Created by: The Resource Compiler for Qt version 6.8.3
 # WARNING! All changes made in this file will be lost!
 
+"""Provide Qt resources generated from the application resource collection."""
+
 from PySide6 import QtCore
 
 qt_resource_data = b"\
@@ -179543,9 +179545,11 @@ qt_resource_struct = b"\
 "
 
 def qInitResources():
+    """Register the generated resources with Qt."""
     QtCore.qRegisterResourceData(0x03, qt_resource_struct, qt_resource_name, qt_resource_data)
 
 def qCleanupResources():
+    """Unregister the generated resources from Qt."""
     QtCore.qUnregisterResourceData(0x03, qt_resource_struct, qt_resource_name, qt_resource_data)
 
 qInitResources()

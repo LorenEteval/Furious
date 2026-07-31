@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Manage proxy-core child processes and their output queues."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -49,6 +51,7 @@ logger = logging.getLogger(__name__)
 
 
 class CoreProcessState(Enum):
+    """Enumerate core process state."""
     Idle = 'idle'
     Starting = 'starting'
     Running = 'running'
@@ -59,6 +62,7 @@ class CoreProcessState(Enum):
 
 @dataclass
 class CoreLaunchSpec:
+    """Describe the parameters required by a core launch operation."""
     target: Callable
     args: Tuple[Any, ...] = field(default_factory=tuple)
     processKwargs: Dict[str, Any] = field(default_factory=dict)
@@ -67,6 +71,7 @@ class CoreLaunchSpec:
     waitTime: int = 2500
 
     def __post_init__(self):
+        """Normalize the initialized core launch spec values."""
         self.args = tuple(self.args)
         self.processKwargs = dict(self.processKwargs)
 
@@ -78,6 +83,7 @@ class CoreLaunchSpec:
 
     @classmethod
     def fromProcessKwargs(cls, **kwargs):
+        """Build a launch specification from multiprocessing keyword arguments."""
         daemon, waitCore, waitTime, target, args = (
             kwargs.pop('daemon', True),
             kwargs.pop('waitCore', True),
@@ -96,6 +102,7 @@ class CoreLaunchSpec:
         )
 
     def toProcessKwargs(self):
+        """Convert the launch specification to multiprocessing keyword arguments."""
         kwargs = dict(self.processKwargs)
         kwargs.update(
             {
@@ -108,11 +115,13 @@ class CoreLaunchSpec:
 
 
 class MsgQueue(multiprocessing.queues.Queue):
+    """Deliver child-process log messages to Qt callbacks at an adaptive rate."""
     MSG_PRODUCE_THRESHOLD = 1024
     OPTIMIZER_MIN_FREQ = 2
     OPTIMIZER_MAX_FREQ = 256
 
     def __init__(self, **kwargs):
+        """Initialize the MsgQueue."""
         msgCallback = kwargs.pop('msgCallback', None)
         backgroundOptimizer = kwargs.pop('backgroundOptimizer', None)
 
@@ -125,6 +134,7 @@ class MsgQueue(multiprocessing.queues.Queue):
         self.backgroundOptimizer = backgroundOptimizer
 
     def getNoWait(self) -> str:
+        """Return no wait."""
         try:
             return self.get_nowait()
         except Exception:
@@ -133,19 +143,24 @@ class MsgQueue(multiprocessing.queues.Queue):
             return ''
 
     def getTimeout(self) -> int:
+        """Return timeout."""
         return self.timeout
 
     def setTimeout(self, timeout: int):
+        """Set timeout."""
         self.timeout = timeout
 
     def startTimer(self):
+        """Start timer."""
         self.timer.start(self.getTimeout())
 
     def stopTimer(self):
+        """Stop timer."""
         self.timer.stop()
 
     @property
     def optimizer(self):
+        """Return the optimizer value."""
         try:
             return self.backgroundOptimizer()
         except Exception:
@@ -154,6 +169,7 @@ class MsgQueue(multiprocessing.queues.Queue):
             return None
 
     def processMsg(self):
+        """Process msg."""
         msg = self.getNoWait()
 
         if not callable(self.callback):
@@ -190,9 +206,11 @@ class MsgQueue(multiprocessing.queues.Queue):
 
 
 class CoreProcessMonitor(CoreProcessFactory, ABC):
+    """Track the state and lifetime of a proxy-core child process."""
     StopJoinTimeout = 3
 
     def __init__(self, **kwargs):
+        """Initialize the CoreProcessMonitor."""
         exitCallback = kwargs.pop('exitCallback', None)
 
         super().__init__(exitCallback)
@@ -206,37 +224,46 @@ class CoreProcessMonitor(CoreProcessFactory, ABC):
 
     @property
     def process(self) -> Union[multiprocessing.Process, None]:
+        """Return the process value."""
         return self._process
 
     @process.setter
     def process(self, process: Union[multiprocessing.Process, None]):
+        """Set the process value."""
         self._process = process
 
     @property
     def daemon(self) -> QtCore.QTimer:
+        """Return the daemon value."""
         return self._daemon
 
     @property
     def state(self) -> CoreProcessState:
+        """Return the state value."""
         return self._state
 
     def setState(self, state: CoreProcessState):
+        """Set state."""
         self._state = state
 
     @property
     def lastExitCode(self):
+        """Return the last exit code value."""
         return self._lastExitCode
 
     def setLastExitCode(self, exitCode):
+        """Set last exit code."""
         self._lastExitCode = exitCode
 
     def isAlive(self) -> bool:
+        """Return whether alive."""
         if isinstance(self.process, multiprocessing.Process):
             return self.process.is_alive()
         else:
             return False
 
     def queryIsAlive(self):
+        """Query is alive."""
         if isinstance(self.process, multiprocessing.Process):
             if self.process.is_alive():
                 return True
@@ -248,9 +275,11 @@ class CoreProcessMonitor(CoreProcessFactory, ABC):
             return False
 
     def handleInternalProcessStopped(self, *args, **kwargs):
+        """Handle internal process stopped."""
         raise NotImplementedError
 
     def closeProcess(self):
+        """Close process."""
         if isinstance(self.process, multiprocessing.Process):
             try:
                 self.process.close()
@@ -262,7 +291,9 @@ class CoreProcessMonitor(CoreProcessFactory, ABC):
 
 
 class CoreProcessWorker(CoreProcessMonitor, ABC):
+    """Run and monitor a proxy core in a child process."""
     def __init__(self, **kwargs):
+        """Initialize the CoreProcessWorker."""
         msgCallback = kwargs.pop('msgCallback', None)
         # Optimizer is AppLoggerWindow.Core window
         backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLoggerWindow.Core)
@@ -274,6 +305,7 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
         )
 
     def handleInternalProcessStopped(self):
+        """Handle internal process stopped."""
         exitcode = self.process.exitcode
 
         logger.error(f'{self.name()} stopped unexpectedly with exitcode {exitcode}')
@@ -289,9 +321,11 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
         self.closeProcess()
 
     def start(self, **kwargs) -> bool:
+        """Start the core process worker."""
         return self.startWithSpec(CoreLaunchSpec.fromProcessKwargs(**kwargs))
 
     def startWithSpec(self, launchSpec: CoreLaunchSpec) -> bool:
+        """Start and validate a child process from a launch specification."""
         if not isinstance(launchSpec, CoreLaunchSpec):
             logger.error(f'invalid launch spec for {self.name()}: {launchSpec}')
 
@@ -348,6 +382,7 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
             return False
 
     def stop(self):
+        """Stop the core process worker."""
         self.msgQueue.stopTimer()
         self.daemon.stop()
 
@@ -379,12 +414,14 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
 
 
 class ProcessOutputRedirector:
+    """Redirect child-process output into the application message queue."""
     TemporaryDir = QtCore.QTemporaryDir()
 
     @staticmethod
     def launch(
         msgQueue: multiprocessing.Queue, entrypoint: Callable[[], None], redirect: bool
     ):
+        """Run an entry point while forwarding its output to a message queue."""
         if not callable(entrypoint):
             return
 
@@ -415,6 +452,7 @@ class ProcessOutputRedirector:
         sys.stderr = tmpFileStream
 
         def produceMsg():
+            """Forward one process-output message to the shared queue."""
             with open(temporaryFile, 'rb') as file:
                 while True:
                     for line in iter(file.readline, b''):

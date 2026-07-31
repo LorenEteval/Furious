@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Expose system-tray actions used by the application."""
+
 from __future__ import annotations
 
 from .Connect import *

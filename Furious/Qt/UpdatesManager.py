@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for updates manager."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -37,7 +39,9 @@ logger = logging.getLogger(__name__)
 
 
 class MBoxQuestionUpdate(AppQMessageBox):
+    """Represent m box question update."""
     def __init__(self, *args, **kwargs):
+        """Initialize the MBoxQuestionUpdate."""
         super().__init__(*args, **kwargs)
 
         self.version = '0.0.0'
@@ -47,9 +51,11 @@ class MBoxQuestionUpdate(AppQMessageBox):
         )
 
     def customText(self):
+        """Return the user-facing message text for the m box question update."""
         return _('New version available') + f': {self.version}'
 
     def retranslate(self):
+        """Refresh translated text for the m box question update."""
         self.setText(self.customText())
         self.setWindowTitle(_(self.windowTitle()))
         self.setInformativeText(_(self.informativeText()))
@@ -60,18 +66,21 @@ class MBoxQuestionUpdate(AppQMessageBox):
 
 
 class UpdatesManager(WebGETManager):
+    """Coordinate updates operations."""
     API_URL = (
         f'https://api.github.com/repos/'
         f'{APPLICATION_REPO_OWNER_NAME}/{APPLICATION_REPO_NAME}/releases/latest'
     )
 
     def __init__(self, parent=None, **kwargs):
+        """Initialize the UpdatesManager."""
         actionMessage = kwargs.pop('actionMessage', 'check for updates')
 
         super().__init__(parent, actionMessage=actionMessage)
 
     @staticmethod
     def showErrorMessageBox(parent=None):
+        """Show error message box."""
         mbox = AppQMessageBox(parent=parent, icon=AppQMessageBox.Icon.Critical)
         mbox.setWindowTitle(_(APPLICATION_NAME))
         mbox.setText(_('Check for updates failed'))
@@ -80,6 +89,7 @@ class UpdatesManager(WebGETManager):
         mbox.open()
 
     def successCallback(self, networkReply, **kwargs):
+        """Handle a successful network operation."""
         parent = kwargs.pop('parent', None)
         showMessageBox = kwargs.pop('showMessageBox', True)
         hasNewVersionCallback = kwargs.pop('hasNewVersionCallback', None)
@@ -101,6 +111,7 @@ class UpdatesManager(WebGETManager):
             if versionToValue(newVersion) > versionToValue(APPLICATION_VERSION):
 
                 def handleResultCode(code):
+                    """Handle result code."""
                     if code == PySide6Legacy.enumValueWrapper(
                         AppQMessageBox.StandardButton.Yes
                     ):
@@ -140,6 +151,7 @@ class UpdatesManager(WebGETManager):
                     mbox.open()
 
     def failureCallback(self, networkReply, **kwargs):
+        """Handle a failed network operation."""
         showMessageBox = kwargs.pop('showMessageBox', True)
 
         if showMessageBox:
@@ -151,6 +163,7 @@ class UpdatesManager(WebGETManager):
         hasNewVersionCallback: Callable[[str], None] = None,
         **kwargs,
     ):
+        """Check for updates."""
         self.webGET(
             self.API_URL,
             showMessageBox=showMessageBox,

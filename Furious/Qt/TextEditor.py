@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for text editor."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -38,10 +40,13 @@ __all__ = [
 
 
 class SupportPointSizeSettings(Mixins.CleanupOnExit):
+    """Store and validate support point size settings."""
     def pointSizeSettingsEmpty(self):
+        """Return the point size settings empty value used by the support point size settings."""
         return self.pointSizeSettingsName == ''
 
     def __init__(self, *args, **kwargs):
+        """Initialize the SupportPointSizeSettings."""
         self.pointSizeSettingsName = kwargs.pop('pointSizeSettingsName', '')
 
         super().__init__(*args, **kwargs)
@@ -51,17 +56,22 @@ class SupportPointSizeSettings(Mixins.CleanupOnExit):
         self.restorePointSize()
 
     def restorePointSize(self):
+        """Restore point size."""
         raise NotImplementedError
 
     def cleanup(self):
+        """Release resources owned by the support point size settings."""
         raise NotImplementedError
 
 
 class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
+    """Represent app q plain text edit."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQPlainTextEdit."""
         super().__init__(*args, **kwargs)
 
     def restorePointSize(self):
+        """Restore point size."""
         if self.pointSizeSettingsEmpty():
             return
 
@@ -79,6 +89,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
     @staticmethod
     @functools.lru_cache(128)
     def getIndent(line):
+        """Return indent."""
         indent = ''
 
         for char in line:
@@ -90,6 +101,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
         return indent
 
     def getPrevAndNextChar(self, cursor):
+        """Return prev and next char."""
         plainText = self.toPlainText()
 
         cursor.movePosition(QTextCursor.MoveOperation.Left)
@@ -114,6 +126,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
         return prevChar + nextChar
 
     def smartIndent(self, event):
+        """Handle smart indent for the app q plain text edit."""
         cursor = self.textCursor()
         indent = self.getIndent(cursor.block().text())
 
@@ -126,6 +139,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
         self.setTextCursor(cursor)
 
     def smartSymbolPair(self, event, pair):
+        """Handle smart symbol pair for the app q plain text edit."""
         plainText = self.toPlainText()
 
         cursor = self.textCursor()
@@ -148,6 +162,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
             self.setTextCursor(cursor)
 
     def smartBackspace(self, event):
+        """Handle smart backspace for the app q plain text edit."""
         cursor = self.textCursor()
         chPair = self.getPrevAndNextChar(cursor)
 
@@ -158,6 +173,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
             super().keyPressEvent(event)
 
     def hideTabAndSpaces(self):
+        """Hide tab and spaces."""
         textOption = QTextOption()
 
         self.document().setDefaultTextOption(textOption)
@@ -166,6 +182,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 
     def showTabAndSpaces(self):
+        """Show tab and spaces."""
         textOption = QTextOption()
         textOption.setFlags(QTextOption.Flag.ShowTabsAndSpaces)
 
@@ -175,6 +192,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 
     def keyPressEvent(self, event):
+        """Handle a key press for the app q plain text edit."""
         if (
             event.key() == QtCore.Qt.Key.Key_Return
             or event.key() == QtCore.Qt.Key.Key_Enter
@@ -192,6 +210,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
             super().keyPressEvent(event)
 
     def wheelEvent(self, event):
+        """Handle the wheel event."""
         if event.modifiers() == QtCore.Qt.KeyboardModifier.ControlModifier:
             delta = event.angleDelta().y()
 
@@ -203,6 +222,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
             super().wheelEvent(event)
 
     def cleanup(self):
+        """Release resources owned by the app q plain text edit."""
         if self.pointSizeSettingsEmpty():
             return
 
@@ -210,10 +230,13 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
 
 
 class AppQTextBrowser(SupportPointSizeSettings, QTextBrowser):
+    """Represent app q text browser."""
     def __init__(self, *args, **kwargs):
+        """Initialize the AppQTextBrowser."""
         super().__init__(*args, **kwargs)
 
     def appendLine(self, line: str):
+        """Append line."""
         hScrollBar = self.horizontalScrollBar()
         vScrollBar = self.verticalScrollBar()
         scrollEnds = vScrollBar.maximum() - vScrollBar.value() <= 10
@@ -226,6 +249,7 @@ class AppQTextBrowser(SupportPointSizeSettings, QTextBrowser):
             hScrollBar.setValue(0)  # scroll to the left
 
     def restorePointSize(self):
+        """Restore point size."""
         if self.pointSizeSettingsEmpty():
             return
 
@@ -241,6 +265,7 @@ class AppQTextBrowser(SupportPointSizeSettings, QTextBrowser):
             pass
 
     def wheelEvent(self, event):
+        """Handle the wheel event."""
         if event.modifiers() == QtCore.Qt.KeyboardModifier.ControlModifier:
             delta = event.angleDelta().y()
 
@@ -252,6 +277,7 @@ class AppQTextBrowser(SupportPointSizeSettings, QTextBrowser):
             super().wheelEvent(event)
 
     def cleanup(self):
+        """Release resources owned by the app q text browser."""
         if self.pointSizeSettingsEmpty():
             return
 
@@ -259,7 +285,9 @@ class AppQTextBrowser(SupportPointSizeSettings, QTextBrowser):
 
 
 class DraculaTextEditor(AppQPlainTextEdit):
+    """Represent dracula text editor."""
     def __init__(self, *args, **kwargs):
+        """Initialize the DraculaTextEditor."""
         fontFamily = kwargs.pop('fontFamily', '')
 
         super().__init__(*args, **kwargs)
@@ -276,6 +304,7 @@ class DraculaTextEditor(AppQPlainTextEdit):
 
         @QtCore.Slot(bool)
         def handleModificationChanged(changed):
+            """Handle modification changed."""
             if changed:
                 self.document().setModified(False)
 
@@ -284,6 +313,7 @@ class DraculaTextEditor(AppQPlainTextEdit):
 
         @QtCore.Slot()
         def handleCursorPositionChanged():
+            """Handle cursor position changed."""
             if callable(self._cursorPositionChangedCb):
                 self._cursorPositionChangedCb(self.textCursor())
 
@@ -291,21 +321,27 @@ class DraculaTextEditor(AppQPlainTextEdit):
         self.cursorPositionChanged.connect(handleCursorPositionChanged)
 
     def registerCursorPositionChangedCb(self, callback: Callable[[QTextCursor], None]):
+        """Handle register cursor position changed cb for the dracula text editor."""
         self._cursorPositionChangedCb = callback
 
     def registerModificationChangedCb(self, callback: Callable[[], None]):
+        """Handle register modification changed cb for the dracula text editor."""
         self._modificationChangedCb = callback
 
 
 class DraculaJSONTextEditor(DraculaTextEditor):
+    """Represent dracula JSON text editor."""
     def __init__(self, *args, **kwargs):
+        """Initialize the DraculaJSONTextEditor."""
         super().__init__(*args, **kwargs)
 
         self._syntaxHighlighter = DraculaJSONSyntaxHighlighter(self.document())
 
 
 class DraculaTextBrowser(AppQTextBrowser):
+    """Represent dracula text browser."""
     def __init__(self, *args, **kwargs):
+        """Initialize the DraculaTextBrowser."""
         fontFamily = kwargs.pop('fontFamily', '')
 
         super().__init__(*args, **kwargs)

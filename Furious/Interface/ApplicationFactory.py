@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Define the contract for the top-level application runner."""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -23,14 +25,18 @@ __all__ = ['ApplicationFactory']
 
 
 class ApplicationFactory:
+    """Define the lifecycle contract for the top-level application runner."""
     class ExitCode(Enum):
+        """Enumerate process exit codes."""
         ExitSuccess = 0
         UnknownException = 61
         PlatformNotSupported = 62
         AssertionError = 63
 
     def __init__(self, *args, **kwargs):
+        """Initialize the ApplicationFactory."""
         super().__init__(*args, **kwargs)
 
     def run(self):
+        """Run the application factory task."""
         raise NotImplementedError

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide the application window for user routing window."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -48,6 +50,7 @@ DOMAIN_STRATEGIES, ROUTING_STATES = (
 
 
 def valuesToList(text: str) -> list[str]:
+    """Return the values to list value used by the application."""
     values = list()
 
     for line in text.splitlines():
@@ -61,6 +64,7 @@ def valuesToList(text: str) -> list[str]:
 
 
 def listToText(value) -> str:
+    """Return the list to text value used by the application."""
     if isinstance(value, list):
         return '\n'.join(str(item) for item in value)
 
@@ -68,6 +72,7 @@ def listToText(value) -> str:
 
 
 def routingStateText(state: str) -> str:
+    """Return the routing state text value used by the application."""
     if state == 'Enabled':
         return _('Enabled')
     elif state == 'Disabled':
@@ -77,6 +82,7 @@ def routingStateText(state: str) -> str:
 
 
 def addRoutingStateItems(combo: QComboBox):
+    """Add routing state items."""
     combo.clear()
 
     for state in ROUTING_STATES:
@@ -84,6 +90,7 @@ def addRoutingStateItems(combo: QComboBox):
 
 
 def comboCurrentData(combo: QComboBox, default=''):
+    """Return the combo current data value used by the application."""
     data = combo.currentData()
 
     if data is None:
@@ -93,6 +100,7 @@ def comboCurrentData(combo: QComboBox, default=''):
 
 
 def routingObjectFromProfile(routingProfile: dict):
+    """Return the routing object from profile value used by the application."""
     if not isinstance(routingProfile, dict):
         routingProfile = dict()
 
@@ -116,7 +124,9 @@ def routingObjectFromProfile(routingProfile: dict):
 
 
 class RoutingPreviewDialog(AppQDialog):
+    """Present the routing preview dialog."""
     def __init__(self, routingProfile: dict, parent=None):
+        """Initialize the RoutingPreviewDialog."""
         super().__init__(parent)
 
         self.setWindowTitle(_('Preview Routing'))
@@ -151,11 +161,14 @@ class RoutingPreviewDialog(AppQDialog):
         self.setLayout(layout)
 
     def setWidthAndHeight(self):
+        """Apply the default size for the routing preview dialog."""
         self.setFixedSize(400, int(400 * GOLDEN_RATIO))
 
 
 class RoutingTextEditDialog(AppQDialog):
+    """Present the routing text edit dialog."""
     def __init__(self, text='', parent=None):
+        """Initialize the RoutingTextEditDialog."""
         super().__init__(parent)
 
         self.setWindowTitle(_('Edit Text'))
@@ -179,22 +192,28 @@ class RoutingTextEditDialog(AppQDialog):
         self.setLayout(layout)
 
     def setWidthAndHeight(self):
+        """Apply the default size for the routing text edit dialog."""
         self.setFixedSize(760, 470)
 
     def text(self):
+        """Return the text value."""
         return self.textEdit.toPlainText()
 
 
 class RoutingTextEdit(Mixins.QTranslatable, QTextEdit):
+    """Represent routing text edit."""
     def __init__(self, text='', parent=None):
+        """Initialize the RoutingTextEdit."""
         super().__init__(text, parent)
 
         self.setToolTip(_('Double-click to enlarge'))
 
     def mouseDoubleClickEvent(self, event):
+        """Handle the mouse double click event."""
         dialog = RoutingTextEditDialog(self.toPlainText(), parent=self)
 
         def handleResultCode(code):
+            """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
                 self.setPlainText(dialog.text())
 
@@ -204,19 +223,23 @@ class RoutingTextEdit(Mixins.QTranslatable, QTextEdit):
         event.accept()
 
     def retranslate(self):
+        """Refresh translated text for the routing text edit."""
         self.setToolTip(_(self.toolTip()))
 
 
 class RoutingDocumentationURL(AppQLabel):
+    """Represent routing documentation URL."""
     URL = 'https://xtls.github.io/config/routing.html'
 
     def __init__(self, *args, **kwargs):
+        """Initialize the RoutingDocumentationURL."""
         super().__init__(*args, **kwargs)
 
         self.setWebsiteURL()
         self.linkActivated.connect(self.handleLinkActivated)
 
     def setWebsiteURL(self):
+        """Set website URL."""
         self.setText(
             '<html><head/><body><p>'
             f'<a href="{self.URL}">'
@@ -227,37 +250,44 @@ class RoutingDocumentationURL(AppQLabel):
 
     @staticmethod
     def handleLinkActivated(link: str):
+        """Handle link activated."""
         if QDesktopServices.openUrl(QtCore.QUrl(link)):
             logger.info(f'open link \'{link}\' success')
         else:
             logger.error(f'open link \'{link}\' failed')
 
     def retranslate(self):
+        """Refresh translated text for the routing documentation URL."""
         self.setWebsiteURL()
 
 
 class RoutingProfilesModel(QtCore.QAbstractTableModel):
+    """Expose routing profiles data through a Qt item model."""
     Headers = ['Remark', 'Domain Strategy', 'State']
 
     def rowCount(self, parent=QtCore.QModelIndex()) -> int:
+        """Return the number of rows exposed by the model."""
         if parent.isValid():
             return 0
 
         return len(Storage.UserRoutings())
 
     def columnCount(self, parent=QtCore.QModelIndex()) -> int:
+        """Return the number of columns exposed by the model."""
         if parent.isValid():
             return 0
 
         return len(self.Headers)
 
     def flags(self, index):
+        """Return the Qt item flags for a model index."""
         if not index.isValid():
             return QtCore.Qt.ItemFlag.NoItemFlags
 
         return QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
 
     def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        """Return display data for a table header section."""
         if role != QtCore.Qt.ItemDataRole.DisplayRole:
             return None
 
@@ -272,12 +302,15 @@ class RoutingProfilesModel(QtCore.QAbstractTableModel):
         return section + 1
 
     def routingUniqueByRow(self, row: int):
+        """Return the routing unique by row value used by the routing profiles model."""
         return list(Storage.UserRoutings().keys())[row]
 
     def routingByRow(self, row: int):
+        """Return the routing by row value used by the routing profiles model."""
         return Storage.UserRoutings()[self.routingUniqueByRow(row)]
 
     def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        """Return the data managed by the routing profiles model."""
         if not index.isValid():
             return None
 
@@ -304,9 +337,11 @@ class RoutingProfilesModel(QtCore.QAbstractTableModel):
         return None
 
     def setData(self, index, value, role=QtCore.Qt.ItemDataRole.EditRole):
+        """Update model data for the requested role."""
         return False
 
     def emitAllChanged(self):
+        """Handle emit all changed for the routing profiles model."""
         if self.rowCount() == 0:
             return
 
@@ -317,11 +352,13 @@ class RoutingProfilesModel(QtCore.QAbstractTableModel):
 
 
 class RoutingRuleEditDialog(AppQDialog):
+    """Present the routing rule edit dialog."""
     MatchInputHeight = 72
     ShortInputWidth = 240
 
     @staticmethod
     def textEdit(text=''):
+        """Return the text edit value used by the routing rule edit dialog."""
         widget = RoutingTextEdit(text)
         widget.setFixedHeight(RoutingRuleEditDialog.MatchInputHeight)
 
@@ -329,12 +366,14 @@ class RoutingRuleEditDialog(AppQDialog):
 
     @staticmethod
     def lineEdit(text=''):
+        """Return the line edit value used by the routing rule edit dialog."""
         widget = QLineEdit(text)
         widget.setFixedHeight(RoutingRuleEditDialog.MatchInputHeight)
 
         return widget
 
     def __init__(self, rule: dict, parent=None):
+        """Initialize the RoutingRuleEditDialog."""
         super().__init__(parent)
 
         self.rule = dict(rule)
@@ -500,9 +539,11 @@ class RoutingRuleEditDialog(AppQDialog):
         self.setLayout(layout)
 
     def setWidthAndHeight(self):
+        """Apply the default size for the routing rule edit dialog."""
         self.resize(int(800 * GOLDEN_RATIO), 800)
 
     def routingRule(self):
+        """Return the routing rule value used by the routing rule edit dialog."""
         rule = {
             'type': 'field',
             'outboundTag': self.outboundEdit.text().strip() or 'proxy',
@@ -539,7 +580,9 @@ class RoutingRuleEditDialog(AppQDialog):
 
 
 class RoutingRemarkEditDialog(AppQDialog):
+    """Present the routing remark edit dialog."""
     def __init__(self, remark: str, parent=None):
+        """Initialize the RoutingRemarkEditDialog."""
         super().__init__(parent)
 
         self.setWindowTitle(_('Edit Routing Remark'))
@@ -563,14 +606,18 @@ class RoutingRemarkEditDialog(AppQDialog):
         self.setLayout(layout)
 
     def setWidthAndHeight(self):
+        """Apply the default size for the routing remark edit dialog."""
         self.resize(420, 120)
 
     def remark(self):
+        """Return the remark value used by the routing remark edit dialog."""
         return self.remarkEdit.text().strip()
 
 
 class RoutingProfileEditDialog(AppQDialog):
+    """Present the routing profile edit dialog."""
     def __init__(self, parent=None):
+        """Initialize the RoutingProfileEditDialog."""
         super().__init__(parent)
 
         self.setWindowTitle(_('Add Routing'))
@@ -607,9 +654,11 @@ class RoutingProfileEditDialog(AppQDialog):
         self.setLayout(layout)
 
     def setWidthAndHeight(self):
+        """Apply the default size for the routing profile edit dialog."""
         self.resize(460, 160)
 
     def routing(self):
+        """Return the routing value used by the routing profile edit dialog."""
         return {
             'remark': self.remarkEdit.text().strip() or _('New Routing'),
             'domainStrategy': self.domainStrategyCombo.currentText(),
@@ -619,12 +668,14 @@ class RoutingProfileEditDialog(AppQDialog):
 
 
 class RoutingRulesQListWidget(AppQListWidget):
+    """Provide the routing rules Qt list widget."""
     editRequested, deleteRequested = (
         QtCore.Signal(),
         QtCore.Signal(),
     )
 
     def __init__(self, routing: dict, parent=None):
+        """Initialize the RoutingRulesQListWidget."""
         super().__init__(parent)
 
         self.routing = routing
@@ -646,6 +697,7 @@ class RoutingRulesQListWidget(AppQListWidget):
         self.flushAll()
 
     def rules(self):
+        """Return the rules value used by the routing rules Qt list widget."""
         rules = self.routing.setdefault('rules', list())
 
         if not isinstance(rules, list):
@@ -654,9 +706,11 @@ class RoutingRulesQListWidget(AppQListWidget):
         return rules
 
     def ruleAt(self, index: int):
+        """Return the rule at value used by the routing rules Qt list widget."""
         return self.rules()[index]
 
     def ruleText(self, rule: dict) -> str:
+        """Return the rule text value used by the routing rules Qt list widget."""
         name, outbound, domains, ips = (
             rule.get('ruleTag', '') or 'Untitled Rule',
             rule.get('outboundTag', 'proxy'),
@@ -667,6 +721,7 @@ class RoutingRulesQListWidget(AppQListWidget):
         return f'{name} -> {outbound} ({domains} domains, {ips} IPs)'
 
     def selectedRuleText(self):
+        """Select ed rule text."""
         indexes = self.selectedIndex
 
         if not indexes:
@@ -675,20 +730,24 @@ class RoutingRulesQListWidget(AppQListWidget):
         return self.ruleText(self.ruleAt(indexes[0]))
 
     def appendRule(self, rule: dict):
+        """Append rule."""
         self.rules().append(rule)
         self.flushAll()
 
     def setRule(self, index: int, rule: dict):
+        """Set rule."""
         self.rules()[index] = rule
         self.flushAll()
 
     def deleteRules(self, indexes: list[int]):
+        """Delete rules."""
         for i in range(len(indexes)):
             self.rules().pop(indexes[i] - i)
 
         self.flushAll()
 
     def flushAll(self):
+        """Refresh all."""
         self.clear()
 
         for rule in self.rules():
@@ -696,11 +755,14 @@ class RoutingRulesQListWidget(AppQListWidget):
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
+        """Handle custom context menu requested."""
         self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
 
 class RoutingRulesDialog(AppQDialog):
+    """Present the routing rules dialog."""
     def __init__(self, routing: dict, parent=None):
+        """Initialize the RoutingRulesDialog."""
         super().__init__(parent)
 
         self.routing = routing
@@ -744,13 +806,16 @@ class RoutingRulesDialog(AppQDialog):
         self.setLayout(layout)
 
     def setWidthAndHeight(self):
+        """Apply the default size for the routing rules dialog."""
         self.setFixedSize(760, 470)
 
     def addRule(self):
+        """Add rule."""
         rule = {'type': 'field', 'outboundTag': 'proxy', 'ruleTag': 'New Rule'}
         dialog = RoutingRuleEditDialog(rule, parent=None)
 
         def handleResultCode(code):
+            """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
                 self.listWidget.appendRule(dialog.routingRule())
 
@@ -758,6 +823,7 @@ class RoutingRulesDialog(AppQDialog):
         dialog.open()
 
     def editRule(self):
+        """Handle edit rule for the routing rules dialog."""
         indexes = self.listWidget.selectedIndex
 
         if len(indexes) != 1:
@@ -767,6 +833,7 @@ class RoutingRulesDialog(AppQDialog):
         dialog = RoutingRuleEditDialog(self.listWidget.ruleAt(index), parent=None)
 
         def handleResultCode(_index, code):
+            """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
                 self.listWidget.setRule(_index, dialog.routingRule())
 
@@ -774,12 +841,14 @@ class RoutingRulesDialog(AppQDialog):
         dialog.open()
 
     def deleteRule(self):
+        """Delete rule."""
         indexes = self.listWidget.selectedIndex
 
         if len(indexes) == 0:
             return
 
         def handleResultCode(_indexes, code):
+            """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
@@ -809,14 +878,18 @@ class RoutingRulesDialog(AppQDialog):
 
 
 class UserRoutingQTableViewHorizontalHeader(AppQHeaderView):
+    """Provide the user routing Qt table view horizontal table header."""
     def __init__(self, *args, **kwargs):
+        """Initialize the UserRoutingQTableViewHorizontalHeader."""
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
 
 
 class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
+    """Represent user routing table view."""
     RowHeight = 42
 
     def __init__(self, parent=None):
+        """Initialize the UserRoutingTableView."""
         super().__init__(parent)
 
         self.sourceModel = RoutingProfilesModel(parent=self)
@@ -862,6 +935,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         self.flushAll()
 
     def configureHeader(self):
+        """Configure header."""
         header = self.horizontalHeader()
         header.setSectionsMovable(True)
         header.setFirstSectionMovable(True)
@@ -870,15 +944,18 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
 
     @property
     def selectedIndex(self):
+        """Return the selected index value."""
         return sorted(
             list(set(index.row() for index in self.selectionModel().selectedRows()))
         )
 
     def routingUniqueByRow(self, row):
+        """Return the routing unique by row value used by the user routing table view."""
         return self.sourceModel.routingUniqueByRow(row)
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
+        """Handle custom context menu requested."""
         indexes = self.selectedIndex
 
         isUniqueFlag = len(indexes) == 1
@@ -889,6 +966,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def flushItem(self, row: int, column: int):
+        """Refresh item."""
         index = self.sourceModel.index(row, column)
 
         if column == 1:
@@ -924,16 +1002,19 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
             self.setIndexWidget(index, combo)
 
     def flushRow(self, row: int):
+        """Refresh row."""
         for column in range(self.sourceModel.columnCount()):
             self.flushItem(row, column)
 
     def flushAll(self):
+        """Refresh all."""
         self.sourceModel.emitAllChanged()
 
         for row in range(self.sourceModel.rowCount()):
             self.flushRow(row)
 
     def retranslate(self):
+        """Refresh translated text for the user routing table view."""
         self.sourceModel.headerDataChanged.emit(
             QtCore.Qt.Orientation.Horizontal,
             0,
@@ -942,6 +1023,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         self.flushAll()
 
     def setDomainStrategy(self, row: int, text: str):
+        """Set domain strategy."""
         if row < 0 or row >= self.sourceModel.rowCount():
             return
 
@@ -949,6 +1031,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         self.sourceModel.emitAllChanged()
 
     def setEnabled(self, row: int, state: str):
+        """Set enabled."""
         if row < 0 or row >= self.sourceModel.rowCount():
             return
 
@@ -956,9 +1039,11 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         self.sourceModel.emitAllChanged()
 
     def appendNewItem(self):
+        """Append new item."""
         dialog = RoutingProfileEditDialog(parent=self)
 
         def handleResultCode(code):
+            """Handle result code."""
             if code != PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
                 return
 
@@ -976,6 +1061,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         dialog.open()
 
     def deleteSelectedItem(self):
+        """Delete selected item."""
         indexes = self.selectedIndex
 
         if not indexes:
@@ -983,6 +1069,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
             return
 
         def handleResultCode(_indexes, code):
+            """Handle result code."""
             if code != PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
@@ -1027,6 +1114,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         mbox.open()
 
     def renameSelectedItem(self):
+        """Handle rename selected item for the user routing table view."""
         indexes = self.selectedIndex
 
         if not indexes:
@@ -1042,6 +1130,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         dialog = RoutingRemarkEditDialog(routing.get('remark', ''), parent=self)
 
         def handleResultCode(code):
+            """Handle result code."""
             if code != PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
                 return
 
@@ -1055,6 +1144,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         dialog.open()
 
     def previewSelectedItem(self):
+        """Handle preview selected item for the user routing table view."""
         indexes = self.selectedIndex
 
         if len(indexes) != 1:
@@ -1066,6 +1156,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         dialog.open()
 
     def editSelectedRules(self):
+        """Handle edit selected rules for the user routing table view."""
         indexes = self.selectedIndex
 
         if not indexes:
@@ -1084,9 +1175,11 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
 
 
 class UserRoutingWindow(AppQMainWindow):
+    """Present the user routing window."""
     DEFAULT_WINDOW_SIZE = QtCore.QSize(980, 560)
 
     def __init__(self, *args, **kwargs):
+        """Initialize the UserRoutingWindow."""
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(_('Edit Routing'))
@@ -1116,6 +1209,7 @@ class UserRoutingWindow(AppQMainWindow):
         self.setCentralWidget(centralWidget)
 
     def setWidthAndHeight(self):
+        """Apply the default size for the user routing window."""
         if AppSettings.get('UserRoutingWindowGeometry') is None:
             self.resize(UserRoutingWindow.DEFAULT_WINDOW_SIZE)
         else:
@@ -1137,5 +1231,6 @@ class UserRoutingWindow(AppQMainWindow):
                     pass
 
     def cleanup(self):
+        """Release resources owned by the user routing window."""
         AppSettings.set('UserRoutingWindowGeometry', self.saveGeometry())
         AppSettings.set('UserRoutingWindowState', self.saveState())

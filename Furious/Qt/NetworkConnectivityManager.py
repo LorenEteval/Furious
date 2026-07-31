@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""Provide Qt support for network connectivity manager."""
+
 from __future__ import annotations
 
 from Furious.Frozenlib import *
@@ -32,10 +34,12 @@ logger = logging.getLogger(__name__)
 
 
 class NetworkConnectivityManager(Mixins.ConnectionAware, WebGETManager):
+    """Coordinate network connectivity operations."""
     MIN_JOB_INTERVAL = 2500
     MAX_JOB_INTERVAL = 2000000000
 
     def __init__(self, parent=None, **kwargs):
+        """Initialize the NetworkConnectivityManager."""
         actionMessage = kwargs.pop('actionMessage', 'test network connectivity')
 
         super().__init__(parent, actionMessage=actionMessage)
@@ -49,6 +53,7 @@ class NetworkConnectivityManager(Mixins.ConnectionAware, WebGETManager):
         self.jobArrangeTimer.timeout.connect(lambda: self.startSingleTest())
 
     def recalculateJobInterval(self, jobStatus: bool) -> int:
+        """Return the recalculate job interval value used by the network connectivity manager."""
         assert isinstance(jobStatus, bool)
 
         if self.jobStatus is jobStatus:
@@ -65,15 +70,18 @@ class NetworkConnectivityManager(Mixins.ConnectionAware, WebGETManager):
         return self.jobInterval
 
     def successCallback(self, networkReply, **kwargs):
+        """Handle a successful network operation."""
         self.jobTimeoutTimer.stop()
         self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=True))
 
     def failureCallback(self, networkReply, **kwargs):
+        """Handle a failed network operation."""
         self.jobTimeoutTimer.stop()
         self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=False))
 
     def startSingleTest(self):
         # Use custom network connectivity test URL if possible
+        """Start single test."""
         settings = AppSettings.get('CustomNetworkConnectivityTestURL')
 
         if isinstance(settings, str):
@@ -84,6 +92,7 @@ class NetworkConnectivityManager(Mixins.ConnectionAware, WebGETManager):
         networkReply = self.webGET(url)
 
         def abort(_networkReply):
+            """Cancel the active network connectivity manager operation."""
             if isinstance(_networkReply, QNetworkReply):
                 _networkReply.abort()
 
@@ -91,10 +100,12 @@ class NetworkConnectivityManager(Mixins.ConnectionAware, WebGETManager):
         self.jobTimeoutTimer.start(NetworkConnectivityManager.MIN_JOB_INTERVAL - 500)
 
     def stopTest(self):
+        """Stop test."""
         self.jobArrangeTimer.stop()
         self.jobTimeoutTimer.stop()
 
     def connectedCallback(self):
+        """Update the network connectivity manager for a connected state."""
         if AppSettings.isStateON_('PowerSaveMode'):
             # Power optimization
             logger.info('no job for network connectivity manager in power save mode')
@@ -106,4 +117,5 @@ class NetworkConnectivityManager(Mixins.ConnectionAware, WebGETManager):
             self.jobArrangeTimer.start(self.jobInterval)
 
     def disconnectedCallback(self):
+        """Update the network connectivity manager for a disconnected state."""
         self.stopTest()
