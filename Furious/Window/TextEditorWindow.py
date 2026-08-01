@@ -38,6 +38,7 @@ registerAppSettings('ServerWidgetPointSize')
 
 class MBoxQuestionSave(AppQMessageBox):
     """Represent m box question save."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxQuestionSave."""
         super().__init__(*args, **kwargs)
@@ -56,6 +57,7 @@ class MBoxQuestionSave(AppQMessageBox):
 
 class MBoxJSONDecodeError(AppQMessageBox):
     """Represent m box JSON decode error."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxJSONDecodeError."""
         super().__init__(*args, **kwargs)
@@ -81,6 +83,7 @@ class MBoxJSONDecodeError(AppQMessageBox):
 
 class TextEditorWindow(AppQMainWindow):
     """Present the text editor window."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the TextEditorWindow."""
         super().__init__(*args, **kwargs)
@@ -335,6 +338,7 @@ class TextEditorWindow(AppQMainWindow):
 
     def setIndent(self):
         """Set indent."""
+
         def handleResultCode(_indentSpinBox, code):
             """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):

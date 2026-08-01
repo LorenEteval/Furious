@@ -30,6 +30,7 @@ __all__ = ['IndentSpinBox']
 
 class IndentSpinBox(AppQDialog):
     """Represent indent spin box."""
+
     def __init__(self, parent=None):
         """Initialize the IndentSpinBox."""
         super().__init__(parent)

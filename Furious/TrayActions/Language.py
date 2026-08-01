@@ -41,6 +41,7 @@ registerAppSettings(
 
 class LanguageChildAction(AppQAction):
     """Handle the language child action."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the LanguageChildAction."""
         super().__init__(*args, **kwargs)
@@ -64,6 +65,7 @@ class LanguageChildAction(AppQAction):
 
 class LanguageAction(AppQAction):
     """Handle the language action."""
+
     def __init__(self, **kwargs):
         """Initialize the LanguageAction."""
         super().__init__(

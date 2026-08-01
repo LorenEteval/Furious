@@ -36,9 +36,11 @@ logger = logging.getLogger(__name__)
 
 class StartupOnBoot:
     """Represent startup on boot."""
+
     @staticmethod
     def on_():
         """Enable the startup on boot."""
+
         def _on_():
             """Return the on value used by the startup on boot."""
             if SystemRuntime.isScriptMode():
@@ -149,6 +151,7 @@ class StartupOnBoot:
     @staticmethod
     def off():
         """Disable the startup on boot."""
+
         def _off():
             """Return the off value used by the startup on boot."""
             if PLATFORM == 'Windows':

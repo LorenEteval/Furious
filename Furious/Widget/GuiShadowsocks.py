@@ -40,6 +40,7 @@ getProxyOutboundServer = functools.partial(
 
 class GuiSSItemTextInput(GuiEditorItemTextInput):
     """Represent GUI ss item text input."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiSSItemTextInput."""
         key = kwargs.pop('key', '')
@@ -85,6 +86,7 @@ class GuiSSItemTextInput(GuiEditorItemTextInput):
 
 class GuiSSItemBasicPort(GuiEditorItemTextSpinBox):
     """Represent GUI ss item basic port."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiSSItemBasicPort."""
         super().__init__(*args, **kwargs)
@@ -125,6 +127,7 @@ class GuiSSItemBasicPort(GuiEditorItemTextSpinBox):
 
 class GuiSSItemBasicMethod(GuiEditorItemTextComboBox):
     """Represent GUI ss item basic method."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiSSItemBasicMethod."""
         super().__init__(*args, **kwargs)
@@ -179,6 +182,7 @@ class GuiSSItemBasicMethod(GuiEditorItemTextComboBox):
 
 class GuiSSGroupBoxBasic(GuiEditorWidgetQGroupBox):
     """Represent GUI ss group box basic."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiSSGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -196,6 +200,7 @@ class GuiSSGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 class GuiSSGroupBoxProxy(GuiEditorWidgetQGroupBox):
     """Represent GUI ss group box proxy."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiSSGroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
@@ -210,6 +215,7 @@ class GuiSSGroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 class GuiShadowsocks(GuiEditorWidgetQDialog):
     """Represent GUI shadowsocks."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiShadowsocks."""
         super().__init__(*args, **kwargs)

@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 class GuiHy1ItemTextInput(GuiEditorItemTextInput):
     """Represent GUI hy1 item text input."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy1ItemTextInput."""
         key = kwargs.pop('key', '')
@@ -79,6 +80,7 @@ class GuiHy1ItemTextInput(GuiEditorItemTextInput):
 
 class GuiHy1ItemBasicProtocol(GuiEditorItemTextComboBox):
     """Represent GUI hy1 item basic protocol."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy1ItemBasicProtocol."""
         super().__init__(*args, **kwargs)
@@ -114,6 +116,7 @@ class GuiHy1ItemBasicProtocol(GuiEditorItemTextComboBox):
 
 class GuiHy1ItemSpeedUpMbps(GuiEditorItemTextSpinBox):
     """Represent GUI hy1 item speed up mbps."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy1ItemSpeedUpMbps."""
         super().__init__(*args, **kwargs)
@@ -150,6 +153,7 @@ class GuiHy1ItemSpeedUpMbps(GuiEditorItemTextSpinBox):
 
 class GuiHy1ItemSpeedDownMbps(GuiEditorItemTextSpinBox):
     """Represent GUI hy1 item speed down mbps."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy1ItemSpeedDownMbps."""
         super().__init__(*args, **kwargs)
@@ -186,6 +190,7 @@ class GuiHy1ItemSpeedDownMbps(GuiEditorItemTextSpinBox):
 
 class GuiHy1ItemTLSInsecure(GuiEditorItemTextCheckBox):
     """Represent GUI hy1 item TLS insecure."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy1ItemTLSInsecure."""
         super().__init__(*args, **kwargs)
@@ -239,6 +244,7 @@ class GuiHy1ItemTLSInsecure(GuiEditorItemTextCheckBox):
 
 class GuiHy1ProjectWebsiteURL(AppQLabel):
     """Represent GUI hy1 project website URL."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy1ProjectWebsiteURL."""
         super().__init__(*args, **kwargs)
@@ -271,6 +277,7 @@ class GuiHy1ProjectWebsiteURL(AppQLabel):
 
 class GuiHy1GroupBoxBasic(GuiEditorWidgetQGroupBox):
     """Represent GUI hy1 group box basic."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiHy1GroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -288,6 +295,7 @@ class GuiHy1GroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 class GuiHy1GroupBoxProxy(GuiEditorWidgetQGroupBox):
     """Represent GUI hy1 group box proxy."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiHy1GroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
@@ -302,6 +310,7 @@ class GuiHy1GroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 class GuiHy1GroupBoxSpeed(GuiEditorWidgetQGroupBox):
     """Represent GUI hy1 group box speed."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiHy1GroupBoxSpeed."""
         super().__init__(_('Speed'), **kwargs)
@@ -316,6 +325,7 @@ class GuiHy1GroupBoxSpeed(GuiEditorWidgetQGroupBox):
 
 class GuiHy1GroupBoxTLS(GuiEditorWidgetQGroupBox):
     """Represent GUI hy1 group box TLS."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiHy1GroupBoxTLS."""
         super().__init__('TLS', **kwargs)
@@ -334,6 +344,7 @@ class GuiHy1GroupBoxTLS(GuiEditorWidgetQGroupBox):
 
 class GuiHy1GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):
     """Represent GUI hy1 group box other."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiHy1GroupBoxOther."""
         super().__init__(_('Other'), **kwargs)
@@ -356,6 +367,7 @@ class GuiHy1GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):
 
 class GuiHysteria1(GuiEditorWidgetQDialog):
     """Represent GUI hysteria1."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHysteria1."""
         super().__init__(*args, **kwargs)

@@ -41,6 +41,7 @@ __all__ = [
 
 class SupportPointSizeSettings(Mixins.CleanupOnExit):
     """Store and validate support point size settings."""
+
     def pointSizeSettingsEmpty(self):
         """Return the point size settings empty value used by the support point size settings."""
         return self.pointSizeSettingsName == ''
@@ -66,6 +67,7 @@ class SupportPointSizeSettings(Mixins.CleanupOnExit):
 
 class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
     """Represent app q plain text edit."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQPlainTextEdit."""
         super().__init__(*args, **kwargs)
@@ -231,6 +233,7 @@ class AppQPlainTextEdit(SupportPointSizeSettings, QPlainTextEdit):
 
 class AppQTextBrowser(SupportPointSizeSettings, QTextBrowser):
     """Represent app q text browser."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQTextBrowser."""
         super().__init__(*args, **kwargs)
@@ -286,6 +289,7 @@ class AppQTextBrowser(SupportPointSizeSettings, QTextBrowser):
 
 class DraculaTextEditor(AppQPlainTextEdit):
     """Represent dracula text editor."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the DraculaTextEditor."""
         fontFamily = kwargs.pop('fontFamily', '')
@@ -331,6 +335,7 @@ class DraculaTextEditor(AppQPlainTextEdit):
 
 class DraculaJSONTextEditor(DraculaTextEditor):
     """Represent dracula JSON text editor."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the DraculaJSONTextEditor."""
         super().__init__(*args, **kwargs)
@@ -340,6 +345,7 @@ class DraculaJSONTextEditor(DraculaTextEditor):
 
 class DraculaTextBrowser(AppQTextBrowser):
     """Represent dracula text browser."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the DraculaTextBrowser."""
         fontFamily = kwargs.pop('fontFamily', '')

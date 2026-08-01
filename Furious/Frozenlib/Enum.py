@@ -30,6 +30,7 @@ __all__ = [
 
 class AppBuiltinCommand(Enum):
     """Enumerate app builtin command."""
+
     Empty = 'empty'
     RunAs = 'runas'
     Clear = 'clear'
@@ -37,6 +38,7 @@ class AppBuiltinCommand(Enum):
 
 class AppBuiltinRouting(Enum):
     """Enumerate app builtin routing."""
+
     BypassMainlandChina = 'Bypass Mainland China'
     Global = 'Global'
     Custom = 'Custom'
@@ -44,5 +46,6 @@ class AppBuiltinRouting(Enum):
 
 class AppBuiltinProxyMode(Enum):
     """Enumerate app builtin proxy mode."""
+
     Auto = 'Auto'
     NoChanges = 'NoChanges'

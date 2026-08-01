@@ -27,8 +27,10 @@ __all__ = ['AppHue']
 
 class AppHue:
     """Represent app hue."""
+
     class ColorRGB:
         """Represent color rgb."""
+
         LIGHT_BLUE = '#43ACED'
         LIGHT_RED = '#FF7276'
         LIGHT_PURPLE = '#DA70D6'

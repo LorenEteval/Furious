@@ -36,6 +36,7 @@ __all__ = ['QRCodeWindow']
 
 class QRCodeWindow(AppQMainWindow):
     """Present the QR code window."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the QRCodeWindow."""
         super().__init__(*args, **kwargs)

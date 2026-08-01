@@ -38,6 +38,7 @@ __all__ = [
 
 class JSONEncoder(EncoderFactory):
     """Encode and decode data using JSON."""
+
     @staticmethod
     def encode(data: Any, **kwargs) -> str:
         """Encode data with the JSON encoder."""
@@ -53,6 +54,7 @@ class JSONEncoder(EncoderFactory):
 
 class UJSONEncoder(EncoderFactory):
     """Encode and decode data using ujson."""
+
     @staticmethod
     def encode(data: Any, **kwargs) -> str:
         """Encode data with the ujson encoder."""
@@ -74,6 +76,7 @@ class UJSONEncoder(EncoderFactory):
 
 class Base64Encoder(EncoderFactory):
     """Encode and decode data using base64."""
+
     @staticmethod
     def encode(data: Any, **kwargs) -> bytes:
         """Encode data with the base64 encoder."""
@@ -89,6 +92,7 @@ class Base64Encoder(EncoderFactory):
 
 class PyBase64Encoder(EncoderFactory):
     """Encode and decode data using py base64."""
+
     @staticmethod
     def encode(data: Any, **kwargs) -> bytes:
         """Encode data with the py base64 encoder."""

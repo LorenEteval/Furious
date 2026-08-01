@@ -130,6 +130,7 @@ def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
 
 class ImportURIsProgressDialog(AppQDialog):
     """Present progress and cancellation controls for import ur is."""
+
     ActiveDialogs = list()
 
     def __init__(
@@ -304,6 +305,7 @@ class ImportURIsProgressDialog(AppQDialog):
 
 class MBoxImportError(AppQMessageBox):
     """Represent m box import error."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxImportError."""
         super().__init__(*args, **kwargs)
@@ -322,6 +324,7 @@ class MBoxImportError(AppQMessageBox):
 
 class MBoxImportMultiSuccess(AppQMessageBox):
     """Represent m box import multi success."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxImportMultiSuccess."""
         super().__init__(*args, **kwargs)
@@ -365,6 +368,7 @@ class MBoxImportMultiSuccess(AppQMessageBox):
 
 class MBoxImportSuccess(AppQMessageBox):
     """Represent m box import success."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxImportSuccess."""
         super().__init__(*args, **kwargs)
@@ -391,6 +395,7 @@ class MBoxImportSuccess(AppQMessageBox):
 
 class ImportFromFileAction(AppQAction):
     """Handle the import from file action."""
+
     def __init__(self, **kwargs):
         """Initialize the ImportFromFileAction."""
         super().__init__(
@@ -446,6 +451,7 @@ class ImportFromFileAction(AppQAction):
 
 class ImportURIFromClipboardAction(AppQAction):
     """Handle the import URI from clipboard action."""
+
     def __init__(self, **kwargs):
         """Initialize the ImportURIFromClipboardAction."""
         super().__init__(_('Import Share Link From Clipboard'), **kwargs)
@@ -469,6 +475,7 @@ class ImportURIFromClipboardAction(AppQAction):
 
 class ImportJSONFromClipboardAction(AppQAction):
     """Handle the import JSON from clipboard action."""
+
     def __init__(self, **kwargs):
         """Initialize the ImportJSONFromClipboardAction."""
         super().__init__(_('Import JSON Configuration From Clipboard'), **kwargs)
@@ -482,6 +489,7 @@ class ImportJSONFromClipboardAction(AppQAction):
 
 class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
     """Handle the import QR code on the screen action."""
+
     def __init__(self, **kwargs):
         """Initialize the ImportQRCodeOnTheScreenAction."""
         super().__init__(
@@ -547,6 +555,7 @@ class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
 
 class ImportAction(AppQAction):
     """Handle the import action."""
+
     def __init__(self, **kwargs):
         """Initialize the ImportAction."""
         super().__init__(

@@ -52,6 +52,7 @@ logger = logging.getLogger(__name__)
 
 class CoreProcessState(Enum):
     """Enumerate core process state."""
+
     Idle = 'idle'
     Starting = 'starting'
     Running = 'running'
@@ -63,6 +64,7 @@ class CoreProcessState(Enum):
 @dataclass
 class CoreLaunchSpec:
     """Describe the parameters required by a core launch operation."""
+
     target: Callable
     args: Tuple[Any, ...] = field(default_factory=tuple)
     processKwargs: Dict[str, Any] = field(default_factory=dict)
@@ -116,6 +118,7 @@ class CoreLaunchSpec:
 
 class MsgQueue(multiprocessing.queues.Queue):
     """Deliver child-process log messages to Qt callbacks at an adaptive rate."""
+
     MSG_PRODUCE_THRESHOLD = 1024
     OPTIMIZER_MIN_FREQ = 2
     OPTIMIZER_MAX_FREQ = 256
@@ -207,6 +210,7 @@ class MsgQueue(multiprocessing.queues.Queue):
 
 class CoreProcessMonitor(CoreProcessFactory, ABC):
     """Track the state and lifetime of a proxy-core child process."""
+
     StopJoinTimeout = 3
 
     def __init__(self, **kwargs):
@@ -292,6 +296,7 @@ class CoreProcessMonitor(CoreProcessFactory, ABC):
 
 class CoreProcessWorker(CoreProcessMonitor, ABC):
     """Run and monitor a proxy core in a child process."""
+
     def __init__(self, **kwargs):
         """Initialize the CoreProcessWorker."""
         msgCallback = kwargs.pop('msgCallback', None)
@@ -415,6 +420,7 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
 
 class ProcessOutputRedirector:
     """Redirect child-process output into the application message queue."""
+
     TemporaryDir = QtCore.QTemporaryDir()
 
     @staticmethod

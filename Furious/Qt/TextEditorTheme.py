@@ -33,6 +33,7 @@ __all__ = [
 
 class EditorHighlightRules:
     """Represent editor highlight rules."""
+
     def __init__(self, regex, color, isBold=False, isItalic=False, isJSONKey=False):
         """Initialize the EditorHighlightRules."""
         self.regex = QtCore.QRegularExpression(regex)
@@ -52,6 +53,7 @@ class EditorHighlightRules:
 
 class EditorTheme:
     """Represent editor theme."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the EditorTheme."""
         super().__init__(*args, **kwargs)
@@ -64,6 +66,7 @@ class EditorTheme:
 
 class DraculaEditorTheme(EditorTheme):
     """Represent dracula editor theme."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the DraculaEditorTheme."""
         super().__init__(*args, **kwargs)
@@ -82,6 +85,7 @@ class DraculaEditorTheme(EditorTheme):
 
 class AppQSyntaxHighlighter(QSyntaxHighlighter):
     """Apply syntax highlighting for app q syntax text."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQSyntaxHighlighter."""
         super().__init__(*args, **kwargs)
@@ -124,6 +128,7 @@ class AppQSyntaxHighlighter(QSyntaxHighlighter):
 
 class DraculaJSONSyntaxHighlighter(AppQSyntaxHighlighter):
     """Apply syntax highlighting for dracula JSON syntax text."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the DraculaJSONSyntaxHighlighter."""
         super().__init__(*args, **kwargs)

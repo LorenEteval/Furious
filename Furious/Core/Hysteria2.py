@@ -58,8 +58,10 @@ def startHysteria2(jsonString: str, msgQueue: multiprocessing.Queue):
 
 class Hysteria2(CoreProcessWorker):
     """Manage the embedded Hysteria 2 core subprocess."""
+
     class ExitCode(Enum):
         """Enumerate process exit codes."""
+
         ConfigurationError = 23
         # Windows: 4294967295. Darwin, Linux: 255 (-1)
         ServerStartFailure = 4294967295 if PLATFORM == 'Windows' else 255

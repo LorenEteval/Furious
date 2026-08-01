@@ -38,6 +38,7 @@ _TRANSLATABLE_BUILTIN_ROUTING = [
 
 class RoutingChildAction(AppQAction):
     """Handle the routing child action."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the RoutingChildAction."""
         self.routingValue = kwargs.pop('routingValue', None)
@@ -57,6 +58,7 @@ class RoutingChildAction(AppQAction):
 
 class RoutingAction(AppQAction):
     """Handle the routing action."""
+
     def __init__(self, **kwargs):
         """Initialize the RoutingAction."""
         if AppSettings.get('Routing') == 'Bypass':

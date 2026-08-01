@@ -49,6 +49,7 @@ def getAppAttributes(name: str):
 
 class AppLoggerWindow:
     """Present the app logger window."""
+
     Self = functools.partial(getAppAttributes, 'logViewerWindowSelf')
     Core = functools.partial(getAppAttributes, 'logViewerWindowCore')
     TUN_ = functools.partial(getAppAttributes, 'logViewerWindowTun_')

@@ -46,6 +46,7 @@ else:
 
 class AppMainProcess(ProcessContext.Process):
     """Represent app main process."""
+
     def __init__(self, func: Callable[[], ApplicationFactory], **kwargs):
         """Initialize the AppMainProcess."""
         super().__init__(**kwargs)

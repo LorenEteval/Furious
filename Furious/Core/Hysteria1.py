@@ -58,8 +58,10 @@ def startHysteria1(jsonString, rule, mmdb, msgQueue: multiprocessing.Queue):
 
 class Hysteria1(CoreProcessWorker):
     """Manage the embedded Hysteria 1 core subprocess."""
+
     class ExitCode(Enum):
         """Enumerate process exit codes."""
+
         ConfigurationError = 23
         RemoteNetworkError = 3
         # Windows shutting down

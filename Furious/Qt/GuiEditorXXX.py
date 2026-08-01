@@ -47,6 +47,7 @@ __all__ = [
 
 class GuiEditorItemTextInput(GuiEditorItemWidgetContainer):
     """Represent GUI editor item text input."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorItemTextInput."""
         title = kwargs.pop('title', '')
@@ -76,6 +77,7 @@ class GuiEditorItemTextInput(GuiEditorItemWidgetContainer):
 
 class GuiEditorItemTextSpinBox(GuiEditorItemWidgetContainer):
     """Represent GUI editor item text spin box."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorItemTextSpinBox."""
         title = kwargs.pop('title', '')
@@ -109,6 +111,7 @@ class GuiEditorItemTextSpinBox(GuiEditorItemWidgetContainer):
 
 class GuiEditorItemTextComboBox(GuiEditorItemWidgetContainer):
     """Represent GUI editor item text combo box."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorItemTextComboBox."""
         title = kwargs.pop('title', '')
@@ -146,6 +149,7 @@ class GuiEditorItemTextComboBox(GuiEditorItemWidgetContainer):
 
 class GuiEditorItemTextCheckBox(GuiEditorItemWidgetContainer):
     """Represent GUI editor item text check box."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorItemTextCheckBox."""
         title = kwargs.pop('title', '')
@@ -171,6 +175,7 @@ class GuiEditorItemTextCheckBox(GuiEditorItemWidgetContainer):
 
 class GuiEditorItemBasicRemark(GuiEditorItemTextInput):
     """Represent GUI editor item basic remark."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorItemBasicRemark."""
         super().__init__(*args, **kwargs)
@@ -196,6 +201,7 @@ class GuiEditorItemBasicRemark(GuiEditorItemTextInput):
 
 class GuiEditorItemProxyHttp(GuiEditorItemTextInput):
     """Represent GUI editor item proxy HTTP."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorItemProxyHttp."""
         super().__init__(*args, **kwargs)
@@ -237,6 +243,7 @@ class GuiEditorItemProxyHttp(GuiEditorItemTextInput):
 
 class GuiEditorItemProxySocks(GuiEditorItemTextInput):
     """Represent GUI editor item proxy SOCKS."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorItemProxySocks."""
         super().__init__(*args, **kwargs)
@@ -278,6 +285,7 @@ class GuiEditorItemProxySocks(GuiEditorItemTextInput):
 
 class GuiEditorWidget(GuiEditorItemFactory):
     """Provide the GUI editor widget."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorWidget."""
         super().__init__(*args, **kwargs)
@@ -315,6 +323,7 @@ class GuiEditorWidget(GuiEditorItemFactory):
 
 class GuiEditorWidgetQWidget(GuiEditorWidget, QWidget):
     """Provide the GUI editor  Qt widget."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorWidgetQWidget."""
         super().__init__(*args, **kwargs)
@@ -335,6 +344,7 @@ class GuiEditorWidgetQWidget(GuiEditorWidget, QWidget):
 
 class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
     """Group the GUI editor widget q editor controls."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorWidgetQGroupBox."""
         super().__init__(*args, **kwargs)
@@ -365,6 +375,7 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
 
 class GuiEditorWidgetQDialog(GuiEditorItemFactory, AppQDialog):
     """Present the GUI editor widget Qt dialog."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorWidgetQDialog."""
         tabText, tabTranslatable, style = (

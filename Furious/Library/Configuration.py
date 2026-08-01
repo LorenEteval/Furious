@@ -61,6 +61,7 @@ __all__ = [
 
 class ConfigXrayProxyOutboundObjectV(dict):
     """Represent and transform Xray proxy outbound object v configuration data."""
+
     def __init__(
         self,
         protocol,
@@ -152,6 +153,7 @@ class ConfigXrayProxyOutboundObjectV(dict):
 
 class ConfigXrayProxyOutboundObjectSS(dict):
     """Represent and transform Xray proxy outbound object ss configuration data."""
+
     def __init__(self, method, password, address, port):
         """Initialize the ConfigXrayProxyOutboundObjectSS."""
         super().__init__(
@@ -183,6 +185,7 @@ class ConfigXrayProxyOutboundObjectSS(dict):
 
 class ConfigXrayProxyOutboundObjectSocks(dict):
     """Represent and transform Xray proxy outbound object SOCKS configuration data."""
+
     def __init__(self, address, port, user='', password=''):
         """Initialize the ConfigXrayProxyOutboundObjectSocks."""
         settings = {
@@ -212,6 +215,7 @@ class ConfigXrayProxyOutboundObjectSocks(dict):
 
 class ConfigXrayProxyOutboundObjectTrojan(dict):
     """Represent and transform Xray proxy outbound object trojan configuration data."""
+
     def __init__(self, password, address, port, type_, security, **kwargs):
         """Initialize the ConfigXrayProxyOutboundObjectTrojan."""
         networkObjectArgs, securityArgs, TLSObjectArgs = {}, {}, {}
@@ -349,6 +353,7 @@ BLANK_CONFIG_XRAY = {
 
 class ConfigXray(ConfigFactory):
     """Represent Xray configuration and supported share-link formats."""
+
     def __init__(self, config: Union[str, dict] = '', **kwargs):
         """Initialize the ConfigXray."""
         super().__init__(config, **kwargs)
@@ -1721,6 +1726,7 @@ BLANK_CONFIG_HYSTERIA1 = {
 
 class ConfigHysteria1(ConfigFactory):
     """Represent Hysteria 1 client configuration and share links."""
+
     def __init__(self, config: Union[str, dict] = '', **kwargs):
         """Initialize the ConfigHysteria1."""
         super().__init__(config, **kwargs)
@@ -2006,6 +2012,7 @@ BLANK_CONFIG_HYSTERIA2 = {
 
 class ConfigHysteria2(ConfigFactory):
     """Represent Hysteria 2 client configuration and share links."""
+
     def __init__(self, config: Union[str, dict] = '', **kwargs):
         """Initialize the ConfigHysteria2."""
         super().__init__(config, **kwargs)

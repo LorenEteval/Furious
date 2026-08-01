@@ -27,6 +27,7 @@ __all__ = ['StorageFactory']
 
 class StorageFactory(ABC):
     """Define the interface and shared behavior for storage objects."""
+
     @abstractmethod
     def sync(self):
         """Persist the current storage factory data."""

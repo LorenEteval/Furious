@@ -30,6 +30,7 @@ __all__ = ['PySide6Legacy']
 
 class PySide6Legacy:
     """Represent py side6 legacy."""
+
     @staticmethod
     def enumValueWrapper(enum) -> int:
         # Protect PySide6 enum wrapper behavior changes

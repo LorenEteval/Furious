@@ -39,6 +39,7 @@ registerAppSettings('CustomNetworkConnectivityTestURL')
 
 class GuiCustomizeNetworkTestDialog(AppQDialog):
     """Present the GUI customize network test dialog."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiCustomizeNetworkTestDialog."""
         super().__init__(*args, **kwargs)

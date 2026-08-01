@@ -31,6 +31,7 @@ registerAppSettings('Configuration')
 
 class UserServer:
     """Represent user server."""
+
     remark: str
     config: str
     subsId: str
@@ -39,6 +40,7 @@ class UserServer:
 class UserServers(Mixins.CleanupOnExit, StorageFactory):
     # remark, config, subsId. (subsId corresponds to unique in user subscription)
     """Manage the persisted list of server configurations."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserServers."""
         super().__init__(*args, **kwargs)

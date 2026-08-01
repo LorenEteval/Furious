@@ -32,6 +32,7 @@ registerAppSettings(
 
 class SystemProxyChildAction(AppQAction):
     """Handle the system proxy child action."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the SystemProxyChildAction."""
         super().__init__(*args, **kwargs)
@@ -46,6 +47,7 @@ class SystemProxyChildAction(AppQAction):
 
 class SystemProxyAction(AppQAction):
     """Handle the system proxy action."""
+
     def __init__(self, **kwargs):
         """Initialize the SystemProxyAction."""
         super().__init__(

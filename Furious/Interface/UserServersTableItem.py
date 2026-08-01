@@ -24,6 +24,7 @@ __all__ = ['UserServersTableItem']
 
 class UserServersTableItem:
     """Define the display fields required by a server-table row."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserServersTableItem."""
         super().__init__(*args, **kwargs)

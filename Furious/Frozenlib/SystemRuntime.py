@@ -34,6 +34,7 @@ __all__ = ['SystemRuntime']
 
 class SystemRuntime:
     """Represent system runtime."""
+
     @staticmethod
     @functools.lru_cache(None)
     def ubuntuRelease() -> str:
@@ -124,6 +125,7 @@ class SystemRuntime:
     @functools.lru_cache(None)
     def isPythonw() -> bool:
         """Return whether pythonw."""
+
         def isRealFile(file):
             """Return whether real file."""
             if not hasattr(file, 'fileno'):

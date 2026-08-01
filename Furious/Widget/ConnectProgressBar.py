@@ -31,6 +31,7 @@ __all__ = ['ConnectProgressBar']
 
 class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
     """Represent auto update progress bar."""
+
     def __init__(self, **kwargs):
         """Initialize the AutoUpdateProgressBar."""
         super().__init__(**kwargs)
@@ -91,6 +92,7 @@ class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
 
 class ConnectProgressBar(Mixins.QTranslatable, Mixins.ConnectionAware, QWidget):
     """Provide the connect progress bar widget."""
+
     def __init__(self, parent=None):
         """Initialize the ConnectProgressBar."""
         super().__init__(parent)

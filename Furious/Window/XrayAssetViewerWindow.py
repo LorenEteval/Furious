@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 class XrayAssetViewerWindow(AppQMainWindow):
     """Present the Xray asset viewer window."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the XrayAssetViewerWindow."""
         super().__init__(*args, **kwargs)

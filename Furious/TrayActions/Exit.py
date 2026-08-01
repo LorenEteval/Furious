@@ -28,6 +28,7 @@ __all__ = ['ExitAction']
 
 class ExitAction(AppQAction):
     """Handle the exit action."""
+
     def __init__(self, **kwargs):
         """Initialize the ExitAction."""
         super().__init__(

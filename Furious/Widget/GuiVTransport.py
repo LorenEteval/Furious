@@ -47,6 +47,7 @@ STREAM_NETWORK = [
 
 class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
     """Represent GUI v transport item network."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemNetwork."""
         super().__init__(*args, **kwargs)
@@ -108,6 +109,7 @@ class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
 
 class GuiVTransportItemFinalMask(GuiEditorItemTextInput):
     """Represent GUI v transport item final mask."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemFinalMask."""
         super().__init__(*args, **kwargs)
@@ -160,6 +162,7 @@ class GuiVTransportItemFinalMask(GuiEditorItemTextInput):
 
 class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
     """Represent GUI v transport item type xxx."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemTypeXXX."""
         networkKey = kwargs.pop('networkKey', '')
@@ -222,6 +225,7 @@ class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
 
 class GuiVTransportItemTypeTcpOrRaw(GuiVTransportItemTypeXXX):
     """Represent GUI v transport item type TCP or raw."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemTypeTcpOrRaw."""
         networkKey = kwargs.pop('networkKey', 'tcpSettings')
@@ -239,6 +243,7 @@ class GuiVTransportItemTypeTcpOrRaw(GuiVTransportItemTypeXXX):
 
 class GuiVTransportItemHostTcpOrRaw(GuiEditorItemTextInput):
     """Represent GUI v transport item host TCP or raw."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemHostTcpOrRaw."""
         networkKey = kwargs.pop('networkKey', 'tcpSettings')
@@ -307,6 +312,7 @@ class GuiVTransportItemHostTcpOrRaw(GuiEditorItemTextInput):
 
 class GuiVTransportItemPathTcpOrRaw(GuiEditorItemTextInput):
     """Represent GUI v transport item path TCP or raw."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemPathTcpOrRaw."""
         networkKey = kwargs.pop('networkKey', 'tcpSettings')
@@ -372,6 +378,7 @@ class GuiVTransportItemPathTcpOrRaw(GuiEditorItemTextInput):
 
 class GuiVTransportItemTypeKcp(GuiVTransportItemTypeXXX):
     """Represent GUI v transport item type kcp."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemTypeKcp."""
         networkKey = kwargs.pop('networkKey', 'kcpSettings')
@@ -394,6 +401,7 @@ class GuiVTransportItemTypeKcp(GuiVTransportItemTypeXXX):
 
 class GuiVTransportItemSeedKcp(GuiEditorItemTextInput):
     """Represent GUI v transport item seed kcp."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemSeedKcp."""
         super().__init__(*args, **kwargs)
@@ -449,6 +457,7 @@ class GuiVTransportItemSeedKcp(GuiEditorItemTextInput):
 
 class GuiVTransportItemHostWs(GuiEditorItemTextInput):
     """Represent GUI v transport item host ws."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemHostWs."""
         super().__init__(*args, **kwargs)
@@ -507,6 +516,7 @@ class GuiVTransportItemHostWs(GuiEditorItemTextInput):
 
 class GuiVTransportItemPathWs(GuiEditorItemTextInput):
     """Represent GUI v transport item path ws."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemPathWs."""
         super().__init__(*args, **kwargs)
@@ -562,6 +572,7 @@ class GuiVTransportItemPathWs(GuiEditorItemTextInput):
 
 class GuiVTransportItemHostHttpUpgrade(GuiEditorItemTextInput):
     """Represent GUI v transport item host HTTP upgrade."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemHostHttpUpgrade."""
         super().__init__(*args, **kwargs)
@@ -619,6 +630,7 @@ class GuiVTransportItemHostHttpUpgrade(GuiEditorItemTextInput):
 
 class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
     """Represent GUI v transport item path HTTP upgrade."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemPathHttpUpgrade."""
         super().__init__(*args, **kwargs)
@@ -676,6 +688,7 @@ class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
 
 class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
     """Represent GUI v transport item host split HTTP."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemHostSplitHttp."""
         super().__init__(*args, **kwargs)
@@ -733,6 +746,7 @@ class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
 
 class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
     """Represent GUI v transport item path split HTTP."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemPathSplitHttp."""
         super().__init__(*args, **kwargs)
@@ -790,6 +804,7 @@ class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
 
 class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
     """Represent GUI v transport item host x HTTP."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemHostXHttp."""
         super().__init__(*args, **kwargs)
@@ -845,6 +860,7 @@ class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
 
 class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
     """Represent GUI v transport item path x HTTP."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemPathXHttp."""
         super().__init__(*args, **kwargs)
@@ -900,6 +916,7 @@ class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
 
 class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
     """Represent GUI v transport item mode x HTTP."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemModeXHttp."""
         super().__init__(*args, **kwargs)
@@ -964,6 +981,7 @@ class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
 
 class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
     """Represent GUI v transport item extra x HTTP."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemExtraXHttp."""
         super().__init__(*args, **kwargs)
@@ -1030,6 +1048,7 @@ class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
 
 class GuiVTransportItemHostH2(GuiEditorItemTextInput):
     """Represent GUI v transport item host h2."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemHostH2."""
         super().__init__(*args, **kwargs)
@@ -1085,6 +1104,7 @@ class GuiVTransportItemHostH2(GuiEditorItemTextInput):
 
 class GuiVTransportItemPathH2(GuiEditorItemTextInput):
     """Represent GUI v transport item path h2."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemPathH2."""
         super().__init__(*args, **kwargs)
@@ -1140,6 +1160,7 @@ class GuiVTransportItemPathH2(GuiEditorItemTextInput):
 
 class GuiVTransportItemTypeQuic(GuiVTransportItemTypeXXX):
     """Represent GUI v transport item type quic."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemTypeQuic."""
         networkKey = kwargs.pop('networkKey', 'quicSettings')
@@ -1161,6 +1182,7 @@ class GuiVTransportItemTypeQuic(GuiVTransportItemTypeXXX):
 
 class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
     """Represent GUI v transport item security quic."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemSecurityQuic."""
         super().__init__(*args, **kwargs)
@@ -1222,6 +1244,7 @@ class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
 
 class GuiVTransportItemKeyQuic(GuiEditorItemTextInput):
     """Represent GUI v transport item key quic."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemKeyQuic."""
         super().__init__(*args, **kwargs)
@@ -1277,6 +1300,7 @@ class GuiVTransportItemKeyQuic(GuiEditorItemTextInput):
 
 class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
     """Represent GUI v transport item mode grpc."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemModeGRPC."""
         super().__init__(*args, **kwargs)
@@ -1352,6 +1376,7 @@ class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
 
 class GuiVTransportItemAuthorityGRPC(GuiEditorItemTextInput):
     """Represent GUI v transport item authority grpc."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemAuthorityGRPC."""
         super().__init__(*args, **kwargs)
@@ -1407,6 +1432,7 @@ class GuiVTransportItemAuthorityGRPC(GuiEditorItemTextInput):
 
 class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
     """Represent GUI v transport item service name grpc."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemServiceNameGRPC."""
         super().__init__(*args, **kwargs)
@@ -1462,6 +1488,7 @@ class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
 
 class GuiVTransportItemVersionHysteria(GuiEditorItemTextSpinBox):
     """Represent GUI v transport item version hysteria."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemVersionHysteria."""
         super().__init__(*args, **kwargs)
@@ -1509,6 +1536,7 @@ class GuiVTransportItemVersionHysteria(GuiEditorItemTextSpinBox):
 
 class GuiVTransportItemAuthHysteria(GuiEditorItemTextInput):
     """Represent GUI v transport item auth hysteria."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemAuthHysteria."""
         super().__init__(*args, **kwargs)
@@ -1566,6 +1594,7 @@ class GuiVTransportItemAuthHysteria(GuiEditorItemTextInput):
 
 class GuiVTransportItemPasswordHysteria(GuiEditorItemTextInput):
     """Represent GUI v transport item password hysteria."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemPasswordHysteria."""
         super().__init__(*args, **kwargs)
@@ -1628,6 +1657,7 @@ class GuiVTransportItemPasswordHysteria(GuiEditorItemTextInput):
 
 class GuiVTransportPageXXX(GuiEditorWidgetQWidget):
     """Represent GUI v transport page xxx."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageXXX."""
         super().__init__(*args, **kwargs)
@@ -1649,6 +1679,7 @@ class GuiVTransportPageXXX(GuiEditorWidgetQWidget):
 
 class GuiVTransportPageTcp(GuiVTransportPageXXX):
     """Represent GUI v transport page TCP."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageTcp."""
         super().__init__(*args, **kwargs)
@@ -1672,6 +1703,7 @@ class GuiVTransportPageTcp(GuiVTransportPageXXX):
 
 class GuiVTransportPageRaw(GuiVTransportPageXXX):
     """Represent GUI v transport page raw."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageRaw."""
         super().__init__(*args, **kwargs)
@@ -1695,6 +1727,7 @@ class GuiVTransportPageRaw(GuiVTransportPageXXX):
 
 class GuiVTransportPageKcp(GuiVTransportPageXXX):
     """Represent GUI v transport page kcp."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageKcp."""
         super().__init__(*args, **kwargs)
@@ -1711,6 +1744,7 @@ class GuiVTransportPageKcp(GuiVTransportPageXXX):
 
 class GuiVTransportPageWs(GuiVTransportPageXXX):
     """Represent GUI v transport page ws."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageWs."""
         super().__init__(*args, **kwargs)
@@ -1727,6 +1761,7 @@ class GuiVTransportPageWs(GuiVTransportPageXXX):
 
 class GuiVTransportPageHttpUpgrade(GuiVTransportPageXXX):
     """Represent GUI v transport page HTTP upgrade."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageHttpUpgrade."""
         super().__init__(*args, **kwargs)
@@ -1743,6 +1778,7 @@ class GuiVTransportPageHttpUpgrade(GuiVTransportPageXXX):
 
 class GuiVTransportPageSplitHttp(GuiVTransportPageXXX):
     """Represent GUI v transport page split HTTP."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageSplitHttp."""
         super().__init__(*args, **kwargs)
@@ -1759,6 +1795,7 @@ class GuiVTransportPageSplitHttp(GuiVTransportPageXXX):
 
 class GuiVTransportPageXHttp(GuiVTransportPageXXX):
     """Represent GUI v transport page x HTTP."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageXHttp."""
         super().__init__(*args, **kwargs)
@@ -1777,6 +1814,7 @@ class GuiVTransportPageXHttp(GuiVTransportPageXXX):
 
 class GuiVTransportPageH2(GuiVTransportPageXXX):
     """Represent GUI v transport page h2."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageH2."""
         super().__init__(*args, **kwargs)
@@ -1793,6 +1831,7 @@ class GuiVTransportPageH2(GuiVTransportPageXXX):
 
 class GuiVTransportPageQuic(GuiVTransportPageXXX):
     """Represent GUI v transport page quic."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageQuic."""
         super().__init__(*args, **kwargs)
@@ -1810,6 +1849,7 @@ class GuiVTransportPageQuic(GuiVTransportPageXXX):
 
 class GuiVTransportPageGRPC(GuiVTransportPageXXX):
     """Represent GUI v transport page grpc."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageGRPC."""
         super().__init__(*args, **kwargs)
@@ -1829,6 +1869,7 @@ class GuiVTransportPageGRPC(GuiVTransportPageXXX):
 
 class GuiVTransportPageHysteria(GuiVTransportPageXXX):
     """Represent GUI v transport page hysteria."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageHysteria."""
         super().__init__(*args, **kwargs)
@@ -1846,6 +1887,7 @@ class GuiVTransportPageHysteria(GuiVTransportPageXXX):
 
 class GuiVTransportPageStackedWidget(QStackedWidget):
     """Provide the GUI v transport page stacked widget."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportPageStackedWidget."""
         super().__init__(*args, **kwargs)
@@ -1882,6 +1924,7 @@ class GuiVTransportPageStackedWidget(QStackedWidget):
 
 class GuiVTransportQGroupBox(GuiEditorItemFactory, AppQGroupBox):
     """Group the GUI v transport q editor controls."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiVTransportQGroupBox."""
         super().__init__(_('Transport'), **kwargs)

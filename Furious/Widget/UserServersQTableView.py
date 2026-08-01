@@ -77,6 +77,7 @@ def appIsExiting() -> bool:
 
 class MBoxUpdateSubsInfo(AppQMessageBox):
     """Represent m box update subs info."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxUpdateSubsInfo."""
         self.successArgs = kwargs.pop('successArgs', list())
@@ -147,6 +148,7 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
 
 class SubscriptionManager(WebGETManager):
     """Coordinate subscription operations."""
+
     def __init__(self, parent, **kwargs):
         """Initialize the SubscriptionManager."""
         actionMessage = kwargs.pop('actionMessage', 'update subs')
@@ -353,6 +355,7 @@ class SubscriptionManager(WebGETManager):
 
 class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
     """Run test ping latency work in the background."""
+
     finished = QtCore.Signal()
 
     def __init__(self, factory: ConfigFactory):
@@ -401,6 +404,7 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
 
 class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
     """Run test tcping latency work in the background."""
+
     finished = QtCore.Signal()
 
     def __init__(self, factory: ConfigFactory):
@@ -446,6 +450,7 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
 
 class TestDownloadSpeedWorker(WebGETManager):
     """Run test download speed work in the background."""
+
     progressed = QtCore.Signal()
     finished = QtCore.Signal(object)
 
@@ -739,6 +744,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
 class DownloadSpeedTestJob:
     """Represent download speed test job."""
+
     def __init__(
         self,
         index: int,
@@ -757,6 +763,7 @@ class DownloadSpeedTestJob:
 
 class DownloadSpeedTestScheduler(QtCore.QObject):
     """Schedule and coordinate download speed test jobs."""
+
     SinglePort = 20809
     MultiPortStart = 30000
     MultiPortStop = 40000
@@ -908,6 +915,7 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
 
 class DeleteServersProgressDialog(AppQDialog):
     """Present progress and cancellation controls for delete servers."""
+
     def __init__(self, table, indexes, showTrayMessage=True, parent=None):
         """Initialize the DeleteServersProgressDialog."""
         super().__init__(parent)
@@ -1082,6 +1090,7 @@ class DeleteServersProgressDialog(AppQDialog):
 
 class UserServersQTableViewHorizontalHeader(AppQHeaderView):
     """Provide the user servers Qt table view horizontal table header."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserServersQTableViewHorizontalHeader."""
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
@@ -1089,6 +1098,7 @@ class UserServersQTableViewHorizontalHeader(AppQHeaderView):
 
 class UserServersQTableViewVerticalHeader(AppQHeaderView):
     """Provide the user servers Qt table view vertical table header."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserServersQTableViewVerticalHeader."""
         super().__init__(QtCore.Qt.Orientation.Vertical, *args, **kwargs)
@@ -1096,6 +1106,7 @@ class UserServersQTableViewVerticalHeader(AppQHeaderView):
 
 class UserServersQTableViewHeaders:
     """Describe and render user servers Qt table view table columns."""
+
     def __init__(self, name: str, func: Callable[[ConfigFactory], str] = None):
         """Initialize the UserServersQTableViewHeaders."""
         self.name = name
@@ -1119,6 +1130,7 @@ class UserServersQTableViewHeaders:
 
 class UserServersTableModel(QtCore.QAbstractTableModel):
     """Expose user servers table data through a Qt item model."""
+
     SortRole = QtCore.Qt.ItemDataRole.UserRole + 1
 
     def __init__(self, headers: list[UserServersQTableViewHeaders], parent=None):
@@ -1318,6 +1330,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
 
 class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
     """Filter and sort user servers sort filter data."""
+
     def __init__(self, parent=None):
         """Initialize the UserServersSortFilterProxyModel."""
         super().__init__(parent)
@@ -1443,6 +1456,7 @@ class UserServersQTableView(
     AppQTableView,
 ):
     """Represent user servers Qt table view."""
+
     RowHeight = 42
 
     Headers = [
@@ -2140,6 +2154,7 @@ class UserServersQTableView(
 
     def swapItem(self, index0: int, index1: int):
         """Handle swap item for the user servers Qt table view."""
+
         def swapSequenceItem(sequence: MutableSequence, param0: int, param1: int):
             """Handle swap sequence item for the user servers Qt table view."""
             swap = sequence[param0]

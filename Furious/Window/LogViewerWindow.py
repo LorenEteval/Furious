@@ -30,6 +30,7 @@ __all__ = ['LogViewerWindow']
 
 class MBoxSaveError(AppQMessageBox):
     """Represent m box save error."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxSaveError."""
         super().__init__(*args, **kwargs)
@@ -77,6 +78,7 @@ def saveAsFile(content: str):
 
 class LogViewerWindow(AppQMainWindow):
     """Present the log viewer window."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the LogViewerWindow."""
         tabTitle = kwargs.pop('tabTitle', '')
