@@ -32,6 +32,7 @@ class PluginRouting:
     id: str
     displayName: str
     separatorBefore: bool = False
+    translatable: bool = False
 
 
 class FuriousPlugin:

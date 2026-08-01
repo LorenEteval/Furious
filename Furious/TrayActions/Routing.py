@@ -92,7 +92,11 @@ class RoutingAction(AppQAction):
 
             actions.append(
                 RoutingChildAction(
-                    _(option.displayName),
+                    (
+                        _(option.displayName)
+                        if option.translatable
+                        else option.displayName
+                    ),
                     routingValue=option.id,
                     checkable=True,
                     checked=routing == option.id,

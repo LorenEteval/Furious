@@ -1048,7 +1048,6 @@ TRANSLATION = {
     },
     "Routing": {
         "source": [
-            "Furious.Plugins.Official.Xray.Plugin",
             "Furious.TrayActions.Routing"
         ],
         "RU": "Маршрутизация",
@@ -2146,6 +2145,14 @@ TRANSLATION = {
         ],
         "RU": "Управление файлами ресурсов Xray-core...",
         "ZH": "管理Xray-core资源文件...",
+        "isReviewed": "True"
+    },
+    "Edit Routing...": {
+        "source": [
+            "Furious.Plugins.Official.Xray.Plugin"
+        ],
+        "RU": "Редактировать маршрут...",
+        "ZH": "编辑路由...",
         "isReviewed": "True"
     }
 }
