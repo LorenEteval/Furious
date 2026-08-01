@@ -11,7 +11,8 @@ from Furious.Plugins.Official.Configuration import (
     ConfigXray,
     configXrayEmptyProxyOutboundObject,
 )
-from Furious.Qt.QtWidgets import showMBoxDirectRulesNotAllowed
+from Furious.Qt import *
+from Furious.Qt import gettext as _
 
 import copy
 import logging
@@ -227,25 +228,24 @@ class XrayPlugin(FuriousPlugin):
         """Create the editor matching an Xray outbound protocol."""
         return self.createEditorForProtocol(config.proxyProtocol, parent, **kwargs)
 
-    def createRoutingEditor(self, parent=None, **kwargs):
-        """Create Xray's custom routing-profile editor."""
-        from .UserRoutingWindow import UserRoutingWindow
-
-        return UserRoutingWindow(parent=parent, **kwargs)
-
-    def createMainWindowTools(self, parent=None, **kwargs):
-        """Create Xray asset-management actions for the host Tools menu."""
+    def createManagementActions(self, parent=None, **kwargs):
+        """Create Xray routing and asset-management actions."""
         from Furious.Qt import AppQAction, gettext
 
+        from .UserRoutingWindow import UserRoutingWindow
         from .XrayAssetViewerWindow import XrayAssetViewerWindow
 
+        routingEditor = UserRoutingWindow(parent=parent, **kwargs)
         assetViewer = XrayAssetViewerWindow(parent=parent)
-        if parent is not None:
-            parent.xrayAssetViewerWindow = assetViewer
 
         return (
             AppQAction(
-                gettext('Manage Xray-core Asset File...'),
+                _('Routing'),
+                callback=routingEditor.show,
+            ),
+            AppQSeperator(),
+            AppQAction(
+                _('Manage Xray-core Asset File...'),
                 callback=assetViewer.show,
             ),
         )
