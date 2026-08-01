@@ -37,6 +37,38 @@ class Storage:
     """Provide cached access to persisted user configuration collections."""
 
     @staticmethod
+    @functools.lru_cache(None)
+    def _UserServersStorage() -> UserServers:
+        """Return the application-lifetime user-server storage owner."""
+        assert APP() is not None
+
+        return UserServers()
+
+    @staticmethod
+    @functools.lru_cache(None)
+    def _UserSubsStorage() -> UserSubs:
+        """Return the application-lifetime subscription storage owner."""
+        assert APP() is not None
+
+        return UserSubs()
+
+    @staticmethod
+    @functools.lru_cache(None)
+    def _UserTUNSettingsStorage() -> UserTUNSettings:
+        """Return the application-lifetime TUN-settings storage owner."""
+        assert APP() is not None
+
+        return UserTUNSettings()
+
+    @staticmethod
+    @functools.lru_cache(None)
+    def _UserRoutingsStorage() -> UserRoutings:
+        """Return the application-lifetime custom-routing storage owner."""
+        assert APP() is not None
+
+        return UserRoutings()
+
+    @staticmethod
     def UserActivatedItemIndex() -> int:
         """Return the user activated item index value."""
         try:
@@ -47,36 +79,24 @@ class Storage:
             return -1
 
     @staticmethod
-    @functools.lru_cache(None)
     def UserServers() -> list[ConfigFactory]:
         """Return the user servers value."""
-        assert APP() is not None
-
-        return UserServers().data()
+        return Storage._UserServersStorage().data()
 
     @staticmethod
-    @functools.lru_cache(None)
     def UserSubs() -> dict[str, dict]:
         """Return the user subs value."""
-        assert APP() is not None
-
-        return UserSubs().data()
+        return Storage._UserSubsStorage().data()
 
     @staticmethod
-    @functools.lru_cache(None)
     def UserTUNSettings() -> dict[str, str]:
         """Return the user TUN settings value."""
-        assert APP() is not None
-
-        return UserTUNSettings().data()
+        return Storage._UserTUNSettingsStorage().data()
 
     @staticmethod
-    @functools.lru_cache(None)
     def UserRoutings() -> dict[str, dict]:
         """Return the user routings value."""
-        assert APP() is not None
-
-        return UserRoutings().data()
+        return Storage._UserRoutingsStorage().data()
 
     class Extras:
         """Derive display and proxy values from the active server."""
