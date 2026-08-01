@@ -7,7 +7,7 @@ from importlib import metadata
 import logging
 import threading
 
-from .API import PLUGIN_API_VERSION, FuriousPlugin, PluginProtocol
+from .API import PLUGIN_API_VERSION, FuriousPlugin, PluginProtocol, PluginRouting
 
 __all__ = [
     'PLUGIN_ENTRY_POINT_GROUP',
@@ -205,22 +205,55 @@ class PluginRegistry:
 
             return tuple()
 
-    def routingChoices(self):
-        """Return unique routing choices contributed by registered plugins."""
-        choices = []
-        values = set()
-        for plugin in self.plugins():
-            try:
-                for label, value in plugin.routingChoices():
-                    if value not in values:
-                        choices.append((label, value))
-                        values.add(value)
-            except Exception as ex:
-                logger.error(
-                    f'failed to obtain routing choices for {plugin.pluginId!r}: {ex}'
-                )
+    def routingOptions(self, config):
+        """Return validated routing modes supported by a configuration's plugin."""
+        plugin = self.pluginForConfig(config)
+        if plugin is None:
+            return tuple()
 
-        return tuple(choices)
+        try:
+            options = tuple(plugin.routingOptions(config))
+            optionIds = set()
+            for option in options:
+                if not isinstance(option, PluginRouting):
+                    raise TypeError(
+                        'plugin routing options must be PluginRouting values'
+                    )
+
+                if not isinstance(option.id, str):
+                    raise TypeError('plugin routing option ID must be a string')
+                if not option.id.strip():
+                    raise ValueError('plugin routing option ID cannot be empty')
+                if not isinstance(option.displayName, str):
+                    raise TypeError(
+                        'plugin routing option display name must be a string'
+                    )
+
+                optionId = option.id
+                if optionId in optionIds:
+                    raise ValueError(
+                        f'routing option {option.id!r} is already registered'
+                    )
+
+                optionIds.add(optionId)
+
+            return options
+        except Exception as ex:
+            logger.error(
+                f'failed to obtain routing options for {plugin.pluginId!r}: {ex}'
+            )
+
+            return tuple()
+
+    def normalizeRouting(self, config, routing):
+        """Return a supported routing value or the plugin's first option."""
+        options = self.routingOptions(config)
+        if not options:
+            return routing
+
+        optionIds = tuple(option.id for option in options)
+
+        return routing if routing in optionIds else optionIds[0]
 
     def configureEnvironment(self):
         """Allow every plugin to configure its core process environment."""
@@ -312,6 +345,18 @@ class PluginRegistry:
 _registry = PluginRegistry()
 _registryLock = threading.RLock()
 _registryInitialized = False
+_officialPluginTypes = tuple()
+
+
+def _setOfficialPluginTypes(pluginTypes):
+    """Configure bundled plugin classes before registry initialization."""
+    global _officialPluginTypes
+
+    with _registryLock:
+        if _registryInitialized:
+            raise RuntimeError('plugin registry is already initialized')
+
+        _officialPluginTypes = tuple(pluginTypes)
 
 
 def getPluginRegistry() -> PluginRegistry:
@@ -320,10 +365,10 @@ def getPluginRegistry() -> PluginRegistry:
 
     with _registryLock:
         if not _registryInitialized:
-            from .Official import registerOfficialPlugins
-
             registry = PluginRegistry()
-            registerOfficialPlugins(registry)
+            for pluginType in _officialPluginTypes:
+                registry.register(pluginType())
+
             registry.discover()
             _registry = registry
             _registryInitialized = True

@@ -76,38 +76,54 @@ class RoutingAction(AppQAction):
         self.rebuildMenu()
 
     def routingActions(self):
-        """Return the routing actions value used by the routing action."""
-        actions = list(
-            RoutingChildAction(
-                _(routing.value),
-                checkable=True,
-                checked=AppSettings.get('Routing') == routing.value,
-            )
-            for routing in AppBuiltinRouting
-        )
+        """Return routing actions supported by the active core plugin."""
+        config = self.activeConfig()
+        if config is None:
+            return list()
 
-        customActions = list()
-        for label, value in getPluginRegistry().routingChoices():
-            action = RoutingChildAction(
-                label,
-                routingValue=value,
-                checkable=True,
-                checked=AppSettings.get('Routing') == value,
-            )
-            customActions.append(action)
+        pluginRegistry = getPluginRegistry()
+        options = pluginRegistry.routingOptions(config)
+        routing = pluginRegistry.normalizeRouting(config, AppSettings.get('Routing'))
+        actions = list()
 
-        if customActions:
-            actions.extend([AppQSeperator(), *customActions])
+        for option in options:
+            if option.separatorBefore and actions:
+                actions.append(AppQSeperator())
+
+            actions.append(
+                RoutingChildAction(
+                    _(option.displayName),
+                    routingValue=option.id,
+                    checkable=True,
+                    checked=routing == option.id,
+                )
+            )
 
         return actions
+
+    @staticmethod
+    def activeConfig():
+        """Return the currently selected server configuration, if any."""
+        try:
+            index = Storage.UserActivatedItemIndex()
+            servers = Storage.UserServers()
+
+            if 0 <= index < len(servers):
+                return servers[index]
+        except Exception:
+            # The tray may be built before persistent storage is available.
+            pass
+
+        return None
 
     def rebuildMenu(self):
         """Handle rebuild menu for the routing action."""
         self._menu.clear()
         self._menu._actions.clear()
         self._actionGroup = AppQActionGroup(self)
+        actions = self.routingActions()
 
-        for action in self.routingActions():
+        for action in actions:
             if isinstance(action, AppQSeperator):
                 self._menu._actions.append(action)
                 self._menu.addSeparator()
@@ -116,7 +132,16 @@ class RoutingAction(AppQAction):
                 self._menu.addAction(action)
                 self._actionGroup.addAction(action)
 
+        self.setVisible(bool(actions))
+
     def getGlobalAction(self):
-        # 2nd action
-        """Return global action."""
-        return self._menu.actions()[1]
+        """Return the active plugin's global routing action, if supported."""
+        return next(
+            (
+                action
+                for action in self._menu._actions
+                if isinstance(action, RoutingChildAction)
+                and action.routingValue == AppBuiltinRouting.Global.value
+            ),
+            None,
+        )

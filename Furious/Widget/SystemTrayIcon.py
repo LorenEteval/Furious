@@ -131,6 +131,8 @@ class SystemTrayIcon(
                 elif isinstance(childAction, AppQAction):
                     menu.addAction(childAction)
 
+            menu.menuAction().setVisible(action.isVisible())
+
     def bootstrap(self):
         """Handle bootstrap for the system tray icon."""
         if AppSettings.isStateON_('StartupOnBoot'):

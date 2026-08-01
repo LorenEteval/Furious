@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-__all__ = ['PLUGIN_API_VERSION', 'PluginProtocol', 'FuriousPlugin']
+__all__ = [
+    'PLUGIN_API_VERSION',
+    'PluginProtocol',
+    'PluginRouting',
+    'FuriousPlugin',
+]
 
 PLUGIN_API_VERSION = 1
 
@@ -17,6 +22,15 @@ class PluginProtocol:
     displayName: str
     addActionText: str
     menuOrder: int = 0
+    separatorBefore: bool = False
+
+
+@dataclass(frozen=True)
+class PluginRouting:
+    """Describe one routing mode supported by a core plugin."""
+
+    id: str
+    displayName: str
     separatorBefore: bool = False
 
 
@@ -54,8 +68,8 @@ class FuriousPlugin:
         """Return optional actions for this plugin's management submenu."""
         return tuple()
 
-    def routingChoices(self):
-        """Return optional ``(label, value)`` routing choices for the tray."""
+    def routingOptions(self, config=None):
+        """Return routing modes supported for a plugin configuration."""
         return tuple()
 
     def configureEnvironment(self):

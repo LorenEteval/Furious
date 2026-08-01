@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
+from Furious.Plugins import getPluginRegistry
 from Furious.Qt import AppStyleSheet
 from Furious.Qt import gettext as _
 from Furious.Library import *
@@ -295,8 +296,6 @@ class Application(ApplicationFactory, SingletonApplication):
     @staticmethod
     def addEnviron():
         """Add environ."""
-        from Furious.Plugins import getPluginRegistry
-
         getPluginRegistry().configureEnvironment()
 
         if SystemRuntime.flatpakID():

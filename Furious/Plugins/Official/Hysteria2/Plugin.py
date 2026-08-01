@@ -79,6 +79,7 @@ class Hysteria2Plugin(FuriousPlugin):
 
     def createEditorForProtocol(self, protocol, parent=None, **kwargs):
         """Create the Hysteria 2 editor."""
+        # Plugin discovery can occur while the Furious.Qt package is initializing.
         from .GuiHysteria2 import GuiHysteria2
 
         return GuiHysteria2(parent=parent, **kwargs)

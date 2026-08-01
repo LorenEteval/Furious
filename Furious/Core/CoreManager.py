@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Library import *
+from Furious.Library.Storage import Storage
 from Furious.Plugins import getPluginRegistry
 from Furious.Qt import *
 from Furious.Core.CoreProcessWorker import *
@@ -88,9 +88,12 @@ class CoreManager(Mixins.CleanupOnExit):
         **kwargs,
     ) -> Tuple[Union[CoreProcessWorker, None], bool]:
         """Start a configuration through the plugin that owns it."""
-        plugin = getPluginRegistry().pluginForConfig(config)
+        pluginRegistry = getPluginRegistry()
+        plugin = pluginRegistry.pluginForConfig(config)
         if plugin is None:
             return None, False
+
+        routing = pluginRegistry.normalizeRouting(config, routing)
 
         return plugin.startCore(
             config,

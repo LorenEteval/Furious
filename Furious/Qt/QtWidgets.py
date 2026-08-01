@@ -996,8 +996,10 @@ def showMBoxDirectRulesNotAllowed(**kwargs):
     def handleResultCode(code):
         """Handle result code."""
         if code == PySide6Legacy.enumValueWrapper(AppQMessageBox.StandardButton.Yes):
-            APP().systemTray.RoutingAction.getGlobalAction().trigger()
-            APP().systemTray.ConnectAction.trigger()
+            globalAction = APP().systemTray.RoutingAction.getGlobalAction()
+            if globalAction is not None:
+                globalAction.trigger()
+                APP().systemTray.ConnectAction.trigger()
         else:
             # Do nothing
             pass
