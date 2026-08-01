@@ -191,33 +191,19 @@ class PluginRegistry:
 
         return plugin.createEditorForConfig(config, parent=parent, **kwargs)
 
-    def routingEditors(self, parent=None, **kwargs):
-        """Create every optional plugin-specific routing editor."""
-        editors = []
-        for plugin in self.plugins():
-            try:
-                editor = plugin.createRoutingEditor(parent=parent, **kwargs)
-                if editor is not None:
-                    editors.append((plugin, editor))
-            except Exception as ex:
-                logger.error(
-                    f'failed to create routing editor for {plugin.pluginId!r}: {ex}'
-                )
+    def managementActions(self, plugin, parent=None, **kwargs):
+        """Return management actions contributed by one registered plugin."""
+        if self._plugins.get(plugin.pluginId) is not plugin:
+            raise ValueError(f'plugin {plugin.pluginId!r} is not registered')
 
-        return tuple(editors)
+        try:
+            return tuple(plugin.createManagementActions(parent=parent, **kwargs))
+        except Exception as ex:
+            logger.error(
+                f'failed to create management actions for {plugin.pluginId!r}: {ex}'
+            )
 
-    def mainWindowTools(self, parent=None, **kwargs):
-        """Return Tools-menu actions contributed by registered plugins."""
-        actions = []
-        for plugin in self.plugins():
-            try:
-                actions.extend(plugin.createMainWindowTools(parent=parent, **kwargs))
-            except Exception as ex:
-                logger.error(
-                    f'failed to create main-window tools for {plugin.pluginId!r}: {ex}'
-                )
-
-        return tuple(actions)
+            return tuple()
 
     def routingChoices(self):
         """Return unique routing choices contributed by registered plugins."""

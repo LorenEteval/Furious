@@ -1,13 +1,11 @@
-"""Define source strings and translations used by the localization workflow."""
-
 TRANSLATION = {
     "Delete": {
         "source": [
+            "Furious.Plugins.Official.Xray.UserRoutingWindow",
+            "Furious.Plugins.Official.Xray.XrayAssetViewerQListWidget",
             "Furious.Qt.QtWidgets",
             "Furious.Widget.UserServersQTableView",
             "Furious.Widget.UserSubsQTableView",
-            "Furious.Widget.XrayAssetViewerQListWidget",
-            "Furious.Window.UserRoutingWindow",
             "Furious.Window.UserSubsWindow"
         ],
         "RU": "Удалить",
@@ -104,8 +102,8 @@ TRANSLATION = {
     },
     "Import": {
         "source": [
-            "Furious.TrayActions.Import",
-            "Furious.Widget.XrayAssetViewerQListWidget"
+            "Furious.Plugins.Official.Xray.XrayAssetViewerQListWidget",
+            "Furious.TrayActions.Import"
         ],
         "RU": "Импорт",
         "ZH": "导入",
@@ -137,8 +135,8 @@ TRANSLATION = {
     },
     "Import From File...": {
         "source": [
-            "Furious.TrayActions.Import",
-            "Furious.Window.XrayAssetViewerWindow"
+            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow",
+            "Furious.TrayActions.Import"
         ],
         "RU": "Импорт из файла...",
         "ZH": "从文件导入...",
@@ -146,8 +144,8 @@ TRANSLATION = {
     },
     "Import File": {
         "source": [
-            "Furious.TrayActions.Import",
-            "Furious.Window.XrayAssetViewerWindow"
+            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow",
+            "Furious.TrayActions.Import"
         ],
         "RU": "Импорт файла",
         "ZH": "导入文件",
@@ -220,6 +218,7 @@ TRANSLATION = {
     },
     "Cancel": {
         "source": [
+            "Furious.Plugins.Official.Xray.UserRoutingWindow",
             "Furious.Qt.GuiEditorXXX",
             "Furious.TrayActions.Import",
             "Furious.Widget.GuiCustomizeNetworkTest",
@@ -227,7 +226,6 @@ TRANSLATION = {
             "Furious.Widget.IndentSpinBox",
             "Furious.Widget.UserServersQTableView",
             "Furious.Window.TextEditorWindow",
-            "Furious.Window.UserRoutingWindow",
             "Furious.Window.UserSubsWindow"
         ],
         "RU": "Отмена",
@@ -293,9 +291,9 @@ TRANSLATION = {
     },
     "File": {
         "source": [
+            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow",
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.TextEditorWindow",
-            "Furious.Window.XrayAssetViewerWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Файл",
         "ZH": "文件",
@@ -440,16 +438,16 @@ TRANSLATION = {
     },
     "Remark": {
         "source": [
-            "Furious.Widget.GuiHysteria1",
-            "Furious.Widget.GuiHysteria2",
-            "Furious.Widget.GuiShadowsocks",
-            "Furious.Widget.GuiSocks",
-            "Furious.Widget.GuiTrojan",
-            "Furious.Widget.GuiVLESS",
-            "Furious.Widget.GuiVMess",
+            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
+            "Furious.Plugins.Official.Hysteria2.GuiHysteria2",
+            "Furious.Plugins.Official.Xray.GuiShadowsocks",
+            "Furious.Plugins.Official.Xray.GuiSocks",
+            "Furious.Plugins.Official.Xray.GuiTrojan",
+            "Furious.Plugins.Official.Xray.GuiVLESS",
+            "Furious.Plugins.Official.Xray.GuiVMess",
+            "Furious.Plugins.Official.Xray.UserRoutingWindow",
             "Furious.Widget.UserServersQTableView",
-            "Furious.Widget.UserSubsQTableView",
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Widget.UserSubsQTableView"
         ],
         "RU": "Примечание",
         "ZH": "别名",
@@ -457,7 +455,7 @@ TRANSLATION = {
     },
     "Protocol": {
         "source": [
-            "Furious.Widget.GuiHysteria1",
+            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
             "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Протокол",
@@ -466,11 +464,11 @@ TRANSLATION = {
     },
     "Address": {
         "source": [
-            "Furious.Widget.GuiShadowsocks",
-            "Furious.Widget.GuiSocks",
-            "Furious.Widget.GuiTrojan",
-            "Furious.Widget.GuiVLESS",
-            "Furious.Widget.GuiVMess",
+            "Furious.Plugins.Official.Xray.GuiShadowsocks",
+            "Furious.Plugins.Official.Xray.GuiSocks",
+            "Furious.Plugins.Official.Xray.GuiTrojan",
+            "Furious.Plugins.Official.Xray.GuiVLESS",
+            "Furious.Plugins.Official.Xray.GuiVMess",
             "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Адрес",
@@ -479,11 +477,11 @@ TRANSLATION = {
     },
     "Port": {
         "source": [
-            "Furious.Widget.GuiShadowsocks",
-            "Furious.Widget.GuiSocks",
-            "Furious.Widget.GuiTrojan",
-            "Furious.Widget.GuiVLESS",
-            "Furious.Widget.GuiVMess",
+            "Furious.Plugins.Official.Xray.GuiShadowsocks",
+            "Furious.Plugins.Official.Xray.GuiSocks",
+            "Furious.Plugins.Official.Xray.GuiTrojan",
+            "Furious.Plugins.Official.Xray.GuiVLESS",
+            "Furious.Plugins.Official.Xray.GuiVMess",
             "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Порт",
@@ -492,7 +490,7 @@ TRANSLATION = {
     },
     "Transport": {
         "source": [
-            "Furious.Widget.GuiVTransport",
+            "Furious.Plugins.Official.Xray.GuiVTransport",
             "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Способ передачи",
@@ -526,7 +524,7 @@ TRANSLATION = {
     },
     "Speed": {
         "source": [
-            "Furious.Widget.GuiHysteria1",
+            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
             "Furious.Widget.UserServersQTableView"
         ],
         "RU": "Скорость",
@@ -705,7 +703,7 @@ TRANSLATION = {
     },
     "Add": {
         "source": [
-            "Furious.Window.UserRoutingWindow",
+            "Furious.Plugins.Official.Xray.UserRoutingWindow",
             "Furious.Window.UserSubsWindow"
         ],
         "RU": "Добавить",
@@ -714,9 +712,9 @@ TRANSLATION = {
     },
     "Exit": {
         "source": [
+            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow",
             "Furious.TrayActions.Exit",
-            "Furious.Window.LogViewerWindow",
-            "Furious.Window.XrayAssetViewerWindow"
+            "Furious.Window.LogViewerWindow"
         ],
         "RU": "Выход",
         "ZH": "退出",
@@ -756,7 +754,7 @@ TRANSLATION = {
     },
     "Asset file already exists. Overwrite?": {
         "source": [
-            "Furious.Widget.XrayAssetViewerQListWidget"
+            "Furious.Plugins.Official.Xray.XrayAssetViewerQListWidget"
         ],
         "RU": "Файл ресурсов уже существует. Перезаписать?",
         "ZH": "资源文件已存在。是否覆盖？",
@@ -764,7 +762,7 @@ TRANSLATION = {
     },
     "Error import asset file": {
         "source": [
-            "Furious.Widget.XrayAssetViewerQListWidget"
+            "Furious.Plugins.Official.Xray.XrayAssetViewerQListWidget"
         ],
         "RU": "Ошибка при импорте файла ресурсов",
         "ZH": "导入资源文件出错",
@@ -772,7 +770,7 @@ TRANSLATION = {
     },
     "Import asset file success": {
         "source": [
-            "Furious.Widget.XrayAssetViewerQListWidget"
+            "Furious.Plugins.Official.Xray.XrayAssetViewerQListWidget"
         ],
         "RU": "Успешно импортирован файл ресурсов",
         "ZH": "导入资源文件成功",
@@ -780,7 +778,7 @@ TRANSLATION = {
     },
     "Xray-core Asset File": {
         "source": [
-            "Furious.Window.XrayAssetViewerWindow"
+            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow"
         ],
         "RU": "Xray-core Asset File",
         "ZH": "Xray-core资源文件",
@@ -788,7 +786,7 @@ TRANSLATION = {
     },
     "Refresh": {
         "source": [
-            "Furious.Window.XrayAssetViewerWindow"
+            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow"
         ],
         "RU": "Обновить",
         "ZH": "刷新",
@@ -796,7 +794,7 @@ TRANSLATION = {
     },
     "Open Asset Directory": {
         "source": [
-            "Furious.Window.XrayAssetViewerWindow"
+            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow"
         ],
         "RU": "Открыть каталог ресурсов",
         "ZH": "打开资源目录",
@@ -804,7 +802,7 @@ TRANSLATION = {
     },
     "All files (*)": {
         "source": [
-            "Furious.Window.XrayAssetViewerWindow"
+            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow"
         ],
         "RU": "Все файлы (*)",
         "ZH": "所有文件 (*)",
@@ -812,8 +810,8 @@ TRANSLATION = {
     },
     "Server": {
         "source": [
-            "Furious.Widget.GuiHysteria1",
-            "Furious.Widget.GuiHysteria2",
+            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
+            "Furious.Plugins.Official.Hysteria2.GuiHysteria2",
             "Furious.Window.AppMainWindow"
         ],
         "RU": "Сервер",
@@ -895,12 +893,20 @@ TRANSLATION = {
         "ZH": "工具",
         "isReviewed": "True"
     },
-    "Manage Xray-core Asset File...": {
+    "Plugins": {
         "source": [
             "Furious.Window.AppMainWindow"
         ],
-        "RU": "Управление файлами ресурсов Xray-core...",
-        "ZH": "管理Xray-core资源文件...",
+        "RU": "Плагины",
+        "ZH": "插件",
+        "isReviewed": "True"
+    },
+    "Core": {
+        "source": [
+            "Furious.Window.AppMainWindow"
+        ],
+        "RU": "Core",
+        "ZH": "Core",
         "isReviewed": "True"
     },
     "Open Application Folder": {
@@ -1016,14 +1022,6 @@ TRANSLATION = {
         "ZH": "内核启动失败",
         "isReviewed": "True"
     },
-    "Connection to server has been lost": {
-        "source": [
-            "Furious.TrayActions.Connect"
-        ],
-        "RU": "Соединение с сервером было потеряно",
-        "ZH": "与服务器的连接已丢失",
-        "isReviewed": "True"
-    },
     "Core terminated unexpectedly": {
         "source": [
             "Furious.TrayActions.Connect"
@@ -1050,8 +1048,8 @@ TRANSLATION = {
     },
     "Routing": {
         "source": [
-            "Furious.TrayActions.Routing",
-            "Furious.Window.AppMainWindow"
+            "Furious.Plugins.Official.Xray.Plugin",
+            "Furious.TrayActions.Routing"
         ],
         "RU": "Маршрутизация",
         "ZH": "路由",
@@ -1267,14 +1265,14 @@ TRANSLATION = {
     },
     "Basic Configuration": {
         "source": [
-            "Furious.Widget.GuiHysteria1",
-            "Furious.Widget.GuiHysteria2",
-            "Furious.Widget.GuiShadowsocks",
-            "Furious.Widget.GuiSocks",
-            "Furious.Widget.GuiTrojan",
-            "Furious.Widget.GuiTUNSettings",
-            "Furious.Widget.GuiVLESS",
-            "Furious.Widget.GuiVMess"
+            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
+            "Furious.Plugins.Official.Hysteria2.GuiHysteria2",
+            "Furious.Plugins.Official.Xray.GuiShadowsocks",
+            "Furious.Plugins.Official.Xray.GuiSocks",
+            "Furious.Plugins.Official.Xray.GuiTrojan",
+            "Furious.Plugins.Official.Xray.GuiVLESS",
+            "Furious.Plugins.Official.Xray.GuiVMess",
+            "Furious.Widget.GuiTUNSettings"
         ],
         "RU": "Базовая конфигурация",
         "ZH": "基本配置",
@@ -1282,13 +1280,13 @@ TRANSLATION = {
     },
     "Proxy": {
         "source": [
-            "Furious.Widget.GuiHysteria1",
-            "Furious.Widget.GuiHysteria2",
-            "Furious.Widget.GuiShadowsocks",
-            "Furious.Widget.GuiSocks",
-            "Furious.Widget.GuiTrojan",
-            "Furious.Widget.GuiVLESS",
-            "Furious.Widget.GuiVMess"
+            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
+            "Furious.Plugins.Official.Hysteria2.GuiHysteria2",
+            "Furious.Plugins.Official.Xray.GuiShadowsocks",
+            "Furious.Plugins.Official.Xray.GuiSocks",
+            "Furious.Plugins.Official.Xray.GuiTrojan",
+            "Furious.Plugins.Official.Xray.GuiVLESS",
+            "Furious.Plugins.Official.Xray.GuiVMess"
         ],
         "RU": "Прокси",
         "ZH": "代理",
@@ -1296,8 +1294,8 @@ TRANSLATION = {
     },
     "Project Website": {
         "source": [
-            "Furious.Widget.GuiHysteria1",
-            "Furious.Widget.GuiHysteria2"
+            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
+            "Furious.Plugins.Official.Hysteria2.GuiHysteria2"
         ],
         "RU": "Веб-сайт проекта",
         "ZH": "项目网站",
@@ -1305,8 +1303,8 @@ TRANSLATION = {
     },
     "Other": {
         "source": [
-            "Furious.Widget.GuiHysteria1",
-            "Furious.Widget.GuiHysteria2"
+            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
+            "Furious.Plugins.Official.Hysteria2.GuiHysteria2"
         ],
         "RU": "Прочее",
         "ZH": "其它",
@@ -1314,8 +1312,8 @@ TRANSLATION = {
     },
     "Encryption": {
         "source": [
-            "Furious.Widget.GuiShadowsocks",
-            "Furious.Widget.GuiVLESS"
+            "Furious.Plugins.Official.Xray.GuiShadowsocks",
+            "Furious.Plugins.Official.Xray.GuiVLESS"
         ],
         "RU": "Шифрование",
         "ZH": "加密",
@@ -1323,9 +1321,9 @@ TRANSLATION = {
     },
     "Password": {
         "source": [
-            "Furious.Widget.GuiShadowsocks",
-            "Furious.Widget.GuiSocks",
-            "Furious.Widget.GuiTrojan"
+            "Furious.Plugins.Official.Xray.GuiShadowsocks",
+            "Furious.Plugins.Official.Xray.GuiSocks",
+            "Furious.Plugins.Official.Xray.GuiTrojan"
         ],
         "RU": "Пароль",
         "ZH": "密码",
@@ -1333,7 +1331,7 @@ TRANSLATION = {
     },
     "Flow": {
         "source": [
-            "Furious.Widget.GuiVLESS"
+            "Furious.Plugins.Official.Xray.GuiVLESS"
         ],
         "RU": "Поток",
         "ZH": "流控",
@@ -1361,54 +1359,6 @@ TRANSLATION = {
         ],
         "RU": "Редактировать JSON конфигурацию...",
         "ZH": "自定义JSON配置...",
-        "isReviewed": "True"
-    },
-    "Add VMess Server...": {
-        "source": [
-            "Furious.Window.AppMainWindow"
-        ],
-        "RU": "Добавить сервер VMess...",
-        "ZH": "添加VMess服务器...",
-        "isReviewed": "True"
-    },
-    "Add VLESS Server...": {
-        "source": [
-            "Furious.Window.AppMainWindow"
-        ],
-        "RU": "Добавить сервер VLESS...",
-        "ZH": "添加VLESS服务器...",
-        "isReviewed": "True"
-    },
-    "Add Shadowsocks Server...": {
-        "source": [
-            "Furious.Window.AppMainWindow"
-        ],
-        "RU": "Добавить сервер Shadowsocks...",
-        "ZH": "添加Shadowsocks服务器...",
-        "isReviewed": "True"
-    },
-    "Add Trojan Server...": {
-        "source": [
-            "Furious.Window.AppMainWindow"
-        ],
-        "RU": "Добавить сервер Trojan...",
-        "ZH": "添加Trojan服务器...",
-        "isReviewed": "True"
-    },
-    "Add Hysteria1 Server...": {
-        "source": [
-            "Furious.Window.AppMainWindow"
-        ],
-        "RU": "Добавить сервер Hysteria 1...",
-        "ZH": "添加Hysteria1服务器...",
-        "isReviewed": "True"
-    },
-    "Add Hysteria2 Server...": {
-        "source": [
-            "Furious.Window.AppMainWindow"
-        ],
-        "RU": "Добавить сервер Hysteria 2...",
-        "ZH": "添加Hysteria2服务器...",
         "isReviewed": "True"
     },
     "Routing option with direct rules is not allowed in TUN mode": {
@@ -1446,11 +1396,11 @@ TRANSLATION = {
     "OK": {
         "source": [
             "Furious.__main__",
+            "Furious.Plugins.Official.Xray.UserRoutingWindow",
             "Furious.Qt.GuiEditorXXX",
             "Furious.Widget.GuiCustomizeNetworkTest",
             "Furious.Widget.GuiCustomizeProxyBypass",
             "Furious.Widget.IndentSpinBox",
-            "Furious.Window.UserRoutingWindow",
             "Furious.Window.UserSubsWindow"
         ],
         "RU": "OK",
@@ -1942,7 +1892,7 @@ TRANSLATION = {
     },
     "Edit Routing Rule": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Редактировать правило маршрутизации",
         "ZH": "编辑路由规则",
@@ -1950,7 +1900,7 @@ TRANSLATION = {
     },
     "Domain (one per line or comma-separated)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Domain (по одному в строке или через запятую)",
         "ZH": "Domain（每行一个或以逗号分隔）",
@@ -1958,7 +1908,7 @@ TRANSLATION = {
     },
     "IP (one per line or comma-separated)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "IP (по одному в строке или через запятую)",
         "ZH": "IP（每行一个或以逗号分隔）",
@@ -1966,7 +1916,7 @@ TRANSLATION = {
     },
     "Port (comma/range, e.g. 53,443,1000-2000)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Port (через запятую/диапазон, например: 53,443,1000-2000)",
         "ZH": "Port（逗号/范围，例如：53,443,1000-2000）",
@@ -1974,7 +1924,7 @@ TRANSLATION = {
     },
     "VLESS Route (comma/range, e.g. 53,443,1000-2000)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "VLESS Route (через запятую/диапазон, например: 53,443,1000-2000)",
         "ZH": "VLESS Route（逗号/范围，例如：53,443,1000-2000）",
@@ -1982,7 +1932,7 @@ TRANSLATION = {
     },
     "Source IP (one per line or comma-separated)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Source IP (по одному в строке или через запятую)",
         "ZH": "Source IP（每行一个或以逗号分隔）",
@@ -1990,7 +1940,7 @@ TRANSLATION = {
     },
     "Source Port (comma/range, e.g. 53,443,1000-2000)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Source Port (через запятую/диапазон, например: 53,443,1000-2000)",
         "ZH": "Source Port（逗号/范围，例如：53,443,1000-2000）",
@@ -1998,7 +1948,7 @@ TRANSLATION = {
     },
     "Local IP (one per line or comma-separated)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Local IP (по одному в строке или через запятую)",
         "ZH": "Local IP（每行一个或以逗号分隔）",
@@ -2006,7 +1956,7 @@ TRANSLATION = {
     },
     "Local Port (comma/range, e.g. 53,443,1000-2000)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Local Port (через запятую/диапазон, например: 53,443,1000-2000)",
         "ZH": "Local Port（逗号/范围，例如：53,443,1000-2000）",
@@ -2014,7 +1964,7 @@ TRANSLATION = {
     },
     "User (one per line or comma-separated)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "User (по одному в строке или через запятую)",
         "ZH": "User（每行一个或以逗号分隔）",
@@ -2022,7 +1972,7 @@ TRANSLATION = {
     },
     "Inbound Tag (one per line or comma-separated)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Inbound Tag (по одному в строке или через запятую)",
         "ZH": "Inbound Tag（每行一个或以逗号分隔）",
@@ -2030,7 +1980,7 @@ TRANSLATION = {
     },
     "Process (one per line or comma-separated)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Process (по одному в строке или через запятую)",
         "ZH": "Process（每行一个或以逗号分隔）",
@@ -2038,7 +1988,7 @@ TRANSLATION = {
     },
     "Protocol (one per line or comma-separated)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Protocol (по одному в строке или через запятую)",
         "ZH": "Protocol（每行一个或以逗号分隔）",
@@ -2046,7 +1996,7 @@ TRANSLATION = {
     },
     "Edit Routing Remark": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Редактировать примечание к маршруту",
         "ZH": "编辑路由备注",
@@ -2054,7 +2004,7 @@ TRANSLATION = {
     },
     "Add Routing": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Добавить маршрут",
         "ZH": "添加路由",
@@ -2062,7 +2012,7 @@ TRANSLATION = {
     },
     "Routing Rules": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Правила маршрутизации",
         "ZH": "路由规则",
@@ -2070,7 +2020,7 @@ TRANSLATION = {
     },
     "Edit Routing": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Редактировать маршрут",
         "ZH": "编辑路由",
@@ -2078,7 +2028,7 @@ TRANSLATION = {
     },
     "Edit Text": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Редактировать текст",
         "ZH": "编辑文本",
@@ -2086,7 +2036,7 @@ TRANSLATION = {
     },
     "Rename": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Переименовать",
         "ZH": "重命名",
@@ -2094,7 +2044,7 @@ TRANSLATION = {
     },
     "Double-click to enlarge": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Дважды щёлкните, чтобы увеличить",
         "ZH": "双击放大",
@@ -2102,7 +2052,7 @@ TRANSLATION = {
     },
     "State": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Состояние",
         "ZH": "状态",
@@ -2110,7 +2060,7 @@ TRANSLATION = {
     },
     "Enabled": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Включено",
         "ZH": "已启用",
@@ -2118,7 +2068,7 @@ TRANSLATION = {
     },
     "Disabled": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Отключено",
         "ZH": "已禁用",
@@ -2126,7 +2076,7 @@ TRANSLATION = {
     },
     "New Routing": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Новый маршрут",
         "ZH": "新路由",
@@ -2134,7 +2084,7 @@ TRANSLATION = {
     },
     "Routing Documentation": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Документация по маршрутизации",
         "ZH": "路由文档",
@@ -2142,7 +2092,7 @@ TRANSLATION = {
     },
     "Preview Routing": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Предпросмотр маршрутизации",
         "ZH": "预览路由",
@@ -2150,7 +2100,7 @@ TRANSLATION = {
     },
     "OutBound (e.g. proxy/direct/block)": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "OutBound (например: proxy/direct/block)",
         "ZH": "OutBound（例如：proxy/direct/block）",
@@ -2158,7 +2108,7 @@ TRANSLATION = {
     },
     "Preview": {
         "source": [
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow"
         ],
         "RU": "Предпросмотр",
         "ZH": "预览",
@@ -2166,8 +2116,8 @@ TRANSLATION = {
     },
     "Close": {
         "source": [
-            "Furious.Window.TextEditorWindow",
-            "Furious.Window.UserRoutingWindow"
+            "Furious.Plugins.Official.Xray.UserRoutingWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Закрыть",
         "ZH": "关闭",
@@ -2175,8 +2125,8 @@ TRANSLATION = {
     },
     "Generate": {
         "source": [
-            "Furious.Widget.GuiVLESS",
-            "Furious.Widget.GuiVMess"
+            "Furious.Plugins.Official.Xray.GuiVLESS",
+            "Furious.Plugins.Official.Xray.GuiVMess"
         ],
         "RU": "Сгенерировать",
         "ZH": "生成",
@@ -2184,18 +2134,18 @@ TRANSLATION = {
     },
     "Username": {
         "source": [
-            "Furious.Widget.GuiSocks"
+            "Furious.Plugins.Official.Xray.GuiSocks"
         ],
         "RU": "Имя пользователя",
         "ZH": "用户名",
         "isReviewed": "True"
     },
-    "Add SOCKS Server...": {
+    "Manage Xray-core Asset File...": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Plugins.Official.Xray.Plugin"
         ],
-        "RU": "Добавить сервер SOCKS...",
-        "ZH": "添加SOCKS服务器...",
+        "RU": "Управление файлами ресурсов Xray-core...",
+        "ZH": "管理Xray-core资源文件...",
         "isReviewed": "True"
     }
 }

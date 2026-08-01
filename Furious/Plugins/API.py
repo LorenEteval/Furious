@@ -50,12 +50,8 @@ class FuriousPlugin:
         """Create the configuration editor for a plugin configuration."""
         return self.createEditorForProtocol(config.itemProtocol, parent, **kwargs)
 
-    def createRoutingEditor(self, parent=None, **kwargs):
-        """Create an optional plugin-specific routing editor."""
-        return None
-
-    def createMainWindowTools(self, parent=None, **kwargs):
-        """Return optional actions for the main window's Tools menu."""
+    def createManagementActions(self, parent=None, **kwargs):
+        """Return optional actions for this plugin's management submenu."""
         return tuple()
 
     def routingChoices(self):

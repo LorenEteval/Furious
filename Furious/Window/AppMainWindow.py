@@ -284,12 +284,6 @@ class AppMainWindow(AppQMainWindow):
             ),
         )
         pluginRegistry = getPluginRegistry()
-        pluginRoutingEditors = pluginRegistry.routingEditors(parent=self)
-        self.pluginRoutingEditors = tuple(
-            editor for _plugin, editor in pluginRoutingEditors
-        )
-        if self.pluginRoutingEditors:
-            self.userRoutingWindow = self.pluginRoutingEditors[0]
         self.customizeProxyBypassDialog = GuiCustomizeProxyBypassDialog(parent=self)
         self.customizeNetworkTestDialog = GuiCustomizeNetworkTestDialog(parent=self)
 
@@ -412,9 +406,7 @@ class AppMainWindow(AppQMainWindow):
             restartAsAdminAction = []
 
         if PLATFORM == 'Darwin' or SystemRuntime.flatpakID():
-            openAppFolderAction = [
-                AppQSeperator(),
-            ]
+            openAppFolderAction = []
         else:
             openAppFolderAction = [
                 AppQAction(
@@ -423,10 +415,8 @@ class AppMainWindow(AppQMainWindow):
                     checkable=False,
                     callback=lambda: self.openApplicationFolder(),
                 ),
-                AppQSeperator(),
             ]
 
-        pluginTools = pluginRegistry.mainWindowTools(parent=self)
         toolsActions = [
             *customizeTUNSettingsAction,
             AppQAction(
@@ -440,44 +430,53 @@ class AppMainWindow(AppQMainWindow):
                 checkable=False,
                 callback=lambda: self.customizeNetworkTestDialog.open(),
             ),
-            AppQSeperator(),
-            *restartAsAdminAction,
-            *openAppFolderAction,
         ]
-        if pluginTools:
-            toolsActions.extend(pluginTools)
+        systemTools = [*restartAsAdminAction, *openAppFolderAction]
+        if systemTools:
+            toolsActions.extend([AppQSeperator(), *systemTools])
 
-        routingActions = [
-            AppQAction(
-                _(plugin.displayName),
-                callback=editor.show,
+        corePluginActions = []
+        for plugin in pluginRegistry.plugins():
+            managementActions = pluginRegistry.managementActions(
+                plugin,
+                parent=self,
             )
-            for plugin, editor in pluginRoutingEditors
+            if managementActions:
+                corePluginActions.append(
+                    AppQAction(
+                        _(plugin.displayName),
+                        menu=AppQMenu(*managementActions),
+                        useActionGroup=False,
+                        checkable=False,
+                    )
+                )
+            else:
+                corePluginActions.append(
+                    AppQAction(
+                        _(plugin.displayName),
+                        checkable=False,
+                    )
+                )
+
+        pluginActions = [
+            AppQAction(
+                _('Core'),
+                menu=AppQMenu(*corePluginActions),
+                useActionGroup=False,
+                checkable=False,
+            )
         ]
-        if len(routingActions) == 1:
-            routingToolbarActions = [
-                AppQSeperator(),
-                AppQAction(
-                    _('Routing'),
-                    icon=bootstrapIcon('signpost.svg'),
-                    checkable=False,
-                    callback=routingActions[0].trigger,
-                ),
-            ]
-        elif routingActions:
-            routingToolbarActions = [
-                AppQSeperator(),
-                AppQAction(
-                    _('Routing'),
-                    icon=bootstrapIcon('signpost.svg'),
-                    menu=AppQMenu(*routingActions),
-                    useSetMenu=False,
-                    useActionGroup=False,
-                    checkable=False,
-                ),
-            ]
-        else:
-            routingToolbarActions = []
+        pluginsToolbarActions = [
+            AppQSeperator(),
+            AppQAction(
+                _('Plugins'),
+                icon=bootstrapIcon('plugin.svg'),
+                menu=AppQMenu(*pluginActions),
+                useSetMenu=False,
+                useActionGroup=False,
+                checkable=False,
+            ),
+        ]
 
         if hasattr(AppQAction, 'setMenu'):
             self.toolbar = AppQToolBar(
@@ -507,7 +506,7 @@ class AppMainWindow(AppQMainWindow):
                     useActionGroup=False,
                     checkable=False,
                 ),
-                *routingToolbarActions,
+                *pluginsToolbarActions,
                 AppQSeperator(),
                 AppQAction(
                     _('Tools'),
@@ -555,14 +554,10 @@ class AppMainWindow(AppQMainWindow):
                 'actions': [*subsActions],
             }
 
-            routingMenus = []
-            if routingActions:
-                routingMenus.append(
-                    {
-                        'name': 'Routing',
-                        'actions': [*routingActions],
-                    }
-                )
+            pluginsMenu = {
+                'name': 'Plugins',
+                'actions': [*pluginActions],
+            }
 
             toolsMenu = {
                 'name': 'Tools',
@@ -593,7 +588,7 @@ class AppMainWindow(AppQMainWindow):
                 _('Log'),
                 _('Server'),
                 _('Subscription'),
-                _('Routing'),
+                _('Plugins'),
                 _('Tools'),
                 _('Help'),
             ]
@@ -603,7 +598,7 @@ class AppMainWindow(AppQMainWindow):
                 logMenu,
                 serverMenu,
                 subsMenu,
-                *routingMenus,
+                pluginsMenu,
                 toolsMenu,
                 helpMenu,
             ):
