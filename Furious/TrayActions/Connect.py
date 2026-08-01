@@ -22,9 +22,10 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Library import *
+from Furious.Plugins import getPluginRegistry
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Core import *
+from Furious.Core.CoreManager import CoreManager
 from Furious.Widget.ConnectProgressBar import ConnectProgressBar
 
 from PySide6 import QtCore
@@ -75,7 +76,6 @@ class ConnectAction(AppQAction):
         self.actionTimer.timeout.connect(lambda: self.callActionFromQueue())
 
         self.updatesManager = UpdatesManager()
-        self.assetDownloadManager = XrayAssetDownloadManager()
 
     def reset(self):
         """Restore the connect action to its initial state."""
@@ -340,19 +340,7 @@ class ConnectAction(AppQAction):
             hasNewVersionCallback=newVersionCallback,
         )
 
-        if not SystemRuntime.isAssetsFolderWritable():
-            logger.info(
-                f'skipped auto assets update due to assets folder \'{XRAY_ASSET_DIR}\' not writable'
-            )
-        else:
-            logger.info(f'assets folder \'{XRAY_ASSET_DIR}\' is writable. Continue')
-
-            if AppSettings.isStateON_('AutoUpdateAssetFiles'):
-                # Automatically update assets
-                self.assetDownloadManager.configureHttpProxy(connectedHttpProxy)
-                self.assetDownloadManager.download()
-            else:
-                logger.info('skipped auto assets update due to settings')
+        getPluginRegistry().afterConnected(connectedHttpProxy)
 
     def callActionFromQueue(self):
         """Call action from queue."""
@@ -406,16 +394,16 @@ class ConnectAction(AppQAction):
 
             return None
 
-        if isinstance(core, Hysteria1):
-            if exitcode == Hysteria1.ExitCode.RemoteNetworkError.value:
-                putItem(
-                    functools.partial(
-                        self.doDisconnectWithTrayMessage,
-                        f'{core.name()}: ' + _('Connection to server has been lost'),
-                    )
+        pluginMessage = getPluginRegistry().coreExitMessage(core, exitcode)
+        if pluginMessage:
+            putItem(
+                functools.partial(
+                    self.doDisconnectWithTrayMessage,
+                    f'{core.name()}: ' + _(pluginMessage),
                 )
+            )
 
-                return None
+            return None
 
         putItem(
             functools.partial(

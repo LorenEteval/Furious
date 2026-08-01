@@ -19,7 +19,8 @@
 
 from __future__ import annotations
 
-from Furious.Core import *
+from Furious.Core.Tun2socks import Tun2socks
+from Furious.Plugins import getPluginRegistry
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -111,9 +112,7 @@ class AppQSyntaxHighlighter(QSyntaxHighlighter):
                 shouldHighlight = True
 
                 for version in [
-                    XrayCore.version(),
-                    Hysteria1.version(),
-                    Hysteria2.version(),
+                    *getPluginRegistry().coreVersions(),
                     Tun2socks.version(),
                 ]:
                     if captured == version:
@@ -197,10 +196,8 @@ class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
             EditorHighlightRules(
                 # Application logging timestamp
                 r'\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\]' + r'|'
-                # Xray-core logging timestamp
-                + r'\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}.\d{6}' + r'|'
-                # hysteria2 logging timestamp
-                + r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})' + r'|'
+                # Plugin-core logging timestamps
+                + r'|'.join(getPluginRegistry().logTimestampPatterns()) + r'|'
                 # tun2socks logging timestamp
                 + r'\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}',
                 '#7F7F7F',

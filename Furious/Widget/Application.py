@@ -294,9 +294,10 @@ class Application(ApplicationFactory, SingletonApplication):
 
     @staticmethod
     def addEnviron():
-        # Xray environment variables
         """Add environ."""
-        os.environ['XRAY_LOCATION_ASSET'] = str(XRAY_ASSET_DIR)
+        from Furious.Plugins import getPluginRegistry
+
+        getPluginRegistry().configureEnvironment()
 
         if SystemRuntime.flatpakID():
             # https://github.com/flatpak/flatpak/issues/3438

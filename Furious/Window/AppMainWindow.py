@@ -22,6 +22,7 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Library import *
+from Furious.Plugins import getPluginRegistry
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 from Furious.Widget.UserServersQTableView import *
@@ -29,8 +30,6 @@ from Furious.Widget.GuiCustomizeNetworkTest import *
 from Furious.Widget.GuiCustomizeProxyBypass import *
 from Furious.Widget.GuiTUNSettings import *
 from Furious.Window.UserSubsWindow import *
-from Furious.Window.UserRoutingWindow import *
-from Furious.Window.XrayAssetViewerWindow import *
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -284,8 +283,13 @@ class AppMainWindow(AppQMainWindow):
                 showProgress=False,
             ),
         )
-        self.userRoutingWindow = UserRoutingWindow(parent=self)
-        self.xrayAssetViewerWindow = XrayAssetViewerWindow(parent=self)
+        pluginRegistry = getPluginRegistry()
+        pluginRoutingEditors = pluginRegistry.routingEditors(parent=self)
+        self.pluginRoutingEditors = tuple(
+            editor for _plugin, editor in pluginRoutingEditors
+        )
+        if self.pluginRoutingEditors:
+            self.userRoutingWindow = self.pluginRoutingEditors[0]
         self.customizeProxyBypassDialog = GuiCustomizeProxyBypassDialog(parent=self)
         self.customizeNetworkTestDialog = GuiCustomizeNetworkTestDialog(parent=self)
 
@@ -322,57 +326,31 @@ class AppMainWindow(AppQMainWindow):
             ),
         ]
 
-        serverActions = [
-            AppQAction(
-                _('Add VMess Server...'),
-                callback=lambda: self.userServersQTableWidget.addServerViaGui(
-                    Protocol.VMess, _('Add VMess Server...')
-                ),
-            ),
-            AppQAction(
-                _('Add VLESS Server...'),
-                callback=lambda: self.userServersQTableWidget.addServerViaGui(
-                    Protocol.VLESS, _('Add VLESS Server...')
-                ),
-            ),
-            AppQAction(
-                _('Add Shadowsocks Server...'),
-                callback=lambda: self.userServersQTableWidget.addServerViaGui(
-                    Protocol.Shadowsocks, _('Add Shadowsocks Server...')
-                ),
-            ),
-            AppQAction(
-                _('Add Trojan Server...'),
-                callback=lambda: self.userServersQTableWidget.addServerViaGui(
-                    Protocol.Trojan, _('Add Trojan Server...')
-                ),
-            ),
-            AppQSeperator(),
-            AppQAction(
-                _('Add Hysteria1 Server...'),
-                callback=lambda: self.userServersQTableWidget.addServerViaGui(
-                    Protocol.Hysteria1, _('Add Hysteria1 Server...')
-                ),
-            ),
-            AppQAction(
-                _('Add Hysteria2 Server...'),
-                callback=lambda: self.userServersQTableWidget.addServerViaGui(
-                    Protocol.Hysteria2, _('Add Hysteria2 Server...')
-                ),
-            ),
-            AppQSeperator(),
-            AppQAction(
-                _('Add SOCKS Server...'),
-                callback=lambda: self.userServersQTableWidget.addServerViaGui(
-                    Protocol.Socks, _('Add SOCKS Server...')
-                ),
-            ),
-            AppQSeperator(),
+        serverActions = []
+        for descriptor in pluginRegistry.protocolDescriptors():
+            if descriptor.separatorBefore and serverActions:
+                serverActions.append(AppQSeperator())
+
+            actionText = _(descriptor.addActionText)
+            serverActions.append(
+                AppQAction(
+                    actionText,
+                    callback=functools.partial(
+                        self.userServersQTableWidget.addServerViaGui,
+                        descriptor.id,
+                        actionText,
+                    ),
+                )
+            )
+
+        if serverActions:
+            serverActions.append(AppQSeperator())
+        serverActions.append(
             AppQAction(
                 _('New Empty Configuration'),
                 callback=lambda: self.userServersQTableWidget.newEmptyItem(),
-            ),
-        ]
+            )
+        )
 
         subsActions = [
             AppQAction(
@@ -448,6 +426,7 @@ class AppMainWindow(AppQMainWindow):
                 AppQSeperator(),
             ]
 
+        pluginTools = pluginRegistry.mainWindowTools(parent=self)
         toolsActions = [
             *customizeTUNSettingsAction,
             AppQAction(
@@ -464,11 +443,41 @@ class AppMainWindow(AppQMainWindow):
             AppQSeperator(),
             *restartAsAdminAction,
             *openAppFolderAction,
-            AppQAction(
-                _('Manage Xray-core Asset File...'),
-                callback=lambda: self.xrayAssetViewerWindow.show(),
-            ),
         ]
+        if pluginTools:
+            toolsActions.extend(pluginTools)
+
+        routingActions = [
+            AppQAction(
+                _(plugin.displayName),
+                callback=editor.show,
+            )
+            for plugin, editor in pluginRoutingEditors
+        ]
+        if len(routingActions) == 1:
+            routingToolbarActions = [
+                AppQSeperator(),
+                AppQAction(
+                    _('Routing'),
+                    icon=bootstrapIcon('signpost.svg'),
+                    checkable=False,
+                    callback=routingActions[0].trigger,
+                ),
+            ]
+        elif routingActions:
+            routingToolbarActions = [
+                AppQSeperator(),
+                AppQAction(
+                    _('Routing'),
+                    icon=bootstrapIcon('signpost.svg'),
+                    menu=AppQMenu(*routingActions),
+                    useSetMenu=False,
+                    useActionGroup=False,
+                    checkable=False,
+                ),
+            ]
+        else:
+            routingToolbarActions = []
 
         if hasattr(AppQAction, 'setMenu'):
             self.toolbar = AppQToolBar(
@@ -498,13 +507,7 @@ class AppMainWindow(AppQMainWindow):
                     useActionGroup=False,
                     checkable=False,
                 ),
-                AppQSeperator(),
-                AppQAction(
-                    _('Routing'),
-                    icon=bootstrapIcon('signpost.svg'),
-                    checkable=False,
-                    callback=lambda: self.userRoutingWindow.show(),
-                ),
+                *routingToolbarActions,
                 AppQSeperator(),
                 AppQAction(
                     _('Tools'),
@@ -552,6 +555,15 @@ class AppMainWindow(AppQMainWindow):
                 'actions': [*subsActions],
             }
 
+            routingMenus = []
+            if routingActions:
+                routingMenus.append(
+                    {
+                        'name': 'Routing',
+                        'actions': [*routingActions],
+                    }
+                )
+
             toolsMenu = {
                 'name': 'Tools',
                 'actions': [*toolsActions],
@@ -581,12 +593,20 @@ class AppMainWindow(AppQMainWindow):
                 _('Log'),
                 _('Server'),
                 _('Subscription'),
+                _('Routing'),
                 _('Tools'),
                 _('Help'),
             ]
 
             # Menus
-            for menuDict in (logMenu, serverMenu, subsMenu, toolsMenu, helpMenu):
+            for menuDict in (
+                logMenu,
+                serverMenu,
+                subsMenu,
+                *routingMenus,
+                toolsMenu,
+                helpMenu,
+            ):
                 menuName = menuDict['name']
                 menuObjName = f'_{menuName}Menu'
                 menu = AppQMenu(

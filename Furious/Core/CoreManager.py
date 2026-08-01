@@ -22,165 +22,21 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Library import *
+from Furious.Plugins import getPluginRegistry
 from Furious.Qt import *
 from Furious.Core.CoreProcessWorker import *
-from Furious.Core.XrayCore import *
-from Furious.Core.Hysteria1 import *
-from Furious.Core.Hysteria2 import *
 from Furious.Core.Tun2socks import *
 
 from typing import Callable, Tuple, Union
 
 import os
-import uuid
 import logging
 import tempfile
 import functools
 
-__all__ = ['cleanRoutingRule', 'CoreManager']
+__all__ = ['CoreManager']
 
 logger = logging.getLogger(__name__)
-
-
-def fixLogObjectPath(config: ConfigFactory, attr: str, value: str, log=True):
-    """Resolve and normalize one log-file path in a core configuration."""
-    try:
-        path = config['log'][attr]
-    except Exception:
-        # Any non-exit exceptions
-
-        config['log'][attr] = path = ''
-
-    if not isinstance(path, str) and not isinstance(path, bytes):
-        config['log'][attr] = path = ''
-
-    if path == '':
-        if SystemRuntime.isPythonw() and ProcessOutputRedirector.TemporaryDir.isValid():
-            # Redirect implementation for pythonw environment
-            config['log'][attr] = ProcessOutputRedirector.TemporaryDir.filePath(value)
-    else:
-        # Relative path fails if booting on start up
-        # on Windows, when packed using nuitka...
-
-        # Fix relative path if needed. User cannot feel this operation.
-        config['log'][attr] = absolutePath(path)
-
-    result = config['log'][attr]
-
-    if result:
-        try:
-            # Create a new file
-            with open(result, 'x', encoding='utf-8'):
-                pass
-        except FileExistsError:
-            pass
-        except Exception:
-            # Any non-exit exceptions
-
-            pass
-
-    if log:
-        logger.info(
-            f'{XrayCore.name()}: {attr} log is specified as \'{path}\'. '
-            f'Fixed to \'{result}\''
-        )
-
-
-def cleanRoutingRule(rule: dict):
-    """Remove empty match fields from an Xray routing rule."""
-    if not isinstance(rule, dict):
-        return None
-
-    result = {
-        'type': 'field',
-        'outboundTag': str(rule.get('outboundTag', 'proxy')).strip() or 'proxy',
-    }
-
-    for key in [
-        'domain',
-        'ip',
-        'sourceIP',
-        'localIP',
-        'user',
-        'protocol',
-        'inboundTag',
-        'process',
-    ]:
-        value = rule.get(key, [])
-
-        if isinstance(value, list):
-            value = list(str(item).strip() for item in value if str(item).strip())
-
-            if value:
-                result[key] = value
-
-    for key in [
-        'port',
-        'sourcePort',
-        'localPort',
-        'network',
-        'vlessRoute',
-        'balancerTag',
-        'ruleTag',
-    ]:
-        value = str(rule.get(key, '')).strip()
-
-        if value:
-            result[key] = value
-
-    if len(result) <= 2:
-        return None
-
-    return result
-
-
-def customRoutingObjectFromSettings(routing: str):
-    """Load a named custom routing object from persistent settings."""
-    prefix = 'Custom:'
-
-    if not isinstance(routing, str) or not routing.startswith(prefix):
-        return None
-
-    unique = routing[len(prefix) :]
-    routingProfile = Storage.UserRoutings().get(unique)
-
-    if not isinstance(routingProfile, dict):
-        return None
-
-    if not routingProfile.get('enabled', True):
-        return None
-
-    domainStrategy = routingProfile.get('domainStrategy', 'AsIs')
-
-    if domainStrategy not in ['AsIs', 'IPIfNonMatch', 'IPOnDemand']:
-        domainStrategy = 'AsIs'
-
-    rules = list(
-        filter(
-            lambda rule: rule is not None,
-            list(cleanRoutingRule(rule) for rule in routingProfile.get('rules', [])),
-        )
-    )
-
-    return {
-        'domainStrategy': domainStrategy,
-        'domainMatcher': 'hybrid',
-        'rules': rules,
-    }
-
-
-def routingObjectHasDirectRule(routingObject: dict) -> bool:
-    """Return whether an Xray routing object contains a direct rule."""
-    try:
-        return any(
-            rule.get('outboundTag') == 'direct'
-            for rule in routingObject.get('rules', [])
-            if isinstance(rule, dict)
-        )
-    except Exception:
-        # Any non-exit exceptions
-
-        return False
 
 
 def getUserTUNSettings(*args, **kwargs):
@@ -221,7 +77,6 @@ class CoreManager(Mixins.CleanupOnExit):
         self.uniqueCleanup = False
         self.processesPool = list()
 
-    @functools.singledispatchmethod
     def _startCore(
         self,
         config,
@@ -232,180 +87,20 @@ class CoreManager(Mixins.CleanupOnExit):
         log=True,
         **kwargs,
     ) -> Tuple[Union[CoreProcessWorker, None], bool]:
-        """Return the start core value used by the core manager."""
-        return None, False
+        """Start a configuration through the plugin that owns it."""
+        plugin = getPluginRegistry().pluginForConfig(config)
+        if plugin is None:
+            return None, False
 
-    @_startCore.register(ConfigXray)
-    def _(
-        self,
-        config,
-        routing,
-        exitCallback=None,
-        msgCallback=None,
-        proxyModeOnly=False,
-        log=True,
-        **kwargs,
-    ):
-        """Handle the registered singledispatch variant."""
-        if config.get('log') is None or not isinstance(config['log'], dict):
-            config['log'] = {
-                'access': '',
-                'error': '',
-                'loglevel': 'warning',
-            }
-
-        logRedirectValue = str(uuid.uuid4())
-
-        # Fix logObject
-        for attr in ['access', 'error']:
-            fixLogObjectPath(config, attr, logRedirectValue, log)
-
-        if routing == AppBuiltinRouting.BypassMainlandChina.value:
-            # TUN Mode handling
-            if not proxyModeOnly and SystemRuntime.isTUNMode():
-                showMBoxDirectRulesNotAllowed()
-
-                return None, False
-
-            routingObject = {
-                'domainStrategy': 'IPIfNonMatch',
-                'domainMatcher': 'hybrid',
-                'rules': [
-                    {
-                        'type': 'field',
-                        'domain': [
-                            'geosite:category-ads-all',
-                        ],
-                        'outboundTag': 'block',
-                    },
-                    {
-                        'type': 'field',
-                        'domain': [
-                            'geosite:cn',
-                        ],
-                        'outboundTag': 'direct',
-                    },
-                    {
-                        'type': 'field',
-                        'ip': [
-                            'geoip:private',
-                            'geoip:cn',
-                        ],
-                        'outboundTag': 'direct',
-                    },
-                    {
-                        'type': 'field',
-                        'port': '0-65535',
-                        'outboundTag': 'proxy',
-                    },
-                ],
-            }
-        elif routing == AppBuiltinRouting.Global.value:
-            routingObject = {}
-        elif customRoutingObjectFromSettings(routing) is not None:
-            routingObject = customRoutingObjectFromSettings(routing)
-
-            #
-            # TODO: Warning: no check for custom routing
-            #
-            # if (
-            #     routingObjectHasDirectRule(routingObject)
-            #     and not proxyModeOnly
-            #     and SystemRuntime.isTUNMode()
-            # ):
-            #     showMBoxDirectRulesNotAllowed()
-            #
-            #     return None, False
-        elif routing == AppBuiltinRouting.Custom.value:
-            routingObject = config.get('routing', {})
-        else:
-            routingObject = {}
-
-        if log:
-            logger.info(f'core {XrayCore.name()} configured')
-            logger.info(f'routing is {routing}')
-            logger.info(f'RoutingObject: {routingObject}')
-
-        config['routing'] = routingObject
-
-        process = XrayCore(exitCallback=exitCallback, msgCallback=msgCallback)
-        success = process.start(config, **kwargs)
-
-        return process, success
-
-    @_startCore.register(ConfigHysteria1)
-    def _(
-        self,
-        config,
-        routing,
-        exitCallback=None,
-        msgCallback=None,
-        proxyModeOnly=False,
-        log=True,
-        **kwargs,
-    ):
-        """Handle the registered singledispatch variant."""
-        if routing == AppBuiltinRouting.BypassMainlandChina.value:
-            # TUN Mode handling
-            if not proxyModeOnly and SystemRuntime.isTUNMode():
-                showMBoxDirectRulesNotAllowed()
-
-                return None, False
-
-            routingObject = {
-                'rule': DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl',
-                'mmdb': DATA_DIR / 'hysteria' / 'country.mmdb',
-            }
-        elif routing == AppBuiltinRouting.Global.value:
-            routingObject = {
-                'rule': '',
-                'mmdb': '',
-            }
-        elif routing == AppBuiltinRouting.Custom.value:
-            routingObject = {
-                'rule': config.get('acl', ''),
-                'mmdb': config.get('mmdb', ''),
-            }
-        else:
-            routingObject = {
-                'rule': '',
-                'mmdb': '',
-            }
-
-        if log:
-            logger.info(f'core {Hysteria1.name()} configured')
-            logger.info(f'routing is {routing}')
-            logger.info(f'RoutingObject: {routingObject}')
-
-        process = Hysteria1(exitCallback=exitCallback, msgCallback=msgCallback)
-        success = process.start(
+        return plugin.startCore(
             config,
-            Hysteria1.rule(routingObject.get('rule', '')),
-            Hysteria1.mmdb(routingObject.get('mmdb', '')),
+            routing,
+            exitCallback=exitCallback,
+            msgCallback=msgCallback,
+            proxyModeOnly=proxyModeOnly,
+            log=log,
             **kwargs,
         )
-
-        return process, success
-
-    @_startCore.register(ConfigHysteria2)
-    def _(
-        self,
-        config,
-        routing,
-        exitCallback=None,
-        msgCallback=None,
-        proxyModeOnly=False,
-        log=True,
-        **kwargs,
-    ):
-        """Handle the registered singledispatch variant."""
-        if log:
-            logger.info(f'core {Hysteria2.name()} configured')
-
-        process = Hysteria2(exitCallback=exitCallback, msgCallback=msgCallback)
-        success = process.start(config, **kwargs)
-
-        return process, success
 
     @staticmethod
     def waitForTUNDeviceBroughtUp(func: Callable[[str], bool], deviceName: str) -> bool:

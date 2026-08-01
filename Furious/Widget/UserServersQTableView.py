@@ -22,17 +22,11 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Library import *
+from Furious.Plugins import getPluginRegistry
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Core import *
+from Furious.Core.CoreManager import CoreManager
 from Furious.TrayActions.Import import *
-from Furious.Widget.GuiHysteria1 import *
-from Furious.Widget.GuiHysteria2 import *
-from Furious.Widget.GuiShadowsocks import *
-from Furious.Widget.GuiSocks import *
-from Furious.Widget.GuiTrojan import *
-from Furious.Widget.GuiVLESS import *
-from Furious.Widget.GuiVMess import *
 from Furious.Widget.WaitingSpinner import *
 from Furious.Window.QRCodeWindow import *
 from Furious.Window.TextEditorWindow import *
@@ -544,80 +538,24 @@ class TestDownloadSpeedWorker(WebGETManager):
 
             pass
 
-    @functools.singledispatchmethod
     def _startCore(self, config) -> bool:
-        """Return the start core value used by the test download speed worker."""
-        self.factory.setExtras('speedResult', 'Invalid')
-        self.sync()
+        """Prepare and start a download test through the owning plugin."""
+        plugin = getPluginRegistry().pluginForConfig(config)
+        if plugin is None:
+            self.factory.setExtras('speedResult', 'Invalid')
+            self.sync()
 
-        # Unrecognized core. Return
-        return False
+            return False
 
-    @_startCore.register(ConfigXray)
-    def _(self, config) -> bool:
-        """Handle the registered singledispatch variant."""
+        configcopy = plugin.prepareDownloadTest(config, self.port)
+        if configcopy is None:
+            self.factory.setExtras('speedResult', 'Invalid')
+            self.sync()
+
+            return False
+
         self.factory.setExtras('speedResult', 'Starting')
         self.sync()
-
-        configcopy = config.deepcopy()
-        # Force redirect
-        configcopy['inbounds'] = [
-            {
-                'tag': 'http',
-                'port': self.port,
-                'listen': '127.0.0.1',
-                'protocol': 'http',
-                'sniffing': {
-                    'enabled': True,
-                    'destOverride': [
-                        'http',
-                        'tls',
-                    ],
-                },
-                'settings': {
-                    'auth': 'noauth',
-                    'udp': True,
-                    'allowTransparent': False,
-                },
-            },
-        ]
-
-        try:
-            for outboundObject in configcopy['outbounds']:
-                if outboundObject['tag'] == f'proxy':
-                    # Avoid confusion with potentially existing 'proxy' tag
-                    outboundObject['tag'] = f'proxy{self.port}'
-        except Exception:
-            # Any non-exit exceptions
-
-            pass
-
-        return self.coreManager.start(
-            configcopy,
-            AppBuiltinRouting.Global.value,
-            self.coreExitCallback,
-            msgCallbackCore=self.coreMsgCallback,
-            deepcopy=False,
-            proxyModeOnly=True,
-            log=False,
-        )
-
-    @_startCore.register(ConfigHysteria1)
-    @_startCore.register(ConfigHysteria2)
-    def _(self, config) -> bool:
-        """Handle the registered singledispatch variant."""
-        self.factory.setExtras('speedResult', 'Starting')
-        self.sync()
-
-        configcopy = config.deepcopy()
-        # Force redirect
-        configcopy['http'] = {
-            'listen': f'127.0.0.1:{self.port}',
-            'timeout': 300,
-            'disable_udp': False,
-        }
-        # No socks inbounds
-        configcopy.pop('socks5', '')
 
         return self.coreManager.start(
             configcopy,
@@ -1872,50 +1810,26 @@ class UserServersQTableView(
             APP().systemTray.ConnectAction.doReconnect()
 
     @functools.lru_cache(None)
-    def getGuiEditorByProtocol(self, protocol: Protocol, **kwargs):
+    def getGuiEditorByProtocol(self, protocol, **kwargs):
         """Return GUI editor by protocol."""
-        logger.debug(f'getGuiEditorByProtocol called with protocol {protocol.value}')
+        protocolId = getattr(protocol, 'value', protocol)
+        logger.debug(f'getGuiEditorByProtocol called with protocol {protocolId}')
 
-        if protocol == Protocol.VMess:
-            return GuiVMess(parent=self, **kwargs)
-        if protocol == Protocol.VLESS:
-            return GuiVLESS(parent=self, **kwargs)
-        if protocol == Protocol.Shadowsocks:
-            return GuiShadowsocks(parent=self, **kwargs)
-        if protocol == Protocol.Socks:
-            return GuiSocks(parent=self, **kwargs)
-        if protocol == Protocol.Trojan:
-            return GuiTrojan(parent=self, **kwargs)
-        if protocol == Protocol.Hysteria2:
-            return GuiHysteria2(parent=self, **kwargs)
-        if protocol == Protocol.Hysteria1:
-            return GuiHysteria1(parent=self, **kwargs)
+        return getPluginRegistry().createEditorForProtocol(
+            protocol,
+            parent=self,
+            **kwargs,
+        )
 
-        return None
-
-    @functools.singledispatchmethod
     def getGuiEditorByFactory(
         self, factory, **kwargs
     ) -> Union[GuiEditorWidgetQDialog, None]:
         """Return GUI editor by factory."""
-        return None
-
-    @getGuiEditorByFactory.register(ConfigXray)
-    def _(self, factory, **kwargs):
-        """Handle the registered singledispatch variant."""
-        return self.getGuiEditorByProtocol(
-            Protocol.toEnum(factory.proxyProtocol), **kwargs
+        return getPluginRegistry().createEditorForConfig(
+            factory,
+            parent=self,
+            **kwargs,
         )
-
-    @getGuiEditorByFactory.register(ConfigHysteria1)
-    def _(self, factory, **kwargs):
-        """Handle the registered singledispatch variant."""
-        return self.getGuiEditorByProtocol(Protocol.Hysteria1, **kwargs)
-
-    @getGuiEditorByFactory.register(ConfigHysteria2)
-    def _(self, factory, **kwargs):
-        """Handle the registered singledispatch variant."""
-        return self.getGuiEditorByProtocol(Protocol.Hysteria2, **kwargs)
 
     @QtCore.Slot(QtCore.QModelIndex)
     def handleItemDoubleClicked(self, modelIndex: QtCore.QModelIndex):
@@ -2078,7 +1992,7 @@ class UserServersQTableView(
 
     def addServerViaGui(
         self,
-        protocol: Protocol,
+        protocol,
         windowTitle: str = APPLICATION_NAME,
         **kwargs,
     ):
