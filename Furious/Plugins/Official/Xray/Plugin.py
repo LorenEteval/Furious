@@ -161,7 +161,7 @@ class XrayPlugin(FuriousPlugin):
     def createManagementActions(self, parent=None, **kwargs):
         """Create Xray routing and asset-management actions."""
         # These modules require a fully initialized Furious.Qt package.
-        from Furious.Qt import AppQAction, AppQSeperator
+        from Furious.Qt import AppQAction, AppQSeperator, bootstrapIcon
         from Furious.Qt import gettext as _
 
         from .UserRoutingWindow import UserRoutingWindow
@@ -172,7 +172,8 @@ class XrayPlugin(FuriousPlugin):
 
         return (
             AppQAction(
-                _('Routing'),
+                _('Edit Routing...'),
+                icon=bootstrapIcon('signpost.svg'),
                 callback=routingEditor.show,
             ),
             AppQSeperator(),
@@ -188,14 +189,17 @@ class XrayPlugin(FuriousPlugin):
             PluginRouting(
                 AppBuiltinRouting.BypassMainlandChina.value,
                 AppBuiltinRouting.BypassMainlandChina.value,
+                translatable=True,
             ),
             PluginRouting(
                 AppBuiltinRouting.Global.value,
                 AppBuiltinRouting.Global.value,
+                translatable=True,
             ),
             PluginRouting(
                 AppBuiltinRouting.Custom.value,
                 AppBuiltinRouting.Custom.value,
+                translatable=True,
             ),
         ]
         enabledProfiles = tuple(

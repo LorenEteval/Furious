@@ -83,7 +83,8 @@ class Hysteria1Plugin(FuriousPlugin):
     def routingOptions(self, config=None):
         """Return the routing modes supported by Hysteria 1."""
         return tuple(
-            PluginRouting(routing.value, routing.value) for routing in AppBuiltinRouting
+            PluginRouting(routing.value, routing.value, translatable=True)
+            for routing in AppBuiltinRouting
         )
 
     def startCore(

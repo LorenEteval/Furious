@@ -228,6 +228,10 @@ class PluginRegistry:
                     raise TypeError(
                         'plugin routing option display name must be a string'
                     )
+                if not isinstance(option.translatable, bool):
+                    raise TypeError(
+                        'plugin routing option translatable flag must be a boolean'
+                    )
 
                 optionId = option.id
                 if optionId in optionIds:
