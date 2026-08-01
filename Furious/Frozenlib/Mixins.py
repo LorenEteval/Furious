@@ -32,6 +32,80 @@ logger = logging.getLogger(__name__)
 __all__ = ['Mixins']
 
 
+class _WeakObjectsPool:
+    """Store objects in registration order without extending their lifetime."""
+    def __init__(self):
+        """Initialize an empty weak object registry."""
+        self._references = {}
+
+    def _removeReference(self, key, reference):
+        """Remove a weak reference if it is still registered under its object ID."""
+        if self._references.get(key) is reference:
+            self._references.pop(key)
+
+    def append(self, ob):
+        """Register an object without retaining a strong reference to it."""
+        key = id(ob)
+        current = self._references.get(key)
+
+        if current is not None:
+            if current() is ob:
+                raise ValueError('object is already registered')
+
+            self._references.pop(key)
+
+        reference = weakref.ref(
+            ob,
+            lambda ref, _key=key: self._removeReference(_key, ref),
+        )
+        self._references[key] = reference
+
+        if isinstance(ob, QtCore.QObject):
+            ob.destroyed.connect(
+                lambda *_args, _key=key, _reference=reference: self._removeReference(
+                    _key, _reference
+                )
+            )
+
+    def remove(self, ob):
+        """Remove an object's registration by identity."""
+        key = id(ob)
+        reference = self._references.get(key)
+
+        if reference is None or reference() is not ob:
+            raise ValueError('object is not registered')
+
+        self._references.pop(key)
+
+    def clear(self):
+        """Remove every registration from the registry."""
+        self._references.clear()
+
+    def prune(self, predicate=None):
+        """Remove dead objects and live objects rejected by a predicate."""
+        for key, reference in list(self._references.items()):
+            ob = reference()
+
+            if ob is None or (predicate is not None and not predicate(ob)):
+                self._removeReference(key, reference)
+
+    def __iter__(self):
+        """Iterate over a stable snapshot of currently live objects."""
+        for key, reference in list(self._references.items()):
+            ob = reference()
+
+            if ob is None:
+                self._removeReference(key, reference)
+            else:
+                yield ob
+
+    def __len__(self):
+        """Return the number of currently live registrations."""
+        self.prune()
+
+        return len(self._references)
+
+
 class Mixins:
     """Group reusable lifecycle, translation, theme, and Qt context mixins."""
     @staticmethod
@@ -47,7 +121,7 @@ class Mixins:
 
     class ConnectionAware:
         """Represent connection aware."""
-        ObjectsPool = list()
+        ObjectsPool = _WeakObjectsPool()
 
         def __init__(self, *args, **kwargs):
             """Initialize the ConnectionAware."""
@@ -66,7 +140,9 @@ class Mixins:
         @staticmethod
         def callConnectedCallback():
             """Call connected callback."""
-            for ob in Mixins.ConnectionAware.ObjectsPool:
+            Mixins.ConnectionAware.ObjectsPool.prune(Mixins.qObjectIsValid)
+
+            for ob in list(Mixins.ConnectionAware.ObjectsPool):
                 assert isinstance(ob, Mixins.ConnectionAware)
 
                 ob.connectedCallback()
@@ -74,14 +150,16 @@ class Mixins:
         @staticmethod
         def callDisconnectedCallback():
             """Call disconnected callback."""
-            for ob in Mixins.ConnectionAware.ObjectsPool:
+            Mixins.ConnectionAware.ObjectsPool.prune(Mixins.qObjectIsValid)
+
+            for ob in list(Mixins.ConnectionAware.ObjectsPool):
                 assert isinstance(ob, Mixins.ConnectionAware)
 
                 ob.disconnectedCallback()
 
     class ThemeAware:
         """Represent theme aware."""
-        ObjectsPool = list()
+        ObjectsPool = _WeakObjectsPool()
 
         def __init__(self, *args, **kwargs):
             """Initialize the ThemeAware."""
@@ -96,7 +174,9 @@ class Mixins:
         @staticmethod
         def callThemeChangedCallbackUnchecked(theme: str):
             """Call theme changed callback unchecked."""
-            for ob in Mixins.ThemeAware.ObjectsPool:
+            Mixins.ThemeAware.ObjectsPool.prune(Mixins.qObjectIsValid)
+
+            for ob in list(Mixins.ThemeAware.ObjectsPool):
                 assert isinstance(ob, Mixins.ThemeAware)
 
                 ob.themeChangedCallback(theme)
@@ -123,7 +203,7 @@ class Mixins:
 
     class CleanupOnExit:
         """Represent cleanup on exit."""
-        ObjectsPool = list()
+        ObjectsPool = _WeakObjectsPool()
         VisitedType = dict()
 
         def __init__(self, *args, **kwargs):
@@ -141,7 +221,9 @@ class Mixins:
         @staticmethod
         def cleanupAll():
             """Handle cleanup all for the cleanup on exit."""
-            for ob in Mixins.CleanupOnExit.ObjectsPool:
+            Mixins.CleanupOnExit.ObjectsPool.prune(Mixins.qObjectIsValid)
+
+            for ob in list(Mixins.CleanupOnExit.ObjectsPool):
                 assert isinstance(ob, Mixins.CleanupOnExit)
 
                 if ob.uniqueCleanup:
@@ -201,7 +283,7 @@ class Mixins:
 
     class QTranslatable:
         """Represent q translatable."""
-        ObjectsPool = list()
+        ObjectsPool = _WeakObjectsPool()
 
         def __init__(self, *args, **kwargs):
             """Initialize the QTranslatable."""
@@ -211,14 +293,6 @@ class Mixins:
             super().__init__(*args, **kwargs)
 
             Mixins.QTranslatable.ObjectsPool.append(self)
-
-            if isinstance(self, QtCore.QObject):
-                selfref = weakref.ref(self)
-                self.destroyed.connect(
-                    lambda *_args, _selfref=selfref: Mixins.QTranslatable.unregister(
-                        _selfref()
-                    )
-                )
 
         def retranslate(self):
             """Refresh translated text for the q translatable."""
@@ -235,9 +309,7 @@ class Mixins:
         @staticmethod
         def pruneObjectsPool():
             """Handle prune objects pool for the q translatable."""
-            Mixins.QTranslatable.ObjectsPool = list(
-                filter(Mixins.qObjectIsValid, Mixins.QTranslatable.ObjectsPool)
-            )
+            Mixins.QTranslatable.ObjectsPool.prune(Mixins.qObjectIsValid)
 
         @staticmethod
         def retranslateAll():
