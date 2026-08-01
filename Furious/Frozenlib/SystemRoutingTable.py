@@ -51,6 +51,7 @@ def dictRepr(returncode, stdout, stderr):
 
 class SystemRoutingTable:
     """Represent system routing table."""
+
     Relations = list()
 
     DEFAULT_GATEWAY_WIN32 = re.compile(
@@ -66,6 +67,7 @@ class SystemRoutingTable:
     @staticmethod
     def add(sourceIP, destinationIP):
         """Add the system routing table."""
+
         def _add():
             """Return the add value used by the system routing table."""
             if PLATFORM == 'Windows':
@@ -256,6 +258,7 @@ class SystemRoutingTable:
     @staticmethod
     def DarwinGetDNSServers() -> list:
         """Return the darwin get DNS servers value."""
+
         def getNetworkServices():
             """Return network services."""
             _command = runExternalCommand(
@@ -496,6 +499,7 @@ class SystemRoutingTable:
     @staticmethod
     def getDefaultGateway() -> list:
         """Return default gateway."""
+
         def _get():
             """Return the get value used by the system routing table."""
             if PLATFORM == 'Windows':
@@ -564,6 +568,7 @@ class SystemRoutingTable:
     @staticmethod
     def setDeviceGateway(deviceName, deviceIP, deviceGateway):
         """Set device gateway."""
+
         def _set():
             """Return the set value used by the system routing table."""
             if PLATFORM == 'Windows':
@@ -625,6 +630,7 @@ class SystemRoutingTable:
     @staticmethod
     def delete(sourceIP, destinationIP):
         """Delete the system routing table."""
+
         def _delete():
             """Return the delete value used by the system routing table."""
             if PLATFORM == 'Windows':

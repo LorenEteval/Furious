@@ -38,6 +38,7 @@ registerAppSettings('CustomProxyBypass')
 
 class GuiCustomizeProxyBypassDialog(AppQDialog):
     """Present the GUI customize proxy bypass dialog."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiCustomizeProxyBypassDialog."""
         super().__init__(*args, **kwargs)

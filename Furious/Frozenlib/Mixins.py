@@ -34,6 +34,7 @@ __all__ = ['Mixins']
 
 class _WeakObjectsPool:
     """Store objects in registration order without extending their lifetime."""
+
     def __init__(self):
         """Initialize an empty weak object registry."""
         self._references = {}
@@ -108,6 +109,7 @@ class _WeakObjectsPool:
 
 class Mixins:
     """Group reusable lifecycle, translation, theme, and Qt context mixins."""
+
     @staticmethod
     def qObjectIsValid(qobject) -> bool:
         """Return the q object is valid value used by the mixins."""
@@ -121,6 +123,7 @@ class Mixins:
 
     class ConnectionAware:
         """Represent connection aware."""
+
         ObjectsPool = _WeakObjectsPool()
 
         def __init__(self, *args, **kwargs):
@@ -159,6 +162,7 @@ class Mixins:
 
     class ThemeAware:
         """Represent theme aware."""
+
         ObjectsPool = _WeakObjectsPool()
 
         def __init__(self, *args, **kwargs):
@@ -203,6 +207,7 @@ class Mixins:
 
     class CleanupOnExit:
         """Represent cleanup on exit."""
+
         ObjectsPool = _WeakObjectsPool()
         VisitedType = dict()
 
@@ -243,6 +248,7 @@ class Mixins:
 
     class QSetDisabledContext:
         """Manage the q set disabled context."""
+
         def __init__(self, qobject: QtCore.QObject):
             """Initialize the QSetDisabledContext."""
             self.qobject = qobject
@@ -263,6 +269,7 @@ class Mixins:
 
     class QBlockSignalContext:
         """Manage the q block signal context."""
+
         def __init__(self, qobject: QtCore.QObject):
             """Initialize the QBlockSignalContext."""
             self.qobject = qobject
@@ -283,6 +290,7 @@ class Mixins:
 
     class QTranslatable:
         """Represent q translatable."""
+
         ObjectsPool = _WeakObjectsPool()
 
         def __init__(self, *args, **kwargs):

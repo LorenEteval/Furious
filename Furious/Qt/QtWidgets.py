@@ -80,6 +80,7 @@ def _retainOpenDialog(dialog):
 
     if not getattr(dialog, '_furiousOpenDialogLifetimeConnected', False):
         release = functools.partial(_releaseOpenDialog, key)
+
         dialog.finished.connect(release)
         dialog.destroyed.connect(release)
         dialog._furiousOpenDialogLifetimeConnected = True
@@ -107,6 +108,7 @@ def moveToCenter(widget, parent=None):
 
 class AppQCheckBox(Mixins.QTranslatable, QCheckBox):
     """Represent app q check box."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQCheckBox."""
         super().__init__(*args, **kwargs)
@@ -118,6 +120,7 @@ class AppQCheckBox(Mixins.QTranslatable, QCheckBox):
 
 class AppQComboBox(Mixins.QTranslatable, QComboBox):
     """Represent app q combo box."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQComboBox."""
         super().__init__(*args, **kwargs)
@@ -130,6 +133,7 @@ class AppQComboBox(Mixins.QTranslatable, QComboBox):
 
 class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
     """Present the app Qt dialog."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQDialog."""
         super().__init__(*args, **kwargs)
@@ -191,6 +195,7 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
 
 class AppQDialogButtonBox(Mixins.QTranslatable, QDialogButtonBox):
     """Represent app Qt dialog button box."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQDialogButtonBox."""
         super().__init__(*args, **kwargs)
@@ -203,6 +208,7 @@ class AppQDialogButtonBox(Mixins.QTranslatable, QDialogButtonBox):
 
 class AppQGroupBox(Mixins.QTranslatable, QGroupBox):
     """Group the app q editor controls."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQGroupBox."""
         super().__init__(*args, **kwargs)
@@ -214,6 +220,7 @@ class AppQGroupBox(Mixins.QTranslatable, QGroupBox):
 
 class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
     """Represent app q header view."""
+
     def sectionSizeSettingsEmpty(self):
         """Return the section size settings empty value used by the app q header view."""
         return (
@@ -342,6 +349,7 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
 
 class AppQLabel(Mixins.QTranslatable, QLabel):
     """Represent app q label."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQLabel."""
         super().__init__(*args, **kwargs)
@@ -353,6 +361,7 @@ class AppQLabel(Mixins.QTranslatable, QLabel):
 
 class AppQLineEdit(Mixins.QTranslatable, QLineEdit):
     """Represent app q line edit."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQLineEdit."""
         super().__init__(*args, **kwargs)
@@ -364,6 +373,7 @@ class AppQLineEdit(Mixins.QTranslatable, QLineEdit):
 
 class AppQListWidget(Mixins.ConnectionAware, QListWidget):
     """Provide the app Qt list widget."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQListWidget."""
         super().__init__(*args, **kwargs)
@@ -407,6 +417,7 @@ class AppQMainWindow(
     QMainWindow,
 ):
     """Present the app q main window."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQMainWindow."""
         super().__init__(*args, **kwargs)
@@ -462,6 +473,7 @@ class AppQMainWindow(
 
 class AppQMenu(Mixins.QTranslatable, QMenu):
     """Represent app q menu."""
+
     def __init__(self, *actions, **kwargs):
         """Initialize the AppQMenu."""
         super().__init__(**kwargs)
@@ -489,6 +501,7 @@ class AppQMenu(Mixins.QTranslatable, QMenu):
 
 class AppQMenuBar(QMenuBar):
     """Represent app q menu bar."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQMenuBar."""
         super().__init__(*args, **kwargs)
@@ -496,6 +509,7 @@ class AppQMenuBar(QMenuBar):
 
 class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
     """Represent app q message box."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQMessageBox."""
         super().__init__(*args, **kwargs)
@@ -564,6 +578,7 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
 
 class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
     """Represent app q push button."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQPushButton."""
         icon = kwargs.pop('icon', None)
@@ -633,6 +648,7 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
 
 class AppQSpinBox(QSpinBox):
     """Represent app q spin box."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQSpinBox."""
         super().__init__(*args, **kwargs)
@@ -655,6 +671,7 @@ class AppQSpinBox(QSpinBox):
 
 class AppQTableView(Mixins.ConnectionAware, QTableView):
     """Represent app Qt table view."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQTableView."""
         super().__init__(*args, **kwargs)
@@ -689,6 +706,7 @@ class AppQTableView(Mixins.ConnectionAware, QTableView):
 
 class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):
     """Provide the app Qt table widget."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQTableWidget."""
         super().__init__(*args, **kwargs)
@@ -769,6 +787,7 @@ class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):
 
 class AppQTabWidget(Mixins.QTranslatable, QTabWidget):
     """Provide the app q tab widget."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQTabWidget."""
         super().__init__(*args, **kwargs)
@@ -781,6 +800,7 @@ class AppQTabWidget(Mixins.QTranslatable, QTabWidget):
 
 class AppQToolBar(Mixins.QTranslatable, QToolBar):
     """Represent app q tool bar."""
+
     def __init__(self, *actions, **kwargs):
         """Initialize the AppQToolBar."""
         super().__init__(**kwargs)
@@ -805,6 +825,7 @@ class AppQToolBar(Mixins.QTranslatable, QToolBar):
     @QtCore.Slot(AppQAction)
     def showMenuBelow(self, action: AppQAction):
         """Show menu below."""
+
         def toolBarWidgetForAction() -> Union[QWidget | None]:
             # Walk through the toolbar to find the widget for the action
             """Return the tool bar widget for action value used by the app q tool bar."""
@@ -838,6 +859,7 @@ class AppQToolBar(Mixins.QTranslatable, QToolBar):
 
 class MBoxQuestionDelete(AppQMessageBox):
     """Represent m box question delete."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxQuestionDelete."""
         super().__init__(*args, **kwargs)
@@ -869,6 +891,7 @@ class MBoxQuestionDelete(AppQMessageBox):
 
 class MBoxNewChangesNextTime(AppQMessageBox):
     """Represent m box new changes next time."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxNewChangesNextTime."""
         super().__init__(*args, **kwargs)
@@ -898,8 +921,8 @@ class MBoxNewChangesNextTime(AppQMessageBox):
 
 
 def showMBoxNewChangesNextTime(**kwargs):
-
     """Show m box new changes next time."""
+
     @QtCore.Slot(int)
     def handleResultCode(code):
         """Handle result code."""
@@ -935,6 +958,7 @@ def showMBoxNewChangesNextTime(**kwargs):
 
 class MBoxDirectRulesNotAllowed(AppQMessageBox):
     """Represent m box direct rules not allowed."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxDirectRulesNotAllowed."""
         super().__init__(*args, **kwargs)
@@ -967,6 +991,7 @@ class MBoxDirectRulesNotAllowed(AppQMessageBox):
 
 def showMBoxDirectRulesNotAllowed(**kwargs):
     """Show m box direct rules not allowed."""
+
     @QtCore.Slot(int)
     def handleResultCode(code):
         """Handle result code."""
@@ -991,6 +1016,7 @@ def showMBoxDirectRulesNotAllowed(**kwargs):
 
 class MBoxUnrecognizedConfig(AppQMessageBox):
     """Represent m box unrecognized config."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxUnrecognizedConfig."""
         super().__init__(*args, **kwargs)

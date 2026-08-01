@@ -125,6 +125,7 @@ def routingObjectFromProfile(routingProfile: dict):
 
 class RoutingPreviewDialog(AppQDialog):
     """Present the routing preview dialog."""
+
     def __init__(self, routingProfile: dict, parent=None):
         """Initialize the RoutingPreviewDialog."""
         super().__init__(parent)
@@ -167,6 +168,7 @@ class RoutingPreviewDialog(AppQDialog):
 
 class RoutingTextEditDialog(AppQDialog):
     """Present the routing text edit dialog."""
+
     def __init__(self, text='', parent=None):
         """Initialize the RoutingTextEditDialog."""
         super().__init__(parent)
@@ -202,6 +204,7 @@ class RoutingTextEditDialog(AppQDialog):
 
 class RoutingTextEdit(Mixins.QTranslatable, QTextEdit):
     """Represent routing text edit."""
+
     def __init__(self, text='', parent=None):
         """Initialize the RoutingTextEdit."""
         super().__init__(text, parent)
@@ -229,6 +232,7 @@ class RoutingTextEdit(Mixins.QTranslatable, QTextEdit):
 
 class RoutingDocumentationURL(AppQLabel):
     """Represent routing documentation URL."""
+
     URL = 'https://xtls.github.io/config/routing.html'
 
     def __init__(self, *args, **kwargs):
@@ -263,6 +267,7 @@ class RoutingDocumentationURL(AppQLabel):
 
 class RoutingProfilesModel(QtCore.QAbstractTableModel):
     """Expose routing profiles data through a Qt item model."""
+
     Headers = ['Remark', 'Domain Strategy', 'State']
 
     def rowCount(self, parent=QtCore.QModelIndex()) -> int:
@@ -353,6 +358,7 @@ class RoutingProfilesModel(QtCore.QAbstractTableModel):
 
 class RoutingRuleEditDialog(AppQDialog):
     """Present the routing rule edit dialog."""
+
     MatchInputHeight = 72
     ShortInputWidth = 240
 
@@ -581,6 +587,7 @@ class RoutingRuleEditDialog(AppQDialog):
 
 class RoutingRemarkEditDialog(AppQDialog):
     """Present the routing remark edit dialog."""
+
     def __init__(self, remark: str, parent=None):
         """Initialize the RoutingRemarkEditDialog."""
         super().__init__(parent)
@@ -616,6 +623,7 @@ class RoutingRemarkEditDialog(AppQDialog):
 
 class RoutingProfileEditDialog(AppQDialog):
     """Present the routing profile edit dialog."""
+
     def __init__(self, parent=None):
         """Initialize the RoutingProfileEditDialog."""
         super().__init__(parent)
@@ -669,6 +677,7 @@ class RoutingProfileEditDialog(AppQDialog):
 
 class RoutingRulesQListWidget(AppQListWidget):
     """Provide the routing rules Qt list widget."""
+
     editRequested, deleteRequested = (
         QtCore.Signal(),
         QtCore.Signal(),
@@ -761,6 +770,7 @@ class RoutingRulesQListWidget(AppQListWidget):
 
 class RoutingRulesDialog(AppQDialog):
     """Present the routing rules dialog."""
+
     def __init__(self, routing: dict, parent=None):
         """Initialize the RoutingRulesDialog."""
         super().__init__(parent)
@@ -879,6 +889,7 @@ class RoutingRulesDialog(AppQDialog):
 
 class UserRoutingQTableViewHorizontalHeader(AppQHeaderView):
     """Provide the user routing Qt table view horizontal table header."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserRoutingQTableViewHorizontalHeader."""
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
@@ -886,6 +897,7 @@ class UserRoutingQTableViewHorizontalHeader(AppQHeaderView):
 
 class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
     """Represent user routing table view."""
+
     RowHeight = 42
 
     def __init__(self, parent=None):
@@ -1176,6 +1188,7 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
 
 class UserRoutingWindow(AppQMainWindow):
     """Present the user routing window."""
+
     DEFAULT_WINDOW_SIZE = QtCore.QSize(980, 560)
 
     def __init__(self, *args, **kwargs):

@@ -32,6 +32,7 @@ __all__ = [
 
 class Translator:
     """Represent translator."""
+
     def __init__(self):
         """Initialize the Translator."""
         super().__init__()

@@ -54,6 +54,7 @@ registerAppSettings('AppMainWindowState')
 
 class AppNetworkConnectivityManager(NetworkConnectivityManager):
     """Coordinate app network connectivity operations."""
+
     def __init__(self, parent=None):
         """Initialize the AppNetworkConnectivityManager."""
         super().__init__(parent)
@@ -110,6 +111,7 @@ class AppNetworkConnectivityManager(NetworkConnectivityManager):
 
 class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
     """Provide the network state badge widget."""
+
     DefaultIconFileName = 'reception-4.svg'
     StateIconFileName = {
         'success': 'reception-4.svg',
@@ -229,6 +231,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
 
 class SearchButton(AppQPushButton):
     """Represent search button."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the SearchButton."""
         super().__init__(*args, **kwargs)
@@ -248,6 +251,7 @@ class SearchButton(AppQPushButton):
 
 class AppMainWindow(AppQMainWindow):
     """Present the app main window."""
+
     DEFAULT_WINDOW_SIZE_DARWIN = QtCore.QSize(1500, 780)
     DEFAULT_WINDOW_SIZE = (
         QtCore.QSize(1800, 960) if PLATFORM != 'Darwin' else DEFAULT_WINDOW_SIZE_DARWIN
@@ -661,6 +665,7 @@ class AppMainWindow(AppQMainWindow):
 
     def getGuiTUNSettings(self, **kwargs):
         """Return GUI TUN settings."""
+
         @functools.lru_cache(None)
         def cachedGuiTUNSettings():
             """Return the cached GUI TUN settings value used by the app main window."""

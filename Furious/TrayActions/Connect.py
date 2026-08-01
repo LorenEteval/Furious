@@ -57,6 +57,7 @@ def validateProxyServer(server) -> bool:
 
 class ConnectAction(AppQAction):
     """Handle the connect action."""
+
     def __init__(self, **kwargs):
         """Initialize the ConnectAction."""
         super().__init__(
@@ -323,6 +324,7 @@ class ConnectAction(AppQAction):
     @callOnceOnly
     def doConnectedCallOnceOnly(self):
         """Handle do connected call once only for the connect action."""
+
         def newVersionCallback(newVersion):
             """Handle the new version callback."""
             APP().systemTray.showMessage(
@@ -370,6 +372,7 @@ class ConnectAction(AppQAction):
 
     def coreExitCallback(self, core: CoreProcessFactory, exitcode: int):
         """Handle the core exit callback."""
+
         def putItem(item):
             """Handle put item for the connect action."""
             try:

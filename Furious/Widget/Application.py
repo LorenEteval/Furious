@@ -51,11 +51,13 @@ registerAppSettings('LogViewerWidgetPointSizeTun_')
 
 class SystemTrayUnavailable(Exception):
     """Represent system tray unavailable."""
+
     pass
 
 
 class AppLogHandler(logging.Handler):
     """Represent app log handler."""
+
     def __init__(self, emitCallback):
         """Initialize the AppLogHandler."""
         super().__init__()
@@ -70,6 +72,7 @@ class AppLogHandler(logging.Handler):
 
 class ApplicationExitHelper(QApplication):
     """Represent application exit helper."""
+
     def __init__(self, argv):
         """Initialize the ApplicationExitHelper."""
         super().__init__(argv)
@@ -88,6 +91,7 @@ class ApplicationExitHelper(QApplication):
 
 class SingletonApplication(ApplicationExitHelper):
     """Represent singleton application."""
+
     def __init__(self, argv):
         """Initialize the SingletonApplication."""
         super().__init__(argv)
@@ -153,6 +157,7 @@ class SingletonApplication(ApplicationExitHelper):
 
 class ApplicationThemeDetector(QtCore.QObject):
     """Represent application theme detector."""
+
     themeChanged = QtCore.Signal(str)
 
     def __init__(self, *args, **kwargs):
@@ -162,6 +167,7 @@ class ApplicationThemeDetector(QtCore.QObject):
 
 class Application(ApplicationFactory, SingletonApplication):
     """Represent application."""
+
     def __init__(self, argv):
         """Initialize the Application."""
         super().__init__(argv)

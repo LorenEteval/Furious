@@ -26,6 +26,7 @@ __all__ = ['AppStyleSheet']
 
 class AppStyleSheet:
     """Represent app style sheet."""
+
     Light = 'Light'
     Dark = 'Dark'
     FontPointSize = 10

@@ -72,6 +72,7 @@ def linuxProxyConfig(proxy_args, arg0, arg1):
 
 def darwinProxyConfig(operation, *args):
     """Return the darwin proxy config value used by the application."""
+
     def getNetworkServices():
         """Return network services."""
         command = runExternalCommand(
@@ -99,6 +100,7 @@ def darwinProxyConfig(operation, *args):
 
 class _SystemProxy:
     """Represent system proxy."""
+
     def __init__(self):
         """Initialize the _SystemProxy."""
         self._daemonThread = None
@@ -106,6 +108,7 @@ class _SystemProxy:
     @staticmethod
     def pac(pac_url):
         """Configure the system proxy with a PAC URL."""
+
         def _pac():
             """Return the pac value used by the system proxy."""
             if PLATFORM == 'Windows':
@@ -152,6 +155,7 @@ class _SystemProxy:
     @staticmethod
     def set(server, bypass):
         """Set data managed by the system proxy."""
+
         def _set():
             """Return the set value used by the system proxy."""
             if PLATFORM == 'Windows':
@@ -211,6 +215,7 @@ class _SystemProxy:
     @staticmethod
     def off():
         """Disable the system proxy."""
+
         def _off():
             """Return the off value used by the system proxy."""
             if PLATFORM == 'Windows':
@@ -257,6 +262,7 @@ class _SystemProxy:
 
     def daemonOn_(self):
         """Return the daemon on value used by the system proxy."""
+
         def _daemonOn_():
             """Return the daemon on value used by the system proxy."""
             if PLATFORM == 'Windows':
@@ -290,6 +296,7 @@ class _SystemProxy:
 
     def daemonOff(self):
         """Return the daemon off value used by the system proxy."""
+
         def _daemonOff():
             """Return the daemon off value used by the system proxy."""
             if PLATFORM == 'Windows':

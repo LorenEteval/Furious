@@ -27,6 +27,7 @@ __all__ = ['EncoderFactory']
 
 class EncoderFactory(ABC):
     """Define the interface and shared behavior for encoder objects."""
+
     @abstractmethod
     def encode(self, data: Any, **kwargs) -> Any:
         """Encode data with the encoder factory."""

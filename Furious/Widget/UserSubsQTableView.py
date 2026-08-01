@@ -44,6 +44,7 @@ registerAppSettings('UserSubsHeaderViewState')
 
 class UserSubsQTableViewHorizontalHeader(AppQHeaderView):
     """Provide the user subs Qt table view horizontal table header."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserSubsQTableViewHorizontalHeader."""
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
@@ -51,6 +52,7 @@ class UserSubsQTableViewHorizontalHeader(AppQHeaderView):
 
 class UserSubsQTableViewVerticalHeader(AppQHeaderView):
     """Provide the user subs Qt table view vertical table header."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserSubsQTableViewVerticalHeader."""
         super().__init__(QtCore.Qt.Orientation.Vertical, *args, **kwargs)
@@ -58,6 +60,7 @@ class UserSubsQTableViewVerticalHeader(AppQHeaderView):
 
 class UserSubsQTableViewHeaders:
     """Describe and render user subs Qt table view table columns."""
+
     def __init__(self, name: str, func: Callable[[dict], str] = None):
         """Initialize the UserSubsQTableViewHeaders."""
         self.name = name
@@ -81,6 +84,7 @@ class UserSubsQTableViewHeaders:
 
 class UserSubsAppQComboBox(AppQComboBox):
     """Represent user subs app q combo box."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserSubsAppQComboBox."""
         super().__init__(*args, **kwargs)
@@ -94,6 +98,7 @@ class UserSubsAppQComboBox(AppQComboBox):
 
 class UserSubsTableModel(QtCore.QAbstractTableModel):
     """Expose user subs table data through a Qt item model."""
+
     def __init__(
         self,
         headers: list[UserSubsQTableViewHeaders],
@@ -268,6 +273,7 @@ _TRANSLATABLE_HEADERS = [
 
 class UserSubsQTableView(Mixins.QTranslatable, AppQTableView):
     """Represent user subs Qt table view."""
+
     RowHeight = 42
 
     AutoUpdateOptions = {

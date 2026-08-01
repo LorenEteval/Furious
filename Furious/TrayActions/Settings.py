@@ -56,6 +56,7 @@ _TRANSLATABLE_TUN_MODE = [
 
 class TUNModeAction(AppQAction):
     """Handle the TUN mode action."""
+
     def __init__(self, **kwargs):
         """Initialize the TUNModeAction."""
         if PLATFORM == 'Linux':
@@ -85,6 +86,7 @@ class TUNModeAction(AppQAction):
 
 class SettingsChildAction(AppQAction):
     """Handle the settings child action."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the SettingsChildAction."""
         super().__init__(*args, **kwargs)
@@ -179,6 +181,7 @@ class SettingsChildAction(AppQAction):
 
 class SettingsAction(AppQAction):
     """Handle the settings action."""
+
     def __init__(self, **kwargs):
         """Initialize the SettingsAction."""
         if SystemRuntime.flatpakID():

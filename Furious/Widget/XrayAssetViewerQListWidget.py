@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 class MBoxAssetExists(AppQMessageBox):
     """Represent m box asset exists."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxAssetExists."""
         super().__init__(*args, **kwargs)
@@ -60,6 +61,7 @@ class MBoxAssetExists(AppQMessageBox):
 
 class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
     """Provide the Xray asset viewer Qt list widget."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the XrayAssetViewerQListWidget."""
         super().__init__(*args, **kwargs)
@@ -161,6 +163,7 @@ class XrayAssetViewerQListWidget(Mixins.ThemeAware, AppQListWidget):
 
     def appendNewItem(self, filename: str):
         """Append new item."""
+
         def append(_filename):
             """Append the Xray asset viewer Qt list widget."""
             try:

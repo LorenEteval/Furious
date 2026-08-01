@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 class AppBinarySettings:
     """Store and validate app binary settings."""
+
     OFF = '0'
     ON_ = '1'
 
@@ -42,6 +43,7 @@ class AppBinarySettings:
 
 class AppSettings:
     """Store and validate app settings."""
+
     SettingsPool: dict[str, AppSettings] = dict()
 
     def __init__(

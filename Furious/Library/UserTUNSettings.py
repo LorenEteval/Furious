@@ -30,6 +30,7 @@ registerAppSettings('CustomTUNSettings')
 
 class UserTUNSettings(Mixins.CleanupOnExit, StorageFactory):
     """Manage persisted TUN customization values."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserTUNSettings."""
         super().__init__(*args, **kwargs)

@@ -35,6 +35,7 @@ __all__ = ['Storage']
 
 class Storage:
     """Provide cached access to persisted user configuration collections."""
+
     @staticmethod
     def UserActivatedItemIndex() -> int:
         """Return the user activated item index value."""
@@ -79,6 +80,7 @@ class Storage:
 
     class Extras:
         """Derive display and proxy values from the active server."""
+
         @staticmethod
         @forceToLocalhostIfPossible()
         def UserHttpProxy() -> Union[str, None]:

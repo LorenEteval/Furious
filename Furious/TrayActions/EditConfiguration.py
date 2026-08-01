@@ -28,6 +28,7 @@ __all__ = ['EditConfigurationAction']
 
 class EditConfigurationAction(AppQAction):
     """Handle the edit configuration action."""
+
     def __init__(self, **kwargs):
         """Initialize the EditConfigurationAction."""
         super().__init__(

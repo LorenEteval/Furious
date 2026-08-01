@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 class NetworkConnectivityManager(Mixins.ConnectionAware, WebGETManager):
     """Coordinate network connectivity operations."""
+
     MIN_JOB_INTERVAL = 2500
     MAX_JOB_INTERVAL = 2000000000
 

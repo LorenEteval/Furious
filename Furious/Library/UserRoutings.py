@@ -30,6 +30,7 @@ registerAppSettings('CustomRouting')
 
 class UserRoutings(Mixins.CleanupOnExit, StorageFactory):
     """Manage the persisted custom-routing collection."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserRoutings."""
         super().__init__(*args, **kwargs)

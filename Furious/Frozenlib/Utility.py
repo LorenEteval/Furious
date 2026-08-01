@@ -50,6 +50,7 @@ __all__ = [
 
 class Protocol(Enum):
     """Enumerate proxy protocols recognized by Furious."""
+
     Unknown = 'Unknown'
     VMess = 'VMess'
     VLESS = 'VLESS'
@@ -93,6 +94,7 @@ def callRateLimited(maxCallPerSecond):
 
     def decorator(func):
         """Decorate a callable with the enclosing behavior."""
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             # Previously called
@@ -117,8 +119,10 @@ def callRateLimited(maxCallPerSecond):
 
 def forceToLocalhostIfPossible():
     """Return the force to localhost if possible value used by the application."""
+
     def decorator(func):
         """Decorate a callable with the enclosing behavior."""
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             """Invoke the wrapped callable with the enclosing behavior."""
@@ -226,6 +230,7 @@ def absolutePath(path) -> pathlib.Path:
 @functools.lru_cache(None)
 def versionToValue(version: str) -> int:
     """Return the version to value value used by the application."""
+
     def split():
         # x or x.y or x.y.z or x.y.z.u
         """Split the application."""

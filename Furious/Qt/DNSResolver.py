@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 class _DNSResolver(WebGETManager):
     """Represent DNS resolver."""
+
     def __init__(self, parent=None, **kwargs):
         """Initialize the _DNSResolver."""
         actionMessage = kwargs.pop('actionMessage', 'DNS resolution')

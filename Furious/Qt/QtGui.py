@@ -44,6 +44,7 @@ __all__ = [
 
 class AppQIcon(QIcon):
     """Represent app q icon."""
+
     def __init__(self, iconFileName: str):
         """Initialize the AppQIcon."""
         super().__init__(iconFileName)
@@ -112,6 +113,7 @@ def bootstrapIconWithOpacity(name, opacity, isMask=False):
 
 class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
     """Handle the app q action."""
+
     def __init__(
         self,
         text,
@@ -271,6 +273,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
 
     def retranslate(self):
         """Refresh translated text for the app q action."""
+
         def recursiveTranslate(action, memo):
             """Handle recursive translate for the app q action."""
             if action not in memo and not action.isSeparator() and action.translatable:
@@ -296,6 +299,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
 
 class AppQActionGroup(QActionGroup):
     """Represent app q action group."""
+
     def __init__(self, parent, *actions):
         """Initialize the AppQActionGroup."""
         super().__init__(parent)
@@ -306,6 +310,7 @@ class AppQActionGroup(QActionGroup):
 
 class AppQSeperator(QAction):
     """Represent app q seperator."""
+
     def __init__(self):
         """Initialize the AppQSeperator."""
         super().__init__()

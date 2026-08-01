@@ -40,6 +40,7 @@ HY2_OBFS_TYPES = ['', 'salamander', 'gecko']
 
 class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
     """Represent GUI hy2 item basic server."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2ItemBasicServer."""
         super().__init__(*args, **kwargs)
@@ -73,6 +74,7 @@ class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
 
 class GuiHy2ItemBasicAuth(GuiEditorItemTextInput):
     """Represent GUI hy2 item basic auth."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2ItemBasicAuth."""
         super().__init__(*args, **kwargs)
@@ -114,6 +116,7 @@ class GuiHy2ItemBasicAuth(GuiEditorItemTextInput):
 
 class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
     """Represent GUI hy2 item basic congestion combo box."""
+
     CONGESTION_KEYS = ['type', 'bbrProfile']
 
     def __init__(self, *args, **kwargs):
@@ -205,6 +208,7 @@ class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
 
 class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
     """Represent GUI hy2 item obfs type."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2ItemObfsType."""
         super().__init__(*args, **kwargs)
@@ -262,6 +266,7 @@ class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
 
 class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
     """Represent GUI hy2 item obfs password."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2ItemObfsPassword."""
         self.obfsType = kwargs.pop('obfsType', 'salamander')
@@ -334,6 +339,7 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
 
 class GuiHy2ItemObfsPacketSize(GuiEditorItemTextSpinBox):
     """Represent GUI hy2 item obfs packet size."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2ItemObfsPacketSize."""
         self.obfsType, self.key, self.default = (
@@ -404,6 +410,7 @@ class GuiHy2ItemObfsPacketSize(GuiEditorItemTextSpinBox):
 
 class GuiHy2PageObfsXXX(GuiEditorWidgetQWidget):
     """Represent GUI hy2 page obfs xxx."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2PageObfsXXX."""
         super().__init__(*args, **kwargs)
@@ -425,6 +432,7 @@ class GuiHy2PageObfsXXX(GuiEditorWidgetQWidget):
 
 class GuiHy2PageObfsEmpty(GuiHy2PageObfsXXX):
     """Represent GUI hy2 page obfs empty."""
+
     def containerSequence(self):
         """Return the editor item containers in display order."""
         return [
@@ -434,6 +442,7 @@ class GuiHy2PageObfsEmpty(GuiHy2PageObfsXXX):
 
 class GuiHy2PageObfsSalamander(GuiHy2PageObfsXXX):
     """Represent GUI hy2 page obfs salamander."""
+
     def containerSequence(self):
         """Return the editor item containers in display order."""
         return [
@@ -448,6 +457,7 @@ class GuiHy2PageObfsSalamander(GuiHy2PageObfsXXX):
 
 class GuiHy2PageObfsGecko(GuiHy2PageObfsXXX):
     """Represent GUI hy2 page obfs gecko."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2PageObfsGecko."""
         super().__init__(*args, **kwargs)
@@ -493,6 +503,7 @@ class GuiHy2PageObfsGecko(GuiHy2PageObfsXXX):
 
 class GuiHy2ObfsPageStackedWidget(QStackedWidget):
     """Provide the GUI hy2 obfs page stacked widget."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2ObfsPageStackedWidget."""
         super().__init__(*args, **kwargs)
@@ -518,6 +529,7 @@ class GuiHy2ObfsPageStackedWidget(QStackedWidget):
 
 class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
     """Represent GUI hy2 item TLS text input."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2ItemTLSTextInput."""
         key = kwargs.pop('key', '')
@@ -597,6 +609,7 @@ class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
 
 class GuiHy2ItemTLSInsecure(GuiEditorItemTextCheckBox):
     """Represent GUI hy2 item TLS insecure."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2ItemTLSInsecure."""
         super().__init__(*args, **kwargs)
@@ -650,6 +663,7 @@ class GuiHy2ItemTLSInsecure(GuiEditorItemTextCheckBox):
 
 class GuiHy2GroupBoxBasic(GuiEditorWidgetQGroupBox):
     """Represent GUI hy2 group box basic."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiHy2GroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -671,6 +685,7 @@ class GuiHy2GroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 class GuiHy2GroupBoxProxy(GuiEditorWidgetQGroupBox):
     """Represent GUI hy2 group box proxy."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiHy2GroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
@@ -685,6 +700,7 @@ class GuiHy2GroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 class GuiHy2GroupBoxObfs(GuiEditorItemFactory, AppQGroupBox):
     """Represent GUI hy2 group box obfs."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiHy2GroupBoxObfs."""
         translatable = kwargs.pop('translatable', False)
@@ -779,6 +795,7 @@ class GuiHy2GroupBoxObfs(GuiEditorItemFactory, AppQGroupBox):
 
 class GuiHy2GroupBoxTLS(GuiEditorWidgetQGroupBox):
     """Represent GUI hy2 group box TLS."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiHy2GroupBoxTLS."""
         super().__init__('TLS', **kwargs)
@@ -799,6 +816,7 @@ class GuiHy2GroupBoxTLS(GuiEditorWidgetQGroupBox):
 
 class GuiHy2ProjectWebsiteURL(AppQLabel):
     """Represent GUI hy2 project website URL."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy2ProjectWebsiteURL."""
         super().__init__(*args, **kwargs)
@@ -831,6 +849,7 @@ class GuiHy2ProjectWebsiteURL(AppQLabel):
 
 class GuiHy2GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):
     """Represent GUI hy2 group box other."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiHy2GroupBoxOther."""
         super().__init__(_('Other'), **kwargs)
@@ -853,6 +872,7 @@ class GuiHy2GroupBoxOther(GuiEditorItemFactory, AppQGroupBox):
 
 class GuiHysteria2(GuiEditorWidgetQDialog):
     """Represent GUI hysteria2."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHysteria2."""
         super().__init__(*args, **kwargs)

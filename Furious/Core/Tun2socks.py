@@ -52,6 +52,7 @@ def startTun2socks(msgQueue: multiprocessing.Queue, *args):
 
 class Tun2socks(CoreProcessWorker):
     """Manage the tun2socks subprocess used by TUN mode."""
+
     class ExitCode:
         # Windows shutting down
         """Enumerate process exit codes."""

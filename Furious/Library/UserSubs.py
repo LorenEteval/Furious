@@ -30,6 +30,7 @@ registerAppSettings('CustomSubscription')
 
 class UserSubEntry:
     """Describe one user sub entry."""
+
     remark: str
     webURL: str
     autoupdate: str
@@ -38,12 +39,14 @@ class UserSubEntry:
 
 class UserSub:
     """Represent user sub."""
+
     unique: dict[str, dict]
 
 
 class UserSubs(Mixins.CleanupOnExit, StorageFactory):
     # unique: { remark, webURL }
     """Manage the persisted subscription collection."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the UserSubs."""
         super().__init__(*args, **kwargs)

@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 class GuiTUNSettingsItemXXX(GuiEditorItemTextInput):
     """Represent GUI TUN settings item xxx."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiTUNSettingsItemXXX."""
         self.key = kwargs.pop('key', '')
@@ -65,6 +66,7 @@ class GuiTUNSettingsItemXXX(GuiEditorItemTextInput):
 
 class GuiTUNSettingsItemSpinBoxBufferSizeXXX(GuiEditorItemTextSpinBox):
     """Represent GUI TUN settings item spin box buffer size xxx."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiTUNSettingsItemSpinBoxBufferSizeXXX."""
         self.key = kwargs.pop('key', '')
@@ -106,6 +108,7 @@ class GuiTUNSettingsItemSpinBoxBufferSizeXXX(GuiEditorItemTextSpinBox):
 
 class GuiTUNSettingsItemCheckBoxXXX(GuiEditorItemTextCheckBox):
     """Represent GUI TUN settings item check box xxx."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiTUNSettingsItemCheckBoxXXX."""
         self.key = kwargs.pop('key', '')
@@ -138,6 +141,7 @@ class GuiTUNSettingsItemCheckBoxXXX(GuiEditorItemTextCheckBox):
 
 class AppQLabelHelpPage(AppQLabel):
     """Represent app q label help page."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQLabelHelpPage."""
         super().__init__(*args, **kwargs)
@@ -170,6 +174,7 @@ class AppQLabelHelpPage(AppQLabel):
 
 class GuiTUNSettingsItemHelpPage(GuiEditorItemWidgetContainer):
     """Provide the TUN settings item help configuration editor page."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiTUNSettingsItemHelpPage."""
         super().__init__(*args, **kwargs)
@@ -183,6 +188,7 @@ class GuiTUNSettingsItemHelpPage(GuiEditorItemWidgetContainer):
 
 class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
     """Represent GUI TUN settings group box basic."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiTUNSettingsGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -252,6 +258,7 @@ class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 class GuiTUNSettingsGroupBoxMemory(GuiEditorWidgetQGroupBox):
     """Represent GUI TUN settings group box memory."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiTUNSettingsGroupBoxMemory."""
         super().__init__(_('Memory Optimization'), **kwargs)
@@ -283,6 +290,7 @@ class GuiTUNSettingsGroupBoxMemory(GuiEditorWidgetQGroupBox):
 
 class GuiTUNSettings(GuiEditorWidgetQDialog):
     """Store and validate GUI TUN settings."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiTUNSettings."""
         tabTranslatable = kwargs.pop('tabTranslatable', True)

@@ -40,6 +40,7 @@ getProxyOutboundServer = functools.partial(
 
 class GuiTrojanItemTextInput(GuiEditorItemTextInput):
     """Represent GUI trojan item text input."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiTrojanItemTextInput."""
         key = kwargs.pop('key', '')
@@ -85,6 +86,7 @@ class GuiTrojanItemTextInput(GuiEditorItemTextInput):
 
 class GuiTrojanItemBasicPort(GuiEditorItemTextSpinBox):
     """Represent GUI trojan item basic port."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiTrojanItemBasicPort."""
         super().__init__(*args, **kwargs)
@@ -125,6 +127,7 @@ class GuiTrojanItemBasicPort(GuiEditorItemTextSpinBox):
 
 class GuiTrojanGroupBoxBasic(GuiEditorWidgetQGroupBox):
     """Represent GUI trojan group box basic."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiTrojanGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -141,6 +144,7 @@ class GuiTrojanGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 class GuiTrojanGroupBoxProxy(GuiEditorWidgetQGroupBox):
     """Represent GUI trojan group box proxy."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiTrojanGroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
@@ -155,6 +159,7 @@ class GuiTrojanGroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 class GuiTrojan(GuiEditorWidgetQDialog):
     """Represent GUI trojan."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiTrojan."""
         super().__init__(*args, **kwargs)

@@ -49,6 +49,7 @@ getProxyOutboundUser = functools.partial(
 
 class GuiVLESSItemBasicAddress(GuiEditorItemTextInput):
     """Represent GUI VLESS item basic address."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVLESSItemBasicAddress."""
         super().__init__(*args, **kwargs)
@@ -90,6 +91,7 @@ class GuiVLESSItemBasicAddress(GuiEditorItemTextInput):
 
 class GuiVLESSItemBasicPort(GuiEditorItemTextSpinBox):
     """Represent GUI VLESS item basic port."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVLESSItemBasicPort."""
         super().__init__(*args, **kwargs)
@@ -130,6 +132,7 @@ class GuiVLESSItemBasicPort(GuiEditorItemTextSpinBox):
 
 class GuiVLESSItemBasicId(GuiEditorItemTextInput):
     """Represent GUI VLESS item basic id."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVLESSItemBasicId."""
         super().__init__(*args, **kwargs)
@@ -189,6 +192,7 @@ class GuiVLESSItemBasicId(GuiEditorItemTextInput):
 
 class GuiVLESSItemBasicEncryption(GuiEditorItemTextInput):
     """Represent GUI VLESS item basic encryption."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVLESSItemBasicEncryption."""
         super().__init__(*args, **kwargs)
@@ -230,6 +234,7 @@ class GuiVLESSItemBasicEncryption(GuiEditorItemTextInput):
 
 class GuiVLESSItemBasicFlow(GuiEditorItemTextComboBox):
     """Represent GUI VLESS item basic flow."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVLESSItemBasicFlow."""
         super().__init__(*args, **kwargs)
@@ -276,6 +281,7 @@ class GuiVLESSItemBasicFlow(GuiEditorItemTextComboBox):
 
 class GuiVLESSGroupBoxBasic(GuiEditorWidgetQGroupBox):
     """Represent GUI VLESS group box basic."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiVLESSGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -337,6 +343,7 @@ class GuiVLESSGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 class GuiVLESSGroupBoxProxy(GuiEditorWidgetQGroupBox):
     """Represent GUI VLESS group box proxy."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiVLESSGroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
@@ -351,6 +358,7 @@ class GuiVLESSGroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 class GuiVLESS(GuiEditorWidgetQDialog):
     """Represent GUI VLESS."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVLESS."""
         super().__init__(*args, **kwargs)

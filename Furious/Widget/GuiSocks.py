@@ -40,6 +40,7 @@ getProxyOutboundServer = functools.partial(
 
 class GuiSocksItemTextInput(GuiEditorItemTextInput):
     """Represent GUI SOCKS item text input."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiSocksItemTextInput."""
         key = kwargs.pop('key', '')
@@ -84,6 +85,7 @@ class GuiSocksItemTextInput(GuiEditorItemTextInput):
 
 class GuiSocksItemBasicPort(GuiEditorItemTextSpinBox):
     """Represent GUI SOCKS item basic port."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiSocksItemBasicPort."""
         super().__init__(*args, **kwargs)
@@ -123,6 +125,7 @@ class GuiSocksItemBasicPort(GuiEditorItemTextSpinBox):
 
 class GuiSocksGroupBoxBasic(GuiEditorWidgetQGroupBox):
     """Represent GUI SOCKS group box basic."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiSocksGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -140,6 +143,7 @@ class GuiSocksGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 class GuiSocksGroupBoxProxy(GuiEditorWidgetQGroupBox):
     """Represent GUI SOCKS group box proxy."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiSocksGroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
@@ -154,6 +158,7 @@ class GuiSocksGroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 class GuiSocks(GuiEditorWidgetQDialog):
     """Represent GUI SOCKS."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiSocks."""
         super().__init__(*args, **kwargs)

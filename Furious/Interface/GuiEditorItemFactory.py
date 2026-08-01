@@ -26,6 +26,7 @@ __all__ = ['GuiEditorItemFactory', 'GuiEditorItemWidgetContainer']
 
 class GuiEditorItemFactory:
     """Define the interface and shared behavior for GUI editor item objects."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorItemFactory."""
         super().__init__(*args, **kwargs)
@@ -41,6 +42,7 @@ class GuiEditorItemFactory:
 
 class GuiEditorItemWidgetContainer(GuiEditorItemFactory):
     """Bind one or more editor widgets to configuration data."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorItemWidgetContainer."""
         super().__init__(*args, **kwargs)

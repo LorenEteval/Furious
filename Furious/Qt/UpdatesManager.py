@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 class MBoxQuestionUpdate(AppQMessageBox):
     """Represent m box question update."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the MBoxQuestionUpdate."""
         super().__init__(*args, **kwargs)
@@ -67,6 +68,7 @@ class MBoxQuestionUpdate(AppQMessageBox):
 
 class UpdatesManager(WebGETManager):
     """Coordinate updates operations."""
+
     API_URL = (
         f'https://api.github.com/repos/'
         f'{APPLICATION_REPO_OWNER_NAME}/{APPLICATION_REPO_NAME}/releases/latest'

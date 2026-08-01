@@ -49,6 +49,7 @@ getProxyOutboundUser = functools.partial(
 
 class GuiVMessItemBasicAddress(GuiEditorItemTextInput):
     """Represent GUI v mess item basic address."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVMessItemBasicAddress."""
         super().__init__(*args, **kwargs)
@@ -90,6 +91,7 @@ class GuiVMessItemBasicAddress(GuiEditorItemTextInput):
 
 class GuiVMessItemBasicPort(GuiEditorItemTextSpinBox):
     """Represent GUI v mess item basic port."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVMessItemBasicPort."""
         super().__init__(*args, **kwargs)
@@ -130,6 +132,7 @@ class GuiVMessItemBasicPort(GuiEditorItemTextSpinBox):
 
 class GuiVMessItemBasicId(GuiEditorItemTextInput):
     """Represent GUI v mess item basic id."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVMessItemBasicId."""
         super().__init__(*args, **kwargs)
@@ -189,6 +192,7 @@ class GuiVMessItemBasicId(GuiEditorItemTextInput):
 
 class GuiVMessItemBasicAlterId(GuiEditorItemTextSpinBox):
     """Represent GUI v mess item basic alter id."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVMessItemBasicAlterId."""
         super().__init__(*args, **kwargs)
@@ -229,6 +233,7 @@ class GuiVMessItemBasicAlterId(GuiEditorItemTextSpinBox):
 
 class GuiVMessItemBasicSecurity(GuiEditorItemTextComboBox):
     """Represent GUI v mess item basic security."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVMessItemBasicSecurity."""
         super().__init__(*args, **kwargs)
@@ -277,6 +282,7 @@ class GuiVMessItemBasicSecurity(GuiEditorItemTextComboBox):
 
 class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
     """Represent GUI v mess group box basic."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiVMessGroupBoxBasic."""
         super().__init__(_('Basic Configuration'), **kwargs)
@@ -346,6 +352,7 @@ class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
 
 class GuiVMessGroupBoxProxy(GuiEditorWidgetQGroupBox):
     """Represent GUI v mess group box proxy."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiVMessGroupBoxProxy."""
         super().__init__(_('Proxy'), **kwargs)
@@ -360,6 +367,7 @@ class GuiVMessGroupBoxProxy(GuiEditorWidgetQGroupBox):
 
 class GuiVMess(GuiEditorWidgetQDialog):
     """Represent GUI v mess."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVMess."""
         super().__init__(*args, **kwargs)

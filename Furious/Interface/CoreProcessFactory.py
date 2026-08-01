@@ -34,8 +34,10 @@ __all__ = ['CoreProcessFactory']
 
 class CoreProcessFactory(ABC):
     """Define the interface and shared behavior for core process objects."""
+
     class ExitCode(Enum):
         """Enumerate process exit codes."""
+
         ConfigurationError = 23
         # Windows: 4294967295. Darwin, Linux: 255 (-1)
         ServerStartFailure = 4294967295 if PLATFORM == 'Windows' else 255

@@ -213,6 +213,7 @@ def getUserTUNSettings(*args, **kwargs):
 
 class CoreManager(Mixins.CleanupOnExit):
     """Coordinate proxy cores, TUN setup, DNS changes, and routing cleanup."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the CoreManager."""
         super().__init__(*args, **kwargs)

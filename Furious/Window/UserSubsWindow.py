@@ -40,6 +40,7 @@ registerAppSettings('UserSubsWindowState')
 
 class AddSubsDialog(AppQDialog):
     """Present the add subs dialog."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the AddSubsDialog."""
         super().__init__(*args, **kwargs)
@@ -85,6 +86,7 @@ class AddSubsDialog(AppQDialog):
 
 class UserSubsWindow(AppQMainWindow):
     """Present the user subs window."""
+
     DEFAULT_WINDOW_SIZE = QtCore.QSize(1120, 600)
 
     def __init__(self, *args, **kwargs):
@@ -126,6 +128,7 @@ class UserSubsWindow(AppQMainWindow):
 
     def addSubs(self):
         """Add subs."""
+
         def handleResultCode(_addSubsDialog, code):
             """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):

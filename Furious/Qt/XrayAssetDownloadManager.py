@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 class SHA256Worker(QtCore.QObject, QtCore.QRunnable):
     """Run SHA-256 work in the background."""
+
     finished = QtCore.Signal(str)
 
     def __init__(self, string=b''):
@@ -55,6 +56,7 @@ class SHA256Worker(QtCore.QObject, QtCore.QRunnable):
 
 class XrayAssetSHA256DownloadManager(WebGETManager):
     """Coordinate Xray asset SHA-256 download operations."""
+
     def __init__(self, parent=None, **kwargs):
         """Initialize the XrayAssetSHA256DownloadManager."""
         actionMessage = kwargs.pop('actionMessage', 'download sha256')
@@ -124,6 +126,7 @@ class XrayAssetSHA256DownloadManager(WebGETManager):
 
 class XrayAssetAssetsDownloadManager(WebGETManager):
     """Coordinate Xray asset assets download operations."""
+
     def __init__(self, parent=None, **kwargs):
         """Initialize the XrayAssetAssetsDownloadManager."""
         actionMessage = kwargs.pop('actionMessage', 'download assets')
@@ -159,6 +162,7 @@ class XrayAssetAssetsDownloadManager(WebGETManager):
 
 class XrayAssetPairDownloadHelper:
     """Represent Xray asset pair download helper."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the XrayAssetPairDownloadHelper."""
         sha256ActionMessage = kwargs.pop('sha256ActionMessage', 'download sha256')
@@ -195,6 +199,7 @@ class XrayAssetPairDownloadHelper:
 
 class XrayAssetDownloadManager:
     """Coordinate Xray asset download operations."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the XrayAssetDownloadManager."""
         super().__init__(*args, **kwargs)

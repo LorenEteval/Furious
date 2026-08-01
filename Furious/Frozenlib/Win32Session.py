@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 class _Win32Session:
     """Represent win32 session."""
+
     def __init__(self):
         """Initialize the _Win32Session."""
         self._daemonThread = None

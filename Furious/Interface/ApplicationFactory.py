@@ -26,8 +26,10 @@ __all__ = ['ApplicationFactory']
 
 class ApplicationFactory:
     """Define the lifecycle contract for the top-level application runner."""
+
     class ExitCode(Enum):
         """Enumerate process exit codes."""
+
         ExitSuccess = 0
         UnknownException = 61
         PlatformNotSupported = 62

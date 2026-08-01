@@ -30,6 +30,7 @@ __all__ = ['AppQNetworkAccessManager']
 
 class AppQNetworkAccessManager(QNetworkAccessManager):
     """Coordinate app q network access operations."""
+
     def __init__(self, parent=None):
         """Initialize the AppQNetworkAccessManager."""
         super().__init__(parent)

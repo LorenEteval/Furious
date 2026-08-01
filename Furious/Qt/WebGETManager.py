@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 class WebGETManager(AppQNetworkAccessManager):
     """Coordinate web get operations."""
+
     def __init__(self, parent=None, actionMessage='web GET', **kwargs):
         """Initialize the WebGETManager."""
         super().__init__(parent)
@@ -64,6 +65,7 @@ class WebGETManager(AppQNetworkAccessManager):
 
     def must(self, **kwargs):
         """Run the required completion hook according to its call policy."""
+
         def call():
             """Invoke the registered completion callback."""
             try:

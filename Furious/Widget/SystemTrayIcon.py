@@ -48,6 +48,7 @@ class SystemTrayIcon(
     QSystemTrayIcon,
 ):
     """Represent system tray icon."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the SystemTrayIcon."""
         super().__init__(*args, **kwargs)
@@ -146,6 +147,7 @@ class SystemTrayIcon(
 
     def setMonochromeIconByTheme(self, theme):
         """Set monochrome icon by theme."""
+
         def switchMonochrome():
             """Handle switch monochrome for the system tray icon."""
             if theme == 'Dark':

@@ -40,6 +40,7 @@ STREAM_SECURITY = [
 
 class GuiVTLSItemSecurity(GuiEditorItemTextComboBox):
     """Represent GUI vtls item security."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemSecurity."""
         super().__init__(*args, **kwargs)
@@ -101,6 +102,7 @@ class GuiVTLSItemSecurity(GuiEditorItemTextComboBox):
 
 class GuiVTLSItemXXXServerName(GuiEditorItemTextInput):
     """Represent GUI vtls item xxx server name."""
+
     def __init__(self, *args, **kwargs):
         # Mandatory
         """Initialize the GuiVTLSItemXXXServerName."""
@@ -161,6 +163,7 @@ class GuiVTLSItemXXXServerName(GuiEditorItemTextInput):
 
 class GuiVTLSItemTLSServerName(GuiVTLSItemXXXServerName):
     """Represent GUI vtls item TLS server name."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemTLSServerName."""
         securityKey = kwargs.pop('securityKey', 'tlsSettings')
@@ -170,6 +173,7 @@ class GuiVTLSItemTLSServerName(GuiVTLSItemXXXServerName):
 
 class GuiVTLSItemRealityServerName(GuiVTLSItemXXXServerName):
     """Represent GUI vtls item reality server name."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemRealityServerName."""
         securityKey = kwargs.pop('securityKey', 'realitySettings')
@@ -179,6 +183,7 @@ class GuiVTLSItemRealityServerName(GuiVTLSItemXXXServerName):
 
 class GuiVTLSItemXXXFingerprint(GuiEditorItemTextInput):
     """Represent GUI vtls item xxx fingerprint."""
+
     def __init__(self, *args, **kwargs):
         # Mandatory
         """Initialize the GuiVTLSItemXXXFingerprint."""
@@ -239,6 +244,7 @@ class GuiVTLSItemXXXFingerprint(GuiEditorItemTextInput):
 
 class GuiVTLSItemTLSFingerprint(GuiVTLSItemXXXFingerprint):
     """Represent GUI vtls item TLS fingerprint."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemTLSFingerprint."""
         securityKey = kwargs.pop('securityKey', 'tlsSettings')
@@ -248,6 +254,7 @@ class GuiVTLSItemTLSFingerprint(GuiVTLSItemXXXFingerprint):
 
 class GuiVTLSItemRealityFingerprint(GuiVTLSItemXXXFingerprint):
     """Represent GUI vtls item reality fingerprint."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemRealityFingerprint."""
         securityKey = kwargs.pop('securityKey', 'realitySettings')
@@ -257,6 +264,7 @@ class GuiVTLSItemRealityFingerprint(GuiVTLSItemXXXFingerprint):
 
 class GuiVTLSItemTLSAlpn(GuiEditorItemTextInput):
     """Represent GUI vtls item TLS alpn."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemTLSAlpn."""
         super().__init__(*args, **kwargs)
@@ -312,6 +320,7 @@ class GuiVTLSItemTLSAlpn(GuiEditorItemTextInput):
 
 class GuiVTLSItemTLSXXXTextInput(GuiEditorItemTextInput):
     """Represent GUI vtls item tlsxxx text input."""
+
     def __init__(self, *args, **kwargs):
         # Mandatory
         """Initialize the GuiVTLSItemTLSXXXTextInput."""
@@ -366,6 +375,7 @@ class GuiVTLSItemTLSXXXTextInput(GuiEditorItemTextInput):
 
 class GuiVTLSItemTLSAllowInsecure(GuiEditorItemTextCheckBox):
     """Represent GUI vtls item TLS allow insecure."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemTLSAllowInsecure."""
         super().__init__(*args, **kwargs)
@@ -417,6 +427,7 @@ class GuiVTLSItemTLSAllowInsecure(GuiEditorItemTextCheckBox):
 
 class GuiVTLSItemRealityXXX(GuiEditorItemTextInput):
     """Represent GUI vtls item reality xxx."""
+
     def __init__(self, *args, **kwargs):
         # Mandatory
         """Initialize the GuiVTLSItemRealityXXX."""
@@ -477,6 +488,7 @@ class GuiVTLSItemRealityXXX(GuiEditorItemTextInput):
 
 class GuiVTLSItemRealityPublicKey(GuiVTLSItemRealityXXX):
     """Represent GUI vtls item reality public key."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemRealityPublicKey."""
         realityKey = kwargs.pop('realityKey', 'publicKey')
@@ -486,6 +498,7 @@ class GuiVTLSItemRealityPublicKey(GuiVTLSItemRealityXXX):
 
 class GuiVTLSItemRealityShortId(GuiVTLSItemRealityXXX):
     """Represent GUI vtls item reality short id."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemRealityShortId."""
         realityKey = kwargs.pop('realityKey', 'shortId')
@@ -495,6 +508,7 @@ class GuiVTLSItemRealityShortId(GuiVTLSItemRealityXXX):
 
 class GuiVTLSItemRealityMldsa65Verify(GuiVTLSItemRealityXXX):
     """Represent GUI vtls item reality mldsa65 verify."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemRealityMldsa65Verify."""
         realityKey = kwargs.pop('realityKey', 'mldsa65Verify')
@@ -504,6 +518,7 @@ class GuiVTLSItemRealityMldsa65Verify(GuiVTLSItemRealityXXX):
 
 class GuiVTLSItemRealitySpiderX(GuiVTLSItemRealityXXX):
     """Represent GUI vtls item reality spider x."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemRealitySpiderX."""
         realityKey = kwargs.pop('realityKey', 'spiderX')
@@ -513,6 +528,7 @@ class GuiVTLSItemRealitySpiderX(GuiVTLSItemRealityXXX):
 
 class GuiVTLSPageXXX(GuiEditorWidgetQWidget):
     """Represent GUI vtls page xxx."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSPageXXX."""
         super().__init__(*args, **kwargs)
@@ -534,6 +550,7 @@ class GuiVTLSPageXXX(GuiEditorWidgetQWidget):
 
 class GuiVTLSPageEmpty(GuiVTLSPageXXX):
     """Represent GUI vtls page empty."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSPageEmpty."""
         super().__init__(*args, **kwargs)
@@ -547,6 +564,7 @@ class GuiVTLSPageEmpty(GuiVTLSPageXXX):
 
 class GuiVTLSPageNone(GuiVTLSPageXXX):
     """Represent GUI vtls page none."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSPageNone."""
         super().__init__(*args, **kwargs)
@@ -560,6 +578,7 @@ class GuiVTLSPageNone(GuiVTLSPageXXX):
 
 class GuiVTLSPageTLS(GuiVTLSPageXXX):
     """Represent GUI vtls page TLS."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSPageTLS."""
         super().__init__(*args, **kwargs)
@@ -641,6 +660,7 @@ class GuiVTLSPageTLS(GuiVTLSPageXXX):
 
 class GuiVTLSPageReality(GuiVTLSPageXXX):
     """Represent GUI vtls page reality."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSPageReality."""
         super().__init__(*args, **kwargs)
@@ -691,6 +711,7 @@ class GuiVTLSPageReality(GuiVTLSPageXXX):
 
 class GuiVTLSPageStackedWidget(QStackedWidget):
     """Provide the GUI vtls page stacked widget."""
+
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSPageStackedWidget."""
         super().__init__(*args, **kwargs)
@@ -718,6 +739,7 @@ class GuiVTLSPageStackedWidget(QStackedWidget):
 
 class GuiVTLSQGroupBox(GuiEditorItemFactory, AppQGroupBox):
     """Group the GUI vtlsq editor controls."""
+
     def __init__(self, **kwargs):
         """Initialize the GuiVTLSQGroupBox."""
         translatable = kwargs.pop('translatable', False)
