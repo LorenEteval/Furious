@@ -20,7 +20,6 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from .Plugin import cleanRoutingRule
 from Furious.Library import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
@@ -33,6 +32,8 @@ import copy
 import uuid
 import logging
 import functools
+
+from .Routing import cleanRoutingRule
 
 __all__ = ['UserRoutingWindow']
 

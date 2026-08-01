@@ -5,14 +5,12 @@ from __future__ import annotations
 from Furious.Core.CoreProcessWorker import ProcessOutputRedirector
 from Furious.Frozenlib import *
 from Furious.Library.Storage import Storage
-from Furious.Plugins.API import FuriousPlugin, PluginProtocol
+from Furious.Plugins.API import FuriousPlugin, PluginProtocol, PluginRouting
 from Furious.Plugins.Official.Configuration import (
     BLANK_CONFIG_XRAY,
     ConfigXray,
     configXrayEmptyProxyOutboundObject,
 )
-from Furious.Qt import *
-from Furious.Qt import gettext as _
 
 import copy
 import logging
@@ -20,6 +18,7 @@ import os
 import uuid
 
 from .Core import XrayCore
+from .Routing import customRoutingObjectFromSettings
 
 __all__ = ['XrayPlugin']
 
@@ -62,76 +61,6 @@ def fixLogObjectPath(config, attr: str, value: str, log=True):
             f'{XrayCore.name()}: {attr} log is specified as \'{path}\'. '
             f'Fixed to \'{result}\''
         )
-
-
-def cleanRoutingRule(rule: dict):
-    """Remove empty match fields from an Xray routing rule."""
-    if not isinstance(rule, dict):
-        return None
-
-    result = {
-        'type': 'field',
-        'outboundTag': str(rule.get('outboundTag', 'proxy')).strip() or 'proxy',
-    }
-
-    for key in [
-        'domain',
-        'ip',
-        'sourceIP',
-        'localIP',
-        'user',
-        'protocol',
-        'inboundTag',
-        'process',
-    ]:
-        value = rule.get(key, [])
-        if isinstance(value, list):
-            value = list(str(item).strip() for item in value if str(item).strip())
-            if value:
-                result[key] = value
-
-    for key in [
-        'port',
-        'sourcePort',
-        'localPort',
-        'network',
-        'vlessRoute',
-        'balancerTag',
-        'ruleTag',
-    ]:
-        value = str(rule.get(key, '')).strip()
-        if value:
-            result[key] = value
-
-    return result if len(result) > 2 else None
-
-
-def customRoutingObjectFromSettings(routing: str):
-    """Load a named custom Xray routing object from persistent settings."""
-    prefix = 'Custom:'
-    if not isinstance(routing, str) or not routing.startswith(prefix):
-        return None
-
-    routingProfile = Storage.UserRoutings().get(routing[len(prefix) :])
-    if not isinstance(routingProfile, dict) or not routingProfile.get('enabled', True):
-        return None
-
-    domainStrategy = routingProfile.get('domainStrategy', 'AsIs')
-    if domainStrategy not in ['AsIs', 'IPIfNonMatch', 'IPOnDemand']:
-        domainStrategy = 'AsIs'
-
-    rules = list(
-        filter(
-            lambda rule: rule is not None,
-            list(cleanRoutingRule(rule) for rule in routingProfile.get('rules', [])),
-        )
-    )
-
-    return {
-        'domainStrategy': domainStrategy,
-        'domainMatcher': 'hybrid',
-        'rules': rules,
-    }
 
 
 class XrayPlugin(FuriousPlugin):
@@ -207,6 +136,7 @@ class XrayPlugin(FuriousPlugin):
 
     def createEditorForProtocol(self, protocol, parent=None, **kwargs):
         """Create the Xray editor matching a protocol identifier."""
+        # Plugin discovery can occur while the Furious.Qt package is initializing.
         from .GuiShadowsocks import GuiShadowsocks
         from .GuiSocks import GuiSocks
         from .GuiTrojan import GuiTrojan
@@ -230,7 +160,9 @@ class XrayPlugin(FuriousPlugin):
 
     def createManagementActions(self, parent=None, **kwargs):
         """Create Xray routing and asset-management actions."""
-        from Furious.Qt import AppQAction, gettext
+        # These modules require a fully initialized Furious.Qt package.
+        from Furious.Qt import AppQAction, AppQSeperator
+        from Furious.Qt import gettext as _
 
         from .UserRoutingWindow import UserRoutingWindow
         from .XrayAssetViewerWindow import XrayAssetViewerWindow
@@ -250,13 +182,37 @@ class XrayPlugin(FuriousPlugin):
             ),
         )
 
-    def routingChoices(self):
-        """Return enabled named Xray routing profiles."""
-        return tuple(
-            (routing.get('remark', ''), f'Custom:{unique}')
+    def routingOptions(self, config=None):
+        """Return built-in and named routing modes supported by Xray."""
+        options = [
+            PluginRouting(
+                AppBuiltinRouting.BypassMainlandChina.value,
+                AppBuiltinRouting.BypassMainlandChina.value,
+            ),
+            PluginRouting(
+                AppBuiltinRouting.Global.value,
+                AppBuiltinRouting.Global.value,
+            ),
+            PluginRouting(
+                AppBuiltinRouting.Custom.value,
+                AppBuiltinRouting.Custom.value,
+            ),
+        ]
+        enabledProfiles = tuple(
+            (unique, routing)
             for unique, routing in Storage.UserRoutings().items()
             if routing.get('enabled', True)
         )
+        options.extend(
+            PluginRouting(
+                f'Custom:{unique}',
+                routing.get('remark', ''),
+                separatorBefore=index == 0,
+            )
+            for index, (unique, routing) in enumerate(enabledProfiles)
+        )
+
+        return tuple(options)
 
     def configureEnvironment(self):
         """Point Xray-core at Furious's bundled geo-asset directory."""
@@ -282,6 +238,9 @@ class XrayPlugin(FuriousPlugin):
 
         if routing == AppBuiltinRouting.BypassMainlandChina.value:
             if not proxyModeOnly and SystemRuntime.isTUNMode():
+                # Defer Qt access until the application has finished importing it.
+                from Furious.Qt.QtWidgets import showMBoxDirectRulesNotAllowed
+
                 showMBoxDirectRulesNotAllowed()
 
                 return None, False
@@ -385,6 +344,7 @@ class XrayPlugin(FuriousPlugin):
 
             return
 
+        # The download manager is Qt-based and is not needed until this hook runs.
         from .XrayAssetDownloadManager import XrayAssetDownloadManager
 
         try:

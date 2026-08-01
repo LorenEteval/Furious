@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from Furious.Plugins.API import FuriousPlugin, PluginProtocol
+from Furious.Plugins.API import FuriousPlugin, PluginProtocol, PluginRouting
 from Furious.Plugins.Official.Configuration import (
     BLANK_CONFIG_HYSTERIA1,
     ConfigHysteria1,
@@ -75,9 +75,16 @@ class Hysteria1Plugin(FuriousPlugin):
 
     def createEditorForProtocol(self, protocol, parent=None, **kwargs):
         """Create the Hysteria 1 editor."""
+        # Plugin discovery can occur while the Furious.Qt package is initializing.
         from .GuiHysteria1 import GuiHysteria1
 
         return GuiHysteria1(parent=parent, **kwargs)
+
+    def routingOptions(self, config=None):
+        """Return the routing modes supported by Hysteria 1."""
+        return tuple(
+            PluginRouting(routing.value, routing.value) for routing in AppBuiltinRouting
+        )
 
     def startCore(
         self,
@@ -92,6 +99,7 @@ class Hysteria1Plugin(FuriousPlugin):
         """Configure Hysteria 1 routing files and start its core."""
         if routing == AppBuiltinRouting.BypassMainlandChina.value:
             if not proxyModeOnly and SystemRuntime.isTUNMode():
+                # Defer Qt access until the application has finished importing it.
                 from Furious.Qt.QtWidgets import showMBoxDirectRulesNotAllowed
 
                 showMBoxDirectRulesNotAllowed()
