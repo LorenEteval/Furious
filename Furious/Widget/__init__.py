@@ -23,17 +23,9 @@ from .Application import *
 from .ConnectProgressBar import *
 from .GuiCustomizeNetworkTest import *
 from .GuiCustomizeProxyBypass import *
-from .GuiHysteria1 import *
-from .GuiHysteria2 import *
-from .GuiShadowsocks import *
-from .GuiSocks import *
-from .GuiTrojan import *
 from .GuiTUNSettings import *
-from .GuiVLESS import *
-from .GuiVMess import *
 from .IndentSpinBox import *
 from .SystemTrayIcon import *
 from .UserServersQTableView import *
 from .UserSubsQTableView import *
 from .WaitingSpinner import *
-from .XrayAssetViewerQListWidget import *

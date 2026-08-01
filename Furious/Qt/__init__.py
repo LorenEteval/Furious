@@ -32,4 +32,3 @@ from .TextEditor import *
 from .TextEditorTheme import *
 from .UpdatesManager import *
 from .WebGETManager import *
-from .XrayAssetDownloadManager import *

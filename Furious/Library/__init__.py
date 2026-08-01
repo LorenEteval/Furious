@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+from Furious.Plugins.Configuration import *
+
 from .Encoder import *
 from .Storage import *
-from .Configuration import *

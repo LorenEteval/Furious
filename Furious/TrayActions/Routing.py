@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Library import *
+from Furious.Plugins import getPluginRegistry
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
@@ -86,16 +87,12 @@ class RoutingAction(AppQAction):
         )
 
         customActions = list()
-
-        for unique, routing in Storage.UserRoutings().items():
-            if not routing.get('enabled', True):
-                continue
-
+        for label, value in getPluginRegistry().routingChoices():
             action = RoutingChildAction(
-                routing.get('remark', ''),
-                routingValue=f'Custom:{unique}',
+                label,
+                routingValue=value,
                 checkable=True,
-                checked=AppSettings.get('Routing') == f'Custom:{unique}',
+                checked=AppSettings.get('Routing') == value,
             )
             customActions.append(action)
 
