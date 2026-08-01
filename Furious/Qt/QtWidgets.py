@@ -65,6 +65,28 @@ __all__ = [
 ]
 
 
+_OpenDialogs = {}
+
+
+def _releaseOpenDialog(key, *_args):
+    """Release the temporary strong reference for a finished dialog."""
+    _OpenDialogs.pop(key, None)
+
+
+def _retainOpenDialog(dialog):
+    """Keep a shown dialog alive until it finishes or is destroyed."""
+    key = id(dialog)
+    _OpenDialogs[key] = dialog
+
+    if not getattr(dialog, '_furiousOpenDialogLifetimeConnected', False):
+        release = functools.partial(_releaseOpenDialog, key)
+        dialog.finished.connect(release)
+        dialog.destroyed.connect(release)
+        dialog._furiousOpenDialogLifetimeConnected = True
+
+    return key
+
+
 def moveToCenter(widget, parent=None):
     """Move to center."""
     geometry = widget.frameGeometry()
@@ -137,7 +159,14 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
 
     def show(self):
         """Show and position the app Qt dialog."""
-        super().show()
+        key = _retainOpenDialog(self)
+
+        try:
+            super().show()
+        except Exception:
+            _releaseOpenDialog(key)
+
+            raise
 
         if PLATFORM == 'Darwin':
             if self._firstShowCall:
@@ -478,6 +507,17 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
         moveToCenter(self, self.parentWidget())
 
         return self
+
+    def show(self):
+        """Show the message box and retain it until it finishes."""
+        key = _retainOpenDialog(self)
+
+        try:
+            return super().show()
+        except Exception:
+            _releaseOpenDialog(key)
+
+            raise
 
     def exec(self):
         """Show and execute the app q message box modally."""
