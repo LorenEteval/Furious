@@ -29,9 +29,17 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 import io
+import functools
 import pyqrcode
 
 __all__ = ['QRCodeWindow']
+
+_OpenQRCodeWindows = {}
+
+
+def _releaseOpenQRCodeWindow(key, *_args):
+    """Release an exported QR-code window after Qt destroys it."""
+    _OpenQRCodeWindows.pop(key, None)
 
 
 class QRCodeWindow(AppQMainWindow):
@@ -43,12 +51,29 @@ class QRCodeWindow(AppQMainWindow):
 
         self.setWindowTitle(_(APPLICATION_NAME))
         self.setFixedSize(640, 640)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
+
+        self._lifetimeKey = id(self)
+        self.destroyed.connect(
+            functools.partial(_releaseOpenQRCodeWindow, self._lifetimeKey)
+        )
 
         self.tabWidget = QTabWidget(self)
         self.tabWidget.setTabsClosable(True)
         self.tabWidget.tabCloseRequested.connect(self.handleTabCloseRequested)
 
         self.setCentralWidget(self.tabWidget)
+
+    def show(self):
+        """Show and retain this unparented window until Qt destroys it."""
+        _OpenQRCodeWindows[self._lifetimeKey] = self
+
+        try:
+            return super().show()
+        except Exception:
+            _releaseOpenQRCodeWindow(self._lifetimeKey)
+
+            raise
 
     def tabCount(self) -> int:
         """Return the tab count value used by the QR code window."""
