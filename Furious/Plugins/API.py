@@ -69,6 +69,10 @@ class FuriousPlugin:
         """Return optional actions for this plugin's management submenu."""
         return tuple()
 
+    def prepareTUN(self, config) -> bool:
+        """Prepare plugin-native TUN and return whether the plugin handles it."""
+        return False
+
     def routingOptions(self, config=None):
         """Return routing modes supported for a plugin configuration."""
         return tuple()

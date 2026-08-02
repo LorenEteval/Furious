@@ -2154,5 +2154,133 @@ TRANSLATION = {
         "RU": "Редактировать маршрут...",
         "ZH": "编辑路由...",
         "isReviewed": "True"
+    },
+    "Add VMess Server...": {
+        "source": [
+            "Furious.Plugins.Official.Xray.Plugin"
+        ],
+        "RU": "Добавить сервер VMess...",
+        "ZH": "添加VMess服务器...",
+        "isReviewed": "True"
+    },
+    "Add VLESS Server...": {
+        "source": [
+            "Furious.Plugins.Official.Xray.Plugin"
+        ],
+        "RU": "Добавить сервер VLESS...",
+        "ZH": "添加VLESS服务器...",
+        "isReviewed": "True"
+    },
+    "Add Shadowsocks Server...": {
+        "source": [
+            "Furious.Plugins.Official.Xray.Plugin"
+        ],
+        "RU": "Добавить сервер Shadowsocks...",
+        "ZH": "添加Shadowsocks服务器...",
+        "isReviewed": "True"
+    },
+    "Add Trojan Server...": {
+        "source": [
+            "Furious.Plugins.Official.Xray.Plugin"
+        ],
+        "RU": "Добавить сервер Trojan...",
+        "ZH": "添加Trojan服务器...",
+        "isReviewed": "True"
+    },
+    "Add Hysteria1 Server...": {
+        "source": [
+            "Furious.Plugins.Official.Hysteria1.Plugin"
+        ],
+        "RU": "Добавить сервер Hysteria 1...",
+        "ZH": "添加Hysteria1服务器...",
+        "isReviewed": "True"
+    },
+    "Add Hysteria2 Server...": {
+        "source": [
+            "Furious.Plugins.Official.Hysteria2.Plugin"
+        ],
+        "RU": "Добавить сервер Hysteria 2...",
+        "ZH": "添加Hysteria2服务器...",
+        "isReviewed": "True"
+    },
+    "Add SOCKS Server...": {
+        "source": [
+            "Furious.Plugins.Official.Xray.Plugin"
+        ],
+        "RU": "Добавить сервер SOCKS...",
+        "ZH": "添加SOCKS服务器...",
+        "isReviewed": "True"
+    },
+    "Interface": {
+        "source": [
+            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+        ],
+        "RU": "Интерфейс",
+        "ZH": "接口",
+        "isReviewed": "True"
+    },
+    "Network": {
+        "source": [
+            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+        ],
+        "RU": "Сеть",
+        "ZH": "网络",
+        "isReviewed": "True"
+    },
+    "Use Xray-core TUN": {
+        "source": [
+            "Furious.Plugins.Official.Xray.Plugin"
+        ],
+        "RU": "Использовать TUN Xray-core",
+        "ZH": "使用Xray-core TUN",
+        "isReviewed": "True"
+    },
+    "Customize Xray-core TUN Settings": {
+        "source": [
+            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+        ],
+        "RU": "Настроить параметры TUN Xray-core",
+        "ZH": "自定义Xray-core TUN设置",
+        "isReviewed": "True"
+    },
+    "Customize Xray-core TUN Settings...": {
+        "source": [
+            "Furious.Plugins.Official.Xray.Plugin"
+        ],
+        "RU": "Настроить параметры TUN Xray-core...",
+        "ZH": "自定义Xray-core TUN设置...",
+        "isReviewed": "True"
+    },
+    "Gateway (separated by commas)": {
+        "source": [
+            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+        ],
+        "RU": "Gateway (через запятую)",
+        "ZH": "Gateway（以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "DNS (separated by commas)": {
+        "source": [
+            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+        ],
+        "RU": "DNS (через запятую)",
+        "ZH": "DNS（以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "AutoSystemRoutingTable (separated by commas)": {
+        "source": [
+            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+        ],
+        "RU": "AutoSystemRoutingTable (через запятую)",
+        "ZH": "AutoSystemRoutingTable（以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "TUN Documentation": {
+        "source": [
+            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+        ],
+        "RU": "Документация TUN",
+        "ZH": "TUN文档",
+        "isReviewed": "True"
     }
 }

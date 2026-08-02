@@ -149,6 +149,10 @@ class CoreManager(Mixins.CleanupOnExit):
 
             return False
 
+        pluginTUN = False
+        if not proxyModeOnly and SystemRuntime.isTUNMode():
+            pluginTUN = getPluginRegistry().prepareTUN(configcopy)
+
         process, success = self._startCore(
             configcopy,
             routing,
@@ -171,7 +175,7 @@ class CoreManager(Mixins.CleanupOnExit):
             return False
 
         # TUN Mode handling
-        if not proxyModeOnly and SystemRuntime.isTUNMode():
+        if not proxyModeOnly and SystemRuntime.isTUNMode() and not pluginTUN:
             if PLATFORM == 'Windows':
                 # cleanup first
                 SystemRoutingTable.delete('0.0.0.0', APPLICATION_TUN_GATEWAY_ADDRESS)
