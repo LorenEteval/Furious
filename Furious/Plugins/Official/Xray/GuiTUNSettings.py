@@ -1,3 +1,20 @@
+# Copyright (C) 2024–present  Loren Eteval & contributors <loren.eteval@proton.me>
+#
+# This file is part of Furious.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """Provide the editor for Xray-core native TUN settings."""
 
 from __future__ import annotations
@@ -6,12 +23,12 @@ from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import *
 
 import copy
 import functools
 import logging
-import re
 
 from .TUN import getXrayTUNSettings, saveXrayTUNSettings
 
@@ -51,10 +68,8 @@ class GuiXrayTUNItemList(GuiXrayTUNItemText):
     """Edit one list-valued Xray TUN setting as comma-separated text."""
 
     def inputToFactory(self, config: dict) -> bool:
-        """Store comma- or line-separated values in the settings mapping."""
-        value = [
-            item.strip() for item in re.split(r'[,\n]', self.text()) if item.strip()
-        ]
+        """Store comma-separated values in the settings mapping."""
+        value = [item.strip() for item in self.text().split(',') if item.strip()]
         if config.get(self.key, []) == value:
             return False
 
