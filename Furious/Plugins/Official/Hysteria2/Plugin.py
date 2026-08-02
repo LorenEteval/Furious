@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Plugins.API import FuriousPlugin, PluginProtocol
 from Furious.Plugins.Official.Configuration import (
     BLANK_CONFIG_HYSTERIA2,
@@ -16,6 +17,10 @@ from .Core import Hysteria2
 __all__ = ['Hysteria2Plugin']
 
 logger = logging.getLogger(__name__)
+
+_TRANSLATABLE_ACTION_TEXT = [
+    _('Add Hysteria2 Server...'),
+]
 
 
 class Hysteria2Plugin(FuriousPlugin):

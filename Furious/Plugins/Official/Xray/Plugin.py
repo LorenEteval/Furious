@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from Furious.Core.CoreProcessWorker import ProcessOutputRedirector
 from Furious.Frozenlib import *
+from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Library.Storage import Storage
 from Furious.Plugins.API import FuriousPlugin, PluginProtocol, PluginRouting
 from Furious.Plugins.Official.Configuration import (
@@ -19,6 +20,12 @@ import uuid
 
 from .Core import XrayCore
 from .Routing import customRoutingObjectFromSettings
+from .TUN import (
+    buildXrayTUNInbound,
+    hasXrayTUNInbound,
+    isXrayTUNEnabled,
+    setXrayTUNEnabled,
+)
 
 __all__ = ['XrayPlugin']
 
@@ -61,6 +68,15 @@ def fixLogObjectPath(config, attr: str, value: str, log=True):
             f'{XrayCore.name()}: {attr} log is specified as \'{path}\'. '
             f'Fixed to \'{result}\''
         )
+
+
+_TRANSLATABLE_ACTION_TEXT = [
+    _('Add VMess Server...'),
+    _('Add VLESS Server...'),
+    _('Add Shadowsocks Server...'),
+    _('Add Trojan Server...'),
+    _('Add SOCKS Server...'),
+]
 
 
 class XrayPlugin(FuriousPlugin):
@@ -159,16 +175,37 @@ class XrayPlugin(FuriousPlugin):
         return self.createEditorForProtocol(config.proxyProtocol, parent, **kwargs)
 
     def createManagementActions(self, parent=None, **kwargs):
-        """Create Xray routing and asset-management actions."""
+        """Create Xray routing, TUN, and asset-management actions."""
         # These modules require a fully initialized Furious.Qt package.
-        from Furious.Qt import AppQAction, AppQSeperator, bootstrapIcon
+        from Furious.Qt import (
+            AppQAction,
+            AppQSeperator,
+            bootstrapIcon,
+            showMBoxNewChangesNextTime,
+        )
         from Furious.Qt import gettext as _
 
+        from .GuiTUNSettings import GuiXrayTUNSettings
         from .UserRoutingWindow import UserRoutingWindow
         from .XrayAssetViewerWindow import XrayAssetViewerWindow
 
         routingEditor = UserRoutingWindow(parent=parent, **kwargs)
         assetViewer = XrayAssetViewerWindow(parent=parent)
+
+        useXrayTUNAction = AppQAction(
+            _('Use Xray-core TUN'),
+            checkable=True,
+            checked=isXrayTUNEnabled(),
+        )
+
+        def updateUseXrayTUN():
+            """Persist the native Xray TUN action state."""
+            setXrayTUNEnabled(useXrayTUNAction.isChecked())
+
+            if SystemRuntime.isTUNMode():
+                showMBoxNewChangesNextTime()
+
+        useXrayTUNAction.callback = updateUseXrayTUN
 
         return (
             AppQAction(
@@ -177,11 +214,38 @@ class XrayPlugin(FuriousPlugin):
                 callback=routingEditor.show,
             ),
             AppQSeperator(),
+            useXrayTUNAction,
+            AppQAction(
+                _('Customize Xray-core TUN Settings...'),
+                callback=lambda: GuiXrayTUNSettings(parent=parent).open(),
+            ),
+            AppQSeperator(),
             AppQAction(
                 _('Manage Xray-core Asset File...'),
                 callback=assetViewer.show,
             ),
         )
+
+    def prepareTUN(self, config) -> bool:
+        """Add the configured Xray native TUN inbound when enabled."""
+        if not isXrayTUNEnabled():
+            return False
+
+        inbounds = config.get('inbounds')
+        if not isinstance(inbounds, list):
+            inbounds = []
+
+        config['inbounds'] = [
+            inbound
+            for inbound in inbounds
+            if not (
+                isinstance(inbound, dict)
+                and str(inbound.get('protocol', '')).casefold() == 'tun'
+            )
+        ]
+        config['inbounds'].append(buildXrayTUNInbound())
+
+        return True
 
     def routingOptions(self, config=None):
         """Return built-in and named routing modes supported by Xray."""
@@ -241,7 +305,11 @@ class XrayPlugin(FuriousPlugin):
             fixLogObjectPath(config, attr, logRedirectValue, log)
 
         if routing == AppBuiltinRouting.BypassMainlandChina.value:
-            if not proxyModeOnly and SystemRuntime.isTUNMode():
+            if (
+                not proxyModeOnly
+                and SystemRuntime.isTUNMode()
+                and not hasXrayTUNInbound(config)
+            ):
                 # Defer Qt access until the application has finished importing it.
                 from Furious.Qt.QtWidgets import showMBoxDirectRulesNotAllowed
 

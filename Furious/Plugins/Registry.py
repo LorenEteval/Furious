@@ -205,6 +205,23 @@ class PluginRegistry:
 
             return tuple()
 
+    def prepareTUN(self, config) -> bool:
+        """Ask a configuration's plugin to prepare its native TUN support."""
+        plugin = self.pluginForConfig(config)
+        if plugin is None:
+            return False
+
+        try:
+            handled = plugin.prepareTUN(config)
+            if not isinstance(handled, bool):
+                raise TypeError('plugin TUN preparation result must be a boolean')
+
+            return handled
+        except Exception as ex:
+            logger.error(f'TUN preparation failed for {plugin.pluginId!r}: {ex}')
+
+            return False
+
     def routingOptions(self, config):
         """Return validated routing modes supported by a configuration's plugin."""
         plugin = self.pluginForConfig(config)
