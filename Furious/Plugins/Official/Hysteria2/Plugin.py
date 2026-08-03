@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import APP, PLATFORM, SystemRuntime
 from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Plugins.API import FuriousPlugin, PluginProtocol
 from Furious.Plugins.Official.Configuration import (
@@ -30,14 +31,37 @@ import copy
 import logging
 
 from .Core import Hysteria2
+from .TUN import (
+    buildHysteria2TUNConfig,
+    getHysteria2TUNSettings,
+    isHysteria2TUNEnabled,
+    resolveHysteria2ServerAddresses,
+    setHysteria2TUNEnabled,
+)
 
-__all__ = ['Hysteria2Plugin']
+__all__ = ['Hysteria2Plugin', 'isHysteria2ConnectionActive']
 
 logger = logging.getLogger(__name__)
 
 _TRANSLATABLE_ACTION_TEXT = [
     _('Add Hysteria2 Server...'),
 ]
+
+
+def isHysteria2ConnectionActive() -> bool:
+    """Return whether the connected core process belongs to Hysteria 2."""
+    try:
+        connectAction = APP().systemTray.ConnectAction
+        if not connectAction.isConnected():
+            return False
+
+        return any(
+            isinstance(process, Hysteria2)
+            for process in connectAction.coreManager.processesPool
+        )
+    except Exception:
+        # Plugin actions can be created before the tray is fully initialized.
+        return False
 
 
 class Hysteria2Plugin(FuriousPlugin):
@@ -85,6 +109,7 @@ class Hysteria2Plugin(FuriousPlugin):
             'udpForwarding',
             'tcpTProxy',
             'udpTProxy',
+            'tun',
             'fastOpen',
             'lazy',
         )
@@ -105,6 +130,77 @@ class Hysteria2Plugin(FuriousPlugin):
         from .GuiHysteria2 import GuiHysteria2
 
         return GuiHysteria2(parent=parent, **kwargs)
+
+    def createManagementActions(self, parent=None, **kwargs):
+        """Create Hysteria 2 native TUN management actions."""
+        # These modules require a fully initialized Furious.Qt package.
+        from Furious.Qt import AppQAction, showMBoxNewChangesNextTime
+        from Furious.Qt import gettext as _
+
+        from .GuiTUNSettings import GuiHysteria2TUNSettings
+
+        useHysteria2TUNAction = AppQAction(
+            _('Use Hysteria2 TUN'),
+            checkable=True,
+            checked=isHysteria2TUNEnabled(),
+        )
+
+        def updateUseHysteria2TUN():
+            """Persist the native Hysteria 2 TUN action state."""
+            setHysteria2TUNEnabled(useHysteria2TUNAction.isChecked())
+
+            if SystemRuntime.isTUNMode() and isHysteria2ConnectionActive():
+                showMBoxNewChangesNextTime()
+
+        useHysteria2TUNAction.callback = updateUseHysteria2TUN
+
+        return (
+            useHysteria2TUNAction,
+            AppQAction(
+                _('Customize Hysteria2 TUN Settings...'),
+                callback=lambda: GuiHysteria2TUNSettings(parent=parent).open(),
+            ),
+        )
+
+    def prepareTUN(self, config) -> bool:
+        """Add Hysteria 2 native TUN mode when enabled and safe to route."""
+        if not isHysteria2TUNEnabled():
+            # Work on CoreManager's connection copy so a stored native TUN block
+            # cannot run alongside the external tun2socks implementation.
+            config.pop('tun', None)
+
+            return False
+
+        if PLATFORM == 'Linux' and not SystemRuntime.isAdmin():
+            # Native Hysteria 2 creates the interface and routing table in its
+            # own process, so it cannot use CoreManager's privileged helper.
+            # Keep the existing external tun2socks path available instead.
+            config.pop('tun', None)
+            logger.warning(
+                'Hysteria 2 native TUN requires superuser privileges on '
+                'Linux; falling back to external tun2socks'
+            )
+
+            return False
+
+        settings = getHysteria2TUNSettings()
+        serverAddresses = resolveHysteria2ServerAddresses(config)
+        route = settings.get('route', {})
+        hasManualExclusions = bool(route.get('ipv4Exclude') or route.get('ipv6Exclude'))
+
+        if not serverAddresses and not hasManualExclusions:
+            config.pop('tun', None)
+            logger.error(
+                'Hysteria 2 native TUN disabled for this connection because '
+                'the server address could not be resolved and no manual route '
+                'exclusion is configured'
+            )
+
+            return False
+
+        config['tun'] = buildHysteria2TUNConfig(settings, serverAddresses)
+
+        return True
 
     def startCore(
         self,
@@ -133,6 +229,7 @@ class Hysteria2Plugin(FuriousPlugin):
             'disable_udp': False,
         }
         configcopy.pop('socks5', '')
+        configcopy.pop('tun', None)
 
         return configcopy
 
