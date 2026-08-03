@@ -30,6 +30,7 @@ import copy
 import functools
 import logging
 
+from .Plugin import isXrayConnectionActive
 from .TUN import getXrayTUNSettings, saveXrayTUNSettings
 
 __all__ = ['GuiXrayTUNSettings']
@@ -245,7 +246,7 @@ class GuiXrayTUNSettings(GuiEditorWidgetQDialog):
             return
 
         saveXrayTUNSettings(self._settings)
-        if SystemRuntime.isTUNMode():
+        if SystemRuntime.isTUNMode() and isXrayConnectionActive():
             showMBoxNewChangesNextTime()
 
     @functools.lru_cache(None)
