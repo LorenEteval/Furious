@@ -20,16 +20,36 @@
 from __future__ import annotations
 
 from Furious.Core.Tun2socks import Tun2socks
+from Furious.Frozenlib.Mixins import Mixins
 from Furious.Plugins import getPluginRegistry
+from Furious.Qt.AppStyleSheet import AppStyleSheet
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
+from PySide6.QtWidgets import QApplication
 
 __all__ = [
     'DraculaEditorTheme',
     'DraculaJSONSyntaxHighlighter',
     'DraculaLoggerSyntaxHighlighter',
 ]
+
+
+def _currentTheme():
+    """Return the application's active theme without coupling to its concrete type."""
+    app = QApplication.instance()
+
+    if app is not None:
+        themeGetter = getattr(app, 'theme', None)
+
+        if callable(themeGetter):
+            try:
+                return AppStyleSheet.normalizeTheme(themeGetter())
+            except Exception:
+                # A partially initialized application falls back to the safe default.
+                pass
+
+    return AppStyleSheet.Light
 
 
 class EditorHighlightRules:
@@ -66,32 +86,50 @@ class EditorTheme:
 
 
 class DraculaEditorTheme(EditorTheme):
-    """Represent dracula editor theme."""
+    """Compatibility facade for the application-owned editor theme."""
 
     def __init__(self, *args, **kwargs):
         """Initialize the DraculaEditorTheme."""
         super().__init__(*args, **kwargs)
 
     @staticmethod
-    def getStyleSheet(widgetName, fontFamily):
-        """Return style sheet."""
-        return (
-            f'{widgetName} {{'
-            f'    background-color: #282A36;'
-            f'    color: #F8F8F2;'
-            f'    font-family: \'{fontFamily}\';'
-            f'}}'
+    def getStyleSheet(widgetName, fontFamily, theme=None):
+        """Return token-driven editor styling while preserving the legacy API."""
+        if theme is None:
+            theme = _currentTheme()
+
+        return AppStyleSheet.editorStyleSheet(
+            widgetName=widgetName,
+            fontFamily=fontFamily,
+            theme=theme,
         )
 
 
-class AppQSyntaxHighlighter(QSyntaxHighlighter):
+class AppQSyntaxHighlighter(Mixins.ThemeAware, QSyntaxHighlighter):
     """Apply syntax highlighting for app q syntax text."""
 
     def __init__(self, *args, **kwargs):
         """Initialize the AppQSyntaxHighlighter."""
+        self._theme = AppStyleSheet.normalizeTheme(kwargs.pop('theme', _currentTheme()))
+
         super().__init__(*args, **kwargs)
 
         self.highlightRules = list()
+
+    def buildHighlightRules(self, palette):
+        """Return highlight rules for *palette*."""
+        return list()
+
+    def applyTheme(self, theme):
+        """Rebuild formats from semantic tokens and rehighlight the document."""
+        self._theme = AppStyleSheet.normalizeTheme(theme)
+        palette = AppStyleSheet.paletteForTheme(self._theme)
+        self.highlightRules = self.buildHighlightRules(palette)
+        self.rehighlight()
+
+    def themeChangedCallback(self, theme: str):
+        """Refresh syntax formats after an application theme change."""
+        self.applyTheme(theme)
 
     def highlightBlock(self, text):
         """Handle highlight block for the app q syntax highlighter."""
@@ -126,33 +164,38 @@ class AppQSyntaxHighlighter(QSyntaxHighlighter):
 
 
 class DraculaJSONSyntaxHighlighter(AppQSyntaxHighlighter):
-    """Apply syntax highlighting for dracula JSON syntax text."""
+    """Apply application-themed JSON syntax highlighting."""
 
     def __init__(self, *args, **kwargs):
         """Initialize the DraculaJSONSyntaxHighlighter."""
         super().__init__(*args, **kwargs)
 
-        self.highlightRules = [
-            # Keywords: true, false, null. Pink. Bold
-            EditorHighlightRules(r'\b(true|false|null)\b', '#FF79C6', isBold=True),
-            # Numbers. Purple
-            EditorHighlightRules(r'[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?', '#BD93F9'),
-            # Symbols: :, [, ], {, }. White
-            EditorHighlightRules(r'[:,\[\]\{\}]', '#F8F8F2'),
-            # Double-quoted strings. Yellow
-            EditorHighlightRules(r'"[^"\\]*(\\.[^"\\]*)*"', '#F1FA8C'),
-            # JSON keys. Green
+        self.applyTheme(self._theme)
+
+    def buildHighlightRules(self, palette):
+        """Return JSON rules resolved from editor semantic tokens."""
+        return [
             EditorHighlightRules(
-                r'"([^"\\]*(\\.[^"\\]*)*)"\s*:', '#50FA7B', isJSONKey=True
+                r'\b(true|false|null)\b', palette['editor_keyword'], isBold=True
             ),
-            # Comments(only for hints on display). Grey
-            EditorHighlightRules(r'^#.*', '#6272A4'),
+            EditorHighlightRules(
+                r'[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?',
+                palette['editor_number'],
+            ),
+            EditorHighlightRules(r'[:,\[\]\{\}]', palette['editor_symbol']),
+            EditorHighlightRules(r'"[^"\\]*(\\.[^"\\]*)*"', palette['editor_string']),
+            EditorHighlightRules(
+                r'"([^"\\]*(\\.[^"\\]*)*)"\s*:',
+                palette['editor_key'],
+                isJSONKey=True,
+            ),
+            EditorHighlightRules(r'^#.*', palette['editor_comment'], isItalic=True),
         ]
 
 
 class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
     # https://ihateregex.io/expr/ip/
-    """Apply syntax highlighting for dracula logger syntax text."""
+    """Apply application-themed network logger syntax highlighting."""
     IPV4_REGEX = (
         r'(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)'
         r'(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}(?::\d{1,5})?\b'
@@ -182,17 +225,20 @@ class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
         """Initialize the DraculaLoggerSyntaxHighlighter."""
         super().__init__(*args, **kwargs)
 
-        self.highlightRules = [
-            # IP addresses (IPv4 & IPv6)
+        self.applyTheme(self._theme)
+
+    def buildHighlightRules(self, palette):
+        """Return network-log rules resolved from editor semantic tokens."""
+        return [
             EditorHighlightRules(
                 DraculaLoggerSyntaxHighlighter.IPV4_REGEX
                 + r'|'
                 + DraculaLoggerSyntaxHighlighter.IPV6_REGEX,
-                '#B4FFFF',
+                palette['editor_ip'],
             ),
-            # URLs
-            EditorHighlightRules(r'(https?:)?\/\/[^\s,"\'>)\]]+', '#FFDD88'),
-            # Timestamps
+            EditorHighlightRules(
+                r'(https?:)?\/\/[^\s,"\'>)\]]+', palette['editor_url']
+            ),
             EditorHighlightRules(
                 # Application logging timestamp
                 r'\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\]' + r'|'
@@ -200,23 +246,35 @@ class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
                 + r'|'.join(getPluginRegistry().logTimestampPatterns()) + r'|'
                 # tun2socks logging timestamp
                 + r'\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}',
-                '#7F7F7F',
+                palette['editor_timestamp'],
             ),
-            # Logger name: [X.Y.Z]
             EditorHighlightRules(
-                r'\[[A-Za-z0-9_]+\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+\]', '#FFB46E'
+                r'\[[A-Za-z0-9_]+\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+\]',
+                palette['editor_logger'],
             ),
-            # Log levels
-            EditorHighlightRules(r'\[INFO\]|\[Info\]|INFO', '#A0C882', isBold=True),
-            EditorHighlightRules(r'\[DEBUG\]|\[Debug\]|DEBUG', '#82B4FF', isBold=True),
             EditorHighlightRules(
-                r'\[WARNING\]|\[Warning\]|WARNING', '#FFD75A', isBold=True
+                r'\[INFO\]|\[Info\]|INFO', palette['editor_info'], isBold=True
             ),
-            EditorHighlightRules(r'\[ERROR\]|\[Error\]|ERROR', '#FF7878', isBold=True),
             EditorHighlightRules(
-                r'\[CRITICAL\]|\[Critical\]|CRITICAL', '#FF5050', isBold=True
+                r'\[DEBUG\]|\[Debug\]|DEBUG',
+                palette['editor_debug'],
+                isBold=True,
             ),
-            # Quoted strings (single or double)
-            EditorHighlightRules(r"'[^']*'", '#A0FFA0'),
-            EditorHighlightRules(r'"[^"]*"', '#A0FFA0'),
+            EditorHighlightRules(
+                r'\[WARNING\]|\[Warning\]|WARNING',
+                palette['editor_warning'],
+                isBold=True,
+            ),
+            EditorHighlightRules(
+                r'\[ERROR\]|\[Error\]|ERROR',
+                palette['editor_error'],
+                isBold=True,
+            ),
+            EditorHighlightRules(
+                r'\[CRITICAL\]|\[Critical\]|CRITICAL',
+                palette['editor_critical'],
+                isBold=True,
+            ),
+            EditorHighlightRules(r"'[^']*'", palette['editor_string']),
+            EditorHighlightRules(r'"[^"]*"', palette['editor_string']),
         ]
