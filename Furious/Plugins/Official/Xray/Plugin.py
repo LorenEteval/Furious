@@ -44,7 +44,7 @@ from .TUN import (
     setXrayTUNEnabled,
 )
 
-__all__ = ['XrayPlugin']
+__all__ = ['XrayPlugin', 'isXrayConnectionActive']
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,22 @@ _TRANSLATABLE_ACTION_TEXT = [
     _('Add Trojan Server...'),
     _('Add SOCKS Server...'),
 ]
+
+
+def isXrayConnectionActive() -> bool:
+    """Return whether the connected core process belongs to Xray-core."""
+    try:
+        connectAction = APP().systemTray.ConnectAction
+        if not connectAction.isConnected():
+            return False
+
+        return any(
+            isinstance(process, XrayCore)
+            for process in connectAction.coreManager.processesPool
+        )
+    except Exception:
+        # Plugin actions can be created before the tray is fully initialized.
+        return False
 
 
 class XrayPlugin(FuriousPlugin):
@@ -219,7 +235,7 @@ class XrayPlugin(FuriousPlugin):
             """Persist the native Xray TUN action state."""
             setXrayTUNEnabled(useXrayTUNAction.isChecked())
 
-            if SystemRuntime.isTUNMode():
+            if SystemRuntime.isTUNMode() and isXrayConnectionActive():
                 showMBoxNewChangesNextTime()
 
         useXrayTUNAction.callback = updateUseXrayTUN
