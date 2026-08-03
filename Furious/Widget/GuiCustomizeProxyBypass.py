@@ -43,11 +43,11 @@ class GuiCustomizeProxyBypassDialog(AppQDialog):
         """Initialize the GuiCustomizeProxyBypassDialog."""
         super().__init__(*args, **kwargs)
 
-        self.setWindowTitle(_('Customize Proxy Bypass Address'))
+        self.setWindowTitle(_('Customize System Proxy Bypass Address'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         self.proxyBypassText = AppQLabel(
-            _('Enter proxy bypass address (separated by semicolons):')
+            _('Enter system proxy bypass address (separated by semicolons):')
         )
         self.proxyBypassEdit = QLineEdit()
 

@@ -1743,20 +1743,20 @@ TRANSLATION = {
         "ZH": "我就是至高无上的存在 👑",
         "isReviewed": "True"
     },
-    "Customize Proxy Bypass Address": {
+    "Customize System Proxy Bypass Address": {
         "source": [
             "Furious.Widget.GuiCustomizeProxyBypass"
         ],
-        "RU": "Настроить адреса исключений прокси",
-        "ZH": "自定义代理绕过地址",
+        "RU": "Настроить адреса исключений системного прокси",
+        "ZH": "自定义系统代理绕过地址",
         "isReviewed": "True"
     },
-    "Customize Proxy Bypass Address...": {
+    "Customize System Proxy Bypass Address...": {
         "source": [
             "Furious.Window.AppMainWindow"
         ],
-        "RU": "Настроить адреса исключений прокси...",
-        "ZH": "自定义代理绕过地址...",
+        "RU": "Настроить адреса исключений системного прокси...",
+        "ZH": "自定义系统代理绕过地址...",
         "isReviewed": "True"
     },
     "Reset": {
@@ -1768,12 +1768,12 @@ TRANSLATION = {
         "ZH": "重置",
         "isReviewed": "True"
     },
-    "Enter proxy bypass address (separated by semicolons):": {
+    "Enter system proxy bypass address (separated by semicolons):": {
         "source": [
             "Furious.Widget.GuiCustomizeProxyBypass"
         ],
-        "RU": "Введите адреса исключений прокси (через точку с запятой):",
-        "ZH": "输入代理绕过地址（以分号分隔）：",
+        "RU": "Введите адреса исключений системного прокси (через точку с запятой):",
+        "ZH": "输入系统代理绕过地址（以分号分隔）：",
         "isReviewed": "True"
     },
     "Customize Network Test URL": {
