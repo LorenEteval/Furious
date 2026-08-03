@@ -178,7 +178,9 @@ class CoreManager(Mixins.CleanupOnExit):
         if not proxyModeOnly and SystemRuntime.isTUNMode() and not pluginTUN:
             if PLATFORM == 'Windows':
                 # cleanup first
-                SystemRoutingTable.delete('0.0.0.0', APPLICATION_TUN_GATEWAY_ADDRESS)
+                SystemRoutingTable.delete(
+                    '0.0.0.0', APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS
+                )
 
             # Handle user defined settings
             userGateway, userInterfaceIP = (
@@ -207,7 +209,7 @@ class CoreManager(Mixins.CleanupOnExit):
                     defaultGateway = list(
                         # Filter TUN Gateway
                         filter(
-                            lambda x: x != APPLICATION_TUN_GATEWAY_ADDRESS,
+                            lambda x: x != APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS,
                             defaultGateway,
                         )
                     )
@@ -254,13 +256,13 @@ class CoreManager(Mixins.CleanupOnExit):
                 tcpAutoTuning = False
 
             if PLATFORM != 'Linux':
-                interfaceArg = APPLICATION_TUN_NETWORK_INTERFACE_NAME
+                interfaceArg = APPLICATION_TUN2SOCKS_NETWORK_INTERFACE_NAME
             else:
                 interfaceArg = interface
 
             startTUN = functools.partial(
                 tun.start,
-                APPLICATION_TUN_DEVICE_NAME,
+                APPLICATION_TUN2SOCKS_DEVICE_NAME,
                 interfaceArg,
                 'error',
                 f'socks5://{configcopy.socksProxy()}',
@@ -333,7 +335,7 @@ class CoreManager(Mixins.CleanupOnExit):
             if PLATFORM == 'Windows':
                 if not self.waitForTUNDeviceBroughtUp(
                     SystemRoutingTable.WIN32IpconfigFindContent,
-                    APPLICATION_TUN_DEVICE_NAME,
+                    APPLICATION_TUN2SOCKS_DEVICE_NAME,
                 ):
                     return abortStart()
 
@@ -380,7 +382,7 @@ class CoreManager(Mixins.CleanupOnExit):
                 userTunInterfaceDNS = userTunAdapterInterfaceDNS()
 
                 if userTunInterfaceDNS == '':
-                    userTunInterfaceDNS = APPLICATION_TUN_INTERFACE_DNS_ADDRESS
+                    userTunInterfaceDNS = APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS
                 else:
                     logger.info(
                         f'got user defined TUN settings. '
@@ -389,14 +391,14 @@ class CoreManager(Mixins.CleanupOnExit):
 
                 SystemRoutingTable.addRelations()
                 SystemRoutingTable.WIN32SetInterfaceDNS(
-                    APPLICATION_TUN_DEVICE_NAME,
+                    APPLICATION_TUN2SOCKS_DEVICE_NAME,
                     userTunInterfaceDNS,
                     False,
                 )
                 SystemRoutingTable.setDeviceGateway(
-                    APPLICATION_TUN_DEVICE_NAME,
-                    APPLICATION_TUN_IP_ADDRESS,
-                    APPLICATION_TUN_GATEWAY_ADDRESS,
+                    APPLICATION_TUN2SOCKS_DEVICE_NAME,
+                    APPLICATION_TUN2SOCKS_IP_ADDRESS,
+                    APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS,
                 )
                 SystemRoutingTable.WIN32FlushDNSCache()
 
@@ -407,7 +409,7 @@ class CoreManager(Mixins.CleanupOnExit):
                     '198.18.0.0/15',
                 ]:
                     SystemRoutingTable.Relations.append(
-                        [address, APPLICATION_TUN_GATEWAY_ADDRESS]
+                        [address, APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS]
                     )
 
                 servers = SystemRoutingTable.DarwinGetDNSServers()
@@ -423,7 +425,7 @@ class CoreManager(Mixins.CleanupOnExit):
                 userTunInterfaceDNS = userTunAdapterInterfaceDNS()
 
                 if userTunInterfaceDNS == '':
-                    userTunInterfaceDNS = APPLICATION_TUN_INTERFACE_DNS_ADDRESS
+                    userTunInterfaceDNS = APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS
                 else:
                     logger.info(
                         f'got user defined TUN settings. '
@@ -437,9 +439,9 @@ class CoreManager(Mixins.CleanupOnExit):
                     )
 
                 SystemRoutingTable.setDeviceGateway(
-                    APPLICATION_TUN_DEVICE_NAME,
-                    APPLICATION_TUN_IP_ADDRESS,
-                    APPLICATION_TUN_GATEWAY_ADDRESS,
+                    APPLICATION_TUN2SOCKS_DEVICE_NAME,
+                    APPLICATION_TUN2SOCKS_IP_ADDRESS,
+                    APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS,
                 )
                 SystemRoutingTable.addRelations()
 
@@ -448,31 +450,36 @@ class CoreManager(Mixins.CleanupOnExit):
 
                 def _linuxCleanup():
                     """Handle linux cleanup for the core manager."""
-                    SystemRoutingTable.LinuxDeleteTUNDevice(APPLICATION_TUN_DEVICE_NAME)
+                    SystemRoutingTable.LinuxDeleteTUNDevice(
+                        APPLICATION_TUN2SOCKS_DEVICE_NAME
+                    )
 
                 tun.cleanup = functools.partial(_linuxCleanup)
 
-                if SystemRoutingTable.LinuxFindTUNDevice(APPLICATION_TUN_DEVICE_NAME):
+                if SystemRoutingTable.LinuxFindTUNDevice(
+                    APPLICATION_TUN2SOCKS_DEVICE_NAME
+                ):
                     logger.info(
-                        f'find TUN device {APPLICATION_TUN_DEVICE_NAME} success. '
+                        f'find TUN device {APPLICATION_TUN2SOCKS_DEVICE_NAME} success. '
                         f'Will not try to bring up TUN device again'
                     )
 
                     commandBringUpTUN = ''
                 else:
                     logger.info(
-                        f'find TUN device {APPLICATION_TUN_DEVICE_NAME} failed. '
+                        f'find TUN device {APPLICATION_TUN2SOCKS_DEVICE_NAME} failed. '
                         f'Will try to bring up TUN device'
                     )
 
                     commandBringUpTUN = (
-                        f'ip tuntap add mode tun dev {APPLICATION_TUN_DEVICE_NAME}\n'
-                        f'ip addr add 10.10.10.10/24 dev {APPLICATION_TUN_DEVICE_NAME}\n'
-                        f'ip link set dev {APPLICATION_TUN_DEVICE_NAME} up'
+                        f'ip tuntap add mode tun dev {APPLICATION_TUN2SOCKS_DEVICE_NAME}\n'
+                        f'ip addr add 10.10.10.10/24 dev {APPLICATION_TUN2SOCKS_DEVICE_NAME}\n'
+                        f'ip link set dev {APPLICATION_TUN2SOCKS_DEVICE_NAME} up'
                     )
 
                 commandAddDefaultRoute = (
-                    f'ip route add default dev {APPLICATION_TUN_DEVICE_NAME} metric 5'
+                    f'ip route add default dev {APPLICATION_TUN2SOCKS_DEVICE_NAME} '
+                    'metric 5'
                 )
 
                 def route(source, destination) -> str:
@@ -514,7 +521,7 @@ class CoreManager(Mixins.CleanupOnExit):
 
                     if not self.waitForTUNDeviceBroughtUp(
                         SystemRoutingTable.LinuxFindTUNDevice,
-                        APPLICATION_TUN_DEVICE_NAME,
+                        APPLICATION_TUN2SOCKS_DEVICE_NAME,
                     ):
                         return abortStart()
 

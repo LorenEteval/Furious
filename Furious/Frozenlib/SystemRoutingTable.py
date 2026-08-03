@@ -690,7 +690,9 @@ class SystemRoutingTable:
         """Delete relations."""
         if PLATFORM == 'Windows':
             if len(SystemRoutingTable.Relations):
-                SystemRoutingTable.delete('0.0.0.0', APPLICATION_TUN_GATEWAY_ADDRESS)
+                SystemRoutingTable.delete(
+                    '0.0.0.0', APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS
+                )
 
         for sourceIP, destinationIP in SystemRoutingTable.Relations[::-1]:
             SystemRoutingTable.delete(sourceIP, destinationIP)
