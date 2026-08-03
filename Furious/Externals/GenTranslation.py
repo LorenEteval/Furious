@@ -1606,21 +1606,21 @@ TRANSLATION = {
         "ZH": "无代理",
         "isReviewed": "True"
     },
-    "Customize TUN Settings": {
+    "Customize Tun2socks Settings": {
         "source": [
             "Furious.Widget.GuiTUNSettings"
         ],
-        "RU": "Настроить параметры TUN",
-        "ZH": "自定义TUN设置",
+        "RU": "Настроить параметры Tun2socks",
+        "ZH": "自定义Tun2socks设置",
         "isReviewed": "True"
     },
-    "Customize TUN Settings...": {
+    "Customize Tun2socks Settings...": {
         "source": [
             "Furious.TrayActions.Settings",
             "Furious.Window.AppMainWindow"
         ],
-        "RU": "Настроить параметры TUN...",
-        "ZH": "自定义TUN设置...",
+        "RU": "Настроить параметры Tun2socks...",
+        "ZH": "自定义Tun2socks设置...",
         "isReviewed": "True"
     },
     "Go to help page": {
@@ -1655,20 +1655,20 @@ TRANSLATION = {
         "ZH": "默认主网关IP",
         "isReviewed": "True"
     },
-    "TUN Adapter Interface DNS": {
+    "Tun2socks Adapter Interface DNS": {
         "source": [
             "Furious.Widget.GuiTUNSettings"
         ],
-        "RU": "DNS-адрес интерфейса адаптера TUN",
-        "ZH": "TUN适配器接口DNS",
+        "RU": "DNS-адрес интерфейса адаптера Tun2socks",
+        "ZH": "Tun2socks适配器接口DNS",
         "isReviewed": "True"
     },
-    "Bypass TUN Adapter Interface IP (separated by commas)": {
+    "Bypass Tun2socks Adapter Interface IP (separated by commas)": {
         "source": [
             "Furious.Widget.GuiTUNSettings"
         ],
-        "RU": "Обход IP-адреса интерфейса адаптера TUN (через запятую)",
-        "ZH": "绕过TUN适配器接口IP（以逗号分隔）",
+        "RU": "Обход IP-адреса интерфейса адаптера Tun2socks (через запятую)",
+        "ZH": "绕过Tun2socks适配器接口IP（以逗号分隔）",
         "isReviewed": "True"
     },
     "Disable Primary Adapter Interface DNS (Mitigating DNS leaks on Windows)": {
