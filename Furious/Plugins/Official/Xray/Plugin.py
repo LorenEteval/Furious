@@ -225,6 +225,16 @@ class XrayPlugin(FuriousPlugin):
         routingEditor = UserRoutingWindow(parent=parent, **kwargs)
         assetViewer = XrayAssetViewerWindow(parent=parent)
 
+        def showRoutingDialog():
+            """Restore and foreground the persistent routing editor window."""
+            if routingEditor.isMinimized():
+                routingEditor.showNormal()
+            else:
+                routingEditor.show()
+
+            routingEditor.raise_()
+            routingEditor.activateWindow()
+
         useXrayTUNAction = AppQAction(
             _('Use Xray-core TUN'),
             checkable=True,
@@ -244,7 +254,7 @@ class XrayPlugin(FuriousPlugin):
             AppQAction(
                 _('Edit Routing...'),
                 icon=bootstrapIcon('signpost.svg'),
-                callback=routingEditor.show,
+                callback=showRoutingDialog,
             ),
             AppQSeperator(),
             useXrayTUNAction,
