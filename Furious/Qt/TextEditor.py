@@ -287,12 +287,12 @@ class AppQTextBrowser(SupportPointSizeSettings, QTextBrowser):
         AppSettings.set(self.pointSizeSettingsName, str(self.font().pointSize()))
 
 
-class DraculaTextEditor(AppQPlainTextEdit):
-    """Represent dracula text editor."""
+class DraculaTextEditor(Mixins.ThemeAware, AppQPlainTextEdit):
+    """Represent the legacy-named, application-themed text editor."""
 
     def __init__(self, *args, **kwargs):
         """Initialize the DraculaTextEditor."""
-        fontFamily = kwargs.pop('fontFamily', '')
+        self._fontFamily = kwargs.pop('fontFamily', '')
 
         super().__init__(*args, **kwargs)
 
@@ -302,7 +302,7 @@ class DraculaTextEditor(AppQPlainTextEdit):
         # Theme
         self.setStyleSheet(
             DraculaEditorTheme.getStyleSheet(
-                widgetName='QPlainTextEdit', fontFamily=fontFamily
+                widgetName='QPlainTextEdit', fontFamily=self._fontFamily
             )
         )
 
@@ -324,6 +324,16 @@ class DraculaTextEditor(AppQPlainTextEdit):
         self.modificationChanged.connect(handleModificationChanged)
         self.cursorPositionChanged.connect(handleCursorPositionChanged)
 
+    def themeChangedCallback(self, theme: str):
+        """Refresh editor chrome after an application theme change."""
+        self.setStyleSheet(
+            DraculaEditorTheme.getStyleSheet(
+                widgetName='QPlainTextEdit',
+                fontFamily=self._fontFamily,
+                theme=theme,
+            )
+        )
+
     def registerCursorPositionChangedCb(self, callback: Callable[[QTextCursor], None]):
         """Handle register cursor position changed cb for the dracula text editor."""
         self._cursorPositionChangedCb = callback
@@ -343,12 +353,12 @@ class DraculaJSONTextEditor(DraculaTextEditor):
         self._syntaxHighlighter = DraculaJSONSyntaxHighlighter(self.document())
 
 
-class DraculaTextBrowser(AppQTextBrowser):
-    """Represent dracula text browser."""
+class DraculaTextBrowser(Mixins.ThemeAware, AppQTextBrowser):
+    """Represent the legacy-named, application-themed text browser."""
 
     def __init__(self, *args, **kwargs):
         """Initialize the DraculaTextBrowser."""
-        fontFamily = kwargs.pop('fontFamily', '')
+        self._fontFamily = kwargs.pop('fontFamily', '')
 
         super().__init__(*args, **kwargs)
 
@@ -357,6 +367,16 @@ class DraculaTextBrowser(AppQTextBrowser):
         # Theme
         self.setStyleSheet(
             DraculaEditorTheme.getStyleSheet(
-                widgetName='QTextBrowser', fontFamily=fontFamily
+                widgetName='QTextBrowser', fontFamily=self._fontFamily
+            )
+        )
+
+    def themeChangedCallback(self, theme: str):
+        """Refresh browser chrome after an application theme change."""
+        self.setStyleSheet(
+            DraculaEditorTheme.getStyleSheet(
+                widgetName='QTextBrowser',
+                fontFamily=self._fontFamily,
+                theme=theme,
             )
         )

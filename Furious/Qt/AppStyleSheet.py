@@ -33,6 +33,7 @@ class AppStyleSheet:
 
     Palettes = {
         Light: {
+            # Application surfaces and interaction states.
             'window': '#F4F7FB',
             'panel': '#FFFFFF',
             'panel_alt': '#F8FAFD',
@@ -64,8 +65,37 @@ class AppStyleSheet:
             'warning_soft': '#FFF4D6',
             'scroll_handle': '#B9C5D4',
             'scroll_handle_hover': '#93A3B7',
+            # Editor semantics.
+            'editor_background': '#F8FAFC',
+            'editor_text': '#172033',
+            'editor_keyword': '#7C3AED',
+            'editor_string': '#0F766E',
+            'editor_number': '#B45309',
+            'editor_comment': '#64748B',
+            'editor_ip': '#0369A1',
+            'editor_url': '#2563EB',
+            'editor_warning': '#A16207',
+            'editor_error': '#D33F5A',
+            'editor_symbol': '#475569',
+            'editor_key': '#047857',
+            'editor_timestamp': '#64748B',
+            'editor_logger': '#C2410C',
+            'editor_info': '#15803D',
+            'editor_debug': '#2563EB',
+            'editor_critical': '#B91C1C',
+            'editor_selection': '#D8E8FF',
+            'editor_selection_text': '#102A56',
+            # Progress and connection semantics.
+            'progress_background': '#DCE5F0',
+            'progress_chunk_start': '#2563EB',
+            'progress_chunk_end': '#22B8CF',
+            'progress_text': '#172033',
+            'connection_disconnected': '#D94F64',
+            'connection_connecting': '#3B82F6',
+            'connection_connected': '#159A70',
         },
         Dark: {
+            # Application surfaces and interaction states.
             'window': '#0F131A',
             'panel': '#151A22',
             'panel_alt': '#11161D',
@@ -97,6 +127,34 @@ class AppStyleSheet:
             'warning_soft': '#352C18',
             'scroll_handle': '#3B4654',
             'scroll_handle_hover': '#536171',
+            # Editor semantics.
+            'editor_background': '#10151D',
+            'editor_text': '#E7ECF4',
+            'editor_keyword': '#C4A7FF',
+            'editor_string': '#85E0B7',
+            'editor_number': '#F5B971',
+            'editor_comment': '#8290A4',
+            'editor_ip': '#80D8FF',
+            'editor_url': '#8AB4FF',
+            'editor_warning': '#F7C65F',
+            'editor_error': '#FF7A8A',
+            'editor_symbol': '#C7D0DD',
+            'editor_key': '#6EE7B7',
+            'editor_timestamp': '#8290A4',
+            'editor_logger': '#FFAD7A',
+            'editor_info': '#7DD3A8',
+            'editor_debug': '#82B4FF',
+            'editor_critical': '#FF5C70',
+            'editor_selection': '#214A7D',
+            'editor_selection_text': '#F6F9FF',
+            # Progress and connection semantics.
+            'progress_background': '#242C38',
+            'progress_chunk_start': '#5B9BFF',
+            'progress_chunk_end': '#36D6C5',
+            'progress_text': '#F7F9FC',
+            'connection_disconnected': '#FF6B7A',
+            'connection_connecting': '#5B9BFF',
+            'connection_connected': '#42D39A',
         },
     }
 
@@ -109,10 +167,92 @@ class AppStyleSheet:
         return AppStyleSheet.Light
 
     @staticmethod
+    def paletteForTheme(theme):
+        """Return the semantic token palette for *theme*."""
+        return AppStyleSheet.Palettes[AppStyleSheet.normalizeTheme(theme)]
+
+    @staticmethod
+    def editorStyleSheet(widgetName, fontFamily='', theme=Light):
+        """Return editor chrome built exclusively from semantic theme tokens."""
+        palette = AppStyleSheet.paletteForTheme(theme)
+        escapedFontFamily = fontFamily.replace('\\', '\\\\').replace("'", "\\'")
+        fontDeclaration = ''
+
+        if escapedFontFamily:
+            fontDeclaration = f"font-family: '{escapedFontFamily}';"
+
+        return dedent(f"""
+            {widgetName} {{
+                border: 1px solid {palette['border']};
+                border-radius: 6px;
+                background-color: {palette['editor_background']};
+                color: {palette['editor_text']};
+                selection-background-color: {palette['editor_selection']};
+                selection-color: {palette['editor_selection_text']};
+                {fontDeclaration}
+            }}
+
+            {widgetName}:hover {{
+                border-color: {palette['border_strong']};
+            }}
+
+            {widgetName}:focus {{
+                border-color: {palette['accent']};
+                background-color: {palette['editor_background']};
+            }}
+        """).strip()
+
+    @staticmethod
+    def progressBarStyleSheet(theme=Light):
+        """Return progress styling built from progress and connection tokens."""
+        palette = AppStyleSheet.paletteForTheme(theme)
+
+        return dedent(f"""
+            QProgressBar {{
+                min-height: 12px;
+                border: 1px solid {palette['border']};
+                border-radius: 6px;
+                background-color: {palette['progress_background']};
+                color: {palette['progress_text']};
+                text-align: center;
+            }}
+
+            QProgressBar::chunk {{
+                border-radius: 5px;
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 0,
+                    stop: 0 {palette['progress_chunk_start']},
+                    stop: 1 {palette['progress_chunk_end']}
+                );
+            }}
+
+            QProgressBar[connectionState="disconnected"]::chunk {{
+                background: {palette['connection_disconnected']};
+            }}
+
+            QProgressBar[connectionState="connecting"]::chunk {{
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 0,
+                    stop: 0 {palette['connection_connecting']},
+                    stop: 1 {palette['progress_chunk_end']}
+                );
+            }}
+
+            QProgressBar[connectionState="connected"]::chunk {{
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 0,
+                    stop: 0 {palette['progress_chunk_start']},
+                    stop: 1 {palette['connection_connected']}
+                );
+            }}
+        """).strip()
+
+    @staticmethod
     def forTheme(theme):
         """Return the complete Qt style sheet for *theme*."""
         normalizedTheme = AppStyleSheet.normalizeTheme(theme)
-        palette = AppStyleSheet.Palettes[normalizedTheme]
+        palette = AppStyleSheet.paletteForTheme(normalizedTheme)
+        progressBarStyleSheet = AppStyleSheet.progressBarStyleSheet(normalizedTheme)
         iconPrefix = ':/Icons/bootstrap'
 
         if normalizedTheme == AppStyleSheet.Dark:
@@ -689,19 +829,7 @@ class AppStyleSheet:
                 background-color: transparent;
             }}
 
-            QProgressBar {{
-                min-height: 8px;
-                border: none;
-                border-radius: 4px;
-                background-color: {palette['raised']};
-                color: {palette['text']};
-                text-align: center;
-            }}
-
-            QProgressBar::chunk {{
-                border-radius: 4px;
-                background-color: {palette['accent']};
-            }}
+            {progressBarStyleSheet}
 
             QCheckBox,
             QRadioButton {{

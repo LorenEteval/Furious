@@ -52,10 +52,25 @@ class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(update)
 
-        self.setStyleSheet(self.getStyleSheet())
+        self._setConnectionState('disconnected')
+
+    def _setConnectionState(self, state: str):
+        """Expose semantic state to the application-owned progress style."""
+        if self.property('connectionState') == state:
+            return
+
+        self.setProperty('connectionState', state)
+
+        # Qt does not automatically repolish a widget after a dynamic property
+        # used by a style-sheet selector changes.
+        style = self.style()
+        style.unpolish(self)
+        style.polish(self)
+        self.update()
 
     def start(self, msec: int):
         """Start the auto update progress bar."""
+        self._setConnectionState('connecting')
         self.timer.start(msec)
 
     def stop(self):
@@ -63,31 +78,23 @@ class AutoUpdateProgressBar(Mixins.ConnectionAware, QProgressBar):
         self.timer.stop()
 
     @staticmethod
-    def getStyleSheet():
-        """Return style sheet."""
-        return (
-            f'QProgressBar {{'
-            f'    border-radius: 2px;'
-            f'    text-align: center;'
-            f'}}'
-            f''
-            f'QProgressBar::chunk {{'
-            f'    background: qlineargradient('
-            f'        x1: 0, y1: 0, x2: 1, y2: 0,'
-            f'        stop: 0 {AppHue.disconnectedColor()},'
-            f'        stop: 1 {AppHue.connectedColor()}'
-            f'    );'
-            f'    border-radius: 2px;'
-            f'}}'
-        )
+    def getStyleSheet(theme=None):
+        """Return centralized progress styling for compatibility callers."""
+        if theme is None:
+            try:
+                theme = APP().theme()
+            except Exception:
+                theme = AppStyleSheet.Light
+
+        return AppStyleSheet.progressBarStyleSheet(theme)
 
     def disconnectedCallback(self):
         """Update the auto update progress bar for a disconnected state."""
-        pass
+        self._setConnectionState('disconnected')
 
     def connectedCallback(self):
         """Update the auto update progress bar for a connected state."""
-        pass
+        self._setConnectionState('connected')
 
 
 class ConnectProgressBar(Mixins.QTranslatable, Mixins.ConnectionAware, QWidget):
