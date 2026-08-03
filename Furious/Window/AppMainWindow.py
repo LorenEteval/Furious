@@ -420,7 +420,7 @@ class AppMainWindow(AppQMainWindow):
         toolsActions = [
             *customizeTUNSettingsAction,
             AppQAction(
-                _('Customize Proxy Bypass Address...'),
+                _('Customize System Proxy Bypass Address...'),
                 checkable=False,
                 callback=lambda: self.customizeProxyBypassDialog.open(),
             ),
