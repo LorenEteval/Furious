@@ -238,11 +238,13 @@ class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
                 key='defaultPrimaryGatewayIP',
             ),
             GuiTUNSettingsItemXXX(
-                title=_('TUN Adapter Interface DNS'),
+                title=_('Tun2socks Adapter Interface DNS'),
                 key='tunAdapterInterfaceDNS',
             ),
             GuiTUNSettingsItemXXX(
-                title=_('Bypass TUN Adapter Interface IP (separated by commas)'),
+                title=_(
+                    'Bypass Tun2socks Adapter Interface IP (separated by commas)'
+                ),
                 key='bypassTUNAdapterInterfaceIP',
             ),
             GuiTUNSettingsItemCheckBoxXXX(
@@ -298,7 +300,7 @@ class GuiTUNSettings(GuiEditorWidgetQDialog):
 
         super().__init__(*args, tabTranslatable=tabTranslatable, style=style, **kwargs)
 
-        self.setTabText(_('Customize TUN Settings'))
+        self.setTabText(_('Customize Tun2socks Settings'))
 
         if PLATFORM == 'Darwin' or PLATFORM == 'Linux':
             self.setFixedSize(int(690 * GOLDEN_RATIO), int(690))

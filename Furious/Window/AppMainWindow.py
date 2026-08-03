@@ -381,7 +381,7 @@ class AppMainWindow(AppQMainWindow):
         else:
             customizeTUNSettingsAction = [
                 AppQAction(
-                    _('Customize TUN Settings...'),
+                    _('Customize Tun2socks Settings...'),
                     icon=bootstrapIcon('diagram-3.svg'),
                     checkable=False,
                     callback=lambda: self.getGuiTUNSettings().open(),
