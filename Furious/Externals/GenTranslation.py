@@ -2213,6 +2213,7 @@ TRANSLATION = {
     },
     "Interface": {
         "source": [
+            "Furious.Plugins.Official.Hysteria2.GuiTUNSettings",
             "Furious.Plugins.Official.Xray.GuiTUNSettings"
         ],
         "RU": "Интерфейс",
@@ -2221,6 +2222,7 @@ TRANSLATION = {
     },
     "Network": {
         "source": [
+            "Furious.Plugins.Official.Hysteria2.GuiTUNSettings",
             "Furious.Plugins.Official.Xray.GuiTUNSettings"
         ],
         "RU": "Сеть",
@@ -2277,10 +2279,35 @@ TRANSLATION = {
     },
     "TUN Documentation": {
         "source": [
+            "Furious.Plugins.Official.Hysteria2.GuiTUNSettings",
             "Furious.Plugins.Official.Xray.GuiTUNSettings"
         ],
         "RU": "Документация TUN",
         "ZH": "TUN文档",
+        "isReviewed": "True"
+    },
+    "Use Hysteria2 TUN": {
+        "source": [
+            "Furious.Plugins.Official.Hysteria2.Plugin"
+        ],
+        "RU": "Использовать TUN Hysteria2",
+        "ZH": "使用Hysteria2 TUN",
+        "isReviewed": "True"
+    },
+    "Customize Hysteria2 TUN Settings": {
+        "source": [
+            "Furious.Plugins.Official.Hysteria2.GuiTUNSettings"
+        ],
+        "RU": "Настроить параметры TUN Hysteria2",
+        "ZH": "自定义Hysteria2 TUN设置",
+        "isReviewed": "True"
+    },
+    "Customize Hysteria2 TUN Settings...": {
+        "source": [
+            "Furious.Plugins.Official.Hysteria2.Plugin"
+        ],
+        "RU": "Настроить параметры TUN Hysteria2...",
+        "ZH": "自定义Hysteria2 TUN设置...",
         "isReviewed": "True"
     }
 }
