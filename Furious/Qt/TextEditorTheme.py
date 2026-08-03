@@ -194,31 +194,51 @@ class DraculaJSONSyntaxHighlighter(AppQSyntaxHighlighter):
 
 
 class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
-    # https://ihateregex.io/expr/ip/
     """Apply application-themed network logger syntax highlighting."""
-    IPV4_REGEX = (
-        r'(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)'
-        r'(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}(?::\d{1,5})?\b'
+
+    # Keep IPv4 strict enough to avoid highlighting malformed octets in logs.
+    _IPV4_OCTET_REGEX = r'(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])'
+    _IPV4_ADDRESS_REGEX = rf'(?:{_IPV4_OCTET_REGEX}\.){{3}}{_IPV4_OCTET_REGEX}'
+    IPV4_REGEX = rf'(?<![\w.]){_IPV4_ADDRESS_REGEX}' rf'(?::[0-9]{{1,5}})?(?![\w.:])'
+
+    _IPV6_HEXTET_REGEX = r'[0-9A-Fa-f]{1,4}'
+    _IPV6_ADDRESS_REGEX = (
+        rf'(?:'
+        # Full, uncompressed address.
+        rf'(?:{_IPV6_HEXTET_REGEX}:){{7}}{_IPV6_HEXTET_REGEX}|'
+        # Compressed forms with one or more omitted hextets.
+        rf'(?:{_IPV6_HEXTET_REGEX}:){{1,7}}:|'
+        rf'(?:{_IPV6_HEXTET_REGEX}:){{1,6}}:{_IPV6_HEXTET_REGEX}|'
+        rf'(?:{_IPV6_HEXTET_REGEX}:){{1,5}}'
+        rf'(?::{_IPV6_HEXTET_REGEX}){{1,2}}|'
+        rf'(?:{_IPV6_HEXTET_REGEX}:){{1,4}}'
+        rf'(?::{_IPV6_HEXTET_REGEX}){{1,3}}|'
+        rf'(?:{_IPV6_HEXTET_REGEX}:){{1,3}}'
+        rf'(?::{_IPV6_HEXTET_REGEX}){{1,4}}|'
+        rf'(?:{_IPV6_HEXTET_REGEX}:){{1,2}}'
+        rf'(?::{_IPV6_HEXTET_REGEX}){{1,5}}|'
+        rf'{_IPV6_HEXTET_REGEX}:'
+        rf'(?:(?::{_IPV6_HEXTET_REGEX}){{1,6}})|'
+        rf':(?:(?::{_IPV6_HEXTET_REGEX}){{1,7}}|:)|'
+        # IPv4-embedded and IPv4-mapped forms.
+        rf'(?:(?:{_IPV6_HEXTET_REGEX}:){{6}}|'
+        rf'::(?:{_IPV6_HEXTET_REGEX}:){{0,5}}|'
+        rf'(?:{_IPV6_HEXTET_REGEX}:){{1,5}}:)'
+        rf'{_IPV4_ADDRESS_REGEX}'
+        rf')'
     )
-    # https://vernon.mauery.com/content/2008/04/21/ipv6-regex/
+    _IPV6_HOST_REGEX = rf'{_IPV6_ADDRESS_REGEX}(?:%[0-9A-Za-z_.~-]+)?'
+    # A port is only recognized on bracketed IPv6, where it is unambiguous.
     IPV6_REGEX = (
-        r'(A([0-9a-f]{1,4}:){1,1}(:[0-9a-f]{1,4}){1,6}Z)|'
-        r'(A([0-9a-f]{1,4}:){1,2}(:[0-9a-f]{1,4}){1,5}Z)|'
-        r'(A([0-9a-f]{1,4}:){1,3}(:[0-9a-f]{1,4}){1,4}Z)|'
-        r'(A([0-9a-f]{1,4}:){1,4}(:[0-9a-f]{1,4}){1,3}Z)|'
-        r'(A([0-9a-f]{1,4}:){1,5}(:[0-9a-f]{1,4}){1,2}Z)|'
-        r'(A([0-9a-f]{1,4}:){1,6}(:[0-9a-f]{1,4}){1,1}Z)|'
-        r'(A(([0-9a-f]{1,4}:){1,7}|:):Z)|'
-        r'(A:(:[0-9a-f]{1,4}){1,7}Z)|'
-        r'(A((([0-9a-f]{1,4}:){6})(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3})Z)|'
-        r'(A(([0-9a-f]{1,4}:){5}[0-9a-f]{1,4}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3})Z)|'
-        r'(A([0-9a-f]{1,4}:){5}:[0-9a-f]{1,4}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
-        r'(A([0-9a-f]{1,4}:){1,1}(:[0-9a-f]{1,4}){1,4}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
-        r'(A([0-9a-f]{1,4}:){1,2}(:[0-9a-f]{1,4}){1,3}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
-        r'(A([0-9a-f]{1,4}:){1,3}(:[0-9a-f]{1,4}){1,2}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
-        r'(A([0-9a-f]{1,4}:){1,4}(:[0-9a-f]{1,4}){1,1}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
-        r'(A(([0-9a-f]{1,4}:){1,5}|:):(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)|'
-        r'(A:(:[0-9a-f]{1,4}){1,5}:(25[0-5]|2[0-4]d|[0-1]?d?d)(.(25[0-5]|2[0-4]d|[0-1]?d?d)){3}Z)(?::\d{1,5})?'
+        rf'(?:'
+        # Bracketed endpoints commonly follow a transport prefix such as "tcp:".
+        rf'(?<!\w)\[{_IPV6_HOST_REGEX}\](?::[0-9]{{1,5}})?(?![\w:])|'
+        rf'(?<![\w:\[]){_IPV6_HOST_REGEX}(?![\w:\]])'
+        rf')'
+    )
+
+    LOGGER_NAME_REGEX = (
+        r'\[(?:[A-Za-z_][A-Za-z0-9_]*)' r'(?:\.[A-Za-z_][A-Za-z0-9_]*)+\]'
     )
 
     def __init__(self, *args, **kwargs):
@@ -249,7 +269,7 @@ class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
                 palette['editor_timestamp'],
             ),
             EditorHighlightRules(
-                r'\[[A-Za-z0-9_]+\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+\]',
+                DraculaLoggerSyntaxHighlighter.LOGGER_NAME_REGEX,
                 palette['editor_logger'],
             ),
             EditorHighlightRules(
