@@ -46,7 +46,7 @@ DEFAULT_XRAY_TUN_SETTINGS = {
     'autoOutboundsInterface': 'auto',
 }
 
-registerAppSettings('useXrayTUN', isBinary=True)
+registerAppSettings('useXrayTUN', isBinary=True, default=AppBinarySettings.ON_)
 registerAppSettings('XrayTUNSettings')
 
 
