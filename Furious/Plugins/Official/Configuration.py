@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
+from Furious.Library.Configuration import ConfigFactory
 from Furious.Library.Encoder import *
 
 from typing import Union, Tuple
@@ -392,7 +393,7 @@ class ConfigXray(ConfigFactory):
     def getProxyOutboundServer(config: dict, protocol: Protocol, **kwargs) -> dict:
         """Return proxy outbound server."""
         value, proxyOutbound = (
-            protocol.value.lower(),
+            protocol.value.casefold(),
             ConfigXray.getProxyOutboundObject(config, **kwargs),
         )
 
@@ -458,7 +459,7 @@ class ConfigXray(ConfigFactory):
     def proxyServerObject(self) -> dict:
         """Return the proxy server object value."""
         try:
-            proxyProtocol = self.proxyProtocol.lower()
+            proxyProtocol = self.proxyProtocol.casefold()
 
             if proxyProtocol == 'vmess' or proxyProtocol == 'vless':
                 return self.proxyOutboundObject['settings']['vnext'][0]
@@ -479,7 +480,7 @@ class ConfigXray(ConfigFactory):
     def proxyUserObject(self) -> dict:
         """Return the proxy user object value."""
         try:
-            if self.proxyProtocol.lower() == 'socks':
+            if self.proxyProtocol.casefold() == 'socks':
                 return self.proxyServerObject
 
             return self.proxyServerObject['users'][0]
@@ -1416,7 +1417,7 @@ class ConfigXray(ConfigFactory):
         else:
             override = remark
 
-        protocol = self.proxyProtocol.lower()
+        protocol = self.proxyProtocol.casefold()
 
         if protocol == 'vmess':
             netloc = PyBase64Encoder.encode(
@@ -2311,7 +2312,7 @@ class ConfigHysteria2(ConfigFactory):
 
 def configXrayEmptyProxyOutboundObject(protocol: Protocol) -> dict:
     """Return the config Xray empty proxy outbound object value used by the application."""
-    value = protocol.value.lower()
+    value = protocol.value.casefold()
 
     if value == 'vless' or value == 'vmess':
         return {

@@ -19,4 +19,6 @@
 
 from __future__ import annotations
 
-from .Plugin import *
+from .Plugin import XrayPlugin
+
+__all__ = ['XrayPlugin']

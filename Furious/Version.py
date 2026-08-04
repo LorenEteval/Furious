@@ -15,8 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Define the Furious package version."""
+"""Provide the stable public import path for the Furious package version."""
 
 from __future__ import annotations
 
-__version__ = '0.7.0'
+from Furious.Frozenlib.Version import __version__
+
+__all__ = ['__version__']

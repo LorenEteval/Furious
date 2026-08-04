@@ -154,7 +154,7 @@ TRANSLATION = {
     "Text files (*.json);;All files (*)": {
         "source": [
             "Furious.TrayActions.Import",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Текст файлов (*.json);;Остальные файлы (*)",
         "ZH": "文本文件 (*.json);;所有文件 (*)",
@@ -225,7 +225,7 @@ TRANSLATION = {
             "Furious.Widget.GuiCustomizeProxyBypass",
             "Furious.Widget.IndentSpinBox",
             "Furious.Widget.UserServersQTableView",
-            "Furious.Window.TextEditorWindow",
+            "Furious.Widget.TextEditorWindow",
             "Furious.Window.UserSubsWindow"
         ],
         "RU": "Отмена",
@@ -234,7 +234,7 @@ TRANSLATION = {
     },
     "Save Changes": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Сохранить изменения",
         "ZH": "保存更改",
@@ -242,7 +242,7 @@ TRANSLATION = {
     },
     "The content has been modified. Save changes?": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Содержимое было изменено. Сохранить изменения?",
         "ZH": "内容已修改。保存更改？",
@@ -250,7 +250,7 @@ TRANSLATION = {
     },
     "Save": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Сохранить",
         "ZH": "保存",
@@ -258,7 +258,7 @@ TRANSLATION = {
     },
     "Discard": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Отказаться",
         "ZH": "丢弃",
@@ -266,7 +266,7 @@ TRANSLATION = {
     },
     "Please check if the configuration is in valid JSON format": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Проверьте, имеет ли конфигурация допустимый формат JSON",
         "ZH": "请检查配置是否为有效的JSON格式",
@@ -275,7 +275,7 @@ TRANSLATION = {
     "Save As...": {
         "source": [
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Сохранить как...",
         "ZH": "另存为...",
@@ -283,7 +283,7 @@ TRANSLATION = {
     },
     "Close Window": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Закрыть окно",
         "ZH": "关闭窗口",
@@ -293,7 +293,7 @@ TRANSLATION = {
         "source": [
             "Furious.Plugins.Official.Xray.XrayAssetViewerWindow",
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Файл",
         "ZH": "文件",
@@ -301,7 +301,7 @@ TRANSLATION = {
     },
     "Undo": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Отменить",
         "ZH": "撤销",
@@ -309,7 +309,7 @@ TRANSLATION = {
     },
     "Redo": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Повторить",
         "ZH": "重做",
@@ -317,7 +317,7 @@ TRANSLATION = {
     },
     "Cut": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Вырезать",
         "ZH": "剪切",
@@ -326,7 +326,7 @@ TRANSLATION = {
     "Copy": {
         "source": [
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Копировать",
         "ZH": "复制",
@@ -334,7 +334,7 @@ TRANSLATION = {
     },
     "Paste": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Вставить",
         "ZH": "粘贴",
@@ -344,7 +344,7 @@ TRANSLATION = {
         "source": [
             "Furious.Widget.UserServersQTableView",
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Выбрать все",
         "ZH": "全选",
@@ -352,7 +352,7 @@ TRANSLATION = {
     },
     "Indent...": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Настройка отступа...",
         "ZH": "缩进...",
@@ -361,7 +361,7 @@ TRANSLATION = {
     "Edit": {
         "source": [
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Редактировать",
         "ZH": "编辑",
@@ -370,7 +370,7 @@ TRANSLATION = {
     "Zoom In": {
         "source": [
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Увеличить маcштаб",
         "ZH": "变大",
@@ -379,7 +379,7 @@ TRANSLATION = {
     "Zoom Out": {
         "source": [
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Уменьшить маcштаб",
         "ZH": "变小",
@@ -388,7 +388,7 @@ TRANSLATION = {
     "View": {
         "source": [
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Вид",
         "ZH": "显示",
@@ -396,7 +396,7 @@ TRANSLATION = {
     },
     "Error saving configuration": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Ошибка сохранения конфигурации",
         "ZH": "保存配置出错",
@@ -405,7 +405,7 @@ TRANSLATION = {
     "Save File": {
         "source": [
             "Furious.Window.LogViewerWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Сохранить файл",
         "ZH": "保存文件",
@@ -413,7 +413,7 @@ TRANSLATION = {
     },
     "Error Saving File": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Ошибка сохранения файла",
         "ZH": "保存文件出错",
@@ -422,7 +422,7 @@ TRANSLATION = {
     "Invalid server configuration": {
         "source": [
             "Furious.TrayActions.Connect",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Неверная конфигурация сервера",
         "ZH": "无效的服务器配置",
@@ -430,7 +430,7 @@ TRANSLATION = {
     },
     "Error setting indent": {
         "source": [
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Ошибка при установке отступов",
         "ZH": "设置缩进出错",
@@ -935,7 +935,7 @@ TRANSLATION = {
     },
     "Already started": {
         "source": [
-            "Furious.Widget.Application"
+            "Furious.Application.Application"
         ],
         "RU": "Активированный",
         "ZH": "已启动",
@@ -943,7 +943,7 @@ TRANSLATION = {
     },
     "Furious Log": {
         "source": [
-            "Furious.Widget.Application"
+            "Furious.Application.Application"
         ],
         "RU": "Лог Furious",
         "ZH": "Furious日志",
@@ -951,7 +951,7 @@ TRANSLATION = {
     },
     "Core Log": {
         "source": [
-            "Furious.Widget.Application"
+            "Furious.Application.Application"
         ],
         "RU": "Лог ядра",
         "ZH": "内核日志",
@@ -959,7 +959,7 @@ TRANSLATION = {
     },
     "Tun2socks Log": {
         "source": [
-            "Furious.Widget.Application"
+            "Furious.Application.Application"
         ],
         "RU": "Лог Tun2socks",
         "ZH": "Tun2socks日志",
@@ -1729,7 +1729,7 @@ TRANSLATION = {
     },
     "Administrator": {
         "source": [
-            "Furious.Widget.SystemTrayIcon"
+            "Furious.Application.SystemTrayIcon"
         ],
         "RU": "Administrator",
         "ZH": "管理员",
@@ -2116,7 +2116,7 @@ TRANSLATION = {
     "Close": {
         "source": [
             "Furious.Plugins.Official.Xray.UserRoutingWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Widget.TextEditorWindow"
         ],
         "RU": "Закрыть",
         "ZH": "关闭",

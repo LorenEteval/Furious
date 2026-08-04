@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Initialize the Furious application package."""
+"""Expose application services that coordinate lower-level subsystems."""
 
 from __future__ import annotations
 
-from .Frozenlib import AppResources
+from .CoreManager import CoreManager
 
-__all__ = ['AppResources']
+__all__ = ['CoreManager']

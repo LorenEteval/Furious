@@ -19,4 +19,6 @@
 
 from __future__ import annotations
 
-from .GenTranslation import *
+from .GenTranslation import TRANSLATION
+
+__all__ = ['TRANSLATION']

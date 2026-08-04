@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Library.Storage import Storage
+from Furious.Library import *
 
 __all__ = ['cleanRoutingRule', 'customRoutingObjectFromSettings']
 
@@ -45,8 +45,10 @@ def cleanRoutingRule(rule: dict):
         'process',
     ]:
         value = rule.get(key, [])
+
         if isinstance(value, list):
             value = list(str(item).strip() for item in value if str(item).strip())
+
             if value:
                 result[key] = value
 
@@ -60,6 +62,7 @@ def cleanRoutingRule(rule: dict):
         'ruleTag',
     ]:
         value = str(rule.get(key, '')).strip()
+
         if value:
             result[key] = value
 
@@ -69,14 +72,17 @@ def cleanRoutingRule(rule: dict):
 def customRoutingObjectFromSettings(routing: str):
     """Load a named custom Xray routing object from persistent settings."""
     prefix = 'Custom:'
+
     if not isinstance(routing, str) or not routing.startswith(prefix):
         return None
 
     routingProfile = Storage.UserRoutings().get(routing[len(prefix) :])
+
     if not isinstance(routingProfile, dict) or not routingProfile.get('enabled', True):
         return None
 
     domainStrategy = routingProfile.get('domainStrategy', 'AsIs')
+
     if domainStrategy not in ['AsIs', 'IPIfNonMatch', 'IPOnDemand']:
         domainStrategy = 'AsIs'
 

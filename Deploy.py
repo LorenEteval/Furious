@@ -60,7 +60,7 @@ NUITKA_BINARY_VERSION_OPTION = (
     f'--product-version={APPLICATION_VERSION} '
 )
 
-PLATFORM_MACHINE_LOWER = PLATFORM_MACHINE.lower()
+PLATFORM_MACHINE_LOWER = PLATFORM_MACHINE.casefold()
 
 if PLATFORM == 'Windows':
     NUITKA_BINARY_VERSION_OPTION += f'--file-description=\"{APPLICATION_DESCRIPTION}\" '
@@ -117,9 +117,9 @@ else:
 if PLATFORM == 'Windows':
     if PLATFORM_RELEASE.endswith('Server'):
         # Windows server. Fixed to windows10
-        winVerCompatible = f'{PLATFORM.lower()}10'
+        winVerCompatible = f'{PLATFORM.casefold()}10'
     else:
-        winVerCompatible = f'{PLATFORM.lower()}{PLATFORM_RELEASE}'
+        winVerCompatible = f'{PLATFORM.casefold()}{PLATFORM_RELEASE}'
 
     if os.environ.get('WIN_VER_COMPATIBLE', ''):
         winVerCompatible = os.environ['WIN_VER_COMPATIBLE']

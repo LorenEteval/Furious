@@ -66,26 +66,31 @@ def setXrayTUNEnabled(enabled: bool):
 def _normalizedXrayTUNSettings(settings) -> dict:
     """Return validated Xray TUN settings with defaults for invalid fields."""
     result = copy.deepcopy(DEFAULT_XRAY_TUN_SETTINGS)
+
     if not isinstance(settings, dict):
         return result
 
     for key in ('name', 'desc', 'autoOutboundsInterface'):
         value = settings.get(key)
+
         if isinstance(value, str):
             result[key] = value.strip()
 
     for key in ('gateway', 'dns', 'autoSystemRoutingTable'):
         value = settings.get(key)
+
         if isinstance(value, (list, tuple)):
             result[key] = [
                 item.strip() for item in value if isinstance(item, str) and item.strip()
             ]
 
     mtu = settings.get('mtu')
+
     if isinstance(mtu, int) and not isinstance(mtu, bool) and mtu > 0:
         result['mtu'] = mtu
 
     userLevel = settings.get('userLevel')
+
     if (
         isinstance(userLevel, int)
         and not isinstance(userLevel, bool)
@@ -101,6 +106,8 @@ def getXrayTUNSettings() -> dict:
     try:
         settings = json.loads(AppSettings.get('XrayTUNSettings'))
     except Exception:
+        # Any non-exit exceptions
+
         settings = None
 
     return _normalizedXrayTUNSettings(settings)
@@ -137,6 +144,7 @@ def buildXrayTUNInbound(settings=None) -> dict:
 def hasXrayTUNInbound(config) -> bool:
     """Return whether an Xray configuration contains a TUN inbound."""
     inbounds = config.get('inbounds', [])
+
     if not isinstance(inbounds, list):
         return False
 

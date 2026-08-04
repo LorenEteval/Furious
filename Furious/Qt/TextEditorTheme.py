@@ -19,9 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Core.Tun2socks import Tun2socks
 from Furious.Frozenlib.Mixins import Mixins
-from Furious.Plugins import getPluginRegistry
 from Furious.Qt.AppStyleSheet import AppStyleSheet
 
 from PySide6 import QtCore
@@ -32,7 +30,21 @@ __all__ = [
     'DraculaEditorTheme',
     'DraculaJSONSyntaxHighlighter',
     'DraculaLoggerSyntaxHighlighter',
+    'configureEditorLogMetadata',
 ]
+
+_coreVersionsProvider = lambda: tuple()
+_logTimestampPatternsProvider = lambda: tuple()
+
+
+def configureEditorLogMetadata(coreVersionsProvider, timestampPatternsProvider):
+    """Install application-owned metadata providers used for log highlighting."""
+    if not callable(coreVersionsProvider) or not callable(timestampPatternsProvider):
+        raise TypeError('editor log metadata providers must be callable')
+
+    global _coreVersionsProvider, _logTimestampPatternsProvider
+    _coreVersionsProvider = coreVersionsProvider
+    _logTimestampPatternsProvider = timestampPatternsProvider
 
 
 def _currentTheme():
@@ -149,10 +161,7 @@ class AppQSyntaxHighlighter(Mixins.ThemeAware, QSyntaxHighlighter):
                 captured = text[capturedStart : capturedStart + capturedLength]
                 shouldHighlight = True
 
-                for version in [
-                    *getPluginRegistry().coreVersions(),
-                    Tun2socks.version(),
-                ]:
+                for version in _coreVersionsProvider():
                     if captured == version:
                         # These x.y.z.u version values are not IPv4 addresses. Do not highlight
                         shouldHighlight = False
@@ -261,11 +270,15 @@ class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
             ),
             EditorHighlightRules(
                 # Application logging timestamp
-                r'\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\]' + r'|'
-                # Plugin-core logging timestamps
-                + r'|'.join(getPluginRegistry().logTimestampPatterns()) + r'|'
-                # tun2socks logging timestamp
-                + r'\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}',
+                r'|'.join(
+                    (
+                        # Application logging timestamp
+                        r'\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\]',
+                        *_logTimestampPatternsProvider(),
+                        # tun2socks logging timestamp
+                        r'\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}',
+                    )
+                ),
                 palette['editor_timestamp'],
             ),
             EditorHighlightRules(

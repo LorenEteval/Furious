@@ -22,12 +22,9 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Library import *
-from Furious.Plugins.Official.Configuration import (
-    ConfigXray,
-    configXrayEmptyProxyOutboundObject,
-)
 from Furious.Qt import *
 from Furious.Qt import gettext as _
+from Furious.Plugins.Official.Configuration import *
 from Furious.Plugins.Official.Xray.GuiVTransport import *
 from Furious.Plugins.Official.Xray.GuiVTLS import *
 

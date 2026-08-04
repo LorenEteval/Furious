@@ -15,14 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose the Furious plugin API and process-wide plugin registry."""
+"""Expose plugin contracts without eagerly loading plugin implementations."""
 
 from __future__ import annotations
 
-from .API import *
-from .Registry import *
-from .Registry import _setOfficialPluginTypes
-from .Configuration import *
-from .Official import OFFICIAL_PLUGIN_TYPES
+from .API import PLUGIN_API_VERSION, FuriousPlugin, PluginProtocol, PluginRouting
+from .Registry import (
+    PLUGIN_ENTRY_POINT_GROUP,
+    PluginRegistry,
+    getPluginRegistry,
+    registerPlugin,
+)
 
-_setOfficialPluginTypes(OFFICIAL_PLUGIN_TYPES)
+__all__ = [
+    'PLUGIN_API_VERSION',
+    'PLUGIN_ENTRY_POINT_GROUP',
+    'FuriousPlugin',
+    'PluginProtocol',
+    'PluginRegistry',
+    'PluginRouting',
+    'getPluginRegistry',
+    'registerPlugin',
+]

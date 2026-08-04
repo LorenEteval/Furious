@@ -25,8 +25,8 @@ from Furious.Library import *
 from Furious.Plugins import getPluginRegistry
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Core.CoreManager import CoreManager
-from Furious.Widget.ConnectProgressBar import ConnectProgressBar
+from Furious.Service import CoreManager
+from Furious.TrayActions.ConnectProgressBar import ConnectProgressBar
 
 from PySide6 import QtCore
 

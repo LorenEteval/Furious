@@ -67,19 +67,19 @@ class Protocol(Enum):
         if not isinstance(protocol, str):
             return Protocol.Unknown
 
-        if protocol.lower() == 'vmess':
+        if protocol.casefold() == 'vmess':
             return Protocol.VMess
 
-        if protocol.lower() == 'vless':
+        if protocol.casefold() == 'vless':
             return Protocol.VLESS
 
-        if protocol.lower() == 'shadowsocks':
+        if protocol.casefold() == 'shadowsocks':
             return Protocol.Shadowsocks
 
-        if protocol.lower() == 'socks':
+        if protocol.casefold() == 'socks':
             return Protocol.Socks
 
-        if protocol.lower() == 'trojan':
+        if protocol.casefold() == 'trojan':
             return Protocol.Trojan
 
         return Protocol.Unknown

@@ -23,15 +23,16 @@ from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
-from PySide6.QtGui import QDesktopServices
+from PySide6 import QtCore
+from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-import copy
-import functools
-import logging
+from .Plugin import *
+from .TUN import *
 
-from .Plugin import isHysteria2ConnectionActive
-from .TUN import getHysteria2TUNSettings, saveHysteria2TUNSettings
+import copy
+import logging
+import functools
 
 __all__ = ['GuiHysteria2TUNSettings']
 
@@ -41,6 +42,7 @@ logger = logging.getLogger(__name__)
 def _nestedValue(config: dict, path: tuple[str, ...], default):
     """Return a nested settings value or *default*."""
     value = config
+
     for key in path:
         if not isinstance(value, dict):
             return default
@@ -53,8 +55,10 @@ def _nestedValue(config: dict, path: tuple[str, ...], default):
 def _setNestedValue(config: dict, path: tuple[str, ...], value):
     """Set one nested settings value."""
     target = config
+
     for key in path[:-1]:
         child = target.get(key)
+
         if not isinstance(child, dict):
             child = {}
             target[key] = child
@@ -70,7 +74,9 @@ class GuiHysteria2TUNItemText(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         """Initialize a Hysteria 2 TUN string editor."""
         self.path = tuple(kwargs.pop('path'))
+
         maximumWidth = kwargs.pop('maximumWidth', None)
+
         super().__init__(*args, **kwargs)
 
         if maximumWidth is not None:
@@ -79,6 +85,7 @@ class GuiHysteria2TUNItemText(GuiEditorItemTextInput):
     def inputToFactory(self, config: dict) -> bool:
         """Store the current text in a Hysteria 2 TUN settings mapping."""
         value = self.text().strip()
+
         if _nestedValue(config, self.path, '') == value:
             return False
 
@@ -89,6 +96,7 @@ class GuiHysteria2TUNItemText(GuiEditorItemTextInput):
     def factoryToInput(self, config: dict):
         """Load one Hysteria 2 TUN string setting into the editor."""
         value = _nestedValue(config, self.path, '')
+
         self.setText(value if isinstance(value, str) else '')
 
 
@@ -98,6 +106,7 @@ class GuiHysteria2TUNItemList(GuiHysteria2TUNItemText):
     def inputToFactory(self, config: dict) -> bool:
         """Store comma-separated values in the settings mapping."""
         value = [item.strip() for item in self.text().split(',') if item.strip()]
+
         if _nestedValue(config, self.path, []) == value:
             return False
 
@@ -108,6 +117,7 @@ class GuiHysteria2TUNItemList(GuiHysteria2TUNItemText):
     def factoryToInput(self, config: dict):
         """Load one list setting into the editor."""
         value = _nestedValue(config, self.path, [])
+
         self.setText(','.join(value) if isinstance(value, list) else '')
 
 
@@ -117,11 +127,13 @@ class GuiHysteria2TUNItemMTU(GuiEditorItemTextSpinBox):
     def __init__(self, *args, **kwargs):
         """Initialize the MTU editor."""
         super().__init__(*args, **kwargs)
+
         self.setRange(1, 65535)
 
     def inputToFactory(self, config: dict) -> bool:
         """Store the MTU in the settings mapping."""
         value = self.value()
+
         if config.get('mtu', 1500) == value:
             return False
 
@@ -132,6 +144,7 @@ class GuiHysteria2TUNItemMTU(GuiEditorItemTextSpinBox):
     def factoryToInput(self, config: dict):
         """Load the MTU into the editor."""
         value = config.get('mtu', 1500)
+
         self.setValue(value if isinstance(value, int) else 1500)
 
 
@@ -213,6 +226,7 @@ class GuiHysteria2TUNSettingsGroupBoxNetwork(GuiEditorWidgetQGroupBox):
             row, field = divmod(index, 2)
             label, editor = container.widgets()
             column = field * 2
+
             layout.addWidget(label, row, column)
             layout.addWidget(editor, row, column + 1)
 
@@ -253,32 +267,42 @@ class GuiHysteria2TUNSettings(GuiEditorWidgetQDialog):
 
     def __init__(self, *args, **kwargs):
         """Initialize the Hysteria 2 TUN settings dialog."""
+        self._isConnectionActive = kwargs.pop('isConnectionActive', lambda: False)
         kwargs.setdefault('style', 'portrait')
         kwargs.setdefault('tabTranslatable', True)
+
         super().__init__(*args, **kwargs)
 
         self.setTabText(_('Customize Hysteria2 TUN Settings'))
         self.setFixedSize(int(650 * GOLDEN_RATIO), 650)
+
         self._settings = getHysteria2TUNSettings()
+
         self.factoryToInput(self._settings)
+
         self.accepted.connect(self.handleAccepted)
 
         self.layout().takeRow(self.layout().rowCount() - 1)
+
         bottomLayout = QHBoxLayout()
         bottomLayout.addWidget(Hysteria2TUNDocumentationURL())
         bottomLayout.addStretch(1)
         bottomLayout.addWidget(self.dialogBtns)
+
         self.layout().addRow(bottomLayout)
 
     def handleAccepted(self):
         """Persist changed settings and offer to reconnect when connected."""
         oldSettings = copy.deepcopy(self._settings)
+
         self.inputToFactory(self._settings)
+
         if self._settings == oldSettings:
             return
 
         saveHysteria2TUNSettings(self._settings)
-        if SystemRuntime.isTUNMode() and isHysteria2ConnectionActive():
+
+        if SystemRuntime.isTUNMode() and self._isConnectionActive():
             showMBoxNewChangesNextTime()
 
     @functools.lru_cache(None)

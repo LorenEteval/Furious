@@ -21,8 +21,8 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
+from Furious.Library.Configuration import ConfigFactory, configFactoryFromAny
 from Furious.Library.Encoder import *
-from Furious.Plugins.Configuration import configFactoryFromAny
 
 __all__ = ['UserServers']
 

@@ -20,7 +20,6 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from Furious.Interface.ConfigFactory import *
 
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -68,14 +67,14 @@ class CoreProcessFactory(ABC):
         """Handle the registered singledispatch variant."""
         return config
 
-    @toJSONString.register(ConfigFactory)
-    def _(self, config, **kwargs) -> str:
-        """Handle the registered singledispatch variant."""
-        return config.toJSONString(**kwargs)
-
     @toJSONString.register(dict)
     def _(self, config, **kwargs) -> str:
         """Handle the registered singledispatch variant."""
+        serializer = getattr(config, 'toJSONString', None)
+
+        if callable(serializer):
+            return serializer(**kwargs)
+
         try:
             ensure_ascii = kwargs.pop('ensure_ascii', False)
             escape_forward_slashes = kwargs.pop('escape_forward_slashes', False)

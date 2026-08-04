@@ -23,7 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Library import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Widget.WaitingSpinner import *
+from Furious.Qt.WaitingSpinner import *
 
 from PySide6 import QtCore
 from PySide6.QtGui import QColor

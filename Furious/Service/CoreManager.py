@@ -21,8 +21,8 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Library.Storage import Storage
-from Furious.Plugins import getPluginRegistry
+from Furious.Library import *
+from Furious.Plugins import *
 from Furious.Qt import *
 from Furious.Core.CoreProcessWorker import *
 from Furious.Core.Tun2socks import *

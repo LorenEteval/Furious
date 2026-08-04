@@ -21,11 +21,13 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
+from Furious.Core import Tun2socks
 from Furious.Plugins import getPluginRegistry
 from Furious.Qt import AppStyleSheet
+from Furious.Qt.TextEditorTheme import configureEditorLogMetadata
 from Furious.Qt import gettext as _
 from Furious.Library import *
-from Furious.Widget.SystemTrayIcon import *
+from Furious.Application.SystemTrayIcon import *
 from Furious.Window.AppMainWindow import *
 from Furious.Window.LogViewerWindow import *
 
@@ -296,7 +298,12 @@ class Application(ApplicationFactory, SingletonApplication):
     @staticmethod
     def addEnviron():
         """Add environ."""
-        getPluginRegistry().configureEnvironment()
+        pluginRegistry = getPluginRegistry()
+        configureEditorLogMetadata(
+            lambda: (*pluginRegistry.coreVersions(), Tun2socks.version()),
+            pluginRegistry.logTimestampPatterns,
+        )
+        pluginRegistry.configureEnvironment()
 
         if SystemRuntime.flatpakID():
             # https://github.com/flatpak/flatpak/issues/3438

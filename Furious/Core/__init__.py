@@ -15,9 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose the public core-process integration API."""
+"""Expose reusable proxy-process primitives without application orchestration."""
 
 from __future__ import annotations
 
-from .Tun2socks import *
-from .CoreManager import *
+from .CoreProcessWorker import (
+    CoreLaunchSpec,
+    CoreProcessMonitor,
+    CoreProcessState,
+    CoreProcessWorker,
+    MsgQueue,
+    ProcessOutputRedirector,
+)
+from .Tun2socks import Tun2socks
+
+__all__ = [
+    'CoreLaunchSpec',
+    'CoreProcessMonitor',
+    'CoreProcessState',
+    'CoreProcessWorker',
+    'MsgQueue',
+    'ProcessOutputRedirector',
+    'Tun2socks',
+]

@@ -21,8 +21,8 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Library.Encoder import UJSONEncoder
-from Furious.Core.CoreProcessWorker import *
+from Furious.Library import *
+from Furious.Core import *
 
 from enum import Enum
 from typing import Union

@@ -15,10 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Initialize the Furious application package."""
+"""Expose the GUI composition root for the Furious desktop application."""
 
 from __future__ import annotations
 
-from .Frozenlib import AppResources
+from .Application import Application
+from .SystemTrayIcon import SystemTrayIcon
 
-__all__ = ['AppResources']
+__all__ = ['Application', 'SystemTrayIcon']
