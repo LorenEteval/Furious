@@ -19,13 +19,22 @@
 
 from __future__ import annotations
 
-from .Application import *
-from .ConnectProgressBar import *
-from .GuiCustomizeNetworkTest import *
-from .GuiCustomizeProxyBypass import *
-from .GuiTUNSettings import *
-from .IndentSpinBox import *
-from .SystemTrayIcon import *
-from .UserServersQTableView import *
-from .UserSubsQTableView import *
-from .WaitingSpinner import *
+from .GuiCustomizeNetworkTest import GuiCustomizeNetworkTestDialog
+from .GuiCustomizeProxyBypass import GuiCustomizeProxyBypassDialog
+from .GuiTUNSettings import GuiTUNSettings
+from .IndentSpinBox import IndentSpinBox
+from .QRCodeWindow import QRCodeWindow
+from .TextEditorWindow import TextEditorWindow
+from .UserServersQTableView import UserServersQTableView
+from .UserSubsQTableView import UserSubsQTableView
+
+__all__ = [
+    'GuiCustomizeNetworkTestDialog',
+    'GuiCustomizeProxyBypassDialog',
+    'GuiTUNSettings',
+    'IndentSpinBox',
+    'QRCodeWindow',
+    'TextEditorWindow',
+    'UserServersQTableView',
+    'UserSubsQTableView',
+]

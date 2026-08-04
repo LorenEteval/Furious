@@ -45,6 +45,21 @@ __all__ = ['AppMainWindow']
 
 logger = logging.getLogger(__name__)
 
+
+def _isCoreActive(coreType) -> bool:
+    """Return whether the tray's active connection owns *coreType*."""
+    try:
+        connectAction = APP().systemTray.ConnectAction
+
+        return connectAction.isConnected() and any(
+            isinstance(process, coreType)
+            for process in connectAction.coreManager.processesPool
+        )
+    except (AttributeError, RuntimeError):
+        # The main window is built before the system tray is attached.
+        return False
+
+
 # Migrate legacy settings
 registerAppSettings('ServerWidgetWindowSize')
 registerAppSettings('AppMainWindowGeometry')
@@ -440,6 +455,7 @@ class AppMainWindow(AppQMainWindow):
             managementActions = pluginRegistry.managementActions(
                 plugin,
                 parent=self,
+                isCoreActive=_isCoreActive,
             )
             if managementActions:
                 corePluginActions.append(

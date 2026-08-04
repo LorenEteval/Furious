@@ -19,4 +19,6 @@
 
 from __future__ import annotations
 
-from .AppMainProcess import *
+from .AppMainProcess import AppMainProcess
+
+__all__ = ['AppMainProcess']

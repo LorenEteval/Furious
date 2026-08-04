@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Initialize the Furious application package."""
+"""Define the package version without importing higher application layers."""
 
 from __future__ import annotations
 
-from .Frozenlib import AppResources
+__all__ = ['__version__']
 
-__all__ = ['AppResources']
+__version__ = '0.7.0'

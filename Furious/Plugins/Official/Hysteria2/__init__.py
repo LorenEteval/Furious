@@ -19,4 +19,6 @@
 
 from __future__ import annotations
 
-from .Plugin import *
+from .Plugin import Hysteria2Plugin
+
+__all__ = ['Hysteria2Plugin']

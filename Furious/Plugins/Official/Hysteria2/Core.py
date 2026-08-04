@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from Furious.Core.CoreProcessWorker import *
+from Furious.Core import *
 
 from enum import Enum
 from typing import Union

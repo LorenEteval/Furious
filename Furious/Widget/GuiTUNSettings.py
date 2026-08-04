@@ -25,6 +25,7 @@ from Furious.Library import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
+from PySide6 import QtCore
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
@@ -242,9 +243,7 @@ class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
                 key='tunAdapterInterfaceDNS',
             ),
             GuiTUNSettingsItemXXX(
-                title=_(
-                    'Bypass Tun2socks Adapter Interface IP (separated by commas)'
-                ),
+                title=_('Bypass Tun2socks Adapter Interface IP (separated by commas)'),
                 key='bypassTUNAdapterInterfaceIP',
             ),
             GuiTUNSettingsItemCheckBoxXXX(

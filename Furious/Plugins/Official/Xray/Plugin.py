@@ -19,32 +19,23 @@
 
 from __future__ import annotations
 
-from Furious.Core.CoreProcessWorker import ProcessOutputRedirector
 from Furious.Frozenlib import *
 from Furious.Qt.DynamicTranslate import gettext as _
-from Furious.Library.Storage import Storage
-from Furious.Plugins.API import FuriousPlugin, PluginProtocol, PluginRouting
-from Furious.Plugins.Official.Configuration import (
-    BLANK_CONFIG_XRAY,
-    ConfigXray,
-    configXrayEmptyProxyOutboundObject,
-)
+from Furious.Core import *
+from Furious.Library import *
+from Furious.Plugins.API import *
+from Furious.Plugins.Official.Configuration import *
 
-import copy
-import logging
+from .Core import *
+from .Routing import *
+from .TUN import *
+
 import os
 import uuid
+import copy
+import logging
 
-from .Core import XrayCore
-from .Routing import customRoutingObjectFromSettings
-from .TUN import (
-    buildXrayTUNInbound,
-    hasXrayTUNInbound,
-    isXrayTUNEnabled,
-    setXrayTUNEnabled,
-)
-
-__all__ = ['XrayPlugin', 'isXrayConnectionActive']
+__all__ = ['XrayPlugin']
 
 logger = logging.getLogger(__name__)
 
@@ -94,22 +85,6 @@ _TRANSLATABLE_ACTION_TEXT = [
     _('Add Trojan Server...'),
     _('Add SOCKS Server...'),
 ]
-
-
-def isXrayConnectionActive() -> bool:
-    """Return whether the connected core process belongs to Xray-core."""
-    try:
-        connectAction = APP().systemTray.ConnectAction
-        if not connectAction.isConnected():
-            return False
-
-        return any(
-            isinstance(process, XrayCore)
-            for process in connectAction.coreManager.processesPool
-        )
-    except Exception:
-        # Plugin actions can be created before the tray is fully initialized.
-        return False
 
 
 class XrayPlugin(FuriousPlugin):
@@ -209,6 +184,8 @@ class XrayPlugin(FuriousPlugin):
 
     def createManagementActions(self, parent=None, **kwargs):
         """Create Xray routing, TUN, and asset-management actions."""
+        isCoreActive = kwargs.pop('isCoreActive', lambda coreType: False)
+
         # These modules require a fully initialized Furious.Qt package.
         from Furious.Qt import (
             AppQAction,
@@ -245,7 +222,7 @@ class XrayPlugin(FuriousPlugin):
             """Persist the native Xray TUN action state."""
             setXrayTUNEnabled(useXrayTUNAction.isChecked())
 
-            if SystemRuntime.isTUNMode() and isXrayConnectionActive():
+            if SystemRuntime.isTUNMode() and isCoreActive(XrayCore):
                 showMBoxNewChangesNextTime()
 
         useXrayTUNAction.callback = updateUseXrayTUN
@@ -260,7 +237,10 @@ class XrayPlugin(FuriousPlugin):
             useXrayTUNAction,
             AppQAction(
                 _('Customize Xray-core TUN Settings...'),
-                callback=lambda: GuiXrayTUNSettings(parent=parent).open(),
+                callback=lambda: GuiXrayTUNSettings(
+                    parent=parent,
+                    isConnectionActive=lambda: isCoreActive(XrayCore),
+                ).open(),
             ),
             AppQSeperator(),
             AppQAction(
@@ -275,6 +255,7 @@ class XrayPlugin(FuriousPlugin):
             return False
 
         inbounds = config.get('inbounds')
+
         if not isinstance(inbounds, list):
             inbounds = []
 
@@ -344,6 +325,7 @@ class XrayPlugin(FuriousPlugin):
             config['log'] = {'access': '', 'error': '', 'loglevel': 'warning'}
 
         logRedirectValue = str(uuid.uuid4())
+
         for attr in ['access', 'error']:
             fixLogObjectPath(config, attr, logRedirectValue, log)
 
@@ -454,6 +436,7 @@ class XrayPlugin(FuriousPlugin):
             return
 
         logger.info(f'assets folder \'{XRAY_ASSET_DIR}\' is writable. Continue')
+
         if not AppSettings.isStateON_('AutoUpdateAssetFiles'):
             logger.info('skipped auto assets update due to settings')
 

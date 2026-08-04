@@ -23,15 +23,16 @@ from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
-from PySide6.QtGui import QDesktopServices
+from PySide6 import QtCore
+from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-import copy
-import functools
-import logging
+from .Plugin import *
+from .TUN import *
 
-from .Plugin import isXrayConnectionActive
-from .TUN import getXrayTUNSettings, saveXrayTUNSettings
+import copy
+import logging
+import functools
 
 __all__ = ['GuiXrayTUNSettings']
 
@@ -44,7 +45,9 @@ class GuiXrayTUNItemText(GuiEditorItemTextInput):
     def __init__(self, *args, **kwargs):
         """Initialize an Xray TUN string editor."""
         self.key = kwargs.pop('key')
+
         maximumWidth = kwargs.pop('maximumWidth', None)
+
         super().__init__(*args, **kwargs)
 
         if maximumWidth is not None:
@@ -53,6 +56,7 @@ class GuiXrayTUNItemText(GuiEditorItemTextInput):
     def inputToFactory(self, config: dict) -> bool:
         """Store the current text in an Xray TUN settings mapping."""
         value = self.text().strip()
+
         if config.get(self.key, '') == value:
             return False
 
@@ -71,6 +75,7 @@ class GuiXrayTUNItemList(GuiXrayTUNItemText):
     def inputToFactory(self, config: dict) -> bool:
         """Store comma-separated values in the settings mapping."""
         value = [item.strip() for item in self.text().split(',') if item.strip()]
+
         if config.get(self.key, []) == value:
             return False
 
@@ -81,6 +86,7 @@ class GuiXrayTUNItemList(GuiXrayTUNItemText):
     def factoryToInput(self, config: dict):
         """Load one Xray TUN list setting into the editor."""
         value = config.get(self.key, [])
+
         self.setText(','.join(value) if isinstance(value, list) else '')
 
 
@@ -91,14 +97,18 @@ class GuiXrayTUNItemNumber(GuiEditorItemTextSpinBox):
         """Initialize an Xray TUN numeric editor."""
         self.key = kwargs.pop('key')
         self.default = kwargs.pop('default')
+
         minimum = kwargs.pop('minimum')
         maximum = kwargs.pop('maximum')
+
         super().__init__(*args, **kwargs)
+
         self.setRange(minimum, maximum)
 
     def inputToFactory(self, config: dict) -> bool:
         """Store the current number in an Xray TUN settings mapping."""
         value = self.value()
+
         if config.get(self.key, self.default) == value:
             return False
 
@@ -109,6 +119,7 @@ class GuiXrayTUNItemNumber(GuiEditorItemTextSpinBox):
     def factoryToInput(self, config: dict):
         """Load one Xray TUN numeric setting into the editor."""
         value = config.get(self.key, self.default)
+
         self.setValue(value if isinstance(value, int) else self.default)
 
 
@@ -221,32 +232,42 @@ class GuiXrayTUNSettings(GuiEditorWidgetQDialog):
 
     def __init__(self, *args, **kwargs):
         """Initialize the Xray-core TUN settings dialog."""
+        self._isConnectionActive = kwargs.pop('isConnectionActive', lambda: False)
         kwargs.setdefault('style', 'portrait')
         kwargs.setdefault('tabTranslatable', True)
+
         super().__init__(*args, **kwargs)
 
         self.setTabText(_('Customize Xray-core TUN Settings'))
         self.setFixedSize(int(650 * GOLDEN_RATIO), 650)
+
         self._settings = getXrayTUNSettings()
+
         self.factoryToInput(self._settings)
+
         self.accepted.connect(self.handleAccepted)
 
         self.layout().takeRow(self.layout().rowCount() - 1)
+
         bottomLayout = QHBoxLayout()
         bottomLayout.addWidget(XrayTUNDocumentationURL())
         bottomLayout.addStretch(1)
         bottomLayout.addWidget(self.dialogBtns)
+
         self.layout().addRow(bottomLayout)
 
     def handleAccepted(self):
         """Persist changed settings and offer to reconnect when connected."""
         oldSettings = copy.deepcopy(self._settings)
+
         self.inputToFactory(self._settings)
+
         if self._settings == oldSettings:
             return
 
         saveXrayTUNSettings(self._settings)
-        if SystemRuntime.isTUNMode() and isXrayConnectionActive():
+
+        if SystemRuntime.isTUNMode() and self._isConnectionActive():
             showMBoxNewChangesNextTime()
 
     @functools.lru_cache(None)

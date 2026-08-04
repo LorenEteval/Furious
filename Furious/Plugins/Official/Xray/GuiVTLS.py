@@ -21,8 +21,8 @@ from __future__ import annotations
 
 from Furious.Interface import *
 from Furious.Library import *
-from Furious.Plugins.Official.Configuration import ConfigXray
 from Furious.Qt import *
+from Furious.Plugins.Official.Configuration import *
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import *

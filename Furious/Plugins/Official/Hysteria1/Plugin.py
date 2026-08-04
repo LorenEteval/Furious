@@ -21,16 +21,13 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Qt.DynamicTranslate import gettext as _
-from Furious.Plugins.API import FuriousPlugin, PluginProtocol, PluginRouting
-from Furious.Plugins.Official.Configuration import (
-    BLANK_CONFIG_HYSTERIA1,
-    ConfigHysteria1,
-)
+from Furious.Plugins.API import *
+from Furious.Plugins.Official.Configuration import *
+
+from .Core import *
 
 import copy
 import logging
-
-from .Core import Hysteria1
 
 __all__ = ['Hysteria1Plugin']
 
@@ -60,11 +57,10 @@ class Hysteria1Plugin(FuriousPlugin):
 
     def configFromString(self, config: str, **kwargs):
         """Parse a Hysteria 1 share URI."""
-        return (
-            ConfigHysteria1(config, **kwargs)
-            if config.startswith('hysteria://')
-            else None
-        )
+        if config.startswith('hysteria://'):
+            return ConfigHysteria1(config, **kwargs)
+
+        return None
 
     def configFromDict(self, config: dict, **kwargs):
         """Recognize Hysteria 1 configuration mappings."""

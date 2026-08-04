@@ -15,20 +15,149 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose bundled platform, settings, and compatibility helpers."""
+"""Expose the self-contained foundation API used by higher layers."""
 
 from __future__ import annotations
 
-from .AppSettings import *
-from .Constants import *
-from .Enum import *
-from .Globals import *
-from .Mixins import *
-from .PySide6Legacy import *
-from .StartupOnBoot import *
-from .SystemProxy import *
-from .SystemRoutingTable import *
-from .SystemRuntime import *
-from .Tcping import *
-from .Utility import *
-from .Win32Session import *
+from . import AppResources
+from .AppSettings import AppBinarySettings, AppSettings, registerAppSettings
+from .Constants import (
+    ADMINISTRATOR_NAME,
+    APPLICATION_ABOUT_PAGE,
+    APPLICATION_AUTHOR_EMAIL,
+    APPLICATION_AUTHOR_NAME,
+    APPLICATION_DESCRIPTION,
+    APPLICATION_FLATPAK_ID,
+    APPLICATION_MACOS_SIGNATURE,
+    APPLICATION_NAME,
+    APPLICATION_REPO_NAME,
+    APPLICATION_REPO_OWNER_NAME,
+    APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS,
+    APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS,
+    APPLICATION_TUN2SOCKS_NETWORK_INTERFACE_NAME,
+    APPLICATION_VERSION,
+    CORE_CHECK_ALIVE_INTERVAL,
+    CRASH_LOG_DIR,
+    DATA_DIR,
+    GEN_TRANSLATION_FILE,
+    GOLDEN_RATIO,
+    LOCAL_SERVER_NAME,
+    NETWORK_CONNECTIVITY_TEST_URL,
+    NETWORK_SPEED_TEST_URL,
+    ORGANIZATION_DOMAIN,
+    ORGANIZATION_NAME,
+    OS_CPU_COUNT,
+    PACKAGE_DIR,
+    PLATFORM,
+    PLATFORM_MACHINE,
+    PLATFORM_PYTHON_VERSION,
+    PLATFORM_RELEASE,
+    PROXY_OUTBOUND_USER_EMAIL,
+    PROXY_SERVER_BYPASS,
+    PYSIDE6_VERSION,
+    ROOT_DIR,
+    SYSTEM_LANGUAGE,
+    URL_GEOIP,
+    URL_GEOIP_SHA256,
+    URL_GEOSITE,
+    URL_GEOSITE_SHA256,
+    XRAY_ASSET_DIR,
+    XRAY_ASSET_PATH_GEOIP,
+    XRAY_ASSET_PATH_GEOSITE,
+)
+from .Enum import AppBuiltinCommand, AppBuiltinProxyMode, AppBuiltinRouting
+from .Globals import APP, AppFontName, AppLoggerWindow, AppThreadPool
+from .Mixins import Mixins
+from .PySide6Legacy import PySide6Legacy
+from .StartupOnBoot import StartupOnBoot
+from .SystemProxy import SystemProxy
+from .SystemRoutingTable import SystemRoutingTable
+from .SystemRuntime import SystemRuntime
+from .Tcping import tcping
+from .Utility import (
+    Protocol,
+    absolutePath,
+    callOnceOnly,
+    callRateLimited,
+    classname,
+    forceToLocalhostIfPossible,
+    isValidIPAddress,
+    parseHostPort,
+    runExternalCommand,
+    versionToValue,
+)
+from .Win32Session import Win32Session
+
+__all__ = [
+    'ADMINISTRATOR_NAME',
+    'APP',
+    'APPLICATION_ABOUT_PAGE',
+    'APPLICATION_AUTHOR_EMAIL',
+    'APPLICATION_AUTHOR_NAME',
+    'APPLICATION_DESCRIPTION',
+    'APPLICATION_FLATPAK_ID',
+    'APPLICATION_MACOS_SIGNATURE',
+    'APPLICATION_NAME',
+    'APPLICATION_REPO_NAME',
+    'APPLICATION_REPO_OWNER_NAME',
+    'APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS',
+    'APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS',
+    'APPLICATION_TUN2SOCKS_NETWORK_INTERFACE_NAME',
+    'APPLICATION_VERSION',
+    'AppBinarySettings',
+    'AppBuiltinCommand',
+    'AppBuiltinProxyMode',
+    'AppBuiltinRouting',
+    'AppFontName',
+    'AppLoggerWindow',
+    'AppResources',
+    'AppSettings',
+    'AppThreadPool',
+    'CORE_CHECK_ALIVE_INTERVAL',
+    'CRASH_LOG_DIR',
+    'DATA_DIR',
+    'GEN_TRANSLATION_FILE',
+    'GOLDEN_RATIO',
+    'LOCAL_SERVER_NAME',
+    'Mixins',
+    'NETWORK_CONNECTIVITY_TEST_URL',
+    'NETWORK_SPEED_TEST_URL',
+    'ORGANIZATION_DOMAIN',
+    'ORGANIZATION_NAME',
+    'OS_CPU_COUNT',
+    'PACKAGE_DIR',
+    'PLATFORM',
+    'PLATFORM_MACHINE',
+    'PLATFORM_PYTHON_VERSION',
+    'PLATFORM_RELEASE',
+    'PROXY_OUTBOUND_USER_EMAIL',
+    'PROXY_SERVER_BYPASS',
+    'PYSIDE6_VERSION',
+    'Protocol',
+    'PySide6Legacy',
+    'ROOT_DIR',
+    'SYSTEM_LANGUAGE',
+    'StartupOnBoot',
+    'SystemProxy',
+    'SystemRoutingTable',
+    'SystemRuntime',
+    'URL_GEOIP',
+    'URL_GEOIP_SHA256',
+    'URL_GEOSITE',
+    'URL_GEOSITE_SHA256',
+    'Win32Session',
+    'XRAY_ASSET_DIR',
+    'XRAY_ASSET_PATH_GEOIP',
+    'XRAY_ASSET_PATH_GEOSITE',
+    'absolutePath',
+    'callOnceOnly',
+    'callRateLimited',
+    'classname',
+    'forceToLocalhostIfPossible',
+    'isValidIPAddress',
+    'parseHostPort',
+    'registerAppSettings',
+    'runExternalCommand',
+    'tcping',
+    'versionToValue',
+]

@@ -21,11 +21,11 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 
-import copy
-import ipaddress
 import json
-import logging
+import copy
 import socket
+import logging
+import ipaddress
 
 __all__ = [
     'DEFAULT_HYSTERIA2_TUN_SETTINGS',
@@ -84,29 +84,36 @@ def _normalizedStringList(value) -> list[str]:
 def _normalizedHysteria2TUNSettings(settings) -> dict:
     """Return validated Hysteria 2 TUN settings with safe defaults."""
     result = copy.deepcopy(DEFAULT_HYSTERIA2_TUN_SETTINGS)
+
     if not isinstance(settings, dict):
         return result
 
     for key in ('name', 'timeout'):
         value = settings.get(key)
+
         if isinstance(value, str):
             result[key] = value.strip()
 
     mtu = settings.get('mtu')
+
     if isinstance(mtu, int) and not isinstance(mtu, bool) and 1 <= mtu <= 65535:
         result['mtu'] = mtu
 
     address = settings.get('address')
+
     if isinstance(address, dict):
         for key in ('ipv4', 'ipv6'):
             value = address.get(key)
+
             if isinstance(value, str):
                 result['address'][key] = value.strip()
 
     route = settings.get('route')
+
     if isinstance(route, dict):
         for key in ('ipv4', 'ipv6', 'ipv4Exclude', 'ipv6Exclude'):
             value = route.get(key)
+
             if isinstance(value, (list, tuple)):
                 result['route'][key] = _normalizedStringList(value)
 
@@ -118,6 +125,8 @@ def getHysteria2TUNSettings() -> dict:
     try:
         settings = json.loads(AppSettings.get('Hysteria2TUNSettings'))
     except Exception:
+        # Any non-exit exceptions
+
         settings = None
 
     return _normalizedHysteria2TUNSettings(settings)
@@ -134,18 +143,23 @@ def saveHysteria2TUNSettings(settings: dict):
 def _serverHost(config) -> str:
     """Return the Hysteria server host from a config or share-style server URI."""
     server = config.get('server', '')
+
     if not isinstance(server, str) or not server.strip():
         return ''
 
     try:
         host, _port = parseHostPort(server.strip())
     except Exception:
+        # Any non-exit exceptions
+
         host = None
 
     if not host:
         try:
             host = config.itemAddress
         except Exception:
+            # Any non-exit exceptions
+
             host = server.rsplit(':', 1)[0]
 
     if not isinstance(host, str):
@@ -157,16 +171,19 @@ def _serverHost(config) -> str:
 def resolveHysteria2ServerAddresses(config) -> list[str]:
     """Resolve addresses that must bypass native TUN to prevent a route loop."""
     host = _serverHost(config)
+
     if not host:
         return []
 
     unscopedHost = host.split('%', 1)[0]
+
     try:
         return [str(ipaddress.ip_address(unscopedHost))]
     except ValueError:
         pass
 
     addresses = []
+
     try:
         results = socket.getaddrinfo(
             host,
@@ -184,6 +201,7 @@ def resolveHysteria2ServerAddresses(config) -> list[str]:
             continue
 
         address = str(socketAddress[0]).split('%', 1)[0]
+
         try:
             address = str(ipaddress.ip_address(address))
         except ValueError:
@@ -218,6 +236,7 @@ def buildHysteria2TUNConfig(settings=None, serverAddresses=()) -> dict:
             continue
 
         key, prefix = _hostPrefix(address)
+
         if key is not None and prefix not in settings['route'][key]:
             settings['route'][key].append(prefix)
 

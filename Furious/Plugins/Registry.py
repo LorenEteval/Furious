@@ -19,12 +19,14 @@
 
 from __future__ import annotations
 
+from Furious.Library.Configuration import configurationRegistry
+
 from importlib import metadata
 
 import logging
 import threading
 
-from .API import PLUGIN_API_VERSION, FuriousPlugin, PluginProtocol, PluginRouting
+from .API import *
 
 __all__ = [
     'PLUGIN_ENTRY_POINT_GROUP',
@@ -48,12 +50,17 @@ def _normalizeProtocol(protocol) -> str:
 class PluginRegistry:
     """Store plugins and route host operations to the owning plugin."""
 
-    def __init__(self):
-        """Initialize an empty plugin registry."""
+    def __init__(self, configRegistry=None):
+        """Initialize an empty plugin registry.
+
+        ``configRegistry`` is supplied only to the process-wide registry.  This
+        keeps independently constructed registries isolated for tools and tests.
+        """
         self._plugins = {}
         self._protocols = {}
         self._configurationTypes = {}
         self._coreTypes = {}
+        self._configRegistry = configRegistry
 
     def register(self, plugin: FuriousPlugin):
         """Register a plugin after validating all of its public identifiers."""
@@ -62,6 +69,7 @@ class PluginRegistry:
 
         if not isinstance(plugin, FuriousPlugin):
             raise TypeError('plugin must be a FuriousPlugin instance')
+
         if plugin.apiVersion != PLUGIN_API_VERSION:
             raise ValueError(
                 f'plugin API {plugin.apiVersion!r} is not supported; '
@@ -69,28 +77,35 @@ class PluginRegistry:
             )
 
         pluginId = str(plugin.pluginId).strip()
+
         if not pluginId:
             raise ValueError('plugin ID cannot be empty')
+
         if pluginId in self._plugins:
             raise ValueError(f'plugin {pluginId!r} is already registered')
 
         protocolKeys = []
+
         for descriptor in plugin.protocols:
             if not isinstance(descriptor, PluginProtocol):
                 raise TypeError('plugin protocols must contain PluginProtocol values')
 
             key = _normalizeProtocol(descriptor.id)
+
             if not key:
                 raise ValueError('plugin protocol ID cannot be empty')
+
             if key in self._protocols or key in protocolKeys:
                 raise ValueError(f'protocol {descriptor.id!r} is already registered')
 
             protocolKeys.append(key)
 
         configurationTypes = []
+
         for configType in plugin.configurationTypes:
             if not isinstance(configType, type):
                 raise TypeError('plugin configuration types must be classes')
+
             if any(
                 issubclass(configType, registeredType)
                 or issubclass(registeredType, configType)
@@ -102,12 +117,15 @@ class PluginRegistry:
                 raise ValueError(
                     f'configuration type {configType.__name__!r} overlaps a registered type'
                 )
+
             configurationTypes.append(configType)
 
         coreTypes = []
+
         for coreType in plugin.coreTypes:
             if not isinstance(coreType, type):
                 raise TypeError('plugin core types must be classes')
+
             if any(
                 issubclass(coreType, registeredType)
                 or issubclass(registeredType, coreType)
@@ -119,7 +137,11 @@ class PluginRegistry:
                 raise ValueError(
                     f'core type {coreType.__name__!r} overlaps a registered type'
                 )
+
             coreTypes.append(coreType)
+
+        if self._configRegistry is not None:
+            self._configRegistry.register(plugin)
 
         self._plugins[pluginId] = plugin
 
@@ -172,6 +194,7 @@ class PluginRegistry:
         """Ask plugins to parse textual configuration data."""
         for plugin in self.plugins():
             factory = plugin.configFromString(config, **kwargs)
+
             if factory is not None:
                 return factory
 
@@ -181,6 +204,7 @@ class PluginRegistry:
         """Ask plugins to parse configuration mapping data."""
         for plugin in self.plugins():
             factory = plugin.configFromDict(config, **kwargs)
+
             if factory is not None:
                 return factory
 
@@ -195,6 +219,7 @@ class PluginRegistry:
     def createEditorForProtocol(self, protocol, parent=None, **kwargs):
         """Construct a protocol editor through the owning plugin."""
         plugin = self.pluginForProtocol(protocol)
+
         if plugin is None:
             return None
 
@@ -203,6 +228,7 @@ class PluginRegistry:
     def createEditorForConfig(self, config, parent=None, **kwargs):
         """Construct a configuration editor through the owning plugin."""
         plugin = self.pluginForConfig(config)
+
         if plugin is None:
             return None
 
@@ -225,16 +251,20 @@ class PluginRegistry:
     def prepareTUN(self, config) -> bool:
         """Ask a configuration's plugin to prepare its native TUN support."""
         plugin = self.pluginForConfig(config)
+
         if plugin is None:
             return False
 
         try:
             handled = plugin.prepareTUN(config)
+
             if not isinstance(handled, bool):
                 raise TypeError('plugin TUN preparation result must be a boolean')
 
             return handled
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'TUN preparation failed for {plugin.pluginId!r}: {ex}')
 
             return False
@@ -242,12 +272,14 @@ class PluginRegistry:
     def routingOptions(self, config):
         """Return validated routing modes supported by a configuration's plugin."""
         plugin = self.pluginForConfig(config)
+
         if plugin is None:
             return tuple()
 
         try:
             options = tuple(plugin.routingOptions(config))
             optionIds = set()
+
             for option in options:
                 if not isinstance(option, PluginRouting):
                     raise TypeError(
@@ -256,18 +288,22 @@ class PluginRegistry:
 
                 if not isinstance(option.id, str):
                     raise TypeError('plugin routing option ID must be a string')
+
                 if not option.id.strip():
                     raise ValueError('plugin routing option ID cannot be empty')
+
                 if not isinstance(option.displayName, str):
                     raise TypeError(
                         'plugin routing option display name must be a string'
                     )
+
                 if not isinstance(option.translatable, bool):
                     raise TypeError(
                         'plugin routing option translatable flag must be a boolean'
                     )
 
                 optionId = option.id
+
                 if optionId in optionIds:
                     raise ValueError(
                         f'routing option {option.id!r} is already registered'
@@ -277,6 +313,8 @@ class PluginRegistry:
 
             return options
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(
                 f'failed to obtain routing options for {plugin.pluginId!r}: {ex}'
             )
@@ -286,6 +324,7 @@ class PluginRegistry:
     def normalizeRouting(self, config, routing):
         """Return a supported routing value or the plugin's first option."""
         options = self.routingOptions(config)
+
         if not options:
             return routing
 
@@ -299,15 +338,20 @@ class PluginRegistry:
             try:
                 plugin.configureEnvironment()
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(f'environment hook failed for {plugin.pluginId!r}: {ex}')
 
     def coreVersions(self):
         """Return version strings reported by every registered plugin core."""
         versions = []
+
         for plugin in self.plugins():
             try:
                 versions.extend(plugin.coreVersions())
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'failed to obtain core versions for {plugin.pluginId!r}: {ex}'
                 )
@@ -317,10 +361,13 @@ class PluginRegistry:
     def logTimestampPatterns(self):
         """Return timestamp expressions contributed by registered plugins."""
         patterns = []
+
         for plugin in self.plugins():
             try:
                 patterns.extend(plugin.logTimestampPatterns())
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'failed to obtain log patterns for {plugin.pluginId!r}: {ex}'
                 )
@@ -330,12 +377,15 @@ class PluginRegistry:
     def coreExitMessage(self, core, exitcode: int):
         """Return the owning plugin's special exit message, if any."""
         plugin = self.pluginForCore(core)
+
         if plugin is None:
             return None
 
         try:
             return plugin.coreExitMessage(core, exitcode)
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'failed to interpret core exit for {plugin.pluginId!r}: {ex}')
 
             return None
@@ -346,6 +396,8 @@ class PluginRegistry:
             try:
                 plugin.afterConnected(httpProxy)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'post-connection hook failed for {plugin.pluginId!r}: {ex}'
                 )
@@ -354,11 +406,14 @@ class PluginRegistry:
         """Load third-party plugins exposed through Python entry points."""
         try:
             entryPoints = metadata.entry_points()
+
             if hasattr(entryPoints, 'select'):
                 entryPoints = entryPoints.select(group=PLUGIN_ENTRY_POINT_GROUP)
             else:
                 entryPoints = entryPoints.get(PLUGIN_ENTRY_POINT_GROUP, tuple())
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'failed to enumerate Furious plugins: {ex}')
 
             return
@@ -366,6 +421,7 @@ class PluginRegistry:
         for entryPoint in entryPoints:
             try:
                 plugin = entryPoint.load()
+
                 if isinstance(plugin, type) and issubclass(plugin, FuriousPlugin):
                     plugin = plugin()
                 elif callable(plugin) and not isinstance(plugin, FuriousPlugin):
@@ -377,24 +433,14 @@ class PluginRegistry:
                 else:
                     self.register(plugin)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(f'failed to load plugin {entryPoint.name!r}: {ex}')
 
 
-_registry = PluginRegistry()
+_registry = PluginRegistry(configurationRegistry)
 _registryLock = threading.RLock()
 _registryInitialized = False
-_officialPluginTypes = tuple()
-
-
-def _setOfficialPluginTypes(pluginTypes):
-    """Configure bundled plugin classes before registry initialization."""
-    global _officialPluginTypes
-
-    with _registryLock:
-        if _registryInitialized:
-            raise RuntimeError('plugin registry is already initialized')
-
-        _officialPluginTypes = tuple(pluginTypes)
 
 
 def getPluginRegistry() -> PluginRegistry:
@@ -403,8 +449,14 @@ def getPluginRegistry() -> PluginRegistry:
 
     with _registryLock:
         if not _registryInitialized:
-            registry = PluginRegistry()
-            for pluginType in _officialPluginTypes:
+            # Importing official plugins is an intentional extension-loading
+            # boundary.  Keeping it here prevents package initialization from
+            # eagerly importing GUI and core implementations.
+            from .Official import OFFICIAL_PLUGIN_TYPES
+
+            registry = PluginRegistry(configurationRegistry)
+
+            for pluginType in OFFICIAL_PLUGIN_TYPES:
                 registry.register(pluginType())
 
             registry.discover()

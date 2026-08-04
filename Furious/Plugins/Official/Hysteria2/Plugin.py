@@ -19,49 +19,25 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import APP, PLATFORM, SystemRuntime
+from Furious.Frozenlib import *
 from Furious.Qt.DynamicTranslate import gettext as _
-from Furious.Plugins.API import FuriousPlugin, PluginProtocol
-from Furious.Plugins.Official.Configuration import (
-    BLANK_CONFIG_HYSTERIA2,
-    ConfigHysteria2,
-)
+from Furious.Plugins.API import *
+from Furious.Plugins.Official.Configuration import *
+
+from .Core import Hysteria2
+from .TUN import *
 
 import copy
 import logging
 
-from .Core import Hysteria2
-from .TUN import (
-    buildHysteria2TUNConfig,
-    getHysteria2TUNSettings,
-    isHysteria2TUNEnabled,
-    resolveHysteria2ServerAddresses,
-    setHysteria2TUNEnabled,
-)
-
-__all__ = ['Hysteria2Plugin', 'isHysteria2ConnectionActive']
+__all__ = ['Hysteria2Plugin']
 
 logger = logging.getLogger(__name__)
+
 
 _TRANSLATABLE_ACTION_TEXT = [
     _('Add Hysteria2 Server...'),
 ]
-
-
-def isHysteria2ConnectionActive() -> bool:
-    """Return whether the connected core process belongs to Hysteria 2."""
-    try:
-        connectAction = APP().systemTray.ConnectAction
-        if not connectAction.isConnected():
-            return False
-
-        return any(
-            isinstance(process, Hysteria2)
-            for process in connectAction.coreManager.processesPool
-        )
-    except Exception:
-        # Plugin actions can be created before the tray is fully initialized.
-        return False
 
 
 class Hysteria2Plugin(FuriousPlugin):
@@ -133,6 +109,8 @@ class Hysteria2Plugin(FuriousPlugin):
 
     def createManagementActions(self, parent=None, **kwargs):
         """Create Hysteria 2 native TUN management actions."""
+        isCoreActive = kwargs.pop('isCoreActive', lambda coreType: False)
+
         # These modules require a fully initialized Furious.Qt package.
         from Furious.Qt import AppQAction, showMBoxNewChangesNextTime
         from Furious.Qt import gettext as _
@@ -149,7 +127,7 @@ class Hysteria2Plugin(FuriousPlugin):
             """Persist the native Hysteria 2 TUN action state."""
             setHysteria2TUNEnabled(useHysteria2TUNAction.isChecked())
 
-            if SystemRuntime.isTUNMode() and isHysteria2ConnectionActive():
+            if SystemRuntime.isTUNMode() and isCoreActive(Hysteria2):
                 showMBoxNewChangesNextTime()
 
         useHysteria2TUNAction.callback = updateUseHysteria2TUN
@@ -158,7 +136,10 @@ class Hysteria2Plugin(FuriousPlugin):
             useHysteria2TUNAction,
             AppQAction(
                 _('Customize Hysteria2 TUN Settings...'),
-                callback=lambda: GuiHysteria2TUNSettings(parent=parent).open(),
+                callback=lambda: GuiHysteria2TUNSettings(
+                    parent=parent,
+                    isConnectionActive=lambda: isCoreActive(Hysteria2),
+                ).open(),
             ),
         )
 
@@ -176,6 +157,7 @@ class Hysteria2Plugin(FuriousPlugin):
             # own process, so it cannot use CoreManager's privileged helper.
             # Keep the existing external tun2socks path available instead.
             config.pop('tun', None)
+
             logger.warning(
                 'Hysteria 2 native TUN requires superuser privileges on '
                 'Linux; falling back to external tun2socks'
@@ -190,6 +172,7 @@ class Hysteria2Plugin(FuriousPlugin):
 
         if not serverAddresses and not hasManualExclusions:
             config.pop('tun', None)
+
             logger.error(
                 'Hysteria 2 native TUN disabled for this connection because '
                 'the server address could not be resolved and no manual route '

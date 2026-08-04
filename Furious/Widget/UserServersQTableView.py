@@ -25,11 +25,11 @@ from Furious.Library import *
 from Furious.Plugins import getPluginRegistry
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Core.CoreManager import CoreManager
+from Furious.Service import CoreManager
 from Furious.TrayActions.Import import *
-from Furious.Widget.WaitingSpinner import *
-from Furious.Window.QRCodeWindow import *
-from Furious.Window.TextEditorWindow import *
+from Furious.Qt.WaitingSpinner import *
+from Furious.Widget.QRCodeWindow import *
+from Furious.Widget.TextEditorWindow import *
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -1066,6 +1066,13 @@ class UserServersQTableViewHeaders:
         return self.name
 
 
+def _subscriptionRemark(item: ConfigFactory) -> str:
+    """Resolve a persisted subscription ID to its user-visible remark."""
+    subscription = Storage.UserSubs().get(item.itemSubscription, {})
+
+    return subscription.get('remark', '')
+
+
 class UserServersTableModel(QtCore.QAbstractTableModel):
     """Expose user servers table data through a Qt item model."""
 
@@ -1404,7 +1411,7 @@ class UserServersQTableView(
         UserServersQTableViewHeaders('Port'),
         UserServersQTableViewHeaders('Transport'),
         UserServersQTableViewHeaders('TLS'),
-        UserServersQTableViewHeaders('Subscription'),
+        UserServersQTableViewHeaders('Subscription', _subscriptionRemark),
         UserServersQTableViewHeaders('Latency'),
         UserServersQTableViewHeaders('Speed'),
     ]

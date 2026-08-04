@@ -24,7 +24,7 @@ from Furious.Interface import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 from Furious.Utility import *
-from Furious.Widget.Application import Application
+from Furious.Application import Application
 
 from PySide6 import QtCore
 from PySide6.QtGui import QDesktopServices

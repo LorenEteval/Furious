@@ -19,8 +19,8 @@
 
 from __future__ import annotations
 
-from .AppMainWindow import *
-from .LogViewerWindow import *
-from .QRCodeWindow import *
-from .TextEditorWindow import *
-from .UserSubsWindow import *
+from .AppMainWindow import AppMainWindow
+from .LogViewerWindow import LogViewerWindow
+from .UserSubsWindow import UserSubsWindow
+
+__all__ = ['AppMainWindow', 'LogViewerWindow', 'UserSubsWindow']

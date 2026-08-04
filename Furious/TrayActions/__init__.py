@@ -19,11 +19,34 @@
 
 from __future__ import annotations
 
-from .Connect import *
-from .EditConfiguration import *
-from .Exit import *
-from .Import import *
-from .Language import *
-from .Routing import *
-from .Settings import *
-from .SystemProxy import *
+from .Connect import ConnectAction
+from .ConnectProgressBar import ConnectProgressBar
+from .EditConfiguration import EditConfigurationAction
+from .Exit import ExitAction
+from .Import import (
+    ImportAction,
+    ImportFromFileAction,
+    ImportJSONFromClipboardAction,
+    ImportQRCodeOnTheScreenAction,
+    ImportURIFromClipboardAction,
+)
+from .Language import LanguageAction
+from .Routing import RoutingAction
+from .Settings import SettingsAction
+from .SystemProxy import SystemProxyAction
+
+__all__ = [
+    'ConnectAction',
+    'ConnectProgressBar',
+    'EditConfigurationAction',
+    'ExitAction',
+    'ImportAction',
+    'ImportFromFileAction',
+    'ImportJSONFromClipboardAction',
+    'ImportQRCodeOnTheScreenAction',
+    'ImportURIFromClipboardAction',
+    'LanguageAction',
+    'RoutingAction',
+    'SettingsAction',
+    'SystemProxyAction',
+]

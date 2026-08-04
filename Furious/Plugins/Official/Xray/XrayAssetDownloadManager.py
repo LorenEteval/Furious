@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from Furious.Qt.WebGETManager import *
+from Furious.Qt import *
 
 from PySide6 import QtCore
 
