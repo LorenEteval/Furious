@@ -341,7 +341,6 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         self.setSortingEnabled(False)
 
         # Selection
-        self.setSelectionColor(AppHue.disconnectedColor())
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 

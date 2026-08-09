@@ -65,29 +65,6 @@ __all__ = [
 ]
 
 
-_OpenDialogs = {}
-
-
-def _releaseOpenDialog(key, *_args):
-    """Release the temporary strong reference for a finished dialog."""
-    _OpenDialogs.pop(key, None)
-
-
-def _retainOpenDialog(dialog):
-    """Keep a shown dialog alive until it finishes or is destroyed."""
-    key = id(dialog)
-    _OpenDialogs[key] = dialog
-
-    if not getattr(dialog, '_furiousOpenDialogLifetimeConnected', False):
-        release = functools.partial(_releaseOpenDialog, key)
-
-        dialog.finished.connect(release)
-        dialog.destroyed.connect(release)
-        dialog._furiousOpenDialogLifetimeConnected = True
-
-    return key
-
-
 def moveToCenter(widget, parent=None):
     """Move to center."""
     geometry = widget.frameGeometry()
@@ -134,11 +111,32 @@ class AppQComboBox(Mixins.QTranslatable, QComboBox):
 class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
     """Present the app Qt dialog."""
 
+    _openDialogs = {}
+
+    @staticmethod
+    def _releaseOpenDialog(key, *_args):
+        """Release an asynchronously opened dialog after it finishes."""
+        AppQDialog._openDialogs.pop(key, None)
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQDialog."""
         super().__init__(*args, **kwargs)
 
-        self._firstShowCall = True
+        @callOnceOnly
+        def connect(key):
+            """Connect the lifetime release signals once."""
+            release = functools.partial(AppQDialog._releaseOpenDialog, key)
+
+            self.finished.connect(release)
+            self.destroyed.connect(release)
+
+        @callOnceOnly
+        def firstShow():
+            """Apply the first-show sizing once."""
+            self.setWidthAndHeight()
+
+        self._connectOnce = connect
+        self._firstShow = firstShow
 
         if PLATFORM != 'Darwin':
             self.setWidthAndHeight()
@@ -156,27 +154,29 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         return super().exec()
 
     def open(self):
-        """Open the app Qt dialog asynchronously."""
-        self.show()
+        """Open and retain the dialog until it finishes or is destroyed."""
+        key = id(self)
+        AppQDialog._openDialogs[key] = self
 
-        return super().open()
-
-    def show(self):
-        """Show and position the app Qt dialog."""
-        key = _retainOpenDialog(self)
+        self._connectOnce(key)
 
         try:
-            super().show()
+            self.show()
+
+            return super().open()
         except Exception:
-            _releaseOpenDialog(key)
+            # Any non-exit exceptions
+
+            AppQDialog._releaseOpenDialog(key)
 
             raise
 
-        if PLATFORM == 'Darwin':
-            if self._firstShowCall:
-                self.setWidthAndHeight()
+    def show(self):
+        """Show and position the app Qt dialog."""
+        super().show()
 
-                self._firstShowCall = False
+        if PLATFORM == 'Darwin':
+            self._firstShow()
 
         moveToCenter(self)
 
@@ -218,7 +218,7 @@ class AppQGroupBox(Mixins.QTranslatable, QGroupBox):
         self.setTitle(_(self.title()))
 
 
-class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
+class AppQHeaderView(Mixins.CleanupOnExit, QHeaderView):
     """Represent app q header view."""
 
     def sectionSizeSettingsEmpty(self):
@@ -250,7 +250,6 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
         self.sectionSizeTable = {}
 
         self.setSectionsClickable(True)
-        # self.setStyleSheet(self.getStyleSheet(AppHue.currentColor()))
         self.setFont(QFont(AppFontName()))
 
         # self.sectionResized.connect(self.handleSectionResized)
@@ -308,23 +307,6 @@ class AppQHeaderView(Mixins.CleanupOnExit, Mixins.ConnectionAware, QHeaderView):
             else:
                 self.setSectionResizeMode(index, AppQHeaderView.ResizeMode.Stretch)
 
-    @staticmethod
-    def getStyleSheet(color):
-        """Return style sheet."""
-        return f'QHeaderView::section:hover {{ background-color: {color}; }}'
-
-    def disconnectedCallback(self):
-        # self.setStyleSheet(self.getStyleSheet(AppHue.disconnectedColor()))
-
-        """Update the app q header view for a disconnected state."""
-        pass
-
-    def connectedCallback(self):
-        # self.setStyleSheet(self.getStyleSheet(AppHue.connectedColor()))
-
-        """Update the app q header view for a connected state."""
-        pass
-
     # Legacy method. Not used
     # @QtCore.Slot(int, int, int)
     # def handleSectionResized(self, index: int, oldSize: int, newSize: int):
@@ -371,43 +353,17 @@ class AppQLineEdit(Mixins.QTranslatable, QLineEdit):
         self.setPlaceholderText(_(self.placeholderText()))
 
 
-class AppQListWidget(Mixins.ConnectionAware, QListWidget):
+class AppQListWidget(QListWidget):
     """Provide the app Qt list widget."""
 
     def __init__(self, *args, **kwargs):
         """Initialize the AppQListWidget."""
         super().__init__(*args, **kwargs)
 
-        # self.setSelectionColor(AppHue.disconnectedColor())
-
-    def setSelectionColor(self, color):
-        """Set selection color."""
-        self.setStyleSheet(
-            f'QListWidget::item:selected {{'
-            f'    background: {color};'
-            f'}}'
-            f''
-            f'QListWidget::item:hover {{'
-            f'    background: {color};'
-            f'}}'
-        )
-
     @property
     def selectedIndex(self):
         """Return the selected index value."""
         return sorted(list(set(index.row() for index in self.selectedIndexes())))
-
-    def disconnectedCallback(self):
-        # self.setSelectionColor(AppHue.disconnectedColor())
-
-        """Update the app Qt list widget for a disconnected state."""
-        pass
-
-    def connectedCallback(self):
-        # self.setSelectionColor(AppHue.connectedColor())
-
-        """Update the app Qt list widget for a connected state."""
-        pass
 
 
 class AppQMainWindow(
@@ -418,11 +374,30 @@ class AppQMainWindow(
 ):
     """Present the app q main window."""
 
+    _openWindows = {}
+
+    @staticmethod
+    def _releaseOpenWindow(key, *_args):
+        """Release a shown main window after it closes or is destroyed."""
+        AppQMainWindow._openWindows.pop(key, None)
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQMainWindow."""
         super().__init__(*args, **kwargs)
 
-        self._firstShowCall = True
+        @callOnceOnly
+        def connect(key):
+            """Connect the lifetime release signal once."""
+            release = functools.partial(AppQMainWindow._releaseOpenWindow, key)
+            self.destroyed.connect(release)
+
+        @callOnceOnly
+        def firstShow():
+            """Apply the first-show sizing once."""
+            self.setWidthAndHeight()
+
+        self._connectOnce = connect
+        self._firstShow = firstShow
 
         self.setWindowIcon(AppHue.currentWindowIcon())
 
@@ -437,14 +412,23 @@ class AppQMainWindow(
         pass
 
     def show(self):
-        """Show and position the app q main window."""
-        super().show()
+        """Show, position, and retain the window until it closes."""
+        key = id(self)
+        AppQMainWindow._openWindows[key] = self
+
+        self._connectOnce(key)
+
+        try:
+            super().show()
+        except Exception:
+            # Any non-exit exceptions
+
+            AppQMainWindow._releaseOpenWindow(key)
+
+            raise
 
         if PLATFORM == 'Darwin':
-            if self._firstShowCall:
-                self.setWidthAndHeight()
-
-                self._firstShowCall = False
+            self._firstShow()
 
         moveToCenter(self)
 
@@ -453,6 +437,16 @@ class AppQMainWindow(
         if PLATFORM == 'Darwin':
             self.activateWindow()
             self.raise_()
+
+    def event(self, event):
+        """Release this window after Qt accepts its close event."""
+        closes = event.type() == QtCore.QEvent.Type.Close
+        result = super().event(event)
+
+        if closes and event.isAccepted():
+            AppQMainWindow._releaseOpenWindow(id(self))
+
+        return result
 
     def retranslate(self):
         """Refresh translated text for the app q main window."""
@@ -510,9 +504,26 @@ class AppQMenuBar(QMenuBar):
 class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
     """Represent app q message box."""
 
+    _openMessageBoxes = {}
+
+    @staticmethod
+    def _releaseOpenMessageBox(key, *_args):
+        """Release an asynchronously opened message box after it finishes."""
+        AppQMessageBox._openMessageBoxes.pop(key, None)
+
     def __init__(self, *args, **kwargs):
         """Initialize the AppQMessageBox."""
         super().__init__(*args, **kwargs)
+
+        @callOnceOnly
+        def connect(key):
+            """Connect the lifetime release signals once."""
+            release = functools.partial(AppQMessageBox._releaseOpenMessageBox, key)
+
+            self.finished.connect(release)
+            self.destroyed.connect(release)
+
+        self._connectOnce = connect
 
         self.setWindowIcon(AppHue.currentWindowIcon())
 
@@ -523,15 +534,8 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
         return self
 
     def show(self):
-        """Show the message box and retain it until it finishes."""
-        key = _retainOpenDialog(self)
-
-        try:
-            return super().show()
-        except Exception:
-            _releaseOpenDialog(key)
-
-            raise
+        """Show the app q message box."""
+        return super().show()
 
     def exec(self):
         """Show and execute the app q message box modally."""
@@ -541,11 +545,23 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
         return super().exec()
 
     def open(self):
-        """Open the app q message box asynchronously."""
-        self.show()
-        self.moveToCenter()
+        """Open and retain the message box until it finishes or is destroyed."""
+        key = id(self)
+        AppQMessageBox._openMessageBoxes[key] = self
 
-        return super().open()
+        self._connectOnce(key)
+
+        try:
+            self.show()
+            self.moveToCenter()
+
+            return super().open()
+        except Exception:
+            # Any non-exit exceptions
+
+            AppQMessageBox._releaseOpenMessageBox(key)
+
+            raise
 
     def retranslate(self):
         """Refresh translated text for the app q message box."""
@@ -669,7 +685,7 @@ class AppQSpinBox(QSpinBox):
         self.resizeHints()
 
 
-class AppQTableView(Mixins.ConnectionAware, QTableView):
+class AppQTableView(QTableView):
     """Represent app Qt table view."""
 
     def __init__(self, *args, **kwargs):
@@ -684,27 +700,8 @@ class AppQTableView(Mixins.ConnectionAware, QTableView):
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.verticalHeader().setDefaultSectionSize(height)
 
-    @staticmethod
-    def getStyleSheet(color):
-        """Return style sheet."""
-        return f'QTableView {{ selection-background-color: {color}; }}'
 
-    def setSelectionColor(self, color):
-        # self.setStyleSheet(self.getStyleSheet(color))
-
-        """Set selection color."""
-        pass
-
-    def disconnectedCallback(self):
-        """Update the app Qt table view for a disconnected state."""
-        self.setSelectionColor(AppHue.disconnectedColor())
-
-    def connectedCallback(self):
-        """Update the app Qt table view for a connected state."""
-        self.setSelectionColor(AppHue.connectedColor())
-
-
-class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):
+class AppQTableWidget(QTableWidget):
     """Provide the app Qt table widget."""
 
     def __init__(self, *args, **kwargs):
@@ -718,17 +715,6 @@ class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):
     def selectedIndex(self):
         """Return the selected index value."""
         return sorted(list(set(index.row() for index in self.selectedIndexes())))
-
-    @staticmethod
-    def getStyleSheet(color):
-        """Return style sheet."""
-        return f'QTableWidget {{ selection-background-color: {color}; }}'
-
-    def setSelectionColor(self, color):
-        # self.setStyleSheet(self.getStyleSheet(color))
-
-        """Set selection color."""
-        pass
 
     def activateItemByIndex(self, index, activate):
         """Activate item by index."""
@@ -776,14 +762,6 @@ class AppQTableWidget(Mixins.ConnectionAware, QTableWidget):
             selection, QtCore.QItemSelectionModel.SelectionFlag.Select
         )
 
-    def disconnectedCallback(self):
-        """Update the app Qt table widget for a disconnected state."""
-        self.setSelectionColor(AppHue.disconnectedColor())
-
-    def connectedCallback(self):
-        """Update the app Qt table widget for a connected state."""
-        self.setSelectionColor(AppHue.connectedColor())
-
 
 class AppQTabWidget(Mixins.QTranslatable, QTabWidget):
     """Provide the app q tab widget."""
@@ -818,8 +796,6 @@ class AppQToolBar(Mixins.QTranslatable, QToolBar):
                 # Do nothing
                 pass
 
-        self.setStyleSheet(self.getStyleSheet())
-
         self.actionTriggered.connect(self.showMenuBelow)
 
     @QtCore.Slot(AppQAction)
@@ -846,11 +822,6 @@ class AppQToolBar(Mixins.QTranslatable, QToolBar):
 
             if isinstance(menu, AppQMenu):
                 menu.exec(button.mapToGlobal(button.rect().bottomLeft()))
-
-    @staticmethod
-    def getStyleSheet():
-        """Return style sheet."""
-        return f'QToolBar {{ spacing: 5px; }}'
 
     def retranslate(self):
         """Refresh translated text for the app q tool bar."""

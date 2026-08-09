@@ -66,6 +66,7 @@ class ConnectionProgressBar(Mixins.ConnectionAware, QProgressBar):
         style = self.style()
         style.unpolish(self)
         style.polish(self)
+
         self.update()
 
     def start(self, msec: int):
