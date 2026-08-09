@@ -19,13 +19,47 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import AppSettings, registerAppSettings
 from Furious.Qt import *
 from Furious.Qt import gettext as _
+from Furious.Service.LogManager import (
+    ALL_LOGS_FILTER,
+    APPLICATION_LOG_CATEGORY,
+    CORE_LOG_CATEGORY,
+    LogManager,
+    formatLogEntry,
+)
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import *
 
 __all__ = ['LogWindow']
+
+registerAppSettings('LogViewerWidgetPointSize')
+registerAppSettings('LogViewerSelectedCategory', default=ALL_LOGS_FILTER)
+
+_LEGACY_POINT_SIZE_SETTINGS = (
+    'LogViewerWidgetPointSizeSelf',
+    'LogViewerWidgetPointSizeCore',
+    'LogViewerWidgetPointSizeTun_',
+)
+
+
+def _migratePointSizeSettings():
+    """Preserve one legacy size and remove the obsolete per-source settings."""
+    settings = QtCore.QSettings()
+
+    if settings.value('LogViewerWidgetPointSize') is None:
+        for name in _LEGACY_POINT_SIZE_SETTINGS:
+            value = settings.value(name)
+
+            if value is not None:
+                settings.setValue('LogViewerWidgetPointSize', value)
+
+                break
+
+    for name in _LEGACY_POINT_SIZE_SETTINGS:
+        settings.remove(name)
 
 
 class MBoxSaveError(AppQMessageBox):
@@ -77,28 +111,52 @@ def saveAsFile(content: str):
 
 
 class LogWindow(AppQMainWindow):
-    """Present the log viewer window."""
+    """Present and filter the unified application log stream."""
 
     def __init__(self, *args, **kwargs):
         """Initialize the log window."""
-        tabTitle = kwargs.pop('tabTitle', '')
-        fontFamily = kwargs.pop('fontFamily', '')
-        pointSizeSettingsName = kwargs.pop('pointSizeSettingsName', '')
+        manager, fontFamily = (
+            kwargs.pop('manager', None),
+            kwargs.pop('fontFamily', ''),
+        )
 
         super().__init__(*args, **kwargs)
 
+        if not isinstance(manager, LogManager):
+            raise TypeError('manager must be a LogManager')
+
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
+
+        _migratePointSizeSettings()
+
+        self.manager = manager
+        self._preferredFilter = str(AppSettings.get('LogViewerSelectedCategory'))
+
         self.setWindowTitle(_('Log Viewer'))
+
+        self.filterLabel = AppQLabel(_('Log Type'))
+        self.filterComboBox = QComboBox()
+        self.filterComboBox.setMinimumWidth(180)
 
         self.textBrowser = DraculaTextBrowser(
             fontFamily=fontFamily,
-            pointSizeSettingsName=pointSizeSettingsName,
+            pointSizeSettingsName='LogViewerWidgetPointSize',
         )
         self.textBrowser.setLineWrapMode(DraculaTextBrowser.LineWrapMode.NoWrap)
 
-        self.tabWidget = AppQTabWidget()
-        self.tabWidget.addTab(self.textBrowser, tabTitle)
+        filterLayout = QHBoxLayout()
+        filterLayout.addWidget(self.filterLabel)
+        filterLayout.addWidget(self.filterComboBox)
+        filterLayout.addStretch()
 
-        self.setCentralWidget(self.tabWidget)
+        centralLayout = QVBoxLayout()
+        centralLayout.addLayout(filterLayout)
+        centralLayout.addWidget(self.textBrowser)
+
+        centralWidget = QWidget()
+        centralWidget.setLayout(centralLayout)
+
+        self.setCentralWidget(centralWidget)
 
         self._fileMenu = AppQMenu(
             AppQAction(
@@ -162,14 +220,112 @@ class LogWindow(AppQMainWindow):
         self.menuBar().addMenu(self._editMenu)
         self.menuBar().addMenu(self._viewMenu)
 
+        self._populateFilters(self._preferredFilter)
+        self._refreshEntries()
+
+        self.filterComboBox.currentIndexChanged.connect(self._filterChanged)
+        self.manager.categoryRegistered.connect(self._categoryRegistered)
+        self.manager.entryAdded.connect(self._entryAdded)
+        self.manager.entriesCleared.connect(self._entriesCleared)
+
+    def _categoryText(self, category) -> str:
+        """Return a category's translated or literal display label."""
+        if category.id == APPLICATION_LOG_CATEGORY:
+            return _('Application')
+
+        return (
+            _(category.displayName) if category.translatable else category.displayName
+        )
+
+    def _populateFilters(self, selectedCategoryId: str):
+        """Rebuild filter choices from the registered category collection."""
+        self.filterComboBox.blockSignals(True)
+
+        try:
+            self.filterComboBox.clear()
+            self.filterComboBox.addItem(_('All Logs'), ALL_LOGS_FILTER)
+
+            for category in self.manager.categories():
+                self.filterComboBox.addItem(
+                    self._categoryText(category),
+                    category.id,
+                )
+
+            index = self.filterComboBox.findData(selectedCategoryId)
+
+            self.filterComboBox.setCurrentIndex(max(index, 0))
+        finally:
+            self.filterComboBox.blockSignals(False)
+
+    def _refreshEntries(self):
+        """Render the current immutable filtered-entry snapshot."""
+        selectedCategoryId = self.filterComboBox.currentData()
+
+        content = '\n'.join(
+            formatLogEntry(entry) for entry in self.manager.entries(selectedCategoryId)
+        )
+        self.textBrowser.setPlainText(content)
+
+        scrollbar = self.textBrowser.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+
+    @QtCore.Slot(int)
+    def _filterChanged(self, _index: int):
+        """Persist and apply the category selected by the user."""
+        categoryId = self.filterComboBox.currentData()
+
+        if not isinstance(categoryId, str):
+            categoryId = ALL_LOGS_FILTER
+
+        self._preferredFilter = categoryId
+
+        AppSettings.set('LogViewerSelectedCategory', categoryId)
+
+        self._refreshEntries()
+
+    @QtCore.Slot(object)
+    def _categoryRegistered(self, category):
+        """Add a newly registered component without rebuilding the window."""
+        if self.filterComboBox.findData(category.id) == -1:
+            self.filterComboBox.addItem(self._categoryText(category), category.id)
+
+        if category.id == self._preferredFilter:
+            self.filterComboBox.setCurrentIndex(
+                self.filterComboBox.findData(category.id)
+            )
+
+    @QtCore.Slot(object)
+    def _entryAdded(self, entry):
+        """Append an entry when it matches the active filter."""
+        categoryId = self.filterComboBox.currentData()
+
+        if categoryId in (ALL_LOGS_FILTER, entry.categoryId):
+            self.textBrowser.appendLine(formatLogEntry(entry))
+
+    @QtCore.Slot(object)
+    def _entriesCleared(self, _categoryIds):
+        """Refresh the presentation after the underlying collection changes."""
+        self._refreshEntries()
+
+    def showEvent(self, event):
+        """Focus the window itself instead of an untouched child control."""
+        super().showEvent(event)
+
+        self.setFocus(QtCore.Qt.FocusReason.OtherFocusReason)
+
     def plainText(self) -> str:
-        """Return the plain text value used by the log viewer window."""
+        """Return the plain text currently shown by the selected filter."""
         return self.textBrowser.toPlainText()
 
-    def appendLine(self, line: str):
-        """Append line."""
-        self.textBrowser.appendLine(line)
-
     def clear(self):
-        """Remove all data from the log viewer window."""
-        self.textBrowser.clear()
+        """Remove all entries through the unified logging service."""
+        self.manager.clear()
+
+    def retranslate(self):
+        """Refresh translated window and filter labels."""
+        super().retranslate()
+
+        selectedCategoryId = self.filterComboBox.currentData()
+
+        self._populateFilters(selectedCategoryId)
+        self._refreshEntries()

@@ -35,6 +35,7 @@ from Furious.Service import (
     ConnectionManager,
     SubscriptionImportService,
     SubscriptionSource,
+    coreLogCallback,
 )
 from Furious.Widget.WaitingSpinner import *
 
@@ -510,19 +511,10 @@ class TestDownloadSpeedWorker(WebGETManager):
         finally:
             self.must()
 
-    @staticmethod
-    def coreMsgCallback(line):
-        """Handle the core msg callback."""
-        try:
-            AppLoggerWindow.Core().appendLine(line)
-        except Exception:
-            # Any non-exit exceptions
-
-            pass
-
     def _startKernel(self, config) -> bool:
         """Prepare and start a download test through its runtime factory."""
         configcopy = getPluginRegistry().prepareDownloadTest(config, self.port)
+
         if configcopy is None:
             self.factory.metadata.speed = 'Invalid'
             self.sync()
@@ -536,7 +528,7 @@ class TestDownloadSpeedWorker(WebGETManager):
             configcopy,
             AppBuiltinRouting.Global.value,
             self.coreExitCallback,
-            msgCallbackCore=self.coreMsgCallback,
+            msgCallbackCore=coreLogCallback(AppLogManager()),
             deepcopy=False,
             proxyModeOnly=True,
             log=False,
@@ -1462,34 +1454,6 @@ class ServerTableView(
             _('Advanced...'),
             menu=AppQMenu(
                 self.customizeJSONConfigActionRef,
-                AppQSeperator(),
-                AppQAction(
-                    _('Show Furious Log...'),
-                    callback=lambda: AppLoggerWindow.Self().showMaximized(),
-                    shortcut=QtCore.QKeyCombination(
-                        QtCore.Qt.KeyboardModifier.ControlModifier
-                        | QtCore.Qt.KeyboardModifier.ShiftModifier,
-                        QtCore.Qt.Key.Key_F,
-                    ),
-                ),
-                AppQAction(
-                    _('Show Core Log...'),
-                    callback=lambda: AppLoggerWindow.Core().showMaximized(),
-                    shortcut=QtCore.QKeyCombination(
-                        QtCore.Qt.KeyboardModifier.ControlModifier
-                        | QtCore.Qt.KeyboardModifier.ShiftModifier,
-                        QtCore.Qt.Key.Key_C,
-                    ),
-                ),
-                AppQAction(
-                    _('Show Tun2socks Log...'),
-                    callback=lambda: AppLoggerWindow.TUN_().showMaximized(),
-                    shortcut=QtCore.QKeyCombination(
-                        QtCore.Qt.KeyboardModifier.ControlModifier
-                        | QtCore.Qt.KeyboardModifier.ShiftModifier,
-                        QtCore.Qt.Key.Key_T,
-                    ),
-                ),
             ),
             useActionGroup=False,
             checkable=False,

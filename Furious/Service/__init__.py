@@ -22,6 +22,16 @@ from __future__ import annotations
 from .ConnectionManager import ConnectionManager
 from .ConnectivityManager import ConnectivityManager
 from .DnsResolver import DnsResolver
+from .LogManager import (
+    ALL_LOGS_FILTER,
+    APPLICATION_LOG_CATEGORY,
+    CORE_LOG_CATEGORY,
+    TUN2SOCKS_LOG_CATEGORY,
+    ApplicationLogHandler,
+    LogManager,
+    coreLogCallback,
+    formatLogEntry,
+)
 from .SubscriptionImporter import (
     SubscriptionImportResult,
     SubscriptionImportService,
@@ -38,6 +48,13 @@ __all__ = [
     'ConnectionManager',
     'ConnectivityManager',
     'DnsResolver',
+    'ALL_LOGS_FILTER',
+    'APPLICATION_LOG_CATEGORY',
+    'CORE_LOG_CATEGORY',
+    'TUN2SOCKS_LOG_CATEGORY',
+    'ApplicationLogHandler',
+    'LogManager',
+    'coreLogCallback',
     'SubscriptionImportResult',
     'SubscriptionImportService',
     'SubscriptionSource',
@@ -45,4 +62,5 @@ __all__ = [
     'UpdateManager',
     'formatTrafficSpeed',
     'formatTrafficUsage',
+    'formatLogEntry',
 ]

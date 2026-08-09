@@ -29,6 +29,7 @@ from Furious.Qt import AppStyleSheet
 from Furious.Qt.TextEditorTheme import configureEditorLogMetadata
 from Furious.Qt import gettext as _
 from Furious.Repository import *
+from Furious.Service import ApplicationLogHandler, LogManager
 from Furious.Application.TrayIcon import *
 from Furious.Window.LogWindow import *
 from Furious.Window.MainWindow import *
@@ -49,30 +50,11 @@ import darkdetect
 
 logger = logging.getLogger(__name__)
 
-registerAppSettings('LogViewerWidgetPointSizeSelf')
-registerAppSettings('LogViewerWidgetPointSizeCore')
-registerAppSettings('LogViewerWidgetPointSizeTun_')
-
 
 class SystemTrayUnavailable(Exception):
     """Represent system tray unavailable."""
 
     pass
-
-
-class AppLogHandler(logging.Handler):
-    """Represent app log handler."""
-
-    def __init__(self, emitCallback):
-        """Initialize the AppLogHandler."""
-        super().__init__()
-
-        self.emitCallback = emitCallback
-
-    def emit(self, record):
-        """Emit the current app log handler event or message."""
-        if callable(self.emitCallback):
-            self.emitCallback(self.format(record))
 
 
 class ApplicationExitHelper(QApplication):
@@ -198,10 +180,9 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         self.mainWindow = None
         self.systemTray = None
 
-        # Logging window
-        self.logViewerWindowSelf = None
-        self.logViewerWindowCore = None
-        self.logViewerWindowTun_ = None
+        # Unified logging service and presentation
+        self.logManager = None
+        self.logWindow = None
 
         # Protected storage access
         self._userActivatedItemIndex = None
@@ -248,29 +229,18 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
     def configureLogging(self):
         """Configure logging."""
-        self.logViewerWindowSelf = LogWindow(
-            tabTitle=_('Furious Log'),
+        self.logManager = LogManager(parent=self)
+
+        self.logWindow = LogWindow(
+            manager=self.logManager,
             fontFamily=self.customFontName,
-            pointSizeSettingsName='LogViewerWidgetPointSizeSelf',
-        )
-        self.logViewerWindowCore = LogWindow(
-            tabTitle=_('Core Log'),
-            fontFamily=self.customFontName,
-            pointSizeSettingsName='LogViewerWidgetPointSizeCore',
-        )
-        self.logViewerWindowTun_ = LogWindow(
-            tabTitle=_('Tun2socks Log'),
-            fontFamily=self.customFontName,
-            pointSizeSettingsName='LogViewerWidgetPointSizeTun_',
         )
 
         logging.basicConfig(
             format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
             level=logging.INFO,
             handlers=(
-                AppLogHandler(
-                    functools.partial(self.logViewerWindowSelf.appendLine),
-                ),
+                ApplicationLogHandler(self.logManager),
                 logging.StreamHandler(),
             ),
         )

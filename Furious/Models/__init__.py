@@ -26,6 +26,7 @@ from .Encoding import (
     PyBase64Encoder,
     UJSONEncoder,
 )
+from .Logging import LogCategory, LogEntry
 from .Profile import (
     ProfileMetadata,
     ServerProfile,
@@ -38,6 +39,8 @@ __all__ = [
     'Base64Encoder',
     'ConfigFactory',
     'JSONEncoder',
+    'LogCategory',
+    'LogEntry',
     'ProfileMetadata',
     'PyBase64Encoder',
     'Protocol',

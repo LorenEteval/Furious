@@ -59,9 +59,8 @@ class Tun2socks(CoreProcessWorker):
         SystemShuttingDown = 0x40010004
 
     def __init__(self, **kwargs):
-        # Optimizer is AppLoggerWindow.TUN_ window
         """Initialize the Tun2socks."""
-        backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLoggerWindow.TUN_)
+        backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLogWindow)
 
         super().__init__(**kwargs, backgroundOptimizer=backgroundOptimizer)
 

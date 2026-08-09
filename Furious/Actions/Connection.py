@@ -26,7 +26,12 @@ from Furious.Repository import *
 from Furious.Plugins import getPluginRegistry
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Service import ConnectionManager, UpdateManager
+from Furious.Service import (
+    TUN2SOCKS_LOG_CATEGORY,
+    ConnectionManager,
+    UpdateManager,
+    coreLogCallback,
+)
 from Furious.Widget.ConnectionProgressWidget import ConnectionProgressWidget
 
 from PySide6 import QtCore
@@ -259,16 +264,19 @@ class ConnectAction(AppQAction):
 
             self.doConnecting()
 
-            # Clear previous log
-            AppLoggerWindow.Core().clear()
-            AppLoggerWindow.TUN_().clear()
+            logManager = AppLogManager()
+            # Retain application diagnostics while starting a fresh runtime log.
+            logManager.clear(runtimeOnly=True)
 
             success = self.coreManager.start(
                 config,
                 routing=AppSettings.get('Routing'),
                 exitCallback=self.coreExitCallback,
-                msgCallbackCore=lambda line: AppLoggerWindow.Core().appendLine(line),
-                msgCallbackTUN_=lambda line: AppLoggerWindow.TUN_().appendLine(line),
+                msgCallbackCore=coreLogCallback(logManager),
+                msgCallbackTUN_=logManager.callback(
+                    TUN2SOCKS_LOG_CATEGORY,
+                    source='Tun2socks',
+                ),
             )
 
             if self.actionQueue.empty():

@@ -407,6 +407,8 @@ class MainWindow(AppQMainWindow):
         """Initialize the main window."""
         super().__init__(*args, **kwargs)
 
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
+
         if SystemRuntime.isAdmin():
             self.setWindowTitle(f'{_(APPLICATION_NAME)} ({_(ADMINISTRATOR_NAME)})')
         else:
@@ -441,36 +443,6 @@ class MainWindow(AppQMainWindow):
 
         self.mainTab = AppQTabWidget()
         self.mainTab.addTab(self.userServersQTableWidget, _('Server'))
-
-        logActions = [
-            AppQAction(
-                _('Show Furious Log...'),
-                callback=lambda: AppLoggerWindow.Self().showMaximized(),
-                shortcut=QtCore.QKeyCombination(
-                    QtCore.Qt.KeyboardModifier.ControlModifier
-                    | QtCore.Qt.KeyboardModifier.ShiftModifier,
-                    QtCore.Qt.Key.Key_F,
-                ),
-            ),
-            AppQAction(
-                _('Show Core Log...'),
-                callback=lambda: AppLoggerWindow.Core().showMaximized(),
-                shortcut=QtCore.QKeyCombination(
-                    QtCore.Qt.KeyboardModifier.ControlModifier
-                    | QtCore.Qt.KeyboardModifier.ShiftModifier,
-                    QtCore.Qt.Key.Key_C,
-                ),
-            ),
-            AppQAction(
-                _('Show Tun2socks Log...'),
-                callback=lambda: AppLoggerWindow.TUN_().showMaximized(),
-                shortcut=QtCore.QKeyCombination(
-                    QtCore.Qt.KeyboardModifier.ControlModifier
-                    | QtCore.Qt.KeyboardModifier.ShiftModifier,
-                    QtCore.Qt.Key.Key_T,
-                ),
-            ),
-        ]
 
         serverActions = []
 
@@ -692,10 +664,8 @@ class MainWindow(AppQMainWindow):
                 AppQAction(
                     _('Log'),
                     icon=bootstrapIcon('pin-angle.svg'),
-                    menu=AppQMenu(*logActions),
-                    useSetMenu=False,
-                    useActionGroup=False,
                     checkable=False,
+                    callback=lambda: AppLogWindow().showMaximized(),
                 ),
                 AppQSeperator(),
                 AppQAction(
@@ -750,7 +720,12 @@ class MainWindow(AppQMainWindow):
             # Menu actions
             logMenu = {
                 'name': 'Log',
-                'actions': [*logActions],
+                'actions': [
+                    AppQAction(
+                        _('Show Logs...'),
+                        callback=lambda: AppLogWindow().showMaximized(),
+                    )
+                ],
             }
 
             serverMenu = {
@@ -1048,6 +1023,12 @@ class MainWindow(AppQMainWindow):
                         f'restore main window size on macOS success: '
                         f'{size.toTuple()}'
                     )
+
+    def showEvent(self, event):
+        """Focus the window itself instead of an untouched child control."""
+        super().showEvent(event)
+
+        self.setFocus(QtCore.Qt.FocusReason.OtherFocusReason)
 
     def retranslate(self):
         """Refresh translated text for the app main window."""

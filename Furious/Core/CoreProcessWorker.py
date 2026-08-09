@@ -300,8 +300,8 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
     def __init__(self, **kwargs):
         """Initialize the CoreProcessWorker."""
         msgCallback = kwargs.pop('msgCallback', None)
-        # Optimizer is AppLoggerWindow.Core window
-        backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLoggerWindow.Core)
+        # Drain output more frequently while the unified log window is visible.
+        backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLogWindow)
 
         super().__init__(**kwargs)
 
