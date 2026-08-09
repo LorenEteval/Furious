@@ -83,6 +83,7 @@ class PluginRegistry:
         self._factories = {}
         self._configurationFactories = {}
         self._kernelFactories = {}
+        self._trafficStatsProviders = {}
         self._decoders = {}
         self._initializedPlugins = []
         self._closed = False
@@ -146,6 +147,7 @@ class PluginRegistry:
         localEditorProtocols = set()
         localConfigurationTypes = []
         localKernelTypes = []
+        localTrafficStatsKernelTypes = []
         entries = []
 
         for capability in capabilities:
@@ -276,6 +278,37 @@ class PluginRegistry:
                         local.append(itemType)
 
                 detail = (configurationTypes, kernelTypes)
+            elif isinstance(capability, TrafficStatsProvider):
+                kernelTypes = tuple(capability.kernelTypes)
+
+                if not kernelTypes:
+                    raise ValueError(
+                        f'traffic stats provider {capability.providerId!r} must '
+                        f'declare kernel types'
+                    )
+
+                for kernelType in kernelTypes:
+                    if not isinstance(kernelType, type):
+                        raise TypeError(
+                            'traffic stats provider kernel types must be classes'
+                        )
+
+                    if any(
+                        issubclass(kernelType, registeredType)
+                        or issubclass(registeredType, kernelType)
+                        for registeredType in (
+                            *self._trafficStatsProviders,
+                            *localTrafficStatsKernelTypes,
+                        )
+                    ):
+                        raise ValueError(
+                            f'traffic stats kernel type '
+                            f'{kernelType.__name__!r} overlaps a registered type'
+                        )
+
+                    localTrafficStatsKernelTypes.append(kernelType)
+
+                detail = kernelTypes
             elif isinstance(capability, SubscriptionDecoder):
                 if not isinstance(capability.priority, int):
                     raise TypeError('subscription decoder priority must be an integer')
@@ -322,6 +355,9 @@ class PluginRegistry:
                     self._configurationFactories[configType] = entry
                 for kernelType in kernelTypes:
                     self._kernelFactories[kernelType] = entry
+            elif isinstance(capability, TrafficStatsProvider):
+                for kernelType in detail:
+                    self._trafficStatsProviders[kernelType] = entry
             elif isinstance(capability, SubscriptionDecoder):
                 self._decoders[capabilityId] = entry
 
@@ -373,6 +409,7 @@ class PluginRegistry:
             '_factories',
             '_configurationFactories',
             '_kernelFactories',
+            '_trafficStatsProviders',
             '_decoders',
         ):
             setattr(
@@ -464,6 +501,10 @@ class PluginRegistry:
             )
         )
 
+    def trafficStatsProviders(self):
+        """Return registered runtime traffic-statistics providers."""
+        return self.capabilities(CapabilityKind.TrafficStats)
+
     def handlerForProtocol(self, protocol):
         """Return the handler registered for a protocol identifier."""
         entry = self._protocols.get(_normalizeIdentifier(protocol))
@@ -512,6 +553,55 @@ class PluginRegistry:
         for kernelType, (_plugin, factory) in self._kernelFactories.items():
             if isinstance(kernel, kernelType):
                 return factory
+
+        return None
+
+    def trafficStatsProviderForKernel(self, kernel):
+        """Return the traffic-statistics provider that owns *kernel*."""
+        for kernelType, (_plugin, provider) in self._trafficStatsProviders.items():
+            if isinstance(kernel, kernelType):
+                return provider
+
+        return None
+
+    def trafficStatsMonitorForKernels(self, kernels):
+        """Return the first available monitor for the active runtime kernels."""
+        for kernel in kernels:
+            provider = self.trafficStatsProviderForKernel(kernel)
+
+            if provider is None:
+                continue
+
+            try:
+                monitor = provider.monitorForKernel(kernel)
+            except Exception as ex:
+                logger.error(
+                    f'failed to obtain traffic stats monitor from '
+                    f'{provider.providerId!r}: {ex}'
+                )
+
+                continue
+
+            if monitor is None:
+                continue
+
+            if not isinstance(monitor, TrafficStatsMonitor):
+                logger.error(
+                    f'traffic stats provider {provider.providerId!r} returned '
+                    f'an invalid monitor'
+                )
+
+                continue
+
+            if not callable(monitor.query):
+                logger.error(
+                    f'traffic stats provider {provider.providerId!r} returned '
+                    f'a monitor without a query callable'
+                )
+
+                continue
+
+            return monitor
 
         return None
 
