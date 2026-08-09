@@ -296,6 +296,17 @@ class AppStyleSheet:
                 border-color: {palette['border']};
             }}
 
+            QFrame#NavigationPanel {{
+                border: none;
+                border-right: 1px solid {palette['border']};
+                background-color: {palette['panel_alt']};
+            }}
+
+            QStackedWidget#ApplicationPageStack {{
+                border: none;
+                background-color: {palette['window']};
+            }}
+
             QGroupBox {{
                 margin-top: 16px;
                 padding: 14px 12px 12px 12px;
@@ -415,13 +426,15 @@ class AppStyleSheet:
                 background-color: {palette['border']};
             }}
 
-            QToolBar#AppMainWindow_AppQToolBar {{
+            QToolBar#AppMainWindow_AppQToolBar,
+            QToolBar#HomePageToolBar {{
                 padding: 6px 8px;
                 spacing: 2px;
                 background-color: {palette['panel']};
             }}
 
-            QToolBar#AppMainWindow_AppQToolBar::separator {{
+            QToolBar#AppMainWindow_AppQToolBar::separator,
+            QToolBar#HomePageToolBar::separator {{
                 margin: 8px 4px;
             }}
 
@@ -434,11 +447,44 @@ class AppStyleSheet:
                 color: {palette['text']};
             }}
 
-            QToolBar#AppMainWindow_AppQToolBar QToolButton {{
+            QToolBar#AppMainWindow_AppQToolBar QToolButton,
+            QToolBar#HomePageToolBar QToolButton {{
                 min-width: 72px;
                 min-height: 54px;
                 padding: 5px 11px;
                 border-radius: 8px;
+            }}
+
+            QToolButton#NavigationToggleButton,
+            QToolButton#NavigationPageButton {{
+                min-width: 0;
+                min-height: 38px;
+                padding: 4px 10px;
+                border: 1px solid transparent;
+                border-radius: 7px;
+                background-color: transparent;
+                color: {palette['text']};
+                text-align: left;
+            }}
+
+            QToolButton#NavigationToggleButton:hover,
+            QToolButton#NavigationPageButton:hover {{
+                border-color: transparent;
+                background-color: {palette['hover']};
+                color: {palette['text_strong']};
+            }}
+
+            QToolButton#NavigationPageButton:checked {{
+                border: none;
+                border-left: 3px solid {palette['accent']};
+                border-radius: 7px;
+                background-color: {palette['accent_soft']};
+                color: {palette['text_strong']};
+                font-weight: 600;
+            }}
+
+            QToolButton#NavigationPageButton:checked:hover {{
+                background-color: {palette['accent_soft_hover']};
             }}
 
             QToolButton:hover {{

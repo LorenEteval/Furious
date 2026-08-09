@@ -31,7 +31,7 @@ from Furious.Qt import gettext as _
 from Furious.Repository import *
 from Furious.Service import ApplicationLogHandler, LogManager
 from Furious.Application.TrayIcon import *
-from Furious.Window.LogWindow import *
+from Furious.Window.LogPage import *
 from Furious.Window.MainWindow import *
 
 from PySide6 import QtCore
@@ -182,7 +182,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
         # Unified logging service and presentation
         self.logManager = None
-        self.logWindow = None
+        self.logPage = None
 
         # Protected storage access
         self._userActivatedItemIndex = None
@@ -231,7 +231,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         """Configure logging."""
         self.logManager = LogManager(parent=self)
 
-        self.logWindow = LogWindow(
+        self.logPage = LogPage(
             manager=self.logManager,
             fontFamily=self.customFontName,
         )
