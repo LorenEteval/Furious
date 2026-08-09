@@ -46,6 +46,8 @@ def fixLogObjectPath(config, attr: str, value: str, log=True):
     try:
         path = config['log'][attr]
     except Exception:
+        # Any non-exit exceptions
+
         config['log'][attr] = path = ''
 
     if not isinstance(path, (str, bytes)):
@@ -65,6 +67,8 @@ def fixLogObjectPath(config, attr: str, value: str, log=True):
         except FileExistsError:
             pass
         except Exception:
+            # Any non-exit exceptions
+
             pass
 
     if log:
@@ -304,6 +308,8 @@ class XrayKernelFactory(KernelFactory):
             try:
                 statsTarget = configureXrayStats(config)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(f'failed to configure Xray traffic statistics: {ex}')
 
                 statsTarget = None
@@ -342,6 +348,8 @@ class XrayKernelFactory(KernelFactory):
                 if outboundObject['tag'] == 'proxy':
                     outboundObject['tag'] = f'proxy{port}'
         except Exception:
+            # Any non-exit exceptions
+
             pass
 
         return configcopy

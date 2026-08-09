@@ -544,6 +544,8 @@ class ConnectionManager(Mixins.CleanupOnExit):
                 try:
                     process.stop()
                 except Exception as ex:
+                    # Any non-exit exceptions
+
                     logger.error(f'error stopping core process: {ex}')
         finally:
             self.processesPool.clear()

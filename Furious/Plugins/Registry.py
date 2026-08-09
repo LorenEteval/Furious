@@ -58,6 +58,8 @@ def _schemeFromURI(uri: str) -> str:
     try:
         return _normalizeScheme(urlsplit(uri.strip()).scheme)
     except Exception:
+        # Any non-exit exceptions
+
         return ''
 
 
@@ -94,6 +96,8 @@ class PluginRegistry:
         try:
             return CapabilityKind(capability.capabilityKind)
         except Exception as ex:
+            # Any non-exit exceptions
+
             raise TypeError('capability has an invalid capability kind') from ex
 
     @staticmethod
@@ -364,9 +368,13 @@ class PluginRegistry:
         try:
             plugin.initialize(PluginContext(pluginId, self, pluginMetadata))
         except Exception:
+            # Any non-exit exceptions
+
             try:
                 plugin.shutdown()
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(f'plugin rollback failed for {pluginId!r}: {ex}')
 
             self._removePlugin(pluginId)
@@ -521,6 +529,8 @@ class PluginRegistry:
                 if handler.supports(config):
                     matches.append(handler)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'protocol ownership check failed for '
                     f'{handler.descriptor.id!r}: {ex}'
@@ -575,6 +585,8 @@ class PluginRegistry:
             try:
                 monitor = provider.monitorForKernel(kernel)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'failed to obtain traffic stats monitor from '
                     f'{provider.providerId!r}: {ex}'
@@ -647,6 +659,8 @@ class PluginRegistry:
         try:
             result = handler.parse(uri, **kwargs)
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(
                 f'failed to parse {handler.descriptor.id!r} configuration: {ex}'
             )
@@ -667,6 +681,8 @@ class PluginRegistry:
         try:
             owned = handler.supports(result.configuration)
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(
                 f'protocol ownership check failed for '
                 f'{handler.descriptor.id!r}: {ex}'
@@ -692,6 +708,8 @@ class PluginRegistry:
             try:
                 result = handler.fromMapping(config, **kwargs)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'failed to recognize {handler.descriptor.id!r} mapping: {ex}'
                 )
@@ -701,6 +719,8 @@ class PluginRegistry:
                 try:
                     owned = handler.supports(result)
                 except Exception as ex:
+                    # Any non-exit exceptions
+
                     logger.error(
                         f'protocol ownership check failed for '
                         f'{handler.descriptor.id!r}: {ex}'
@@ -729,6 +749,8 @@ class PluginRegistry:
             try:
                 result = factory.fromMapping(config, **kwargs)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(f'failed to recognize {factory.factoryId!r} mapping: {ex}')
                 continue
 
@@ -758,6 +780,8 @@ class PluginRegistry:
         try:
             result = handler.blank(**kwargs)
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(
                 f'failed to create blank {handler.descriptor.id!r} configuration: '
                 f'{ex}'
@@ -770,6 +794,8 @@ class PluginRegistry:
                 if handler.supports(result):
                     return result
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'protocol ownership check failed for '
                     f'{handler.descriptor.id!r}: {ex}'
@@ -841,6 +867,8 @@ class PluginRegistry:
             try:
                 actions.extend(provider.createActions(parent=parent, **kwargs))
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'failed to create management actions for '
                     f'{provider.providerId!r}: {ex}'
@@ -863,6 +891,8 @@ class PluginRegistry:
 
             return handled
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'TUN preparation failed for {factory.factoryId!r}: {ex}')
 
             return False
@@ -902,6 +932,8 @@ class PluginRegistry:
 
             return options
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(
                 f'failed to obtain routing options for {factory.factoryId!r}: {ex}'
             )
@@ -959,6 +991,8 @@ class PluginRegistry:
                 (launch.kernel, launch.start()) if launch is not None else (None, False)
             )
         except Exception as ex:
+            # Any non-exit exceptions
+
             factory = self.factoryForConfig(config)
             factoryId = factory.factoryId if factory is not None else 'unknown'
             logger.error(f'kernel start failed for {factoryId!r}: {ex}')
@@ -996,6 +1030,8 @@ class PluginRegistry:
             try:
                 result = decoder.decode(data)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(f'subscription decoder {decoder.decoderId!r} failed: {ex}')
                 continue
 
@@ -1028,6 +1064,8 @@ class PluginRegistry:
             try:
                 factory.configureEnvironment()
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(f'environment hook failed for {factory.factoryId!r}: {ex}')
 
     def coreVersions(self):
@@ -1038,6 +1076,8 @@ class PluginRegistry:
             try:
                 versions.extend(factory.coreVersions())
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'failed to obtain core versions for {factory.factoryId!r}: {ex}'
                 )
@@ -1052,6 +1092,8 @@ class PluginRegistry:
             try:
                 patterns.extend(factory.logTimestampPatterns())
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'failed to obtain log patterns for {factory.factoryId!r}: {ex}'
                 )
@@ -1068,6 +1110,8 @@ class PluginRegistry:
         try:
             return factory.coreExitMessage(core, exitcode)
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(
                 f'failed to interpret core exit for {factory.factoryId!r}: {ex}'
             )
@@ -1080,6 +1124,8 @@ class PluginRegistry:
             try:
                 factory.afterConnected(httpProxy)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(
                     f'post-connection hook failed for {factory.factoryId!r}: {ex}'
                 )
@@ -1094,6 +1140,8 @@ class PluginRegistry:
             else:
                 entryPoints = entryPoints.get(PLUGIN_ENTRY_POINT_GROUP, tuple())
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'failed to enumerate Furious plugins: {ex}')
 
             return
@@ -1113,6 +1161,8 @@ class PluginRegistry:
                 else:
                     self.register(plugin)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 logger.error(f'failed to load plugin {entryPoint.name!r}: {ex}')
 
     def shutdown(self):
@@ -1126,6 +1176,8 @@ class PluginRegistry:
             try:
                 plugin.shutdown()
             except Exception as ex:
+                # Any non-exit exceptions
+
                 pluginMetadata = plugin.pluginMetadata()
                 logger.error(f'plugin shutdown failed for {pluginMetadata.id!r}: {ex}')
 

@@ -64,6 +64,8 @@ class _DnsResolver(WebGETManager):
         try:
             replyObject = UJSONEncoder.decode(data)
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(
                 f'bad network reply while resolving DNS for \'{domain}\'. {ex}'
             )
