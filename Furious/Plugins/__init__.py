@@ -38,6 +38,9 @@ from .API import (
     SubscriptionDecoder,
     SubscriptionItem,
     SubscriptionResult,
+    TrafficCounters,
+    TrafficStatsMonitor,
+    TrafficStatsProvider,
 )
 from .Profile import (
     blankConfiguration,
@@ -77,6 +80,9 @@ __all__ = [
     'SubscriptionDecoder',
     'SubscriptionItem',
     'SubscriptionResult',
+    'TrafficCounters',
+    'TrafficStatsMonitor',
+    'TrafficStatsProvider',
     'blankConfiguration',
     'blankProfile',
     'configurationFromAny',

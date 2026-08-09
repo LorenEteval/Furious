@@ -26,7 +26,12 @@ from Furious.Repository import *
 from Furious.Plugins import CapabilityKind, getPluginRegistry
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Service import ConnectivityManager, UpdateManager
+from Furious.Service import (
+    ConnectivityManager,
+    TrafficStatsManager,
+    UpdateManager,
+    formatTrafficSpeed,
+)
 from Furious.Actions.Import import (
     ImportFromFileAction,
     ImportJSONFromClipboardAction,
@@ -251,6 +256,85 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
     def retranslate(self):
         """Refresh translated text for the network state badge."""
         self.updateStatusText()
+
+
+class TrafficSpeedBadge(Mixins.ThemeAware, QWidget):
+    """Display independently updated upload and download speeds."""
+
+    UploadIconFileName = 'cloud-arrow-up.svg'
+    DownloadIconFileName = 'cloud-arrow-down.svg'
+    IconSize = QtCore.QSize(16, 16)
+
+    def __init__(self, parent=None):
+        """Initialize dedicated traffic-direction icons and labels."""
+        super().__init__(parent)
+
+        self.setObjectName('TrafficSpeedBadge')
+        self.setVisible(False)
+
+        self.uploadIconLabel = QLabel(parent=self)
+        self.uploadTextLabel = AppQLabel(translatable=False, parent=self)
+        self.downloadIconLabel = QLabel(parent=self)
+        self.downloadTextLabel = AppQLabel(translatable=False, parent=self)
+
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(8, 3, 8, 3)
+        self._layout.setSpacing(6)
+        self._layout.addWidget(self.uploadIconLabel)
+        self._layout.addWidget(self.uploadTextLabel)
+        self._layout.addSpacing(4)
+        self._layout.addWidget(self.downloadIconLabel)
+        self._layout.addWidget(self.downloadTextLabel)
+
+        self.setIconByTheme(APP().theme())
+
+    def setIconByTheme(self, theme: str):
+        """Apply theme-appropriate upload and download icons."""
+        iconFactory = (
+            bootstrapIconWhite if theme == AppStyleSheet.Dark else bootstrapIcon
+        )
+        self.uploadIconLabel.setPixmap(
+            iconFactory(self.UploadIconFileName).pixmap(self.IconSize)
+        )
+        self.downloadIconLabel.setPixmap(
+            iconFactory(self.DownloadIconFileName).pixmap(self.IconSize)
+        )
+
+    @QtCore.Slot(float, float)
+    def setSpeeds(self, upload: float, download: float):
+        """Display formatted upload and download byte rates."""
+        self.uploadTextLabel.setText(formatTrafficSpeed(upload))
+        self.downloadTextLabel.setText(formatTrafficSpeed(download))
+        self.setVisible(True)
+
+    @QtCore.Slot()
+    def clearSpeeds(self):
+        """Hide stale speeds when statistics are unavailable."""
+        self.uploadTextLabel.clear()
+        self.downloadTextLabel.clear()
+        self.setVisible(False)
+
+    def themeChangedCallback(self, theme: str):
+        """Refresh traffic-direction icons after a theme change."""
+        self.setIconByTheme(theme)
+
+
+class ConnectionStatusWidget(QWidget):
+    """Compose network state and traffic speed as one permanent status item."""
+
+    def __init__(self, parent=None):
+        """Initialize separate network-state and traffic-speed components."""
+        super().__init__(parent)
+
+        self.setObjectName('ConnectionStatusWidget')
+        self.networkState = NetworkStateBadge(parent=self)
+        self.trafficSpeed = TrafficSpeedBadge(parent=self)
+
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(6)
+        self._layout.addWidget(self.networkState)
+        self._layout.addWidget(self.trafficSpeed)
 
 
 class SearchButton(AppQPushButton):
@@ -726,9 +810,16 @@ class MainWindow(AppQMainWindow):
         # TODO: Custom status tip
         # self.setStatusBar(QStatusBar(self))
 
-        self.networkState = NetworkStateBadge(parent=self)
+        self.connectionStatus = ConnectionStatusWidget(parent=self)
+        self.networkState = self.connectionStatus.networkState
+        self.trafficSpeed = self.connectionStatus.trafficSpeed
+        self.trafficStatsManager = TrafficStatsManager(parent=self)
+        self.trafficStatsManager.speedChanged.connect(self.trafficSpeed.setSpeeds)
+        self.trafficStatsManager.statisticsUnavailable.connect(
+            self.trafficSpeed.clearSpeeds
+        )
 
-        self.statusBar().addPermanentWidget(self.networkState)
+        self.statusBar().addPermanentWidget(self.connectionStatus)
 
         self._widget = QWidget()
         self._layout = QVBoxLayout(self._widget)

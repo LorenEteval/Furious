@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any, Callable, Mapping, Optional, Tuple
 
 __all__ = [
     'PLUGIN_API_VERSION',
@@ -42,6 +42,9 @@ __all__ = [
     'SubscriptionDecoder',
     'SubscriptionItem',
     'SubscriptionResult',
+    'TrafficCounters',
+    'TrafficStatsMonitor',
+    'TrafficStatsProvider',
 ]
 
 PLUGIN_API_VERSION = 3
@@ -55,6 +58,7 @@ class CapabilityKind(str, Enum):
     ProtocolEditor = 'protocol-editor'
     SubscriptionDecoder = 'subscription-decoder'
     KernelFactory = 'kernel-factory'
+    TrafficStats = 'traffic-stats'
     Utility = 'utility'
 
 
@@ -244,6 +248,39 @@ class SubscriptionDecoder(PluginCapability):
 
     def decode(self, data: bytes) -> Optional[SubscriptionResult]:
         """Decode *data* or return ``None`` when the format does not match."""
+        return None
+
+
+@dataclass(frozen=True)
+class TrafficCounters:
+    """Store cumulative upload and download byte counters."""
+
+    uplink: int
+    downlink: int
+
+
+@dataclass(frozen=True)
+class TrafficStatsMonitor:
+    """Describe an isolated traffic-statistics query operation."""
+
+    query: Callable[[Any], Optional[TrafficCounters]]
+    target: Any
+
+
+class TrafficStatsProvider(PluginCapability):
+    """Provide traffic counters for one or more runtime kernel types."""
+
+    capabilityKind = CapabilityKind.TrafficStats
+    providerId = ''
+    kernelTypes = tuple()
+
+    @property
+    def capabilityId(self) -> str:
+        """Return the traffic-statistics provider identifier."""
+        return self.providerId
+
+    def monitorForKernel(self, kernel) -> Optional[TrafficStatsMonitor]:
+        """Return a monitor for *kernel* or ``None`` when unavailable."""
         return None
 
 

@@ -967,6 +967,22 @@ class AppStyleSheet:
                 color: {palette['danger']};
             }}
 
+            QWidget#TrafficSpeedBadge {{
+                min-height: 24px;
+                padding: 0 2px;
+                border: 1px solid {palette['border']};
+                border-radius: 6px;
+                background-color: {palette['raised']};
+                color: {palette['text_strong']};
+            }}
+
+            QWidget#TrafficSpeedBadge QLabel {{
+                border: none;
+                padding: 0;
+                background-color: transparent;
+                color: {palette['text_strong']};
+            }}
+
             QSplitter::handle {{
                 background-color: {palette['border']};
             }}

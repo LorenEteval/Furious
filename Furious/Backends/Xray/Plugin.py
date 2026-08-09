@@ -29,6 +29,7 @@ from .Process import *
 from .ProtocolEditors import XRAY_PROTOCOL_EDITORS
 from .Protocols import XRAY_PROTOCOL_HANDLERS
 from .Routing import *
+from .Stats import *
 from .TUN import *
 
 import os
@@ -297,10 +298,21 @@ class XrayKernelFactory(KernelFactory):
 
         config['routing'] = routingObject
 
+        if proxyModeOnly:
+            statsTarget = None
+        else:
+            try:
+                statsTarget = configureXrayStats(config)
+            except Exception as ex:
+                logger.error(f'failed to configure Xray traffic statistics: {ex}')
+
+                statsTarget = None
+
         process = XrayCore(
             exitCallback=request.exitCallback,
             msgCallback=request.messageCallback,
         )
+        process.xrayStatsTarget = statsTarget
 
         return KernelLaunch(process, config, options=request.options)
 
@@ -389,5 +401,6 @@ class XrayPlugin(FuriousPlugin):
             *XRAY_PROTOCOL_HANDLERS,
             *XRAY_PROTOCOL_EDITORS,
             XrayKernelFactory(),
+            XrayStatsProvider(),
             XrayActionProvider(),
         )
