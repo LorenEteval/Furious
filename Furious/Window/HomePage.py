@@ -704,6 +704,8 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
                 ),
             )
             self.toolbar.setObjectName('HomePageToolBar')
+            self.toolbar.setMovable(False)
+            self.toolbar.setFloatable(False)
             self.toolbar.setIconSize(QtCore.QSize(64, 32))
             self.toolbar.setToolButtonStyle(
                 QtCore.Qt.ToolButtonStyle.ToolButtonTextUnderIcon
