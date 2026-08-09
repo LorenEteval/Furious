@@ -476,11 +476,16 @@ class AppStyleSheet:
 
             QPushButton#NavigationPageButton:checked {{
                 border: none;
-                border-left: 3px solid {palette['accent']};
                 border-radius: 7px;
                 background-color: {palette['accent_soft']};
                 color: {palette['text_strong']};
                 font-weight: 600;
+            }}
+
+            QFrame#NavigationSelectionIndicator {{
+                border: none;
+                border-radius: 0;
+                background-color: {palette['accent']};
             }}
 
             QPushButton#NavigationPageButton:checked:hover {{
