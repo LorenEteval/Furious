@@ -15,10 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Initialize the Furious application package."""
+"""Initialize Furious without eagerly loading its Qt resource module."""
 
 from __future__ import annotations
 
-from .Frozenlib import AppResources
+from importlib import import_module
 
 __all__ = ['AppResources']
+
+
+def __getattr__(name: str):
+    """Load generated Qt resources only when requested by the application."""
+    if name != 'AppResources':
+        raise AttributeError(name)
+
+    resources = import_module('.Frozenlib.AppResources', __name__)
+
+    globals()[name] = resources
+
+    return resources

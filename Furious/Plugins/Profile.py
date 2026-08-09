@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Domain.Configuration import ConfigFactory
+from Furious.Domain import ConfigFactory, ServerProfile, ensureProfile
 
 from typing import Mapping, Union
 
@@ -33,18 +33,23 @@ __all__ = [
     'configurationFromAny',
     'configurationFromMapping',
     'exportConfiguration',
+    'blankProfile',
+    'profileFromAny',
+    'profileFromMapping',
 ]
 
 logger = logging.getLogger(__name__)
 
 
-def configurationFromMapping(config: Mapping, **kwargs) -> ConfigFactory:
-    """Construct a profile from a normalized mapping."""
-    if not isinstance(config, dict):
-        return ConfigFactory(**kwargs)
+def configurationFromMapping(config: Mapping, registry=None, **kwargs) -> ConfigFactory:
+    """Construct a connection document from a normalized mapping."""
+    if not isinstance(config, Mapping):
+        return ConfigFactory()
 
     try:
-        factory = getPluginRegistry().configFromDict(config, **kwargs)
+        factory = (registry or getPluginRegistry()).configFromDict(
+            dict(config), **kwargs
+        )
     except Exception as ex:
         # Any non-exit exceptions
 
@@ -52,44 +57,104 @@ def configurationFromMapping(config: Mapping, **kwargs) -> ConfigFactory:
 
         factory = None
 
-    return factory if factory is not None else ConfigFactory(config, **kwargs)
+    return factory if factory is not None else ConfigFactory(dict(config))
 
 
-def configurationFromAny(config: Union[str, Mapping], **kwargs) -> ConfigFactory:
-    """Construct a profile from a share URI, JSON text, or mapping."""
+def configurationFromAny(
+    config: Union[str, Mapping, ConfigFactory, ServerProfile], registry=None, **kwargs
+) -> ConfigFactory:
+    """Construct a connection document from supported input data."""
+    if isinstance(config, ServerProfile):
+        return config.connection.deepcopy()
+
+    if isinstance(config, ConfigFactory):
+        return config.deepcopy()
+
     if isinstance(config, str):
-        factory = getPluginRegistry().configFromString(config, **kwargs)
+        registry = registry or getPluginRegistry()
+        result = registry.parseURI(config, **kwargs)
 
-        if factory is not None:
-            return factory
+        if result is not None:
+            return result.configuration
 
         try:
-            return configurationFromMapping(ujson.loads(config), **kwargs)
+            return configurationFromMapping(
+                ujson.loads(config), registry=registry, **kwargs
+            )
         except Exception:
             # Any non-exit exceptions
 
-            return ConfigFactory(**kwargs)
+            return ConfigFactory()
 
-    if isinstance(config, dict):
-        return configurationFromMapping(config, **kwargs)
+    if isinstance(config, Mapping):
+        return configurationFromMapping(config, registry=registry, **kwargs)
 
-    return ConfigFactory(**kwargs)
-
-
-def blankConfiguration(protocol, **kwargs) -> ConfigFactory:
-    """Create a blank profile through an exact protocol capability."""
-    factory = getPluginRegistry().blankConfig(protocol, **kwargs)
-
-    return factory if factory is not None else ConfigFactory(**kwargs)
+    return ConfigFactory()
 
 
-def exportConfiguration(config, remark: str = '') -> str:
+def blankConfiguration(protocol, registry=None, **kwargs) -> ConfigFactory:
+    """Create a blank connection through an exact protocol capability."""
+    factory = (registry or getPluginRegistry()).blankConfig(protocol, **kwargs)
+
+    return factory if factory is not None else ConfigFactory()
+
+
+def exportConfiguration(config, remark: str = '', registry=None) -> str:
     """Export a profile through its owning protocol capability."""
     try:
-        return getPluginRegistry().exportConfig(config, remark)
+        return (registry or getPluginRegistry()).exportConfig(config, remark)
     except Exception as ex:
         # Any non-exit exceptions
 
         logger.error(f'failed to export configuration: {ex}')
 
         return ''
+
+
+def profileFromMapping(config: Mapping, registry=None, **metadata) -> ServerProfile:
+    """Construct a metadata-separated profile from a connection mapping."""
+    return ensureProfile(
+        configurationFromMapping(config, registry=registry),
+        **metadata,
+    )
+
+
+def profileFromAny(
+    config: Union[str, Mapping, ConfigFactory, ServerProfile],
+    registry=None,
+    **metadata,
+) -> ServerProfile:
+    """Construct a metadata-separated profile from supported input data."""
+    if isinstance(config, ServerProfile):
+        profile = config.deepcopy()
+
+        for name, value in metadata.items():
+            profile.metadata.set(name, value)
+
+        return profile
+
+    if isinstance(config, str):
+        registry = registry or getPluginRegistry()
+        result = registry.parseURI(config)
+
+        if result is not None:
+            parsedMetadata = dict(result.metadata)
+            parsedMetadata.update(metadata)
+
+            return ServerProfile.fromConfiguration(
+                result.configuration,
+                parsedMetadata,
+            )
+
+    return ensureProfile(
+        configurationFromAny(config, registry=registry),
+        **metadata,
+    )
+
+
+def blankProfile(protocol, registry=None, **metadata) -> ServerProfile:
+    """Create a metadata-separated blank profile for *protocol*."""
+    return ensureProfile(
+        blankConfiguration(protocol, registry=registry),
+        **metadata,
+    )

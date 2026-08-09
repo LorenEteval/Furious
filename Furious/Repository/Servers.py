@@ -21,13 +21,13 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Domain.Configuration import ConfigFactory
+from Furious.Domain import ProfileMetadata, ServerProfile
 from Furious.Domain.Encoding import *
 from Furious.Plugins import configurationFromAny
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
-__all__ = ['UserServers']
+__all__ = ['UserServer', 'UserServers']
 
 registerAppSettings('Configuration')
 
@@ -36,13 +36,20 @@ registerAppSettings('Configuration')
 class UserServer:
     """Represent one serialized user-server storage record."""
 
-    remark: str
-    config: str
-    subsId: str
+    metadata: dict
+    connection: str
+
+    @classmethod
+    def fromProfile(cls, profile: ServerProfile):
+        """Build a storage record from a server profile."""
+        return cls(profile.metadata.toMapping(), profile.connection.toJSONString())
+
+    def toMapping(self) -> dict:
+        """Return the record as a JSON-compatible mapping."""
+        return asdict(self)
 
 
 class UserServers(Mixins.CleanupOnExit, StorageBackend):
-    # remark, config, subsId. (subsId corresponds to unique in user subscription)
     """Manage the persisted list of server configurations."""
 
     def __init__(self, *args, **kwargs):
@@ -61,10 +68,26 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
                 return {'model': []}
 
         self._data = restore()
-        self._list = list(
-            configurationFromAny(model.pop('config', ''), index=index, **model)
-            for index, model in enumerate(self._data['model'])
-        )
+        records = self._data.get('profiles', self._data.get('model', []))
+        self._list = []
+
+        for index, value in enumerate(records):
+            record = dict(value)
+
+            if 'connection' in record:
+                connection = configurationFromAny(record.get('connection', ''))
+                metadata = ProfileMetadata.fromMapping(record.get('metadata', {}))
+            else:
+                connection = configurationFromAny(record.pop('config', ''))
+                metadata = ProfileMetadata.fromMapping(record)
+
+            self._list.append(
+                ServerProfile.fromConfiguration(
+                    connection,
+                    metadata,
+                    index=index,
+                )
+            )
 
     def sync(self):
         """Persist the current user servers data."""
@@ -72,12 +95,18 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
             'Configuration',
             PyBase64Encoder.encode(
                 UJSONEncoder.encode(
-                    {'model': list(factory.toStorageObject() for factory in self._list)}
+                    {
+                        'schemaVersion': 2,
+                        'profiles': [
+                            UserServer.fromProfile(profile).toMapping()
+                            for profile in self._list
+                        ],
+                    }
                 ).encode()
             ),
         )
 
-    def data(self) -> list[ConfigFactory]:
+    def data(self) -> list[ServerProfile]:
         # Shallow copy
         """Return the data managed by the user servers."""
         return self._list

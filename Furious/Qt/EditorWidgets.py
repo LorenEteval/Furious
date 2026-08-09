@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Domain import ConfigFactory
+from Furious.Domain import ConfigFactory, ServerProfile
 from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Qt.QtWidgets import *
 
@@ -181,13 +181,13 @@ class GuiEditorItemBasicRemark(GuiEditorItemTextInput):
         """Initialize the GuiEditorItemBasicRemark."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: ServerProfile) -> bool:
         """Apply the current editor value to the configuration."""
-        oldRemark = config.getExtras('remark')
+        oldRemark = config.metadata.displayName
         newRemark = self.text()
 
         if newRemark != oldRemark:
-            config.setExtras('remark', newRemark)
+            config.metadata.displayName = newRemark
 
             # Value modified, but not return as a modified behavior
             return False
@@ -195,9 +195,9 @@ class GuiEditorItemBasicRemark(GuiEditorItemTextInput):
             # Not modified
             return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: ServerProfile):
         """Load the configuration value into the editor."""
-        self.setText(config.getExtras('remark'))
+        self.setText(config.metadata.displayName)
 
 
 class GuiEditorItemProxyHttp(GuiEditorItemTextInput):

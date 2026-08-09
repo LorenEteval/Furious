@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Domain import *
-from Furious.Plugins import configurationFromAny
+from Furious.Plugins import profileFromAny
 from Furious.Repository import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
@@ -70,7 +70,7 @@ def showMBoxImportError(clipboard: str):
 
 def importURIFromClipboard(clipboard: str):
     """Import URI from clipboard."""
-    factory = configurationFromAny(clipboard)
+    factory = profileFromAny(clipboard)
 
     if not factory.isValid():
         showMBoxImportError(clipboard)
@@ -78,7 +78,7 @@ def importURIFromClipboard(clipboard: str):
         APP().mainWindow.appendNewItemByFactory(factory)
 
         mbox = MBoxImportSuccess(icon=AppQMessageBox.Icon.Information)
-        mbox.remark = factory.getExtras('remark')
+        mbox.remark = factory.itemRemark
         mbox.setText(mbox.customText())
 
         # Show the MessageBox asynchronously
@@ -101,12 +101,12 @@ def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
     rowIndex = len(Storage.UserServers())
 
     for uri in uris:
-        factory = configurationFromAny(uri.strip())
+        factory = profileFromAny(uri.strip())
 
         if factory.isValid():
             APP().mainWindow.appendNewItemByFactory(factory)
 
-            imported.append(factory.getExtras('remark'))
+            imported.append(factory.itemRemark)
 
     if len(imported) == 0:
         if callable(failureCallback):
@@ -245,10 +245,10 @@ class ImportURIsProgressDialog(AppQDialog):
         uri = self.uris[self.currentIndex]
         self.currentIndex += 1
 
-        factory = configurationFromAny(uri.strip())
+        factory = profileFromAny(uri.strip())
 
         if factory.isValid():
-            remark = factory.getExtras('remark')
+            remark = factory.itemRemark
 
             self.currentRemark = self.limitedRemark(remark)
 
@@ -429,15 +429,13 @@ class ImportFromFileAction(AppQAction):
                 # Show the MessageBox asynchronously
                 mbox.open()
             else:
-                factory = configurationFromAny(
-                    plainText, remark=os.path.basename(filename)
-                )
+                factory = profileFromAny(plainText, remark=os.path.basename(filename))
 
                 if factory.isValid():
                     APP().mainWindow.appendNewItemByFactory(factory)
 
                     mbox = MBoxImportSuccess(icon=AppQMessageBox.Icon.Information)
-                    mbox.remark = factory.getExtras('remark')
+                    mbox.remark = factory.itemRemark
                     mbox.setText(mbox.customText())
 
                     # Show the MessageBox asynchronously

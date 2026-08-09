@@ -22,11 +22,19 @@ from __future__ import annotations
 from .ConnectionManager import ConnectionManager
 from .ConnectivityManager import ConnectivityManager
 from .DnsResolver import DnsResolver
+from .SubscriptionImporter import (
+    SubscriptionImportResult,
+    SubscriptionImportService,
+    SubscriptionSource,
+)
 from .UpdateManager import UpdateManager
 
 __all__ = [
     'ConnectionManager',
     'ConnectivityManager',
     'DnsResolver',
+    'SubscriptionImportResult',
+    'SubscriptionImportService',
+    'SubscriptionSource',
     'UpdateManager',
 ]
