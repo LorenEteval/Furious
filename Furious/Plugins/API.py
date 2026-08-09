@@ -261,7 +261,7 @@ class TrafficCounters:
 
 @dataclass(frozen=True)
 class TrafficStatsMonitor:
-    """Describe an isolated traffic-statistics query operation."""
+    """Describe a background traffic-statistics query operation."""
 
     query: Callable[[Any], Optional[TrafficCounters]]
     target: Any

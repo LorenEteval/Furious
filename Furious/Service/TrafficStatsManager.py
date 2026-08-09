@@ -24,10 +24,10 @@ from Furious.Plugins import TrafficCounters, getPluginRegistry
 
 from PySide6 import QtCore
 
-import logging
-import multiprocessing
-import queue
+from concurrent.futures import Future, ThreadPoolExecutor
+
 import time
+import logging
 
 __all__ = [
     'TrafficStatsManager',
@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 KIBIBYTE = 1024
 MEBIBYTE = KIBIBYTE * KIBIBYTE
 TRAFFIC_STATS_SAMPLE_INTERVAL = 2000
-TRAFFIC_STATS_RESULT_INTERVAL = 50
 
 
 def formatTrafficSpeed(bytesPerSecond: float) -> str:
@@ -89,25 +88,16 @@ def formatTrafficUsage(bytesUsed: int) -> str:
     return f'{value} B'
 
 
-def _queryTrafficStats(requestQueue, resultQueue):
-    """Run potentially GIL-blocking statistics calls in an isolated process."""
-    while True:
-        request = requestQueue.get()
+def _queryTrafficStats(monitor):
+    """Query counters in a worker thread and timestamp the result."""
+    try:
+        counters = monitor.query(monitor.target)
+    except Exception:
+        # Any non-exit exceptions
 
-        if request is None:
-            return
+        counters = None
 
-        generation, monitor = request
-
-        try:
-            counters = monitor.query(monitor.target)
-        except Exception:
-            counters = None
-
-        try:
-            resultQueue.put((generation, counters, time.monotonic()))
-        except Exception:
-            return
+    return counters, time.monotonic()
 
 
 class TrafficStatsManager(
@@ -120,15 +110,14 @@ class TrafficStatsManager(
     speedChanged = QtCore.Signal(float, float)
     usageChanged = QtCore.Signal(object, object)
     statisticsUnavailable = QtCore.Signal()
+    _sampleReady = QtCore.Signal(int, object, float)
 
     def __init__(self, parent=None):
-        """Initialize timers and lazy worker-process state."""
+        """Initialize the timer and lazy worker-thread state."""
         super().__init__(parent)
 
-        self._context = multiprocessing.get_context()
-        self._requestQueue = None
-        self._resultQueue = None
-        self._workerProcess = None
+        self._executor = None
+        self._future = None
         self._monitor = None
         self._generation = 0
         self._queryInFlight = False
@@ -138,10 +127,7 @@ class TrafficStatsManager(
         self._sampleTimer = QtCore.QTimer(self)
         self._sampleTimer.setInterval(TRAFFIC_STATS_SAMPLE_INTERVAL)
         self._sampleTimer.timeout.connect(self._requestSample)
-
-        self._resultTimer = QtCore.QTimer(self)
-        self._resultTimer.setInterval(TRAFFIC_STATS_RESULT_INTERVAL)
-        self._resultTimer.timeout.connect(self._consumeResults)
+        self._sampleReady.connect(self._consumeResult)
 
         if parent is not None:
             parent.installEventFilter(self)
@@ -159,13 +145,8 @@ class TrafficStatsManager(
 
     def _suspendSampling(self):
         """Pause polling and discard the current rate baseline."""
-        wasActive = (
-            self._sampleTimer.isActive()
-            or self._resultTimer.isActive()
-            or self._queryInFlight
-        )
+        wasActive = self._sampleTimer.isActive() or self._queryInFlight
         self._sampleTimer.stop()
-        self._resultTimer.stop()
 
         if wasActive:
             self._generation += 1
@@ -176,12 +157,11 @@ class TrafficStatsManager(
         if self._monitor is None or not self._parentIsVisible():
             return
 
-        if not self._ensureWorker():
+        if not self._ensureExecutor():
             self.statisticsUnavailable.emit()
 
             return
 
-        self._resultTimer.start()
         self._sampleTimer.start()
         self._requestSample()
 
@@ -216,59 +196,52 @@ class TrafficStatsManager(
         except (AttributeError, RuntimeError):
             return tuple()
 
-    def _closeWorker(self):
-        """Stop and release the isolated query worker."""
-        process = self._workerProcess
+    def _closeExecutor(self):
+        """Cancel queued work and release the background query executor."""
+        future = self._future
+        executor = self._executor
 
-        if process is not None and process.is_alive():
-            try:
-                self._requestQueue.put_nowait(None)
-            except Exception:
-                pass
+        self._future = None
+        self._executor = None
 
-            process.join(0.2)
+        if future is not None:
+            future.cancel()
 
-            if process.is_alive():
-                process.terminate()
-                process.join(1.0)
+        if executor is not None:
+            executor.shutdown(wait=False, cancel_futures=True)
 
-        for workerQueue in (self._requestQueue, self._resultQueue):
-            if workerQueue is None:
-                continue
-
-            try:
-                workerQueue.close()
-                workerQueue.cancel_join_thread()
-            except Exception:
-                pass
-
-        self._requestQueue = None
-        self._resultQueue = None
-        self._workerProcess = None
-
-    def _ensureWorker(self) -> bool:
-        """Start the isolated query worker when it is not already alive."""
-        if self._workerProcess is not None and self._workerProcess.is_alive():
+    def _ensureExecutor(self) -> bool:
+        """Create the single background query thread when needed."""
+        if self._executor is not None:
             return True
 
-        self._closeWorker()
-        self._requestQueue = self._context.Queue(maxsize=1)
-        self._resultQueue = self._context.Queue()
-        self._workerProcess = self._context.Process(
-            target=_queryTrafficStats,
-            args=(self._requestQueue, self._resultQueue),
-            daemon=True,
-        )
-
         try:
-            self._workerProcess.start()
+            self._executor = ThreadPoolExecutor(max_workers=1)
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'failed to start traffic statistics worker: {ex}')
-            self._closeWorker()
+
+            self._closeExecutor()
 
             return False
 
         return True
+
+    def _futureCompleted(self, generation: int, future: Future):
+        """Forward a worker result to the manager's Qt thread."""
+        try:
+            counters, sampledAt = future.result()
+        except Exception:
+            # Any non-exit exceptions
+
+            counters, sampledAt = None, time.monotonic()
+
+        try:
+            self._sampleReady.emit(generation, counters, sampledAt)
+        except RuntimeError:
+            # The application may be closing after the query completed.
+            pass
 
     def _resetSamples(self):
         """Discard the previous counter baseline and in-flight marker."""
@@ -279,13 +252,12 @@ class TrafficStatsManager(
     def _activateMonitor(self, monitor):
         """Begin sampling one plugin-provided monitor."""
         self._sampleTimer.stop()
-        self._resultTimer.stop()
         self._generation += 1
         self._monitor = monitor
         self._resetSamples()
 
         if monitor is None:
-            self._closeWorker()
+            self._closeExecutor()
             self.statisticsUnavailable.emit()
 
             return
@@ -298,21 +270,29 @@ class TrafficStatsManager(
         if self._monitor is None or self._queryInFlight or not self._parentIsVisible():
             return
 
-        if not self._ensureWorker():
+        if not self._ensureExecutor():
             self.statisticsUnavailable.emit()
 
             return
 
         try:
-            self._requestQueue.put_nowait((self._generation, self._monitor))
-        except queue.Full:
-            return
+            future = self._executor.submit(_queryTrafficStats, self._monitor)
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'failed to queue traffic statistics query: {ex}')
 
             return
 
+        self._future = future
         self._queryInFlight = True
+
+        future.add_done_callback(
+            lambda completed, generation=self._generation: self._futureCompleted(
+                generation,
+                completed,
+            )
+        )
 
     def _updateSpeeds(self, counters: TrafficCounters, sampledAt: float):
         """Calculate and emit rates from one cumulative counter sample."""
@@ -320,6 +300,7 @@ class TrafficStatsManager(
 
         previousCounters = self._previousCounters
         previousSampleTime = self._previousSampleTime
+
         self._previousCounters = counters
         self._previousSampleTime = sampledAt
 
@@ -340,45 +321,28 @@ class TrafficStatsManager(
 
         self.speedChanged.emit(uplinkDelta / elapsed, downlinkDelta / elapsed)
 
-    @QtCore.Slot()
-    def _consumeResults(self):
-        """Drain worker results and ignore samples from older connections."""
+    @QtCore.Slot(int, object, float)
+    def _consumeResult(self, generation, counters, sampledAt):
+        """Consume one worker result on Qt's GUI thread."""
         if not self._parentIsVisible():
             self._suspendSampling()
 
             return
 
-        resultQueue = self._resultQueue
-
-        if resultQueue is None:
+        if generation != self._generation:
             return
 
-        while True:
-            try:
-                generation, counters, sampledAt = resultQueue.get_nowait()
-            except queue.Empty:
-                return
-            except Exception as ex:
-                logger.error(f'failed to read traffic statistics result: {ex}')
+        self._future = None
+        self._queryInFlight = False
 
-                return
+        if not isinstance(counters, TrafficCounters):
+            self._previousCounters = None
+            self._previousSampleTime = None
+            self.statisticsUnavailable.emit()
 
-            if generation != self._generation:
-                continue
+            return
 
-            self._queryInFlight = False
-
-            if not isinstance(counters, TrafficCounters):
-                self._previousCounters = None
-                self._previousSampleTime = None
-                self.statisticsUnavailable.emit()
-
-                continue
-
-            self._updateSpeeds(counters, sampledAt)
-
-            if self._resultQueue is not resultQueue:
-                return
+        self._updateSpeeds(counters, sampledAt)
 
     def connectedCallback(self):
         """Discover and activate statistics for the connected runtime."""
@@ -390,13 +354,12 @@ class TrafficStatsManager(
     def disconnectedCallback(self):
         """Stop sampling and clear traffic speeds after disconnecting."""
         self._sampleTimer.stop()
-        self._resultTimer.stop()
         self._generation += 1
         self._monitor = None
         self._resetSamples()
-        self._closeWorker()
+        self._closeExecutor()
         self.statisticsUnavailable.emit()
 
     def cleanup(self):
-        """Release timers and the isolated query worker."""
+        """Release the timer and background query executor."""
         self.disconnectedCallback()
