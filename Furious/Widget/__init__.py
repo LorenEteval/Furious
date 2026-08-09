@@ -20,12 +20,14 @@
 from __future__ import annotations
 
 from .ConnectionProgressWidget import ConnectionProgressWidget
+from .NavigationView import NavigationView
 from .ServerTableView import ServerTableView
 from .SubscriptionTableView import SubscriptionTableView
 from .WaitingSpinner import WaitingSpinner
 
 __all__ = [
     'ConnectionProgressWidget',
+    'NavigationView',
     'ServerTableView',
     'SubscriptionTableView',
     'WaitingSpinner',

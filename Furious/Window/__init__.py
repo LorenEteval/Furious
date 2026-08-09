@@ -20,7 +20,8 @@
 from __future__ import annotations
 
 from .IndentDialog import IndentDialog
-from .LogWindow import LogWindow
+from .HomePage import HomePage
+from .LogPage import LogPage
 from .MainWindow import MainWindow
 from .NetworkTestDialog import NetworkTestDialog
 from .ProxyBypassDialog import ProxyBypassDialog
@@ -31,7 +32,8 @@ from .TunSettingsDialog import TunSettingsDialog
 
 __all__ = [
     'IndentDialog',
-    'LogWindow',
+    'HomePage',
+    'LogPage',
     'MainWindow',
     'NetworkTestDialog',
     'ProxyBypassDialog',

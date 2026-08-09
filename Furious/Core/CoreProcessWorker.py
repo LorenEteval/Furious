@@ -184,7 +184,7 @@ class MsgQueue(multiprocessing.queues.Queue):
             self.callback(msg)
 
             if self.optimizer is not None and self.optimizer.isVisible():
-                # Logger window is visible: maximum loading speed for user
+                # Log page is visible: maximum loading speed for user
 
                 # 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 2, 2, ...
                 # For timeout value 2 Furious can handle at about 500 messages per second
@@ -193,7 +193,7 @@ class MsgQueue(multiprocessing.queues.Queue):
                 )
                 self.startTimer()
             else:
-                # Logger window does not exist or is not visible: low speed in background
+                # Log page is unavailable or hidden: low speed in background
                 # to avoid consuming too much CPU resources
 
                 # 1024, 512, 256, 256, 256, ...
@@ -300,8 +300,8 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
     def __init__(self, **kwargs):
         """Initialize the CoreProcessWorker."""
         msgCallback = kwargs.pop('msgCallback', None)
-        # Drain output more frequently while the unified log window is visible.
-        backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLogWindow)
+        # Drain output more frequently while the unified log page is visible.
+        backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLogPage)
 
         super().__init__(**kwargs)
 

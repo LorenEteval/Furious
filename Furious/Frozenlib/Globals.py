@@ -27,7 +27,7 @@ __all__ = [
     'APP',
     'AppFontName',
     'AppLogManager',
-    'AppLogWindow',
+    'AppLogPage',
     'AppThreadPool',
 ]
 
@@ -42,11 +42,11 @@ def getAppAttributes(name: str):
 (
     AppFontName,
     AppLogManager,
-    AppLogWindow,
+    AppLogPage,
     AppThreadPool,
 ) = (
     functools.partial(getAppAttributes, 'customFontName'),
     functools.partial(getAppAttributes, 'logManager'),
-    functools.partial(getAppAttributes, 'logWindow'),
+    functools.partial(getAppAttributes, 'logPage'),
     functools.partial(getAppAttributes, 'threadPool'),
 )

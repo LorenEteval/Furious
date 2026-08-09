@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Provide the application window for log viewer window."""
+"""Provide the unified logging page."""
 
 from __future__ import annotations
 
-from Furious.Frozenlib import AppSettings, registerAppSettings
+from Furious.Frozenlib import AppSettings, Mixins, registerAppSettings
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 from Furious.Service.LogManager import (
@@ -33,7 +33,7 @@ from Furious.Service.LogManager import (
 from PySide6 import QtCore
 from PySide6.QtWidgets import *
 
-__all__ = ['LogWindow']
+__all__ = ['LogPage']
 
 registerAppSettings('LogViewerWidgetPointSize')
 registerAppSettings('LogViewerSelectedCategory', default=ALL_LOGS_FILTER)
@@ -110,11 +110,11 @@ def saveAsFile(content: str):
             mbox.open()
 
 
-class LogWindow(AppQMainWindow):
-    """Present and filter the unified application log stream."""
+class LogPage(Mixins.QTranslatable, QMainWindow):
+    """Present and filter the unified application log stream as a page."""
 
     def __init__(self, *args, **kwargs):
-        """Initialize the log window."""
+        """Initialize the logging page."""
         manager, fontFamily = (
             kwargs.pop('manager', None),
             kwargs.pop('fontFamily', ''),
@@ -131,8 +131,6 @@ class LogWindow(AppQMainWindow):
 
         self.manager = manager
         self._preferredFilter = str(AppSettings.get('LogViewerSelectedCategory'))
-
-        self.setWindowTitle(_('Log Viewer'))
 
         self.filterLabel = AppQLabel(_('Log Type'))
         self.filterComboBox = QComboBox()
@@ -162,11 +160,6 @@ class LogWindow(AppQMainWindow):
             AppQAction(
                 _('Save As...'),
                 callback=lambda: saveAsFile(self.textBrowser.toPlainText()),
-            ),
-            AppQSeperator(),
-            AppQAction(
-                _('Exit'),
-                callback=lambda: self.close(),
             ),
             title=_('File'),
             parent=self,
@@ -285,7 +278,7 @@ class LogWindow(AppQMainWindow):
 
     @QtCore.Slot(object)
     def _categoryRegistered(self, category):
-        """Add a newly registered component without rebuilding the window."""
+        """Add a newly registered component without rebuilding the page."""
         if self.filterComboBox.findData(category.id) == -1:
             self.filterComboBox.addItem(self._categoryText(category), category.id)
 
@@ -307,12 +300,6 @@ class LogWindow(AppQMainWindow):
         """Refresh the presentation after the underlying collection changes."""
         self._refreshEntries()
 
-    def showEvent(self, event):
-        """Focus the window itself instead of an untouched child control."""
-        super().showEvent(event)
-
-        self.setFocus(QtCore.Qt.FocusReason.OtherFocusReason)
-
     def plainText(self) -> str:
         """Return the plain text currently shown by the selected filter."""
         return self.textBrowser.toPlainText()
@@ -322,8 +309,7 @@ class LogWindow(AppQMainWindow):
         self.manager.clear()
 
     def retranslate(self):
-        """Refresh translated window and filter labels."""
-        super().retranslate()
+        """Refresh translated page controls and filter labels."""
 
         selectedCategoryId = self.filterComboBox.currentData()
 

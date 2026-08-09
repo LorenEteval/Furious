@@ -274,7 +274,7 @@ TRANSLATION = {
     },
     "Save As...": {
         "source": [
-            "Furious.Window.LogWindow",
+            "Furious.Window.LogPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Сохранить как...",
@@ -292,7 +292,7 @@ TRANSLATION = {
     "File": {
         "source": [
             "Furious.Backends.Xray.AssetWindow",
-            "Furious.Window.LogWindow",
+            "Furious.Window.LogPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Файл",
@@ -325,7 +325,7 @@ TRANSLATION = {
     },
     "Copy": {
         "source": [
-            "Furious.Window.LogWindow",
+            "Furious.Window.LogPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Копировать",
@@ -343,7 +343,7 @@ TRANSLATION = {
     "Select All": {
         "source": [
             "Furious.Widget.ServerTableView",
-            "Furious.Window.LogWindow",
+            "Furious.Window.LogPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Выбрать все",
@@ -360,7 +360,7 @@ TRANSLATION = {
     },
     "Edit": {
         "source": [
-            "Furious.Window.LogWindow",
+            "Furious.Window.LogPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Редактировать",
@@ -369,7 +369,7 @@ TRANSLATION = {
     },
     "Zoom In": {
         "source": [
-            "Furious.Window.LogWindow",
+            "Furious.Window.LogPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Увеличить маcштаб",
@@ -378,7 +378,7 @@ TRANSLATION = {
     },
     "Zoom Out": {
         "source": [
-            "Furious.Window.LogWindow",
+            "Furious.Window.LogPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Уменьшить маcштаб",
@@ -387,7 +387,7 @@ TRANSLATION = {
     },
     "View": {
         "source": [
-            "Furious.Window.LogWindow",
+            "Furious.Window.LogPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Вид",
@@ -404,7 +404,7 @@ TRANSLATION = {
     },
     "Save File": {
         "source": [
-            "Furious.Window.LogWindow",
+            "Furious.Window.LogPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Сохранить файл",
@@ -508,7 +508,7 @@ TRANSLATION = {
     "Subscription": {
         "source": [
             "Furious.Widget.ServerTableView",
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Подписка",
         "ZH": "订阅",
@@ -606,7 +606,7 @@ TRANSLATION = {
     "New Empty Configuration": {
         "source": [
             "Furious.Widget.ServerTableView",
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Создать новую пустую конфигурацию",
         "ZH": "新建空白配置",
@@ -713,8 +713,7 @@ TRANSLATION = {
     "Exit": {
         "source": [
             "Furious.Actions.Exit",
-            "Furious.Backends.Xray.AssetWindow",
-            "Furious.Window.LogWindow"
+            "Furious.Backends.Xray.AssetWindow"
         ],
         "RU": "Выход",
         "ZH": "退出",
@@ -722,7 +721,7 @@ TRANSLATION = {
     },
     "Unable to save log": {
         "source": [
-            "Furious.Window.LogWindow"
+            "Furious.Window.LogPage"
         ],
         "RU": "Не удалось сохранить журнал",
         "ZH": "无法保存日志",
@@ -730,7 +729,7 @@ TRANSLATION = {
     },
     "Text files (*.txt);;All files (*)": {
         "source": [
-            "Furious.Window.LogWindow"
+            "Furious.Window.LogPage"
         ],
         "RU": "Текстовые файлы (*.txt);;Все файлы (*)",
         "ZH": "文本文件 (*.txt);;所有文件 (*)",
@@ -738,18 +737,10 @@ TRANSLATION = {
     },
     "Error saving log": {
         "source": [
-            "Furious.Window.LogWindow"
+            "Furious.Window.LogPage"
         ],
         "RU": "Ошибка сохранения журнала",
         "ZH": "保存日志出错",
-        "isReviewed": "True"
-    },
-    "Log Viewer": {
-        "source": [
-            "Furious.Window.LogWindow"
-        ],
-        "RU": "Средство просмотра журнала",
-        "ZH": "日志查看器",
         "isReviewed": "True"
     },
     "Asset file already exists. Overwrite?": {
@@ -812,7 +803,7 @@ TRANSLATION = {
         "source": [
             "Furious.Backends.Hysteria1.Editor",
             "Furious.Backends.Hysteria2.Editor",
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Сервер",
         "ZH": "服务器",
@@ -826,9 +817,33 @@ TRANSLATION = {
         "ZH": "日志",
         "isReviewed": "True"
     },
-    "Update Subscription (Use Current Proxy)": {
+    "Home": {
         "source": [
             "Furious.Window.MainWindow"
+        ],
+        "RU": "Главная",
+        "ZH": "主页",
+        "isReviewed": "True"
+    },
+    "Expand Navigation": {
+        "source": [
+            "Furious.Widget.NavigationView"
+        ],
+        "RU": "Развернуть навигацию",
+        "ZH": "展开导航",
+        "isReviewed": "True"
+    },
+    "Collapse Navigation": {
+        "source": [
+            "Furious.Widget.NavigationView"
+        ],
+        "RU": "Свернуть навигацию",
+        "ZH": "折叠导航",
+        "isReviewed": "True"
+    },
+    "Update Subscription (Use Current Proxy)": {
+        "source": [
+            "Furious.Window.HomePage"
         ],
         "RU": "Обновить подписки (использовать текущий прокси-сервер)",
         "ZH": "更新订阅（使用当前代理）",
@@ -836,7 +851,7 @@ TRANSLATION = {
     },
     "Update Subscription (Force Proxy)": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Обновить подписки (обязательно через прокси-сервер)",
         "ZH": "更新订阅（强制代理）",
@@ -844,7 +859,7 @@ TRANSLATION = {
     },
     "Update Subscription (No Proxy)": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Обновить подписки (не использовать прокси)",
         "ZH": "更新订阅（无代理）",
@@ -852,7 +867,7 @@ TRANSLATION = {
     },
     "Edit Subscription...": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Редактировать подписки...",
         "ZH": "编辑订阅...",
@@ -860,7 +875,7 @@ TRANSLATION = {
     },
     "Tools": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Инструменты",
         "ZH": "工具",
@@ -868,7 +883,7 @@ TRANSLATION = {
     },
     "Plugins": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Плагины",
         "ZH": "插件",
@@ -876,7 +891,7 @@ TRANSLATION = {
     },
     "Core": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Core",
         "ZH": "Core",
@@ -884,7 +899,7 @@ TRANSLATION = {
     },
     "Open Application Folder": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Открыть папку приложения",
         "ZH": "打开应用程序文件夹",
@@ -892,7 +907,7 @@ TRANSLATION = {
     },
     "Check For Updates": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Проверка обновлений",
         "ZH": "检查更新",
@@ -900,7 +915,7 @@ TRANSLATION = {
     },
     "About": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "О нас",
         "ZH": "关于",
@@ -1197,7 +1212,7 @@ TRANSLATION = {
     },
     "Help": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Помощь",
         "ZH": "帮助",
@@ -1566,7 +1581,7 @@ TRANSLATION = {
     "Customize Tun2socks Settings...": {
         "source": [
             "Furious.Actions.Settings",
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Настроить параметры Tun2socks...",
         "ZH": "自定义Tun2socks设置...",
@@ -1662,7 +1677,7 @@ TRANSLATION = {
     },
     "Restart The Application As Administrator": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Перезапустите приложение от имени администратора",
         "ZH": "以管理员身份重新启动应用程序",
@@ -1670,7 +1685,7 @@ TRANSLATION = {
     },
     "Restart The Application As Superuser": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Перезапустите приложение от имени суперпользователя",
         "ZH": "以Superuser身份重新启动应用程序",
@@ -1686,7 +1701,7 @@ TRANSLATION = {
     },
     "I am the supreme authority 👑": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Я — единственная высшая инстанция 👑",
         "ZH": "我就是至高无上的存在 👑",
@@ -1702,7 +1717,7 @@ TRANSLATION = {
     },
     "Customize System Proxy Bypass Address...": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Настроить адреса исключений системного прокси...",
         "ZH": "自定义系统代理绕过地址...",
@@ -1735,7 +1750,7 @@ TRANSLATION = {
     },
     "Customize Network Test URL...": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Настроить URL теста сети...",
         "ZH": "自定义网络测试URL...",
@@ -1767,7 +1782,7 @@ TRANSLATION = {
     },
     "Search servers with text or regex, e.g. trojan, hk|jp, ^vmess, (us|sg).*tls": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Поиск серверов по тексту или регулярному выражению, например: trojan, hk|jp, ^vmess, (us|sg).*tls",
         "ZH": "使用文本或正则表达式搜索服务器，例如：trojan、hk|jp、^vmess、(us|sg).*tls",
@@ -1775,7 +1790,7 @@ TRANSLATION = {
     },
     "Search": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Поиск",
         "ZH": "查找",
@@ -1783,7 +1798,7 @@ TRANSLATION = {
     },
     "Network OK": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Сеть работает",
         "ZH": "网络正常",
@@ -1791,7 +1806,7 @@ TRANSLATION = {
     },
     "Network error": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Ошибка сети",
         "ZH": "网络异常",
@@ -2245,23 +2260,15 @@ TRANSLATION = {
     },
     "Extensions": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Расширения",
         "ZH": "扩展功能",
         "isReviewed": "True"
     },
-    "Show Logs...": {
-        "source": [
-            "Furious.Window.MainWindow"
-        ],
-        "RU": "Показать журналы...",
-        "ZH": "显示日志...",
-        "isReviewed": "True"
-    },
     "Log Type": {
         "source": [
-            "Furious.Window.LogWindow"
+            "Furious.Window.LogPage"
         ],
         "RU": "Тип журнала",
         "ZH": "日志类型",
@@ -2269,7 +2276,7 @@ TRANSLATION = {
     },
     "Application": {
         "source": [
-            "Furious.Window.LogWindow"
+            "Furious.Window.LogPage"
         ],
         "RU": "Приложение",
         "ZH": "应用程序",
@@ -2277,7 +2284,7 @@ TRANSLATION = {
     },
     "All Logs": {
         "source": [
-            "Furious.Window.LogWindow"
+            "Furious.Window.LogPage"
         ],
         "RU": "Все журналы",
         "ZH": "全部日志",
@@ -2285,7 +2292,7 @@ TRANSLATION = {
     },
     "Upload Speed": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Скорость отдачи",
         "ZH": "上传速度",
@@ -2293,7 +2300,7 @@ TRANSLATION = {
     },
     "Download Speed": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Скорость загрузки",
         "ZH": "下载速度",
@@ -2301,7 +2308,7 @@ TRANSLATION = {
     },
     "Upload Traffic Usage": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Объём исходящего трафика",
         "ZH": "上传流量",
@@ -2309,7 +2316,7 @@ TRANSLATION = {
     },
     "Download Traffic Usage": {
         "source": [
-            "Furious.Window.MainWindow"
+            "Furious.Window.HomePage"
         ],
         "RU": "Объём входящего трафика",
         "ZH": "下载流量",
