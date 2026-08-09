@@ -23,7 +23,8 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Core import Tun2socks
 from Furious.Backends import OFFICIAL_PLUGIN_TYPES
-from Furious.Plugins import initializePluginRegistry
+from Furious.Extensions import BUNDLED_EXTENSION_TYPES
+from Furious.Plugins import getPluginRegistry, initializePluginRegistry
 from Furious.Qt import AppStyleSheet
 from Furious.Qt.TextEditorTheme import configureEditorLogMetadata
 from Furious.Qt import gettext as _
@@ -299,7 +300,9 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
     @staticmethod
     def addEnviron():
         """Add environ."""
-        pluginRegistry = initializePluginRegistry(OFFICIAL_PLUGIN_TYPES)
+        pluginRegistry = initializePluginRegistry(
+            (*OFFICIAL_PLUGIN_TYPES, *BUNDLED_EXTENSION_TYPES)
+        )
         configureEditorLogMetadata(
             lambda: (*pluginRegistry.coreVersions(), Tun2socks.version()),
             pluginRegistry.logTimestampPatterns,
@@ -400,6 +403,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
     @QtCore.Slot()
     def cleanup():
         """Release resources owned by the application."""
+        getPluginRegistry().shutdown()
         Mixins.CleanupOnExit.cleanupAll()
 
         if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:

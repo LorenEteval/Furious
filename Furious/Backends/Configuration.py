@@ -1366,7 +1366,9 @@ class ConfigXray(ConfigFactory):
     @property
     def itemProtocol(self) -> str:
         """Return the item protocol value."""
-        return Protocol.toEnum(self.proxyProtocol).value
+        protocol = Protocol.toEnum(self.proxyProtocol)
+
+        return self.proxyProtocol if protocol == Protocol.Unknown else protocol.value
 
     @property
     def itemAddress(self) -> str:
@@ -2310,9 +2312,9 @@ class ConfigHysteria2(ConfigFactory):
             return False
 
 
-def configXrayEmptyProxyOutboundObject(protocol: Protocol) -> dict:
+def configXrayEmptyProxyOutboundObject(protocol) -> dict:
     """Return the config Xray empty proxy outbound object value used by the application."""
-    value = protocol.value.casefold()
+    value = str(getattr(protocol, 'value', protocol)).casefold()
 
     if value == 'vless' or value == 'vmess':
         return {

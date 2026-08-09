@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Domain import *
+from Furious.Plugins import configurationFromMapping
 from Furious.Repository import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
@@ -295,7 +296,7 @@ class TextEditorWindow(AppQMainWindow):
             return False
         else:
             old = Storage.UserServers()[index]
-            new = configFactoryFromDict(jsonObject, **old.kwargs)
+            new = configurationFromMapping(jsonObject, **old.kwargs)
 
             old.deleted = True
 

@@ -20,14 +20,13 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Plugins.API import *
 from Furious.Backends.Configuration import *
 
 from .Process import Hysteria2
+from .Protocols import HYSTERIA2_PROTOCOL_HANDLERS
 from .TUN import *
 
-import copy
 import logging
 
 __all__ = ['Hysteria2Plugin']
@@ -35,77 +34,12 @@ __all__ = ['Hysteria2Plugin']
 logger = logging.getLogger(__name__)
 
 
-_TRANSLATABLE_ACTION_TEXT = [
-    _('Add Hysteria2 Server...'),
-]
+class Hysteria2Backend(CoreBackend):
+    """Run Hysteria 2 independently of profile parsing and editor creation."""
 
-
-class Hysteria2Plugin(FuriousPlugin):
-    """Provide official Hysteria 2 support."""
-
-    pluginId = 'official.hysteria2'
-    displayName = 'Hysteria2'
-    protocols = (
-        PluginProtocol(
-            'hysteria2',
-            'hysteria2',
-            'Add Hysteria2 Server...',
-            60,
-        ),
-    )
+    backendId = 'official.hysteria2'
     configurationTypes = (ConfigHysteria2,)
     coreTypes = (Hysteria2,)
-
-    def configFromString(self, config: str, **kwargs):
-        """Parse a Hysteria 2 share URI."""
-        if config.startswith(
-            (
-                'hy2://',
-                'hysteria2://',
-                'hysteria2+realm://',
-                'hysteria2+realm+http://',
-            )
-        ):
-            return ConfigHysteria2(config, **kwargs)
-
-        return None
-
-    def configFromDict(self, config: dict, **kwargs):
-        """Recognize Hysteria 2 configuration mappings."""
-        if config.get('server') is None:
-            return None
-
-        fields = (
-            'auth',
-            'tls',
-            'transport',
-            'quic',
-            'bandwidth',
-            'tcpForwarding',
-            'udpForwarding',
-            'tcpTProxy',
-            'udpTProxy',
-            'tun',
-            'fastOpen',
-            'lazy',
-        )
-        if any(config.get(field) is not None for field in fields) or isinstance(
-            config.get('obfs'), dict
-        ):
-            return ConfigHysteria2(config, **kwargs)
-
-        return None
-
-    def blankConfig(self, protocol, **kwargs):
-        """Construct a blank Hysteria 2 configuration."""
-        return ConfigHysteria2(copy.deepcopy(BLANK_CONFIG_HYSTERIA2), **kwargs)
-
-    def createEditorForProtocol(self, protocol, parent=None, **kwargs):
-        """Create the Hysteria 2 editor."""
-        # Plugin discovery can occur while the Furious.Qt package is initializing.
-        from .Editor import Hysteria2Editor
-
-        return Hysteria2Editor(parent=parent, **kwargs)
 
     def createManagementActions(self, parent=None, **kwargs):
         """Create Hysteria 2 native TUN management actions."""
@@ -223,3 +157,15 @@ class Hysteria2Plugin(FuriousPlugin):
     def logTimestampPatterns(self):
         """Return the timestamp format emitted by Hysteria 2."""
         return (r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})',)
+
+
+class Hysteria2Plugin(FuriousPlugin):
+    """Bundle official Hysteria 2 protocol and runtime capabilities."""
+
+    pluginId = 'official.hysteria2'
+    displayName = 'Hysteria2'
+    protocolHandlers = HYSTERIA2_PROTOCOL_HANDLERS
+
+    def __init__(self):
+        """Create an isolated Hysteria 2 backend instance for this plugin."""
+        self.coreBackends = (Hysteria2Backend(),)

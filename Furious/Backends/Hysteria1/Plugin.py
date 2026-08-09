@@ -20,88 +20,30 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Plugins.API import *
 from Furious.Backends.Configuration import *
 
 from .Process import *
+from .Protocols import HYSTERIA1_PROTOCOL_HANDLERS
 
-import copy
 import logging
 
 __all__ = ['Hysteria1Plugin']
 
 logger = logging.getLogger(__name__)
 
-_TRANSLATABLE_ACTION_TEXT = [
-    _('Add Hysteria1 Server...'),
-]
 
+class Hysteria1Backend(CoreBackend):
+    """Run Hysteria 1 independently of profile parsing and editor creation."""
 
-class Hysteria1Plugin(FuriousPlugin):
-    """Provide official Hysteria 1 support."""
-
-    pluginId = 'official.hysteria1'
-    displayName = 'Hysteria1'
-    protocols = (
-        PluginProtocol(
-            'hysteria1',
-            'hysteria1',
-            'Add Hysteria1 Server...',
-            50,
-            True,
-        ),
-    )
+    backendId = 'official.hysteria1'
     configurationTypes = (ConfigHysteria1,)
     coreTypes = (Hysteria1,)
-
-    def configFromString(self, config: str, **kwargs):
-        """Parse a Hysteria 1 share URI."""
-        if config.startswith('hysteria://'):
-            return ConfigHysteria1(config, **kwargs)
-
-        return None
-
-    def configFromDict(self, config: dict, **kwargs):
-        """Recognize Hysteria 1 configuration mappings."""
-        if config.get('server') is None:
-            return None
-
-        fields = (
-            'protocol',
-            'up_mbps',
-            'down_mbps',
-            'auth_str',
-            'alpn',
-            'server_name',
-            'insecure',
-            'recv_window_conn',
-            'recv_window',
-            'fast_open',
-            'lazy_start',
-        )
-        if any(config.get(field) is not None for field in fields) or isinstance(
-            config.get('obfs'), str
-        ):
-            return ConfigHysteria1(config, **kwargs)
-
-        return None
-
-    def blankConfig(self, protocol, **kwargs):
-        """Construct a blank Hysteria 1 configuration."""
-        return ConfigHysteria1(copy.deepcopy(BLANK_CONFIG_HYSTERIA1), **kwargs)
-
-    def createEditorForProtocol(self, protocol, parent=None, **kwargs):
-        """Create the Hysteria 1 editor."""
-        # Plugin discovery can occur while the Furious.Qt package is initializing.
-        from .Editor import Hysteria1Editor
-
-        return Hysteria1Editor(parent=parent, **kwargs)
 
     def routingOptions(self, config=None):
         """Return the routing modes supported by Hysteria 1."""
         return tuple(
-            PluginRouting(routing.value, routing.value, translatable=True)
+            RoutingOption(routing.value, routing.value, translatable=True)
             for routing in AppBuiltinRouting
         )
 
@@ -174,3 +116,15 @@ class Hysteria1Plugin(FuriousPlugin):
             return 'Connection to server has been lost'
 
         return None
+
+
+class Hysteria1Plugin(FuriousPlugin):
+    """Bundle official Hysteria 1 protocol and runtime capabilities."""
+
+    pluginId = 'official.hysteria1'
+    displayName = 'Hysteria1'
+    protocolHandlers = HYSTERIA1_PROTOCOL_HANDLERS
+
+    def __init__(self):
+        """Create an isolated Hysteria 1 backend instance for this plugin."""
+        self.coreBackends = (Hysteria1Backend(),)

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Repository import *
+from Furious.Plugins import exportConfiguration
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
@@ -89,7 +90,7 @@ class QRCodeWindow(AppQMainWindow):
             config = Storage.UserServers()[index]
 
             try:
-                uri = config.toURI()
+                uri = exportConfiguration(config)
             except Exception:
                 # Any non-exit exceptions
 
