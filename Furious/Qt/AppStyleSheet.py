@@ -455,11 +455,11 @@ class AppStyleSheet:
                 border-radius: 8px;
             }}
 
-            QToolButton#NavigationToggleButton,
-            QToolButton#NavigationPageButton {{
+            QPushButton#NavigationToggleButton,
+            QPushButton#NavigationPageButton {{
                 min-width: 0;
                 min-height: 38px;
-                padding: 4px 10px;
+                padding: 0;
                 border: 1px solid transparent;
                 border-radius: 7px;
                 background-color: transparent;
@@ -467,14 +467,14 @@ class AppStyleSheet:
                 text-align: left;
             }}
 
-            QToolButton#NavigationToggleButton:hover,
-            QToolButton#NavigationPageButton:hover {{
+            QPushButton#NavigationToggleButton:hover,
+            QPushButton#NavigationPageButton:hover {{
                 border-color: transparent;
                 background-color: {palette['hover']};
                 color: {palette['text_strong']};
             }}
 
-            QToolButton#NavigationPageButton:checked {{
+            QPushButton#NavigationPageButton:checked {{
                 border: none;
                 border-left: 3px solid {palette['accent']};
                 border-radius: 7px;
@@ -483,8 +483,23 @@ class AppStyleSheet:
                 font-weight: 600;
             }}
 
-            QToolButton#NavigationPageButton:checked:hover {{
+            QPushButton#NavigationPageButton:checked:hover {{
                 background-color: {palette['accent_soft_hover']};
+            }}
+
+            QPushButton#NavigationPageButton QLabel {{
+                border: none;
+                background-color: transparent;
+                color: {palette['text']};
+            }}
+
+            QPushButton#NavigationPageButton:checked QLabel {{
+                color: {palette['text_strong']};
+                font-weight: 600;
+            }}
+
+            QPushButton#SearchButton {{
+                padding: 0;
             }}
 
             QToolButton:hover {{

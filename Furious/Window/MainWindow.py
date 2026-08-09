@@ -73,19 +73,20 @@ class MainWindow(AppQMainWindow):
             'home',
             self.homePage,
             'Home',
-            'house.svg',
+            'house-door.svg',
         )
         self.navigationView.addPage(
             'log',
             self.logPage,
             'Log',
-            'terminal.svg',
+            'pin-angle.svg',
         )
         self.navigationView.pageChanged.connect(self._pageChanged)
         self.navigationView.expandedChanged.connect(self._navigationExpandedChanged)
 
         self.navigationView.setExpanded(
-            AppSettings.isStateON_('AppMainWindowNavigationExpanded')
+            AppSettings.isStateON_('AppMainWindowNavigationExpanded'),
+            animated=False,
         )
         self.navigationView.setCurrentPage(
             str(AppSettings.get('AppMainWindowSelectedPage'))

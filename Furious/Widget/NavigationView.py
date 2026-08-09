@@ -20,7 +20,12 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import APP, Mixins
-from Furious.Qt import AppStyleSheet, bootstrapIcon, bootstrapIconWhite
+from Furious.Qt import (
+    AppStyleSheet,
+    IconTextPushButton,
+    bootstrapIcon,
+    bootstrapIconWhite,
+)
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
@@ -31,6 +36,28 @@ from dataclasses import dataclass
 __all__ = ['NavigationView']
 
 
+class _NavigationButton(IconTextPushButton):
+    """Present one navigation item with layout-managed icon spacing."""
+
+    IconSize = QtCore.QSize(20, 20)
+    IconTextSpacing = 12
+    HorizontalMargin = 12
+
+    def __init__(self, parent=None):
+        """Initialize the icon and text presentation."""
+        super().__init__(
+            parent,
+            iconTextSpacing=self.IconTextSpacing,
+            horizontalMargin=self.HorizontalMargin,
+            verticalMargin=0,
+            iconSize=self.IconSize,
+        )
+
+    def setExpanded(self, expanded: bool):
+        """Show the text label only in expanded navigation mode."""
+        self.setTextVisible(expanded)
+
+
 @dataclass
 class _NavigationPage:
     """Describe one registered page and its navigation control."""
@@ -39,7 +66,7 @@ class _NavigationPage:
     title: str
     iconFileName: str
     widget: QWidget
-    button: QToolButton
+    button: _NavigationButton
     translatable: bool = True
 
 
@@ -51,7 +78,8 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
 
     CollapsedWidth = 56
     ExpandedWidth = 220
-    IconSize = QtCore.QSize(20, 20)
+    IconSize = _NavigationButton.IconSize
+    AnimationDuration = 150
 
     def __init__(self, parent=None):
         """Initialize an empty page registry and its navigation controls."""
@@ -60,16 +88,17 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self._pages: dict[str, _NavigationPage] = {}
         self._currentPageId = ''
         self._expanded = False
+        self._navigationWidth = self.CollapsedWidth
 
         self.setObjectName('NavigationView')
 
         self.navigationPanel = QFrame(parent=self)
         self.navigationPanel.setObjectName('NavigationPanel')
 
-        self.toggleButton = QToolButton(parent=self.navigationPanel)
+        self.toggleButton = _NavigationButton(parent=self.navigationPanel)
         self.toggleButton.setObjectName('NavigationToggleButton')
+        self.toggleButton.setExpanded(False)
         self.toggleButton.setToolTip(_('Expand Navigation'))
-        self.toggleButton.setIconSize(self.IconSize)
         self.toggleButton.clicked.connect(self.toggleExpanded)
 
         self.navigationLayout = QVBoxLayout(self.navigationPanel)
@@ -95,7 +124,16 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self._layout.addWidget(self.navigationPanel)
         self._layout.addWidget(self.pageStack, 1)
 
-        self.setExpanded(False)
+        self._widthAnimation = QtCore.QPropertyAnimation(
+            self,
+            b'navigationWidth',
+            parent=self,
+        )
+        self._widthAnimation.setDuration(self.AnimationDuration)
+        self._widthAnimation.setEasingCurve(QtCore.QEasingCurve.Type.OutQuad)
+        self._widthAnimation.finished.connect(self._widthAnimationFinished)
+
+        self.setExpanded(False, animated=False)
         self.setIconByTheme(APP().theme())
 
     def addPage(
@@ -117,16 +155,11 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         if not isinstance(widget, QWidget):
             raise TypeError('widget must be a QWidget')
 
-        button = QToolButton(parent=self.navigationPanel)
+        button = _NavigationButton(parent=self.navigationPanel)
         button.setObjectName('NavigationPageButton')
         button.setProperty('pageId', pageId)
         button.setCheckable(True)
-        button.setIconSize(self.IconSize)
-        button.setToolButtonStyle(
-            QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon
-            if self._expanded
-            else QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly
-        )
+        button.setExpanded(self._expanded)
         button.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Fixed,
@@ -191,16 +224,13 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         """Toggle between the compact rail and expanded navigation menu."""
         self.setExpanded(not self._expanded)
 
-    @QtCore.Slot(bool)
-    def setExpanded(self, expanded: bool):
-        """Set the navigation menu expansion state."""
+    def setExpanded(self, expanded: bool, *, animated: bool = True):
+        """Set expansion state, optionally animating the panel width."""
         expanded = bool(expanded)
         changed = expanded != self._expanded
+
         self._expanded = expanded
 
-        self.navigationPanel.setFixedWidth(
-            self.ExpandedWidth if expanded else self.CollapsedWidth
-        )
         self.toggleButton.setToolTip(
             _('Collapse Navigation') if expanded else _('Expand Navigation')
         )
@@ -208,18 +238,54 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self._refreshWidgetStyle(self.toggleButton)
         self.setIconByTheme(APP().theme())
 
-        style = (
-            QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon
-            if expanded
-            else QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly
-        )
-
         for page in self._pages.values():
-            page.button.setToolButtonStyle(style)
+            if expanded:
+                page.button.setExpanded(True)
+
             self._updatePageText(page)
+
+        targetWidth = self.ExpandedWidth if expanded else self.CollapsedWidth
+
+        self._widthAnimation.stop()
+
+        if changed and animated:
+            self._widthAnimation.setStartValue(self._navigationWidth)
+            self._widthAnimation.setEndValue(targetWidth)
+            self._widthAnimation.start()
+        else:
+            self._setNavigationWidth(targetWidth)
+
+            if not expanded:
+                self._setPageButtonsExpanded(False)
 
         if changed:
             self.expandedChanged.emit(expanded)
+
+    def _getNavigationWidth(self) -> int:
+        """Return the width exposed to the property animation."""
+        return self._navigationWidth
+
+    def _setNavigationWidth(self, width: int):
+        """Apply an animated width to the navigation panel."""
+        self._navigationWidth = int(width)
+        self.navigationPanel.setFixedWidth(self._navigationWidth)
+
+    navigationWidth = QtCore.Property(
+        int,
+        _getNavigationWidth,
+        _setNavigationWidth,
+    )
+
+    def _setPageButtonsExpanded(self, expanded: bool):
+        """Set label visibility for all registered page buttons."""
+        for page in self._pages.values():
+            page.button.setExpanded(expanded)
+
+    @QtCore.Slot()
+    def _widthAnimationFinished(self):
+        """Finish label compaction after a collapse animation."""
+        if not self._expanded:
+            self._setPageButtonsExpanded(False)
 
     @staticmethod
     def _refreshWidgetStyle(widget: QWidget):
@@ -246,12 +312,8 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
     def setIconByTheme(self, theme: str):
         """Refresh navigation icons for the active theme."""
         iconFactory = self._iconFactory(theme)
-        toggleIcon = (
-            'layout-sidebar-inset-reverse.svg'
-            if self._expanded
-            else 'layout-sidebar-inset.svg'
-        )
-        self.toggleButton.setIcon(iconFactory(toggleIcon))
+
+        self.toggleButton.setIcon(iconFactory('list.svg'))
 
         for page in self._pages.values():
             self._updatePageIcon(page, theme)
