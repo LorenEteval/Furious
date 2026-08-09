@@ -826,33 +826,6 @@ TRANSLATION = {
         "ZH": "日志",
         "isReviewed": "True"
     },
-    "Show Furious Log...": {
-        "source": [
-            "Furious.Widget.ServerTableView",
-            "Furious.Window.MainWindow"
-        ],
-        "RU": "Показать журнал Furious...",
-        "ZH": "显示Furious日志...",
-        "isReviewed": "True"
-    },
-    "Show Core Log...": {
-        "source": [
-            "Furious.Widget.ServerTableView",
-            "Furious.Window.MainWindow"
-        ],
-        "RU": "Показать журнал ядра...",
-        "ZH": "显示内核日志...",
-        "isReviewed": "True"
-    },
-    "Show Tun2socks Log...": {
-        "source": [
-            "Furious.Widget.ServerTableView",
-            "Furious.Window.MainWindow"
-        ],
-        "RU": "Показать журнал Tun2socks...",
-        "ZH": "显示Tun2socks日志...",
-        "isReviewed": "True"
-    },
     "Update Subscription (Use Current Proxy)": {
         "source": [
             "Furious.Window.MainWindow"
@@ -939,30 +912,6 @@ TRANSLATION = {
         ],
         "RU": "Активированный",
         "ZH": "已启动",
-        "isReviewed": "True"
-    },
-    "Furious Log": {
-        "source": [
-            "Furious.Application.DesktopApplication"
-        ],
-        "RU": "Лог Furious",
-        "ZH": "Furious日志",
-        "isReviewed": "True"
-    },
-    "Core Log": {
-        "source": [
-            "Furious.Application.DesktopApplication"
-        ],
-        "RU": "Лог ядра",
-        "ZH": "内核日志",
-        "isReviewed": "True"
-    },
-    "Tun2socks Log": {
-        "source": [
-            "Furious.Application.DesktopApplication"
-        ],
-        "RU": "Лог Tun2socks",
-        "ZH": "Tun2socks日志",
         "isReviewed": "True"
     },
     "Connect": {
@@ -2300,6 +2249,38 @@ TRANSLATION = {
         ],
         "RU": "Расширения",
         "ZH": "扩展功能",
+        "isReviewed": "True"
+    },
+    "Show Logs...": {
+        "source": [
+            "Furious.Window.MainWindow"
+        ],
+        "RU": "Показать журналы...",
+        "ZH": "显示日志...",
+        "isReviewed": "True"
+    },
+    "Log Type": {
+        "source": [
+            "Furious.Window.LogWindow"
+        ],
+        "RU": "Тип журнала",
+        "ZH": "日志类型",
+        "isReviewed": "True"
+    },
+    "Application": {
+        "source": [
+            "Furious.Window.LogWindow"
+        ],
+        "RU": "Приложение",
+        "ZH": "应用程序",
+        "isReviewed": "True"
+    },
+    "All Logs": {
+        "source": [
+            "Furious.Window.LogWindow"
+        ],
+        "RU": "Все журналы",
+        "ZH": "全部日志",
         "isReviewed": "True"
     }
 }

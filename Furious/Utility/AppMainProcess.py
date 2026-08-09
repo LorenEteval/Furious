@@ -99,7 +99,13 @@ class AppMainProcess(ProcessContext.Process):
             if APP() is None:
                 crashLog = f'{stackLog}'
             else:
-                crashLog = f'{AppLoggerWindow.Self().plainText()}\n{stackLog}'
+                logManager = AppLogManager()
+
+                crashLog = (
+                    f'{logManager.plainText()}\n{stackLog}'
+                    if logManager is not None
+                    else f'{stackLog}'
+                )
 
             with open(CRASH_LOG_DIR / self.logFileName, 'w', encoding='utf-8') as file:
                 file.write(crashLog)

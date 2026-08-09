@@ -26,8 +26,9 @@ import functools
 __all__ = [
     'APP',
     'AppFontName',
+    'AppLogManager',
+    'AppLogWindow',
     'AppThreadPool',
-    'AppLoggerWindow',
 ]
 
 APP = functools.partial(QApplication.instance)
@@ -40,16 +41,12 @@ def getAppAttributes(name: str):
 
 (
     AppFontName,
+    AppLogManager,
+    AppLogWindow,
     AppThreadPool,
 ) = (
     functools.partial(getAppAttributes, 'customFontName'),
+    functools.partial(getAppAttributes, 'logManager'),
+    functools.partial(getAppAttributes, 'logWindow'),
     functools.partial(getAppAttributes, 'threadPool'),
 )
-
-
-class AppLoggerWindow:
-    """Present the app logger window."""
-
-    Self = functools.partial(getAppAttributes, 'logViewerWindowSelf')
-    Core = functools.partial(getAppAttributes, 'logViewerWindowCore')
-    TUN_ = functools.partial(getAppAttributes, 'logViewerWindowTun_')

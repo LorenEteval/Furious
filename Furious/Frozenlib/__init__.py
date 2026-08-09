@@ -67,7 +67,7 @@ from .Constants import (
     XRAY_ASSET_PATH_GEOSITE,
 )
 from .Enum import AppBuiltinCommand, AppBuiltinProxyMode, AppBuiltinRouting
-from .Globals import APP, AppFontName, AppLoggerWindow, AppThreadPool
+from .Globals import APP, AppFontName, AppLogManager, AppLogWindow, AppThreadPool
 from .Mixins import Mixins
 from .PySide6Legacy import PySide6Legacy
 from .StartupOnBoot import StartupOnBoot
@@ -111,7 +111,8 @@ __all__ = [
     'AppBuiltinProxyMode',
     'AppBuiltinRouting',
     'AppFontName',
-    'AppLoggerWindow',
+    'AppLogManager',
+    'AppLogWindow',
     'AppResources',
     'AppSettings',
     'AppThreadPool',
