@@ -35,6 +35,8 @@ import socket
 try:
     import xray
 except Exception:
+    # Any non-exit exceptions
+
     xray = None
 
 from .Process import XrayCore
@@ -193,6 +195,8 @@ def queryXrayStats(
     try:
         response = xray.queryStats(apiServer, timeout, myPattern, reset)
     except Exception:
+        # Any non-exit exceptions
+
         return None
 
     if isinstance(response, bytes):
