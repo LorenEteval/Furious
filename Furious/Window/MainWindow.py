@@ -259,7 +259,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.updateStatusText()
 
 
-class TrafficStatsBadge(Mixins.ThemeAware, QWidget):
+class TrafficStatsBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
     """Display independently updated traffic speeds and usage."""
 
     UploadIconFileName = 'cloud-upload.svg'
@@ -295,12 +295,30 @@ class TrafficStatsBadge(Mixins.ThemeAware, QWidget):
         self._layout.addWidget(self.downloadUsageLabel)
 
         self.setIconByTheme(APP().theme())
+        self.updateToolTips()
+
+    def updateToolTips(self):
+        """Apply translated descriptions to each traffic statistic."""
+        uploadSpeed, downloadSpeed, uploadUsage, downloadUsage = (
+            _('Upload Speed'),
+            _('Download Speed'),
+            _('Upload Traffic Usage'),
+            _('Download Traffic Usage'),
+        )
+
+        self.uploadIconLabel.setToolTip(uploadSpeed)
+        self.uploadTextLabel.setToolTip(uploadSpeed)
+        self.uploadUsageLabel.setToolTip(uploadUsage)
+        self.downloadIconLabel.setToolTip(downloadSpeed)
+        self.downloadTextLabel.setToolTip(downloadSpeed)
+        self.downloadUsageLabel.setToolTip(downloadUsage)
 
     def setIconByTheme(self, theme: str):
         """Apply theme-appropriate upload and download icons."""
         iconFactory = (
             bootstrapIconWhite if theme == AppStyleSheet.Dark else bootstrapIcon
         )
+
         self.uploadIconLabel.setPixmap(
             iconFactory(self.UploadIconFileName).pixmap(self.IconSize)
         )
@@ -334,6 +352,10 @@ class TrafficStatsBadge(Mixins.ThemeAware, QWidget):
     def themeChangedCallback(self, theme: str):
         """Refresh traffic-direction icons after a theme change."""
         self.setIconByTheme(theme)
+
+    def retranslate(self):
+        """Refresh translated traffic-statistic tooltips."""
+        self.updateToolTips()
 
 
 class ConnectionStatusWidget(QWidget):

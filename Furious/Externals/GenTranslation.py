@@ -2282,5 +2282,37 @@ TRANSLATION = {
         "RU": "Все журналы",
         "ZH": "全部日志",
         "isReviewed": "True"
+    },
+    "Upload Speed": {
+        "source": [
+            "Furious.Window.MainWindow"
+        ],
+        "RU": "Скорость отдачи",
+        "ZH": "上传速度",
+        "isReviewed": "True"
+    },
+    "Download Speed": {
+        "source": [
+            "Furious.Window.MainWindow"
+        ],
+        "RU": "Скорость загрузки",
+        "ZH": "下载速度",
+        "isReviewed": "True"
+    },
+    "Upload Traffic Usage": {
+        "source": [
+            "Furious.Window.MainWindow"
+        ],
+        "RU": "Объём исходящего трафика",
+        "ZH": "上传流量",
+        "isReviewed": "True"
+    },
+    "Download Traffic Usage": {
+        "source": [
+            "Furious.Window.MainWindow"
+        ],
+        "RU": "Объём входящего трафика",
+        "ZH": "下载流量",
+        "isReviewed": "True"
     }
 }
