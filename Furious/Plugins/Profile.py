@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Domain import ConfigFactory, ServerProfile, ensureProfile
+from Furious.Models import ConfigFactory, ServerProfile, ensureProfile
 
 from typing import Mapping, Union
 

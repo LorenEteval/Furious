@@ -21,8 +21,8 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Domain import ProfileMetadata, ServerProfile
-from Furious.Domain.Encoding import *
+from Furious.Models import ProfileMetadata, ServerProfile
+from Furious.Models.Encoding import *
 from Furious.Plugins import configurationFromAny
 
 from dataclasses import asdict, dataclass

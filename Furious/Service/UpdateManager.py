@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from Furious.Domain import *
+from Furious.Models import *
 from Furious.Qt.QtWidgets import *
 from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Qt.WebGETManager import *

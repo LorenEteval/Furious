@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Domain import ConfigFactory, ServerProfile
+from Furious.Models import ConfigFactory, ServerProfile
 from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Qt.QtWidgets import *
 
