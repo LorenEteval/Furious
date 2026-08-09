@@ -42,8 +42,9 @@ class _NavigationButton(IconTextPushButton):
     IconSize = QtCore.QSize(20, 20)
     IconTextSpacing = 12
     HorizontalMargin = 12
+    SelectionIndicatorWidth = 3
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, hasSelectionIndicator=False):
         """Initialize the icon and text presentation."""
         super().__init__(
             parent,
@@ -53,9 +54,44 @@ class _NavigationButton(IconTextPushButton):
             iconSize=self.IconSize,
         )
 
+        self.selectionIndicator = None
+
+        if hasSelectionIndicator:
+            self.selectionIndicator = QFrame(parent=self)
+            self.selectionIndicator.setObjectName('NavigationSelectionIndicator')
+            self.selectionIndicator.setFixedWidth(self.SelectionIndicatorWidth)
+            self.selectionIndicator.setAttribute(
+                QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents
+            )
+            self.selectionIndicator.hide()
+            self.toggled.connect(self._selectionChanged)
+
     def setExpanded(self, expanded: bool):
         """Show the text label only in expanded navigation mode."""
         self.setTextVisible(expanded)
+
+    @QtCore.Slot(bool)
+    def _selectionChanged(self, selected: bool):
+        """Show the independent indicator for a selected page."""
+        self.selectionIndicator.setVisible(selected)
+
+        if selected:
+            self.selectionIndicator.raise_()
+
+    def resizeEvent(self, event):
+        """Keep the selection indicator straight along the left edge."""
+        super().resizeEvent(event)
+
+        if self.selectionIndicator is not None:
+            indicatorHeight = min(self.IconSize.height(), self.height())
+            indicatorTop = (self.height() - indicatorHeight) // 2
+
+            self.selectionIndicator.setGeometry(
+                0,
+                indicatorTop,
+                self.SelectionIndicatorWidth,
+                indicatorHeight,
+            )
 
 
 @dataclass
@@ -155,7 +191,10 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         if not isinstance(widget, QWidget):
             raise TypeError('widget must be a QWidget')
 
-        button = _NavigationButton(parent=self.navigationPanel)
+        button = _NavigationButton(
+            parent=self.navigationPanel,
+            hasSelectionIndicator=True,
+        )
         button.setObjectName('NavigationPageButton')
         button.setProperty('pageId', pageId)
         button.setCheckable(True)
