@@ -29,7 +29,11 @@ import multiprocessing
 import queue
 import time
 
-__all__ = ['TrafficStatsManager', 'formatTrafficSpeed']
+__all__ = [
+    'TrafficStatsManager',
+    'formatTrafficSpeed',
+    'formatTrafficUsage',
+]
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +65,30 @@ def formatTrafficSpeed(bytesPerSecond: float) -> str:
     return f'{formatted} {unit}'
 
 
+def formatTrafficUsage(bytesUsed: int) -> str:
+    """Format cumulative traffic using compact binary units."""
+    try:
+        value = max(int(bytesUsed), 0)
+    except (TypeError, ValueError, OverflowError):
+        value = 0
+
+    if value < KIBIBYTE:
+        return f'{value} B'
+
+    amount = float(value)
+    units = ('KiB', 'MiB', 'GiB', 'TiB', 'PiB')
+
+    for unit in units:
+        amount /= KIBIBYTE
+
+        if amount < KIBIBYTE or unit == units[-1]:
+            formatted = f'{amount:.2f}'.rstrip('0').rstrip('.')
+
+            return f'{formatted} {unit}'
+
+    return f'{value} B'
+
+
 def _queryTrafficStats(requestQueue, resultQueue):
     """Run potentially GIL-blocking statistics calls in an isolated process."""
     while True:
@@ -87,9 +115,10 @@ class TrafficStatsManager(
     Mixins.CleanupOnExit,
     QtCore.QObject,
 ):
-    """Periodically convert cumulative plugin counters into traffic speeds."""
+    """Publish plugin traffic usage and rates while its parent is visible."""
 
     speedChanged = QtCore.Signal(float, float)
+    usageChanged = QtCore.Signal(object, object)
     statisticsUnavailable = QtCore.Signal()
 
     def __init__(self, parent=None):
@@ -113,6 +142,71 @@ class TrafficStatsManager(
         self._resultTimer = QtCore.QTimer(self)
         self._resultTimer.setInterval(TRAFFIC_STATS_RESULT_INTERVAL)
         self._resultTimer.timeout.connect(self._consumeResults)
+
+        if parent is not None:
+            parent.installEventFilter(self)
+
+    def _parentIsVisible(self) -> bool:
+        """Return whether the parent widget can currently display updates."""
+        parent = self.parent()
+
+        if parent is None or not hasattr(parent, 'isVisible'):
+            return True
+
+        return parent.isVisible() and not (
+            hasattr(parent, 'isMinimized') and parent.isMinimized()
+        )
+
+    def _suspendSampling(self):
+        """Pause polling and discard the current rate baseline."""
+        wasActive = (
+            self._sampleTimer.isActive()
+            or self._resultTimer.isActive()
+            or self._queryInFlight
+        )
+        self._sampleTimer.stop()
+        self._resultTimer.stop()
+
+        if wasActive:
+            self._generation += 1
+            self._resetSamples()
+
+    def _resumeSampling(self):
+        """Resume polling when a monitor and visible parent are available."""
+        if self._monitor is None or not self._parentIsVisible():
+            return
+
+        if not self._ensureWorker():
+            self.statisticsUnavailable.emit()
+
+            return
+
+        self._resultTimer.start()
+        self._sampleTimer.start()
+        self._requestSample()
+
+    @QtCore.Slot()
+    def _syncSamplingVisibility(self):
+        """Synchronize polling with the parent widget's visibility."""
+        if self._parentIsVisible():
+            self._resumeSampling()
+        else:
+            self._suspendSampling()
+
+    def eventFilter(self, watched, event):
+        """Pause traffic queries while the parent widget is not visible."""
+        if watched is self.parent():
+            eventType = event.type()
+
+            if eventType == QtCore.QEvent.Type.Hide:
+                self._suspendSampling()
+            elif eventType in (
+                QtCore.QEvent.Type.Show,
+                QtCore.QEvent.Type.WindowStateChange,
+            ):
+                QtCore.QTimer.singleShot(0, self._syncSamplingVisibility)
+
+        return super().eventFilter(watched, event)
 
     @staticmethod
     def _activeProcesses():
@@ -184,6 +278,8 @@ class TrafficStatsManager(
 
     def _activateMonitor(self, monitor):
         """Begin sampling one plugin-provided monitor."""
+        self._sampleTimer.stop()
+        self._resultTimer.stop()
         self._generation += 1
         self._monitor = monitor
         self._resetSamples()
@@ -194,19 +290,12 @@ class TrafficStatsManager(
 
             return
 
-        if not self._ensureWorker():
-            self.statisticsUnavailable.emit()
-
-            return
-
-        self._resultTimer.start()
-        self._sampleTimer.start()
-        self._requestSample()
+        self._resumeSampling()
 
     @QtCore.Slot()
     def _requestSample(self):
         """Queue one statistics query unless another query is still running."""
-        if self._monitor is None or self._queryInFlight:
+        if self._monitor is None or self._queryInFlight or not self._parentIsVisible():
             return
 
         if not self._ensureWorker():
@@ -227,6 +316,8 @@ class TrafficStatsManager(
 
     def _updateSpeeds(self, counters: TrafficCounters, sampledAt: float):
         """Calculate and emit rates from one cumulative counter sample."""
+        self.usageChanged.emit(counters.uplink, counters.downlink)
+
         previousCounters = self._previousCounters
         previousSampleTime = self._previousSampleTime
         self._previousCounters = counters
@@ -252,6 +343,11 @@ class TrafficStatsManager(
     @QtCore.Slot()
     def _consumeResults(self):
         """Drain worker results and ignore samples from older connections."""
+        if not self._parentIsVisible():
+            self._suspendSampling()
+
+            return
+
         resultQueue = self._resultQueue
 
         if resultQueue is None:

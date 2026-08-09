@@ -31,6 +31,7 @@ from Furious.Service import (
     TrafficStatsManager,
     UpdateManager,
     formatTrafficSpeed,
+    formatTrafficUsage,
 )
 from Furious.Actions.Import import (
     ImportFromFileAction,
@@ -258,33 +259,40 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.updateStatusText()
 
 
-class TrafficSpeedBadge(Mixins.ThemeAware, QWidget):
-    """Display independently updated upload and download speeds."""
+class TrafficStatsBadge(Mixins.ThemeAware, QWidget):
+    """Display independently updated traffic speeds and usage."""
 
-    UploadIconFileName = 'cloud-arrow-up.svg'
-    DownloadIconFileName = 'cloud-arrow-down.svg'
+    UploadIconFileName = 'cloud-upload.svg'
+    DownloadIconFileName = 'cloud-download.svg'
     IconSize = QtCore.QSize(16, 16)
 
     def __init__(self, parent=None):
         """Initialize dedicated traffic-direction icons and labels."""
         super().__init__(parent)
 
-        self.setObjectName('TrafficSpeedBadge')
+        self.setObjectName('TrafficStatsBadge')
         self.setVisible(False)
 
         self.uploadIconLabel = QLabel(parent=self)
         self.uploadTextLabel = AppQLabel(translatable=False, parent=self)
+        self.uploadUsageLabel = AppQLabel(translatable=False, parent=self)
         self.downloadIconLabel = QLabel(parent=self)
         self.downloadTextLabel = AppQLabel(translatable=False, parent=self)
+        self.downloadUsageLabel = AppQLabel(translatable=False, parent=self)
+
+        self.uploadUsageLabel.setObjectName('TrafficUsageLabel')
+        self.downloadUsageLabel.setObjectName('TrafficUsageLabel')
 
         self._layout = QHBoxLayout(self)
         self._layout.setContentsMargins(8, 3, 8, 3)
         self._layout.setSpacing(6)
         self._layout.addWidget(self.uploadIconLabel)
         self._layout.addWidget(self.uploadTextLabel)
+        self._layout.addWidget(self.uploadUsageLabel)
         self._layout.addSpacing(4)
         self._layout.addWidget(self.downloadIconLabel)
         self._layout.addWidget(self.downloadTextLabel)
+        self._layout.addWidget(self.downloadUsageLabel)
 
         self.setIconByTheme(APP().theme())
 
@@ -307,11 +315,20 @@ class TrafficSpeedBadge(Mixins.ThemeAware, QWidget):
         self.downloadTextLabel.setText(formatTrafficSpeed(download))
         self.setVisible(True)
 
+    @QtCore.Slot(object, object)
+    def setUsage(self, upload: int, download: int):
+        """Display formatted cumulative upload and download usage."""
+        self.uploadUsageLabel.setText(f'({formatTrafficUsage(upload)})')
+        self.downloadUsageLabel.setText(f'({formatTrafficUsage(download)})')
+        self.setVisible(True)
+
     @QtCore.Slot()
-    def clearSpeeds(self):
-        """Hide stale speeds when statistics are unavailable."""
+    def clearStatistics(self):
+        """Hide stale speed and usage values when statistics are unavailable."""
         self.uploadTextLabel.clear()
+        self.uploadUsageLabel.clear()
         self.downloadTextLabel.clear()
+        self.downloadUsageLabel.clear()
         self.setVisible(False)
 
     def themeChangedCallback(self, theme: str):
@@ -328,13 +345,13 @@ class ConnectionStatusWidget(QWidget):
 
         self.setObjectName('ConnectionStatusWidget')
         self.networkState = NetworkStateBadge(parent=self)
-        self.trafficSpeed = TrafficSpeedBadge(parent=self)
+        self.trafficStats = TrafficStatsBadge(parent=self)
 
         self._layout = QHBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(6)
+        self._layout.addWidget(self.trafficStats)
         self._layout.addWidget(self.networkState)
-        self._layout.addWidget(self.trafficSpeed)
 
 
 class SearchButton(AppQPushButton):
@@ -812,11 +829,12 @@ class MainWindow(AppQMainWindow):
 
         self.connectionStatus = ConnectionStatusWidget(parent=self)
         self.networkState = self.connectionStatus.networkState
-        self.trafficSpeed = self.connectionStatus.trafficSpeed
+        self.trafficStats = self.connectionStatus.trafficStats
         self.trafficStatsManager = TrafficStatsManager(parent=self)
-        self.trafficStatsManager.speedChanged.connect(self.trafficSpeed.setSpeeds)
+        self.trafficStatsManager.speedChanged.connect(self.trafficStats.setSpeeds)
+        self.trafficStatsManager.usageChanged.connect(self.trafficStats.setUsage)
         self.trafficStatsManager.statisticsUnavailable.connect(
-            self.trafficSpeed.clearSpeeds
+            self.trafficStats.clearStatistics
         )
 
         self.statusBar().addPermanentWidget(self.connectionStatus)

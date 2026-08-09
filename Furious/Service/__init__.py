@@ -27,7 +27,11 @@ from .SubscriptionImporter import (
     SubscriptionImportService,
     SubscriptionSource,
 )
-from .TrafficStatsManager import TrafficStatsManager, formatTrafficSpeed
+from .TrafficStatsManager import (
+    TrafficStatsManager,
+    formatTrafficSpeed,
+    formatTrafficUsage,
+)
 from .UpdateManager import UpdateManager
 
 __all__ = [
@@ -40,4 +44,5 @@ __all__ = [
     'TrafficStatsManager',
     'UpdateManager',
     'formatTrafficSpeed',
+    'formatTrafficUsage',
 ]
