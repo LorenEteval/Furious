@@ -370,24 +370,24 @@ class ConnectionStatusWidget(QWidget):
         self._layout.addWidget(self.networkState)
 
 
-class SearchButton(AppQPushButton):
+class SearchButton(AppQIconTextPushButton):
     """Represent search button."""
 
     def __init__(self, *args, **kwargs):
         """Initialize the SearchButton."""
         super().__init__(*args, **kwargs)
 
-        self.setText(self.customText())
+        self.setObjectName('SearchButton')
+        self.setSizePolicy(
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Fixed,
+        )
+        self.setText(_('Search'))
         self.setIcon(bootstrapIcon('search.svg'))
-
-    @staticmethod
-    def customText():
-        """Return the user-facing message text for the search button."""
-        return ' ' * 2 + _('Search')
 
     def retranslate(self):
         """Refresh translated text for the search button."""
-        self.setText(self.customText())
+        self.setText(_('Search'))
 
 
 class HomePage(Mixins.QTranslatable, QMainWindow):

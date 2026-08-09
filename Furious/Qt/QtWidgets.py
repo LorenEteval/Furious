@@ -49,12 +49,14 @@ __all__ = [
     'AppQMenu',
     'AppQMenuBar',
     'AppQMessageBox',
+    'AppQIconTextPushButton',
     'AppQPushButton',
     'AppQSpinBox',
     'AppQTableView',
     'AppQTableWidget',
     'AppQTabWidget',
     'AppQToolBar',
+    'IconTextPushButton',
     'MBoxQuestionDelete',
     'MBoxNewChangesNextTime',
     'MBoxDirectRulesNotAllowed',
@@ -592,6 +594,113 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
         self.setWindowIcon(AppHue.connectedWindowIcon())
 
 
+class IconTextPushButton(QPushButton):
+    """Present a push-button icon and label through an explicit layout."""
+
+    def __init__(
+        self,
+        *args,
+        iconTextSpacing=12,
+        horizontalMargin=13,
+        verticalMargin=3,
+        iconSize=QtCore.QSize(16, 16),
+        **kwargs,
+    ):
+        """Initialize layout-managed icon and text presentation."""
+        icon = kwargs.pop('icon', None)
+
+        super().__init__(*args, **kwargs)
+
+        text = QPushButton.text(self)
+
+        QPushButton.setText(self, '')
+        QPushButton.setIcon(self, QIcon())
+        QPushButton.setIconSize(self, iconSize)
+
+        self._text = ''
+        self._icon = QIcon()
+
+        self._iconLabel = QLabel(parent=self)
+        self._iconLabel.setObjectName('IconTextPushButtonIcon')
+        self._iconLabel.setFixedSize(iconSize)
+        self._iconLabel.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self._iconLabel.setAttribute(
+            QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+
+        self._textLabel = QLabel(parent=self)
+        self._textLabel.setObjectName('IconTextPushButtonText')
+        self._textLabel.setAttribute(
+            QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+
+        self._iconTextLayout = QHBoxLayout(self)
+        self._iconTextLayout.setContentsMargins(
+            horizontalMargin,
+            verticalMargin,
+            horizontalMargin,
+            verticalMargin,
+        )
+        self._iconTextLayout.setSpacing(iconTextSpacing)
+        self._iconTextLayout.addWidget(self._iconLabel)
+        self._iconTextLayout.addWidget(self._textLabel)
+        self._iconTextLayout.addStretch()
+
+        self.setText(text)
+
+        if icon is not None:
+            self.setIcon(icon)
+
+    def setIcon(self, icon: QIcon):
+        """Render *icon* in the layout-managed icon label."""
+        self._icon = icon
+        self._iconLabel.setPixmap(icon.pixmap(self.iconSize()))
+
+    def icon(self) -> QIcon:
+        """Return the displayed icon."""
+        return self._icon
+
+    def setIconSize(self, size: QtCore.QSize):
+        """Resize and rerender the layout-managed icon."""
+        QPushButton.setIconSize(self, size)
+
+        if not hasattr(self, '_iconLabel'):
+            return
+
+        self._iconLabel.setFixedSize(size)
+        self._iconLabel.setPixmap(self._icon.pixmap(size))
+
+    def setText(self, text: str):
+        """Set the visible and accessible button label."""
+        self._text = text
+        self._textLabel.setText(text)
+        self.setAccessibleName(text)
+        self.updateGeometry()
+
+    def text(self) -> str:
+        """Return the button label."""
+        return self._text
+
+    def setTextVisible(self, visible: bool):
+        """Set whether the text label participates in the layout."""
+        self._textLabel.setVisible(visible)
+        self.updateGeometry()
+
+    def iconTextSpacing(self) -> int:
+        """Return the space between the icon and text label."""
+        return self._iconTextLayout.spacing()
+
+    def sizeHint(self):
+        """Include the managed icon and text layout in the preferred size."""
+        baseHint = super().sizeHint()
+        layoutHint = self._iconTextLayout.sizeHint()
+
+        return QtCore.QSize(
+            max(baseHint.width(), layoutHint.width()),
+            max(baseHint.height(), layoutHint.height()),
+        )
+
+
 class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
     """Represent app q push button."""
 
@@ -659,6 +768,66 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
 
     def retranslate(self):
         """Refresh translated text for the app q push button."""
+        self.setText(_(self.text()))
+
+
+class AppQIconTextPushButton(
+    Mixins.QTranslatable,
+    Mixins.ThemeAware,
+    IconTextPushButton,
+):
+    """Provide a theme-aware application icon-text push button."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize a button with an optional application icon."""
+        icon = kwargs.pop('icon', None)
+        super().__init__(*args, **kwargs)
+
+        self.iconFileName = ''
+
+        if icon is not None:
+            self.setIcon(icon)
+
+    def setIconByTheme(self, theme):
+        """Apply the stored application icon for *theme*."""
+        if not self.iconFileName:
+            return
+
+        if AppSettings.isStateON_('DarkMode'):
+            IconTextPushButton.setIcon(
+                self,
+                bootstrapIconWhite(self.iconFileName),
+            )
+
+            return
+
+        if theme == 'Dark':
+            if PLATFORM == 'Windows' and versionToValue(
+                PYSIDE6_VERSION
+            ) < versionToValue('6.7.0'):
+                icon = bootstrapIcon(self.iconFileName)
+            else:
+                icon = bootstrapIconWhite(self.iconFileName)
+        else:
+            icon = bootstrapIcon(self.iconFileName)
+
+        IconTextPushButton.setIcon(self, icon)
+
+    def setIcon(self, icon: AppQIcon):
+        """Store an application icon and apply its themed variant."""
+        self.iconFileName = AppQPushButton.getIconFileName(icon.iconFileName)
+
+        if not self.iconFileName:
+            IconTextPushButton.setIcon(self, icon)
+        else:
+            self.setIconByTheme(APP().theme())
+
+    def themeChangedCallback(self, theme):
+        """Refresh the icon after an application theme change."""
+        self.setIconByTheme(theme)
+
+    def retranslate(self):
+        """Refresh translated button text."""
         self.setText(_(self.text()))
 
 
