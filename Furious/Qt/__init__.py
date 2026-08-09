@@ -20,7 +20,6 @@
 from __future__ import annotations
 
 from .AppStyleSheet import AppStyleSheet
-from .DNSResolver import DNSResolver
 from .DynamicTheme import AppHue
 from .DynamicTranslate import (
     ABBR_TO_LANGUAGE,
@@ -28,7 +27,7 @@ from .DynamicTranslate import (
     SUPPORTED_LANGUAGE,
     gettext,
 )
-from .GuiEditorXXX import (
+from .EditorWidgets import (
     GuiEditorItemBasicRemark,
     GuiEditorItemProxyHttp,
     GuiEditorItemProxySocks,
@@ -40,7 +39,6 @@ from .GuiEditorXXX import (
     GuiEditorWidgetQGroupBox,
     GuiEditorWidgetQWidget,
 )
-from .NetworkConnectivityManager import NetworkConnectivityManager
 from .QtGui import (
     AppQAction,
     AppQActionGroup,
@@ -94,8 +92,6 @@ from .TextEditorTheme import (
     DraculaLoggerSyntaxHighlighter,
     configureEditorLogMetadata,
 )
-from .UpdatesManager import UpdatesManager
-from .WaitingSpinner import WaitingSpinner
 from .WebGETManager import WebGETManager
 
 __all__ = [
@@ -128,7 +124,6 @@ __all__ = [
     'AppQTextBrowser',
     'AppQToolBar',
     'AppStyleSheet',
-    'DNSResolver',
     'DraculaEditorTheme',
     'DraculaJSONSyntaxHighlighter',
     'DraculaJSONTextEditor',
@@ -150,10 +145,7 @@ __all__ = [
     'MBoxNewChangesNextTime',
     'MBoxQuestionDelete',
     'MBoxUnrecognizedConfig',
-    'NetworkConnectivityManager',
     'SUPPORTED_LANGUAGE',
-    'UpdatesManager',
-    'WaitingSpinner',
     'WebGETManager',
     'bootstrapIcon',
     'bootstrapIconMask',

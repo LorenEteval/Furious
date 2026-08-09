@@ -147,7 +147,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
             self._menu = menu
 
             # Some old version PySide6 does not have setMenu method
-            # for QAction. Protect it. Currently only used in SystemTrayIcon
+            # for QAction. Protect it. Currently only used in TrayIcon
             if hasattr(self, 'setMenu') and useSetMenu:
                 self.setMenu(menu)
 

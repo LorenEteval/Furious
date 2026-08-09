@@ -15,26 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose reusable application widgets and configuration editors."""
+"""Expose reusable visual components that do not own application windows."""
 
 from __future__ import annotations
 
-from .GuiCustomizeNetworkTest import GuiCustomizeNetworkTestDialog
-from .GuiCustomizeProxyBypass import GuiCustomizeProxyBypassDialog
-from .GuiTUNSettings import GuiTUNSettings
-from .IndentSpinBox import IndentSpinBox
-from .QRCodeWindow import QRCodeWindow
-from .TextEditorWindow import TextEditorWindow
-from .UserServersQTableView import UserServersQTableView
-from .UserSubsQTableView import UserSubsQTableView
+from .ConnectionProgressWidget import ConnectionProgressWidget
+from .ServerTableView import ServerTableView
+from .SubscriptionTableView import SubscriptionTableView
+from .WaitingSpinner import WaitingSpinner
 
 __all__ = [
-    'GuiCustomizeNetworkTestDialog',
-    'GuiCustomizeProxyBypassDialog',
-    'GuiTUNSettings',
-    'IndentSpinBox',
-    'QRCodeWindow',
-    'TextEditorWindow',
-    'UserServersQTableView',
-    'UserSubsQTableView',
+    'ConnectionProgressWidget',
+    'ServerTableView',
+    'SubscriptionTableView',
+    'WaitingSpinner',
 ]

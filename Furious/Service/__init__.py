@@ -19,6 +19,14 @@
 
 from __future__ import annotations
 
-from .CoreManager import CoreManager
+from .ConnectionManager import ConnectionManager
+from .ConnectivityManager import ConnectivityManager
+from .DnsResolver import DnsResolver
+from .UpdateManager import UpdateManager
 
-__all__ = ['CoreManager']
+__all__ = [
+    'ConnectionManager',
+    'ConnectivityManager',
+    'DnsResolver',
+    'UpdateManager',
+]

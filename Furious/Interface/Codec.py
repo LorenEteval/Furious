@@ -15,28 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose application windows and complete dialog compositions."""
+"""Define the common data encoder interface."""
 
 from __future__ import annotations
 
-from .IndentDialog import IndentDialog
-from .LogWindow import LogWindow
-from .MainWindow import MainWindow
-from .NetworkTestDialog import NetworkTestDialog
-from .ProxyBypassDialog import ProxyBypassDialog
-from .QRCodeWindow import QRCodeWindow
-from .SubscriptionWindow import SubscriptionWindow
-from .TextEditorWindow import TextEditorWindow
-from .TunSettingsDialog import TunSettingsDialog
+from abc import ABC, abstractmethod
+from typing import Any
 
-__all__ = [
-    'IndentDialog',
-    'LogWindow',
-    'MainWindow',
-    'NetworkTestDialog',
-    'ProxyBypassDialog',
-    'QRCodeWindow',
-    'SubscriptionWindow',
-    'TextEditorWindow',
-    'TunSettingsDialog',
-]
+__all__ = ['Codec']
+
+
+class Codec(ABC):
+    """Define the interface and shared behavior for encoder objects."""
+
+    @abstractmethod
+    def encode(self, data: Any, **kwargs) -> Any:
+        """Encode data with the encoder factory."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def decode(self, data: Any, **kwargs) -> Any:
+        """Decode data with the encoder factory."""
+        raise NotImplementedError

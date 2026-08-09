@@ -24,6 +24,7 @@ from .Registry import (
     PLUGIN_ENTRY_POINT_GROUP,
     PluginRegistry,
     getPluginRegistry,
+    initializePluginRegistry,
     registerPlugin,
 )
 
@@ -35,5 +36,6 @@ __all__ = [
     'PluginRegistry',
     'PluginRouting',
     'getPluginRegistry',
+    'initializePluginRegistry',
     'registerPlugin',
 ]

@@ -1,12 +1,12 @@
 TRANSLATION = {
     "Delete": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow",
-            "Furious.Plugins.Official.Xray.XrayAssetViewerQListWidget",
+            "Furious.Backends.Xray.RoutingWindow",
+            "Furious.Backends.Xray.AssetListWidget",
             "Furious.Qt.QtWidgets",
-            "Furious.Widget.UserServersQTableView",
-            "Furious.Widget.UserSubsQTableView",
-            "Furious.Window.UserSubsWindow"
+            "Furious.Widget.ServerTableView",
+            "Furious.Widget.SubscriptionTableView",
+            "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Удалить",
         "ZH": "删除",
@@ -54,7 +54,7 @@ TRANSLATION = {
     },
     "New version available": {
         "source": [
-            "Furious.Qt.UpdatesManager"
+            "Furious.Service.UpdateManager"
         ],
         "RU": "Доступна новая версия",
         "ZH": "新版本可用",
@@ -62,7 +62,7 @@ TRANSLATION = {
     },
     "Check for updates failed": {
         "source": [
-            "Furious.Qt.UpdatesManager"
+            "Furious.Service.UpdateManager"
         ],
         "RU": "Не удалось проверить наличие обновлений",
         "ZH": "检查更新失败",
@@ -70,7 +70,7 @@ TRANSLATION = {
     },
     "Go to download page?": {
         "source": [
-            "Furious.Qt.UpdatesManager"
+            "Furious.Service.UpdateManager"
         ],
         "RU": "Перейти на страницу загрузки?",
         "ZH": "前往下载页面？",
@@ -78,7 +78,7 @@ TRANSLATION = {
     },
     "Furious is already the latest version": {
         "source": [
-            "Furious.Qt.UpdatesManager"
+            "Furious.Service.UpdateManager"
         ],
         "RU": "Используется последняя версия Furious",
         "ZH": "Furious已是最新版本",
@@ -86,7 +86,7 @@ TRANSLATION = {
     },
     "Invalid data": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Неверные данные",
         "ZH": "无效的数据",
@@ -94,7 +94,7 @@ TRANSLATION = {
     },
     "Invalid data. The content of the clipboard is:": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Неверные данные. Содержимое буфера обмена:",
         "ZH": "无效的数据。剪贴板内容为",
@@ -102,8 +102,8 @@ TRANSLATION = {
     },
     "Import": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerQListWidget",
-            "Furious.TrayActions.Import"
+            "Furious.Backends.Xray.AssetListWidget",
+            "Furious.Actions.Import"
         ],
         "RU": "Импорт",
         "ZH": "导入",
@@ -111,7 +111,7 @@ TRANSLATION = {
     },
     "Import share link success": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Успешный импорт общей ссылки",
         "ZH": "导入分享链接成功",
@@ -119,7 +119,7 @@ TRANSLATION = {
     },
     "Imported to row": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Импорт в строку",
         "ZH": "导入至行",
@@ -127,7 +127,7 @@ TRANSLATION = {
     },
     "Import success": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Успешный импорт",
         "ZH": "导入成功",
@@ -135,8 +135,8 @@ TRANSLATION = {
     },
     "Import From File...": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow",
-            "Furious.TrayActions.Import"
+            "Furious.Backends.Xray.AssetWindow",
+            "Furious.Actions.Import"
         ],
         "RU": "Импорт из файла...",
         "ZH": "从文件导入...",
@@ -144,8 +144,8 @@ TRANSLATION = {
     },
     "Import File": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow",
-            "Furious.TrayActions.Import"
+            "Furious.Backends.Xray.AssetWindow",
+            "Furious.Actions.Import"
         ],
         "RU": "Импорт файла",
         "ZH": "导入文件",
@@ -153,8 +153,8 @@ TRANSLATION = {
     },
     "Text files (*.json);;All files (*)": {
         "source": [
-            "Furious.TrayActions.Import",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Actions.Import",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Текст файлов (*.json);;Остальные файлы (*)",
         "ZH": "文本文件 (*.json);;所有文件 (*)",
@@ -162,7 +162,7 @@ TRANSLATION = {
     },
     "Error opening file": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Ошибка открытия файла",
         "ZH": "打开文件出错",
@@ -170,7 +170,7 @@ TRANSLATION = {
     },
     "Invalid configuration file": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Недопустимый конфигурационный файл",
         "ZH": "无效的配置文件",
@@ -178,7 +178,7 @@ TRANSLATION = {
     },
     "Import Share Link From Clipboard": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Импортировать ссылку из буфера обмена",
         "ZH": "从剪贴板导入分享链接",
@@ -186,7 +186,7 @@ TRANSLATION = {
     },
     "Import JSON Configuration From Clipboard": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Импортировать JSON конфигурацию из буфера обмена",
         "ZH": "从剪贴板导入JSON配置",
@@ -194,7 +194,7 @@ TRANSLATION = {
     },
     "Scan QR Code On The Screen": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Отсканируйте QR-код на экране",
         "ZH": "扫描屏幕上的二维码",
@@ -202,7 +202,7 @@ TRANSLATION = {
     },
     "Set Indent": {
         "source": [
-            "Furious.Widget.IndentSpinBox"
+            "Furious.Window.IndentDialog"
         ],
         "RU": "Установить отступ",
         "ZH": "设置缩进",
@@ -210,7 +210,7 @@ TRANSLATION = {
     },
     "Indent:": {
         "source": [
-            "Furious.Widget.IndentSpinBox"
+            "Furious.Window.IndentDialog"
         ],
         "RU": "Отступ",
         "ZH": "缩进：",
@@ -218,15 +218,15 @@ TRANSLATION = {
     },
     "Cancel": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow",
-            "Furious.Qt.GuiEditorXXX",
-            "Furious.TrayActions.Import",
-            "Furious.Widget.GuiCustomizeNetworkTest",
-            "Furious.Widget.GuiCustomizeProxyBypass",
-            "Furious.Widget.IndentSpinBox",
-            "Furious.Widget.UserServersQTableView",
-            "Furious.Widget.TextEditorWindow",
-            "Furious.Window.UserSubsWindow"
+            "Furious.Backends.Xray.RoutingWindow",
+            "Furious.Qt.EditorWidgets",
+            "Furious.Actions.Import",
+            "Furious.Window.NetworkTestDialog",
+            "Furious.Window.ProxyBypassDialog",
+            "Furious.Window.IndentDialog",
+            "Furious.Widget.ServerTableView",
+            "Furious.Window.TextEditorWindow",
+            "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Отмена",
         "ZH": "取消",
@@ -234,7 +234,7 @@ TRANSLATION = {
     },
     "Save Changes": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Сохранить изменения",
         "ZH": "保存更改",
@@ -242,7 +242,7 @@ TRANSLATION = {
     },
     "The content has been modified. Save changes?": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Содержимое было изменено. Сохранить изменения?",
         "ZH": "内容已修改。保存更改？",
@@ -250,7 +250,7 @@ TRANSLATION = {
     },
     "Save": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Сохранить",
         "ZH": "保存",
@@ -258,7 +258,7 @@ TRANSLATION = {
     },
     "Discard": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Отказаться",
         "ZH": "丢弃",
@@ -266,7 +266,7 @@ TRANSLATION = {
     },
     "Please check if the configuration is in valid JSON format": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Проверьте, имеет ли конфигурация допустимый формат JSON",
         "ZH": "请检查配置是否为有效的JSON格式",
@@ -274,8 +274,8 @@ TRANSLATION = {
     },
     "Save As...": {
         "source": [
-            "Furious.Window.LogViewerWindow",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.LogWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Сохранить как...",
         "ZH": "另存为...",
@@ -283,7 +283,7 @@ TRANSLATION = {
     },
     "Close Window": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Закрыть окно",
         "ZH": "关闭窗口",
@@ -291,9 +291,9 @@ TRANSLATION = {
     },
     "File": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow",
-            "Furious.Window.LogViewerWindow",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Backends.Xray.AssetWindow",
+            "Furious.Window.LogWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Файл",
         "ZH": "文件",
@@ -301,7 +301,7 @@ TRANSLATION = {
     },
     "Undo": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Отменить",
         "ZH": "撤销",
@@ -309,7 +309,7 @@ TRANSLATION = {
     },
     "Redo": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Повторить",
         "ZH": "重做",
@@ -317,7 +317,7 @@ TRANSLATION = {
     },
     "Cut": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Вырезать",
         "ZH": "剪切",
@@ -325,8 +325,8 @@ TRANSLATION = {
     },
     "Copy": {
         "source": [
-            "Furious.Window.LogViewerWindow",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.LogWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Копировать",
         "ZH": "复制",
@@ -334,7 +334,7 @@ TRANSLATION = {
     },
     "Paste": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Вставить",
         "ZH": "粘贴",
@@ -342,9 +342,9 @@ TRANSLATION = {
     },
     "Select All": {
         "source": [
-            "Furious.Widget.UserServersQTableView",
-            "Furious.Window.LogViewerWindow",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Widget.ServerTableView",
+            "Furious.Window.LogWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Выбрать все",
         "ZH": "全选",
@@ -352,7 +352,7 @@ TRANSLATION = {
     },
     "Indent...": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Настройка отступа...",
         "ZH": "缩进...",
@@ -360,8 +360,8 @@ TRANSLATION = {
     },
     "Edit": {
         "source": [
-            "Furious.Window.LogViewerWindow",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.LogWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Редактировать",
         "ZH": "编辑",
@@ -369,8 +369,8 @@ TRANSLATION = {
     },
     "Zoom In": {
         "source": [
-            "Furious.Window.LogViewerWindow",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.LogWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Увеличить маcштаб",
         "ZH": "变大",
@@ -378,8 +378,8 @@ TRANSLATION = {
     },
     "Zoom Out": {
         "source": [
-            "Furious.Window.LogViewerWindow",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.LogWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Уменьшить маcштаб",
         "ZH": "变小",
@@ -387,8 +387,8 @@ TRANSLATION = {
     },
     "View": {
         "source": [
-            "Furious.Window.LogViewerWindow",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.LogWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Вид",
         "ZH": "显示",
@@ -396,7 +396,7 @@ TRANSLATION = {
     },
     "Error saving configuration": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Ошибка сохранения конфигурации",
         "ZH": "保存配置出错",
@@ -404,8 +404,8 @@ TRANSLATION = {
     },
     "Save File": {
         "source": [
-            "Furious.Window.LogViewerWindow",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.LogWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Сохранить файл",
         "ZH": "保存文件",
@@ -413,7 +413,7 @@ TRANSLATION = {
     },
     "Error Saving File": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Ошибка сохранения файла",
         "ZH": "保存文件出错",
@@ -421,8 +421,8 @@ TRANSLATION = {
     },
     "Invalid server configuration": {
         "source": [
-            "Furious.TrayActions.Connect",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Actions.Connection",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Неверная конфигурация сервера",
         "ZH": "无效的服务器配置",
@@ -430,7 +430,7 @@ TRANSLATION = {
     },
     "Error setting indent": {
         "source": [
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Ошибка при установке отступов",
         "ZH": "设置缩进出错",
@@ -438,16 +438,16 @@ TRANSLATION = {
     },
     "Remark": {
         "source": [
-            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
-            "Furious.Plugins.Official.Hysteria2.GuiHysteria2",
-            "Furious.Plugins.Official.Xray.GuiShadowsocks",
-            "Furious.Plugins.Official.Xray.GuiSocks",
-            "Furious.Plugins.Official.Xray.GuiTrojan",
-            "Furious.Plugins.Official.Xray.GuiVLESS",
-            "Furious.Plugins.Official.Xray.GuiVMess",
-            "Furious.Plugins.Official.Xray.UserRoutingWindow",
-            "Furious.Widget.UserServersQTableView",
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Backends.Hysteria1.Editor",
+            "Furious.Backends.Hysteria2.Editor",
+            "Furious.Backends.Xray.ShadowsocksEditor",
+            "Furious.Backends.Xray.SocksEditor",
+            "Furious.Backends.Xray.TrojanEditor",
+            "Furious.Backends.Xray.VlessEditor",
+            "Furious.Backends.Xray.VmessEditor",
+            "Furious.Backends.Xray.RoutingWindow",
+            "Furious.Widget.ServerTableView",
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Примечание",
         "ZH": "别名",
@@ -455,8 +455,8 @@ TRANSLATION = {
     },
     "Protocol": {
         "source": [
-            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Backends.Hysteria1.Editor",
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Протокол",
         "ZH": "协议",
@@ -464,12 +464,12 @@ TRANSLATION = {
     },
     "Address": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiShadowsocks",
-            "Furious.Plugins.Official.Xray.GuiSocks",
-            "Furious.Plugins.Official.Xray.GuiTrojan",
-            "Furious.Plugins.Official.Xray.GuiVLESS",
-            "Furious.Plugins.Official.Xray.GuiVMess",
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Backends.Xray.ShadowsocksEditor",
+            "Furious.Backends.Xray.SocksEditor",
+            "Furious.Backends.Xray.TrojanEditor",
+            "Furious.Backends.Xray.VlessEditor",
+            "Furious.Backends.Xray.VmessEditor",
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Адрес",
         "ZH": "地址",
@@ -477,12 +477,12 @@ TRANSLATION = {
     },
     "Port": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiShadowsocks",
-            "Furious.Plugins.Official.Xray.GuiSocks",
-            "Furious.Plugins.Official.Xray.GuiTrojan",
-            "Furious.Plugins.Official.Xray.GuiVLESS",
-            "Furious.Plugins.Official.Xray.GuiVMess",
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Backends.Xray.ShadowsocksEditor",
+            "Furious.Backends.Xray.SocksEditor",
+            "Furious.Backends.Xray.TrojanEditor",
+            "Furious.Backends.Xray.VlessEditor",
+            "Furious.Backends.Xray.VmessEditor",
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Порт",
         "ZH": "端口",
@@ -490,8 +490,8 @@ TRANSLATION = {
     },
     "Transport": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiVTransport",
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Backends.Xray.TransportEditor",
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Способ передачи",
         "ZH": "传输方式",
@@ -499,7 +499,7 @@ TRANSLATION = {
     },
     "TLS": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "TLS",
         "ZH": "TLS",
@@ -507,8 +507,8 @@ TRANSLATION = {
     },
     "Subscription": {
         "source": [
-            "Furious.Widget.UserServersQTableView",
-            "Furious.Window.AppMainWindow"
+            "Furious.Widget.ServerTableView",
+            "Furious.Window.MainWindow"
         ],
         "RU": "Подписка",
         "ZH": "订阅",
@@ -516,7 +516,7 @@ TRANSLATION = {
     },
     "Latency": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Задержка",
         "ZH": "延迟",
@@ -524,8 +524,8 @@ TRANSLATION = {
     },
     "Speed": {
         "source": [
-            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Backends.Hysteria1.Editor",
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Скорость",
         "ZH": "速度",
@@ -533,7 +533,7 @@ TRANSLATION = {
     },
     "Edit Configuration...": {
         "source": [
-            "Furious.TrayActions.EditConfiguration"
+            "Furious.Actions.Configuration"
         ],
         "RU": "Изменить конфигурацию...",
         "ZH": "编辑配置...",
@@ -541,7 +541,7 @@ TRANSLATION = {
     },
     "Move Up": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Переместить вверх",
         "ZH": "上移",
@@ -549,7 +549,7 @@ TRANSLATION = {
     },
     "Move Down": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Переместить вниз",
         "ZH": "下移",
@@ -557,7 +557,7 @@ TRANSLATION = {
     },
     "Duplicate": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Дубликат",
         "ZH": "克隆",
@@ -565,7 +565,7 @@ TRANSLATION = {
     },
     "Scroll To Activated Server": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Перейдите к активированному серверу",
         "ZH": "滚动到激活的服务器",
@@ -573,7 +573,7 @@ TRANSLATION = {
     },
     "Test Ping Latency": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Измерить задержку (ping)",
         "ZH": "测试Ping延迟",
@@ -581,7 +581,7 @@ TRANSLATION = {
     },
     "Test Download Speed": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Измерить скорость загрузки",
         "ZH": "测试下行速度",
@@ -589,7 +589,7 @@ TRANSLATION = {
     },
     "Test Download Speed (Multithreaded)": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Измерить скорость загрузки (многопоточная)",
         "ZH": "测试下行速度（多线程）",
@@ -597,7 +597,7 @@ TRANSLATION = {
     },
     "Clear Test Results": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Очистить результаты тестирования",
         "ZH": "清除测试结果",
@@ -605,8 +605,8 @@ TRANSLATION = {
     },
     "New Empty Configuration": {
         "source": [
-            "Furious.Widget.UserServersQTableView",
-            "Furious.Window.AppMainWindow"
+            "Furious.Widget.ServerTableView",
+            "Furious.Window.MainWindow"
         ],
         "RU": "Создать новую пустую конфигурацию",
         "ZH": "新建空白配置",
@@ -614,7 +614,7 @@ TRANSLATION = {
     },
     "Export Share Link To Clipboard": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Копировать ссылку в буфер обмена",
         "ZH": "导出分享链接至剪贴板",
@@ -622,7 +622,7 @@ TRANSLATION = {
     },
     "Export As QR Code": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Экспорт в виде QR-кода",
         "ZH": "导出为二维码",
@@ -630,7 +630,7 @@ TRANSLATION = {
     },
     "Export JSON Configuration To Clipboard": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Копировать JSON конфигурацию в буфер обмена",
         "ZH": "导出JSON配置至剪贴板",
@@ -638,8 +638,8 @@ TRANSLATION = {
     },
     "Connecting": {
         "source": [
-            "Furious.TrayActions.Connect",
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Actions.Connection",
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Подключение",
         "ZH": "正在连接",
@@ -647,7 +647,7 @@ TRANSLATION = {
     },
     "Connecting. Please wait...": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Подключение. Пожалуйста, подождите...",
         "ZH": "正在连接。请稍候",
@@ -655,7 +655,7 @@ TRANSLATION = {
     },
     "Untitled": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Без названия",
         "ZH": "未命名",
@@ -663,7 +663,7 @@ TRANSLATION = {
     },
     "Add Subscription": {
         "source": [
-            "Furious.Window.UserSubsWindow"
+            "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Добавить подписку",
         "ZH": "添加订阅",
@@ -671,7 +671,7 @@ TRANSLATION = {
     },
     "Enter subscription remark:": {
         "source": [
-            "Furious.Window.UserSubsWindow"
+            "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Введите примечание о подписке:",
         "ZH": "输入订阅名称：",
@@ -679,7 +679,7 @@ TRANSLATION = {
     },
     "Enter subscription URL:": {
         "source": [
-            "Furious.Window.UserSubsWindow"
+            "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Введите URL-адрес подписки:",
         "ZH": "输入订阅URL：",
@@ -687,7 +687,7 @@ TRANSLATION = {
     },
     "Edit Subscription": {
         "source": [
-            "Furious.Window.UserSubsWindow"
+            "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Редактировать подписку",
         "ZH": "编辑订阅",
@@ -695,7 +695,7 @@ TRANSLATION = {
     },
     "Subscription List": {
         "source": [
-            "Furious.Window.UserSubsWindow"
+            "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Список подписок",
         "ZH": "订阅列表",
@@ -703,8 +703,8 @@ TRANSLATION = {
     },
     "Add": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow",
-            "Furious.Window.UserSubsWindow"
+            "Furious.Backends.Xray.RoutingWindow",
+            "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Добавить",
         "ZH": "添加",
@@ -712,9 +712,9 @@ TRANSLATION = {
     },
     "Exit": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow",
-            "Furious.TrayActions.Exit",
-            "Furious.Window.LogViewerWindow"
+            "Furious.Backends.Xray.AssetWindow",
+            "Furious.Actions.Exit",
+            "Furious.Window.LogWindow"
         ],
         "RU": "Выход",
         "ZH": "退出",
@@ -722,7 +722,7 @@ TRANSLATION = {
     },
     "Unable to save log": {
         "source": [
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogWindow"
         ],
         "RU": "Не удалось сохранить журнал",
         "ZH": "无法保存日志",
@@ -730,7 +730,7 @@ TRANSLATION = {
     },
     "Text files (*.txt);;All files (*)": {
         "source": [
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogWindow"
         ],
         "RU": "Текстовые файлы (*.txt);;Все файлы (*)",
         "ZH": "文本文件 (*.txt);;所有文件 (*)",
@@ -738,7 +738,7 @@ TRANSLATION = {
     },
     "Error saving log": {
         "source": [
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogWindow"
         ],
         "RU": "Ошибка сохранения журнала",
         "ZH": "保存日志出错",
@@ -746,7 +746,7 @@ TRANSLATION = {
     },
     "Log Viewer": {
         "source": [
-            "Furious.Window.LogViewerWindow"
+            "Furious.Window.LogWindow"
         ],
         "RU": "Средство просмотра журнала",
         "ZH": "日志查看器",
@@ -754,7 +754,7 @@ TRANSLATION = {
     },
     "Asset file already exists. Overwrite?": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerQListWidget"
+            "Furious.Backends.Xray.AssetListWidget"
         ],
         "RU": "Файл ресурсов уже существует. Перезаписать?",
         "ZH": "资源文件已存在。是否覆盖？",
@@ -762,7 +762,7 @@ TRANSLATION = {
     },
     "Error import asset file": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerQListWidget"
+            "Furious.Backends.Xray.AssetListWidget"
         ],
         "RU": "Ошибка при импорте файла ресурсов",
         "ZH": "导入资源文件出错",
@@ -770,7 +770,7 @@ TRANSLATION = {
     },
     "Import asset file success": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerQListWidget"
+            "Furious.Backends.Xray.AssetListWidget"
         ],
         "RU": "Успешно импортирован файл ресурсов",
         "ZH": "导入资源文件成功",
@@ -778,7 +778,7 @@ TRANSLATION = {
     },
     "Xray-core Asset File": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow"
+            "Furious.Backends.Xray.AssetWindow"
         ],
         "RU": "Xray-core Asset File",
         "ZH": "Xray-core资源文件",
@@ -786,7 +786,7 @@ TRANSLATION = {
     },
     "Refresh": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow"
+            "Furious.Backends.Xray.AssetWindow"
         ],
         "RU": "Обновить",
         "ZH": "刷新",
@@ -794,7 +794,7 @@ TRANSLATION = {
     },
     "Open Asset Directory": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow"
+            "Furious.Backends.Xray.AssetWindow"
         ],
         "RU": "Открыть каталог ресурсов",
         "ZH": "打开资源目录",
@@ -802,7 +802,7 @@ TRANSLATION = {
     },
     "All files (*)": {
         "source": [
-            "Furious.Plugins.Official.Xray.XrayAssetViewerWindow"
+            "Furious.Backends.Xray.AssetWindow"
         ],
         "RU": "Все файлы (*)",
         "ZH": "所有文件 (*)",
@@ -810,9 +810,9 @@ TRANSLATION = {
     },
     "Server": {
         "source": [
-            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
-            "Furious.Plugins.Official.Hysteria2.GuiHysteria2",
-            "Furious.Window.AppMainWindow"
+            "Furious.Backends.Hysteria1.Editor",
+            "Furious.Backends.Hysteria2.Editor",
+            "Furious.Window.MainWindow"
         ],
         "RU": "Сервер",
         "ZH": "服务器",
@@ -820,7 +820,7 @@ TRANSLATION = {
     },
     "Log": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Журнал событий",
         "ZH": "日志",
@@ -828,8 +828,8 @@ TRANSLATION = {
     },
     "Show Furious Log...": {
         "source": [
-            "Furious.Widget.UserServersQTableView",
-            "Furious.Window.AppMainWindow"
+            "Furious.Widget.ServerTableView",
+            "Furious.Window.MainWindow"
         ],
         "RU": "Показать журнал Furious...",
         "ZH": "显示Furious日志...",
@@ -837,8 +837,8 @@ TRANSLATION = {
     },
     "Show Core Log...": {
         "source": [
-            "Furious.Widget.UserServersQTableView",
-            "Furious.Window.AppMainWindow"
+            "Furious.Widget.ServerTableView",
+            "Furious.Window.MainWindow"
         ],
         "RU": "Показать журнал ядра...",
         "ZH": "显示内核日志...",
@@ -846,8 +846,8 @@ TRANSLATION = {
     },
     "Show Tun2socks Log...": {
         "source": [
-            "Furious.Widget.UserServersQTableView",
-            "Furious.Window.AppMainWindow"
+            "Furious.Widget.ServerTableView",
+            "Furious.Window.MainWindow"
         ],
         "RU": "Показать журнал Tun2socks...",
         "ZH": "显示Tun2socks日志...",
@@ -855,7 +855,7 @@ TRANSLATION = {
     },
     "Update Subscription (Use Current Proxy)": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Обновить подписки (использовать текущий прокси-сервер)",
         "ZH": "更新订阅（使用当前代理）",
@@ -863,7 +863,7 @@ TRANSLATION = {
     },
     "Update Subscription (Force Proxy)": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Обновить подписки (обязательно через прокси-сервер)",
         "ZH": "更新订阅（强制代理）",
@@ -871,7 +871,7 @@ TRANSLATION = {
     },
     "Update Subscription (No Proxy)": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Обновить подписки (не использовать прокси)",
         "ZH": "更新订阅（无代理）",
@@ -879,7 +879,7 @@ TRANSLATION = {
     },
     "Edit Subscription...": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Редактировать подписки...",
         "ZH": "编辑订阅...",
@@ -887,7 +887,7 @@ TRANSLATION = {
     },
     "Tools": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Инструменты",
         "ZH": "工具",
@@ -895,7 +895,7 @@ TRANSLATION = {
     },
     "Plugins": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Плагины",
         "ZH": "插件",
@@ -903,7 +903,7 @@ TRANSLATION = {
     },
     "Core": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Core",
         "ZH": "Core",
@@ -911,7 +911,7 @@ TRANSLATION = {
     },
     "Open Application Folder": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Открыть папку приложения",
         "ZH": "打开应用程序文件夹",
@@ -919,7 +919,7 @@ TRANSLATION = {
     },
     "Check For Updates": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Проверка обновлений",
         "ZH": "检查更新",
@@ -927,7 +927,7 @@ TRANSLATION = {
     },
     "About": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "О нас",
         "ZH": "关于",
@@ -935,7 +935,7 @@ TRANSLATION = {
     },
     "Already started": {
         "source": [
-            "Furious.Application.Application"
+            "Furious.Application.DesktopApplication"
         ],
         "RU": "Активированный",
         "ZH": "已启动",
@@ -943,7 +943,7 @@ TRANSLATION = {
     },
     "Furious Log": {
         "source": [
-            "Furious.Application.Application"
+            "Furious.Application.DesktopApplication"
         ],
         "RU": "Лог Furious",
         "ZH": "Furious日志",
@@ -951,7 +951,7 @@ TRANSLATION = {
     },
     "Core Log": {
         "source": [
-            "Furious.Application.Application"
+            "Furious.Application.DesktopApplication"
         ],
         "RU": "Лог ядра",
         "ZH": "内核日志",
@@ -959,7 +959,7 @@ TRANSLATION = {
     },
     "Tun2socks Log": {
         "source": [
-            "Furious.Application.Application"
+            "Furious.Application.DesktopApplication"
         ],
         "RU": "Лог Tun2socks",
         "ZH": "Tun2socks日志",
@@ -967,7 +967,7 @@ TRANSLATION = {
     },
     "Connect": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Подключиться",
         "ZH": "连接",
@@ -975,7 +975,7 @@ TRANSLATION = {
     },
     "Disconnect": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Отключиться",
         "ZH": "断开连接",
@@ -984,7 +984,7 @@ TRANSLATION = {
     "Unable to connect": {
         "source": [
             "Furious.Qt.QtWidgets",
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Не удается подключиться",
         "ZH": "无法连接",
@@ -992,7 +992,7 @@ TRANSLATION = {
     },
     "Server configuration empty. Please configure your server first": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Конфигурация сервера пуста. Пожалуйста, сначала настройте свой сервер",
         "ZH": "服务器配置为空。请先配置服务器",
@@ -1000,7 +1000,7 @@ TRANSLATION = {
     },
     "Connected": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Подключен",
         "ZH": "已连接",
@@ -1008,7 +1008,7 @@ TRANSLATION = {
     },
     "Unknown error": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Неизвестная ошибка",
         "ZH": "未知错误",
@@ -1016,7 +1016,7 @@ TRANSLATION = {
     },
     "Failed to start core": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Сбой при запуске ядра",
         "ZH": "内核启动失败",
@@ -1024,7 +1024,7 @@ TRANSLATION = {
     },
     "Core terminated unexpectedly": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Неожиданное завершение работы ядра",
         "ZH": "内核意外终止",
@@ -1032,7 +1032,7 @@ TRANSLATION = {
     },
     "Disconnected": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Отключен",
         "ZH": "已断开",
@@ -1040,7 +1040,7 @@ TRANSLATION = {
     },
     "Language": {
         "source": [
-            "Furious.TrayActions.Language"
+            "Furious.Actions.Language"
         ],
         "RU": "Язык",
         "ZH": "语言",
@@ -1048,7 +1048,7 @@ TRANSLATION = {
     },
     "Routing": {
         "source": [
-            "Furious.TrayActions.Routing"
+            "Furious.Actions.Routing"
         ],
         "RU": "Маршрутизация",
         "ZH": "路由",
@@ -1056,7 +1056,7 @@ TRANSLATION = {
     },
     "TUN Mode": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "TUN режим",
         "ZH": "TUN模式",
@@ -1064,7 +1064,7 @@ TRANSLATION = {
     },
     "TUN Mode Disabled (Administrator)": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "TUN режим отключен (Administrator)",
         "ZH": "TUN模式已禁用（管理员）",
@@ -1072,7 +1072,7 @@ TRANSLATION = {
     },
     "TUN Mode Disabled (Superuser)": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "TUN режим отключен  (Superuser)",
         "ZH": "TUN模式已禁用（Superuser）",
@@ -1080,7 +1080,7 @@ TRANSLATION = {
     },
     "Settings": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "Настройки",
         "ZH": "设置",
@@ -1088,7 +1088,7 @@ TRANSLATION = {
     },
     "Dark Mode": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "Темный режим",
         "ZH": "深色模式",
@@ -1096,7 +1096,7 @@ TRANSLATION = {
     },
     "Startup On Boot": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "Автозапуск при загрузке системы",
         "ZH": "开机启动",
@@ -1104,7 +1104,7 @@ TRANSLATION = {
     },
     "Force To 127.0.0.1 When Setting Local Proxy": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "Принудительно 127.0.0.1 для локального прокси",
         "ZH": "设置本地代理时强制使用127.0.0.1",
@@ -1112,7 +1112,7 @@ TRANSLATION = {
     },
     "Automatically Update Asset Files": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "Автоматически обновлять файлы активов",
         "ZH": "自动更新资源文件",
@@ -1120,7 +1120,7 @@ TRANSLATION = {
     },
     "Show Progress Bar When Connecting": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "Отображение индикатора выполнения при подключении",
         "ZH": "连接时显示进度条",
@@ -1128,7 +1128,7 @@ TRANSLATION = {
     },
     "Show Tab And Spaces In Editor": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "Показывать табуляцию и пробелы в редакторе",
         "ZH": "在编辑器中显示制表符和空格",
@@ -1136,7 +1136,7 @@ TRANSLATION = {
     },
     "System Proxy": {
         "source": [
-            "Furious.TrayActions.SystemProxy"
+            "Furious.Actions.SystemProxy"
         ],
         "RU": "Системный прокси",
         "ZH": "系统代理",
@@ -1144,7 +1144,7 @@ TRANSLATION = {
     },
     "Automatically Configure System Proxy": {
         "source": [
-            "Furious.TrayActions.SystemProxy"
+            "Furious.Actions.SystemProxy"
         ],
         "RU": "Автоматическая настройка системного прокси-сервера",
         "ZH": "自动配置系统代理",
@@ -1152,7 +1152,7 @@ TRANSLATION = {
     },
     "Do Not Change System Proxy": {
         "source": [
-            "Furious.TrayActions.SystemProxy"
+            "Furious.Actions.SystemProxy"
         ],
         "RU": "Не изменять системный прокси-сервер",
         "ZH": "不修改系统代理",
@@ -1208,7 +1208,7 @@ TRANSLATION = {
     },
     "Bypass Mainland China": {
         "source": [
-            "Furious.TrayActions.Routing"
+            "Furious.Actions.Routing"
         ],
         "RU": "В обход Китая",
         "ZH": "绕过中国大陆",
@@ -1216,7 +1216,7 @@ TRANSLATION = {
     },
     "Global": {
         "source": [
-            "Furious.TrayActions.Routing"
+            "Furious.Actions.Routing"
         ],
         "RU": "глобальный режим",
         "ZH": "全球",
@@ -1224,7 +1224,7 @@ TRANSLATION = {
     },
     "Custom": {
         "source": [
-            "Furious.TrayActions.Routing"
+            "Furious.Actions.Routing"
         ],
         "RU": "Свои настройки",
         "ZH": "自定义",
@@ -1232,7 +1232,7 @@ TRANSLATION = {
     },
     "Furious cannot find any valid http proxy endpoint in the configuration": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Я не могу найти ни одной допустимой конечной точки http-прокси в конфигурации",
         "ZH": "Furious在配置中无法找到任何有效的http代理端点",
@@ -1240,7 +1240,7 @@ TRANSLATION = {
     },
     "Please complete your server configuration": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Пожалуйста, завершите настройку вашего сервера",
         "ZH": "请完善服务器配置",
@@ -1248,7 +1248,7 @@ TRANSLATION = {
     },
     "Help": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Помощь",
         "ZH": "帮助",
@@ -1256,7 +1256,7 @@ TRANSLATION = {
     },
     "Test Tcping Latency": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Измерить задержку (Tсping)",
         "ZH": "测试Tcping延迟",
@@ -1264,14 +1264,14 @@ TRANSLATION = {
     },
     "Basic Configuration": {
         "source": [
-            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
-            "Furious.Plugins.Official.Hysteria2.GuiHysteria2",
-            "Furious.Plugins.Official.Xray.GuiShadowsocks",
-            "Furious.Plugins.Official.Xray.GuiSocks",
-            "Furious.Plugins.Official.Xray.GuiTrojan",
-            "Furious.Plugins.Official.Xray.GuiVLESS",
-            "Furious.Plugins.Official.Xray.GuiVMess",
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Backends.Hysteria1.Editor",
+            "Furious.Backends.Hysteria2.Editor",
+            "Furious.Backends.Xray.ShadowsocksEditor",
+            "Furious.Backends.Xray.SocksEditor",
+            "Furious.Backends.Xray.TrojanEditor",
+            "Furious.Backends.Xray.VlessEditor",
+            "Furious.Backends.Xray.VmessEditor",
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Базовая конфигурация",
         "ZH": "基本配置",
@@ -1279,13 +1279,13 @@ TRANSLATION = {
     },
     "Proxy": {
         "source": [
-            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
-            "Furious.Plugins.Official.Hysteria2.GuiHysteria2",
-            "Furious.Plugins.Official.Xray.GuiShadowsocks",
-            "Furious.Plugins.Official.Xray.GuiSocks",
-            "Furious.Plugins.Official.Xray.GuiTrojan",
-            "Furious.Plugins.Official.Xray.GuiVLESS",
-            "Furious.Plugins.Official.Xray.GuiVMess"
+            "Furious.Backends.Hysteria1.Editor",
+            "Furious.Backends.Hysteria2.Editor",
+            "Furious.Backends.Xray.ShadowsocksEditor",
+            "Furious.Backends.Xray.SocksEditor",
+            "Furious.Backends.Xray.TrojanEditor",
+            "Furious.Backends.Xray.VlessEditor",
+            "Furious.Backends.Xray.VmessEditor"
         ],
         "RU": "Прокси",
         "ZH": "代理",
@@ -1293,8 +1293,8 @@ TRANSLATION = {
     },
     "Project Website": {
         "source": [
-            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
-            "Furious.Plugins.Official.Hysteria2.GuiHysteria2"
+            "Furious.Backends.Hysteria1.Editor",
+            "Furious.Backends.Hysteria2.Editor"
         ],
         "RU": "Веб-сайт проекта",
         "ZH": "项目网站",
@@ -1302,8 +1302,8 @@ TRANSLATION = {
     },
     "Other": {
         "source": [
-            "Furious.Plugins.Official.Hysteria1.GuiHysteria1",
-            "Furious.Plugins.Official.Hysteria2.GuiHysteria2"
+            "Furious.Backends.Hysteria1.Editor",
+            "Furious.Backends.Hysteria2.Editor"
         ],
         "RU": "Прочее",
         "ZH": "其它",
@@ -1311,8 +1311,8 @@ TRANSLATION = {
     },
     "Encryption": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiShadowsocks",
-            "Furious.Plugins.Official.Xray.GuiVLESS"
+            "Furious.Backends.Xray.ShadowsocksEditor",
+            "Furious.Backends.Xray.VlessEditor"
         ],
         "RU": "Шифрование",
         "ZH": "加密",
@@ -1320,9 +1320,9 @@ TRANSLATION = {
     },
     "Password": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiShadowsocks",
-            "Furious.Plugins.Official.Xray.GuiSocks",
-            "Furious.Plugins.Official.Xray.GuiTrojan"
+            "Furious.Backends.Xray.ShadowsocksEditor",
+            "Furious.Backends.Xray.SocksEditor",
+            "Furious.Backends.Xray.TrojanEditor"
         ],
         "RU": "Пароль",
         "ZH": "密码",
@@ -1330,7 +1330,7 @@ TRANSLATION = {
     },
     "Flow": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiVLESS"
+            "Furious.Backends.Xray.VlessEditor"
         ],
         "RU": "Поток",
         "ZH": "流控",
@@ -1338,7 +1338,7 @@ TRANSLATION = {
     },
     "Use Monochrome Tray Icon": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "Использовать монохромный значок в трее",
         "ZH": "使用单色托盘图标",
@@ -1346,7 +1346,7 @@ TRANSLATION = {
     },
     "Hide Dock Icon": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "Скрыть значок Dock",
         "ZH": "隐藏程序坞图标",
@@ -1354,7 +1354,7 @@ TRANSLATION = {
     },
     "Customize JSON Configuration...": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Редактировать JSON конфигурацию...",
         "ZH": "自定义JSON配置...",
@@ -1378,7 +1378,7 @@ TRANSLATION = {
     },
     "Select and press Enter to activate configuration and connect": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "Выберите конфигурацию и нажмите Enter, чтобы активировать ее и подключиться",
         "ZH": "选择并按下Enter键以激活配置并连接",
@@ -1386,7 +1386,7 @@ TRANSLATION = {
     },
     "Power Save Mode": {
         "source": [
-            "Furious.TrayActions.Settings"
+            "Furious.Actions.Settings"
         ],
         "RU": "Режим энергосбережения",
         "ZH": "省电模式",
@@ -1395,12 +1395,12 @@ TRANSLATION = {
     "OK": {
         "source": [
             "Furious.__main__",
-            "Furious.Plugins.Official.Xray.UserRoutingWindow",
-            "Furious.Qt.GuiEditorXXX",
-            "Furious.Widget.GuiCustomizeNetworkTest",
-            "Furious.Widget.GuiCustomizeProxyBypass",
-            "Furious.Widget.IndentSpinBox",
-            "Furious.Window.UserSubsWindow"
+            "Furious.Backends.Xray.RoutingWindow",
+            "Furious.Qt.EditorWidgets",
+            "Furious.Window.NetworkTestDialog",
+            "Furious.Window.ProxyBypassDialog",
+            "Furious.Window.IndentDialog",
+            "Furious.Window.SubscriptionWindow"
         ],
         "RU": "OK",
         "ZH": "OK",
@@ -1408,7 +1408,7 @@ TRANSLATION = {
     },
     "Advanced...": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Расширенные...",
         "ZH": "高级...",
@@ -1416,7 +1416,7 @@ TRANSLATION = {
     },
     "is available to download": {
         "source": [
-            "Furious.TrayActions.Connect"
+            "Furious.Actions.Connection"
         ],
         "RU": "доступен для скачивания",
         "ZH": "可供下载",
@@ -1424,7 +1424,7 @@ TRANSLATION = {
     },
     "Update subscription completed": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Подписка на обновление завершена",
         "ZH": "更新订阅完成",
@@ -1432,7 +1432,7 @@ TRANSLATION = {
     },
     "Update subscription failed": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Обновить подписку не удалось",
         "ZH": "更新订阅失败",
@@ -1440,7 +1440,7 @@ TRANSLATION = {
     },
     "Configuration has been updated": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Конфигурация обновлена",
         "ZH": "配置已更新",
@@ -1448,7 +1448,7 @@ TRANSLATION = {
     },
     "Configuration update failed": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Обновление конфигурации не удалось",
         "ZH": "配置更新失败",
@@ -1456,7 +1456,7 @@ TRANSLATION = {
     },
     "Auto Update": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Автообновление",
         "ZH": "自动更新",
@@ -1464,7 +1464,7 @@ TRANSLATION = {
     },
     "Auto Update Use Proxy": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Автообновление (используя прокси)",
         "ZH": "自动更新使用代理",
@@ -1472,7 +1472,7 @@ TRANSLATION = {
     },
     "Never": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Никогда",
         "ZH": "从不",
@@ -1480,7 +1480,7 @@ TRANSLATION = {
     },
     "Every 5 mins": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 5 минут",
         "ZH": "每5分钟",
@@ -1488,7 +1488,7 @@ TRANSLATION = {
     },
     "Every 10 mins": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 10 минут",
         "ZH": "每10分钟",
@@ -1496,7 +1496,7 @@ TRANSLATION = {
     },
     "Every 15 mins": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 15 минут",
         "ZH": "每15分钟",
@@ -1504,7 +1504,7 @@ TRANSLATION = {
     },
     "Every 30 mins": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 30 минут",
         "ZH": "每30分钟",
@@ -1512,7 +1512,7 @@ TRANSLATION = {
     },
     "Every 45 mins": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 45 минут",
         "ZH": "每45分钟",
@@ -1520,7 +1520,7 @@ TRANSLATION = {
     },
     "Every 1 hour": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждый 1 час",
         "ZH": "每1小时",
@@ -1528,7 +1528,7 @@ TRANSLATION = {
     },
     "Every 2 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 2 часа",
         "ZH": "每2小时",
@@ -1536,7 +1536,7 @@ TRANSLATION = {
     },
     "Every 3 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 3 часа",
         "ZH": "每3小时",
@@ -1544,7 +1544,7 @@ TRANSLATION = {
     },
     "Every 6 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 6 часов",
         "ZH": "每6小时",
@@ -1552,7 +1552,7 @@ TRANSLATION = {
     },
     "Every 8 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 8 часов",
         "ZH": "每8小时",
@@ -1560,7 +1560,7 @@ TRANSLATION = {
     },
     "Every 10 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 10 часов",
         "ZH": "每10小时",
@@ -1568,7 +1568,7 @@ TRANSLATION = {
     },
     "Every 12 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 12 часов",
         "ZH": "每12小时",
@@ -1576,7 +1576,7 @@ TRANSLATION = {
     },
     "Every 24 hours": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Каждые 24 часа",
         "ZH": "每24小时",
@@ -1584,7 +1584,7 @@ TRANSLATION = {
     },
     "Use current proxy": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Использовать текущий прокси-сервер",
         "ZH": "使用当前代理",
@@ -1592,7 +1592,7 @@ TRANSLATION = {
     },
     "Force proxy": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Обязательно через прокси-сервер",
         "ZH": "强制代理",
@@ -1600,7 +1600,7 @@ TRANSLATION = {
     },
     "No proxy": {
         "source": [
-            "Furious.Widget.UserSubsQTableView"
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Не использовать прокси",
         "ZH": "无代理",
@@ -1608,7 +1608,7 @@ TRANSLATION = {
     },
     "Customize Tun2socks Settings": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Настроить параметры Tun2socks",
         "ZH": "自定义Tun2socks设置",
@@ -1616,8 +1616,8 @@ TRANSLATION = {
     },
     "Customize Tun2socks Settings...": {
         "source": [
-            "Furious.TrayActions.Settings",
-            "Furious.Window.AppMainWindow"
+            "Furious.Actions.Settings",
+            "Furious.Window.MainWindow"
         ],
         "RU": "Настроить параметры Tun2socks...",
         "ZH": "自定义Tun2socks设置...",
@@ -1625,7 +1625,7 @@ TRANSLATION = {
     },
     "Go to help page": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Перейти на страницу помощи",
         "ZH": "转到帮助页面",
@@ -1633,7 +1633,7 @@ TRANSLATION = {
     },
     "Primary Adapter Interface Name": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Имя основного сетевого адаптера",
         "ZH": "主适配器接口名称",
@@ -1641,7 +1641,7 @@ TRANSLATION = {
     },
     "Primary Adapter Interface IP": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "IP-адрес основного сетевого адаптера",
         "ZH": "主适配器接口IP",
@@ -1649,7 +1649,7 @@ TRANSLATION = {
     },
     "Default Primary Gateway IP": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "IP-адрес основного шлюза по умолчанию",
         "ZH": "默认主网关IP",
@@ -1657,7 +1657,7 @@ TRANSLATION = {
     },
     "Tun2socks Adapter Interface DNS": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "DNS-адрес интерфейса адаптера Tun2socks",
         "ZH": "Tun2socks适配器接口DNS",
@@ -1665,7 +1665,7 @@ TRANSLATION = {
     },
     "Bypass Tun2socks Adapter Interface IP (separated by commas)": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Обход IP-адреса интерфейса адаптера Tun2socks (через запятую)",
         "ZH": "绕过Tun2socks适配器接口IP（以逗号分隔）",
@@ -1673,7 +1673,7 @@ TRANSLATION = {
     },
     "Disable Primary Adapter Interface DNS (Mitigating DNS leaks on Windows)": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Отключить DNS основного сетевого адаптера (для предотвращения утечек DNS в Windows)",
         "ZH": "禁用主适配器接口DNS（在Windows上缓解DNS泄露）",
@@ -1681,7 +1681,7 @@ TRANSLATION = {
     },
     "Memory Optimization": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Оптимизация памяти",
         "ZH": "内存优化",
@@ -1689,7 +1689,7 @@ TRANSLATION = {
     },
     "TCP Send Buffer Size (MiB)": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Размер буфера отправки TCP (MiB)",
         "ZH": "TCP发送缓冲区大小（MiB）",
@@ -1697,7 +1697,7 @@ TRANSLATION = {
     },
     "TCP Receive Buffer Size (MiB)": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Размер буфера приема TCP (MiB)",
         "ZH": "TCP接收缓冲区大小（MiB）",
@@ -1705,7 +1705,7 @@ TRANSLATION = {
     },
     "TCP Receive Buffer Auto-tuning": {
         "source": [
-            "Furious.Widget.GuiTUNSettings"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Автоматическая настройка буфера приема TCP",
         "ZH": "TCP接收缓冲区自动调优",
@@ -1713,7 +1713,7 @@ TRANSLATION = {
     },
     "Restart The Application As Administrator": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Перезапустите приложение от имени администратора",
         "ZH": "以管理员身份重新启动应用程序",
@@ -1721,7 +1721,7 @@ TRANSLATION = {
     },
     "Restart The Application As Superuser": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Перезапустите приложение от имени суперпользователя",
         "ZH": "以Superuser身份重新启动应用程序",
@@ -1729,7 +1729,7 @@ TRANSLATION = {
     },
     "Administrator": {
         "source": [
-            "Furious.Application.SystemTrayIcon"
+            "Furious.Application.TrayIcon"
         ],
         "RU": "Administrator",
         "ZH": "管理员",
@@ -1737,7 +1737,7 @@ TRANSLATION = {
     },
     "I am the supreme authority 👑": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Я — единственная высшая инстанция 👑",
         "ZH": "我就是至高无上的存在 👑",
@@ -1745,7 +1745,7 @@ TRANSLATION = {
     },
     "Customize System Proxy Bypass Address": {
         "source": [
-            "Furious.Widget.GuiCustomizeProxyBypass"
+            "Furious.Window.ProxyBypassDialog"
         ],
         "RU": "Настроить адреса исключений системного прокси",
         "ZH": "自定义系统代理绕过地址",
@@ -1753,7 +1753,7 @@ TRANSLATION = {
     },
     "Customize System Proxy Bypass Address...": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Настроить адреса исключений системного прокси...",
         "ZH": "自定义系统代理绕过地址...",
@@ -1761,8 +1761,8 @@ TRANSLATION = {
     },
     "Reset": {
         "source": [
-            "Furious.Widget.GuiCustomizeNetworkTest",
-            "Furious.Widget.GuiCustomizeProxyBypass"
+            "Furious.Window.NetworkTestDialog",
+            "Furious.Window.ProxyBypassDialog"
         ],
         "RU": "Сбросить",
         "ZH": "重置",
@@ -1770,7 +1770,7 @@ TRANSLATION = {
     },
     "Enter system proxy bypass address (separated by semicolons):": {
         "source": [
-            "Furious.Widget.GuiCustomizeProxyBypass"
+            "Furious.Window.ProxyBypassDialog"
         ],
         "RU": "Введите адреса исключений системного прокси (через точку с запятой):",
         "ZH": "输入系统代理绕过地址（以分号分隔）：",
@@ -1778,7 +1778,7 @@ TRANSLATION = {
     },
     "Customize Network Test URL": {
         "source": [
-            "Furious.Widget.GuiCustomizeNetworkTest"
+            "Furious.Window.NetworkTestDialog"
         ],
         "RU": "Настроить URL теста сети",
         "ZH": "自定义网络测试URL",
@@ -1786,7 +1786,7 @@ TRANSLATION = {
     },
     "Customize Network Test URL...": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Настроить URL теста сети...",
         "ZH": "自定义网络测试URL...",
@@ -1794,7 +1794,7 @@ TRANSLATION = {
     },
     "Enter network speed test URL:": {
         "source": [
-            "Furious.Widget.GuiCustomizeNetworkTest"
+            "Furious.Window.NetworkTestDialog"
         ],
         "RU": "Введите URL теста скорости сети:",
         "ZH": "输入网络速度测试URL：",
@@ -1802,7 +1802,7 @@ TRANSLATION = {
     },
     "Enter network connectivity test URL:": {
         "source": [
-            "Furious.Widget.GuiCustomizeNetworkTest"
+            "Furious.Window.NetworkTestDialog"
         ],
         "RU": "Введите URL теста подключения к сети:",
         "ZH": "输入网络连通性测试URL：",
@@ -1810,7 +1810,7 @@ TRANSLATION = {
     },
     "Activate Selected Server": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Активировать выбранный сервер",
         "ZH": "激活选定的服务器",
@@ -1818,7 +1818,7 @@ TRANSLATION = {
     },
     "Search servers with text or regex, e.g. trojan, hk|jp, ^vmess, (us|sg).*tls": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Поиск серверов по тексту или регулярному выражению, например: trojan, hk|jp, ^vmess, (us|sg).*tls",
         "ZH": "使用文本或正则表达式搜索服务器，例如：trojan、hk|jp、^vmess、(us|sg).*tls",
@@ -1826,7 +1826,7 @@ TRANSLATION = {
     },
     "Search": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Поиск",
         "ZH": "查找",
@@ -1834,7 +1834,7 @@ TRANSLATION = {
     },
     "Network OK": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Сеть работает",
         "ZH": "网络正常",
@@ -1842,7 +1842,7 @@ TRANSLATION = {
     },
     "Network error": {
         "source": [
-            "Furious.Window.AppMainWindow"
+            "Furious.Window.MainWindow"
         ],
         "RU": "Ошибка сети",
         "ZH": "网络异常",
@@ -1850,7 +1850,7 @@ TRANSLATION = {
     },
     "Canceling import": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Отмена импорта",
         "ZH": "正在取消导入",
@@ -1858,7 +1858,7 @@ TRANSLATION = {
     },
     "Importing": {
         "source": [
-            "Furious.TrayActions.Import"
+            "Furious.Actions.Import"
         ],
         "RU": "Импортирование",
         "ZH": "正在导入",
@@ -1866,8 +1866,8 @@ TRANSLATION = {
     },
     "Current": {
         "source": [
-            "Furious.TrayActions.Import",
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Actions.Import",
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Текущий",
         "ZH": "当前",
@@ -1875,7 +1875,7 @@ TRANSLATION = {
     },
     "Canceling delete": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Отмена удаления",
         "ZH": "正在取消删除",
@@ -1883,7 +1883,7 @@ TRANSLATION = {
     },
     "Deleting": {
         "source": [
-            "Furious.Widget.UserServersQTableView"
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Удаление",
         "ZH": "正在删除",
@@ -1891,7 +1891,7 @@ TRANSLATION = {
     },
     "Edit Routing Rule": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Редактировать правило маршрутизации",
         "ZH": "编辑路由规则",
@@ -1899,7 +1899,7 @@ TRANSLATION = {
     },
     "Domain (one per line or comma-separated)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Domain (по одному в строке или через запятую)",
         "ZH": "Domain（每行一个或以逗号分隔）",
@@ -1907,7 +1907,7 @@ TRANSLATION = {
     },
     "IP (one per line or comma-separated)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "IP (по одному в строке или через запятую)",
         "ZH": "IP（每行一个或以逗号分隔）",
@@ -1915,7 +1915,7 @@ TRANSLATION = {
     },
     "Port (comma/range, e.g. 53,443,1000-2000)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Port (через запятую/диапазон, например: 53,443,1000-2000)",
         "ZH": "Port（逗号/范围，例如：53,443,1000-2000）",
@@ -1923,7 +1923,7 @@ TRANSLATION = {
     },
     "VLESS Route (comma/range, e.g. 53,443,1000-2000)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "VLESS Route (через запятую/диапазон, например: 53,443,1000-2000)",
         "ZH": "VLESS Route（逗号/范围，例如：53,443,1000-2000）",
@@ -1931,7 +1931,7 @@ TRANSLATION = {
     },
     "Source IP (one per line or comma-separated)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Source IP (по одному в строке или через запятую)",
         "ZH": "Source IP（每行一个或以逗号分隔）",
@@ -1939,7 +1939,7 @@ TRANSLATION = {
     },
     "Source Port (comma/range, e.g. 53,443,1000-2000)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Source Port (через запятую/диапазон, например: 53,443,1000-2000)",
         "ZH": "Source Port（逗号/范围，例如：53,443,1000-2000）",
@@ -1947,7 +1947,7 @@ TRANSLATION = {
     },
     "Local IP (one per line or comma-separated)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Local IP (по одному в строке или через запятую)",
         "ZH": "Local IP（每行一个或以逗号分隔）",
@@ -1955,7 +1955,7 @@ TRANSLATION = {
     },
     "Local Port (comma/range, e.g. 53,443,1000-2000)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Local Port (через запятую/диапазон, например: 53,443,1000-2000)",
         "ZH": "Local Port（逗号/范围，例如：53,443,1000-2000）",
@@ -1963,7 +1963,7 @@ TRANSLATION = {
     },
     "User (one per line or comma-separated)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "User (по одному в строке или через запятую)",
         "ZH": "User（每行一个或以逗号分隔）",
@@ -1971,7 +1971,7 @@ TRANSLATION = {
     },
     "Inbound Tag (one per line or comma-separated)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Inbound Tag (по одному в строке или через запятую)",
         "ZH": "Inbound Tag（每行一个或以逗号分隔）",
@@ -1979,7 +1979,7 @@ TRANSLATION = {
     },
     "Process (one per line or comma-separated)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Process (по одному в строке или через запятую)",
         "ZH": "Process（每行一个或以逗号分隔）",
@@ -1987,7 +1987,7 @@ TRANSLATION = {
     },
     "Protocol (one per line or comma-separated)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Protocol (по одному в строке или через запятую)",
         "ZH": "Protocol（每行一个或以逗号分隔）",
@@ -1995,7 +1995,7 @@ TRANSLATION = {
     },
     "Edit Routing Remark": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Редактировать примечание к маршруту",
         "ZH": "编辑路由备注",
@@ -2003,7 +2003,7 @@ TRANSLATION = {
     },
     "Add Routing": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Добавить маршрут",
         "ZH": "添加路由",
@@ -2011,7 +2011,7 @@ TRANSLATION = {
     },
     "Routing Rules": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Правила маршрутизации",
         "ZH": "路由规则",
@@ -2019,7 +2019,7 @@ TRANSLATION = {
     },
     "Edit Routing": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Редактировать маршрут",
         "ZH": "编辑路由",
@@ -2027,7 +2027,7 @@ TRANSLATION = {
     },
     "Edit Text": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Редактировать текст",
         "ZH": "编辑文本",
@@ -2035,7 +2035,7 @@ TRANSLATION = {
     },
     "Rename": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Переименовать",
         "ZH": "重命名",
@@ -2043,7 +2043,7 @@ TRANSLATION = {
     },
     "Double-click to enlarge": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Дважды щёлкните, чтобы увеличить",
         "ZH": "双击放大",
@@ -2051,7 +2051,7 @@ TRANSLATION = {
     },
     "State": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Состояние",
         "ZH": "状态",
@@ -2059,7 +2059,7 @@ TRANSLATION = {
     },
     "Enabled": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Включено",
         "ZH": "已启用",
@@ -2067,7 +2067,7 @@ TRANSLATION = {
     },
     "Disabled": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Отключено",
         "ZH": "已禁用",
@@ -2075,7 +2075,7 @@ TRANSLATION = {
     },
     "New Routing": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Новый маршрут",
         "ZH": "新路由",
@@ -2083,7 +2083,7 @@ TRANSLATION = {
     },
     "Routing Documentation": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Документация по маршрутизации",
         "ZH": "路由文档",
@@ -2091,7 +2091,7 @@ TRANSLATION = {
     },
     "Preview Routing": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Предпросмотр маршрутизации",
         "ZH": "预览路由",
@@ -2099,7 +2099,7 @@ TRANSLATION = {
     },
     "OutBound (e.g. proxy/direct/block)": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "OutBound (например: proxy/direct/block)",
         "ZH": "OutBound（例如：proxy/direct/block）",
@@ -2107,7 +2107,7 @@ TRANSLATION = {
     },
     "Preview": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Предпросмотр",
         "ZH": "预览",
@@ -2115,8 +2115,8 @@ TRANSLATION = {
     },
     "Close": {
         "source": [
-            "Furious.Plugins.Official.Xray.UserRoutingWindow",
-            "Furious.Widget.TextEditorWindow"
+            "Furious.Backends.Xray.RoutingWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Закрыть",
         "ZH": "关闭",
@@ -2124,8 +2124,8 @@ TRANSLATION = {
     },
     "Generate": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiVLESS",
-            "Furious.Plugins.Official.Xray.GuiVMess"
+            "Furious.Backends.Xray.VlessEditor",
+            "Furious.Backends.Xray.VmessEditor"
         ],
         "RU": "Сгенерировать",
         "ZH": "生成",
@@ -2133,7 +2133,7 @@ TRANSLATION = {
     },
     "Username": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiSocks"
+            "Furious.Backends.Xray.SocksEditor"
         ],
         "RU": "Имя пользователя",
         "ZH": "用户名",
@@ -2141,7 +2141,7 @@ TRANSLATION = {
     },
     "Manage Xray-core Asset File...": {
         "source": [
-            "Furious.Plugins.Official.Xray.Plugin"
+            "Furious.Backends.Xray.Plugin"
         ],
         "RU": "Управление файлами ресурсов Xray-core...",
         "ZH": "管理Xray-core资源文件...",
@@ -2149,7 +2149,7 @@ TRANSLATION = {
     },
     "Edit Routing...": {
         "source": [
-            "Furious.Plugins.Official.Xray.Plugin"
+            "Furious.Backends.Xray.Plugin"
         ],
         "RU": "Редактировать маршрут...",
         "ZH": "编辑路由...",
@@ -2157,7 +2157,7 @@ TRANSLATION = {
     },
     "Add VMess Server...": {
         "source": [
-            "Furious.Plugins.Official.Xray.Plugin"
+            "Furious.Backends.Xray.Plugin"
         ],
         "RU": "Добавить сервер VMess...",
         "ZH": "添加VMess服务器...",
@@ -2165,7 +2165,7 @@ TRANSLATION = {
     },
     "Add VLESS Server...": {
         "source": [
-            "Furious.Plugins.Official.Xray.Plugin"
+            "Furious.Backends.Xray.Plugin"
         ],
         "RU": "Добавить сервер VLESS...",
         "ZH": "添加VLESS服务器...",
@@ -2173,7 +2173,7 @@ TRANSLATION = {
     },
     "Add Shadowsocks Server...": {
         "source": [
-            "Furious.Plugins.Official.Xray.Plugin"
+            "Furious.Backends.Xray.Plugin"
         ],
         "RU": "Добавить сервер Shadowsocks...",
         "ZH": "添加Shadowsocks服务器...",
@@ -2181,7 +2181,7 @@ TRANSLATION = {
     },
     "Add Trojan Server...": {
         "source": [
-            "Furious.Plugins.Official.Xray.Plugin"
+            "Furious.Backends.Xray.Plugin"
         ],
         "RU": "Добавить сервер Trojan...",
         "ZH": "添加Trojan服务器...",
@@ -2189,7 +2189,7 @@ TRANSLATION = {
     },
     "Add Hysteria1 Server...": {
         "source": [
-            "Furious.Plugins.Official.Hysteria1.Plugin"
+            "Furious.Backends.Hysteria1.Plugin"
         ],
         "RU": "Добавить сервер Hysteria 1...",
         "ZH": "添加Hysteria1服务器...",
@@ -2197,7 +2197,7 @@ TRANSLATION = {
     },
     "Add Hysteria2 Server...": {
         "source": [
-            "Furious.Plugins.Official.Hysteria2.Plugin"
+            "Furious.Backends.Hysteria2.Plugin"
         ],
         "RU": "Добавить сервер Hysteria 2...",
         "ZH": "添加Hysteria2服务器...",
@@ -2205,7 +2205,7 @@ TRANSLATION = {
     },
     "Add SOCKS Server...": {
         "source": [
-            "Furious.Plugins.Official.Xray.Plugin"
+            "Furious.Backends.Xray.Plugin"
         ],
         "RU": "Добавить сервер SOCKS...",
         "ZH": "添加SOCKS服务器...",
@@ -2213,8 +2213,8 @@ TRANSLATION = {
     },
     "Interface": {
         "source": [
-            "Furious.Plugins.Official.Hysteria2.GuiTUNSettings",
-            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+            "Furious.Backends.Hysteria2.TunSettingsDialog",
+            "Furious.Backends.Xray.TunSettingsDialog"
         ],
         "RU": "Интерфейс",
         "ZH": "接口",
@@ -2222,8 +2222,8 @@ TRANSLATION = {
     },
     "Network": {
         "source": [
-            "Furious.Plugins.Official.Hysteria2.GuiTUNSettings",
-            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+            "Furious.Backends.Hysteria2.TunSettingsDialog",
+            "Furious.Backends.Xray.TunSettingsDialog"
         ],
         "RU": "Сеть",
         "ZH": "网络",
@@ -2231,7 +2231,7 @@ TRANSLATION = {
     },
     "Use Xray-core TUN": {
         "source": [
-            "Furious.Plugins.Official.Xray.Plugin"
+            "Furious.Backends.Xray.Plugin"
         ],
         "RU": "Использовать TUN Xray-core",
         "ZH": "使用Xray-core TUN",
@@ -2239,7 +2239,7 @@ TRANSLATION = {
     },
     "Customize Xray-core TUN Settings": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+            "Furious.Backends.Xray.TunSettingsDialog"
         ],
         "RU": "Настроить параметры TUN Xray-core",
         "ZH": "自定义Xray-core TUN设置",
@@ -2247,7 +2247,7 @@ TRANSLATION = {
     },
     "Customize Xray-core TUN Settings...": {
         "source": [
-            "Furious.Plugins.Official.Xray.Plugin"
+            "Furious.Backends.Xray.Plugin"
         ],
         "RU": "Настроить параметры TUN Xray-core...",
         "ZH": "自定义Xray-core TUN设置...",
@@ -2255,7 +2255,7 @@ TRANSLATION = {
     },
     "Gateway (separated by commas)": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+            "Furious.Backends.Xray.TunSettingsDialog"
         ],
         "RU": "Gateway (через запятую)",
         "ZH": "Gateway（以逗号分隔）",
@@ -2263,7 +2263,7 @@ TRANSLATION = {
     },
     "DNS (separated by commas)": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+            "Furious.Backends.Xray.TunSettingsDialog"
         ],
         "RU": "DNS (через запятую)",
         "ZH": "DNS（以逗号分隔）",
@@ -2271,7 +2271,7 @@ TRANSLATION = {
     },
     "AutoSystemRoutingTable (separated by commas)": {
         "source": [
-            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+            "Furious.Backends.Xray.TunSettingsDialog"
         ],
         "RU": "AutoSystemRoutingTable (через запятую)",
         "ZH": "AutoSystemRoutingTable（以逗号分隔）",
@@ -2279,8 +2279,8 @@ TRANSLATION = {
     },
     "TUN Documentation": {
         "source": [
-            "Furious.Plugins.Official.Hysteria2.GuiTUNSettings",
-            "Furious.Plugins.Official.Xray.GuiTUNSettings"
+            "Furious.Backends.Hysteria2.TunSettingsDialog",
+            "Furious.Backends.Xray.TunSettingsDialog"
         ],
         "RU": "Документация TUN",
         "ZH": "TUN文档",
@@ -2288,7 +2288,7 @@ TRANSLATION = {
     },
     "Use Hysteria2 TUN": {
         "source": [
-            "Furious.Plugins.Official.Hysteria2.Plugin"
+            "Furious.Backends.Hysteria2.Plugin"
         ],
         "RU": "Использовать TUN Hysteria2",
         "ZH": "使用Hysteria2 TUN",
@@ -2296,7 +2296,7 @@ TRANSLATION = {
     },
     "Customize Hysteria2 TUN Settings": {
         "source": [
-            "Furious.Plugins.Official.Hysteria2.GuiTUNSettings"
+            "Furious.Backends.Hysteria2.TunSettingsDialog"
         ],
         "RU": "Настроить параметры TUN Hysteria2",
         "ZH": "自定义Hysteria2 TUN设置",
@@ -2304,7 +2304,7 @@ TRANSLATION = {
     },
     "Customize Hysteria2 TUN Settings...": {
         "source": [
-            "Furious.Plugins.Official.Hysteria2.Plugin"
+            "Furious.Backends.Hysteria2.Plugin"
         ],
         "RU": "Настроить параметры TUN Hysteria2...",
         "ZH": "自定义Hysteria2 TUN设置...",
