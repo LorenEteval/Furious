@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Domain import ServerProfile
+from Furious.Models import ServerProfile
 from Furious.Plugins import getPluginRegistry, profileFromAny
 
 from dataclasses import dataclass, field

@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Domain.Encoding import *
+from Furious.Models.Encoding import *
 
 __all__ = ['UserRoutings']
 

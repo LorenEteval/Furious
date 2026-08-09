@@ -19,9 +19,9 @@
 
 from __future__ import annotations
 
-from Furious.Domain.Configuration import ConfigFactory
-from Furious.Domain.Encoding import *
-from Furious.Domain.Protocol import Protocol
+from Furious.Models.Configuration import ConfigFactory
+from Furious.Models.Encoding import *
+from Furious.Models.Protocol import Protocol
 
 from typing import Union, Tuple
 

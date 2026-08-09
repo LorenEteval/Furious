@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from Furious.Domain import *
+from Furious.Models import *
 from Furious.Plugins import configurationFromMapping
 from Furious.Repository import *
 from Furious.Qt import *

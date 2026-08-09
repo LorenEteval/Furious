@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Domain import ServerProfile
+from Furious.Models import ServerProfile
 from Furious.Repository.Routings import UserRoutings
 from Furious.Repository.Servers import UserServers
 from Furious.Repository.Subscriptions import UserSubs
