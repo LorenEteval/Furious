@@ -1444,7 +1444,6 @@ class ServerTableView(
         self.proxyModel.sort(-1)
 
         # Selection
-        self.setSelectionColor(AppHue.disconnectedColor())
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
