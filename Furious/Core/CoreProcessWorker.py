@@ -360,6 +360,8 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
             )
             self.process.start()
         except Exception as ex:
+            # Any non-exit exceptions
+
             logger.error(f'{self.name()} start failed: {ex}')
 
             self.setState(CoreProcessState.Failed)

@@ -85,6 +85,8 @@ class ConnectionProgressBar(Mixins.ConnectionAware, QProgressBar):
             try:
                 theme = APP().theme()
             except Exception:
+                # Any non-exit exceptions
+
                 theme = AppStyleSheet.Light
 
         return AppStyleSheet.progressBarStyleSheet(theme)
