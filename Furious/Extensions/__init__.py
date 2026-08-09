@@ -15,17 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose core-neutral configuration models and data encoding."""
+"""Expose bundled non-core plugins shipped with Furious."""
 
 from __future__ import annotations
 
-from .Configuration import ConfigFactory
-from .Encoding import Base64Encoder, JSONEncoder, PyBase64Encoder, UJSONEncoder
+from .StandardSubscriptions import StandardSubscriptionPlugin
 
-__all__ = [
-    'Base64Encoder',
-    'ConfigFactory',
-    'JSONEncoder',
-    'PyBase64Encoder',
-    'UJSONEncoder',
-]
+__all__ = ['BUNDLED_EXTENSION_TYPES', 'StandardSubscriptionPlugin']
+
+BUNDLED_EXTENSION_TYPES = (StandardSubscriptionPlugin,)

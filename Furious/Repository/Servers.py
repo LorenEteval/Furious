@@ -21,8 +21,9 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Domain.Configuration import ConfigFactory, configFactoryFromAny
+from Furious.Domain.Configuration import ConfigFactory
 from Furious.Domain.Encoding import *
+from Furious.Plugins import configurationFromAny
 
 __all__ = ['UserServers']
 
@@ -58,7 +59,7 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
 
         self._data = restore()
         self._list = list(
-            configFactoryFromAny(model.pop('config', ''), index=index, **model)
+            configurationFromAny(model.pop('config', ''), index=index, **model)
             for index, model in enumerate(self._data['model'])
         )
 

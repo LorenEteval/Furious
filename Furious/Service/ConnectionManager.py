@@ -89,15 +89,15 @@ class ConnectionManager(Mixins.CleanupOnExit):
         log=True,
         **kwargs,
     ) -> Tuple[Union[CoreProcessWorker, None], bool]:
-        """Start a configuration through the plugin that owns it."""
+        """Start a configuration through the backend that owns it."""
         pluginRegistry = getPluginRegistry()
-        plugin = pluginRegistry.pluginForConfig(config)
-        if plugin is None:
+        backend = pluginRegistry.backendForConfig(config)
+        if backend is None:
             return None, False
 
         routing = pluginRegistry.normalizeRouting(config, routing)
 
-        return plugin.startCore(
+        return backend.startCore(
             config,
             routing,
             exitCallback=exitCallback,

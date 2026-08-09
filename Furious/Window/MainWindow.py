@@ -487,7 +487,7 @@ class MainWindow(AppQMainWindow):
             toolsActions.extend([AppQSeperator(), *systemTools])
 
         corePluginActions = []
-        for plugin in pluginRegistry.plugins():
+        for plugin in pluginRegistry.corePlugins():
             managementActions = pluginRegistry.managementActions(
                 plugin,
                 parent=self,

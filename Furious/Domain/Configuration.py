@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Define configuration data and the registry used to construct it."""
+"""Define the core-neutral configuration profile model."""
 
 from __future__ import annotations
 
@@ -25,17 +25,10 @@ from typing import Union
 
 import copy
 import functools
-import threading
 import ujson
 
 __all__ = [
     'ConfigFactory',
-    'ConfigurationRegistry',
-    'configurationRegistry',
-    'registerConfigurationProvider',
-    'configFactoryFromDict',
-    'configFactoryFromAny',
-    'configFactoryBlank',
 ]
 
 
@@ -259,115 +252,3 @@ class ConfigFactory(ServerTableItem, dict):
         """
 
         return False
-
-
-class ConfigurationRegistry:
-    """Construct configuration objects through registered providers.
-
-    Providers are deliberately defined by behavior instead of by a plugin base
-    class.  This keeps configuration and persistence independent from the
-    optional plugin system while allowing plugins to contribute parsers.
-    """
-
-    def __init__(self):
-        """Initialize an empty provider registry."""
-        self._providers = []
-        self._lock = threading.RLock()
-
-    def register(self, provider):
-        """Register *provider* once and return it."""
-        requiredMethods = ('configFromString', 'configFromDict', 'blankConfig')
-
-        if not all(callable(getattr(provider, name, None)) for name in requiredMethods):
-            raise TypeError(
-                'configuration providers must implement configFromString, '
-                'configFromDict, and blankConfig'
-            )
-
-        with self._lock:
-            if any(item is provider for item in self._providers):
-                raise ValueError('configuration provider is already registered')
-
-            self._providers.append(provider)
-
-        return provider
-
-    def providers(self):
-        """Return registered providers in deterministic registration order."""
-        with self._lock:
-            return tuple(self._providers)
-
-    def fromString(self, config: str, **kwargs):
-        """Return the first provider result for textual *config*."""
-        for provider in self.providers():
-            factory = provider.configFromString(config, **kwargs)
-
-            if factory is not None:
-                return factory
-
-        return None
-
-    def fromDict(self, config: dict, **kwargs):
-        """Return the first provider result for mapping *config*."""
-        for provider in self.providers():
-            factory = provider.configFromDict(config, **kwargs)
-
-            if factory is not None:
-                return factory
-
-        return None
-
-    def blank(self, protocol, **kwargs):
-        """Return a blank configuration from the first matching provider."""
-        for provider in self.providers():
-            factory = provider.blankConfig(protocol, **kwargs)
-
-            if factory is not None:
-                return factory
-
-        return None
-
-
-configurationRegistry = ConfigurationRegistry()
-
-
-def registerConfigurationProvider(provider):
-    """Register a configuration provider with the process-wide registry."""
-    return configurationRegistry.register(provider)
-
-
-def configFactoryFromDict(config: dict, **kwargs) -> ConfigFactory:
-    """Construct a configuration mapping through registered providers."""
-    if not isinstance(config, dict):
-        return ConfigFactory(**kwargs)
-
-    factory = configurationRegistry.fromDict(config, **kwargs)
-
-    return factory if factory is not None else ConfigFactory(config, **kwargs)
-
-
-def configFactoryFromAny(config: Union[str, dict], **kwargs) -> ConfigFactory:
-    """Construct configuration data from text or a mapping."""
-    if isinstance(config, str):
-        factory = configurationRegistry.fromString(config, **kwargs)
-
-        if factory is not None:
-            return factory
-
-        try:
-            return configFactoryFromDict(ujson.loads(config), **kwargs)
-        except Exception:
-            # Any non-exit exceptions
-            return ConfigFactory(**kwargs)
-
-    if isinstance(config, dict):
-        return configFactoryFromDict(config, **kwargs)
-
-    return ConfigFactory(**kwargs)
-
-
-def configFactoryBlank(protocol, **kwargs) -> ConfigFactory:
-    """Construct a blank configuration through a registered provider."""
-    factory = configurationRegistry.blank(protocol, **kwargs)
-
-    return factory if factory is not None else ConfigFactory(**kwargs)

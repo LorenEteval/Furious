@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Domain import *
+from Furious.Plugins import configurationFromAny
 from Furious.Repository import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
@@ -69,7 +70,7 @@ def showMBoxImportError(clipboard: str):
 
 def importURIFromClipboard(clipboard: str):
     """Import URI from clipboard."""
-    factory = configFactoryFromAny(clipboard)
+    factory = configurationFromAny(clipboard)
 
     if not factory.isValid():
         showMBoxImportError(clipboard)
@@ -100,7 +101,7 @@ def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
     rowIndex = len(Storage.UserServers())
 
     for uri in uris:
-        factory = configFactoryFromAny(uri.strip())
+        factory = configurationFromAny(uri.strip())
 
         if factory.isValid():
             APP().mainWindow.appendNewItemByFactory(factory)
@@ -244,7 +245,7 @@ class ImportURIsProgressDialog(AppQDialog):
         uri = self.uris[self.currentIndex]
         self.currentIndex += 1
 
-        factory = configFactoryFromAny(uri.strip())
+        factory = configurationFromAny(uri.strip())
 
         if factory.isValid():
             remark = factory.getExtras('remark')
@@ -428,7 +429,7 @@ class ImportFromFileAction(AppQAction):
                 # Show the MessageBox asynchronously
                 mbox.open()
             else:
-                factory = configFactoryFromAny(
+                factory = configurationFromAny(
                     plainText, remark=os.path.basename(filename)
                 )
 

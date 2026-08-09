@@ -20,29 +20,23 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Core import *
 from Furious.Repository import *
 from Furious.Plugins.API import *
 from Furious.Backends.Configuration import *
 
 from .Process import *
+from .Protocols import XRAY_PROTOCOL_HANDLERS
 from .Routing import *
 from .TUN import *
 
 import os
 import uuid
-import copy
 import logging
 
 __all__ = ['XrayPlugin']
 
 logger = logging.getLogger(__name__)
-
-
-def _protocolId(protocol) -> str:
-    """Return a normalized protocol identifier."""
-    return str(getattr(protocol, 'value', protocol)).strip().casefold()
 
 
 def fixLogObjectPath(config, attr: str, value: str, log=True):
@@ -78,109 +72,22 @@ def fixLogObjectPath(config, attr: str, value: str, log=True):
         )
 
 
-_TRANSLATABLE_ACTION_TEXT = [
-    _('Add VMess Server...'),
-    _('Add VLESS Server...'),
-    _('Add Shadowsocks Server...'),
-    _('Add Trojan Server...'),
-    _('Add SOCKS Server...'),
-]
+class XrayBackend(CoreBackend):
+    """Run Xray configurations independently of protocol codecs and editors."""
 
-
-class XrayPlugin(FuriousPlugin):
-    """Provide official Xray-core support."""
-
-    pluginId = 'official.xray'
-    displayName = 'Xray-core'
-    protocols = (
-        PluginProtocol('VMess', 'VMess', 'Add VMess Server...', 10),
-        PluginProtocol('VLESS', 'VLESS', 'Add VLESS Server...', 20),
-        PluginProtocol('Shadowsocks', 'Shadowsocks', 'Add Shadowsocks Server...', 30),
-        PluginProtocol('Trojan', 'Trojan', 'Add Trojan Server...', 40),
-        PluginProtocol('SOCKS', 'SOCKS', 'Add SOCKS Server...', 70, True),
-    )
+    backendId = 'official.xray'
     configurationTypes = (ConfigXray,)
     coreTypes = (XrayCore,)
 
-    def configFromString(self, config: str, **kwargs):
-        """Parse an Xray share URI when its scheme is supported."""
-        if config.startswith(
-            (
-                'vmess://',
-                'vless://',
-                'ss://',
-                'trojan://',
-                'socks://',
-                'socks5://',
-                'socks5h://',
-            )
+    def fromMapping(self, configuration, **kwargs):
+        """Recognize a complete Xray configuration without a proxy profile."""
+        if (
+            configuration.get('inbounds') is not None
+            or configuration.get('outbounds') is not None
         ):
-            return ConfigXray(config, **kwargs)
+            return ConfigXray(configuration, **kwargs)
 
         return None
-
-    def configFromDict(self, config: dict, **kwargs):
-        """Recognize Xray configuration mappings by their inbound/outbound fields."""
-        if config.get('inbounds') is not None or config.get('outbounds') is not None:
-            return ConfigXray(config, **kwargs)
-
-        return None
-
-    def blankConfig(self, protocol, **kwargs):
-        """Construct a blank Xray configuration for one supported protocol."""
-        protocolId = _protocolId(protocol)
-        factory = ConfigXray(copy.deepcopy(BLANK_CONFIG_XRAY), **kwargs)
-        outbound = factory['outbounds'][0]
-
-        if protocolId in ('vmess', 'vless'):
-            outbound['protocol'] = protocolId
-            outbound['settings']['vnext'] = [
-                {
-                    'address': '',
-                    'port': 0,
-                    'users': [{'email': PROXY_OUTBOUND_USER_EMAIL}],
-                },
-            ]
-        elif protocolId == 'socks':
-            outbound['protocol'] = protocolId
-            outbound['settings'] = {'address': '', 'port': 0}
-        elif protocolId in ('shadowsocks', 'trojan'):
-            outbound['protocol'] = protocolId
-            outbound['settings']['servers'] = [
-                {
-                    'address': '',
-                    'port': 0,
-                    'email': PROXY_OUTBOUND_USER_EMAIL,
-                },
-            ]
-        else:
-            return None
-
-        return factory
-
-    def createEditorForProtocol(self, protocol, parent=None, **kwargs):
-        """Create the Xray editor matching a protocol identifier."""
-        # Plugin discovery can occur while the Furious.Qt package is initializing.
-        from .ShadowsocksEditor import ShadowsocksEditor
-        from .SocksEditor import SocksEditor
-        from .TrojanEditor import TrojanEditor
-        from .VlessEditor import VlessEditor
-        from .VmessEditor import VmessEditor
-
-        editors = {
-            'vmess': VmessEditor,
-            'vless': VlessEditor,
-            'shadowsocks': ShadowsocksEditor,
-            'socks': SocksEditor,
-            'trojan': TrojanEditor,
-        }
-        editorType = editors.get(_protocolId(protocol))
-
-        return editorType(parent=parent, **kwargs) if editorType is not None else None
-
-    def createEditorForConfig(self, config, parent=None, **kwargs):
-        """Create the editor matching an Xray outbound protocol."""
-        return self.createEditorForProtocol(config.proxyProtocol, parent, **kwargs)
 
     def createManagementActions(self, parent=None, **kwargs):
         """Create Xray routing, TUN, and asset-management actions."""
@@ -274,17 +181,17 @@ class XrayPlugin(FuriousPlugin):
     def routingOptions(self, config=None):
         """Return built-in and named routing modes supported by Xray."""
         options = [
-            PluginRouting(
+            RoutingOption(
                 AppBuiltinRouting.BypassMainlandChina.value,
                 AppBuiltinRouting.BypassMainlandChina.value,
                 translatable=True,
             ),
-            PluginRouting(
+            RoutingOption(
                 AppBuiltinRouting.Global.value,
                 AppBuiltinRouting.Global.value,
                 translatable=True,
             ),
-            PluginRouting(
+            RoutingOption(
                 AppBuiltinRouting.Custom.value,
                 AppBuiltinRouting.Custom.value,
                 translatable=True,
@@ -296,7 +203,7 @@ class XrayPlugin(FuriousPlugin):
             if routing.get('enabled', True)
         )
         options.extend(
-            PluginRouting(
+            RoutingOption(
                 f'Custom:{unique}',
                 routing.get('remark', ''),
                 separatorBefore=index == 0,
@@ -454,3 +361,15 @@ class XrayPlugin(FuriousPlugin):
 
         assetDownloadManager.configureHttpProxy(httpProxy)
         assetDownloadManager.download()
+
+
+class XrayPlugin(FuriousPlugin):
+    """Bundle official Xray protocol handlers and its runtime backend."""
+
+    pluginId = 'official.xray'
+    displayName = 'Xray-core'
+    protocolHandlers = XRAY_PROTOCOL_HANDLERS
+
+    def __init__(self):
+        """Create an isolated Xray backend instance for this plugin."""
+        self.coreBackends = (XrayBackend(),)

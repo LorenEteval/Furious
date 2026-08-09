@@ -23,7 +23,12 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Domain import *
 from Furious.Repository import *
-from Furious.Plugins import getPluginRegistry
+from Furious.Plugins import (
+    blankConfiguration,
+    configurationFromAny,
+    exportConfiguration,
+    getPluginRegistry,
+)
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 from Furious.Service import ConnectionManager
@@ -154,7 +159,7 @@ class SubscriptionManager(WebGETManager):
         showMessageBox = kwargs.pop('showMessageBox', True)
 
         for param in successArgs:
-            uris, unique = param['uris'], param['unique']
+            items, unique = param['items'], param['unique']
 
             parent = self.parent()
 
@@ -186,8 +191,18 @@ class SubscriptionManager(WebGETManager):
 
                 remaining = len(Storage.UserServers())
 
-                for uri in uris:
-                    parent.appendNewItem(config=uri, subsId=unique)
+                for item in items:
+                    profile = (
+                        item.configuration
+                        if item.configuration is not None
+                        else item.uri
+                    )
+                    itemArgs = {'remark': item.name} if item.name else {}
+                    parent.appendNewItem(
+                        config=profile,
+                        subsId=unique,
+                        **itemArgs,
+                    )
 
                 if subsGroupIndex >= 0:
                     newIndex = remaining + subsGroupIndex
@@ -232,52 +247,19 @@ class SubscriptionManager(WebGETManager):
         successArgs = kwargs.get('successArgs', list())
         failureArgs = kwargs.get('failureArgs', list())
 
-        data = networkReply.readAll().data()
+        data = bytes(networkReply.readAll().data())
+        decoderId = kwargs.get('decoderId')
+        result = getPluginRegistry().decodeSubscription(data, decoderId)
 
-        uris = None
-        lastException = None
-
-        try:
-            decoded = PyBase64Encoder.decode(data).decode()
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            lastException = ex
-
-            logger.error(
-                f'parse base64 share link from \'{webURL}\' failed: {ex}. '
-                f'Try to fall back to plain text'
-            )
-        else:
-            # pybase64 decodes leniently and happily turns plain text into
-            # garbage bytes, so only accept the base64 result when it actually
-            # looks like share links.
-            if '://' in decoded:
-                uris = list(filter(lambda x: x != '', decoded.split('\n')))
-
-        if uris is None:
-            try:
-                uris = list(
-                    filter(
-                        lambda x: x != '',
-                        data.decode().split('\n'),
-                    )
-                )
-            except Exception as ex:
-                # Any non-exit exceptions
-
-                lastException = ex
-
-                logger.error(f'parse share link from \'{webURL}\' failed: {ex}')
-
-        if uris is None:
-            failureArgs.append({'error': classname(lastException), **kwargs})
+        if result is None:
+            failureArgs.append({'error': 'UnsupportedSubscriptionFormat', **kwargs})
         else:
             logger.info(
-                f'update subs ({remark}, {webURL}) success. Got {len(uris)} share link'
+                f'update subs ({remark}, {webURL}) success. '
+                f'Got {len(result.items)} profiles from {result.decoderId!r}'
             )
 
-            successArgs.append({'uris': uris, **kwargs})
+            successArgs.append({'items': result.items, **kwargs})
 
     def failureCallback(self, networkReply, **kwargs):
         """Handle a failed network operation."""
@@ -537,15 +519,15 @@ class TestDownloadSpeedWorker(WebGETManager):
             pass
 
     def _startCore(self, config) -> bool:
-        """Prepare and start a download test through the owning plugin."""
-        plugin = getPluginRegistry().pluginForConfig(config)
-        if plugin is None:
+        """Prepare and start a download test through the owning backend."""
+        backend = getPluginRegistry().backendForConfig(config)
+        if backend is None:
             self.factory.setExtras('speedResult', 'Invalid')
             self.sync()
 
             return False
 
-        configcopy = plugin.prepareDownloadTest(config, self.port)
+        configcopy = backend.prepareDownloadTest(config, self.port)
         if configcopy is None:
             self.factory.setExtras('speedResult', 'Invalid')
             self.sync()
@@ -1991,7 +1973,7 @@ class ServerTableView(
         **kwargs,
     ):
         """Add server via GUI."""
-        factory = configFactoryBlank(protocol)
+        factory = blankConfiguration(protocol)
 
         guiEditor = self.getGuiEditorByFactory(factory, **kwargs)
 
@@ -2531,7 +2513,7 @@ class ServerTableView(
         }
         tostr = f'{model}'
 
-        factory = configFactoryFromAny(model.pop('config', ''), **model)
+        factory = configurationFromAny(model.pop('config', ''), **model)
 
         if factory.isValid():
             self.appendNewItemByFactory(factory)
@@ -2554,7 +2536,7 @@ class ServerTableView(
             assert isinstance(factory, ConfigFactory)
 
             try:
-                return factory.toURI()
+                return exportConfiguration(factory)
             except Exception:
                 # Any non-exit exceptions
 

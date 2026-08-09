@@ -19,7 +19,24 @@
 
 from __future__ import annotations
 
-from .API import PLUGIN_API_VERSION, FuriousPlugin, PluginProtocol, PluginRouting
+from .API import (
+    PLUGIN_API_VERSION,
+    CoreBackend,
+    FuriousPlugin,
+    PluginContext,
+    ProtocolDescriptor,
+    ProtocolHandler,
+    RoutingOption,
+    SubscriptionDecoder,
+    SubscriptionItem,
+    SubscriptionResult,
+)
+from .Profile import (
+    blankConfiguration,
+    configurationFromAny,
+    configurationFromMapping,
+    exportConfiguration,
+)
 from .Registry import (
     PLUGIN_ENTRY_POINT_GROUP,
     PluginRegistry,
@@ -31,10 +48,20 @@ from .Registry import (
 __all__ = [
     'PLUGIN_API_VERSION',
     'PLUGIN_ENTRY_POINT_GROUP',
+    'CoreBackend',
     'FuriousPlugin',
-    'PluginProtocol',
+    'PluginContext',
     'PluginRegistry',
-    'PluginRouting',
+    'ProtocolDescriptor',
+    'ProtocolHandler',
+    'RoutingOption',
+    'SubscriptionDecoder',
+    'SubscriptionItem',
+    'SubscriptionResult',
+    'blankConfiguration',
+    'configurationFromAny',
+    'configurationFromMapping',
+    'exportConfiguration',
     'getPluginRegistry',
     'initializePluginRegistry',
     'registerPlugin',

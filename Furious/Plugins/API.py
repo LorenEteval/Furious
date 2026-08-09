@@ -15,25 +15,32 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Define the public contract implemented by Furious core plugins."""
+"""Define the capability contracts implemented by Furious plugins."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, Mapping, Optional, Tuple
 
 __all__ = [
     'PLUGIN_API_VERSION',
-    'PluginProtocol',
-    'PluginRouting',
+    'CoreBackend',
     'FuriousPlugin',
+    'PluginContext',
+    'ProtocolDescriptor',
+    'ProtocolHandler',
+    'RoutingOption',
+    'SubscriptionDecoder',
+    'SubscriptionItem',
+    'SubscriptionResult',
 ]
 
-PLUGIN_API_VERSION = 1
+PLUGIN_API_VERSION = 2
 
 
 @dataclass(frozen=True)
-class PluginProtocol:
-    """Describe one server protocol contributed by a plugin."""
+class ProtocolDescriptor:
+    """Describe one user-visible proxy protocol."""
 
     id: str
     displayName: str
@@ -43,8 +50,8 @@ class PluginProtocol:
 
 
 @dataclass(frozen=True)
-class PluginRouting:
-    """Describe one routing mode supported by a core plugin."""
+class RoutingOption:
+    """Describe one routing mode supported by a core backend."""
 
     id: str
     displayName: str
@@ -52,50 +59,106 @@ class PluginRouting:
     translatable: bool = False
 
 
-class FuriousPlugin:
-    """Provide configuration, UI, and process hooks for one proxy core family."""
+@dataclass(frozen=True)
+class PluginContext:
+    """Provide host services to a plugin during initialization."""
 
-    apiVersion = PLUGIN_API_VERSION
-    pluginId = ''
+    pluginId: str
+    registry: Any
+
+
+@dataclass(frozen=True)
+class SubscriptionItem:
+    """Represent one profile emitted by a subscription decoder."""
+
+    uri: Optional[str] = None
+    configuration: Optional[Mapping[str, Any]] = None
+    name: str = ''
+
+    def __post_init__(self):
+        """Require exactly one serialized or normalized profile value."""
+        if (self.uri is None) == (self.configuration is None):
+            raise ValueError(
+                'a subscription item must contain exactly one URI or configuration'
+            )
+
+
+@dataclass(frozen=True)
+class SubscriptionResult:
+    """Return normalized entries produced from one subscription payload."""
+
+    decoderId: str
+    items: Tuple[SubscriptionItem, ...]
+
+
+class ProtocolHandler:
+    """Own one protocol's profile conversion and editor capability."""
+
+    descriptor = ProtocolDescriptor('', '', '')
+    schemes = tuple()
+
+    def supports(self, configuration) -> bool:
+        """Return whether this handler owns *configuration*."""
+        return False
+
+    def parse(self, uri: str, **kwargs):
+        """Parse one supported URI or return ``None``."""
+        return None
+
+    def fromMapping(self, configuration: Mapping[str, Any], **kwargs):
+        """Recognize one normalized configuration mapping or return ``None``."""
+        return None
+
+    def blank(self, **kwargs):
+        """Create a blank configuration for this protocol."""
+        return None
+
+    def export(self, configuration, remark: str = '') -> str:
+        """Serialize one owned configuration to a share URI."""
+        return ''
+
+    def createEditor(self, parent=None, **kwargs):
+        """Create this protocol's editor, if it provides one."""
+        return None
+
+
+class SubscriptionDecoder:
+    """Decode one subscription representation without importing profiles."""
+
+    decoderId = ''
     displayName = ''
-    protocols = tuple()
+    priority = 0
+
+    def decode(self, data: bytes) -> Optional[SubscriptionResult]:
+        """Decode *data* or return ``None`` when the format does not match."""
+        return None
+
+
+class CoreBackend:
+    """Run configurations for one proxy core independently of URI protocols."""
+
+    backendId = ''
     configurationTypes = tuple()
     coreTypes = tuple()
 
-    def configFromString(self, config: str, **kwargs):
-        """Construct a supported configuration from text or return ``None``."""
+    def fromMapping(self, configuration: Mapping[str, Any], **kwargs):
+        """Recognize a full backend configuration not owned by one protocol."""
         return None
-
-    def configFromDict(self, config: dict, **kwargs):
-        """Construct a supported configuration mapping or return ``None``."""
-        return None
-
-    def blankConfig(self, protocol, **kwargs):
-        """Construct a blank configuration for a contributed protocol."""
-        return None
-
-    def createEditorForProtocol(self, protocol, parent=None, **kwargs):
-        """Create the configuration editor for a contributed protocol."""
-        return None
-
-    def createEditorForConfig(self, config, parent=None, **kwargs):
-        """Create the configuration editor for a plugin configuration."""
-        return self.createEditorForProtocol(config.itemProtocol, parent, **kwargs)
 
     def createManagementActions(self, parent=None, **kwargs):
-        """Return optional actions for this plugin's management submenu."""
+        """Return optional actions for this backend's management submenu."""
         return tuple()
 
     def prepareTUN(self, config) -> bool:
-        """Prepare plugin-native TUN and return whether the plugin handles it."""
+        """Prepare native TUN and return whether the backend handles it."""
         return False
 
     def routingOptions(self, config=None):
-        """Return routing modes supported for a plugin configuration."""
+        """Return routing modes supported for a backend configuration."""
         return tuple()
 
     def configureEnvironment(self):
-        """Set optional process environment required by the plugin core."""
+        """Set optional environment required by this backend's process."""
 
     def startCore(
         self,
@@ -107,7 +170,7 @@ class FuriousPlugin:
         log=True,
         **kwargs,
     ):
-        """Start the plugin core and return ``(process, success)``."""
+        """Start the backend and return ``(process, success)``."""
         return None, False
 
     def prepareDownloadTest(self, config, port: int):
@@ -115,16 +178,33 @@ class FuriousPlugin:
         return None
 
     def coreVersions(self):
-        """Return core version strings that should be treated as versions in logs."""
+        """Return version strings reported by this backend."""
         return tuple()
 
     def logTimestampPatterns(self):
-        """Return regular expressions for timestamps emitted by the plugin core."""
+        """Return timestamp expressions emitted by this backend."""
         return tuple()
 
     def coreExitMessage(self, core, exitcode: int):
-        """Return a user-facing message key for a plugin-specific exit code."""
+        """Return a user-facing message key for a special exit code."""
         return None
 
     def afterConnected(self, httpProxy=None):
-        """Perform optional plugin maintenance after a connection succeeds."""
+        """Perform optional maintenance after a connection succeeds."""
+
+
+class FuriousPlugin:
+    """Group independently discoverable Furious capabilities."""
+
+    apiVersion = PLUGIN_API_VERSION
+    pluginId = ''
+    displayName = ''
+    protocolHandlers = tuple()
+    coreBackends = tuple()
+    subscriptionDecoders = tuple()
+
+    def initialize(self, context: PluginContext):
+        """Initialize the plugin after all of its capabilities are registered."""
+
+    def shutdown(self):
+        """Release resources owned by the plugin before application shutdown."""

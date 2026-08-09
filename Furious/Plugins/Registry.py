@@ -15,13 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Register official plugins and discover third-party Furious plugins."""
+"""Discover plugins and index their independently usable capabilities."""
 
 from __future__ import annotations
 
-from Furious.Domain.Configuration import configurationRegistry
-
 from importlib import metadata
+from urllib.parse import urlsplit
 
 import logging
 import threading
@@ -41,30 +40,42 @@ PLUGIN_ENTRY_POINT_GROUP = 'furious.plugins'
 logger = logging.getLogger(__name__)
 
 
-def _normalizeProtocol(protocol) -> str:
-    """Return a case-insensitive protocol identifier."""
-    value = getattr(protocol, 'value', protocol)
+def _normalizeIdentifier(value) -> str:
+    """Return a case-insensitive capability identifier."""
+    return str(getattr(value, 'value', value)).strip().casefold()
 
-    return str(value).strip().casefold()
+
+def _normalizeScheme(value) -> str:
+    """Return a URI scheme without punctuation."""
+    return str(value).strip().rstrip(':').casefold()
+
+
+def _schemeFromURI(uri: str) -> str:
+    """Extract a normalized scheme from *uri*."""
+    try:
+        return _normalizeScheme(urlsplit(uri.strip()).scheme)
+    except Exception:
+        return ''
 
 
 class PluginRegistry:
-    """Store plugins and route host operations to the owning plugin."""
+    """Own plugin lifecycle and dispatch through indexed capabilities."""
 
-    def __init__(self, configRegistry=None):
-        """Initialize an empty plugin registry.
-
-        ``configRegistry`` is supplied only to the process-wide registry.  This
-        keeps independently constructed registries isolated for tools and tests.
-        """
+    def __init__(self):
+        """Initialize an empty capability registry."""
         self._plugins = {}
         self._protocols = {}
-        self._configurationTypes = {}
-        self._coreTypes = {}
-        self._configRegistry = configRegistry
+        self._schemes = {}
+        self._protocolEntries = []
+        self._backends = {}
+        self._configurationBackends = {}
+        self._coreBackends = {}
+        self._decoders = {}
+        self._initializedPlugins = []
+        self._closed = False
 
-    def register(self, plugin: FuriousPlugin):
-        """Register a plugin after validating all of its public identifiers."""
+    def _validatePlugin(self, plugin):
+        """Validate *plugin* and return its normalized capability metadata."""
         if isinstance(plugin, type) and issubclass(plugin, FuriousPlugin):
             plugin = plugin()
 
@@ -85,249 +96,491 @@ class PluginRegistry:
         if pluginId in self._plugins:
             raise ValueError(f'plugin {pluginId!r} is already registered')
 
-        protocolKeys = []
+        protocols = []
+        localProtocolIds = set()
+        localSchemes = set()
 
-        for descriptor in plugin.protocols:
-            if not isinstance(descriptor, PluginProtocol):
-                raise TypeError('plugin protocols must contain PluginProtocol values')
+        for handler in plugin.protocolHandlers:
+            if not isinstance(handler, ProtocolHandler):
+                raise TypeError(
+                    'plugin protocolHandlers must contain ProtocolHandler values'
+                )
 
-            key = _normalizeProtocol(descriptor.id)
+            descriptor = handler.descriptor
 
-            if not key:
-                raise ValueError('plugin protocol ID cannot be empty')
+            if not isinstance(descriptor, ProtocolDescriptor):
+                raise TypeError(
+                    'protocol handlers must expose a ProtocolDescriptor value'
+                )
 
-            if key in self._protocols or key in protocolKeys:
+            protocolId = _normalizeIdentifier(descriptor.id)
+
+            if not protocolId:
+                raise ValueError('protocol ID cannot be empty')
+
+            if protocolId in self._protocols or protocolId in localProtocolIds:
                 raise ValueError(f'protocol {descriptor.id!r} is already registered')
 
-            protocolKeys.append(key)
+            schemes = tuple(_normalizeScheme(scheme) for scheme in handler.schemes)
 
-        configurationTypes = []
+            if any(not scheme for scheme in schemes):
+                raise ValueError(f'protocol {descriptor.id!r} has an empty URI scheme')
 
-        for configType in plugin.configurationTypes:
-            if not isinstance(configType, type):
-                raise TypeError('plugin configuration types must be classes')
+            for scheme in schemes:
+                if scheme in self._schemes or scheme in localSchemes:
+                    raise ValueError(f'URI scheme {scheme!r} is already registered')
 
-            if any(
-                issubclass(configType, registeredType)
-                or issubclass(registeredType, configType)
-                for registeredType in (
-                    *self._configurationTypes,
-                    *configurationTypes,
-                )
+            localProtocolIds.add(protocolId)
+            localSchemes.update(schemes)
+            protocols.append((protocolId, schemes, handler))
+
+        backends = []
+        localBackendIds = set()
+        localConfigurationTypes = []
+        localCoreTypes = []
+
+        for backend in plugin.coreBackends:
+            if not isinstance(backend, CoreBackend):
+                raise TypeError('plugin coreBackends must contain CoreBackend values')
+
+            backendId = _normalizeIdentifier(backend.backendId)
+
+            if not backendId:
+                raise ValueError('backend ID cannot be empty')
+
+            if backendId in self._backends or backendId in localBackendIds:
+                raise ValueError(f'backend {backend.backendId!r} is already registered')
+
+            configurationTypes = tuple(backend.configurationTypes)
+            coreTypes = tuple(backend.coreTypes)
+
+            for value, label, existing, local in (
+                (
+                    configurationTypes,
+                    'configuration',
+                    tuple(self._configurationBackends),
+                    localConfigurationTypes,
+                ),
+                (coreTypes, 'core', tuple(self._coreBackends), localCoreTypes),
             ):
+                for itemType in value:
+                    if not isinstance(itemType, type):
+                        raise TypeError(f'backend {label} types must be classes')
+
+                    if any(
+                        issubclass(itemType, registeredType)
+                        or issubclass(registeredType, itemType)
+                        for registeredType in (*existing, *local)
+                    ):
+                        raise ValueError(
+                            f'{label} type {itemType.__name__!r} overlaps a '
+                            f'registered type'
+                        )
+
+                    local.append(itemType)
+
+            localBackendIds.add(backendId)
+            backends.append((backendId, backend))
+
+        decoders = []
+        localDecoderIds = set()
+
+        for decoder in plugin.subscriptionDecoders:
+            if not isinstance(decoder, SubscriptionDecoder):
+                raise TypeError(
+                    'plugin subscriptionDecoders must contain SubscriptionDecoder values'
+                )
+
+            decoderId = _normalizeIdentifier(decoder.decoderId)
+
+            if not decoderId:
+                raise ValueError('subscription decoder ID cannot be empty')
+
+            if decoderId in self._decoders or decoderId in localDecoderIds:
                 raise ValueError(
-                    f'configuration type {configType.__name__!r} overlaps a registered type'
+                    f'subscription decoder {decoder.decoderId!r} is already registered'
                 )
 
-            configurationTypes.append(configType)
+            if not isinstance(decoder.priority, int):
+                raise TypeError('subscription decoder priority must be an integer')
 
-        coreTypes = []
+            localDecoderIds.add(decoderId)
+            decoders.append((decoderId, decoder))
 
-        for coreType in plugin.coreTypes:
-            if not isinstance(coreType, type):
-                raise TypeError('plugin core types must be classes')
+        return plugin, pluginId, protocols, backends, decoders
 
-            if any(
-                issubclass(coreType, registeredType)
-                or issubclass(registeredType, coreType)
-                for registeredType in (
-                    *self._coreTypes,
-                    *coreTypes,
-                )
-            ):
-                raise ValueError(
-                    f'core type {coreType.__name__!r} overlaps a registered type'
-                )
+    def register(self, plugin: FuriousPlugin):
+        """Register, index, and initialize one plugin atomically."""
+        if self._closed:
+            raise RuntimeError('plugin registry has already been shut down')
 
-            coreTypes.append(coreType)
-
-        if self._configRegistry is not None:
-            self._configRegistry.register(plugin)
+        plugin, pluginId, protocols, backends, decoders = self._validatePlugin(plugin)
 
         self._plugins[pluginId] = plugin
 
-        for key, descriptor in zip(protocolKeys, plugin.protocols):
-            self._protocols[key] = (plugin, descriptor)
-        for configType in plugin.configurationTypes:
-            self._configurationTypes[configType] = plugin
-        for coreType in plugin.coreTypes:
-            self._coreTypes[coreType] = plugin
+        for protocolId, schemes, handler in protocols:
+            entry = (plugin, handler)
+            self._protocols[protocolId] = entry
+            self._protocolEntries.append(entry)
 
+            for scheme in schemes:
+                self._schemes[scheme] = entry
+
+        for backendId, backend in backends:
+            self._backends[backendId] = (plugin, backend)
+
+            for configType in backend.configurationTypes:
+                self._configurationBackends[configType] = (plugin, backend)
+            for coreType in backend.coreTypes:
+                self._coreBackends[coreType] = (plugin, backend)
+
+        for decoderId, decoder in decoders:
+            self._decoders[decoderId] = (plugin, decoder)
+
+        try:
+            plugin.initialize(PluginContext(pluginId, self))
+        except Exception:
+            try:
+                plugin.shutdown()
+            except Exception as ex:
+                logger.error(f'plugin rollback failed for {pluginId!r}: {ex}')
+
+            self._removePlugin(pluginId)
+            raise
+
+        self._initializedPlugins.append(plugin)
         logger.info(f'registered plugin {pluginId!r}')
 
         return plugin
 
+    def _removePlugin(self, pluginId: str):
+        """Remove a partially registered plugin after initialization failure."""
+        plugin = self._plugins.pop(pluginId, None)
+
+        if plugin is None:
+            return
+
+        self._protocolEntries = [
+            entry for entry in self._protocolEntries if entry[0] is not plugin
+        ]
+        self._protocols = {
+            key: entry
+            for key, entry in self._protocols.items()
+            if entry[0] is not plugin
+        }
+        self._schemes = {
+            key: entry for key, entry in self._schemes.items() if entry[0] is not plugin
+        }
+        self._backends = {
+            key: entry
+            for key, entry in self._backends.items()
+            if entry[0] is not plugin
+        }
+        self._configurationBackends = {
+            key: entry
+            for key, entry in self._configurationBackends.items()
+            if entry[0] is not plugin
+        }
+        self._coreBackends = {
+            key: entry
+            for key, entry in self._coreBackends.items()
+            if entry[0] is not plugin
+        }
+        self._decoders = {
+            key: entry
+            for key, entry in self._decoders.items()
+            if entry[0] is not plugin
+        }
+
     def plugins(self):
-        """Return registered plugins in registration order."""
+        """Return initialized plugins in registration order."""
         return tuple(self._plugins.values())
 
+    def corePlugins(self):
+        """Return plugins that contribute at least one core backend."""
+        return tuple(plugin for plugin in self.plugins() if plugin.coreBackends)
+
     def plugin(self, pluginId: str):
-        """Return the plugin registered with ``pluginId``, if any."""
+        """Return the plugin registered with *pluginId*, if any."""
         return self._plugins.get(pluginId)
 
     def protocolDescriptors(self):
-        """Return contributed protocols in their requested menu order."""
-        descriptors = list(
-            descriptor for _plugin, descriptor in self._protocols.values()
+        """Return protocol descriptors in their requested menu order."""
+        descriptors = [handler.descriptor for _plugin, handler in self._protocolEntries]
+
+        return tuple(sorted(descriptors, key=lambda value: value.menuOrder))
+
+    def protocolHandlers(self):
+        """Return registered protocol handlers in registration order."""
+        return tuple(handler for _plugin, handler in self._protocolEntries)
+
+    def coreBackends(self):
+        """Return registered core backends in registration order."""
+        return tuple(backend for _plugin, backend in self._backends.values())
+
+    def subscriptionDecoders(self):
+        """Return subscription decoders in auto-detection priority order."""
+        return tuple(
+            decoder
+            for _plugin, decoder in sorted(
+                self._decoders.values(),
+                key=lambda value: value[1].priority,
+                reverse=True,
+            )
         )
 
-        return tuple(sorted(descriptors, key=lambda descriptor: descriptor.menuOrder))
+    def handlerForProtocol(self, protocol):
+        """Return the handler registered for a protocol identifier."""
+        entry = self._protocols.get(_normalizeIdentifier(protocol))
+
+        return entry[1] if entry is not None else None
+
+    def handlerForConfig(self, config):
+        """Return the unique protocol handler that owns *config*."""
+        matches = []
+
+        for _plugin, handler in self._protocolEntries:
+            try:
+                if handler.supports(config):
+                    matches.append(handler)
+            except Exception as ex:
+                logger.error(
+                    f'protocol ownership check failed for '
+                    f'{handler.descriptor.id!r}: {ex}'
+                )
+
+        if len(matches) > 1:
+            names = ', '.join(repr(handler.descriptor.id) for handler in matches)
+            raise ValueError(f'configuration is claimed by multiple protocols: {names}')
+
+        return matches[0] if matches else None
 
     def pluginForProtocol(self, protocol):
-        """Return the plugin that owns a protocol identifier."""
-        entry = self._protocols.get(_normalizeProtocol(protocol))
+        """Return the plugin that contributes *protocol*."""
+        entry = self._protocols.get(_normalizeIdentifier(protocol))
 
         return entry[0] if entry is not None else None
 
-    def pluginForConfig(self, config):
-        """Return the plugin that owns a configuration instance."""
-        for configType, plugin in self._configurationTypes.items():
+    def backendForConfig(self, config):
+        """Return the backend whose configuration type matches *config*."""
+        for configType, (_plugin, backend) in self._configurationBackends.items():
             if isinstance(config, configType):
-                return plugin
+                return backend
 
         return None
 
+    def backendForCore(self, core):
+        """Return the backend that owns a running core object."""
+        for coreType, (_plugin, backend) in self._coreBackends.items():
+            if isinstance(core, coreType):
+                return backend
+
+        return None
+
+    def pluginForConfig(self, config):
+        """Return the plugin that contributes the owning backend or protocol."""
+        for configType, (plugin, _backend) in self._configurationBackends.items():
+            if isinstance(config, configType):
+                return plugin
+
+        handler = self.handlerForConfig(config)
+
+        if handler is None:
+            return None
+
+        return self.pluginForProtocol(handler.descriptor.id)
+
     def pluginForCore(self, core):
-        """Return the plugin that owns a running core instance."""
-        for coreType, plugin in self._coreTypes.items():
+        """Return the plugin that contributes the core's backend."""
+        for coreType, (plugin, _backend) in self._coreBackends.items():
             if isinstance(core, coreType):
                 return plugin
 
         return None
 
     def configFromString(self, config: str, **kwargs):
-        """Ask plugins to parse textual configuration data."""
-        for plugin in self.plugins():
-            factory = plugin.configFromString(config, **kwargs)
+        """Parse a URI through its directly indexed scheme handler."""
+        entry = self._schemes.get(_schemeFromURI(config))
 
-            if factory is not None:
-                return factory
+        if entry is None:
+            return None
 
-        return None
+        _plugin, handler = entry
+
+        try:
+            result = handler.parse(config, **kwargs)
+        except Exception as ex:
+            logger.error(
+                f'failed to parse {handler.descriptor.id!r} configuration: {ex}'
+            )
+
+            return None
+
+        if result is not None and not handler.supports(result):
+            logger.error(
+                f'protocol handler {handler.descriptor.id!r} returned a '
+                f'configuration it does not own'
+            )
+
+            return None
+
+        return result
 
     def configFromDict(self, config: dict, **kwargs):
-        """Ask plugins to parse configuration mapping data."""
-        for plugin in self.plugins():
-            factory = plugin.configFromDict(config, **kwargs)
+        """Recognize a normalized configuration through protocol handlers."""
+        matches = []
 
-            if factory is not None:
-                return factory
+        for _plugin, handler in self._protocolEntries:
+            try:
+                result = handler.fromMapping(config, **kwargs)
+            except Exception as ex:
+                logger.error(
+                    f'failed to recognize {handler.descriptor.id!r} mapping: {ex}'
+                )
+                continue
 
-        return None
+            if result is not None:
+                matches.append((handler, result))
+
+        if len(matches) > 1:
+            names = ', '.join(repr(item[0].descriptor.id) for item in matches)
+            raise ValueError(f'configuration mapping is ambiguous: {names}')
+
+        if matches:
+            return matches[0][1]
+
+        backendMatches = []
+
+        for _plugin, backend in self._backends.values():
+            try:
+                result = backend.fromMapping(config, **kwargs)
+            except Exception as ex:
+                logger.error(f'failed to recognize {backend.backendId!r} mapping: {ex}')
+                continue
+
+            if result is not None:
+                backendMatches.append((backend, result))
+
+        if len(backendMatches) > 1:
+            names = ', '.join(repr(item[0].backendId) for item in backendMatches)
+            raise ValueError(f'backend configuration mapping is ambiguous: {names}')
+
+        return backendMatches[0][1] if backendMatches else None
 
     def blankConfig(self, protocol, **kwargs):
-        """Construct a blank configuration through the owning plugin."""
-        plugin = self.pluginForProtocol(protocol)
+        """Create a blank configuration through an exact protocol handler."""
+        handler = self.handlerForProtocol(protocol)
 
-        return plugin.blankConfig(protocol, **kwargs) if plugin is not None else None
+        return handler.blank(**kwargs) if handler is not None else None
+
+    def exportConfig(self, config, remark: str = '') -> str:
+        """Export a configuration through its owning protocol handler."""
+        handler = self.handlerForConfig(config)
+
+        return handler.export(config, remark) if handler is not None else ''
 
     def createEditorForProtocol(self, protocol, parent=None, **kwargs):
-        """Construct a protocol editor through the owning plugin."""
-        plugin = self.pluginForProtocol(protocol)
+        """Create an editor through an exact protocol handler."""
+        handler = self.handlerForProtocol(protocol)
 
-        if plugin is None:
-            return None
-
-        return plugin.createEditorForProtocol(protocol, parent=parent, **kwargs)
+        return (
+            handler.createEditor(parent=parent, **kwargs)
+            if handler is not None
+            else None
+        )
 
     def createEditorForConfig(self, config, parent=None, **kwargs):
-        """Construct a configuration editor through the owning plugin."""
-        plugin = self.pluginForConfig(config)
+        """Create an editor through the configuration's protocol handler."""
+        handler = self.handlerForConfig(config)
 
-        if plugin is None:
-            return None
-
-        return plugin.createEditorForConfig(config, parent=parent, **kwargs)
+        return (
+            handler.createEditor(parent=parent, **kwargs)
+            if handler is not None
+            else None
+        )
 
     def managementActions(self, plugin, parent=None, **kwargs):
-        """Return management actions contributed by one registered plugin."""
+        """Aggregate management actions from one plugin's core backends."""
         if self._plugins.get(plugin.pluginId) is not plugin:
             raise ValueError(f'plugin {plugin.pluginId!r} is not registered')
 
-        try:
-            return tuple(plugin.createManagementActions(parent=parent, **kwargs))
-        except Exception as ex:
-            logger.error(
-                f'failed to create management actions for {plugin.pluginId!r}: {ex}'
-            )
+        actions = []
 
-            return tuple()
+        for backend in plugin.coreBackends:
+            try:
+                actions.extend(backend.createManagementActions(parent=parent, **kwargs))
+            except Exception as ex:
+                logger.error(
+                    f'failed to create management actions for '
+                    f'{backend.backendId!r}: {ex}'
+                )
+
+        return tuple(actions)
 
     def prepareTUN(self, config) -> bool:
-        """Ask a configuration's plugin to prepare its native TUN support."""
-        plugin = self.pluginForConfig(config)
+        """Ask a configuration's backend to prepare native TUN support."""
+        backend = self.backendForConfig(config)
 
-        if plugin is None:
+        if backend is None:
             return False
 
         try:
-            handled = plugin.prepareTUN(config)
+            handled = backend.prepareTUN(config)
 
             if not isinstance(handled, bool):
-                raise TypeError('plugin TUN preparation result must be a boolean')
+                raise TypeError('backend TUN preparation result must be a boolean')
 
             return handled
         except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'TUN preparation failed for {plugin.pluginId!r}: {ex}')
+            logger.error(f'TUN preparation failed for {backend.backendId!r}: {ex}')
 
             return False
 
     def routingOptions(self, config):
-        """Return validated routing modes supported by a configuration's plugin."""
-        plugin = self.pluginForConfig(config)
+        """Return validated routing modes from a configuration's backend."""
+        backend = self.backendForConfig(config)
 
-        if plugin is None:
+        if backend is None:
             return tuple()
 
         try:
-            options = tuple(plugin.routingOptions(config))
+            options = tuple(backend.routingOptions(config))
             optionIds = set()
 
             for option in options:
-                if not isinstance(option, PluginRouting):
+                if not isinstance(option, RoutingOption):
                     raise TypeError(
-                        'plugin routing options must be PluginRouting values'
+                        'backend routing options must be RoutingOption values'
                     )
 
-                if not isinstance(option.id, str):
-                    raise TypeError('plugin routing option ID must be a string')
-
-                if not option.id.strip():
-                    raise ValueError('plugin routing option ID cannot be empty')
+                if not isinstance(option.id, str) or not option.id.strip():
+                    raise ValueError('routing option ID must be a non-empty string')
 
                 if not isinstance(option.displayName, str):
-                    raise TypeError(
-                        'plugin routing option display name must be a string'
-                    )
+                    raise TypeError('routing option display name must be a string')
 
                 if not isinstance(option.translatable, bool):
                     raise TypeError(
-                        'plugin routing option translatable flag must be a boolean'
+                        'routing option translatable flag must be a boolean'
                     )
 
-                optionId = option.id
-
-                if optionId in optionIds:
+                if option.id in optionIds:
                     raise ValueError(
                         f'routing option {option.id!r} is already registered'
                     )
 
-                optionIds.add(optionId)
+                optionIds.add(option.id)
 
             return options
         except Exception as ex:
-            # Any non-exit exceptions
-
             logger.error(
-                f'failed to obtain routing options for {plugin.pluginId!r}: {ex}'
+                f'failed to obtain routing options for {backend.backendId!r}: {ex}'
             )
 
             return tuple()
 
     def normalizeRouting(self, config, routing):
-        """Return a supported routing value or the plugin's first option."""
+        """Return a supported routing value or the backend's first option."""
         options = self.routingOptions(config)
 
         if not options:
@@ -337,78 +590,117 @@ class PluginRegistry:
 
         return routing if routing in optionIds else optionIds[0]
 
-    def configureEnvironment(self):
-        """Allow every plugin to configure its core process environment."""
-        for plugin in self.plugins():
-            try:
-                plugin.configureEnvironment()
-            except Exception as ex:
-                # Any non-exit exceptions
+    def decodeSubscription(self, data: bytes, decoderId=None):
+        """Decode subscription bytes using an explicit or auto-detected decoder."""
+        if not isinstance(data, bytes):
+            raise TypeError('subscription payload must be bytes')
 
-                logger.error(f'environment hook failed for {plugin.pluginId!r}: {ex}')
+        if decoderId:
+            entry = self._decoders.get(_normalizeIdentifier(decoderId))
+            candidates = (entry,) if entry is not None else tuple()
+        else:
+            candidates = tuple(
+                sorted(
+                    self._decoders.values(),
+                    key=lambda value: value[1].priority,
+                    reverse=True,
+                )
+            )
+
+        for _plugin, decoder in candidates:
+            try:
+                result = decoder.decode(data)
+            except Exception as ex:
+                logger.error(f'subscription decoder {decoder.decoderId!r} failed: {ex}')
+                continue
+
+            if result is None:
+                continue
+
+            if not isinstance(result, SubscriptionResult):
+                logger.error(
+                    f'subscription decoder {decoder.decoderId!r} returned an '
+                    f'invalid result'
+                )
+                continue
+
+            if _normalizeIdentifier(result.decoderId) != _normalizeIdentifier(
+                decoder.decoderId
+            ) or any(not isinstance(item, SubscriptionItem) for item in result.items):
+                logger.error(
+                    f'subscription decoder {decoder.decoderId!r} returned '
+                    f'inconsistent metadata'
+                )
+                continue
+
+            return result
+
+        return None
+
+    def configureEnvironment(self):
+        """Allow every backend to configure its process environment."""
+        for _plugin, backend in self._backends.values():
+            try:
+                backend.configureEnvironment()
+            except Exception as ex:
+                logger.error(f'environment hook failed for {backend.backendId!r}: {ex}')
 
     def coreVersions(self):
-        """Return version strings reported by every registered plugin core."""
+        """Return version strings reported by every registered backend."""
         versions = []
 
-        for plugin in self.plugins():
+        for _plugin, backend in self._backends.values():
             try:
-                versions.extend(plugin.coreVersions())
+                versions.extend(backend.coreVersions())
             except Exception as ex:
-                # Any non-exit exceptions
-
                 logger.error(
-                    f'failed to obtain core versions for {plugin.pluginId!r}: {ex}'
+                    f'failed to obtain core versions for {backend.backendId!r}: {ex}'
                 )
 
         return tuple(filter(None, versions))
 
     def logTimestampPatterns(self):
-        """Return timestamp expressions contributed by registered plugins."""
+        """Return timestamp expressions contributed by all backends."""
         patterns = []
 
-        for plugin in self.plugins():
+        for _plugin, backend in self._backends.values():
             try:
-                patterns.extend(plugin.logTimestampPatterns())
+                patterns.extend(backend.logTimestampPatterns())
             except Exception as ex:
-                # Any non-exit exceptions
-
                 logger.error(
-                    f'failed to obtain log patterns for {plugin.pluginId!r}: {ex}'
+                    f'failed to obtain log patterns for {backend.backendId!r}: {ex}'
                 )
 
         return tuple(filter(None, patterns))
 
     def coreExitMessage(self, core, exitcode: int):
-        """Return the owning plugin's special exit message, if any."""
-        plugin = self.pluginForCore(core)
+        """Return the owning backend's special exit message, if any."""
+        backend = self.backendForCore(core)
 
-        if plugin is None:
+        if backend is None:
             return None
 
         try:
-            return plugin.coreExitMessage(core, exitcode)
+            return backend.coreExitMessage(core, exitcode)
         except Exception as ex:
-            # Any non-exit exceptions
-
-            logger.error(f'failed to interpret core exit for {plugin.pluginId!r}: {ex}')
+            logger.error(
+                f'failed to interpret core exit for {backend.backendId!r}: {ex}'
+            )
 
             return None
 
     def afterConnected(self, httpProxy=None):
-        """Notify every registered plugin after a connection succeeds."""
-        for plugin in self.plugins():
+        """Notify every backend after a connection succeeds."""
+        for _plugin, backend in self._backends.values():
             try:
-                plugin.afterConnected(httpProxy)
+                backend.afterConnected(httpProxy)
             except Exception as ex:
-                # Any non-exit exceptions
-
                 logger.error(
-                    f'post-connection hook failed for {plugin.pluginId!r}: {ex}'
+                    f'post-connection hook failed for {backend.backendId!r}: {ex}'
                 )
 
     def discover(self):
-        """Load third-party plugins exposed through Python entry points."""
+        """Load trusted third-party plugins exposed through entry points."""
         try:
             entryPoints = metadata.entry_points()
 
@@ -417,8 +709,6 @@ class PluginRegistry:
             else:
                 entryPoints = entryPoints.get(PLUGIN_ENTRY_POINT_GROUP, tuple())
         except Exception as ex:
-            # Any non-exit exceptions
-
             logger.error(f'failed to enumerate Furious plugins: {ex}')
 
             return
@@ -438,23 +728,36 @@ class PluginRegistry:
                 else:
                     self.register(plugin)
             except Exception as ex:
-                # Any non-exit exceptions
-
                 logger.error(f'failed to load plugin {entryPoint.name!r}: {ex}')
 
+    def shutdown(self):
+        """Shut down initialized plugins in reverse registration order once."""
+        if self._closed:
+            return
 
-_registry = PluginRegistry(configurationRegistry)
+        self._closed = True
+
+        for plugin in reversed(self._initializedPlugins):
+            try:
+                plugin.shutdown()
+            except Exception as ex:
+                logger.error(f'plugin shutdown failed for {plugin.pluginId!r}: {ex}')
+
+        self._initializedPlugins.clear()
+
+
+_registry = PluginRegistry()
 _registryLock = threading.RLock()
 _registryInitialized = False
 
 
 def initializePluginRegistry(pluginTypes=()) -> PluginRegistry:
-    """Initialize discovery and register host-provided plugin implementations."""
+    """Discover third-party plugins and register host-provided plugin types."""
     global _registry, _registryInitialized
 
     with _registryLock:
         if not _registryInitialized:
-            registry = PluginRegistry(configurationRegistry)
+            registry = PluginRegistry()
 
             for pluginType in pluginTypes:
                 registry.register(pluginType())
