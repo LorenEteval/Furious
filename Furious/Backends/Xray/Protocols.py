@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Contribute isolated Xray protocol profile and editor capabilities."""
+"""Contribute isolated Xray protocol parsing capabilities."""
 
 from __future__ import annotations
 
@@ -24,9 +24,11 @@ from Furious.Backends.Configuration import (
     ConfigXray,
     configXrayEmptyProxyOutboundObject,
 )
-from Furious.Plugins.API import ProtocolDescriptor, ProtocolHandler
-
-from importlib import import_module
+from Furious.Plugins.API import (
+    ProtocolDescriptor,
+    ProtocolHandler,
+    ProtocolParseResult,
+)
 
 import copy
 
@@ -41,15 +43,11 @@ class XrayProtocolHandler(ProtocolHandler):
         descriptor,
         schemes,
         parserName,
-        editorModule,
-        editorType,
     ):
         """Store immutable dispatch metadata for one Xray protocol."""
         self.descriptor = descriptor
         self.schemes = tuple(schemes)
         self._parserName = parserName
-        self._editorModule = editorModule
-        self._editorType = editorType
 
     @property
     def protocolId(self) -> str:
@@ -76,10 +74,11 @@ class XrayProtocolHandler(ProtocolHandler):
 
         config = copy.deepcopy(BLANK_CONFIG_XRAY)
         config['outbounds'][0] = proxyOutbound
-        factory = ConfigXray(config, **kwargs)
-        factory.setExtras('remark', remark)
 
-        return factory
+        return ProtocolParseResult(
+            ConfigXray(config),
+            {'displayName': remark},
+        )
 
     def fromMapping(self, configuration, **kwargs):
         """Recognize a full Xray mapping by its tagged proxy outbound."""
@@ -94,7 +93,7 @@ class XrayProtocolHandler(ProtocolHandler):
                 and outbound.get('tag') == 'proxy'
                 and str(outbound.get('protocol', '')).casefold() == self.protocolId
             ):
-                return ConfigXray(configuration, **kwargs)
+                return ConfigXray(configuration)
 
         return None
 
@@ -103,34 +102,59 @@ class XrayProtocolHandler(ProtocolHandler):
         config = copy.deepcopy(BLANK_CONFIG_XRAY)
         config['outbounds'][0] = configXrayEmptyProxyOutboundObject(self.descriptor.id)
 
-        return ConfigXray(config, **kwargs)
+        return ConfigXray(config)
 
     def export(self, configuration, remark: str = '') -> str:
         """Export an owned Xray configuration to its share-link format."""
         return configuration.toURI(remark) if self.supports(configuration) else ''
 
-    def createEditor(self, parent=None, **kwargs):
-        """Load and create the protocol editor only when the GUI asks for it."""
-        module = import_module(self._editorModule)
-        editorType = getattr(module, self._editorType)
 
-        return editorType(parent=parent, **kwargs)
+def _placeholder(x):
+    return x
 
+
+_ = _placeholder
+
+_TRANSLATABLE = (
+    _('Add VMess Server...'),
+    _('Add VLESS Server...'),
+    _('Add Shadowsocks Server...'),
+    _('Add Trojan Server...'),
+    _('Add SOCKS Server...'),
+)
 
 XRAY_PROTOCOL_HANDLERS = (
     XrayProtocolHandler(
-        ProtocolDescriptor('VMess', 'VMess', 'Add VMess Server...', 10),
+        ProtocolDescriptor(
+            'VMess',
+            'VMess',
+            'Add VMess Server...',
+            10,
+            configurationSchema={
+                'type': 'object',
+                'required': ('outbounds',),
+                'proxyProtocol': 'vmess',
+            },
+            translatable=True,
+        ),
         ('vmess',),
         'URI2ProxyOutboundObjectVMess',
-        'Furious.Backends.Xray.VmessEditor',
-        'VmessEditor',
     ),
     XrayProtocolHandler(
-        ProtocolDescriptor('VLESS', 'VLESS', 'Add VLESS Server...', 20),
+        ProtocolDescriptor(
+            'VLESS',
+            'VLESS',
+            'Add VLESS Server...',
+            20,
+            configurationSchema={
+                'type': 'object',
+                'required': ('outbounds',),
+                'proxyProtocol': 'vless',
+            },
+            translatable=True,
+        ),
         ('vless',),
         'URI2ProxyOutboundObjectVLESS',
-        'Furious.Backends.Xray.VlessEditor',
-        'VlessEditor',
     ),
     XrayProtocolHandler(
         ProtocolDescriptor(
@@ -138,24 +162,47 @@ XRAY_PROTOCOL_HANDLERS = (
             'Shadowsocks',
             'Add Shadowsocks Server...',
             30,
+            configurationSchema={
+                'type': 'object',
+                'required': ('outbounds',),
+                'proxyProtocol': 'shadowsocks',
+            },
+            translatable=True,
         ),
         ('ss',),
         'URI2ProxyOutboundObjectSS',
-        'Furious.Backends.Xray.ShadowsocksEditor',
-        'ShadowsocksEditor',
     ),
     XrayProtocolHandler(
-        ProtocolDescriptor('Trojan', 'Trojan', 'Add Trojan Server...', 40),
+        ProtocolDescriptor(
+            'Trojan',
+            'Trojan',
+            'Add Trojan Server...',
+            40,
+            configurationSchema={
+                'type': 'object',
+                'required': ('outbounds',),
+                'proxyProtocol': 'trojan',
+            },
+            translatable=True,
+        ),
         ('trojan',),
         'URI2ProxyOutboundObjectTrojan',
-        'Furious.Backends.Xray.TrojanEditor',
-        'TrojanEditor',
     ),
     XrayProtocolHandler(
-        ProtocolDescriptor('SOCKS', 'SOCKS', 'Add SOCKS Server...', 70, True),
+        ProtocolDescriptor(
+            'SOCKS',
+            'SOCKS',
+            'Add SOCKS Server...',
+            70,
+            True,
+            {
+                'type': 'object',
+                'required': ('outbounds',),
+                'proxyProtocol': 'socks',
+            },
+            True,
+        ),
         ('socks', 'socks5', 'socks5h'),
         'URI2ProxyOutboundObjectSocks',
-        'Furious.Backends.Xray.SocksEditor',
-        'SocksEditor',
     ),
 )

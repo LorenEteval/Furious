@@ -28,11 +28,11 @@ from typing import Callable, Union
 import ujson
 import functools
 
-__all__ = ['CoreProcess']
+__all__ = ['CoreProcess', 'RuntimeKernel']
 
 
-class CoreProcess(ABC):
-    """Define the interface and shared behavior for core process objects."""
+class RuntimeKernel(ABC):
+    """Define the lifecycle shared by plugin-created runtime kernels."""
 
     class ExitCode(Enum):
         """Enumerate process exit codes."""
@@ -45,7 +45,7 @@ class CoreProcess(ABC):
 
     def __init__(
         self,
-        exitCallback: Union[Callable[[CoreProcess, int], None], None] = None,
+        exitCallback: Union[Callable[[RuntimeKernel, int], None], None] = None,
     ):
         """Initialize the core process."""
         super().__init__()
@@ -104,10 +104,14 @@ class CoreProcess(ABC):
 
     @abstractmethod
     def start(self, *args, **kwargs) -> bool:
-        """Start the core process factory."""
+        """Start the runtime kernel."""
         raise NotImplementedError
 
     @abstractmethod
     def stop(self):
-        """Stop the core process factory."""
+        """Stop the runtime kernel."""
         raise NotImplementedError
+
+
+# Compatibility name retained for existing process implementations.
+CoreProcess = RuntimeKernel

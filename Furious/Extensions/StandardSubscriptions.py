@@ -15,12 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Decode the plain-text and base64 share-link subscription formats."""
+"""Decode standard subscription representations independently."""
 
 from __future__ import annotations
 
 from Furious.Plugins.API import (
     FuriousPlugin,
+    PluginMetadata,
     SubscriptionDecoder,
     SubscriptionItem,
     SubscriptionResult,
@@ -46,31 +47,49 @@ def _shareLinks(text: str):
     return lines
 
 
-class ShareLinkSubscriptionDecoder(SubscriptionDecoder):
-    """Decode standard newline-delimited plain or base64 share links."""
+class PlainShareLinkDecoder(SubscriptionDecoder):
+    """Decode newline-delimited plain-text share links."""
 
-    decoderId = 'share-links'
-    displayName = 'Share Links (plain text or base64)'
+    decoderId = 'plain-share-links'
+    displayName = 'Share Links (plain text)'
     priority = 100
 
     def decode(self, data: bytes):
-        """Decode a validated plain-text or base64 share-link payload."""
+        """Decode a validated plain-text share-link payload."""
         try:
             text = data.decode('utf-8-sig')
         except UnicodeDecodeError:
-            text = ''
+            return None
 
         links = _shareLinks(text)
 
-        if links is None:
-            compact = b''.join(data.split())
-            compact += b'=' * (-len(compact) % 4)
+        return (
+            SubscriptionResult(
+                self.decoderId,
+                tuple(SubscriptionItem(uri=link) for link in links),
+            )
+            if links is not None
+            else None
+        )
 
-            try:
-                decoded = base64.b64decode(compact, altchars=b'-_', validate=True)
-                links = _shareLinks(decoded.decode('utf-8-sig'))
-            except (binascii.Error, UnicodeDecodeError, ValueError):
-                return None
+
+class Base64ShareLinkDecoder(SubscriptionDecoder):
+    """Decode a Base64 envelope containing plain share links."""
+
+    decoderId = 'base64-share-links'
+    displayName = 'Share Links (Base64)'
+    priority = 90
+
+    def decode(self, data: bytes):
+        """Decode Base64 bytes before validating contained share links."""
+        compact = b''.join(data.split())
+        compact += b'=' * (-len(compact) % 4)
+
+        try:
+            decoded = base64.b64decode(compact, altchars=b'-_', validate=True)
+            links = _shareLinks(decoded.decode('utf-8-sig'))
+        except (binascii.Error, UnicodeDecodeError, ValueError):
+            return None
 
         if links is None:
             return None
@@ -84,6 +103,10 @@ class ShareLinkSubscriptionDecoder(SubscriptionDecoder):
 class StandardSubscriptionPlugin(FuriousPlugin):
     """Contribute Furious's built-in share-link subscription decoder."""
 
-    pluginId = 'official.standard-subscriptions'
-    displayName = 'Standard Subscriptions'
-    subscriptionDecoders = (ShareLinkSubscriptionDecoder(),)
+    metadata = PluginMetadata(
+        'official.standard-subscriptions',
+        'Standard Subscriptions',
+        description='Plain-text and Base64 share-link subscription decoders.',
+        provider='Furious',
+    )
+    capabilities = (PlainShareLinkDecoder(), Base64ShareLinkDecoder())

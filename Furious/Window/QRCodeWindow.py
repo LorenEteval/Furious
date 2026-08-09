@@ -56,7 +56,7 @@ class QRCodeWindow(AppQMainWindow):
         """Return the tab count value used by the QR code window."""
         return self.tabWidget.count()
 
-    def initTabByIndex(self, indexes):
+    def initTabByIndex(self, indexes: list[int]):
         """Handle init tab by index for the QR code window."""
         self.tabWidget.clear()
 
@@ -82,9 +82,7 @@ class QRCodeWindow(AppQMainWindow):
                 widget = QLabel(parent=self.tabWidget)
                 widget.setPixmap(pixmap)
 
-                self.tabWidget.addTab(
-                    widget, f'{index + 1} - ' + config.getExtras('remark')
-                )
+                self.tabWidget.addTab(widget, f'{index + 1} - ' + config.itemRemark)
 
     @QtCore.Slot(int)
     def handleTabCloseRequested(self, index):

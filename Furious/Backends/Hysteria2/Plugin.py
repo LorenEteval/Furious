@@ -24,6 +24,7 @@ from Furious.Plugins.API import *
 from Furious.Backends.Configuration import *
 
 from .Process import Hysteria2
+from .ProtocolEditors import HYSTERIA2_PROTOCOL_EDITORS
 from .Protocols import HYSTERIA2_PROTOCOL_HANDLERS
 from .TUN import *
 
@@ -34,14 +35,13 @@ __all__ = ['Hysteria2Plugin']
 logger = logging.getLogger(__name__)
 
 
-class Hysteria2Backend(CoreBackend):
-    """Run Hysteria 2 independently of profile parsing and editor creation."""
+class Hysteria2ActionProvider(ActionProvider):
+    """Provide optional Hysteria 2 management UI independently of its runtime."""
 
-    backendId = 'official.hysteria2'
-    configurationTypes = (ConfigHysteria2,)
-    coreTypes = (Hysteria2,)
+    providerId = 'official.hysteria2.management'
+    category = 'core'
 
-    def createManagementActions(self, parent=None, **kwargs):
+    def createActions(self, parent=None, **kwargs):
         """Create Hysteria 2 native TUN management actions."""
         isCoreActive = kwargs.pop('isCoreActive', lambda coreType: False)
 
@@ -76,6 +76,14 @@ class Hysteria2Backend(CoreBackend):
                 ).open(),
             ),
         )
+
+
+class Hysteria2KernelFactory(KernelFactory):
+    """Construct Hysteria 2 kernels independently of protocol handling."""
+
+    factoryId = 'official.hysteria2'
+    configurationTypes = (ConfigHysteria2,)
+    kernelTypes = (Hysteria2,)
 
     def prepareTUN(self, config) -> bool:
         """Add Hysteria 2 native TUN mode when enabled and safe to route."""
@@ -119,23 +127,21 @@ class Hysteria2Backend(CoreBackend):
 
         return True
 
-    def startCore(
-        self,
-        config,
-        routing,
-        exitCallback=None,
-        msgCallback=None,
-        proxyModeOnly=False,
-        log=True,
-        **kwargs,
-    ):
-        """Start the Hysteria 2 core."""
-        if log:
+    def create(self, request: KernelRequest):
+        """Create a prepared Hysteria 2 kernel launch."""
+        if request.log:
             logger.info(f'core {Hysteria2.name()} configured')
 
-        process = Hysteria2(exitCallback=exitCallback, msgCallback=msgCallback)
+        process = Hysteria2(
+            exitCallback=request.exitCallback,
+            msgCallback=request.messageCallback,
+        )
 
-        return process, process.start(config, **kwargs)
+        return KernelLaunch(
+            process,
+            request.configuration,
+            options=request.options,
+        )
 
     def prepareDownloadTest(self, config, port: int):
         """Create a Hysteria 2 configuration with one local HTTP proxy."""
@@ -162,10 +168,18 @@ class Hysteria2Backend(CoreBackend):
 class Hysteria2Plugin(FuriousPlugin):
     """Bundle official Hysteria 2 protocol and runtime capabilities."""
 
-    pluginId = 'official.hysteria2'
-    displayName = 'Hysteria2'
-    protocolHandlers = HYSTERIA2_PROTOCOL_HANDLERS
+    metadata = PluginMetadata(
+        'official.hysteria2',
+        'Hysteria2',
+        description='Official Hysteria 2 protocol, editor, and runtime support.',
+        provider='Furious',
+    )
 
     def __init__(self):
-        """Create an isolated Hysteria 2 backend instance for this plugin."""
-        self.coreBackends = (Hysteria2Backend(),)
+        """Create an isolated Hysteria 2 runtime factory."""
+        self.capabilities = (
+            *HYSTERIA2_PROTOCOL_HANDLERS,
+            *HYSTERIA2_PROTOCOL_EDITORS,
+            Hysteria2KernelFactory(),
+            Hysteria2ActionProvider(),
+        )

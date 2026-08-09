@@ -26,6 +26,7 @@ from Furious.Plugins.API import *
 from Furious.Backends.Configuration import *
 
 from .Process import *
+from .ProtocolEditors import XRAY_PROTOCOL_EDITORS
 from .Protocols import XRAY_PROTOCOL_HANDLERS
 from .Routing import *
 from .TUN import *
@@ -72,24 +73,13 @@ def fixLogObjectPath(config, attr: str, value: str, log=True):
         )
 
 
-class XrayBackend(CoreBackend):
-    """Run Xray configurations independently of protocol codecs and editors."""
+class XrayActionProvider(ActionProvider):
+    """Provide optional Xray management UI independently of its runtime."""
 
-    backendId = 'official.xray'
-    configurationTypes = (ConfigXray,)
-    coreTypes = (XrayCore,)
+    providerId = 'official.xray.management'
+    category = 'core'
 
-    def fromMapping(self, configuration, **kwargs):
-        """Recognize a complete Xray configuration without a proxy profile."""
-        if (
-            configuration.get('inbounds') is not None
-            or configuration.get('outbounds') is not None
-        ):
-            return ConfigXray(configuration, **kwargs)
-
-        return None
-
-    def createManagementActions(self, parent=None, **kwargs):
+    def createActions(self, parent=None, **kwargs):
         """Create Xray routing, TUN, and asset-management actions."""
         isCoreActive = kwargs.pop('isCoreActive', lambda coreType: False)
 
@@ -156,6 +146,24 @@ class XrayBackend(CoreBackend):
             ),
         )
 
+
+class XrayKernelFactory(KernelFactory):
+    """Construct Xray kernels independently of protocols and editors."""
+
+    factoryId = 'official.xray'
+    configurationTypes = (ConfigXray,)
+    kernelTypes = (XrayCore,)
+
+    def fromMapping(self, configuration, **kwargs):
+        """Recognize a complete Xray configuration without a proxy profile."""
+        if (
+            configuration.get('inbounds') is not None
+            or configuration.get('outbounds') is not None
+        ):
+            return ConfigXray(configuration)
+
+        return None
+
     def prepareTUN(self, config) -> bool:
         """Add the configured Xray native TUN inbound when enabled."""
         if not isXrayTUNEnabled():
@@ -217,17 +225,15 @@ class XrayBackend(CoreBackend):
         """Point Xray-core at Furious's bundled geo-asset directory."""
         os.environ['XRAY_LOCATION_ASSET'] = str(XRAY_ASSET_DIR)
 
-    def startCore(
-        self,
-        config,
-        routing,
-        exitCallback=None,
-        msgCallback=None,
-        proxyModeOnly=False,
-        log=True,
-        **kwargs,
-    ):
-        """Configure routing and start Xray-core."""
+    def create(self, request: KernelRequest):
+        """Configure routing and create an Xray-core launch."""
+        config, routing, proxyModeOnly, log = (
+            request.configuration,
+            request.routing,
+            request.proxyModeOnly,
+            request.log,
+        )
+
         if config.get('log') is None or not isinstance(config['log'], dict):
             config['log'] = {'access': '', 'error': '', 'loglevel': 'warning'}
 
@@ -247,7 +253,7 @@ class XrayBackend(CoreBackend):
 
                 showMBoxDirectRulesNotAllowed()
 
-                return None, False
+                return None
 
             routingObject = {
                 'domainStrategy': 'IPIfNonMatch',
@@ -290,9 +296,13 @@ class XrayBackend(CoreBackend):
             logger.info(f'RoutingObject: {routingObject}')
 
         config['routing'] = routingObject
-        process = XrayCore(exitCallback=exitCallback, msgCallback=msgCallback)
 
-        return process, process.start(config, **kwargs)
+        process = XrayCore(
+            exitCallback=request.exitCallback,
+            msgCallback=request.messageCallback,
+        )
+
+        return KernelLaunch(process, config, options=request.options)
 
     def prepareDownloadTest(self, config, port: int):
         """Create an Xray configuration with one local HTTP test inbound."""
@@ -366,10 +376,18 @@ class XrayBackend(CoreBackend):
 class XrayPlugin(FuriousPlugin):
     """Bundle official Xray protocol handlers and its runtime backend."""
 
-    pluginId = 'official.xray'
-    displayName = 'Xray-core'
-    protocolHandlers = XRAY_PROTOCOL_HANDLERS
+    metadata = PluginMetadata(
+        'official.xray',
+        'Xray-core',
+        description='Official Xray protocol, editor, and runtime support.',
+        provider='Furious',
+    )
 
     def __init__(self):
-        """Create an isolated Xray backend instance for this plugin."""
-        self.coreBackends = (XrayBackend(),)
+        """Create an isolated Xray runtime factory for this plugin."""
+        self.capabilities = (
+            *XRAY_PROTOCOL_HANDLERS,
+            *XRAY_PROTOCOL_EDITORS,
+            XrayKernelFactory(),
+            XrayActionProvider(),
+        )

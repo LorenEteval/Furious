@@ -23,7 +23,13 @@ from Furious.Backends.Configuration import (
     BLANK_CONFIG_HYSTERIA2,
     ConfigHysteria2,
 )
-from Furious.Plugins.API import ProtocolDescriptor, ProtocolHandler
+from Furious.Plugins.API import (
+    ProtocolDescriptor,
+    ProtocolHandler,
+    ProtocolParseResult,
+)
+
+from urllib.parse import unquote, urlsplit
 
 import copy
 
@@ -31,13 +37,15 @@ __all__ = ['HYSTERIA2_PROTOCOL_HANDLERS']
 
 
 class Hysteria2ProtocolHandler(ProtocolHandler):
-    """Own Hysteria 2 URI, mapping, blank-profile, and editor behavior."""
+    """Own Hysteria 2 URI, mapping, validation, and export behavior."""
 
     descriptor = ProtocolDescriptor(
         'hysteria2',
         'Hysteria2',
         'Add Hysteria2 Server...',
         60,
+        configurationSchema={'type': 'object', 'required': ('server', 'auth')},
+        translatable=True,
     )
     schemes = (
         'hy2',
@@ -52,9 +60,16 @@ class Hysteria2ProtocolHandler(ProtocolHandler):
 
     def parse(self, uri: str, **kwargs):
         """Parse a Hysteria 2 share URI, including Realm mode."""
-        factory = ConfigHysteria2(uri, **kwargs)
+        factory = ConfigHysteria2(uri)
 
-        return factory if factory.isValid() else None
+        return (
+            ProtocolParseResult(
+                factory,
+                {'displayName': unquote(urlsplit(uri).fragment)},
+            )
+            if factory.isValid()
+            else None
+        )
 
     def fromMapping(self, configuration, **kwargs):
         """Recognize a Hysteria 2 client configuration mapping."""
@@ -79,23 +94,17 @@ class Hysteria2ProtocolHandler(ProtocolHandler):
         if any(configuration.get(field) is not None for field in fields) or isinstance(
             configuration.get('obfs'), dict
         ):
-            return ConfigHysteria2(configuration, **kwargs)
+            return ConfigHysteria2(configuration)
 
         return None
 
     def blank(self, **kwargs):
         """Create a blank Hysteria 2 client profile."""
-        return ConfigHysteria2(copy.deepcopy(BLANK_CONFIG_HYSTERIA2), **kwargs)
+        return ConfigHysteria2(copy.deepcopy(BLANK_CONFIG_HYSTERIA2))
 
     def export(self, configuration, remark: str = '') -> str:
         """Export a Hysteria 2 profile."""
         return configuration.toURI(remark) if self.supports(configuration) else ''
-
-    def createEditor(self, parent=None, **kwargs):
-        """Create the Hysteria 2 editor on demand."""
-        from .Editor import Hysteria2Editor
-
-        return Hysteria2Editor(parent=parent, **kwargs)
 
 
 HYSTERIA2_PROTOCOL_HANDLERS = (Hysteria2ProtocolHandler(),)

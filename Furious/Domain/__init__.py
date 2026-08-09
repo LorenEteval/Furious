@@ -20,12 +20,29 @@
 from __future__ import annotations
 
 from .Configuration import ConfigFactory
-from .Encoding import Base64Encoder, JSONEncoder, PyBase64Encoder, UJSONEncoder
+from .Encoding import (
+    Base64Encoder,
+    JSONEncoder,
+    PyBase64Encoder,
+    UJSONEncoder,
+)
+from .Profile import (
+    ProfileMetadata,
+    ServerProfile,
+    connectionOf,
+    ensureProfile,
+)
+from .Protocol import Protocol
 
 __all__ = [
     'Base64Encoder',
     'ConfigFactory',
     'JSONEncoder',
+    'ProfileMetadata',
     'PyBase64Encoder',
+    'Protocol',
+    'ServerProfile',
     'UJSONEncoder',
+    'connectionOf',
+    'ensureProfile',
 ]

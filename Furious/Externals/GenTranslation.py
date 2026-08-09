@@ -1,8 +1,8 @@
 TRANSLATION = {
     "Delete": {
         "source": [
-            "Furious.Backends.Xray.RoutingWindow",
             "Furious.Backends.Xray.AssetListWidget",
+            "Furious.Backends.Xray.RoutingWindow",
             "Furious.Qt.QtWidgets",
             "Furious.Widget.ServerTableView",
             "Furious.Widget.SubscriptionTableView",
@@ -102,8 +102,8 @@ TRANSLATION = {
     },
     "Import": {
         "source": [
-            "Furious.Backends.Xray.AssetListWidget",
-            "Furious.Actions.Import"
+            "Furious.Actions.Import",
+            "Furious.Backends.Xray.AssetListWidget"
         ],
         "RU": "Импорт",
         "ZH": "导入",
@@ -135,8 +135,8 @@ TRANSLATION = {
     },
     "Import From File...": {
         "source": [
-            "Furious.Backends.Xray.AssetWindow",
-            "Furious.Actions.Import"
+            "Furious.Actions.Import",
+            "Furious.Backends.Xray.AssetWindow"
         ],
         "RU": "Импорт из файла...",
         "ZH": "从文件导入...",
@@ -144,8 +144,8 @@ TRANSLATION = {
     },
     "Import File": {
         "source": [
-            "Furious.Backends.Xray.AssetWindow",
-            "Furious.Actions.Import"
+            "Furious.Actions.Import",
+            "Furious.Backends.Xray.AssetWindow"
         ],
         "RU": "Импорт файла",
         "ZH": "导入文件",
@@ -218,15 +218,15 @@ TRANSLATION = {
     },
     "Cancel": {
         "source": [
+            "Furious.Actions.Import",
             "Furious.Backends.Xray.RoutingWindow",
             "Furious.Qt.EditorWidgets",
-            "Furious.Actions.Import",
+            "Furious.Widget.ServerTableView",
+            "Furious.Window.IndentDialog",
             "Furious.Window.NetworkTestDialog",
             "Furious.Window.ProxyBypassDialog",
-            "Furious.Window.IndentDialog",
-            "Furious.Widget.ServerTableView",
-            "Furious.Window.TextEditorWindow",
-            "Furious.Window.SubscriptionWindow"
+            "Furious.Window.SubscriptionWindow",
+            "Furious.Window.TextEditorWindow"
         ],
         "RU": "Отмена",
         "ZH": "取消",
@@ -440,12 +440,12 @@ TRANSLATION = {
         "source": [
             "Furious.Backends.Hysteria1.Editor",
             "Furious.Backends.Hysteria2.Editor",
+            "Furious.Backends.Xray.RoutingWindow",
             "Furious.Backends.Xray.ShadowsocksEditor",
             "Furious.Backends.Xray.SocksEditor",
             "Furious.Backends.Xray.TrojanEditor",
             "Furious.Backends.Xray.VlessEditor",
             "Furious.Backends.Xray.VmessEditor",
-            "Furious.Backends.Xray.RoutingWindow",
             "Furious.Widget.ServerTableView",
             "Furious.Widget.SubscriptionTableView"
         ],
@@ -712,8 +712,8 @@ TRANSLATION = {
     },
     "Exit": {
         "source": [
-            "Furious.Backends.Xray.AssetWindow",
             "Furious.Actions.Exit",
+            "Furious.Backends.Xray.AssetWindow",
             "Furious.Window.LogWindow"
         ],
         "RU": "Выход",
@@ -983,8 +983,8 @@ TRANSLATION = {
     },
     "Unable to connect": {
         "source": [
-            "Furious.Qt.QtWidgets",
-            "Furious.Actions.Connection"
+            "Furious.Actions.Connection",
+            "Furious.Qt.QtWidgets"
         ],
         "RU": "Не удается подключиться",
         "ZH": "无法连接",
@@ -1397,9 +1397,9 @@ TRANSLATION = {
             "Furious.__main__",
             "Furious.Backends.Xray.RoutingWindow",
             "Furious.Qt.EditorWidgets",
+            "Furious.Window.IndentDialog",
             "Furious.Window.NetworkTestDialog",
             "Furious.Window.ProxyBypassDialog",
-            "Furious.Window.IndentDialog",
             "Furious.Window.SubscriptionWindow"
         ],
         "RU": "OK",
@@ -2157,7 +2157,7 @@ TRANSLATION = {
     },
     "Add VMess Server...": {
         "source": [
-            "Furious.Backends.Xray.Plugin"
+            "Furious.Backends.Xray.Protocols"
         ],
         "RU": "Добавить сервер VMess...",
         "ZH": "添加VMess服务器...",
@@ -2165,7 +2165,7 @@ TRANSLATION = {
     },
     "Add VLESS Server...": {
         "source": [
-            "Furious.Backends.Xray.Plugin"
+            "Furious.Backends.Xray.Protocols"
         ],
         "RU": "Добавить сервер VLESS...",
         "ZH": "添加VLESS服务器...",
@@ -2173,7 +2173,7 @@ TRANSLATION = {
     },
     "Add Shadowsocks Server...": {
         "source": [
-            "Furious.Backends.Xray.Plugin"
+            "Furious.Backends.Xray.Protocols"
         ],
         "RU": "Добавить сервер Shadowsocks...",
         "ZH": "添加Shadowsocks服务器...",
@@ -2181,31 +2181,15 @@ TRANSLATION = {
     },
     "Add Trojan Server...": {
         "source": [
-            "Furious.Backends.Xray.Plugin"
+            "Furious.Backends.Xray.Protocols"
         ],
         "RU": "Добавить сервер Trojan...",
         "ZH": "添加Trojan服务器...",
         "isReviewed": "True"
     },
-    "Add Hysteria1 Server...": {
-        "source": [
-            "Furious.Backends.Hysteria1.Plugin"
-        ],
-        "RU": "Добавить сервер Hysteria 1...",
-        "ZH": "添加Hysteria1服务器...",
-        "isReviewed": "True"
-    },
-    "Add Hysteria2 Server...": {
-        "source": [
-            "Furious.Backends.Hysteria2.Plugin"
-        ],
-        "RU": "Добавить сервер Hysteria 2...",
-        "ZH": "添加Hysteria2服务器...",
-        "isReviewed": "True"
-    },
     "Add SOCKS Server...": {
         "source": [
-            "Furious.Backends.Xray.Plugin"
+            "Furious.Backends.Xray.Protocols"
         ],
         "RU": "Добавить сервер SOCKS...",
         "ZH": "添加SOCKS服务器...",
@@ -2308,6 +2292,14 @@ TRANSLATION = {
         ],
         "RU": "Настроить параметры TUN Hysteria2...",
         "ZH": "自定义Hysteria2 TUN设置...",
+        "isReviewed": "True"
+    },
+    "Extensions": {
+        "source": [
+            "Furious.Window.MainWindow"
+        ],
+        "RU": "Расширения",
+        "ZH": "扩展功能",
         "isReviewed": "True"
     }
 }

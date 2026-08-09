@@ -15,25 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Define the common data encoder interface."""
+"""Provide the lazily imported Hysteria 1 protocol editor."""
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from typing import Any
+from Furious.Plugins.API import ProtocolEditorProvider
 
-__all__ = ['Codec']
+__all__ = ['HYSTERIA1_PROTOCOL_EDITORS']
 
 
-class Codec(ABC):
-    """Define the interface and shared behavior for encoder objects."""
+class Hysteria1ProtocolEditor(ProtocolEditorProvider):
+    """Create the Hysteria 1 editor on demand."""
 
-    @abstractmethod
-    def encode(self, data: Any, **kwargs) -> Any:
-        """Encode data with the encoder factory."""
-        raise NotImplementedError
+    editorId = 'official.hysteria1.editor'
+    protocolIds = ('hysteria1',)
 
-    @abstractmethod
-    def decode(self, data: Any, **kwargs) -> Any:
-        """Decode data with the encoder factory."""
-        raise NotImplementedError
+    def createEditor(self, protocolId: str, parent=None, **kwargs):
+        """Create the Hysteria 1 editor."""
+        from .Editor import Hysteria1Editor
+
+        return Hysteria1Editor(parent=parent, **kwargs)
+
+
+HYSTERIA1_PROTOCOL_EDITORS = (Hysteria1ProtocolEditor(),)

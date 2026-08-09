@@ -19,10 +19,9 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import *
-from Furious.Interface import *
 from Furious.Domain.Configuration import ConfigFactory
 from Furious.Domain.Encoding import *
+from Furious.Domain.Protocol import Protocol
 
 from typing import Union, Tuple
 
@@ -35,6 +34,15 @@ unquote = functools.partial(urllib.parse.unquote)
 parse_qsl = functools.partial(urllib.parse.parse_qsl)
 urlparse = functools.partial(urllib.parse.urlparse)
 urlunparse = functools.partial(urllib.parse.urlunparse)
+
+XRAY_PROXY_USER_EMAIL = 'user@Furious.GUI'
+
+
+def _parseHostPort(address: str) -> Tuple[str | None, str | None]:
+    """Split a URI-style endpoint into normalized host and port strings."""
+    result = urllib.parse.urlsplit(address if '//' in address else f'//{address}')
+
+    return result.hostname, str(result.port) if result.port is not None else None
 
 
 def queryStringFromItems(items):
@@ -165,7 +173,7 @@ class ConfigXrayProxyOutboundObjectSS(dict):
                             'port': int(port),
                             'method': method,
                             'password': password,
-                            'email': PROXY_OUTBOUND_USER_EMAIL,
+                            'email': XRAY_PROXY_USER_EMAIL,
                             'ota': False,
                         },
                     ]
@@ -248,7 +256,7 @@ class ConfigXrayProxyOutboundObjectTrojan(dict):
                             'address': address,
                             'port': int(port),
                             'password': password,
-                            'email': PROXY_OUTBOUND_USER_EMAIL,
+                            'email': XRAY_PROXY_USER_EMAIL,
                         },
                     ]
                 },
@@ -352,9 +360,9 @@ BLANK_CONFIG_XRAY = {
 class ConfigXray(ConfigFactory):
     """Represent Xray configuration and supported share-link formats."""
 
-    def __init__(self, config: Union[str, dict] = '', **kwargs):
+    def __init__(self, config: Union[str, dict] = ''):
         """Initialize the ConfigXray."""
-        super().__init__(config, **kwargs)
+        super().__init__(config)
 
     def coreName(self) -> str:
         """Return the core implementation name."""
@@ -1136,7 +1144,7 @@ class ConfigXray(ConfigFactory):
             UserObject = {
                 'id': uuid_,
                 'security': encryption,
-                'email': PROXY_OUTBOUND_USER_EMAIL,
+                'email': XRAY_PROXY_USER_EMAIL,
             }
 
             # For VMess(v2rayN share standard) only.
@@ -1150,7 +1158,7 @@ class ConfigXray(ConfigFactory):
             UserObject = {
                 'id': uuid_,
                 'encryption': encryption,
-                'email': PROXY_OUTBOUND_USER_EMAIL,
+                'email': XRAY_PROXY_USER_EMAIL,
             }
 
             if kwargs.get('flow'):
@@ -1223,7 +1231,7 @@ class ConfigXray(ConfigFactory):
 
         uuid_, server = result.netloc.split('@')
 
-        remote_host, remote_port = parseHostPort(server)
+        remote_host, remote_port = _parseHostPort(server)
 
         encryption = queryObject.pop('encryption', 'none')
         type_ = queryObject.pop('type', 'tcp')
@@ -1266,7 +1274,7 @@ class ConfigXray(ConfigFactory):
                 # in base64 encoding. Add padding to userinfo
                 return [
                     *PyBase64Encoder.decode(userinfo + '===').decode().split(':', 1),
-                    *parseHostPort(server),
+                    *_parseHostPort(server),
                 ]
             except Exception:
                 # Any non-exit exceptions
@@ -1277,7 +1285,7 @@ class ConfigXray(ConfigFactory):
                 # Try pack with 4 element
                 userinfo, server = result.netloc.split('@')
 
-                return [*userinfo.split(':', 1), *parseHostPort(server)]
+                return [*userinfo.split(':', 1), *_parseHostPort(server)]
             except Exception:
                 # Any non-exit exceptions
 
@@ -1289,7 +1297,7 @@ class ConfigXray(ConfigFactory):
                     PyBase64Encoder.decode(result.netloc).decode().split('@')
                 )
 
-                return [*userinfo.split(':', 1), *parseHostPort(server)]
+                return [*userinfo.split(':', 1), *_parseHostPort(server)]
             except Exception:
                 # Any non-exit exceptions
 
@@ -1330,7 +1338,7 @@ class ConfigXray(ConfigFactory):
 
         password, server = result.netloc.split('@')
 
-        address, port = parseHostPort(server)
+        address, port = _parseHostPort(server)
 
         type_ = queryObject.pop('type', 'tcp')
         # For Trojan: Assign tls by default
@@ -1394,18 +1402,6 @@ class ConfigXray(ConfigFactory):
         """Return the item TLS value."""
         return self.proxyStreamSettingsTLS
 
-    @property
-    def itemLatency(self) -> str:
-        # Backward compatibility
-        """Return the item latency value."""
-        return self.getExtras('delayResult')
-
-    @property
-    def itemSpeed(self) -> str:
-        # Backward compatibility
-        """Return the item speed value."""
-        return self.getExtras('speedResult')
-
     def toJSONString(self, **kwargs) -> str:
         """Serialize the configuration as JSON text."""
         indent = kwargs.pop('indent', 2)
@@ -1414,10 +1410,7 @@ class ConfigXray(ConfigFactory):
 
     def toURI(self, remark: str = '') -> str:
         """Export the configuration as a share URI."""
-        if remark == '':
-            override = self.itemRemark
-        else:
-            override = remark
+        override = remark
 
         protocol = self.proxyProtocol.casefold()
 
@@ -1531,7 +1524,7 @@ class ConfigXray(ConfigFactory):
     def fromURI(self, URI: str) -> bool:
         """Populate the configuration from a share URI."""
         try:
-            remark, proxyOutboundObject = ConfigXray.URI2ProxyOutboundObject(URI)
+            _remark, proxyOutboundObject = ConfigXray.URI2ProxyOutboundObject(URI)
 
             factory = copy.deepcopy(BLANK_CONFIG_XRAY)
             factory['outbounds'] = [
@@ -1556,8 +1549,6 @@ class ConfigXray(ConfigFactory):
             ]
 
             dict.__init__(self, **factory)
-
-            self.setExtras('remark', remark)
 
             return True
         except Exception:
@@ -1615,7 +1606,7 @@ class ConfigXray(ConfigFactory):
                 # None satisfied. Return success
                 return True
 
-            listen, port = parseHostPort(endpoint)
+            listen, port = _parseHostPort(endpoint)
 
             for inbound in self['inbounds']:
                 if inbound['protocol'] == 'http':
@@ -1673,7 +1664,7 @@ class ConfigXray(ConfigFactory):
                 # None satisfied. Return success
                 return True
 
-            listen, port = parseHostPort(endpoint)
+            listen, port = _parseHostPort(endpoint)
 
             for inbound in self['inbounds']:
                 if inbound['protocol'] == 'socks':
@@ -1727,9 +1718,9 @@ BLANK_CONFIG_HYSTERIA1 = {
 class ConfigHysteria1(ConfigFactory):
     """Represent Hysteria 1 client configuration and share links."""
 
-    def __init__(self, config: Union[str, dict] = '', **kwargs):
+    def __init__(self, config: Union[str, dict] = ''):
         """Initialize the ConfigHysteria1."""
-        super().__init__(config, **kwargs)
+        super().__init__(config)
 
     def coreName(self) -> str:
         """Return the core implementation name."""
@@ -1774,16 +1765,6 @@ class ConfigHysteria1(ConfigFactory):
         """Return the item TLS value."""
         return ''
 
-    @property
-    def itemLatency(self) -> str:
-        """Return the item latency value."""
-        return self.getExtras('delayResult')
-
-    @property
-    def itemSpeed(self) -> str:
-        """Return the item speed value."""
-        return self.getExtras('speedResult')
-
     def toJSONString(self, **kwargs) -> str:
         """Serialize the configuration as JSON text."""
         indent = kwargs.pop('indent', 4)
@@ -1792,10 +1773,7 @@ class ConfigHysteria1(ConfigFactory):
 
     def toURI(self, remark: str = '') -> str:
         """Export the configuration as a share URI."""
-        if remark == '':
-            override = self.itemRemark
-        else:
-            override = remark
+        override = remark
 
         try:
             netloc, mport = self['server'].split(',')
@@ -1860,7 +1838,6 @@ class ConfigHysteria1(ConfigFactory):
         """Populate the configuration from a share URI."""
         try:
             result = urlparse(URI)
-            remark = unquote(result.fragment)
             queryObject = {key: value for key, value in parse_qsl(result.query)}
 
             if result.scheme != 'hysteria':
@@ -1930,8 +1907,6 @@ class ConfigHysteria1(ConfigFactory):
                     },
                 },
             )
-
-            self.setExtras('remark', remark)
 
             return True
         except Exception:
@@ -2013,9 +1988,9 @@ BLANK_CONFIG_HYSTERIA2 = {
 class ConfigHysteria2(ConfigFactory):
     """Represent Hysteria 2 client configuration and share links."""
 
-    def __init__(self, config: Union[str, dict] = '', **kwargs):
+    def __init__(self, config: Union[str, dict] = ''):
         """Initialize the ConfigHysteria2."""
-        super().__init__(config, **kwargs)
+        super().__init__(config)
 
     def coreName(self) -> str:
         """Return the core implementation name."""
@@ -2070,16 +2045,6 @@ class ConfigHysteria2(ConfigFactory):
         """Return the item TLS value."""
         return ''
 
-    @property
-    def itemLatency(self) -> str:
-        """Return the item latency value."""
-        return self.getExtras('delayResult')
-
-    @property
-    def itemSpeed(self) -> str:
-        """Return the item speed value."""
-        return self.getExtras('speedResult')
-
     def toJSONString(self, **kwargs) -> str:
         """Serialize the configuration as JSON text."""
         indent = kwargs.pop('indent', 4)
@@ -2102,10 +2067,7 @@ class ConfigHysteria2(ConfigFactory):
 
     def toURI(self, remark: str = '') -> str:
         """Export the configuration as a share URI."""
-        if remark == '':
-            override = self.itemRemark
-        else:
-            override = remark
+        override = remark
 
         TLSArg, obfsArg = {}, {}
 
@@ -2162,7 +2124,6 @@ class ConfigHysteria2(ConfigFactory):
         """Populate the configuration from a share URI."""
         try:
             result = urlparse(URI)
-            remark = unquote(result.fragment)
             queryItems = parse_qsl(result.query)
             queryObject = {key: value for key, value in queryItems}
 
@@ -2247,8 +2208,6 @@ class ConfigHysteria2(ConfigFactory):
                 },
             )
 
-            self.setExtras('remark', remark)
-
             return True
         except Exception:
             # Any non-exit exceptions
@@ -2327,7 +2286,7 @@ def configXrayEmptyProxyOutboundObject(protocol) -> dict:
                         'port': 0,
                         'users': [
                             {
-                                'email': PROXY_OUTBOUND_USER_EMAIL,
+                                'email': XRAY_PROXY_USER_EMAIL,
                             },
                         ],
                     },
@@ -2352,7 +2311,7 @@ def configXrayEmptyProxyOutboundObject(protocol) -> dict:
                         'port': 0,
                         'method': '',
                         'password': '',
-                        'email': PROXY_OUTBOUND_USER_EMAIL,
+                        'email': XRAY_PROXY_USER_EMAIL,
                         'ota': False,
                     }
                 ]
@@ -2391,7 +2350,7 @@ def configXrayEmptyProxyOutboundObject(protocol) -> dict:
                         'address': '',
                         'port': 0,
                         'password': '',
-                        'email': PROXY_OUTBOUND_USER_EMAIL,
+                        'email': XRAY_PROXY_USER_EMAIL,
                     }
                 ]
             },

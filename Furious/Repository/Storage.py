@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
+from Furious.Domain import ServerProfile
 from Furious.Repository.Routings import UserRoutings
 from Furious.Repository.Servers import UserServers
 from Furious.Repository.Subscriptions import UserSubs
@@ -79,7 +80,7 @@ class Storage:
             return -1
 
     @staticmethod
-    def UserServers() -> list[ConfigFactory]:
+    def UserServers() -> list[ServerProfile]:
         """Return the user servers value."""
         return Storage._UserServersStorage().data()
 
@@ -135,7 +136,7 @@ class Storage:
                     )
 
                     if index >= 0:
-                        return f'{index + 1} - ' + servers[index].getExtras('remark')
+                        return f'{index + 1} - ' + servers[index].itemRemark
                     else:
                         # Should not reach here
                         return ''

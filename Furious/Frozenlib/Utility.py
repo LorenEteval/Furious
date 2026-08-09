@@ -22,7 +22,6 @@ from __future__ import annotations
 from Furious.Frozenlib.Constants import *
 from Furious.Frozenlib.AppSettings import *
 
-from enum import Enum
 from typing import AnyStr, Tuple
 
 import os
@@ -35,7 +34,6 @@ import subprocess
 import urllib.parse
 
 __all__ = [
-    'Protocol',
     'callRateLimited',
     'forceToLocalhostIfPossible',
     'callOnceOnly',
@@ -46,43 +44,6 @@ __all__ = [
     'absolutePath',
     'versionToValue',
 ]
-
-
-class Protocol(Enum):
-    """Enumerate proxy protocols recognized by Furious."""
-
-    Unknown = 'Unknown'
-    VMess = 'VMess'
-    VLESS = 'VLESS'
-    Shadowsocks = 'Shadowsocks'
-    Socks = 'SOCKS'
-    Trojan = 'Trojan'
-    Hysteria1 = 'hysteria1'
-    Hysteria2 = 'hysteria2'
-
-    @staticmethod
-    @functools.lru_cache(None)
-    def toEnum(protocol: str):
-        """Return the to enum value used by the protocol."""
-        if not isinstance(protocol, str):
-            return Protocol.Unknown
-
-        if protocol.casefold() == 'vmess':
-            return Protocol.VMess
-
-        if protocol.casefold() == 'vless':
-            return Protocol.VLESS
-
-        if protocol.casefold() == 'shadowsocks':
-            return Protocol.Shadowsocks
-
-        if protocol.casefold() == 'socks':
-            return Protocol.Socks
-
-        if protocol.casefold() == 'trojan':
-            return Protocol.Trojan
-
-        return Protocol.Unknown
 
 
 def callRateLimited(maxCallPerSecond):

@@ -19,8 +19,6 @@
 
 from __future__ import annotations
 
-from Furious.Interface import *
-
 from typing import Any, AnyStr
 
 import json
@@ -36,7 +34,7 @@ __all__ = [
 ]
 
 
-class JSONEncoder(Codec):
+class JSONEncoder:
     """Encode and decode data using JSON."""
 
     @staticmethod
@@ -52,7 +50,7 @@ class JSONEncoder(Codec):
         return json.loads(data, **kwargs)
 
 
-class UJSONEncoder(Codec):
+class UJSONEncoder:
     """Encode and decode data using ujson."""
 
     @staticmethod
@@ -74,7 +72,7 @@ class UJSONEncoder(Codec):
         return ujson.loads(data, **kwargs)
 
 
-class Base64Encoder(Codec):
+class Base64Encoder:
     """Encode and decode data using base64."""
 
     @staticmethod
@@ -90,7 +88,7 @@ class Base64Encoder(Codec):
         return base64.b64decode(data, validate=validate, **kwargs)
 
 
-class PyBase64Encoder(Codec):
+class PyBase64Encoder:
     """Encode and decode data using py base64."""
 
     @staticmethod

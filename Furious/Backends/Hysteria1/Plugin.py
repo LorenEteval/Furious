@@ -24,6 +24,7 @@ from Furious.Plugins.API import *
 from Furious.Backends.Configuration import *
 
 from .Process import *
+from .ProtocolEditors import HYSTERIA1_PROTOCOL_EDITORS
 from .Protocols import HYSTERIA1_PROTOCOL_HANDLERS
 
 import logging
@@ -33,12 +34,12 @@ __all__ = ['Hysteria1Plugin']
 logger = logging.getLogger(__name__)
 
 
-class Hysteria1Backend(CoreBackend):
-    """Run Hysteria 1 independently of profile parsing and editor creation."""
+class Hysteria1KernelFactory(KernelFactory):
+    """Construct Hysteria 1 kernels independently of protocol handling."""
 
-    backendId = 'official.hysteria1'
+    factoryId = 'official.hysteria1'
     configurationTypes = (ConfigHysteria1,)
-    coreTypes = (Hysteria1,)
+    kernelTypes = (Hysteria1,)
 
     def routingOptions(self, config=None):
         """Return the routing modes supported by Hysteria 1."""
@@ -47,25 +48,21 @@ class Hysteria1Backend(CoreBackend):
             for routing in AppBuiltinRouting
         )
 
-    def startCore(
-        self,
-        config,
-        routing,
-        exitCallback=None,
-        msgCallback=None,
-        proxyModeOnly=False,
-        log=True,
-        **kwargs,
-    ):
-        """Configure Hysteria 1 routing files and start its core."""
+    def create(self, request: KernelRequest):
+        """Configure routing and create a Hysteria 1 kernel launch."""
+        config, routing = (
+            request.configuration,
+            request.routing,
+        )
+
         if routing == AppBuiltinRouting.BypassMainlandChina.value:
-            if not proxyModeOnly and SystemRuntime.isTUNMode():
+            if not request.proxyModeOnly and SystemRuntime.isTUNMode():
                 # Defer Qt access until the application has finished importing it.
                 from Furious.Qt.QtWidgets import showMBoxDirectRulesNotAllowed
 
                 showMBoxDirectRulesNotAllowed()
 
-                return None, False
+                return None
 
             routingObject = {
                 'rule': DATA_DIR / 'hysteria' / 'bypass-mainland-China.acl',
@@ -79,20 +76,25 @@ class Hysteria1Backend(CoreBackend):
         else:
             routingObject = {'rule': '', 'mmdb': ''}
 
-        if log:
+        if request.log:
             logger.info(f'core {Hysteria1.name()} configured')
             logger.info(f'routing is {routing}')
             logger.info(f'RoutingObject: {routingObject}')
 
-        process = Hysteria1(exitCallback=exitCallback, msgCallback=msgCallback)
-        success = process.start(
-            config,
-            Hysteria1.rule(routingObject.get('rule', '')),
-            Hysteria1.mmdb(routingObject.get('mmdb', '')),
-            **kwargs,
+        process = Hysteria1(
+            exitCallback=request.exitCallback,
+            msgCallback=request.messageCallback,
         )
 
-        return process, success
+        return KernelLaunch(
+            process,
+            config,
+            arguments=(
+                Hysteria1.rule(routingObject.get('rule', '')),
+                Hysteria1.mmdb(routingObject.get('mmdb', '')),
+            ),
+            options=request.options,
+        )
 
     def prepareDownloadTest(self, config, port: int):
         """Create a Hysteria 1 configuration with one local HTTP proxy."""
@@ -121,10 +123,17 @@ class Hysteria1Backend(CoreBackend):
 class Hysteria1Plugin(FuriousPlugin):
     """Bundle official Hysteria 1 protocol and runtime capabilities."""
 
-    pluginId = 'official.hysteria1'
-    displayName = 'Hysteria1'
-    protocolHandlers = HYSTERIA1_PROTOCOL_HANDLERS
+    metadata = PluginMetadata(
+        'official.hysteria1',
+        'Hysteria1',
+        description='Official Hysteria 1 protocol, editor, and runtime support.',
+        provider='Furious',
+    )
 
     def __init__(self):
-        """Create an isolated Hysteria 1 backend instance for this plugin."""
-        self.coreBackends = (Hysteria1Backend(),)
+        """Create an isolated Hysteria 1 runtime factory."""
+        self.capabilities = (
+            *HYSTERIA1_PROTOCOL_HANDLERS,
+            *HYSTERIA1_PROTOCOL_EDITORS,
+            Hysteria1KernelFactory(),
+        )

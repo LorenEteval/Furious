@@ -23,7 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Domain import *
 from Furious.Repository import *
-from Furious.Plugins import getPluginRegistry
+from Furious.Plugins import CapabilityKind, getPluginRegistry
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 from Furious.Service import ConnectivityManager, UpdateManager
@@ -329,7 +329,7 @@ class MainWindow(AppQMainWindow):
                 list(
                     index
                     for index, server in enumerate(Storage.UserServers())
-                    if server.getExtras('subsId') == unique
+                    if server.itemSubscription == unique
                 ),
                 showProgress=False,
             ),
@@ -372,11 +372,22 @@ class MainWindow(AppQMainWindow):
         ]
 
         serverActions = []
+
         for descriptor in pluginRegistry.protocolDescriptors():
+            if (
+                not descriptor.addActionText
+                or pluginRegistry.editorForProtocol(descriptor.id) is None
+            ):
+                continue
+
             if descriptor.separatorBefore and serverActions:
                 serverActions.append(AppQSeperator())
 
-            actionText = _(descriptor.addActionText)
+            actionText = (
+                _(descriptor.addActionText)
+                if descriptor.translatable
+                else descriptor.addActionText
+            )
             serverActions.append(
                 AppQAction(
                     actionText,
@@ -483,11 +494,16 @@ class MainWindow(AppQMainWindow):
             ),
         ]
         systemTools = [*restartAsAdminAction, *openAppFolderAction]
+
         if systemTools:
             toolsActions.extend([AppQSeperator(), *systemTools])
 
         corePluginActions = []
-        for plugin in pluginRegistry.corePlugins():
+
+        for plugin in pluginRegistry.pluginsWithCapability(
+            CapabilityKind.KernelFactory
+        ):
+            pluginMetadata = pluginRegistry.metadataFor(plugin)
             managementActions = pluginRegistry.managementActions(
                 plugin,
                 parent=self,
@@ -496,7 +512,7 @@ class MainWindow(AppQMainWindow):
             if managementActions:
                 corePluginActions.append(
                     AppQAction(
-                        _(plugin.displayName),
+                        pluginMetadata.displayName,
                         menu=AppQMenu(*managementActions),
                         useActionGroup=False,
                         checkable=False,
@@ -505,7 +521,36 @@ class MainWindow(AppQMainWindow):
             else:
                 corePluginActions.append(
                     AppQAction(
-                        _(plugin.displayName),
+                        pluginMetadata.displayName,
+                        checkable=False,
+                    )
+                )
+
+        extensionPluginActions = []
+
+        corePlugins = set(
+            pluginRegistry.pluginsWithCapability(CapabilityKind.KernelFactory)
+        )
+
+        for plugin in pluginRegistry.pluginsWithCapability(
+            CapabilityKind.ActionProvider
+        ):
+            if plugin in corePlugins:
+                continue
+
+            managementActions = pluginRegistry.managementActions(
+                plugin,
+                parent=self,
+                isCoreActive=_isCoreActive,
+            )
+
+            if managementActions:
+                pluginMetadata = pluginRegistry.metadataFor(plugin)
+                extensionPluginActions.append(
+                    AppQAction(
+                        pluginMetadata.displayName,
+                        menu=AppQMenu(*managementActions),
+                        useActionGroup=False,
                         checkable=False,
                     )
                 )
@@ -516,8 +561,19 @@ class MainWindow(AppQMainWindow):
                 menu=AppQMenu(*corePluginActions),
                 useActionGroup=False,
                 checkable=False,
-            )
+            ),
         ]
+
+        if extensionPluginActions:
+            pluginActions.append(
+                AppQAction(
+                    _('Extensions'),
+                    menu=AppQMenu(*extensionPluginActions),
+                    useActionGroup=False,
+                    checkable=False,
+                )
+            )
+
         pluginsToolbarActions = [
             AppQSeperator(),
             AppQAction(
@@ -714,11 +770,11 @@ class MainWindow(AppQMainWindow):
         """Update subs by unique."""
         self.userServersQTableWidget.updateSubsByUnique(unique, httpProxy, **kwargs)
 
-    def appendNewItemByFactory(self, factory: ConfigFactory):
+    def appendNewItemByFactory(self, factory: ConfigFactory | ServerProfile):
         """Append new item by factory."""
         self.userServersQTableWidget.appendNewItemByFactory(factory)
 
-    def flushRow(self, row: int, item: ConfigFactory):
+    def flushRow(self, row: int, item: ServerProfile):
         """Refresh row."""
         self.userServersQTableWidget.flushRow(row, item)
 

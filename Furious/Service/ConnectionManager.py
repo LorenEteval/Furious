@@ -79,7 +79,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
         self.uniqueCleanup = False
         self.processesPool = list()
 
-    def _startCore(
+    def _startKernel(
         self,
         config,
         routing,
@@ -89,19 +89,12 @@ class ConnectionManager(Mixins.CleanupOnExit):
         log=True,
         **kwargs,
     ) -> Tuple[Union[CoreProcessWorker, None], bool]:
-        """Start a configuration through the backend that owns it."""
-        pluginRegistry = getPluginRegistry()
-        backend = pluginRegistry.backendForConfig(config)
-        if backend is None:
-            return None, False
-
-        routing = pluginRegistry.normalizeRouting(config, routing)
-
-        return backend.startCore(
+        """Construct and start the runtime kernel selected for a configuration."""
+        return getPluginRegistry().startKernel(
             config,
             routing,
             exitCallback=exitCallback,
-            msgCallback=msgCallback,
+            messageCallback=msgCallback,
             proxyModeOnly=proxyModeOnly,
             log=log,
             **kwargs,
@@ -126,7 +119,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
     def start(
         self,
-        config: ConfigFactory,
+        config: ConfigFactory | ServerProfile,
         routing: str,
         exitCallback=None,
         msgCallbackCore=None,
@@ -155,7 +148,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
         if not proxyModeOnly and SystemRuntime.isTUNMode():
             pluginTUN = getPluginRegistry().prepareTUN(configcopy)
 
-        process, success = self._startCore(
+        process, success = self._startKernel(
             configcopy,
             routing,
             exitCallback,

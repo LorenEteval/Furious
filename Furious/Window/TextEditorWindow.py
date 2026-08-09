@@ -296,7 +296,8 @@ class TextEditorWindow(AppQMainWindow):
             return False
         else:
             old = Storage.UserServers()[index]
-            new = configurationFromMapping(jsonObject, **old.kwargs)
+            connection = configurationFromMapping(jsonObject)
+            new = old.replaceConnection(connection)
 
             old.deleted = True
 

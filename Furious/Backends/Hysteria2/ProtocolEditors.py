@@ -15,23 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose official backend plugin types without importing runtimes eagerly."""
+"""Provide the lazily imported Hysteria 2 protocol editor."""
 
 from __future__ import annotations
 
-__all__ = ['OFFICIAL_PLUGIN_TYPES']
+from Furious.Plugins.API import ProtocolEditorProvider
+
+__all__ = ['HYSTERIA2_PROTOCOL_EDITORS']
 
 
-def __getattr__(name: str):
-    """Load official plugin types only when the application requests them."""
-    if name != 'OFFICIAL_PLUGIN_TYPES':
-        raise AttributeError(name)
+class Hysteria2ProtocolEditor(ProtocolEditorProvider):
+    """Create the Hysteria 2 editor on demand."""
 
-    from .Hysteria1.Plugin import Hysteria1Plugin
-    from .Hysteria2.Plugin import Hysteria2Plugin
-    from .Xray.Plugin import XrayPlugin
+    editorId = 'official.hysteria2.editor'
+    protocolIds = ('hysteria2',)
 
-    pluginTypes = (XrayPlugin, Hysteria1Plugin, Hysteria2Plugin)
-    globals()[name] = pluginTypes
+    def createEditor(self, protocolId: str, parent=None, **kwargs):
+        """Create the Hysteria 2 editor."""
+        from .Editor import Hysteria2Editor
 
-    return pluginTypes
+        return Hysteria2Editor(parent=parent, **kwargs)
+
+
+HYSTERIA2_PROTOCOL_EDITORS = (Hysteria2ProtocolEditor(),)

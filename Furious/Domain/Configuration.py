@@ -15,11 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Define the core-neutral configuration profile model."""
+"""Define the core-neutral connection-document model."""
 
 from __future__ import annotations
-
-from Furious.Interface.Server import ServerTableItem
 
 from typing import Union
 
@@ -32,7 +30,7 @@ __all__ = [
 ]
 
 
-class ConfigFactory(ServerTableItem, dict):
+class ConfigFactory(dict):
     """
     ConfigurationFactory is how Furious sees the core config.
 
@@ -41,19 +39,13 @@ class ConfigFactory(ServerTableItem, dict):
       2. string -- from URI or (valid) JSON string
     """
 
-    def __init__(self, config: Union[str, dict] = '', **kwargs):
+    def __init__(self, config: Union[str, dict] = ''):
         """
         Constructs a ConfigurationFactory. The constructor
         never throws exception
 
         :param config: The input configuration. Can be a string or dict
         """
-
-        self._index = kwargs.pop('index', 0)
-        self._deleted = kwargs.pop('deleted', False)
-
-        # Extra attributes
-        self.kwargs = kwargs
 
         self._init_dispatch(config)
 
@@ -110,58 +102,6 @@ class ConfigFactory(ServerTableItem, dict):
         """Return whether valid."""
         return bool(self)
 
-    def getExtras(self, item):
-        """Return non-core metadata associated with the configuration."""
-        return self.kwargs.get(item, '')
-
-    def setExtras(self, item, value):
-        """Store non-core metadata associated with the configuration."""
-        self.kwargs[item] = value
-
-    @property
-    def index(self) -> int:
-        """Return the index value."""
-        return self._index
-
-    @index.setter
-    def index(self, value: int):
-        """Set the index value."""
-        assert isinstance(value, int)
-
-        self._index = value
-
-    @property
-    def deleted(self) -> bool:
-        """Return the deleted value."""
-        return self._deleted
-
-    @deleted.setter
-    def deleted(self, value: bool):
-        """Set the deleted value."""
-        assert isinstance(value, bool)
-
-        self._deleted = value
-
-    @property
-    def itemRemark(self) -> str:
-        """Return the item remark value."""
-        return self.getExtras('remark')
-
-    @property
-    def itemSubscription(self) -> str:
-        """Return the persisted subscription identifier."""
-        return self.getExtras('subsId') or ''
-
-    @property
-    def itemLatency(self) -> str:
-        """Return the item latency value."""
-        return self.getExtras('delayResult')
-
-    @property
-    def itemSpeed(self) -> str:
-        """Return the item speed value."""
-        return self.getExtras('speedResult')
-
     def toJSONString(self, **kwargs) -> str:
         """
         Converts self to a JSON string
@@ -187,15 +127,6 @@ class ConfigFactory(ServerTableItem, dict):
 
             # '' is invalid
             return ''
-
-    def toStorageObject(self) -> dict:
-        """Build the persisted representation of the configuration."""
-        if self.kwargs.get('remark') is None:
-            # compatibility: remark field is mandatory in previous application version
-            self.kwargs['remark'] = ''
-
-        # self.toJSONString() is used to maintain backward compatibility
-        return {'config': self.toJSONString(), **self.kwargs}
 
     def toURI(self, remark: str = '') -> str:
         """

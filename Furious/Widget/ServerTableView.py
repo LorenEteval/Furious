@@ -24,14 +24,18 @@ from Furious.Interface import *
 from Furious.Domain import *
 from Furious.Repository import *
 from Furious.Plugins import (
-    blankConfiguration,
-    configurationFromAny,
+    blankProfile,
     exportConfiguration,
     getPluginRegistry,
+    profileFromAny,
 )
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Service import ConnectionManager
+from Furious.Service import (
+    ConnectionManager,
+    SubscriptionImportService,
+    SubscriptionSource,
+)
 from Furious.Widget.WaitingSpinner import *
 
 from PySide6 import QtCore
@@ -152,6 +156,8 @@ class SubscriptionManager(WebGETManager):
 
         super().__init__(parent, actionMessage=actionMessage, mustCallOnce=False)
 
+        self.importer = SubscriptionImportService()
+
     def handleItemDeletionAndInsertion(self, **kwargs):
         """Handle item deletion and insertion."""
         successArgs = kwargs.pop('successArgs', list())
@@ -159,7 +165,7 @@ class SubscriptionManager(WebGETManager):
         showMessageBox = kwargs.pop('showMessageBox', True)
 
         for param in successArgs:
-            items, unique = param['items'], param['unique']
+            profiles, unique = param['profiles'], param['unique']
 
             parent = self.parent()
 
@@ -169,7 +175,7 @@ class SubscriptionManager(WebGETManager):
                 subsIndexes = list(
                     index
                     for index, server in enumerate(Storage.UserServers())
-                    if server.getExtras('subsId') == unique
+                    if server.itemSubscription == unique
                 )
 
                 subsGroupIndex = -1
@@ -178,7 +184,7 @@ class SubscriptionManager(WebGETManager):
                 if activatedIndex in subsIndexes:
                     for index, server in enumerate(Storage.UserServers()):
                         if index <= activatedIndex:
-                            if server.getExtras('subsId') == unique:
+                            if server.itemSubscription == unique:
                                 subsGroupIndex += 1
                         else:
                             break
@@ -191,18 +197,8 @@ class SubscriptionManager(WebGETManager):
 
                 remaining = len(Storage.UserServers())
 
-                for item in items:
-                    profile = (
-                        item.configuration
-                        if item.configuration is not None
-                        else item.uri
-                    )
-                    itemArgs = {'remark': item.name} if item.name else {}
-                    parent.appendNewItem(
-                        config=profile,
-                        subsId=unique,
-                        **itemArgs,
-                    )
+                for profile in profiles:
+                    parent.appendNewItemByFactory(profile)
 
                 if subsGroupIndex >= 0:
                     newIndex = remaining + subsGroupIndex
@@ -248,18 +244,24 @@ class SubscriptionManager(WebGETManager):
         failureArgs = kwargs.get('failureArgs', list())
 
         data = bytes(networkReply.readAll().data())
-        decoderId = kwargs.get('decoderId')
-        result = getPluginRegistry().decodeSubscription(data, decoderId)
+        source = SubscriptionSource(
+            kwargs.get('unique', ''),
+            webURL,
+            remark,
+            kwargs.get('decoderId'),
+        )
+        result = self.importer.importPayload(data, source)
 
-        if result is None:
+        if result is None or not result.profiles:
             failureArgs.append({'error': 'UnsupportedSubscriptionFormat', **kwargs})
         else:
             logger.info(
                 f'update subs ({remark}, {webURL}) success. '
-                f'Got {len(result.items)} profiles from {result.decoderId!r}'
+                f'Got {len(result.profiles)} profiles from {result.decoderId!r}; '
+                f'rejected {result.rejectedItems}'
             )
 
-            successArgs.append({'items': result.items, **kwargs})
+            successArgs.append({'profiles': result.profiles, **kwargs})
 
     def failureCallback(self, networkReply, **kwargs):
         """Handle a failed network operation."""
@@ -332,7 +334,7 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
 
     finished = QtCore.Signal()
 
-    def __init__(self, factory: ConfigFactory):
+    def __init__(self, factory: ServerProfile):
         # Explictly called __init__
         """Initialize the TestPingLatencyWorker."""
         QtCore.QObject.__init__(self)
@@ -348,7 +350,7 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
             # Invalid item. Do nothing
             return
 
-        assert isinstance(self.factory, ConfigFactory)
+        assert isinstance(self.factory, ServerProfile)
 
         try:
             result = icmplib.ping(
@@ -360,16 +362,16 @@ class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
         except Exception as ex:
             # Any non-exit exceptions
 
-            self.factory.setExtras('delayResult', classname(ex))
+            self.factory.metadata.latency = classname(ex)
         else:
             # Result address should not be empty
             if result.address and result.is_alive:
-                self.factory.setExtras('delayResult', f'{round(result.avg_rtt)}ms')
+                self.factory.metadata.latency = f'{round(result.avg_rtt)}ms'
             else:
                 if result.packet_loss == 1:
-                    self.factory.setExtras('delayResult', 'Timeout')
+                    self.factory.metadata.latency = 'Timeout'
                 else:
-                    self.factory.setExtras('delayResult', 'Error')
+                    self.factory.metadata.latency = 'Error'
         finally:
             # Extra guard
             if not appIsExiting():
@@ -381,7 +383,7 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
 
     finished = QtCore.Signal()
 
-    def __init__(self, factory: ConfigFactory):
+    def __init__(self, factory: ServerProfile):
         # Explictly called __init__
         """Initialize the TestTcpingLatencyWorker."""
         QtCore.QObject.__init__(self)
@@ -397,7 +399,7 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
             # Invalid item. Do nothing
             return
 
-        assert isinstance(self.factory, ConfigFactory)
+        assert isinstance(self.factory, ServerProfile)
 
         try:
             sent, rtts = tcping(
@@ -410,12 +412,12 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
         except Exception as ex:
             # Any non-exit exceptions
 
-            self.factory.setExtras('delayResult', classname(ex))
+            self.factory.metadata.latency = classname(ex)
         else:
             if rtts:
-                self.factory.setExtras('delayResult', f'{round(rtts[0] * 1000)}ms')
+                self.factory.metadata.latency = f'{round(rtts[0] * 1000)}ms'
             else:
-                self.factory.setExtras('delayResult', 'Timeout')
+                self.factory.metadata.latency = 'Timeout'
         finally:
             # Extra guard
             if not appIsExiting():
@@ -430,7 +432,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
     def __init__(
         self,
-        factory: ConfigFactory,
+        factory: ServerProfile,
         port: int,
         timeout: int,
         parent=None,
@@ -495,15 +497,15 @@ class TestDownloadSpeedWorker(WebGETManager):
         """Handle the core exit callback."""
         try:
             if exitcode == CoreProcess.ExitCode.ConfigurationError.value:
-                self.factory.setExtras('speedResult', f'Invalid')
+                self.factory.metadata.speed = 'Invalid'
                 self.sync()
             elif exitcode == CoreProcess.ExitCode.ServerStartFailure.value:
-                self.factory.setExtras('speedResult', f'Core start failed')
+                self.factory.metadata.speed = 'Core start failed'
                 self.sync()
             elif exitcode == CoreProcess.ExitCode.SystemShuttingDown.value:
                 pass
             else:
-                self.factory.setExtras('speedResult', f'Core exited {exitcode}')
+                self.factory.metadata.speed = f'Core exited {exitcode}'
                 self.sync()
         finally:
             self.must()
@@ -518,23 +520,16 @@ class TestDownloadSpeedWorker(WebGETManager):
 
             pass
 
-    def _startCore(self, config) -> bool:
-        """Prepare and start a download test through the owning backend."""
-        backend = getPluginRegistry().backendForConfig(config)
-        if backend is None:
-            self.factory.setExtras('speedResult', 'Invalid')
-            self.sync()
-
-            return False
-
-        configcopy = backend.prepareDownloadTest(config, self.port)
+    def _startKernel(self, config) -> bool:
+        """Prepare and start a download test through its runtime factory."""
+        configcopy = getPluginRegistry().prepareDownloadTest(config, self.port)
         if configcopy is None:
-            self.factory.setExtras('speedResult', 'Invalid')
+            self.factory.metadata.speed = 'Invalid'
             self.sync()
 
             return False
 
-        self.factory.setExtras('speedResult', 'Starting')
+        self.factory.metadata.speed = 'Starting'
         self.sync()
 
         return self.coreManager.start(
@@ -559,14 +554,14 @@ class TestDownloadSpeedWorker(WebGETManager):
                 # Invalid item. Do nothing
                 return
 
-            assert isinstance(self.factory, ConfigFactory)
+            assert isinstance(self.factory, ServerProfile)
 
             if not self.factory.isValid():
                 # Configuration is invalid
-                self.factory.setExtras('speedResult', 'Invalid')
+                self.factory.metadata.speed = 'Invalid'
                 self.sync()
             else:
-                if not self._startCore(self.factory) or appIsExiting():
+                if not self._startKernel(self.factory) or appIsExiting():
                     return
 
                 self.configureHttpProxy(f'127.0.0.1:{self.port}')
@@ -596,9 +591,9 @@ class TestDownloadSpeedWorker(WebGETManager):
             elapsedSecond = self.elapsedTimer.elapsed() / 1000
             downloadSpeed = self.totalBytesRead / elapsedSecond / 1024 / 1024
 
-            self.factory.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
+            self.factory.metadata.speed = f'{downloadSpeed:.2f} MiB/s'
         else:
-            self.factory.setExtras('speedResult', f'Core start failed')
+            self.factory.metadata.speed = 'Core start failed'
 
         self.coreManager.stopAll()
         self.sync()
@@ -616,7 +611,7 @@ class TestDownloadSpeedWorker(WebGETManager):
 
             # Has speed test result
             self.hasSpeedResult = True
-            self.factory.setExtras('speedResult', f'{downloadSpeed:.2f} MiB/s')
+            self.factory.metadata.speed = f'{downloadSpeed:.2f} MiB/s'
 
             # Limited to save CPU resources
             if self.hasDataCounter % 25 == 0:
@@ -634,7 +629,7 @@ class TestDownloadSpeedWorker(WebGETManager):
                 == QNetworkReply.NetworkError.OperationCanceledError
             ):
                 # Canceled by application
-                self.factory.setExtras('speedResult', 'Canceled')
+                self.factory.metadata.speed = 'Canceled'
             else:
                 try:
                     error = networkReply.error().name
@@ -652,9 +647,9 @@ class TestDownloadSpeedWorker(WebGETManager):
                     error = 'UnknownError'
 
                 if error != 'UnknownError' and error.endswith('Error'):
-                    self.factory.setExtras('speedResult', error[:-5])
+                    self.factory.metadata.speed = error[:-5]
                 else:
-                    self.factory.setExtras('speedResult', error)
+                    self.factory.metadata.speed = error
 
         self.coreManager.stopAll()
         self.sync()
@@ -666,7 +661,7 @@ class DownloadSpeedTestJob:
     def __init__(
         self,
         index: int,
-        factory: ConfigFactory,
+        factory: ServerProfile,
         timeout: int,
         logActionMessage=False,
     ):
@@ -703,7 +698,7 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
     def enqueue(
         self,
         index: int,
-        factory: ConfigFactory,
+        factory: ServerProfile,
         timeout: int,
         logActionMessage=False,
     ):
@@ -753,7 +748,7 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
         while self.queue and len(self.activeJobs) < self.maxConcurrency:
             job = self.queue.popleft()
 
-            assert isinstance(job.factory, ConfigFactory)
+            assert isinstance(job.factory, ServerProfile)
 
             if job.factory.deleted:
                 continue
@@ -947,7 +942,7 @@ class DeleteServersProgressDialog(AppQDialog):
 
         factory = Storage.UserServers()[deleteIndex]
 
-        self.currentRemark = self.limitedRemark(factory.getExtras('remark'))
+        self.currentRemark = self.limitedRemark(factory.itemRemark)
 
         if originalIndex == Storage.UserActivatedItemIndex():
             self.deletedActivated = True
@@ -1030,7 +1025,7 @@ class ServerTableColumn:
         self.name = name
         self.func = func
 
-    def __call__(self, item: ConfigFactory) -> str:
+    def __call__(self, item: ServerProfile) -> str:
         """Invoke the user servers Qt table view headers as a callable."""
         if callable(self.func):
             return self.func(item)
@@ -1046,7 +1041,7 @@ class ServerTableColumn:
         return self.name
 
 
-def _subscriptionRemark(item: ConfigFactory) -> str:
+def _subscriptionRemark(item: ServerProfile) -> str:
     """Resolve a persisted subscription ID to its user-visible remark."""
     subscription = Storage.UserSubs().get(item.itemSubscription, {})
 
@@ -1223,7 +1218,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
 
         header = self.headers[column]
 
-        def keyFn(factory: ConfigFactory):
+        def keyFn(factory: ServerProfile):
             """Return the key fn value used by the user servers table model."""
             data = header(factory)
 
@@ -1827,7 +1822,7 @@ class ServerTableView(
 
             return
 
-        guiEditor.setWindowTitle(f'{index + 1} - ' + factory.getExtras('remark'))
+        guiEditor.setWindowTitle(f'{index + 1} - ' + factory.itemRemark)
 
         try:
             guiEditor.factoryToInput(factory)
@@ -1856,7 +1851,7 @@ class ServerTableView(
         self,
         editor: GuiEditorWidgetQDialog,
         index: int,
-        factory: ConfigFactory,
+        factory: ServerProfile,
     ):
         """Handle GUI editor accepted."""
         logger.debug(f'guiEditor accepted with index {index}')
@@ -1907,7 +1902,7 @@ class ServerTableView(
         self.sourceModel.emitRowChanged(oldIndex)
         self.sourceModel.emitRowChanged(index)
 
-    def flushItem(self, row: int, column: int, item: ConfigFactory):
+    def flushItem(self, row: int, column: int, item: ServerProfile):
         """Refresh item."""
         itemIndex = item.index
 
@@ -1972,7 +1967,7 @@ class ServerTableView(
         **kwargs,
     ):
         """Add server via GUI."""
-        factory = blankConfiguration(protocol)
+        factory = blankProfile(protocol)
 
         guiEditor = self.getGuiEditorByFactory(factory, **kwargs)
 
@@ -2007,7 +2002,7 @@ class ServerTableView(
     def handleAddServerViaGuiAccepted(
         self,
         editor: GuiEditorWidgetQDialog,
-        factory: ConfigFactory,
+        factory: ServerProfile,
     ):
         """Handle add server via GUI accepted."""
         editor.inputToFactory(factory)
@@ -2022,7 +2017,7 @@ class ServerTableView(
         editor.accepted.disconnect()
         editor.rejected.disconnect()
 
-    def flushRow(self, row: int, item: ConfigFactory):
+    def flushRow(self, row: int, item: ServerProfile):
         """Refresh row."""
         itemIndex = item.index
 
@@ -2135,7 +2130,7 @@ class ServerTableView(
 
                 # Do not clone subsId
                 self.appendNewItem(
-                    remark=deepcopy.getExtras('remark'),
+                    remark=deepcopy.itemRemark,
                     config=deepcopy,
                 )
 
@@ -2231,9 +2226,9 @@ class ServerTableView(
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         mbox.isMulti = bool(len(indexes) > 1)
-        mbox.possibleRemark = f'{indexes[0] + 1} - ' + Storage.UserServers()[
-            indexes[0]
-        ].getExtras('remark')
+        mbox.possibleRemark = (
+            f'{indexes[0] + 1} - ' + Storage.UserServers()[indexes[0]].itemRemark
+        )
         mbox.setText(mbox.customText())
         mbox.finished.connect(functools.partial(handleResultCode, indexes))
 
@@ -2253,7 +2248,7 @@ class ServerTableView(
             return
 
         index = indexes[0]
-        title = f'{index + 1} - ' + Storage.UserServers()[index].getExtras('remark')
+        title = f'{index + 1} - ' + Storage.UserServers()[index].itemRemark
 
         self.configurationEditor.currentIndex = index
         self.configurationEditor.customWindowTitle = title
@@ -2288,7 +2283,7 @@ class ServerTableView(
             self.setCurrentIndex(activatedItem)
             self.scrollTo(activatedItem)
 
-    def rowFromFactory(self, fallbackIndex: int, factory: ConfigFactory) -> int:
+    def rowFromFactory(self, fallbackIndex: int, factory: ServerProfile) -> int:
         """Return the row from factory value."""
         if (
             0 <= factory.index < len(Storage.UserServers())
@@ -2308,7 +2303,7 @@ class ServerTableView(
 
         return -1
 
-    def flushDownloadSpeedItem(self, fallbackIndex: int, factory: ConfigFactory):
+    def flushDownloadSpeedItem(self, fallbackIndex: int, factory: ServerProfile):
         """Refresh download speed item."""
         index = self.rowFromFactory(fallbackIndex, factory)
 
@@ -2332,7 +2327,7 @@ class ServerTableView(
             if appIsExiting():
                 break
 
-            assert isinstance(reference, ConfigFactory)
+            assert isinstance(reference, ServerProfile)
 
             if reference.deleted:
                 continue
@@ -2365,7 +2360,7 @@ class ServerTableView(
             if appIsExiting():
                 break
 
-            assert isinstance(reference, ConfigFactory)
+            assert isinstance(reference, ServerProfile)
 
             if reference.deleted:
                 continue
@@ -2386,7 +2381,7 @@ class ServerTableView(
     def testDownloadSpeedByFactory(
         self,
         index: int,
-        factory: ConfigFactory,
+        factory: ServerProfile,
         port: int,
         timeout: int,
         isMulti: bool,
@@ -2453,8 +2448,8 @@ class ServerTableView(
 
         for index in indexes:
             factory = Storage.UserServers()[index]
-            factory.setExtras('delayResult', '')
-            factory.setExtras('speedResult', '')
+            factory.metadata.latency = ''
+            factory.metadata.speed = ''
 
             self.flushItem(index, self.Headers.index('Latency'), factory)
             self.flushItem(index, self.Headers.index('Speed'), factory)
@@ -2476,8 +2471,9 @@ class ServerTableView(
         self.subsManager.configureHttpProxy(httpProxy)
         self.subsManager.updateSubs(**kwargs)
 
-    def appendNewItemByFactory(self, factory: ConfigFactory):
+    def appendNewItemByFactory(self, factory: ConfigFactory | ServerProfile):
         """Append new item by factory."""
+        factory = ensureProfile(factory)
         index = len(Storage.UserServers())
 
         # Set index
@@ -2512,7 +2508,7 @@ class ServerTableView(
         }
         tostr = f'{model}'
 
-        factory = configurationFromAny(model.pop('config', ''), **model)
+        factory = profileFromAny(model.pop('config', ''), **model)
 
         if factory.isValid():
             self.appendNewItemByFactory(factory)
@@ -2532,7 +2528,7 @@ class ServerTableView(
 
         def toURI(factory) -> str:
             """Export the configuration as a share URI."""
-            assert isinstance(factory, ConfigFactory)
+            assert isinstance(factory, ServerProfile)
 
             try:
                 return exportConfiguration(factory)

@@ -227,7 +227,7 @@ class ConnectAction(AppQAction):
 
             self.setChecked(False)
         else:
-            assert isinstance(config, ConfigFactory)
+            assert isinstance(config, ServerProfile)
 
             @forceToLocalhostIfPossible()
             def getHttpProxy() -> str:
