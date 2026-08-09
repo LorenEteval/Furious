@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from .Application import Application
-from .SystemTrayIcon import SystemTrayIcon
+from .DesktopApplication import DesktopApplication
+from .TrayIcon import TrayIcon
 
-__all__ = ['Application', 'SystemTrayIcon']
+__all__ = ['DesktopApplication', 'TrayIcon']

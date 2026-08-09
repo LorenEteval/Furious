@@ -1,0 +1,377 @@
+# Copyright (C) 2024–present  Loren Eteval & contributors <loren.eteval@proton.me>
+#
+# This file is part of Furious.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+"""Provide widgets for GUI VLESS."""
+
+from __future__ import annotations
+
+from Furious.Frozenlib import *
+from Furious.Interface import *
+from Furious.Domain import *
+from Furious.Qt import *
+from Furious.Qt import gettext as _
+from Furious.Backends.Configuration import *
+from Furious.Backends.Xray.TlsEditor import *
+from Furious.Backends.Xray.TransportEditor import *
+
+from PySide6.QtWidgets import *
+
+import uuid
+import functools
+
+__all__ = ['VlessEditor']
+
+getProxyOutboundServer = functools.partial(
+    ConfigXray.getProxyOutboundServer,
+    protocol=Protocol.VLESS,
+    default=configXrayEmptyProxyOutboundObject(Protocol.VLESS),
+)
+
+getProxyOutboundUser = functools.partial(
+    ConfigXray.getProxyOutboundUser,
+    protocol=Protocol.VLESS,
+    default=configXrayEmptyProxyOutboundObject(Protocol.VLESS),
+)
+
+
+class GuiVLESSItemBasicAddress(GuiEditorItemTextInput):
+    """Represent GUI VLESS item basic address."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESSItemBasicAddress."""
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
+        proxyOutboundServer = getProxyOutboundServer(config)
+
+        oldAddress = proxyOutboundServer.get('address', '')
+        newAddress = self.text()
+
+        if isinstance(oldAddress, str):
+            if newAddress != oldAddress:
+                if newAddress == '':
+                    # Remove field
+                    proxyOutboundServer.pop('address', None)
+                else:
+                    proxyOutboundServer['address'] = newAddress
+
+                return True
+            else:
+                return False
+        else:
+            proxyOutboundServer['address'] = newAddress
+
+            return True
+
+    def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
+        try:
+            proxyOutboundServer = getProxyOutboundServer(config)
+
+            self.setText(proxyOutboundServer.get('address', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
+class GuiVLESSItemBasicPort(GuiEditorItemTextSpinBox):
+    """Represent GUI VLESS item basic port."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESSItemBasicPort."""
+        super().__init__(*args, **kwargs)
+
+        # Range
+        self.setRange(0, 65535)
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
+        proxyOutboundServer = getProxyOutboundServer(config)
+
+        oldPort = proxyOutboundServer.get('port')
+        newPort = self.value()
+
+        if isinstance(oldPort, int):
+            if newPort != oldPort:
+                proxyOutboundServer['port'] = newPort
+
+                return True
+            else:
+                return False
+        else:
+            proxyOutboundServer['port'] = newPort
+
+            return True
+
+    def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
+        try:
+            proxyOutboundServer = getProxyOutboundServer(config)
+
+            self.setValue(proxyOutboundServer.get('port', 0))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setValue(0)
+
+
+class GuiVLESSItemBasicId(GuiEditorItemTextInput):
+    """Represent GUI VLESS item basic id."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESSItemBasicId."""
+        super().__init__(*args, **kwargs)
+
+        self.generateButton = AppQPushButton(_('Generate'))
+        self.generateButton.clicked.connect(self.generateUUID)
+
+        self._widget = QWidget()
+
+        layout = QHBoxLayout(self._widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._input)
+        layout.addWidget(self.generateButton)
+
+    def generateUUID(self):
+        """Handle generate uuid for the GUI VLESS item basic id."""
+        self.setText(str(uuid.uuid4()))
+
+    def widgets(self):
+        """Return the widgets owned by this editor item."""
+        return self._title, self._widget
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
+        proxyOutboundUser = getProxyOutboundUser(config)
+
+        oldId = proxyOutboundUser.get('id', '')
+        newId = self.text()
+
+        if isinstance(oldId, str):
+            if newId != oldId:
+                if newId == '':
+                    # Remove field
+                    proxyOutboundUser.pop('id', None)
+                else:
+                    proxyOutboundUser['id'] = newId
+
+                return True
+            else:
+                return False
+        else:
+            proxyOutboundUser['id'] = newId
+
+            return True
+
+    def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
+        try:
+            proxyOutboundUser = getProxyOutboundUser(config)
+
+            self.setText(proxyOutboundUser.get('id', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
+class GuiVLESSItemBasicEncryption(GuiEditorItemTextInput):
+    """Represent GUI VLESS item basic encryption."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESSItemBasicEncryption."""
+        super().__init__(*args, **kwargs)
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
+        proxyOutboundUser = getProxyOutboundUser(config)
+
+        oldEncryption = proxyOutboundUser.get('encryption', '')
+        newEncryption = self.text()
+
+        if isinstance(oldEncryption, str):
+            if newEncryption != oldEncryption:
+                if newEncryption == '':
+                    # Remove field
+                    proxyOutboundUser.pop('encryption', None)
+                else:
+                    proxyOutboundUser['encryption'] = newEncryption
+
+                return True
+            else:
+                return False
+        else:
+            proxyOutboundUser['encryption'] = newEncryption
+
+            return True
+
+    def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
+        try:
+            proxyOutboundUser = getProxyOutboundUser(config)
+
+            self.setText(proxyOutboundUser.get('encryption', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
+class GuiVLESSItemBasicFlow(GuiEditorItemTextComboBox):
+    """Represent GUI VLESS item basic flow."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the GuiVLESSItemBasicFlow."""
+        super().__init__(*args, **kwargs)
+
+        self.addItems(
+            [
+                '',
+                'none',
+                'xtls-rprx-vision',
+                'xtls-rprx-vision-udp443',
+            ]
+        )
+
+    def inputToFactory(self, config: ConfigFactory) -> bool:
+        """Apply the current editor value to the configuration."""
+        proxyOutboundUser = getProxyOutboundUser(config)
+
+        oldFlow = proxyOutboundUser.get('flow', '')
+        newFlow = self.text()
+
+        if isinstance(oldFlow, str):
+            if newFlow != oldFlow:
+                proxyOutboundUser['flow'] = newFlow
+
+                return True
+            else:
+                return False
+        else:
+            proxyOutboundUser['flow'] = newFlow
+
+            return True
+
+    def factoryToInput(self, config: ConfigFactory):
+        """Load the configuration value into the editor."""
+        try:
+            proxyOutboundUser = getProxyOutboundUser(config)
+
+            self.setText(proxyOutboundUser.get('flow', ''))
+        except Exception:
+            # Any non-exit exceptions
+
+            self.setText('')
+
+
+class GuiVLESSGroupBoxBasic(GuiEditorWidgetQGroupBox):
+    """Represent GUI VLESS group box basic."""
+
+    def __init__(self, **kwargs):
+        """Initialize the GuiVLESSGroupBoxBasic."""
+        super().__init__(_('Basic Configuration'), **kwargs)
+
+    def setupPageLayout(self):
+        """Set up page layout."""
+        layout = QGridLayout()
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(3, 1)
+
+        def keepSpinBoxCompact(widget: QWidget):
+            """Handle keep spin box compact for the GUI VLESS group box basic."""
+            if isinstance(widget, QSpinBox):
+                widget.setSizePolicy(
+                    QSizePolicy.Policy.Fixed,
+                    widget.sizePolicy().verticalPolicy(),
+                )
+
+        def addPair(index: int, row: int, column: int):
+            """Add pair."""
+            label, inputWidget = self._containers[index].widgets()
+
+            keepSpinBoxCompact(inputWidget)
+
+            layout.addWidget(label, row, column)
+            layout.addWidget(inputWidget, row, column + 1)
+
+        def addFullRow(index: int, row: int):
+            """Add full row."""
+            label, inputWidget = self._containers[index].widgets()
+
+            keepSpinBoxCompact(inputWidget)
+
+            layout.addWidget(label, row, 0)
+            layout.addWidget(inputWidget, row, 1, 1, 3)
+
+        addFullRow(0, 0)
+        addFullRow(1, 1)
+        addFullRow(2, 2)
+        addFullRow(3, 3)
+        addPair(4, 4, 0)
+        addPair(5, 4, 2)
+
+        layout.setRowStretch(5, 1)
+
+        return layout
+
+    def containerSequence(self):
+        """Return the editor item containers in display order."""
+        return [
+            GuiEditorItemBasicRemark(title=_('Remark')),
+            GuiVLESSItemBasicAddress(title=_('Address')),
+            GuiVLESSItemBasicPort(title=_('Port')),
+            GuiVLESSItemBasicId(title='Id', translatable=False),
+            GuiVLESSItemBasicEncryption(title=_('Encryption')),
+            GuiVLESSItemBasicFlow(title=_('Flow')),
+        ]
+
+
+class GuiVLESSGroupBoxProxy(GuiEditorWidgetQGroupBox):
+    """Represent GUI VLESS group box proxy."""
+
+    def __init__(self, **kwargs):
+        """Initialize the GuiVLESSGroupBoxProxy."""
+        super().__init__(_('Proxy'), **kwargs)
+
+    def containerSequence(self):
+        """Return the editor item containers in display order."""
+        return [
+            GuiEditorItemProxyHttp(title='http', translatable=False),
+            GuiEditorItemProxySocks(title='socks', translatable=False),
+        ]
+
+
+class VlessEditor(GuiEditorWidgetQDialog):
+    """Represent GUI VLESS."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the VLESS configuration editor."""
+        super().__init__(*args, **kwargs)
+
+        self.setTabText(Protocol.VLESS.value)
+
+    @functools.lru_cache(None)
+    def groupBoxSequence(self):
+        """Return the configuration group boxes in display order."""
+        return [
+            GuiVLESSGroupBoxBasic(),
+            GuiVLESSGroupBoxProxy(),
+            GuiVTransportQGroupBox(),
+            GuiVTLSQGroupBox(),
+        ]

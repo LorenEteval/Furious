@@ -208,7 +208,7 @@ class MsgQueue(multiprocessing.queues.Queue):
             self.startTimer()
 
 
-class CoreProcessMonitor(CoreProcessFactory, ABC):
+class CoreProcessMonitor(CoreProcess, ABC):
     """Track the state and lifetime of a proxy-core child process."""
 
     StopJoinTimeout = 3

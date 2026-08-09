@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Externals import *
-from Furious.Library import *
+from Furious.Domain import *
 
 import os
 import re

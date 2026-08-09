@@ -15,28 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose application windows and complete dialog compositions."""
+"""Define the persistent storage collection interface."""
 
 from __future__ import annotations
 
-from .IndentDialog import IndentDialog
-from .LogWindow import LogWindow
-from .MainWindow import MainWindow
-from .NetworkTestDialog import NetworkTestDialog
-from .ProxyBypassDialog import ProxyBypassDialog
-from .QRCodeWindow import QRCodeWindow
-from .SubscriptionWindow import SubscriptionWindow
-from .TextEditorWindow import TextEditorWindow
-from .TunSettingsDialog import TunSettingsDialog
+from abc import ABC, abstractmethod
+from typing import Any
 
-__all__ = [
-    'IndentDialog',
-    'LogWindow',
-    'MainWindow',
-    'NetworkTestDialog',
-    'ProxyBypassDialog',
-    'QRCodeWindow',
-    'SubscriptionWindow',
-    'TextEditorWindow',
-    'TunSettingsDialog',
-]
+__all__ = ['StorageBackend']
+
+
+class StorageBackend(ABC):
+    """Define the interface and shared behavior for storage objects."""
+
+    @abstractmethod
+    def sync(self):
+        """Persist the current storage factory data."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def data(self) -> Any:
+        """Return the data managed by the storage factory."""
+        raise NotImplementedError

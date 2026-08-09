@@ -19,19 +19,19 @@
 
 from __future__ import annotations
 
-from .ApplicationFactory import ApplicationFactory
-from .CoreProcessFactory import CoreProcessFactory
-from .EncoderFactory import EncoderFactory
-from .GuiEditorItemFactory import GuiEditorItemFactory, GuiEditorItemWidgetContainer
-from .StorageFactory import StorageFactory
-from .UserServersTableItem import UserServersTableItem
+from .Application import ApplicationRunner
+from .Codec import Codec
+from .Editor import EditorBinding, EditorWidgetBinding
+from .Process import CoreProcess
+from .Server import ServerTableItem
+from .Storage import StorageBackend
 
 __all__ = [
-    'ApplicationFactory',
-    'CoreProcessFactory',
-    'EncoderFactory',
-    'GuiEditorItemFactory',
-    'GuiEditorItemWidgetContainer',
-    'StorageFactory',
-    'UserServersTableItem',
+    'ApplicationRunner',
+    'Codec',
+    'CoreProcess',
+    'EditorBinding',
+    'EditorWidgetBinding',
+    'ServerTableItem',
+    'StorageBackend',
 ]

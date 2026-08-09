@@ -47,7 +47,7 @@ else:
 class AppMainProcess(ProcessContext.Process):
     """Represent app main process."""
 
-    def __init__(self, func: Callable[[], ApplicationFactory], **kwargs):
+    def __init__(self, func: Callable[[], ApplicationRunner], **kwargs):
         """Initialize the AppMainProcess."""
         super().__init__(**kwargs)
 
@@ -64,9 +64,9 @@ class AppMainProcess(ProcessContext.Process):
             traceback.print_exception(exceptionType, exceptionValue, tb)
 
         if isinstance(exceptionValue, AssertionError):
-            exitcode = ApplicationFactory.ExitCode.AssertionError.value
+            exitcode = ApplicationRunner.ExitCode.AssertionError.value
         else:
-            exitcode = ApplicationFactory.ExitCode.UnknownException.value
+            exitcode = ApplicationRunner.ExitCode.UnknownException.value
 
         logger.error(f'stopped with exitcode {exitcode}')
 

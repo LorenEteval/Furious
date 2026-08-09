@@ -15,28 +15,30 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose application windows and complete dialog compositions."""
+"""Define the contract for the top-level application runner."""
 
 from __future__ import annotations
 
-from .IndentDialog import IndentDialog
-from .LogWindow import LogWindow
-from .MainWindow import MainWindow
-from .NetworkTestDialog import NetworkTestDialog
-from .ProxyBypassDialog import ProxyBypassDialog
-from .QRCodeWindow import QRCodeWindow
-from .SubscriptionWindow import SubscriptionWindow
-from .TextEditorWindow import TextEditorWindow
-from .TunSettingsDialog import TunSettingsDialog
+from enum import Enum
 
-__all__ = [
-    'IndentDialog',
-    'LogWindow',
-    'MainWindow',
-    'NetworkTestDialog',
-    'ProxyBypassDialog',
-    'QRCodeWindow',
-    'SubscriptionWindow',
-    'TextEditorWindow',
-    'TunSettingsDialog',
-]
+__all__ = ['ApplicationRunner']
+
+
+class ApplicationRunner:
+    """Define the lifecycle contract for the top-level application runner."""
+
+    class ExitCode(Enum):
+        """Enumerate process exit codes."""
+
+        ExitSuccess = 0
+        UnknownException = 61
+        PlatformNotSupported = 62
+        AssertionError = 63
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the application runner."""
+        super().__init__(*args, **kwargs)
+
+    def run(self):
+        """Run the application factory task."""
+        raise NotImplementedError

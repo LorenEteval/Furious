@@ -15,28 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose application windows and complete dialog compositions."""
+"""Expose the official proxy backend implementations bundled with Furious."""
 
 from __future__ import annotations
 
-from .IndentDialog import IndentDialog
-from .LogWindow import LogWindow
-from .MainWindow import MainWindow
-from .NetworkTestDialog import NetworkTestDialog
-from .ProxyBypassDialog import ProxyBypassDialog
-from .QRCodeWindow import QRCodeWindow
-from .SubscriptionWindow import SubscriptionWindow
-from .TextEditorWindow import TextEditorWindow
-from .TunSettingsDialog import TunSettingsDialog
+from .Hysteria1.Plugin import Hysteria1Plugin
+from .Hysteria2.Plugin import Hysteria2Plugin
+from .Xray.Plugin import XrayPlugin
 
-__all__ = [
-    'IndentDialog',
-    'LogWindow',
-    'MainWindow',
-    'NetworkTestDialog',
-    'ProxyBypassDialog',
-    'QRCodeWindow',
-    'SubscriptionWindow',
-    'TextEditorWindow',
-    'TunSettingsDialog',
-]
+__all__ = ['OFFICIAL_PLUGIN_TYPES']
+
+
+OFFICIAL_PLUGIN_TYPES = (XrayPlugin, Hysteria1Plugin, Hysteria2Plugin)

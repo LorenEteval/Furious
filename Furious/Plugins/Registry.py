@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Library.Configuration import configurationRegistry
+from Furious.Domain.Configuration import configurationRegistry
 
 from importlib import metadata
 
@@ -32,6 +32,7 @@ __all__ = [
     'PLUGIN_ENTRY_POINT_GROUP',
     'PluginRegistry',
     'getPluginRegistry',
+    'initializePluginRegistry',
     'registerPlugin',
 ]
 
@@ -159,6 +160,10 @@ class PluginRegistry:
     def plugins(self):
         """Return registered plugins in registration order."""
         return tuple(self._plugins.values())
+
+    def plugin(self, pluginId: str):
+        """Return the plugin registered with ``pluginId``, if any."""
+        return self._plugins.get(pluginId)
 
     def protocolDescriptors(self):
         """Return contributed protocols in their requested menu order."""
@@ -443,27 +448,39 @@ _registryLock = threading.RLock()
 _registryInitialized = False
 
 
-def getPluginRegistry() -> PluginRegistry:
-    """Return the process-wide registry after lazy official/external discovery."""
+def initializePluginRegistry(pluginTypes=()) -> PluginRegistry:
+    """Initialize discovery and register host-provided plugin implementations."""
     global _registry, _registryInitialized
 
     with _registryLock:
         if not _registryInitialized:
-            # Importing official plugins is an intentional extension-loading
-            # boundary.  Keeping it here prevents package initialization from
-            # eagerly importing GUI and core implementations.
-            from .Official import OFFICIAL_PLUGIN_TYPES
-
             registry = PluginRegistry(configurationRegistry)
 
-            for pluginType in OFFICIAL_PLUGIN_TYPES:
+            for pluginType in pluginTypes:
                 registry.register(pluginType())
 
             registry.discover()
             _registry = registry
             _registryInitialized = True
+        else:
+            for pluginType in pluginTypes:
+                plugin = pluginType()
+                registered = _registry.plugin(plugin.pluginId)
+
+                if registered is None:
+                    _registry.register(plugin)
+                elif not isinstance(registered, pluginType):
+                    raise ValueError(
+                        f'plugin {plugin.pluginId!r} is already registered by '
+                        f'{type(registered).__name__}'
+                    )
 
     return _registry
+
+
+def getPluginRegistry() -> PluginRegistry:
+    """Return the process-wide registry, discovering external plugins lazily."""
+    return initializePluginRegistry()
 
 
 def registerPlugin(plugin: FuriousPlugin):

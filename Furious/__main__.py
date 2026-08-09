@@ -24,7 +24,7 @@ from Furious.Interface import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 from Furious.Utility import *
-from Furious.Application import Application
+from Furious.Application import DesktopApplication
 
 from PySide6 import QtCore
 from PySide6.QtGui import QDesktopServices
@@ -59,7 +59,7 @@ def runClearSettings():
 
 def runAppMain():
     """Run app main."""
-    process = AppMainProcess(functools.partial(Application, sys.argv))
+    process = AppMainProcess(functools.partial(DesktopApplication, sys.argv))
 
     process.start()
     process.join()
@@ -70,9 +70,9 @@ def runAppMain():
         sys.exit(exitcode)
 
     # For Qt runtime. Not used
-    _app = Application(sys.argv)
+    _app = DesktopApplication(sys.argv)
 
-    if exitcode == ApplicationFactory.ExitCode.PlatformNotSupported.value:
+    if exitcode == ApplicationRunner.ExitCode.PlatformNotSupported.value:
         mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
 
         mbox.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
@@ -102,7 +102,7 @@ def runAppMain():
         # Show the MessageBox and wait for the user to close it
         mbox.exec()
     else:
-        if exitcode == ApplicationFactory.ExitCode.AssertionError.value:
+        if exitcode == ApplicationRunner.ExitCode.AssertionError.value:
             # Assertion error
             text = _(
                 f'{APPLICATION_NAME} encountered an internal error and needs to be stopped'
