@@ -25,7 +25,9 @@ from Furious.Models import ProfileMetadata, ServerProfile
 from Furious.Models.Encoding import *
 from Furious.Plugins import configurationFromAny
 
-from dataclasses import asdict, dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field, fields
+from typing import Any
 
 __all__ = ['UserServer', 'UserServers']
 
@@ -36,17 +38,74 @@ registerAppSettings('Configuration')
 class UserServer:
     """Represent one serialized user-server storage record."""
 
-    metadata: dict
-    connection: str
+    remark: str
+    config: str
+    subsId: str
+    profileMetadata: dict[str, Any]
+    delayResult: str = ''
+    speedResult: str = ''
+    extras: dict[str, Any] = field(default_factory=dict, repr=False)
 
     @classmethod
-    def fromProfile(cls, profile: ServerProfile):
+    def fromProfile(cls, profile: ServerProfile) -> UserServer:
         """Build a storage record from a server profile."""
-        return cls(profile.metadata.toMapping(), profile.connection.toJSONString())
+        metadata = profile.metadata
 
-    def toMapping(self) -> dict:
-        """Return the record as a JSON-compatible mapping."""
-        return asdict(self)
+        return cls(
+            remark=metadata.displayName,
+            config=profile.connection.toJSONString(),
+            subsId=metadata.subscriptionSource,
+            profileMetadata=metadata.toMapping(),
+            delayResult=metadata.latency,
+            speedResult=metadata.speed,
+            extras=dict(metadata.extras),
+        )
+
+    @staticmethod
+    def metadataFromMapping(value: Mapping[str, Any]) -> ProfileMetadata:
+        """Restore metadata with legacy fields taking precedence."""
+        record = dict(value)
+        nested = record.pop('profileMetadata', {})
+        metadata = dict(nested) if isinstance(nested, Mapping) else {}
+        nestedExtras = metadata.pop('extras', {})
+        extras = dict(nestedExtras) if isinstance(nestedExtras, Mapping) else {}
+        aliases = {
+            'remark': 'displayName',
+            'subsId': 'subscriptionSource',
+            'delayResult': 'latency',
+            'speedResult': 'speed',
+        }
+
+        for legacyName, currentName in aliases.items():
+            if legacyName in record:
+                metadata[currentName] = record.pop(legacyName)
+
+        for metadataField in fields(ProfileMetadata):
+            currentName = metadataField.name
+
+            if currentName in record and currentName != 'extras':
+                metadata[currentName] = record.pop(currentName)
+
+        extras.update(record)
+        metadata['extras'] = extras
+
+        return ProfileMetadata.fromMapping(metadata)
+
+    def toMapping(self) -> dict[str, Any]:
+        """Return the backward-compatible JSON storage mapping."""
+        result = dict(self.extras)
+        result.update(
+            {
+                'remark': self.remark,
+                'config': self.config,
+                'subsId': self.subsId,
+                'delayResult': self.delayResult,
+                'speedResult': self.speedResult,
+                'profileMetadata': dict(self.profileMetadata),
+            }
+        )
+
+        return result
 
 
 class UserServers(Mixins.CleanupOnExit, StorageBackend):
@@ -68,8 +127,9 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
                 return {'model': []}
 
         self._data = restore()
-        records = self._data.get('profiles', self._data.get('model', []))
         self._list = []
+
+        records = self._data.get('model', [])
 
         for index, value in enumerate(records):
             record = dict(value)
@@ -79,7 +139,7 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
                 metadata = ProfileMetadata.fromMapping(record.get('metadata', {}))
             else:
                 connection = configurationFromAny(record.pop('config', ''))
-                metadata = ProfileMetadata.fromMapping(record)
+                metadata = UserServer.metadataFromMapping(record)
 
             self._list.append(
                 ServerProfile.fromConfiguration(
@@ -96,8 +156,7 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
             PyBase64Encoder.encode(
                 UJSONEncoder.encode(
                     {
-                        'schemaVersion': 2,
-                        'profiles': [
+                        'model': [
                             UserServer.fromProfile(profile).toMapping()
                             for profile in self._list
                         ],
