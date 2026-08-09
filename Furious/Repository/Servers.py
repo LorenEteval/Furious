@@ -25,13 +25,16 @@ from Furious.Domain.Configuration import ConfigFactory
 from Furious.Domain.Encoding import *
 from Furious.Plugins import configurationFromAny
 
+from dataclasses import dataclass
+
 __all__ = ['UserServers']
 
 registerAppSettings('Configuration')
 
 
+@dataclass
 class UserServer:
-    """Represent user server."""
+    """Represent one serialized user-server storage record."""
 
     remark: str
     config: str
