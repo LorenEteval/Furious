@@ -22,6 +22,7 @@ from __future__ import annotations
 from .IndentDialog import IndentDialog
 from .HomePage import HomePage
 from .LogPage import LogPage
+from .MetricsPage import MetricsPage
 from .MainWindow import MainWindow
 from .NetworkTestDialog import NetworkTestDialog
 from .ProxyBypassDialog import ProxyBypassDialog
@@ -34,6 +35,7 @@ __all__ = [
     'IndentDialog',
     'HomePage',
     'LogPage',
+    'MetricsPage',
     'MainWindow',
     'NetworkTestDialog',
     'ProxyBypassDialog',

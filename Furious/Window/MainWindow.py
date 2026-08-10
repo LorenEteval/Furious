@@ -23,9 +23,11 @@ from Furious.Frozenlib import *
 from Furious.Models import ConfigFactory, ServerProfile
 from Furious.Qt import *
 from Furious.Qt import gettext as _
+from Furious.Service import MetricsDataManager
 from Furious.Widget.NavigationView import NavigationView
 from Furious.Window.HomePage import HomePage
 from Furious.Window.LogPage import LogPage
+from Furious.Window.MetricsPage import MetricsPage
 
 from PySide6 import QtCore
 
@@ -44,7 +46,7 @@ registerAppSettings('AppMainWindowState')
 registerAppSettings('AppMainWindowSelectedPage', default='home')
 registerAppSettings('AppMainWindowNavigationExpanded', isBinary=True)
 
-_TRANSLATABLE_NAVIGATION_LABELS = (_('Home'), _('Log'))
+_TRANSLATABLE_NAVIGATION_LABELS = (_('Home'), _('Metrics'), _('Log'))
 
 
 class MainWindow(AppQMainWindow):
@@ -64,6 +66,14 @@ class MainWindow(AppQMainWindow):
 
         self.navigationView = NavigationView(parent=self)
         self.homePage = HomePage(parent=self.navigationView)
+        self.metricsDataManager = MetricsDataManager(parent=self)
+        self.homePage.trafficStatsManager.sampleChanged.connect(
+            self.metricsDataManager.recordTrafficSample
+        )
+        self.metricsPage = MetricsPage(
+            self.metricsDataManager,
+            parent=self.navigationView,
+        )
         self.logPage = AppLogPage()
 
         if not isinstance(self.logPage, LogPage):
@@ -74,6 +84,12 @@ class MainWindow(AppQMainWindow):
             self.homePage,
             'Home',
             'house-door.svg',
+        )
+        self.navigationView.addPage(
+            'metrics',
+            self.metricsPage,
+            'Metrics',
+            'speedometer2.svg',
         )
         self.navigationView.addPage(
             'log',
@@ -192,14 +208,16 @@ class MainWindow(AppQMainWindow):
 
             if PLATFORM == 'Darwin':
                 APP().processEvents()
+
                 size = self.size()
 
                 if size == QtCore.QSize(640, 480):
                     logger.error(
-                        f'detected unresolve Qt bug on macOS. '
+                        f'detected unresolved Qt bug on macOS. '
                         f'Resizing main window to default '
                         f'{self.DEFAULT_WINDOW_SIZE.toTuple()}'
                     )
+
                     self.resize(self.DEFAULT_WINDOW_SIZE)
                 else:
                     logger.info(

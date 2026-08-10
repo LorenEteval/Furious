@@ -93,6 +93,13 @@ class AppStyleSheet:
             'connection_disconnected': '#D94F64',
             'connection_connecting': '#3B82F6',
             'connection_connected': '#159A70',
+            # Metrics visualization semantics.
+            'metrics_download': '#0F8F87',
+            'metrics_download_fill': '#BFEDE7',
+            'metrics_upload': '#D9772F',
+            'metrics_upload_fill': '#F8D7BB',
+            'metrics_grid': '#D9E1EC',
+            'metrics_axis': '#5E6B80',
         },
         Dark: {
             # Application surfaces and interaction states.
@@ -155,6 +162,13 @@ class AppStyleSheet:
             'connection_disconnected': '#FF6B7A',
             'connection_connecting': '#5B9BFF',
             'connection_connected': '#42D39A',
+            # Metrics visualization semantics.
+            'metrics_download': '#36D6C5',
+            'metrics_download_fill': '#174C47',
+            'metrics_upload': '#FF9A52',
+            'metrics_upload_fill': '#57321F',
+            'metrics_grid': '#2A3340',
+            'metrics_axis': '#9AA7B8',
         },
     }
 
@@ -305,6 +319,46 @@ class AppStyleSheet:
             QStackedWidget#ApplicationPageStack {{
                 border: none;
                 background-color: {palette['window']};
+            }}
+
+            QScrollArea#MetricsScrollArea,
+            QWidget#MetricsPageContent {{
+                border: none;
+                background-color: {palette['window']};
+            }}
+
+            QLabel#MetricsPageTitle {{
+                color: {palette['text_strong']};
+                font-size: 16pt;
+                font-weight: 600;
+            }}
+
+            QFrame#MetricsSection {{
+                border: 1px solid {palette['border']};
+                border-radius: 10px;
+                background-color: {palette['panel']};
+            }}
+
+            QLabel#MetricsSectionTitle {{
+                color: {palette['text_strong']};
+                font-size: 12pt;
+                font-weight: 600;
+            }}
+
+            QFrame#MetricCard {{
+                border: 1px solid {palette['border']};
+                border-radius: 8px;
+                background-color: {palette['panel_alt']};
+            }}
+
+            QLabel#MetricCardTitle {{
+                color: {palette['muted']};
+                font-weight: 600;
+            }}
+
+            QWidget#MetricsGraphWidget {{
+                border: none;
+                background-color: transparent;
             }}
 
             QGroupBox {{
