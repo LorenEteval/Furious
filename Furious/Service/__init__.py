@@ -32,12 +32,22 @@ from .LogManager import (
     coreLogCallback,
     formatLogEntry,
 )
+from .MetricsDataManager import (
+    DOWNLOAD_SPEED_METRIC,
+    DOWNLOAD_USAGE_METRIC,
+    UPLOAD_SPEED_METRIC,
+    UPLOAD_USAGE_METRIC,
+    MetricPoint,
+    MetricSample,
+    MetricsDataManager,
+)
 from .SubscriptionImporter import (
     SubscriptionImportResult,
     SubscriptionImportService,
     SubscriptionSource,
 )
 from .TrafficStatsManager import (
+    TrafficStatsSample,
     TrafficStatsManager,
     formatTrafficSpeed,
     formatTrafficUsage,
@@ -54,10 +64,18 @@ __all__ = [
     'TUN2SOCKS_LOG_CATEGORY',
     'ApplicationLogHandler',
     'LogManager',
+    'DOWNLOAD_SPEED_METRIC',
+    'DOWNLOAD_USAGE_METRIC',
+    'UPLOAD_SPEED_METRIC',
+    'UPLOAD_USAGE_METRIC',
+    'MetricPoint',
+    'MetricSample',
+    'MetricsDataManager',
     'coreLogCallback',
     'SubscriptionImportResult',
     'SubscriptionImportService',
     'SubscriptionSource',
+    'TrafficStatsSample',
     'TrafficStatsManager',
     'UpdateManager',
     'formatTrafficSpeed',

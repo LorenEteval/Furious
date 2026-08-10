@@ -2308,7 +2308,8 @@ TRANSLATION = {
     },
     "Upload Speed": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.HomePage",
+            "Furious.Window.MetricsPage"
         ],
         "RU": "Скорость отдачи",
         "ZH": "上传速度",
@@ -2316,7 +2317,8 @@ TRANSLATION = {
     },
     "Download Speed": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.HomePage",
+            "Furious.Window.MetricsPage"
         ],
         "RU": "Скорость загрузки",
         "ZH": "下载速度",
@@ -2324,7 +2326,8 @@ TRANSLATION = {
     },
     "Upload Traffic Usage": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.HomePage",
+            "Furious.Window.MetricsPage"
         ],
         "RU": "Объём исходящего трафика",
         "ZH": "上传流量",
@@ -2332,10 +2335,155 @@ TRANSLATION = {
     },
     "Download Traffic Usage": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.HomePage",
+            "Furious.Window.MetricsPage"
         ],
         "RU": "Объём входящего трафика",
         "ZH": "下载流量",
+        "isReviewed": "True"
+    },
+    "Metrics": {
+        "source": [
+            "Furious.Window.MainWindow"
+        ],
+        "RU": "Метрики",
+        "ZH": "指标",
+        "isReviewed": "True"
+    },
+    "Network Metrics": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Сетевые метрики",
+        "ZH": "网络指标",
+        "isReviewed": "True"
+    },
+    "Time Range": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Временной диапазон",
+        "ZH": "时间范围",
+        "isReviewed": "True"
+    },
+    "Granularity": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Детализация",
+        "ZH": "粒度",
+        "isReviewed": "True"
+    },
+    "Download": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Загрузка",
+        "ZH": "下载",
+        "isReviewed": "True"
+    },
+    "Upload": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Отдача",
+        "ZH": "上传",
+        "isReviewed": "True"
+    },
+    "Last 5 minutes": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Последние 5 минут",
+        "ZH": "最近 5 分钟",
+        "isReviewed": "True"
+    },
+    "Last 15 minutes": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Последние 15 минут",
+        "ZH": "最近 15 分钟",
+        "isReviewed": "True"
+    },
+    "Last hour": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Последний час",
+        "ZH": "最近 1 小时",
+        "isReviewed": "True"
+    },
+    "Last 6 hours": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Последние 6 часов",
+        "ZH": "最近 6 小时",
+        "isReviewed": "True"
+    },
+    "Last 24 hours": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Последние 24 часа",
+        "ZH": "最近 24 小时",
+        "isReviewed": "True"
+    },
+    "Auto": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Авто",
+        "ZH": "自动",
+        "isReviewed": "True"
+    },
+    "2 seconds": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "2 секунды",
+        "ZH": "2 秒",
+        "isReviewed": "True"
+    },
+    "10 seconds": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "10 секунд",
+        "ZH": "10 秒",
+        "isReviewed": "True"
+    },
+    "1 minute": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "1 минута",
+        "ZH": "1 分钟",
+        "isReviewed": "True"
+    },
+    "5 minutes": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "5 минут",
+        "ZH": "5 分钟",
+        "isReviewed": "True"
+    },
+    "Now": {
+        "source": [
+            "Furious.Widget.MetricsGraph"
+        ],
+        "RU": "Сейчас",
+        "ZH": "现在",
+        "isReviewed": "True"
+    },
+    "Waiting for network statistics": {
+        "source": [
+            "Furious.Widget.MetricsGraph"
+        ],
+        "RU": "Ожидание сетевой статистики",
+        "ZH": "正在等待网络统计数据",
         "isReviewed": "True"
     }
 }

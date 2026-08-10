@@ -25,11 +25,13 @@ from Furious.Plugins import TrafficCounters, getPluginRegistry
 from PySide6 import QtCore
 
 from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
 
 import time
 import logging
 
 __all__ = [
+    'TrafficStatsSample',
     'TrafficStatsManager',
     'formatTrafficSpeed',
     'formatTrafficUsage',
@@ -40,6 +42,17 @@ logger = logging.getLogger(__name__)
 KIBIBYTE = 1024
 MEBIBYTE = KIBIBYTE * KIBIBYTE
 TRAFFIC_STATS_SAMPLE_INTERVAL = 2000
+
+
+@dataclass(frozen=True)
+class TrafficStatsSample:
+    """Describe one timestamped traffic-rate and counter observation."""
+
+    sampledAt: float
+    uploadSpeed: float
+    downloadSpeed: float
+    uploadUsage: int
+    downloadUsage: int
 
 
 def formatTrafficSpeed(bytesPerSecond: float) -> str:
@@ -105,10 +118,11 @@ class TrafficStatsManager(
     Mixins.CleanupOnExit,
     QtCore.QObject,
 ):
-    """Publish plugin traffic usage and rates while its parent is visible."""
+    """Publish plugin traffic usage and rates independently from presentation."""
 
     speedChanged = QtCore.Signal(float, float)
     usageChanged = QtCore.Signal(object, object)
+    sampleChanged = QtCore.Signal(object)
     statisticsUnavailable = QtCore.Signal()
     _sampleReady = QtCore.Signal(int, object, float)
 
@@ -129,32 +143,9 @@ class TrafficStatsManager(
         self._sampleTimer.timeout.connect(self._requestSample)
         self._sampleReady.connect(self._consumeResult)
 
-        if parent is not None:
-            parent.installEventFilter(self)
-
-    def _parentIsVisible(self) -> bool:
-        """Return whether the parent widget can currently display updates."""
-        parent = self.parent()
-
-        if parent is None or not hasattr(parent, 'isVisible'):
-            return True
-
-        return parent.isVisible() and not (
-            hasattr(parent, 'isMinimized') and parent.isMinimized()
-        )
-
-    def _suspendSampling(self):
-        """Pause polling and discard the current rate baseline."""
-        wasActive = self._sampleTimer.isActive() or self._queryInFlight
-        self._sampleTimer.stop()
-
-        if wasActive:
-            self._generation += 1
-            self._resetSamples()
-
     def _resumeSampling(self):
-        """Resume polling when a monitor and visible parent are available."""
-        if self._monitor is None or not self._parentIsVisible():
+        """Resume polling whenever a statistics monitor is available."""
+        if self._monitor is None:
             return
 
         if not self._ensureExecutor():
@@ -164,29 +155,6 @@ class TrafficStatsManager(
 
         self._sampleTimer.start()
         self._requestSample()
-
-    @QtCore.Slot()
-    def _syncSamplingVisibility(self):
-        """Synchronize polling with the parent widget's visibility."""
-        if self._parentIsVisible():
-            self._resumeSampling()
-        else:
-            self._suspendSampling()
-
-    def eventFilter(self, watched, event):
-        """Pause traffic queries while the parent widget is not visible."""
-        if watched is self.parent():
-            eventType = event.type()
-
-            if eventType == QtCore.QEvent.Type.Hide:
-                self._suspendSampling()
-            elif eventType in (
-                QtCore.QEvent.Type.Show,
-                QtCore.QEvent.Type.WindowStateChange,
-            ):
-                QtCore.QTimer.singleShot(0, self._syncSamplingVisibility)
-
-        return super().eventFilter(watched, event)
 
     @staticmethod
     def _activeProcesses():
@@ -267,7 +235,7 @@ class TrafficStatsManager(
     @QtCore.Slot()
     def _requestSample(self):
         """Queue one statistics query unless another query is still running."""
-        if self._monitor is None or self._queryInFlight or not self._parentIsVisible():
+        if self._monitor is None or self._queryInFlight:
             return
 
         if not self._ensureExecutor():
@@ -305,30 +273,32 @@ class TrafficStatsManager(
         self._previousSampleTime = sampledAt
 
         if previousCounters is None or previousSampleTime is None:
-            self.speedChanged.emit(0.0, 0.0)
+            uploadSpeed, downloadSpeed = 0.0, 0.0
+        else:
+            elapsed = sampledAt - previousSampleTime
 
-            return
+            if elapsed <= 0:
+                uploadSpeed, downloadSpeed = 0.0, 0.0
+            else:
+                uplinkDelta = max(counters.uplink - previousCounters.uplink, 0)
+                downlinkDelta = max(counters.downlink - previousCounters.downlink, 0)
+                uploadSpeed = uplinkDelta / elapsed
+                downloadSpeed = downlinkDelta / elapsed
 
-        elapsed = sampledAt - previousSampleTime
-
-        if elapsed <= 0:
-            self.speedChanged.emit(0.0, 0.0)
-
-            return
-
-        uplinkDelta = max(counters.uplink - previousCounters.uplink, 0)
-        downlinkDelta = max(counters.downlink - previousCounters.downlink, 0)
-
-        self.speedChanged.emit(uplinkDelta / elapsed, downlinkDelta / elapsed)
+        self.speedChanged.emit(uploadSpeed, downloadSpeed)
+        self.sampleChanged.emit(
+            TrafficStatsSample(
+                sampledAt=sampledAt,
+                uploadSpeed=uploadSpeed,
+                downloadSpeed=downloadSpeed,
+                uploadUsage=counters.uplink,
+                downloadUsage=counters.downlink,
+            )
+        )
 
     @QtCore.Slot(int, object, float)
     def _consumeResult(self, generation, counters, sampledAt):
         """Consume one worker result on Qt's GUI thread."""
-        if not self._parentIsVisible():
-            self._suspendSampling()
-
-            return
-
         if generation != self._generation:
             return
 
