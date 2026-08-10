@@ -294,7 +294,7 @@ class DraculaLoggerSyntaxHighlighter(AppQSyntaxHighlighter):
                 isBold=True,
             ),
             EditorHighlightRules(
-                r'\[WARNING\]|\[Warning\]|WARNING',
+                r'\[WARNING\]|\[Warning\]|WARNING|WARN',
                 palette['editor_warning'],
                 isBold=True,
             ),
