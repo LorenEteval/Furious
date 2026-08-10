@@ -2151,6 +2151,22 @@ TRANSLATION = {
         "ZH": "添加Trojan服务器...",
         "isReviewed": "True"
     },
+    "Add Hysteria1 Server...": {
+        "source": [
+            "Furious.Backends.Hysteria1.Protocols"
+        ],
+        "RU": "Добавить сервер Hysteria 1...",
+        "ZH": "添加Hysteria1服务器...",
+        "isReviewed": "True"
+    },
+    "Add Hysteria2 Server...": {
+        "source": [
+            "Furious.Backends.Hysteria2.Protocols"
+        ],
+        "RU": "Добавить сервер Hysteria 2...",
+        "ZH": "添加Hysteria2服务器...",
+        "isReviewed": "True"
+    },
     "Add SOCKS Server...": {
         "source": [
             "Furious.Backends.Xray.Protocols"

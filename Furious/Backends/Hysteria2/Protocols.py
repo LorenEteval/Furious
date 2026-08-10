@@ -36,6 +36,15 @@ import copy
 __all__ = ['HYSTERIA2_PROTOCOL_HANDLERS']
 
 
+def _placeholder(x):
+    return x
+
+
+_ = _placeholder
+
+_TRANSLATABLE = (_('Add Hysteria2 Server...'),)
+
+
 class Hysteria2ProtocolHandler(ProtocolHandler):
     """Own Hysteria 2 URI, mapping, validation, and export behavior."""
 
