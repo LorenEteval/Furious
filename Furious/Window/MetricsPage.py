@@ -63,6 +63,7 @@ class _MetricCard(QFrame):
     def setTitle(self, title: str):
         """Set the already translated metric title."""
         self.titleLabel.setText(title)
+        self.graph.setMetricLabel(title)
 
 
 class _MetricsSection(QFrame):
@@ -265,6 +266,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             self.granularityComboBox.currentData() or self.DefaultGranularity
         )
         currentTime = time.monotonic()
+        currentWallTime = time.time()
         graphMetrics = (
             (self.downloadSpeedGraph, DOWNLOAD_SPEED_METRIC),
             (self.downloadUsageGraph, DOWNLOAD_USAGE_METRIC),
@@ -282,6 +284,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
                 ),
                 rangeSeconds,
                 currentTime,
+                currentWallTime,
             )
 
         self._dirty = False
