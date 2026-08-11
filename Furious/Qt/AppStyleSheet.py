@@ -325,6 +325,8 @@ class AppStyleSheet:
             QWidget#MetricsPageContent,
             QScrollArea#SettingsScrollArea,
             QWidget#SettingsPageContent,
+            QScrollArea#SubscriptionScrollArea,
+            QWidget#SubscriptionPageContent,
             QWidget#LogPageContent {{
                 border: none;
                 background-color: {palette['window']};
@@ -332,6 +334,7 @@ class AppStyleSheet:
 
             QLabel#MetricsPageTitle,
             QLabel#LogPageTitle,
+            QLabel#SubscriptionPageTitle,
             QLabel#SettingsPageTitle {{
                 color: {palette['text_strong']};
                 font-size: 16pt;
@@ -1151,21 +1154,36 @@ class AppStyleSheet:
 
             QWidget#TrafficStatsBadge {{
                 min-height: 24px;
-                padding: 0 2px;
+                padding: 0;
+                border: none;
+                background-color: transparent;
+            }}
+
+            QFrame#TrafficDirectionBadge {{
                 border: 1px solid {palette['border']};
                 border-radius: 6px;
                 background-color: {palette['raised']};
                 color: {palette['text_strong']};
             }}
 
-            QWidget#TrafficStatsBadge QLabel {{
+            QFrame#TrafficDirectionBadge QLabel {{
                 border: none;
                 padding: 0;
                 background-color: transparent;
                 color: {palette['text_strong']};
             }}
 
-            QWidget#TrafficStatsBadge QLabel#TrafficUsageLabel {{
+            QFrame#TrafficDirectionBadge[direction="download"] QLabel#TrafficSpeedLabel {{
+                color: {palette['metrics_download']};
+                font-weight: 600;
+            }}
+
+            QFrame#TrafficDirectionBadge[direction="upload"] QLabel#TrafficSpeedLabel {{
+                color: {palette['metrics_upload']};
+                font-weight: 600;
+            }}
+
+            QFrame#TrafficDirectionBadge QLabel#TrafficUsageLabel {{
                 color: {palette['muted']};
             }}
 
