@@ -76,6 +76,9 @@ class MainWindow(AppQMainWindow):
         self.homePage.trafficStatsManager.sampleChanged.connect(
             self.metricsDataManager.recordTrafficSample
         )
+        self.homePage.trafficStatsManager.usageHistoryReset.connect(
+            self.metricsDataManager.clearTrafficUsageHistory
+        )
         self.metricsPage = MetricsPage(
             self.metricsDataManager,
             parent=self.navigationView,
