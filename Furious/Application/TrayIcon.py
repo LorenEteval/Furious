@@ -54,7 +54,7 @@ class TrayIcon(
         super().__init__(*args, **kwargs)
 
         actions = [
-            ConnectAction(isTrayAction=True),
+            APP().connectionAction,
             RoutingAction(isTrayAction=True),
             ImportAction(isTrayAction=True),
             AppQSeperator(),

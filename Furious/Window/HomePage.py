@@ -39,6 +39,7 @@ from Furious.Actions.Import import (
     ImportQRCodeOnTheScreenAction,
     ImportURIFromClipboardAction,
 )
+from Furious.Widget.ConnectionButton import ConnectionButton
 from Furious.Widget.ServerTableView import *
 from Furious.Window.NetworkTestDialog import *
 from Furious.Window.ProxyBypassDialog import *
@@ -474,49 +475,14 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             )
         )
 
-        if hasattr(AppQAction, 'setMenu'):
-            self.toolbar = AppQToolBar(
-                AppQAction(
-                    _('Server'),
-                    icon=bootstrapIcon('server.svg'),
-                    menu=AppQMenu(*serverActions),
-                    useSetMenu=False,
-                    useActionGroup=False,
-                    checkable=False,
-                ),
-            )
-            self.toolbar.setObjectName('HomePageToolBar')
-            self.toolbar.setMovable(False)
-            self.toolbar.setFloatable(False)
-            self.toolbar.setIconSize(QtCore.QSize(64, 32))
-            self.toolbar.setToolButtonStyle(
-                QtCore.Qt.ToolButtonStyle.ToolButtonTextUnderIcon
-            )
-            self.addToolBar(self.toolbar)
-        else:
-            # Menu actions
-            serverMenu = {
-                'name': 'Server',
-                'actions': [*serverActions],
-            }
-
-            # Corresponds to menus defined above
-            _TRANSLATABLE_MENU_NAME = [
-                _('Server'),
-            ]
-
-            # Menus
-            for menuDict in (serverMenu,):
-                menuName = menuDict['name']
-                menuObjName = f'_{menuName}Menu'
-                menu = AppQMenu(
-                    *menuDict['actions'], title=_(menuName), parent=self.menuBar()
-                )
-
-                # Set reference
-                setattr(self, menuObjName, menu)
-
-                self.menuBar().addMenu(menu)
+        self.serverMenu = AppQMenu(*serverActions, parent=self)
+        self.serverButton = AppQPushButton(
+            _('Server'),
+            icon=bootstrapIcon('server.svg'),
+        )
+        # Keep the protocol/profile creation menu without presenting this as a
+        # split or drop-down button. The regular button opens the menu itself.
+        self.serverButton.clicked.connect(self.showServerMenu)
 
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.NoContextMenu)
 
@@ -536,9 +502,19 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.statusBar().addPermanentWidget(self.connectionStatus)
 
         self._widget = QWidget()
+        self._widget.setObjectName('HomePageContent')
         self._layout = QVBoxLayout(self._widget)
+        self._layout.setContentsMargins(20, 18, 20, 20)
+        self._layout.setSpacing(12)
 
-        self.searchLayout = QHBoxLayout()
+        self.pageTitleLabel = AppQLabel(_('Server'))
+        self.pageTitleLabel.setObjectName('HomePageTitle')
+
+        self.connectButton = ConnectionButton(
+            APP().connectionAction,
+            self.activateSelectedServerForConnection,
+            parent=self,
+        )
 
         self.searchLineEdit = AppQLineEdit()
         self.searchLineEdit.setPlaceholderText(
@@ -546,17 +522,41 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
                 'Search servers with text or regex, e.g. trojan, hk|jp, ^vmess, (us|sg).*tls'
             )
         )
+        self.searchLineEdit.setMinimumWidth(280)
+        self.searchLineEdit.setMaximumWidth(700)
+        self.searchLineEdit.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
 
         self.searchButton = SearchButton()
         self.subscriptionFilterComboBox = AppQComboBox()
-        self.subscriptionFilterComboBox.setMinimumWidth(180)
+        self.subscriptionFilterComboBox.setMinimumWidth(190)
+        self.subscriptionFilterComboBox.setMaximumWidth(300)
+        self.subscriptionFilterComboBox.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Fixed,
+        )
 
-        self.searchLayout.addWidget(self.searchLineEdit)
-        self.searchLayout.addWidget(self.subscriptionFilterComboBox)
-        self.searchLayout.addWidget(self.searchButton)
+        self.headerLayout = QHBoxLayout()
+        self.headerLayout.setContentsMargins(0, 0, 0, 0)
+        self.headerLayout.setSpacing(8)
+        self.headerLayout.addWidget(self.pageTitleLabel)
+        self.headerLayout.addStretch(1)
+        self.headerLayout.addWidget(self.searchLineEdit, 4)
+        self.headerLayout.addWidget(self.searchButton)
 
-        self._layout.addLayout(self.searchLayout)
-        self._layout.addWidget(self.userServersQTableWidget)
+        self.actionLayout = QHBoxLayout()
+        self.actionLayout.setContentsMargins(0, 0, 0, 0)
+        self.actionLayout.setSpacing(8)
+        self.actionLayout.addWidget(self.connectButton)
+        self.actionLayout.addWidget(self.serverButton)
+        self.actionLayout.addStretch(1)
+        self.actionLayout.addWidget(self.subscriptionFilterComboBox)
+
+        self._layout.addLayout(self.headerLayout)
+        self._layout.addLayout(self.actionLayout)
+        self._layout.addWidget(self.userServersQTableWidget, 1)
 
         self.searchButton.clicked.connect(
             lambda: self.userServersQTableWidget.search(self.searchLineEdit.text())
@@ -574,10 +574,41 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.userServersQTableWidget.subsManager.subscriptionsChanged.connect(
             self.refreshSubscriptionFilter
         )
+        self.userServersQTableWidget.selectionModel().selectionChanged.connect(
+            self.handleServerSelectionChanged
+        )
 
         self.refreshSubscriptionFilter()
+        self.handleServerSelectionChanged()
 
         self.setCentralWidget(self._widget)
+
+    @QtCore.Slot()
+    def showServerMenu(self):
+        """Open server creation actions below the regular Server button."""
+        position = self.serverButton.mapToGlobal(
+            QtCore.QPoint(0, self.serverButton.height() + 2)
+        )
+
+        self.serverMenu.popup(position)
+
+    @QtCore.Slot()
+    def handleServerSelectionChanged(self, *_args):
+        """Apply Home's selection policy to the shared connection control."""
+        self.connectButton.setSelectionCount(
+            len(self.userServersQTableWidget.selectedIndex)
+        )
+
+    def activateSelectedServerForConnection(self) -> bool:
+        """Activate exactly one selected server before requesting connection."""
+        indexes = self.userServersQTableWidget.selectedIndex
+
+        if len(indexes) != 1:
+            return False
+
+        self.userServersQTableWidget.activateSelectedServer()
+
+        return Storage.UserActivatedItemIndex() == indexes[0]
 
     @QtCore.Slot(str)
     def handleUserServersSearchTextChanged(self, text: str):
