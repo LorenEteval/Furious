@@ -2709,5 +2709,21 @@ TRANSLATION = {
         "RU": "Идентификатор аутентификации, указанный сервером Hysteria2.",
         "ZH": "Hysteria2服务器报告的身份验证 ID。",
         "isReviewed": "True"
+    },
+    "Clear Traffic Usage Statistics On Reconnect": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "ZH": "重新连接时清除流量使用统计",
+        "isReviewed": "True",
+        "RU": "Очищать статистику трафика при переподключении"
+    },
+    "Start accumulated upload and download usage from zero after reconnecting.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "ZH": "重新连接后，将累计上传和下载流量从零开始计算。",
+        "isReviewed": "True",
+        "RU": "После переподключения начинать подсчёт накопленного исходящего и входящего трафика с нуля."
     }
 }

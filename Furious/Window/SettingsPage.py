@@ -32,6 +32,9 @@ from Furious.Backends.Hysteria2.Stats import (
 from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
+from Furious.Service.TrafficStatsManager import (
+    CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
+)
 
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import *
@@ -414,6 +417,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             self.networkTestCard,
             self.forceLocalhostCard,
             self.connectionProgressCard,
+            self.clearTrafficUsageCard,
             self.editorWhitespaceCard,
         ) = (
             _ActionSettingsCard(
@@ -439,6 +443,11 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 SettingsController.setConnectionProgressVisible,
             ),
             _ToggleSettingsCard(
+                'arrow-repeat.svg',
+                CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
+                SettingsController.setClearTrafficUsageOnReconnect,
+            ),
+            _ToggleSettingsCard(
                 'text-paragraph.svg',
                 'ShowTabAndSpacesInEditor',
                 SettingsController.setEditorWhitespaceVisible,
@@ -452,6 +461,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.connectionSection.addCard(self.networkTestCard)
         self.connectionSection.addCard(self.forceLocalhostCard)
         self.connectionSection.addCard(self.connectionProgressCard)
+        self.connectionSection.addCard(self.clearTrafficUsageCard)
         self.connectionSection.addCard(self.editorWhitespaceCard)
 
         if SystemRuntime.isAssetsFolderWritable():
@@ -666,6 +676,12 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.connectionProgressCard.setTexts(
             _('Show Progress Bar When Connecting'),
             _('Show connection progress while proxy services are starting.'),
+        )
+        self.clearTrafficUsageCard.setTexts(
+            _('Clear Traffic Usage Statistics On Reconnect'),
+            _(
+                'Start accumulated upload and download usage from zero after reconnecting.'
+            ),
         )
         self.editorWhitespaceCard.setTexts(
             _('Show Tab And Spaces In Editor'),

@@ -22,6 +22,9 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
+from Furious.Service.TrafficStatsManager import (
+    CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
+)
 
 __all__ = ['SettingsAction', 'SettingsController', 'TUNModeAction']
 
@@ -165,6 +168,14 @@ class SettingsController:
             AppSettings.turnON_('ShowProgressBarWhenConnecting')
         else:
             AppSettings.turnOFF('ShowProgressBarWhenConnecting')
+
+    @staticmethod
+    def setClearTrafficUsageOnReconnect(enabled: bool):
+        """Persist whether reconnecting starts a fresh usage session."""
+        if enabled:
+            AppSettings.turnON_(CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING)
+        else:
+            AppSettings.turnOFF(CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING)
 
     @staticmethod
     def setEditorWhitespaceVisible(enabled: bool):

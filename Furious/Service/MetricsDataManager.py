@@ -116,9 +116,43 @@ class MetricsDataManager(QtCore.QObject):
         self._samples.clear()
         self.historyChanged.emit()
 
+    def clearMetrics(self, metricKeys):
+        """Remove selected metric values while preserving other history."""
+        keys = frozenset(metricKeys)
+
+        if not keys or not self._samples:
+            return
+
+        retainedSamples = deque()
+        changed = False
+
+        for sample in self._samples:
+            retainedValues = {
+                key: value for key, value in sample.values.items() if key not in keys
+            }
+
+            if len(retainedValues) != len(sample.values):
+                changed = True
+
+            if retainedValues:
+                retainedSamples.append(MetricSample(sample.sampledAt, retainedValues))
+
+        if changed:
+            self._samples = retainedSamples
+            self.historyChanged.emit()
+
+    @QtCore.Slot()
+    def clearTrafficUsageHistory(self):
+        """Clear usage graphs without discarding upload/download speed history."""
+        self.clearMetrics((DOWNLOAD_USAGE_METRIC, UPLOAD_USAGE_METRIC))
+
     @QtCore.Slot(object)
     def recordTrafficSample(self, sample):
-        """Convert one provider-facing traffic sample into generic metrics."""
+        """Convert one session-normalized traffic sample into generic metrics.
+
+        Raw proxy-core counter lifetimes are reconciled upstream by
+        ``TrafficStatsManager`` so this class remains provider-independent.
+        """
         if not isinstance(sample, TrafficStatsSample):
             return
 

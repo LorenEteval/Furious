@@ -19,18 +19,21 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import APP, Mixins
+from Furious.Frozenlib import APP, AppSettings, Mixins, registerAppSettings
 from Furious.Plugins import TrafficCounters, getPluginRegistry
 
 from PySide6 import QtCore
 
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
+from typing import Optional, Tuple
 
 import time
 import logging
+import operator
 
 __all__ = [
+    'CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING',
     'TrafficStatsSample',
     'TrafficStatsManager',
     'formatTrafficSpeed',
@@ -42,6 +45,9 @@ logger = logging.getLogger(__name__)
 KIBIBYTE = 1024
 MEBIBYTE = KIBIBYTE * KIBIBYTE
 TRAFFIC_STATS_SAMPLE_INTERVAL = 2000
+CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING = 'ClearTrafficUsageOnReconnect'
+
+registerAppSettings(CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING, isBinary=True)
 
 
 @dataclass(frozen=True)
@@ -53,6 +59,61 @@ class TrafficStatsSample:
     downloadSpeed: float
     uploadUsage: int
     downloadUsage: int
+
+
+@dataclass
+class _TrafficUsageAccumulator:
+    """Convert per-core counters into monotonic application-session totals."""
+
+    uploadTotal: int = 0
+    downloadTotal: int = 0
+    previousCounters: Optional[TrafficCounters] = None
+
+    def beginConnection(self):
+        """Start a new raw-counter lifetime without discarding session totals."""
+        self.previousCounters = None
+
+    def clear(self):
+        """Discard application totals and the current raw-counter baseline."""
+        self.uploadTotal = 0
+        self.downloadTotal = 0
+        self.previousCounters = None
+
+    def update(
+        self,
+        counters: TrafficCounters,
+        *,
+        clearOnReset=False,
+    ) -> Tuple[TrafficCounters, bool]:
+        """Accumulate deltas and report whether a configured reset occurred."""
+        previousCounters = self.previousCounters
+
+        counterReset = previousCounters is not None and (
+            counters.uplink < previousCounters.uplink
+            or counters.downlink < previousCounters.downlink
+        )
+
+        if counterReset and clearOnReset:
+            self.clear()
+
+            previousCounters = None
+
+        self.previousCounters = counters
+
+        if previousCounters is not None:
+            self.uploadTotal += max(counters.uplink - previousCounters.uplink, 0)
+            self.downloadTotal += max(
+                counters.downlink - previousCounters.downlink,
+                0,
+            )
+
+        return (
+            TrafficCounters(
+                uplink=self.uploadTotal,
+                downlink=self.downloadTotal,
+            ),
+            counterReset and clearOnReset,
+        )
 
 
 def formatTrafficSpeed(bytesPerSecond: float) -> str:
@@ -123,6 +184,7 @@ class TrafficStatsManager(
     speedChanged = QtCore.Signal(float, float)
     usageChanged = QtCore.Signal(object, object)
     sampleChanged = QtCore.Signal(object)
+    usageHistoryReset = QtCore.Signal()
     statisticsUnavailable = QtCore.Signal()
     _sampleReady = QtCore.Signal(int, object, float)
 
@@ -137,6 +199,8 @@ class TrafficStatsManager(
         self._queryInFlight = False
         self._previousCounters = None
         self._previousSampleTime = None
+        self._usageAccumulator = _TrafficUsageAccumulator()
+        self._hasConnected = False
 
         self._sampleTimer = QtCore.QTimer(self)
         self._sampleTimer.setInterval(TRAFFIC_STATS_SAMPLE_INTERVAL)
@@ -212,10 +276,24 @@ class TrafficStatsManager(
             pass
 
     def _resetSamples(self):
-        """Discard the previous counter baseline and in-flight marker."""
+        """Discard the speed baseline and in-flight marker."""
         self._queryInFlight = False
         self._previousCounters = None
         self._previousSampleTime = None
+
+    def _beginConnectionUsage(self):
+        """Reset only the raw usage baseline for a new core lifetime."""
+        self._usageAccumulator.beginConnection()
+
+    def _clearSessionUsage(self):
+        """Clear accumulated totals and notify history consumers."""
+        self._usageAccumulator.clear()
+        self.usageHistoryReset.emit()
+
+    @staticmethod
+    def _clearUsageOnReconnectEnabled() -> bool:
+        """Return the current persistent reconnect-reset preference."""
+        return AppSettings.isStateON_(CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING)
 
     def _activateMonitor(self, monitor):
         """Begin sampling one plugin-provided monitor."""
@@ -223,6 +301,7 @@ class TrafficStatsManager(
         self._generation += 1
         self._monitor = monitor
         self._resetSamples()
+        self._beginConnectionUsage()
 
         if monitor is None:
             self._closeExecutor()
@@ -264,7 +343,15 @@ class TrafficStatsManager(
 
     def _updateSpeeds(self, counters: TrafficCounters, sampledAt: float):
         """Calculate and emit rates from one cumulative counter sample."""
-        self.usageChanged.emit(counters.uplink, counters.downlink)
+        sessionCounters, usageWasReset = self._usageAccumulator.update(
+            counters,
+            clearOnReset=self._clearUsageOnReconnectEnabled(),
+        )
+
+        if usageWasReset:
+            self.usageHistoryReset.emit()
+
+        self.usageChanged.emit(sessionCounters.uplink, sessionCounters.downlink)
 
         previousCounters = self._previousCounters
         previousSampleTime = self._previousSampleTime
@@ -291,10 +378,34 @@ class TrafficStatsManager(
                 sampledAt=sampledAt,
                 uploadSpeed=uploadSpeed,
                 downloadSpeed=downloadSpeed,
-                uploadUsage=counters.uplink,
-                downloadUsage=counters.downlink,
+                uploadUsage=sessionCounters.uplink,
+                downloadUsage=sessionCounters.downlink,
             )
         )
+
+    @staticmethod
+    def _validatedCounters(counters) -> Optional[TrafficCounters]:
+        """Return integral, non-negative provider counters or ``None``."""
+        if not isinstance(counters, TrafficCounters):
+            return None
+
+        values = []
+
+        for value in (counters.uplink, counters.downlink):
+            if isinstance(value, bool):
+                return None
+
+            try:
+                normalized = operator.index(value)
+            except TypeError:
+                return None
+
+            if normalized < 0:
+                return None
+
+            values.append(normalized)
+
+        return TrafficCounters(uplink=values[0], downlink=values[1])
 
     @QtCore.Slot(int, object, float)
     def _consumeResult(self, generation, counters, sampledAt):
@@ -305,7 +416,9 @@ class TrafficStatsManager(
         self._future = None
         self._queryInFlight = False
 
-        if not isinstance(counters, TrafficCounters):
+        counters = self._validatedCounters(counters)
+
+        if counters is None:
             self._previousCounters = None
             self._previousSampleTime = None
             self.statisticsUnavailable.emit()
@@ -316,6 +429,10 @@ class TrafficStatsManager(
 
     def connectedCallback(self):
         """Discover and activate statistics for the connected runtime."""
+        if self._hasConnected and self._clearUsageOnReconnectEnabled():
+            self._clearSessionUsage()
+
+        self._hasConnected = True
         monitor = getPluginRegistry().trafficStatsMonitorForKernels(
             self._activeProcesses()
         )
@@ -327,6 +444,7 @@ class TrafficStatsManager(
         self._generation += 1
         self._monitor = None
         self._resetSamples()
+        self._beginConnectionUsage()
         self._closeExecutor()
         self.statisticsUnavailable.emit()
 
