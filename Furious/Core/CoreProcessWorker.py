@@ -474,8 +474,14 @@ class ProcessOutputRedirector:
 
                     time.sleep(MsgQueue.MSG_PRODUCE_THRESHOLD / 1000)
 
+        # TODO: try to resolve messages not shown in edge case
+        time.sleep(2)
+
         msgThread = threading.Thread(target=produceMsg, daemon=True)
         msgThread.start()
+
+        # TODO: try to resolve messages not shown in edge case
+        time.sleep(2)
 
         with tmpFileStream:
             entrypoint()
