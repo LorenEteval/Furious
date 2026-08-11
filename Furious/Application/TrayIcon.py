@@ -59,9 +59,7 @@ class TrayIcon(
             SystemProxyAction(isTrayAction=True),
             AppQSeperator(),
             ImportAction(isTrayAction=True),
-            EditConfigurationAction(isTrayAction=True),
-            AppQSeperator(),
-            SettingsAction(isTrayAction=True),
+            ShowHomePageAction(isTrayAction=True),
             AppQSeperator(),
             ExitAction(isTrayAction=True),
         ]

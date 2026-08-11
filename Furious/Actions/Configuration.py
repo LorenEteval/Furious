@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Implement tray actions for edit configuration."""
+"""Provide the tray action that foregrounds the Home page."""
 
 from __future__ import annotations
 
@@ -23,20 +23,41 @@ from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
-__all__ = ['EditConfigurationAction']
+__all__ = ['ShowHomePageAction']
 
 
-class EditConfigurationAction(AppQAction):
-    """Handle the edit configuration action."""
+class ShowHomePageAction(AppQAction):
+    """Foreground the main window and navigate to server management."""
 
     def __init__(self, **kwargs):
-        """Initialize the EditConfigurationAction."""
+        """Initialize the Home-page navigation action."""
         super().__init__(
-            _('Edit Configuration...'),
-            icon=bootstrapIcon('pencil-square.svg'),
+            _('Show Home Page...'),
+            icon=bootstrapIcon('house-door.svg'),
             **kwargs,
         )
 
+        self.setToolTip(_('Show the server management Home page'))
+        self.setStatusTip(_('Show the server management Home page'))
+
     def triggeredCallback(self, checked):
         """Handle activation of the action."""
-        APP().mainWindow.show()
+        mainWindow = APP().mainWindow
+
+        if mainWindow.isMinimized():
+            mainWindow.showNormal()
+        else:
+            mainWindow.show()
+
+        mainWindow.showPage('home')
+        mainWindow.raise_()
+        mainWindow.activateWindow()
+
+    def retranslate(self):
+        """Refresh the action text and explanatory hover text."""
+        super().retranslate()
+
+        description = _('Show the server management Home page')
+
+        self.setToolTip(description)
+        self.setStatusTip(description)

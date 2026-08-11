@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from .Configuration import EditConfigurationAction
+from .Configuration import ShowHomePageAction
 from .Connection import ConnectAction
 from .Exit import ExitAction
 from .Import import (
@@ -31,12 +31,11 @@ from .Import import (
 )
 from .Language import LanguageAction
 from .Routing import RoutingAction
-from .Settings import SettingsAction
+from .Settings import TUNModeAction
 from .SystemProxy import SystemProxyAction
 
 __all__ = [
     'ConnectAction',
-    'EditConfigurationAction',
     'ExitAction',
     'ImportAction',
     'ImportFromFileAction',
@@ -45,6 +44,7 @@ __all__ = [
     'ImportURIFromClipboardAction',
     'LanguageAction',
     'RoutingAction',
-    'SettingsAction',
+    'ShowHomePageAction',
+    'TUNModeAction',
     'SystemProxyAction',
 ]
