@@ -23,7 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
-__all__ = ['SettingsAction']
+__all__ = ['SettingsAction', 'SettingsController', 'TUNModeAction']
 
 registerAppSettings('VPNMode', isBinary=True)
 registerAppSettings('DarkMode', isBinary=True)
@@ -47,11 +47,134 @@ registerAppSettings(
 )
 registerAppSettings('ShowTabAndSpacesInEditor', isBinary=True)
 
-# Administrator, Superuser
-_TRANSLATABLE_TUN_MODE = [
-    _('TUN Mode Disabled (Administrator)'),
-    _('TUN Mode Disabled (Superuser)'),
-]
+
+class SettingsController:
+    """Apply application settings independently from their presentation."""
+
+    @staticmethod
+    def setTUNMode(enabled: bool):
+        """Persist the global TUN mode and notify active workflows."""
+        if PLATFORM != 'Linux':
+            assert SystemRuntime.isAdmin()
+
+        if enabled:
+            AppSettings.turnON_('VPNMode')
+        else:
+            AppSettings.turnOFF('VPNMode')
+
+        showMBoxNewChangesNextTime()
+
+    @staticmethod
+    def setDarkMode(enabled: bool):
+        """Switch between the explicit dark theme and automatic mode."""
+        if enabled:
+            AppSettings.turnON_('DarkMode')
+
+            try:
+                APP().switchToDarkMode()
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+        else:
+            AppSettings.turnOFF('DarkMode')
+
+            try:
+                APP().switchToAutoMode()
+            except Exception:
+                # Any non-exit exceptions
+
+                pass
+
+    @staticmethod
+    def setLanguage(language: str):
+        """Persist a supported UI language and refresh translated objects."""
+        if language not in SUPPORTED_LANGUAGE:
+            return
+
+        if AppSettings.get('Language') != language:
+            AppSettings.set('Language', language)
+            Mixins.QTranslatable.retranslateAll()
+
+    @staticmethod
+    def setMonochromeTrayIcon(enabled: bool):
+        """Persist and immediately refresh the tray-icon presentation."""
+        if enabled:
+            AppSettings.turnON_('UseMonochromeTrayIcon')
+            APP().systemTray.setMonochromeIcon()
+        else:
+            AppSettings.turnOFF('UseMonochromeTrayIcon')
+
+            if APP().isSystemTrayConnected():
+                APP().systemTray.setConnectedIcon()
+            else:
+                APP().systemTray.setDisconnectedIcon()
+
+    @staticmethod
+    def setDockIconHidden(enabled: bool):
+        """Apply the macOS dock-icon visibility preference."""
+        if enabled:
+            APP().installDockIconVisibilityFeature()
+            AppSettings.turnON_('HideDockIcon')
+        else:
+            APP().installDockIconVisibilityFeature(remove=True)
+            AppSettings.turnOFF('HideDockIcon')
+
+    @staticmethod
+    def setStartupOnBoot(enabled: bool):
+        """Apply the platform startup registration preference."""
+        if enabled:
+            StartupOnBoot.on_()
+            AppSettings.turnON_('StartupOnBoot')
+        else:
+            StartupOnBoot.off()
+            AppSettings.turnOFF('StartupOnBoot')
+
+    @staticmethod
+    def setPowerSaveMode(enabled: bool):
+        """Persist power-saving behavior for the next connection."""
+        if enabled:
+            AppSettings.turnON_('PowerSaveMode')
+        else:
+            AppSettings.turnOFF('PowerSaveMode')
+
+        showMBoxNewChangesNextTime()
+
+    @staticmethod
+    def setForceLocalProxy(enabled: bool):
+        """Persist local system-proxy address normalization."""
+        if enabled:
+            AppSettings.turnON_('ForceToLocalhostWhenSettingLocalProxy')
+        else:
+            AppSettings.turnOFF('ForceToLocalhostWhenSettingLocalProxy')
+
+        showMBoxNewChangesNextTime()
+
+    @staticmethod
+    def setAutoUpdateAssets(enabled: bool):
+        """Persist automatic core-asset updates."""
+        if enabled:
+            AppSettings.turnON_('AutoUpdateAssetFiles')
+        else:
+            AppSettings.turnOFF('AutoUpdateAssetFiles')
+
+    @staticmethod
+    def setConnectionProgressVisible(enabled: bool):
+        """Persist connection-progress visibility."""
+        if enabled:
+            AppSettings.turnON_('ShowProgressBarWhenConnecting')
+        else:
+            AppSettings.turnOFF('ShowProgressBarWhenConnecting')
+
+    @staticmethod
+    def setEditorWhitespaceVisible(enabled: bool):
+        """Apply and persist editor whitespace visibility."""
+        if enabled:
+            APP().mainWindow.showTabAndSpaces()
+            AppSettings.turnON_('ShowTabAndSpacesInEditor')
+        else:
+            APP().mainWindow.hideTabAndSpaces()
+            AppSettings.turnOFF('ShowTabAndSpacesInEditor')
 
 
 class TUNModeAction(AppQAction):
@@ -65,23 +188,18 @@ class TUNModeAction(AppQAction):
             if SystemRuntime.isAdmin():
                 super().__init__(_('TUN Mode'), **kwargs)
             else:
-                super().__init__(
-                    _(f'TUN Mode Disabled ({ADMINISTRATOR_NAME})'), **kwargs
-                )
+                if ADMINISTRATOR_NAME == 'Administrator':
+                    text = _('TUN Mode Disabled (Administrator)')
+                else:
+                    text = _('TUN Mode Disabled (Superuser)')
+
+                super().__init__(text, **kwargs)
 
                 self.setDisabled(True)
 
     def triggeredCallback(self, checked):
         """Handle activation of the action."""
-        if PLATFORM != 'Linux':
-            assert SystemRuntime.isAdmin()
-
-        if checked:
-            AppSettings.turnON_('VPNMode')
-        else:
-            AppSettings.turnOFF('VPNMode')
-
-        showMBoxNewChangesNextTime()
+        SettingsController.setTUNMode(checked)
 
 
 class SettingsChildAction(AppQAction):
@@ -94,187 +212,37 @@ class SettingsChildAction(AppQAction):
     def triggeredCallback(self, checked):
         """Handle activation of the action."""
         if self.textCompare('Dark Mode'):
-            # Settings turn on/off order matters here
-            if checked:
-                AppSettings.turnON_('DarkMode')
-
-                try:
-                    APP().switchToDarkMode()
-                except Exception:
-                    # Any non-exit exceptions
-
-                    pass
-            else:
-                AppSettings.turnOFF('DarkMode')
-
-                try:
-                    APP().switchToAutoMode()
-                except Exception:
-                    # Any non-exit exceptions
-
-                    pass
+            SettingsController.setDarkMode(checked)
         elif self.textCompare('Use Monochrome Tray Icon'):
-            # Settings turn on/off order matters here
-            if checked:
-                AppSettings.turnON_('UseMonochromeTrayIcon')
-
-                APP().systemTray.setMonochromeIcon()
-            else:
-                AppSettings.turnOFF('UseMonochromeTrayIcon')
-
-                if APP().isSystemTrayConnected():
-                    APP().systemTray.setConnectedIcon()
-                else:
-                    APP().systemTray.setDisconnectedIcon()
+            SettingsController.setMonochromeTrayIcon(checked)
         elif self.textCompare('Hide Dock Icon'):
-            if checked:
-                APP().installDockIconVisibilityFeature()
-
-                AppSettings.turnON_('HideDockIcon')
-            else:
-                APP().installDockIconVisibilityFeature(remove=True)
-
-                AppSettings.turnOFF('HideDockIcon')
+            SettingsController.setDockIconHidden(checked)
         elif self.textCompare('Startup On Boot'):
-            if checked:
-                StartupOnBoot.on_()
-
-                AppSettings.turnON_('StartupOnBoot')
-            else:
-                StartupOnBoot.off()
-
-                AppSettings.turnOFF('StartupOnBoot')
+            SettingsController.setStartupOnBoot(checked)
         elif self.textCompare('Power Save Mode'):
-            if checked:
-                AppSettings.turnON_('PowerSaveMode')
-            else:
-                AppSettings.turnOFF('PowerSaveMode')
-
-            showMBoxNewChangesNextTime()
+            SettingsController.setPowerSaveMode(checked)
         elif self.textCompare('Force To 127.0.0.1 When Setting Local Proxy'):
-            if checked:
-                AppSettings.turnON_('ForceToLocalhostWhenSettingLocalProxy')
-            else:
-                AppSettings.turnOFF('ForceToLocalhostWhenSettingLocalProxy')
-
-            showMBoxNewChangesNextTime()
+            SettingsController.setForceLocalProxy(checked)
         elif self.textCompare('Automatically Update Asset Files'):
-            if checked:
-                AppSettings.turnON_('AutoUpdateAssetFiles')
-            else:
-                AppSettings.turnOFF('AutoUpdateAssetFiles')
+            SettingsController.setAutoUpdateAssets(checked)
         elif self.textCompare('Show Progress Bar When Connecting'):
-            if checked:
-                AppSettings.turnON_('ShowProgressBarWhenConnecting')
-            else:
-                AppSettings.turnOFF('ShowProgressBarWhenConnecting')
+            SettingsController.setConnectionProgressVisible(checked)
         elif self.textCompare('Show Tab And Spaces In Editor'):
-            if checked:
-                APP().mainWindow.showTabAndSpaces()
-
-                AppSettings.turnON_('ShowTabAndSpacesInEditor')
-            else:
-                APP().mainWindow.hideTabAndSpaces()
-
-                AppSettings.turnOFF('ShowTabAndSpacesInEditor')
+            SettingsController.setEditorWhitespaceVisible(checked)
 
 
 class SettingsAction(AppQAction):
-    """Handle the settings action."""
+    """Navigate from the system tray to the page-based settings UI."""
 
     def __init__(self, **kwargs):
         """Initialize the SettingsAction."""
-        if SystemRuntime.flatpakID():
-            tunActions = []
-        else:
-            tunActions = [
-                TUNModeAction(
-                    checkable=True,
-                    checked=AppSettings.isStateON_('VPNMode'),
-                ),
-                AppQAction(
-                    _('Customize Tun2socks Settings...'),
-                    icon=bootstrapIcon('diagram-3.svg'),
-                    checkable=False,
-                    callback=lambda: APP().mainWindow.getGuiTUNSettings().open(),
-                ),
-                AppQSeperator(),
-            ]
-
-        if PLATFORM == 'Darwin':
-            hideDockIconAction = [
-                SettingsChildAction(
-                    _('Hide Dock Icon'),
-                    checkable=True,
-                    checked=AppSettings.isStateON_('HideDockIcon'),
-                )
-            ]
-        else:
-            hideDockIconAction = []
-
-        if not SystemRuntime.isAssetsFolderWritable():
-            autoUpdateAssetFilesAction = []
-        else:
-            autoUpdateAssetFilesAction = (
-                SettingsChildAction(
-                    _('Automatically Update Asset Files'),
-                    checkable=True,
-                    checked=AppSettings.isStateON_('AutoUpdateAssetFiles'),
-                ),
-            )
-
         super().__init__(
             _('Settings'),
             icon=bootstrapIcon('gear-wide-connected.svg'),
-            menu=AppQMenu(
-                *tunActions,
-                SettingsChildAction(
-                    _('Dark Mode'),
-                    checkable=True,
-                    checked=AppSettings.isStateON_('DarkMode'),
-                ),
-                SettingsChildAction(
-                    _('Use Monochrome Tray Icon'),
-                    checkable=True,
-                    checked=AppSettings.isStateON_('UseMonochromeTrayIcon'),
-                ),
-                *hideDockIconAction,
-                AppQSeperator(),
-                SettingsChildAction(
-                    _('Startup On Boot'),
-                    checkable=True,
-                    checked=AppSettings.isStateON_('StartupOnBoot'),
-                ),
-                SettingsChildAction(
-                    _('Power Save Mode'),
-                    checkable=True,
-                    checked=AppSettings.isStateON_('PowerSaveMode'),
-                ),
-                AppQSeperator(),
-                SettingsChildAction(
-                    _('Force To 127.0.0.1 When Setting Local Proxy'),
-                    checkable=True,
-                    checked=AppSettings.isStateON_(
-                        'ForceToLocalhostWhenSettingLocalProxy'
-                    ),
-                ),
-                *autoUpdateAssetFilesAction,
-                SettingsChildAction(
-                    _('Show Progress Bar When Connecting'),
-                    checkable=True,
-                    checked=AppSettings.isStateON_('ShowProgressBarWhenConnecting'),
-                ),
-                SettingsChildAction(
-                    _('Show Tab And Spaces In Editor'),
-                    checkable=True,
-                    checked=AppSettings.isStateON_('ShowTabAndSpacesInEditor'),
-                ),
-            ),
-            useActionGroup=False,
+            callback=lambda: APP().mainWindow.showSettingsPage(),
             **kwargs,
         )
 
     def getTUNModeAction(self) -> AppQAction:
-        # 1st action
-        """Return TUN mode action."""
-        return self._menu.actions()[0]
+        """Return the Settings page's compatibility TUN action."""
+        return APP().mainWindow.settingsPage.tunModeAction

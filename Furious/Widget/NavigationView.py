@@ -104,6 +104,7 @@ class _NavigationPage:
     widget: QWidget
     button: _NavigationButton
     translatable: bool = True
+    placement: str = 'top'
 
 
 class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
@@ -145,8 +146,15 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.pageButtonLayout = QVBoxLayout()
         self.pageButtonLayout.setContentsMargins(0, 6, 0, 0)
         self.pageButtonLayout.setSpacing(4)
+
         self.navigationLayout.addLayout(self.pageButtonLayout)
         self.navigationLayout.addStretch()
+
+        self.bottomPageButtonLayout = QVBoxLayout()
+        self.bottomPageButtonLayout.setContentsMargins(0, 0, 0, 0)
+        self.bottomPageButtonLayout.setSpacing(4)
+
+        self.navigationLayout.addLayout(self.bottomPageButtonLayout)
 
         self.pageButtonGroup = QButtonGroup(self)
         self.pageButtonGroup.setExclusive(True)
@@ -180,6 +188,7 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         iconFileName: str,
         *,
         translatable: bool = True,
+        placement: str = 'top',
     ):
         """Register a page and create its navigation control."""
         if not isinstance(pageId, str) or not pageId:
@@ -190,6 +199,9 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
 
         if not isinstance(widget, QWidget):
             raise TypeError('widget must be a QWidget')
+
+        if placement not in ('top', 'bottom'):
+            raise ValueError("placement must be either 'top' or 'bottom'")
 
         button = _NavigationButton(
             parent=self.navigationPanel,
@@ -216,10 +228,17 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
             widget,
             button,
             translatable,
+            placement,
         )
+
         self._pages[pageId] = page
         self.pageButtonGroup.addButton(button)
-        self.pageButtonLayout.addWidget(button)
+
+        if placement == 'bottom':
+            self.bottomPageButtonLayout.addWidget(button)
+        else:
+            self.pageButtonLayout.addWidget(button)
+
         self.pageStack.addWidget(widget)
 
         self._updatePageText(page)
@@ -336,6 +355,7 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
     def _updatePageText(self, page: _NavigationPage):
         """Apply translated navigation text and compact-mode tooltips."""
         text = _(page.title) if page.translatable else page.title
+
         page.button.setText(text)
         page.button.setToolTip('' if self._expanded else text)
 

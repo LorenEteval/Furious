@@ -511,66 +511,6 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             ),
         ]
 
-        if SystemRuntime.flatpakID():
-            customizeTUNSettingsAction = []
-        else:
-            customizeTUNSettingsAction = [
-                AppQAction(
-                    _('Customize Tun2socks Settings...'),
-                    icon=bootstrapIcon('diagram-3.svg'),
-                    checkable=False,
-                    callback=lambda: self.getGuiTUNSettings().open(),
-                ),
-            ]
-
-        if PLATFORM == 'Windows' or PLATFORM == 'Darwin':
-            _TRANSLATABLE_RESTART_AS_ADMIN = [
-                _('Restart The Application As Administrator'),
-                _('Restart The Application As Superuser'),
-            ]
-
-            restartAsAdminAction = [
-                AppQAction(
-                    _(f'Restart The Application As {ADMINISTRATOR_NAME}'),
-                    icon=bootstrapIcon('arrow-clockwise.svg'),
-                    checkable=False,
-                    callback=lambda: self.restartAsAdmin(),
-                ),
-            ]
-        else:
-            restartAsAdminAction = []
-
-        if PLATFORM == 'Darwin' or SystemRuntime.flatpakID():
-            openAppFolderAction = []
-        else:
-            openAppFolderAction = [
-                AppQAction(
-                    _('Open Application Folder'),
-                    icon=bootstrapIcon('folder2-open.svg'),
-                    checkable=False,
-                    callback=lambda: self.openApplicationFolder(),
-                ),
-            ]
-
-        toolsActions = [
-            *customizeTUNSettingsAction,
-            AppQAction(
-                _('Customize System Proxy Bypass Address...'),
-                checkable=False,
-                callback=lambda: self.customizeProxyBypassDialog.open(),
-            ),
-            AppQAction(
-                _('Customize Network Test URL...'),
-                icon=bootstrapIcon('speedometer2.svg'),
-                checkable=False,
-                callback=lambda: self.customizeNetworkTestDialog.open(),
-            ),
-        ]
-        systemTools = [*restartAsAdminAction, *openAppFolderAction]
-
-        if systemTools:
-            toolsActions.extend([AppQSeperator(), *systemTools])
-
         corePluginActions = []
 
         for plugin in pluginRegistry.pluginsWithCapability(
@@ -679,29 +619,6 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
                     checkable=False,
                 ),
                 *pluginsToolbarActions,
-                AppQSeperator(),
-                AppQAction(
-                    _('Tools'),
-                    icon=bootstrapIcon('tools.svg'),
-                    menu=AppQMenu(*toolsActions),
-                    useSetMenu=False,
-                    useActionGroup=False,
-                    checkable=False,
-                ),
-                AppQSeperator(),
-                AppQAction(
-                    _('Check For Updates'),
-                    icon=bootstrapIcon('download.svg'),
-                    checkable=False,
-                    callback=lambda: self.checkForUpdates(parent=self),
-                ),
-                AppQSeperator(),
-                AppQAction(
-                    _('About'),
-                    icon=bootstrapIcon('info-circle.svg'),
-                    checkable=False,
-                    callback=lambda: self.openAboutPage(),
-                ),
             )
             self.toolbar.setObjectName('HomePageToolBar')
             self.toolbar.setMovable(False)
@@ -728,37 +645,11 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
                 'actions': [*pluginActions],
             }
 
-            toolsMenu = {
-                'name': 'Tools',
-                'actions': [*toolsActions],
-            }
-
-            helpMenu = {
-                'name': 'Help',
-                'actions': [
-                    AppQAction(
-                        _('Check For Updates'),
-                        icon=bootstrapIcon('download.svg'),
-                        checkable=False,
-                        callback=lambda: self.checkForUpdates(parent=self),
-                    ),
-                    AppQSeperator(),
-                    AppQAction(
-                        _('About'),
-                        icon=bootstrapIcon('info-circle.svg'),
-                        checkable=False,
-                        callback=lambda: self.openAboutPage(),
-                    ),
-                ],
-            }
-
             # Corresponds to menus defined above
             _TRANSLATABLE_MENU_NAME = [
                 _('Server'),
                 _('Subscription'),
                 _('Plugins'),
-                _('Tools'),
-                _('Help'),
             ]
 
             # Menus
@@ -766,8 +657,6 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
                 serverMenu,
                 subsMenu,
                 pluginsMenu,
-                toolsMenu,
-                helpMenu,
             ):
                 menuName = menuDict['name']
                 menuObjName = f'_{menuName}Menu'

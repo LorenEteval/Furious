@@ -28,6 +28,7 @@ from Furious.Widget.NavigationView import NavigationView
 from Furious.Window.HomePage import HomePage
 from Furious.Window.LogPage import LogPage
 from Furious.Window.MetricsPage import MetricsPage
+from Furious.Window.SettingsPage import SettingsPage
 
 from PySide6 import QtCore
 
@@ -46,7 +47,12 @@ registerAppSettings('AppMainWindowState')
 registerAppSettings('AppMainWindowSelectedPage', default='home')
 registerAppSettings('AppMainWindowNavigationExpanded', isBinary=True)
 
-_TRANSLATABLE_NAVIGATION_LABELS = (_('Home'), _('Metrics'), _('Log'))
+_TRANSLATABLE_NAVIGATION_LABELS = (
+    _('Home'),
+    _('Log'),
+    _('Metrics'),
+    _('Settings'),
+)
 
 
 class MainWindow(AppQMainWindow):
@@ -75,6 +81,16 @@ class MainWindow(AppQMainWindow):
             parent=self.navigationView,
         )
         self.logPage = AppLogPage()
+        self.settingsPage = SettingsPage(
+            tunSettingsDialogFactory=self.homePage.getGuiTUNSettings,
+            proxyBypassDialog=self.homePage.customizeProxyBypassDialog,
+            networkTestDialog=self.homePage.customizeNetworkTestDialog,
+            checkForUpdates=self.homePage.checkForUpdates,
+            openAboutPage=self.homePage.openAboutPage,
+            restartAsAdmin=self.homePage.restartAsAdmin,
+            openApplicationFolder=self.homePage.openApplicationFolder,
+            parent=self.navigationView,
+        )
 
         if not isinstance(self.logPage, LogPage):
             raise TypeError('application log page must be a LogPage')
@@ -86,16 +102,23 @@ class MainWindow(AppQMainWindow):
             'house-door.svg',
         )
         self.navigationView.addPage(
+            'log',
+            self.logPage,
+            'Log',
+            'pin-angle.svg',
+        )
+        self.navigationView.addPage(
             'metrics',
             self.metricsPage,
             'Metrics',
             'speedometer2.svg',
         )
         self.navigationView.addPage(
-            'log',
-            self.logPage,
-            'Log',
-            'pin-angle.svg',
+            'settings',
+            self.settingsPage,
+            'Settings',
+            'gear-wide-connected.svg',
+            placement='bottom',
         )
         self.navigationView.pageChanged.connect(self._pageChanged)
         self.navigationView.expandedChanged.connect(self._navigationExpandedChanged)
@@ -139,6 +162,11 @@ class MainWindow(AppQMainWindow):
     def showLogPage(self):
         """Navigate directly to the unified logging page."""
         self.showPage('log')
+
+    def showSettingsPage(self):
+        """Navigate directly to application settings."""
+        self.show()
+        self.showPage('settings')
 
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
         """Forward a subscription update to the home page."""
