@@ -23,6 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Core import Tun2socks
 from Furious.Backends import OFFICIAL_PLUGIN_TYPES
+from Furious.Controllers import RoutingController
 from Furious.Extensions import BUNDLED_EXTENSION_TYPES
 from Furious.Plugins import getPluginRegistry, initializePluginRegistry
 from Furious.Qt import AppStyleSheet
@@ -181,6 +182,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         self.mainWindow = None
         self.systemTray = None
         self.connectionAction = None
+        self.routingController = None
 
         # Unified logging service and presentation
         self.logManager = None
@@ -544,8 +546,9 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                 SystemProxy.off()
                 SystemProxy.daemonOn_()
 
-            # The application owns the connection operation. Home and tray bind
-            # to this same action, regardless of their construction order.
+            # The application owns connection and routing operations. Home and
+            # tray bind to these same objects regardless of construction order.
+            self.routingController = RoutingController(parent=self)
             self.connectionAction = ConnectAction(isTrayAction=True)
 
             self.mainWindow = MainWindow()

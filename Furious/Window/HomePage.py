@@ -40,6 +40,7 @@ from Furious.Actions.Import import (
     ImportURIFromClipboardAction,
 )
 from Furious.Widget.ConnectionButton import ConnectionButton
+from Furious.Widget.RoutingSelector import RoutingSelector
 from Furious.Widget.ServerTableView import *
 from Furious.Window.NetworkTestDialog import *
 from Furious.Window.ProxyBypassDialog import *
@@ -515,6 +516,8 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             self.activateSelectedServerForConnection,
             parent=self,
         )
+        self.routingController = APP().routingController
+        self.routingSelector = RoutingSelector(self.routingController, parent=self)
 
         self.searchLineEdit = AppQLineEdit()
         self.searchLineEdit.setPlaceholderText(
@@ -550,6 +553,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.actionLayout.setContentsMargins(0, 0, 0, 0)
         self.actionLayout.setSpacing(8)
         self.actionLayout.addWidget(self.connectButton)
+        self.actionLayout.addWidget(self.routingSelector)
         self.actionLayout.addWidget(self.serverButton)
         self.actionLayout.addStretch(1)
         self.actionLayout.addWidget(self.subscriptionFilterComboBox)
@@ -576,6 +580,9 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         )
         self.userServersQTableWidget.selectionModel().selectionChanged.connect(
             self.handleServerSelectionChanged
+        )
+        self.userServersQTableWidget.activeServerChanged.connect(
+            self.routingController.refresh
         )
 
         self.refreshSubscriptionFilter()
@@ -607,6 +614,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             return False
 
         self.userServersQTableWidget.activateSelectedServer()
+        self.routingController.refresh()
 
         return Storage.UserActivatedItemIndex() == indexes[0]
 

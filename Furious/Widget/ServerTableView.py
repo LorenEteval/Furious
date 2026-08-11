@@ -1041,6 +1041,8 @@ class DeleteServersProgressDialog(AppQDialog):
             # Set invalid first
             AppSettings.set('ActivatedItemIndex', str(-1))
 
+            self.table.activeServerChanged.emit()
+
             if APP().isSystemTrayConnected():
                 if self.showTrayMessage:
                     # Trigger disconnect
@@ -1461,6 +1463,8 @@ class ServerTableView(
     AppQTableView,
 ):
     """Represent user servers Qt table view."""
+
+    activeServerChanged = QtCore.Signal()
 
     RowHeight = 42
 
@@ -1953,12 +1957,16 @@ class ServerTableView(
     def activateItemByIndex(self, index, activate):
         """Activate item by index."""
         oldIndex = Storage.UserActivatedItemIndex()
+        changed = activate and oldIndex != int(index)
 
         if activate:
             AppSettings.set('ActivatedItemIndex', str(index))
 
         self.sourceModel.emitRowChanged(oldIndex)
         self.sourceModel.emitRowChanged(index)
+
+        if changed:
+            self.activeServerChanged.emit()
 
     def flushItem(self, row: int, column: int, item: ServerProfile):
         """Refresh item."""
@@ -2091,6 +2099,9 @@ class ServerTableView(
             row = itemIndex
 
         self.sourceModel.emitRowChanged(row)
+
+        if row == Storage.UserActivatedItemIndex():
+            self.activeServerChanged.emit()
 
     def flushAll(self):
         # Refresh index
@@ -2250,6 +2261,8 @@ class ServerTableView(
         if deleteActivated:
             # Set invalid first
             AppSettings.set('ActivatedItemIndex', str(-1))
+
+            self.activeServerChanged.emit()
 
             if APP().isSystemTrayConnected():
                 if showTrayMessage:
@@ -2573,6 +2586,8 @@ class ServerTableView(
         )
 
         AppSettings.set('ActivatedItemIndex', str(newActivatedIndex))
+
+        self.activeServerChanged.emit()
 
         self.sourceModel.refreshIndexes()
         self.proxyModel.invalidate()

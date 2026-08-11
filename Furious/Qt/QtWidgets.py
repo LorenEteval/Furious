@@ -38,6 +38,7 @@ __all__ = [
     'moveToCenter',
     'AppQCheckBox',
     'AppQComboBox',
+    'AppQComboBoxSeparatorDelegate',
     'AppQDialog',
     'AppQDialogButtonBox',
     'AppQGroupBox',
@@ -96,12 +97,73 @@ class AppQCheckBox(Mixins.QTranslatable, QCheckBox):
         self.setText(_(self.text()))
 
 
+class AppQComboBoxSeparatorDelegate(Mixins.ThemeAware, QAbstractItemDelegate):
+    """Paint real combo-box separators with application theme tokens."""
+
+    SeparatorRoleValue = 'separator'
+    HorizontalMargin = 8
+
+    def __init__(self, wrappedDelegate, comboBox):
+        """Wrap Qt's native delegate without changing normal item painting."""
+        self.wrappedDelegate = wrappedDelegate
+        self.comboBox = comboBox
+
+        super().__init__(comboBox)
+
+    @staticmethod
+    def isSeparator(index) -> bool:
+        """Return whether *index* was created by QComboBox.insertSeparator()."""
+        return (
+            index.data(QtCore.Qt.ItemDataRole.AccessibleDescriptionRole)
+            == AppQComboBoxSeparatorDelegate.SeparatorRoleValue
+        )
+
+    def paint(self, painter, option, index):
+        """Paint separators and preserve Qt's native rendering for all items."""
+        if not self.isSeparator(index):
+            self.wrappedDelegate.paint(painter, option, index)
+
+            return
+
+        try:
+            color = QColor(
+                AppStyleSheet.paletteForTheme(APP().theme())['border_strong']
+            )
+        except (AttributeError, RuntimeError):
+            color = option.palette.color(QPalette.ColorRole.Mid)
+
+        line = option.rect.adjusted(self.HorizontalMargin, 0, -self.HorizontalMargin, 0)
+        y = line.center().y()
+
+        painter.fillRect(line.left(), y, max(0, line.width()), 1, color)
+
+    def sizeHint(self, option, index):
+        """Keep the native popup's item and separator geometry unchanged."""
+        return self.wrappedDelegate.sizeHint(option, index)
+
+    def themeChangedCallback(self, theme: str):
+        """Repaint the popup viewport after an application theme change."""
+        self.comboBox.view().viewport().update()
+
+
 class AppQComboBox(Mixins.QTranslatable, QComboBox):
     """Represent app q combo box."""
 
     def __init__(self, *args, **kwargs):
         """Initialize the AppQComboBox."""
         super().__init__(*args, **kwargs)
+
+        self._themedSeparatorDelegate = None
+
+    def enableThemedSeparators(self):
+        """Theme real insertSeparator() rows while preserving native items."""
+        if self._themedSeparatorDelegate is not None:
+            return
+
+        self._themedSeparatorDelegate = AppQComboBoxSeparatorDelegate(
+            self.itemDelegate(), self
+        )
+        self.setItemDelegate(self._themedSeparatorDelegate)
 
     def retranslate(self):
         """Refresh translated text for the app q combo box."""
@@ -1073,10 +1135,20 @@ def showMBoxDirectRulesNotAllowed(**kwargs):
     def handleResultCode(code):
         """Handle result code."""
         if code == PySide6Legacy.enumValueWrapper(AppQMessageBox.StandardButton.Yes):
-            globalAction = APP().systemTray.RoutingAction.getGlobalAction()
-            if globalAction is not None:
-                globalAction.trigger()
-                APP().systemTray.ConnectAction.trigger()
+            app = APP()
+
+            controller, wasConnected = (
+                app.routingController,
+                app.isSystemTrayConnected(),
+            )
+
+            changed = controller.selectRouting(AppBuiltinRouting.Global.value)
+
+            if changed or controller.routing == AppBuiltinRouting.Global.value:
+                # Selecting a route reconnects an established connection itself.
+                # During an initial connection attempt, resume that attempt here.
+                if not wasConnected:
+                    app.connectionAction.trigger()
         else:
             # Do nothing
             pass
