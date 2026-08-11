@@ -39,7 +39,9 @@ from Furious.Service.TrafficStatsManager import (
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import *
 
+from collections import Counter
 from collections.abc import Callable
+
 import logging
 
 __all__ = ['SettingsPage']
@@ -219,7 +221,7 @@ class _SettingsCard(Mixins.ThemeAware, QFrame):
         super().__init__(parent)
 
         self.setObjectName('SettingsCard')
-        self.iconFileName = iconFileName
+        self.iconFileName = ''
         self.iconLabel = QLabel(parent=self)
         self.iconLabel.setObjectName('SettingsCardIcon')
         self.iconLabel.setFixedSize(self.IconSize)
@@ -253,15 +255,28 @@ class _SettingsCard(Mixins.ThemeAware, QFrame):
         layout.addSpacing(16)
         layout.addWidget(self.control, 0, QtCore.Qt.AlignmentFlag.AlignVCenter)
 
-        self.setIconByTheme(APP().theme())
+        self.setIconFileName(iconFileName)
 
     def setTexts(self, title: str, description: str):
         """Set already translated card text."""
         self.titleLabel.setText(title)
         self.descriptionLabel.setText(description)
 
+    def setIconFileName(self, iconFileName: str | None):
+        """Set or remove the optional leading card icon."""
+        self.iconFileName = iconFileName or ''
+        self.iconLabel.setVisible(bool(self.iconFileName))
+
+        if self.iconFileName:
+            self.setIconByTheme(APP().theme())
+        else:
+            self.iconLabel.clear()
+
     def setIconByTheme(self, theme: str):
         """Refresh the card icon for the active theme."""
+        if not self.iconFileName:
+            return
+
         iconFactory = (
             bootstrapIconWhite if theme == AppStyleSheet.Dark else bootstrapIcon
         )
@@ -559,6 +574,19 @@ class _SettingsSection(QWidget):
         """Append a card while retaining it for translation and syncing."""
         self.cards.append(card)
         self.layout.addWidget(card)
+
+    def suppressDuplicateIcons(self):
+        """Remove repeated artwork that adds no meaning within this section."""
+        iconCounts = Counter(
+            card.iconFileName for card in self.cards if card.iconFileName
+        )
+        duplicateIcons = {
+            iconFileName for iconFileName, count in iconCounts.items() if count > 1
+        }
+
+        for card in self.cards:
+            if card.iconFileName in duplicateIcons:
+                card.setIconFileName(None)
 
 
 class SettingsPage(Mixins.QTranslatable, QMainWindow):
@@ -965,6 +993,8 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
 
             section.addCard(self._cardFromPluginDescriptor(descriptor))
 
+        section.suppressDuplicateIcons()
+
         if section.cards:
             self.pluginSections.append(section)
 
@@ -1028,6 +1058,8 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             )
 
             section.addCard(card)
+
+        section.suppressDuplicateIcons()
 
         if section.cards:
             self.pluginSections.append(section)
