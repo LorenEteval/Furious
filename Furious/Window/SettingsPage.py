@@ -265,7 +265,10 @@ class _SettingsCard(Mixins.ThemeAware, QFrame):
     def setIconFileName(self, iconFileName: str | None):
         """Set or remove the optional leading card icon."""
         self.iconFileName = iconFileName or ''
-        self.iconLabel.setVisible(bool(self.iconFileName))
+
+        # Keep the fixed-size icon column in the layout even when no artwork is
+        # requested so every card's title and description share one text edge.
+        self.iconLabel.setVisible(True)
 
         if self.iconFileName:
             self.setIconByTheme(APP().theme())
