@@ -51,6 +51,7 @@ import logging
 import icmplib
 import functools
 import collections
+import datetime
 
 __all__ = ['ServerTableView']
 
@@ -151,6 +152,8 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
 class SubscriptionManager(WebGETManager):
     """Coordinate subscription operations."""
 
+    subscriptionsChanged = QtCore.Signal()
+
     def __init__(self, parent, **kwargs):
         """Initialize the SubscriptionManager."""
         actionMessage = kwargs.pop('actionMessage', 'update subs')
@@ -229,6 +232,8 @@ class SubscriptionManager(WebGETManager):
             # Show the MessageBox asynchronously
             mbox.open()
 
+        self.subscriptionsChanged.emit()
+
     def mustCall(self, **kwargs):
         """Perform the required completion hook."""
         depthMap = kwargs.get('depthMap', {})
@@ -253,6 +258,27 @@ class SubscriptionManager(WebGETManager):
         )
         result = self.importer.importPayload(data, source)
 
+        profileFilter = str(kwargs.get('filter', '')).strip()
+
+        if result is not None and profileFilter:
+            try:
+                pattern = re.compile(profileFilter, re.IGNORECASE)
+            except re.error as ex:
+                logger.error(
+                    f'invalid subscription filter for {remark!r}: {ex}. '
+                    f'Importing all profiles'
+                )
+            else:
+                result = type(result)(
+                    result.decoderId,
+                    tuple(
+                        profile
+                        for profile in result.profiles
+                        if pattern.search(str(getattr(profile, 'itemRemark', '')))
+                    ),
+                    result.rejectedItems,
+                )
+
         if result is None or not result.profiles:
             failureArgs.append({'error': 'UnsupportedSubscriptionFormat', **kwargs})
         else:
@@ -263,6 +289,13 @@ class SubscriptionManager(WebGETManager):
             )
 
             successArgs.append({'profiles': result.profiles, **kwargs})
+
+            unique = kwargs.get('unique', '')
+
+            if unique in Storage.UserSubs():
+                Storage.UserSubs()[unique]['lastUpdated'] = (
+                    datetime.datetime.now().astimezone().isoformat(timespec='seconds')
+                )
 
     def failureCallback(self, networkReply, **kwargs):
         """Handle a failed network operation."""
@@ -290,15 +323,21 @@ class SubscriptionManager(WebGETManager):
         # Some providers reject the default Qt User-Agent (e.g. with 503),
         # so identify ourselves explicitly.
         request = QNetworkRequest(QtCore.QUrl(url))
+        userAgent = str(kwargs.get('userAgent', '')).strip()
         request.setRawHeader(
             b'User-Agent',
-            f'{APPLICATION_NAME}/{APPLICATION_VERSION}'.encode(),
+            (userAgent or f'{APPLICATION_NAME}/{APPLICATION_VERSION}').encode(),
         )
 
         self.webGET(request, logActionMessage=logActionMessage, **kwargs)
 
     def updateSubsByUnique(self, unique: str, **kwargs):
         """Update subs by unique."""
+        subscription = Storage.UserSubs().get(unique)
+
+        if not subscription or not subscription.get('enabled', True):
+            return
+
         depthMap = kwargs.get('depthMap', {'depth': 1})
         successArgs = kwargs.get('successArgs', list())
         failureArgs = kwargs.get('failureArgs', list())
@@ -316,11 +355,20 @@ class SubscriptionManager(WebGETManager):
 
     def updateSubs(self, **kwargs):
         """Update subs."""
-        depthMap = {'depth': len(Storage.UserSubs())}
+        enabledKeys = tuple(
+            key
+            for key, subscription in Storage.UserSubs().items()
+            if subscription.get('enabled', True) and subscription.get('webURL')
+        )
+
+        if not enabledKeys:
+            return
+
+        depthMap = {'depth': len(enabledKeys)}
         successArgs = list()
         failureArgs = list()
 
-        for key in Storage.UserSubs().keys():
+        for key in enabledKeys:
             self.updateSubsByUnique(
                 key,
                 depthMap=depthMap,

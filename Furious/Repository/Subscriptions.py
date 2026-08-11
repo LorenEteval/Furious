@@ -33,8 +33,12 @@ class UserSubEntry:
 
     remark: str
     webURL: str
+    enabled: bool
     autoupdate: str
     proxy: str
+    userAgent: str
+    filter: str
+    lastUpdated: str
 
 
 class UserSub:

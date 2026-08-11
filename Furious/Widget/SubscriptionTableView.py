@@ -132,7 +132,13 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
 
         flags = QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
 
-        if self.itemKey[index.column()] not in ['autoupdate', 'proxy']:
+        if self.itemKey[index.column()] not in [
+            'autoupdate',
+            'proxy',
+            'enabled',
+            'lastUpdated',
+            'profiles',
+        ]:
             flags |= QtCore.Qt.ItemFlag.ItemIsEditable
 
         return flags
@@ -153,9 +159,20 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
 
         subsob = self.subsObjectByRow(row)
         text = self.headers[column](subsob)
+        mapped = self.itemKey[column]
+
+        if mapped == 'profiles':
+            unique = self.uniqueByRow(row)
+            text = str(
+                sum(
+                    1
+                    for profile in Storage.UserServers()
+                    if profile.itemSubscription == unique
+                )
+            )
 
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
-            if self.itemKey[column] in ['autoupdate', 'proxy']:
+            if mapped in ['autoupdate', 'proxy', 'enabled']:
                 return _(text)
 
             return text
@@ -184,7 +201,13 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
 
         mapped = self.itemKey[column]
 
-        if mapped in ['autoupdate', 'proxy']:
+        if mapped in [
+            'autoupdate',
+            'proxy',
+            'enabled',
+            'lastUpdated',
+            'profiles',
+        ]:
             return False
 
         self.subsObjectByRow(row)[mapped] = str(value)
@@ -268,6 +291,10 @@ _TRANSLATABLE_HEADERS = [
     _('Remark'),
     _('Auto Update'),
     _('Auto Update Use Proxy'),
+    _('Enabled'),
+    _('Disabled'),
+    _('Last Updated'),
+    _('Profiles'),
 ]
 
 
@@ -304,14 +331,31 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
     Headers = [
         SubscriptionTableColumn('Remark', lambda item: item.get('remark', '')),
         SubscriptionTableColumn('URL', lambda item: item.get('webURL', '')),
+        SubscriptionTableColumn(
+            'Enabled',
+            lambda item: 'Enabled' if item.get('enabled', True) else 'Disabled',
+        ),
         SubscriptionTableColumn('Auto Update', lambda item: item.get('autoupdate', '')),
         SubscriptionTableColumn(
             'Auto Update Use Proxy', lambda item: item.get('proxy', '')
         ),
+        SubscriptionTableColumn(
+            'Last Updated',
+            lambda item: item.get('lastUpdated', ''),
+        ),
+        SubscriptionTableColumn('Profiles'),
     ]
 
     # Corresponds to 'Headers'
-    ItemKey = ['remark', 'webURL', 'autoupdate', 'proxy']
+    ItemKey = [
+        'remark',
+        'webURL',
+        'enabled',
+        'autoupdate',
+        'proxy',
+        'lastUpdated',
+        'profiles',
+    ]
 
     def __init__(self, *args, **kwargs):
         """Initialize the subscription table view."""
@@ -319,7 +363,9 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
         super().__init__(*args, **kwargs)
 
-        self.timers = list(QtCore.QTimer() for i in range(len(Storage.UserSubs())))
+        self.timers = list(
+            QtCore.QTimer(self) for _index in range(len(Storage.UserSubs()))
+        )
         self.timerConnected = list(False for i in range(len(Storage.UserSubs())))
         self.sourceModel = UserSubsTableModel(self.Headers, self.ItemKey, parent=self)
         self.setModel(self.sourceModel)
@@ -372,6 +418,13 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         return sorted(
             list(set(index.row() for index in self.selectionModel().selectedRows()))
         )
+
+    @property
+    def selectedUniques(self):
+        """Return stable subscription IDs for the selected rows."""
+        keys = tuple(Storage.UserSubs())
+
+        return tuple(keys[row] for row in self.selectedIndex if row < len(keys))
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
@@ -481,7 +534,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
         assert isinstance(qtimer, QtCore.QTimer)
 
-        if timems is not None:
+        if timems is not None and subsob.get('enabled', True):
             logger.info(
                 f'start auto update job for subscription ({remark}, {webURL}). '
                 f'Interval is {timems // (60 * 1000)} mins'
@@ -626,6 +679,12 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
     def flushAll(self):
         """Refresh all."""
+        for item in Storage.UserSubs().values():
+            item.setdefault('enabled', True)
+            item.setdefault('userAgent', '')
+            item.setdefault('filter', '')
+            item.setdefault('lastUpdated', '')
+
         self.sourceModel.emitAllChanged()
 
         for index, key in enumerate(Storage.UserSubs()):
@@ -633,13 +692,26 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
     def appendNewItem(self, **kwargs):
         """Append new item."""
-        unique, remark, webURL, autoupdate, proxy = (
+        (
+            unique,
+            remark,
+            webURL,
+            enabled,
+            autoupdate,
+            proxy,
+            userAgent,
+            profileFilter,
+            lastUpdated,
+        ) = (
             kwargs.pop('unique', ''),
             kwargs.pop('remark', ''),
             kwargs.pop('webURL', ''),
-            # Below values are not filled when adding item via Gui
+            kwargs.pop('enabled', True),
             kwargs.pop('autoupdate', ''),
             kwargs.pop('proxy', ''),
+            kwargs.pop('userAgent', ''),
+            kwargs.pop('filter', ''),
+            kwargs.pop('lastUpdated', ''),
         )
 
         # The internal subs object
@@ -647,8 +719,12 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             unique: {
                 'remark': remark,
                 'webURL': webURL,
+                'enabled': bool(enabled),
                 'autoupdate': autoupdate,
                 'proxy': proxy,
+                'userAgent': userAgent,
+                'filter': profileFilter,
+                'lastUpdated': lastUpdated,
             }
         }
 
@@ -660,7 +736,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             row = self.sourceModel.rowCount()
 
             # Add timer
-            self.timers.append(QtCore.QTimer())
+            self.timers.append(QtCore.QTimer(self))
             self.timerConnected.append(False)
 
             self.sourceModel.beginInsertRows(QtCore.QModelIndex(), row, row)

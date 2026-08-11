@@ -23,7 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Models import *
 from Furious.Repository import *
-from Furious.Plugins import CapabilityKind, getPluginRegistry
+from Furious.Plugins import getPluginRegistry
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 from Furious.Service import (
@@ -43,7 +43,6 @@ from Furious.Widget.ServerTableView import *
 from Furious.Window.NetworkTestDialog import *
 from Furious.Window.ProxyBypassDialog import *
 from Furious.Window.QRCodeWindow import QRCodeWindow
-from Furious.Window.SubscriptionWindow import *
 from Furious.Window.TextEditorWindow import TextEditorWindow
 from Furious.Window.TunSettingsDialog import *
 
@@ -60,20 +59,6 @@ import functools
 __all__ = ['HomePage']
 
 logger = logging.getLogger(__name__)
-
-
-def _isCoreActive(coreType) -> bool:
-    """Return whether the tray's active connection owns *coreType*."""
-    try:
-        connectAction = APP().systemTray.ConnectAction
-
-        return connectAction.isConnected() and any(
-            isinstance(process, coreType)
-            for process in connectAction.coreManager.processesPool
-        )
-    except (AttributeError, RuntimeError):
-        # The home page is built before the system tray is attached.
-        return False
 
 
 class AppConnectivityManager(ConnectivityManager):
@@ -254,7 +239,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
 
 
 class TrafficStatsBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
-    """Display independently updated traffic speeds and usage."""
+    """Display compact Fluent direction groups for live network statistics."""
 
     UploadIconFileName = 'cloud-upload.svg'
     DownloadIconFileName = 'cloud-download.svg'
@@ -274,19 +259,38 @@ class TrafficStatsBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.uploadTextLabel = AppQLabel(translatable=False, parent=self)
         self.uploadUsageLabel = AppQLabel(translatable=False, parent=self)
 
+        self.downloadTextLabel.setObjectName('TrafficSpeedLabel')
+        self.uploadTextLabel.setObjectName('TrafficSpeedLabel')
         self.uploadUsageLabel.setObjectName('TrafficUsageLabel')
         self.downloadUsageLabel.setObjectName('TrafficUsageLabel')
 
+        self.downloadBadge = QFrame(parent=self)
+        self.downloadBadge.setObjectName('TrafficDirectionBadge')
+        self.downloadBadge.setProperty('direction', 'download')
+
+        self.uploadBadge = QFrame(parent=self)
+        self.uploadBadge.setObjectName('TrafficDirectionBadge')
+        self.uploadBadge.setProperty('direction', 'upload')
+
+        downloadLayout = QHBoxLayout(self.downloadBadge)
+        downloadLayout.setContentsMargins(8, 2, 8, 2)
+        downloadLayout.setSpacing(5)
+        downloadLayout.addWidget(self.downloadIconLabel)
+        downloadLayout.addWidget(self.downloadTextLabel)
+        downloadLayout.addWidget(self.downloadUsageLabel)
+
+        uploadLayout = QHBoxLayout(self.uploadBadge)
+        uploadLayout.setContentsMargins(8, 2, 8, 2)
+        uploadLayout.setSpacing(5)
+        uploadLayout.addWidget(self.uploadIconLabel)
+        uploadLayout.addWidget(self.uploadTextLabel)
+        uploadLayout.addWidget(self.uploadUsageLabel)
+
         self._layout = QHBoxLayout(self)
-        self._layout.setContentsMargins(8, 3, 8, 3)
-        self._layout.setSpacing(6)
-        self._layout.addWidget(self.downloadIconLabel)
-        self._layout.addWidget(self.downloadTextLabel)
-        self._layout.addWidget(self.downloadUsageLabel)
-        self._layout.addSpacing(4)
-        self._layout.addWidget(self.uploadIconLabel)
-        self._layout.addWidget(self.uploadTextLabel)
-        self._layout.addWidget(self.uploadUsageLabel)
+        self._layout.setContentsMargins(0, 1, 0, 1)
+        self._layout.setSpacing(5)
+        self._layout.addWidget(self.downloadBadge)
+        self._layout.addWidget(self.uploadBadge)
 
         self.setIconByTheme(APP().theme())
         self.updateToolTips()
@@ -330,8 +334,8 @@ class TrafficStatsBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
     @QtCore.Slot(object, object)
     def setUsage(self, upload: int, download: int):
         """Display formatted cumulative upload and download usage."""
-        self.uploadUsageLabel.setText(f'({formatTrafficUsage(upload)})')
-        self.downloadUsageLabel.setText(f'({formatTrafficUsage(download)})')
+        self.uploadUsageLabel.setText(f'• {formatTrafficUsage(upload)}')
+        self.downloadUsageLabel.setText(f'• {formatTrafficUsage(download)}')
         self.setVisible(True)
 
     @QtCore.Slot()
@@ -429,17 +433,6 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             qrCodeWindowFactory=QRCodeWindow,
             importActionsFactory=self.serverImportActions,
         )
-        self.userSubsWindow = SubscriptionWindow(
-            parent=self,
-            deleteUniqueCallback=lambda unique: self.userServersQTableWidget.deleteItemByIndex(
-                list(
-                    index
-                    for index, server in enumerate(Storage.UserServers())
-                    if server.itemSubscription == unique
-                ),
-                showProgress=False,
-            ),
-        )
         pluginRegistry = getPluginRegistry()
         self.customizeProxyBypassDialog = ProxyBypassDialog(parent=self)
         self.customizeNetworkTestDialog = NetworkTestDialog(parent=self)
@@ -481,124 +474,6 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             )
         )
 
-        subsActions = [
-            AppQAction(
-                _('Update Subscription (Use Current Proxy)'),
-                callback=lambda: self.userServersQTableWidget.updateSubs(
-                    Storage.Extras.UserHttpProxy(),
-                    parent=self,
-                ),
-            ),
-            AppQAction(
-                _('Update Subscription (Force Proxy)'),
-                callback=lambda: self.userServersQTableWidget.updateSubs(
-                    '127.0.0.1:10809',
-                    parent=self,
-                ),
-            ),
-            AppQAction(
-                _('Update Subscription (No Proxy)'),
-                callback=lambda: self.userServersQTableWidget.updateSubs(
-                    None,
-                    parent=self,
-                ),
-            ),
-            AppQSeperator(),
-            AppQAction(
-                _('Edit Subscription...'),
-                icon=bootstrapIcon('star.svg'),
-                callback=lambda: self.userSubsWindow.show(),
-            ),
-        ]
-
-        corePluginActions = []
-
-        for plugin in pluginRegistry.pluginsWithCapability(
-            CapabilityKind.KernelFactory
-        ):
-            pluginMetadata = pluginRegistry.metadataFor(plugin)
-            managementActions = pluginRegistry.managementActions(
-                plugin,
-                parent=self,
-                isCoreActive=_isCoreActive,
-            )
-            if managementActions:
-                corePluginActions.append(
-                    AppQAction(
-                        pluginMetadata.displayName,
-                        menu=AppQMenu(*managementActions),
-                        useActionGroup=False,
-                        checkable=False,
-                    )
-                )
-            else:
-                corePluginActions.append(
-                    AppQAction(
-                        pluginMetadata.displayName,
-                        checkable=False,
-                    )
-                )
-
-        extensionPluginActions = []
-
-        corePlugins = set(
-            pluginRegistry.pluginsWithCapability(CapabilityKind.KernelFactory)
-        )
-
-        for plugin in pluginRegistry.pluginsWithCapability(
-            CapabilityKind.ActionProvider
-        ):
-            if plugin in corePlugins:
-                continue
-
-            managementActions = pluginRegistry.managementActions(
-                plugin,
-                parent=self,
-                isCoreActive=_isCoreActive,
-            )
-
-            if managementActions:
-                pluginMetadata = pluginRegistry.metadataFor(plugin)
-                extensionPluginActions.append(
-                    AppQAction(
-                        pluginMetadata.displayName,
-                        menu=AppQMenu(*managementActions),
-                        useActionGroup=False,
-                        checkable=False,
-                    )
-                )
-
-        pluginActions = [
-            AppQAction(
-                _('Core'),
-                menu=AppQMenu(*corePluginActions),
-                useActionGroup=False,
-                checkable=False,
-            ),
-        ]
-
-        if extensionPluginActions:
-            pluginActions.append(
-                AppQAction(
-                    _('Extensions'),
-                    menu=AppQMenu(*extensionPluginActions),
-                    useActionGroup=False,
-                    checkable=False,
-                )
-            )
-
-        pluginsToolbarActions = [
-            AppQSeperator(),
-            AppQAction(
-                _('Plugins'),
-                icon=bootstrapIcon('plugin.svg'),
-                menu=AppQMenu(*pluginActions),
-                useSetMenu=False,
-                useActionGroup=False,
-                checkable=False,
-            ),
-        ]
-
         if hasattr(AppQAction, 'setMenu'):
             self.toolbar = AppQToolBar(
                 AppQAction(
@@ -609,16 +484,6 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
                     useActionGroup=False,
                     checkable=False,
                 ),
-                AppQSeperator(),
-                AppQAction(
-                    _('Subscription'),
-                    icon=bootstrapIcon('collection.svg'),
-                    menu=AppQMenu(*subsActions),
-                    useSetMenu=False,
-                    useActionGroup=False,
-                    checkable=False,
-                ),
-                *pluginsToolbarActions,
             )
             self.toolbar.setObjectName('HomePageToolBar')
             self.toolbar.setMovable(False)
@@ -635,29 +500,13 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
                 'actions': [*serverActions],
             }
 
-            subsMenu = {
-                'name': 'Subscription',
-                'actions': [*subsActions],
-            }
-
-            pluginsMenu = {
-                'name': 'Plugins',
-                'actions': [*pluginActions],
-            }
-
             # Corresponds to menus defined above
             _TRANSLATABLE_MENU_NAME = [
                 _('Server'),
-                _('Subscription'),
-                _('Plugins'),
             ]
 
             # Menus
-            for menuDict in (
-                serverMenu,
-                subsMenu,
-                pluginsMenu,
-            ):
+            for menuDict in (serverMenu,):
                 menuName = menuDict['name']
                 menuObjName = f'_{menuName}Menu'
                 menu = AppQMenu(
