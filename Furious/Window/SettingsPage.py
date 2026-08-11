@@ -19,7 +19,6 @@
 
 from __future__ import annotations
 
-from Furious.Actions.Settings import TUNModeAction
 from Furious.Controllers import SettingsController
 from Furious.Frozenlib import *
 from Furious.Plugins import (
@@ -46,6 +45,25 @@ import logging
 __all__ = ['SettingsPage']
 
 logger = logging.getLogger(__name__)
+
+
+def _tunModeTitle() -> str:
+    """Return the platform-appropriate translated TUN setting title."""
+    if PLATFORM == 'Linux' or SystemRuntime.isAdmin():
+        return _('TUN Mode')
+
+    if ADMINISTRATOR_NAME == 'Administrator':
+        return _('TUN Mode Disabled (Administrator)')
+
+    return _('TUN Mode Disabled (Superuser)')
+
+
+def _restartApplicationTitle() -> str:
+    """Return the translated privilege-restart title for this platform."""
+    if ADMINISTRATOR_NAME == 'Administrator':
+        return _('Restart The Application As Administrator')
+
+    return _('Restart The Application As Superuser')
 
 
 class _SettingsSwitch(QCheckBox):
@@ -187,7 +205,16 @@ class _SettingsCard(Mixins.ThemeAware, QFrame):
 
     IconSize = QtCore.QSize(20, 20)
 
-    def __init__(self, iconFileName: str, control: QWidget, parent=None):
+    def __init__(
+        self,
+        iconFileName: str,
+        control: QWidget,
+        title='',
+        description='',
+        *,
+        translatable=True,
+        parent=None,
+    ):
         """Initialize one reusable settings row."""
         super().__init__(parent)
 
@@ -196,9 +223,17 @@ class _SettingsCard(Mixins.ThemeAware, QFrame):
         self.iconLabel = QLabel(parent=self)
         self.iconLabel.setObjectName('SettingsCardIcon')
         self.iconLabel.setFixedSize(self.IconSize)
-        self.titleLabel = QLabel(parent=self)
+        self.titleLabel = AppQLabel(
+            title,
+            translatable=translatable,
+            parent=self,
+        )
         self.titleLabel.setObjectName('SettingsCardTitle')
-        self.descriptionLabel = QLabel(parent=self)
+        self.descriptionLabel = AppQLabel(
+            description,
+            translatable=translatable,
+            parent=self,
+        )
         self.descriptionLabel.setObjectName('SettingsCardDescription')
         self.descriptionLabel.setWordWrap(True)
         self.control = control
@@ -241,14 +276,31 @@ class _SettingsCard(Mixins.ThemeAware, QFrame):
 class _ToggleSettingsCard(_SettingsCard):
     """Bind one binary application preference to a trailing checkbox."""
 
-    def __init__(self, iconFileName, settingName, callback, parent=None):
+    def __init__(
+        self,
+        iconFileName,
+        settingName,
+        callback,
+        title='',
+        description='',
+        *,
+        translatable=True,
+        parent=None,
+    ):
         """Initialize a persistent binary setting card."""
         self.settingName = settingName
         self.checkBox = _SettingsSwitch()
         self.checkBox.syncChecked(AppSettings.isStateON_(settingName))
         self.checkBox.toggled.connect(callback)
 
-        super().__init__(iconFileName, self.checkBox, parent)
+        super().__init__(
+            iconFileName,
+            self.checkBox,
+            title,
+            description,
+            translatable=translatable,
+            parent=parent,
+        )
 
     def sync(self):
         """Refresh the control from persistent state without applying it."""
@@ -258,7 +310,16 @@ class _ToggleSettingsCard(_SettingsCard):
 class _ActionToggleSettingsCard(_SettingsCard):
     """Present a plugin-provided checkable action as a Fluent switch."""
 
-    def __init__(self, iconFileName, action, parent=None):
+    def __init__(
+        self,
+        iconFileName,
+        action,
+        title='',
+        description='',
+        *,
+        translatable=False,
+        parent=None,
+    ):
         """Bind switch requests and external action-state changes."""
         self.action = action
         self.checkBox = _SettingsSwitch()
@@ -269,7 +330,14 @@ class _ActionToggleSettingsCard(_SettingsCard):
         action.toggled.connect(self.sync)
         action.changed.connect(self.sync)
 
-        super().__init__(iconFileName, self.checkBox, parent)
+        super().__init__(
+            iconFileName,
+            self.checkBox,
+            title,
+            description,
+            translatable=translatable,
+            parent=parent,
+        )
 
     @QtCore.Slot(bool)
     def _requestedState(self, checked: bool):
@@ -289,13 +357,37 @@ class _ActionToggleSettingsCard(_SettingsCard):
 class _ActionSettingsCard(_SettingsCard):
     """Expose an existing command through one settings row."""
 
-    def __init__(self, iconFileName, callback: Callable, parent=None):
+    def __init__(
+        self,
+        iconFileName,
+        callback: Callable,
+        title='',
+        description='',
+        buttonText='',
+        *,
+        translatable=True,
+        buttonTranslatable=None,
+        parent=None,
+    ):
         """Initialize a card with a compact trailing action button."""
-        self.button = QPushButton()
+        if buttonTranslatable is None:
+            buttonTranslatable = translatable
+
+        self.button = AppQPushButton(
+            buttonText,
+            translatable=buttonTranslatable,
+        )
         self.button.setObjectName('SettingsActionButton')
         self.button.clicked.connect(callback)
 
-        super().__init__(iconFileName, self.button, parent)
+        super().__init__(
+            iconFileName,
+            self.button,
+            title,
+            description,
+            translatable=translatable,
+            parent=parent,
+        )
 
 
 class _LineEditSettingsCard(_SettingsCard):
@@ -305,16 +397,19 @@ class _LineEditSettingsCard(_SettingsCard):
         self,
         iconFileName,
         settingName,
+        title='',
+        description='',
         *,
         placeholder='',
         secret=False,
         strip=True,
+        translatable=True,
         parent=None,
     ):
         """Initialize one bounded settings text editor."""
         self.settingName = settingName
         self.strip = strip
-        self.lineEdit = QLineEdit()
+        self.lineEdit = AppQLineEdit(translatable=False)
         self.lineEdit.setObjectName('SettingsLineEdit')
         self.lineEdit.setMaximumWidth(420)
         self.lineEdit.setMinimumWidth(260)
@@ -326,7 +421,14 @@ class _LineEditSettingsCard(_SettingsCard):
 
         self.lineEdit.editingFinished.connect(self.persist)
 
-        super().__init__(iconFileName, self.lineEdit, parent)
+        super().__init__(
+            iconFileName,
+            self.lineEdit,
+            title,
+            description,
+            translatable=translatable,
+            parent=parent,
+        )
 
     def persist(self):
         """Store the current text without coupling it to graph code."""
@@ -341,7 +443,7 @@ class _LineEditSettingsCard(_SettingsCard):
 class _LanguageSettingsCard(_SettingsCard):
     """Select and apply one supported application language."""
 
-    def __init__(self, parent=None):
+    def __init__(self, title='', description='', parent=None):
         """Initialize the stable language-name selector."""
         self.comboBox = QComboBox()
         self.comboBox.setObjectName('SettingsComboBox')
@@ -353,7 +455,13 @@ class _LanguageSettingsCard(_SettingsCard):
         self.sync()
         self.comboBox.currentIndexChanged.connect(self._selectionChanged)
 
-        super().__init__('globe2.svg', self.comboBox, parent)
+        super().__init__(
+            'globe2.svg',
+            self.comboBox,
+            title,
+            description,
+            parent=parent,
+        )
 
     def sync(self):
         """Select the persisted language without retriggering translation."""
@@ -376,14 +484,69 @@ class _LanguageSettingsCard(_SettingsCard):
             SettingsController.setLanguage(language)
 
 
+class _SystemProxySettingsCard(_SettingsCard):
+    """Select how Furious manages the operating-system proxy."""
+
+    Options = (
+        ('Automatically Configure System Proxy', AppBuiltinProxyMode.Auto.value),
+        ('Do Not Change System Proxy', AppBuiltinProxyMode.NoChanges.value),
+    )
+
+    _TranslatableOptions = (
+        _('Automatically Configure System Proxy'),
+        _('Do Not Change System Proxy'),
+    )
+
+    def __init__(self, title='', description='', parent=None):
+        """Initialize the translated system-proxy mode selector."""
+        self.comboBox = AppQComboBox()
+        self.comboBox.setObjectName('SettingsComboBox')
+        self.comboBox.setMinimumWidth(260)
+
+        for label, mode in self.Options:
+            self.comboBox.addItem(_(label), mode)
+
+        self.sync()
+        self.comboBox.currentIndexChanged.connect(self._selectionChanged)
+
+        super().__init__(
+            'hdd-network.svg',
+            self.comboBox,
+            title,
+            description,
+            parent=parent,
+        )
+
+    def sync(self):
+        """Select the persisted proxy mode without writing it again."""
+        blocker = QtCore.QSignalBlocker(self.comboBox)
+        index = self.comboBox.findData(AppSettings.get('SystemProxyMode'))
+
+        self.comboBox.setCurrentIndex(max(index, 0))
+
+        del blocker
+
+    @QtCore.Slot(int)
+    def _selectionChanged(self, _index: int):
+        """Persist the selected proxy-management mode."""
+        mode = self.comboBox.currentData()
+
+        if isinstance(mode, str):
+            SettingsController.setSystemProxyMode(mode)
+
+
 class _SettingsSection(QWidget):
     """Group a translated heading and a stack of settings cards."""
 
-    def __init__(self, parent=None):
+    def __init__(self, title='', *, translatable=True, parent=None):
         """Initialize an empty settings section."""
         super().__init__(parent)
 
-        self.titleLabel = QLabel(parent=self)
+        self.titleLabel = AppQLabel(
+            title,
+            translatable=translatable,
+            parent=self,
+        )
         self.titleLabel.setObjectName('SettingsSectionTitle')
         self.cards = []
 
@@ -436,32 +599,26 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             openApplicationFolder,
         )
 
-        self.pageTitleLabel = QLabel()
+        self.pageTitleLabel = AppQLabel(_('Settings'))
         self.pageTitleLabel.setObjectName('SettingsPageTitle')
 
-        self.generalSection = _SettingsSection()
-        self.connectionSection = _SettingsSection()
-        self.applicationSection = _SettingsSection()
-        self.pluginSettingsTitleLabel = QLabel()
+        self.generalSection = _SettingsSection(_('General'))
+        self.connectionSection = _SettingsSection(_('Connection and Interface'))
+        self.applicationSection = _SettingsSection(_('Application'))
+        self.pluginSettingsTitleLabel = AppQLabel(_('Plugin Settings'))
         self.pluginSettingsTitleLabel.setObjectName('SettingsSectionTitle')
         self.pluginSections = []
-        self._pluginDescriptorCards = []
-        self._pluginActionCards = []
         self._pluginActions = []
 
-        self.tunModeAction = TUNModeAction(
-            checkable=True,
-            checked=AppSettings.isStateON_('VPNMode'),
-        )
+        self._tunModeAvailable = PLATFORM == 'Linux' or SystemRuntime.isAdmin()
         self.tunModeCard = _ToggleSettingsCard(
             'shield-check.svg',
             'VPNMode',
-            self._setTUNMode,
+            SettingsController.setTUNMode,
+            _tunModeTitle(),
+            _('Route system traffic through the active proxy connection.'),
         )
-        self.tunModeCard.checkBox.setEnabled(self.tunModeAction.isEnabled())
-
-        self.tunModeAction.changed.connect(self._syncTUNModeAction)
-        self.tunModeAction.toggled.connect(self._syncTUNModeAction)
+        self.tunModeCard.checkBox.setEnabled(self._tunModeAvailable)
 
         (
             self.darkModeCard,
@@ -474,22 +631,33 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 'moon-stars.svg',
                 'DarkMode',
                 SettingsController.setDarkMode,
+                _('Dark Mode'),
+                _('Use the application dark theme instead of automatic appearance.'),
             ),
-            _LanguageSettingsCard(),
+            _LanguageSettingsCard(
+                _('Language'),
+                _('Choose the language used by the application interface.'),
+            ),
             _ToggleSettingsCard(
                 'circle-half.svg',
                 'UseMonochromeTrayIcon',
                 SettingsController.setMonochromeTrayIcon,
+                _('Use Monochrome Tray Icon'),
+                _('Use a theme-aware single-color system tray icon.'),
             ),
             _ToggleSettingsCard(
                 'power.svg',
                 'StartupOnBoot',
                 SettingsController.setStartupOnBoot,
+                _('Startup On Boot'),
+                _('Start the application automatically after signing in.'),
             ),
             _ToggleSettingsCard(
                 'battery-half.svg',
                 'PowerSaveMode',
                 SettingsController.setPowerSaveMode,
+                _('Power Save Mode'),
+                _('Reduce background activity when the application is idle.'),
             ),
         )
 
@@ -503,6 +671,8 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 'window.svg',
                 'HideDockIcon',
                 SettingsController.setDockIconHidden,
+                _('Hide Dock Icon'),
+                _('Keep the application available from the menu bar only.'),
             )
             self.generalSection.addCard(self.hideDockCard)
         else:
@@ -513,6 +683,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
 
         (
             self.tunSettingsCard,
+            self.systemProxyCard,
             self.proxyBypassCard,
             self.networkTestCard,
             self.forceLocalhostCard,
@@ -524,45 +695,73 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             _ActionSettingsCard(
                 'diagram-3.svg',
                 self._openTUNSettings,
+                _('Customize Tun2socks Settings...'),
+                _('Configure the external Tun2socks network interface and routing.'),
+                _('Open'),
+            ),
+            _SystemProxySettingsCard(
+                _('System Proxy'),
+                _(
+                    'Choose whether Furious automatically configures the operating system proxy.'
+                ),
             ),
             _ActionSettingsCard(
                 'signpost-split.svg',
                 self._proxyBypassDialog.open,
+                _('Customize System Proxy Bypass Address...'),
+                _('Choose destinations that bypass the operating system proxy.'),
+                _('Open'),
             ),
             _ActionSettingsCard(
                 'link-45deg.svg',
                 self._networkTestDialog.open,
+                _('Customize Network Test URL...'),
+                _('Choose the URL used for download speed tests.'),
+                _('Open'),
             ),
             _ToggleSettingsCard(
                 'pc-display-horizontal.svg',
                 'ForceToLocalhostWhenSettingLocalProxy',
                 SettingsController.setForceLocalProxy,
+                _('Force To 127.0.0.1 When Setting Local Proxy'),
+                _('Use the IPv4 loopback address when configuring the system proxy.'),
             ),
             _ToggleSettingsCard(
                 'hourglass-split.svg',
                 'ShowProgressBarWhenConnecting',
                 SettingsController.setConnectionProgressVisible,
+                _('Show Progress Bar When Connecting'),
+                _('Show connection progress while proxy services are starting.'),
             ),
             _ToggleSettingsCard(
                 'speedometer2.svg',
                 METRICS_COLLECTION_SETTING,
                 SettingsController.setMetricsCollectionEnabled,
+                _('Enable Metrics Collection'),
+                _('Collect network speed and traffic history while connected.'),
             ),
             _ToggleSettingsCard(
                 'arrow-repeat.svg',
                 CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
                 SettingsController.setClearTrafficUsageOnReconnect,
+                _('Clear Traffic Usage Statistics On Reconnect'),
+                _(
+                    'Start accumulated upload and download usage from zero after reconnecting.'
+                ),
             ),
             _ToggleSettingsCard(
                 'text-paragraph.svg',
                 'ShowTabAndSpacesInEditor',
                 SettingsController.setEditorWhitespaceVisible,
+                _('Show Tab And Spaces In Editor'),
+                _('Display whitespace markers in configuration editors.'),
             ),
         )
 
         if not SystemRuntime.flatpakID():
             self.connectionSection.addCard(self.tunSettingsCard)
 
+        self.connectionSection.addCard(self.systemProxyCard)
         self.connectionSection.addCard(self.proxyBypassCard)
         self.connectionSection.addCard(self.networkTestCard)
         self.connectionSection.addCard(self.forceLocalhostCard)
@@ -576,6 +775,8 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 'cloud-arrow-down.svg',
                 'AutoUpdateAssetFiles',
                 SettingsController.setAutoUpdateAssets,
+                _('Automatically Update Asset Files'),
+                _('Keep supported proxy-core data files up to date.'),
             )
             self.connectionSection.addCard(self.autoAssetsCard)
         else:
@@ -590,10 +791,16 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             _ActionSettingsCard(
                 'download.svg',
                 lambda: self._checkForUpdates(parent=self),
+                _('Check For Updates'),
+                _('Check for a newer application and proxy-core release.'),
+                _('Check'),
             ),
             _ActionSettingsCard(
                 'info-circle.svg',
                 self._openAboutPage,
+                _('About'),
+                f'{APPLICATION_NAME} {APPLICATION_VERSION}',
+                _('View'),
             ),
         )
 
@@ -604,6 +811,9 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             self.restartCard = _ActionSettingsCard(
                 'arrow-clockwise.svg',
                 self._restartAsAdmin,
+                _restartApplicationTitle(),
+                _('Restart with privileges required by system-level networking.'),
+                _('Restart'),
             )
             self.applicationSection.addCard(self.restartCard)
         else:
@@ -613,6 +823,9 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             self.openFolderCard = _ActionSettingsCard(
                 'folder2-open.svg',
                 self._openApplicationFolder,
+                _('Open Application Folder'),
+                _('Open the folder containing the current application.'),
+                _('Open'),
             )
             self.applicationSection.addCard(self.openFolderCard)
         else:
@@ -663,6 +876,17 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 f'unsupported plugin setting control: {descriptor.control!r}'
             ) from ex
 
+        title, description = (
+            self._translatedPluginText(
+                descriptor.title,
+                descriptor.translatable,
+            ),
+            self._translatedPluginText(
+                descriptor.description,
+                descriptor.translatable,
+            ),
+        )
+
         if control == PluginSettingControl.Toggle:
             if not descriptor.settingName:
                 raise ValueError('toggle plugin settings require settingName')
@@ -682,6 +906,9 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 descriptor.iconFileName,
                 descriptor.settingName,
                 callback,
+                title,
+                description,
+                translatable=descriptor.translatable,
             )
         elif control in (PluginSettingControl.Text, PluginSettingControl.Password):
             if not descriptor.settingName:
@@ -690,9 +917,12 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             card = _LineEditSettingsCard(
                 descriptor.iconFileName,
                 descriptor.settingName,
+                title,
+                description,
                 placeholder=descriptor.placeholder,
                 secret=control == PluginSettingControl.Password,
                 strip=descriptor.strip,
+                translatable=descriptor.translatable,
             )
         else:
             if not callable(descriptor.callback):
@@ -701,9 +931,14 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             card = _ActionSettingsCard(
                 descriptor.iconFileName,
                 descriptor.callback,
+                title,
+                description,
+                self._translatedPluginText(
+                    descriptor.buttonText,
+                    descriptor.translatable,
+                ),
+                translatable=descriptor.translatable,
             )
-
-        self._pluginDescriptorCards.append((card, descriptor))
 
         return card
 
@@ -715,7 +950,13 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         if not isinstance(sectionDescriptor, PluginSettingsSection):
             raise TypeError('plugin settings providers must return sections')
 
-        section = _SettingsSection()
+        section = _SettingsSection(
+            self._translatedPluginText(
+                sectionDescriptor.title,
+                sectionDescriptor.translatable,
+            ),
+            translatable=sectionDescriptor.translatable,
+        )
         section._pluginDescriptor = sectionDescriptor
 
         for descriptor in sectionDescriptor.settings:
@@ -735,8 +976,15 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             isCoreActive=isCoreActive,
         )
 
-        section = _SettingsSection()
+        section = _SettingsSection(
+            metadata.displayName,
+            translatable=False,
+        )
         section._pluginActionMetadata = metadata
+
+        description = (
+            _(metadata.description) if metadata.description else metadata.displayName
+        )
 
         for action in actions:
             if isinstance(action, AppQSeperator):
@@ -750,19 +998,32 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             iconFileName = action.iconFileName or 'plugin.svg'
 
             if action.isCheckable():
-                card = _ActionToggleSettingsCard(iconFileName, action)
+                card = _ActionToggleSettingsCard(
+                    iconFileName,
+                    action,
+                    action.text(),
+                    description,
+                    translatable=True,
+                )
             else:
                 card = _ActionSettingsCard(
                     iconFileName,
                     lambda _checked=False, target=action: target.trigger(),
+                    action.text(),
+                    description,
+                    _('Open'),
+                    translatable=True,
+                    buttonTranslatable=True,
                 )
 
-            self._pluginActionCards.append((card, action, metadata))
+            # Plugin/action names are literal identities; descriptions may be
+            # host translation keys contributed through the static catalog.
+            card.titleLabel.translatable = False
 
             action.changed.connect(
                 lambda target=card, source=action, owner=metadata: target.setTexts(
                     source.text(),
-                    owner.description or owner.displayName,
+                    _(owner.description) if owner.description else owner.displayName,
                 )
             )
 
@@ -802,33 +1063,14 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                         f'{metadata.id!r}: {ex}'
                     )
 
-    def _setTUNMode(self, enabled: bool):
-        """Trigger the compatibility action used by connection state."""
-        if self.tunModeAction.isChecked() != enabled:
-            self.tunModeAction.trigger()
-
-    @QtCore.Slot()
-    def _syncTUNModeAction(self, *_args):
-        """Mirror compatibility-action state into the settings control."""
-        if self.tunModeCard.checkBox.isChecked() != self.tunModeAction.isChecked():
-            self.tunModeCard.checkBox.syncChecked(self.tunModeAction.isChecked())
-
-        self.tunModeCard.checkBox.setEnabled(self.tunModeAction.isEnabled())
-
     def _openTUNSettings(self):
         """Create and retain the existing Tun2socks settings dialog."""
         self._tunSettingsDialogFactory(parent=self).open()
 
-    def setTUNModeControlEnabled(self, enabled: bool):
-        """Disable TUN changes while a connection transition is active."""
-        self.tunModeAction.setEnabled(enabled)
-        self.tunModeCard.checkBox.setEnabled(enabled)
-
-    @staticmethod
-    def _setActionCardText(card, buttonText, title, description):
-        """Apply translated action-card text consistently."""
-        card.button.setText(buttonText)
-        card.setTexts(title, description)
+    def setConnectionControlsEnabled(self, enabled: bool):
+        """Disable connection-sensitive settings during a transition."""
+        self.tunModeCard.checkBox.setEnabled(bool(enabled) and self._tunModeAvailable)
+        self.systemProxyCard.comboBox.setEnabled(bool(enabled))
 
     def showEvent(self, event):
         """Synchronize controls in case a legacy action changed a setting."""
@@ -849,170 +1091,5 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.languageCard.sync()
 
     def retranslate(self):
-        """Refresh section, card, button, and accessibility text."""
-        self.pageTitleLabel.setText(_('Settings'))
-        self.generalSection.titleLabel.setText(_('General'))
-        self.connectionSection.titleLabel.setText(_('Connection and Interface'))
-        self.pluginSettingsTitleLabel.setText(_('Plugin Settings'))
-        self.applicationSection.titleLabel.setText(_('Application'))
-
-        tunTitle = _('TUN Mode')
-
-        if PLATFORM != 'Linux' and not SystemRuntime.isAdmin():
-            if ADMINISTRATOR_NAME == 'Administrator':
-                tunTitle = _('TUN Mode Disabled (Administrator)')
-            else:
-                tunTitle = _('TUN Mode Disabled (Superuser)')
-
-        self.tunModeCard.setTexts(
-            tunTitle,
-            _('Route system traffic through the active proxy connection.'),
-        )
-        self.darkModeCard.setTexts(
-            _('Dark Mode'),
-            _('Use the application dark theme instead of automatic appearance.'),
-        )
-        self.languageCard.setTexts(
-            _('Language'),
-            _('Choose the language used by the application interface.'),
-        )
-        self.monochromeCard.setTexts(
-            _('Use Monochrome Tray Icon'),
-            _('Use a theme-aware single-color system tray icon.'),
-        )
-        self.startupCard.setTexts(
-            _('Startup On Boot'),
-            _('Start the application automatically after signing in.'),
-        )
-        self.powerSaveCard.setTexts(
-            _('Power Save Mode'),
-            _('Reduce background activity when the application is idle.'),
-        )
-
-        if self.hideDockCard is not None:
-            self.hideDockCard.setTexts(
-                _('Hide Dock Icon'),
-                _('Keep the application available from the menu bar only.'),
-            )
-
-        self._setActionCardText(
-            self.tunSettingsCard,
-            _('Open'),
-            _('Customize Tun2socks Settings...'),
-            _('Configure the external Tun2socks network interface and routing.'),
-        )
-        self._setActionCardText(
-            self.proxyBypassCard,
-            _('Open'),
-            _('Customize System Proxy Bypass Address...'),
-            _('Choose destinations that bypass the operating system proxy.'),
-        )
-        self._setActionCardText(
-            self.networkTestCard,
-            _('Open'),
-            _('Customize Network Test URL...'),
-            _('Choose the URL used for download speed tests.'),
-        )
-        self.forceLocalhostCard.setTexts(
-            _('Force To 127.0.0.1 When Setting Local Proxy'),
-            _('Use the IPv4 loopback address when configuring the system proxy.'),
-        )
-        self.connectionProgressCard.setTexts(
-            _('Show Progress Bar When Connecting'),
-            _('Show connection progress while proxy services are starting.'),
-        )
-        self.metricsCollectionCard.setTexts(
-            _('Enable Metrics Collection'),
-            _('Collect network speed and traffic history while connected.'),
-        )
-        self.clearTrafficUsageCard.setTexts(
-            _('Clear Traffic Usage Statistics On Reconnect'),
-            _(
-                'Start accumulated upload and download usage from zero after reconnecting.'
-            ),
-        )
-        self.editorWhitespaceCard.setTexts(
-            _('Show Tab And Spaces In Editor'),
-            _('Display whitespace markers in configuration editors.'),
-        )
-
-        if self.autoAssetsCard is not None:
-            self.autoAssetsCard.setTexts(
-                _('Automatically Update Asset Files'),
-                _('Keep supported proxy-core data files up to date.'),
-            )
-
-        for section in self.pluginSections:
-            descriptor = getattr(section, '_pluginDescriptor', None)
-            metadata = getattr(section, '_pluginActionMetadata', None)
-
-            if descriptor is not None:
-                section.titleLabel.setText(
-                    self._translatedPluginText(
-                        descriptor.title,
-                        descriptor.translatable,
-                    )
-                )
-            elif metadata is not None:
-                section.titleLabel.setText(metadata.displayName)
-
-        for card, descriptor in self._pluginDescriptorCards:
-            title = self._translatedPluginText(
-                descriptor.title,
-                descriptor.translatable,
-            )
-            description = self._translatedPluginText(
-                descriptor.description,
-                descriptor.translatable,
-            )
-            card.setTexts(title, description)
-
-            if isinstance(card, _ActionSettingsCard):
-                card.button.setText(
-                    self._translatedPluginText(
-                        descriptor.buttonText,
-                        descriptor.translatable,
-                    )
-                )
-
-        for card, action, metadata in self._pluginActionCards:
-            card.setTexts(action.text(), metadata.description or metadata.displayName)
-
-            if isinstance(card, _ActionSettingsCard):
-                card.button.setText(_('Open'))
-
-        self._setActionCardText(
-            self.updateCard,
-            _('Check'),
-            _('Check For Updates'),
-            _('Check for a newer application and proxy-core release.'),
-        )
-        self._setActionCardText(
-            self.aboutCard,
-            _('View'),
-            _('About'),
-            f'{APPLICATION_NAME} {APPLICATION_VERSION}',
-        )
-
-        if self.restartCard is not None:
-            if ADMINISTRATOR_NAME == 'Administrator':
-                restartTitle = _('Restart The Application As Administrator')
-            else:
-                restartTitle = _('Restart The Application As Superuser')
-
-            self._setActionCardText(
-                self.restartCard,
-                _('Restart'),
-                restartTitle,
-                _('Restart with privileges required by system-level networking.'),
-            )
-
-        if self.openFolderCard is not None:
-            self._setActionCardText(
-                self.openFolderCard,
-                _('Open'),
-                _('Open Application Folder'),
-                _('Open the folder containing the current application.'),
-            )
-
+        """Synchronize page-level dynamic state after a language change."""
         self.languageCard.sync()

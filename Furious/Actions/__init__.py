@@ -19,9 +19,9 @@
 
 from __future__ import annotations
 
-from .Configuration import ShowHomePageAction
 from .Connection import ConnectAction
 from .Exit import ExitAction
+from .Home import ShowHomePageAction
 from .Import import (
     ImportAction,
     ImportFromFileAction,
@@ -31,8 +31,6 @@ from .Import import (
 )
 from .Language import LanguageAction
 from .Routing import RoutingAction
-from .Settings import TUNModeAction
-from .SystemProxy import SystemProxyAction
 
 __all__ = [
     'ConnectAction',
@@ -45,6 +43,4 @@ __all__ = [
     'LanguageAction',
     'RoutingAction',
     'ShowHomePageAction',
-    'TUNModeAction',
-    'SystemProxyAction',
 ]
