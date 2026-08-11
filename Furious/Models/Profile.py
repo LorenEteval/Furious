@@ -24,6 +24,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import copy
+import hashlib
+import json
+import uuid
 
 from .Configuration import ConfigFactory
 
@@ -32,6 +35,7 @@ __all__ = [
     'ServerProfile',
     'connectionOf',
     'ensureProfile',
+    'profileConnectionFingerprint',
 ]
 
 
@@ -49,6 +53,9 @@ class ProfileMetadata:
     latency: str = ''
     speed: str = ''
     extras: dict[str, Any] = field(default_factory=dict)
+    profileId: str = field(default_factory=lambda: str(uuid.uuid4()))
+    subscriptionManaged: bool = False
+    subscriptionProfileKey: str = ''
 
     @classmethod
     def fromMapping(cls, value: Mapping[str, Any] | None = None, **kwargs):
@@ -68,19 +75,38 @@ class ProfileMetadata:
         if isinstance(favorite, str):
             favorite = favorite.strip().casefold() in ('1', 'true', 'yes', 'on')
 
+        subscriptionSource = str(
+            data.pop('subscriptionSource', data.pop('subsId', '')) or ''
+        )
+        subscriptionManaged = data.pop('subscriptionManaged', None)
+
+        if subscriptionManaged is None:
+            # Before managed ownership was explicit, a non-empty subsId was
+            # written only for profiles imported from that subscription.
+            subscriptionManaged = bool(subscriptionSource)
+        elif isinstance(subscriptionManaged, str):
+            subscriptionManaged = subscriptionManaged.strip().casefold() in (
+                '1',
+                'true',
+                'yes',
+                'on',
+            )
+
         known = {
+            'profileId': str(data.pop('profileId', '') or uuid.uuid4()),
             'displayName': data.pop('displayName', data.pop('remark', '')),
             'group': data.pop('group', ''),
             'tags': tags,
-            'subscriptionSource': data.pop(
-                'subscriptionSource', data.pop('subsId', '')
-            ),
+            'subscriptionSource': subscriptionSource,
+            'subscriptionManaged': bool(subscriptionManaged),
+            'subscriptionProfileKey': str(data.pop('subscriptionProfileKey', '') or ''),
             'updatedAt': data.pop('updatedAt', ''),
             'annotations': data.pop('annotations', ''),
             'favorite': bool(favorite),
             'latency': data.pop('latency', data.pop('delayResult', '')),
             'speed': data.pop('speed', data.pop('speedResult', '')),
         }
+
         extras = dict(nestedExtras) if isinstance(nestedExtras, Mapping) else {}
         extras.update(data)
 
@@ -89,10 +115,13 @@ class ProfileMetadata:
     def toMapping(self) -> dict[str, Any]:
         """Return the normalized persisted metadata mapping."""
         return {
+            'profileId': self.profileId,
             'displayName': self.displayName,
             'group': self.group,
             'tags': list(self.tags),
             'subscriptionSource': self.subscriptionSource,
+            'subscriptionManaged': self.subscriptionManaged,
+            'subscriptionProfileKey': self.subscriptionProfileKey,
             'updatedAt': self.updatedAt,
             'annotations': self.annotations,
             'favorite': self.favorite,
@@ -119,6 +148,12 @@ class ProfileMetadata:
             )
         elif attribute == 'favorite' and isinstance(value, str):
             self.favorite = value.strip().casefold() in ('1', 'true', 'yes', 'on')
+        elif attribute == 'subscriptionSource':
+            self.subscriptionSource = str(value or '')
+
+            if not self.subscriptionSource:
+                self.subscriptionManaged = False
+                self.subscriptionProfileKey = ''
         elif attribute in self.__dataclass_fields__ and attribute != 'extras':
             setattr(self, attribute, value)
         else:
@@ -182,6 +217,16 @@ class ServerProfile(MutableMapping[str, Any]):
     def deepcopy(self):
         """Return an independent profile copy."""
         return copy.deepcopy(self)
+
+    def independentCopy(self):
+        """Return a manual copy with a new identity and no source owner."""
+        profile = self.deepcopy()
+        profile.metadata.profileId = str(uuid.uuid4())
+        profile.metadata.subscriptionSource = ''
+        profile.metadata.subscriptionManaged = False
+        profile.metadata.subscriptionProfileKey = ''
+
+        return profile
 
     def replaceConnection(self, connection: ConfigFactory):
         """Return this profile's metadata composed with a new connection."""
@@ -260,6 +305,11 @@ class ServerProfile(MutableMapping[str, Any]):
         return self.metadata.subscriptionSource
 
     @property
+    def itemSubscriptionManaged(self) -> bool:
+        """Return whether a subscription synchronizer owns this profile."""
+        return self.metadata.subscriptionManaged
+
+    @property
     def itemLatency(self) -> str:
         """Return the last latency result."""
         return self.metadata.latency
@@ -284,3 +334,23 @@ def ensureProfile(value, **metadata) -> ServerProfile:
         return value
 
     return ServerProfile.fromConfiguration(value, metadata)
+
+
+def profileConnectionFingerprint(value) -> str:
+    """Return a deterministic identity for a profile connection document."""
+    connection = connectionOf(value)
+
+    try:
+        serialized = json.dumps(
+            connection,
+            ensure_ascii=False,
+            separators=(',', ':'),
+            sort_keys=True,
+        )
+    except Exception:
+        # Any non-exit exceptions
+
+        serializer = getattr(connection, 'toJSONString', None)
+        serialized = serializer(indent=0) if callable(serializer) else str(connection)
+
+    return hashlib.sha256(serialized.encode('utf-8')).hexdigest()

@@ -540,7 +540,8 @@ TRANSLATION = {
     },
     "Move Up": {
         "source": [
-            "Furious.Widget.ServerTableView"
+            "Furious.Widget.ServerTableView",
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Переместить вверх",
         "ZH": "上移",
@@ -548,7 +549,8 @@ TRANSLATION = {
     },
     "Move Down": {
         "source": [
-            "Furious.Widget.ServerTableView"
+            "Furious.Widget.ServerTableView",
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Переместить вниз",
         "ZH": "下移",
@@ -1977,6 +1979,7 @@ TRANSLATION = {
     "Disabled": {
         "source": [
             "Furious.Backends.Xray.RoutingWindow",
+            "Furious.Widget.ServerTableView",
             "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Отключено",
@@ -2757,8 +2760,8 @@ TRANSLATION = {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
-        "RU": "Введите название подписки.",
-        "ZH": "请输入订阅备注。",
+        "RU": "Введите примечание к подписки.",
+        "ZH": "请输入订阅别名。",
         "isReviewed": "True"
     },
     "Please enter a valid subscription URL.": {
@@ -2839,6 +2842,38 @@ TRANSLATION = {
         ],
         "RU": "Использовать URL подписки из буфера обмена?",
         "ZH": "是否使用剪贴板中的订阅 URL？",
+        "isReviewed": "True"
+    },
+    "All Profiles": {
+        "source": [
+            "Furious.Window.HomePage"
+        ],
+        "RU": "Все профили",
+        "ZH": "全部配置",
+        "isReviewed": "True"
+    },
+    "Manual Profiles": {
+        "source": [
+            "Furious.Window.HomePage"
+        ],
+        "RU": "Профили, добавленные вручную",
+        "ZH": "手动添加的配置",
+        "isReviewed": "True"
+    },
+    "View Profiles": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "RU": "Показать профили",
+        "ZH": "查看配置",
+        "isReviewed": "True"
+    },
+    "Unknown Subscription": {
+        "source": [
+            "Furious.Widget.ServerTableView"
+        ],
+        "RU": "Неизвестная подписка",
+        "ZH": "未知订阅",
         "isReviewed": "True"
     }
 }

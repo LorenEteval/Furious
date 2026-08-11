@@ -35,6 +35,7 @@ from Furious.Service import (
     ConnectionManager,
     SubscriptionImportService,
     SubscriptionSource,
+    SubscriptionSynchronizer,
     coreLogCallback,
 )
 from Furious.Widget.WaitingSpinner import *
@@ -161,9 +162,10 @@ class SubscriptionManager(WebGETManager):
         super().__init__(parent, actionMessage=actionMessage, mustCallOnce=False)
 
         self.importer = SubscriptionImportService()
+        self.synchronizer = SubscriptionSynchronizer()
 
-    def handleItemDeletionAndInsertion(self, **kwargs):
-        """Handle item deletion and insertion."""
+    def handleSynchronizationResults(self, **kwargs):
+        """Commit successful group-scoped synchronization results."""
         successArgs = kwargs.pop('successArgs', list())
         failureArgs = kwargs.pop('failureArgs', list())
         showMessageBox = kwargs.pop('showMessageBox', True)
@@ -174,45 +176,22 @@ class SubscriptionManager(WebGETManager):
             parent = self.parent()
 
             if isinstance(parent, ServerTableView):
-                isConnected = APP().isSystemTrayConnected()
-
-                subsIndexes = list(
-                    index
-                    for index, server in enumerate(Storage.UserServers())
-                    if server.itemSubscription == unique
+                result = parent.synchronizeSubscriptionProfiles(
+                    unique,
+                    profiles,
+                    self.synchronizer,
                 )
+                param['syncResult'] = result
 
-                subsGroupIndex = -1
-                activatedIndex = Storage.UserActivatedItemIndex()
+                group = Storage.SubscriptionGroup(unique)
 
-                if activatedIndex in subsIndexes:
-                    for index, server in enumerate(Storage.UserServers()):
-                        if index <= activatedIndex:
-                            if server.itemSubscription == unique:
-                                subsGroupIndex += 1
-                        else:
-                            break
+                if group is not None:
+                    group.lastDecoderId = param.get('decoderId', '')
+                    group.lastSyncStatus = 'success'
+                    group.lastSyncError = ''
+                    group.profileCount = len(result.profileIds)
 
-                parent.deleteItemByIndex(
-                    subsIndexes,
-                    showTrayMessage=bool(subsGroupIndex < 0),
-                    showProgress=False,
-                )
-
-                remaining = len(Storage.UserServers())
-
-                for profile in profiles:
-                    parent.appendNewItemByFactory(profile)
-
-                if subsGroupIndex >= 0:
-                    newIndex = remaining + subsGroupIndex
-
-                    if newIndex < len(Storage.UserServers()):
-                        parent.activateItemByIndex(newIndex, True)
-
-                        if isConnected and not APP().isSystemTrayConnected():
-                            # Trigger connect
-                            APP().systemTray.ConnectAction.trigger()
+                    Storage.upsertSubscriptionGroup(group)
 
         if showMessageBox:
             mbox = MBoxUpdateSubsInfo(
@@ -240,7 +219,7 @@ class SubscriptionManager(WebGETManager):
         depthMap['depth'] -= 1
 
         if depthMap['depth'] == 0:
-            self.handleItemDeletionAndInsertion(**kwargs)
+            self.handleSynchronizationResults(**kwargs)
 
     def successCallback(self, networkReply, **kwargs):
         """Handle a successful network operation."""
@@ -281,6 +260,13 @@ class SubscriptionManager(WebGETManager):
 
         if result is None or not result.profiles:
             failureArgs.append({'error': 'UnsupportedSubscriptionFormat', **kwargs})
+
+            group = Storage.SubscriptionGroup(kwargs.get('unique', ''))
+
+            if group is not None:
+                group.lastSyncStatus = 'error'
+                group.lastSyncError = 'UnsupportedSubscriptionFormat'
+                Storage.upsertSubscriptionGroup(group)
         else:
             logger.info(
                 f'update subs ({remark}, {webURL}) success. '
@@ -288,14 +274,27 @@ class SubscriptionManager(WebGETManager):
                 f'rejected {result.rejectedItems}'
             )
 
-            successArgs.append({'profiles': result.profiles, **kwargs})
+            successArgs.append(
+                {
+                    **kwargs,
+                    'profiles': result.profiles,
+                    'decoderId': result.decoderId,
+                }
+            )
 
             unique = kwargs.get('unique', '')
 
             if unique in Storage.UserSubs():
-                Storage.UserSubs()[unique]['lastUpdated'] = (
-                    datetime.datetime.now().astimezone().isoformat(timespec='seconds')
-                )
+                group = Storage.SubscriptionGroup(unique)
+
+                if group is not None:
+                    group.lastUpdated = (
+                        datetime.datetime.now()
+                        .astimezone()
+                        .isoformat(timespec='seconds')
+                    )
+                    group.lastDecoderId = result.decoderId
+                    Storage.upsertSubscriptionGroup(group)
 
     def failureCallback(self, networkReply, **kwargs):
         """Handle a failed network operation."""
@@ -309,6 +308,13 @@ class SubscriptionManager(WebGETManager):
         )
 
         failureArgs.append({'error': networkReply.errorString(), **kwargs})
+
+        group = Storage.SubscriptionGroup(kwargs.get('unique', ''))
+
+        if group is not None:
+            group.lastSyncStatus = 'error'
+            group.lastSyncError = networkReply.errorString()
+            Storage.upsertSubscriptionGroup(group)
 
     def updateSubsByWebGET(self, **kwargs):
         """Update subs by web get."""
@@ -335,8 +341,19 @@ class SubscriptionManager(WebGETManager):
         """Update subs by unique."""
         subscription = Storage.UserSubs().get(unique)
 
-        if not subscription or not subscription.get('enabled', True):
+        if (
+            not subscription
+            or not subscription.get('enabled', True)
+            or not subscription.get('webURL')
+        ):
             return
+
+        group = Storage.SubscriptionGroup(unique)
+
+        if group is not None:
+            group.lastSyncStatus = 'syncing'
+            group.lastSyncError = ''
+            Storage.upsertSubscriptionGroup(group)
 
         depthMap = kwargs.get('depthMap', {'depth': 1})
         successArgs = kwargs.get('successArgs', list())
@@ -1083,9 +1100,19 @@ class ServerTableColumn:
 
 def _subscriptionRemark(item: ServerProfile) -> str:
     """Resolve a persisted subscription ID to its user-visible remark."""
+    if not item.itemSubscriptionManaged:
+        return ''
+
     subscription = Storage.UserSubs().get(item.itemSubscription, {})
 
-    return subscription.get('remark', '')
+    if not subscription:
+        return _('Unknown Subscription')
+
+    remark = subscription.get('remark', '') or item.itemSubscription
+
+    return (
+        remark if subscription.get('enabled', True) else f'{remark} ({_("Disabled")})'
+    )
 
 
 class UserServersTableModel(QtCore.QAbstractTableModel):
@@ -1299,6 +1326,7 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
         self.searchCaseSensitive = False
         self.searchUseRegex = True
         self.searchRegex = None
+        self.subscriptionFilter = None
         self.sortSuspended = False
 
         self.setSortRole(UserServersTableModel.SortRole)
@@ -1357,14 +1385,31 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
 
         self.invalidateFilter()
 
+    def setSubscriptionFilter(self, unique: str | None):
+        """Limit rows to manual profiles or one subscription group."""
+        self.subscriptionFilter = unique
+        self.invalidateFilter()
+
     def filterAcceptsRow(self, sourceRow: int, sourceParent) -> bool:
         """Filter accepts row."""
-        if not self.searchPattern or self.searchRegex is None:
-            return True
-
         model = self.sourceModel()
 
         if model is None:
+            return True
+
+        if 0 <= sourceRow < len(Storage.UserServers()):
+            profile = Storage.UserServers()[sourceRow]
+
+            if self.subscriptionFilter == '':
+                if profile.itemSubscriptionManaged:
+                    return False
+            elif (
+                self.subscriptionFilter is not None
+                and profile.itemSubscription != self.subscriptionFilter
+            ):
+                return False
+
+        if not self.searchPattern or self.searchRegex is None:
             return True
 
         searchableText = '\n'.join(
@@ -1445,6 +1490,7 @@ class ServerTableView(
         self.setModel(self.proxyModel)
 
         self.subsManager = SubscriptionManager(parent=self)
+        self.subsManager.subscriptionsChanged.connect(self.flushAll)
 
         self.downloadSpeedScheduler = DownloadSpeedTestScheduler(
             self,
@@ -1972,6 +2018,10 @@ class ServerTableView(
         """Clear search."""
         self.search('')
 
+    def filterBySubscription(self, unique: str | None):
+        """Show all, manual, or one subscription group's profiles."""
+        self.proxyModel.setSubscriptionFilter(unique)
+
     def addServerViaGui(
         self,
         protocol,
@@ -2138,9 +2188,10 @@ class ServerTableView(
 
         for index in indexes:
             if 0 <= index < len(Storage.UserServers()):
-                deepcopy = Storage.UserServers()[index].deepcopy()
+                deepcopy = Storage.UserServers()[index].independentCopy()
 
-                # Do not clone subsId
+                # A duplicate is a new manual profile, not another profile
+                # managed by the source subscription.
                 self.appendNewItem(
                     remark=deepcopy.itemRemark,
                     config=deepcopy,
@@ -2482,6 +2533,57 @@ class ServerTableView(
 
         self.subsManager.configureHttpProxy(httpProxy)
         self.subsManager.updateSubs(**kwargs)
+
+    def synchronizeSubscriptionProfiles(
+        self,
+        unique: str,
+        profiles,
+        synchronizer: SubscriptionSynchronizer | None = None,
+    ):
+        """Apply one group update without replacing unrelated profiles."""
+        synchronizer = synchronizer or SubscriptionSynchronizer()
+        servers = Storage.UserServers()
+        activatedIndex = Storage.UserActivatedItemIndex()
+        activeProfileId = ''
+        activeWasManagedByGroup = False
+
+        if 0 <= activatedIndex < len(servers):
+            active = servers[activatedIndex]
+            activeProfileId = active.metadata.profileId
+            activeWasManagedByGroup = (
+                active.itemSubscription == unique and active.itemSubscriptionManaged
+            )
+
+        wasConnected = APP().isSystemTrayConnected()
+
+        self.sourceModel.beginResetModel()
+
+        try:
+            result = synchronizer.reconcile(servers, profiles, unique)
+        finally:
+            self.sourceModel.endResetModel()
+
+        newActivatedIndex = next(
+            (
+                index
+                for index, profile in enumerate(servers)
+                if profile.metadata.profileId == activeProfileId
+            ),
+            -1,
+        )
+
+        AppSettings.set('ActivatedItemIndex', str(newActivatedIndex))
+
+        self.sourceModel.refreshIndexes()
+        self.proxyModel.invalidate()
+
+        if wasConnected and activeProfileId:
+            if newActivatedIndex < 0 and activeWasManagedByGroup:
+                APP().systemTray.ConnectAction.doDisconnect()
+            elif activeProfileId in result.changedProfileIds:
+                APP().systemTray.ConnectAction.doReconnect()
+
+        return result
 
     def appendNewItemByFactory(self, factory: ConfigFactory | ServerProfile):
         """Append new item by factory."""

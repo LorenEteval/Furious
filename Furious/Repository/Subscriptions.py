@@ -23,16 +23,18 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Models.Encoding import *
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from typing import Any
 
-__all__ = ['UserSubs']
+__all__ = ['SubscriptionGroup', 'UserSubs']
 
 registerAppSettings('CustomSubscription')
 
 
 @dataclass
-class UserSubEntry:
-    """Describe one user sub entry."""
+class SubscriptionGroup:
+    """Describe a subscription source and the profiles that it owns."""
 
     remark: str = ''
     webURL: str = ''
@@ -42,12 +44,95 @@ class UserSubEntry:
     userAgent: str = ''
     filter: str = ''
     lastUpdated: str = ''
+    id: str = ''
+    sortOrder: int = 0
+    lastDecoderId: str = ''
+    lastSyncStatus: str = ''
+    lastSyncError: str = ''
+    profileCount: int = 0
+    extras: dict[str, Any] = field(default_factory=dict, repr=False)
 
+    @classmethod
+    def fromMapping(cls, unique: str, value: Mapping[str, Any] | None = None):
+        """Restore a group while preserving fields from newer installations."""
+        data = dict(value or {})
+        nestedExtras = data.pop('extras', {})
+        known = {
+            name: data.pop(name, default)
+            for name, default in (
+                ('remark', ''),
+                ('webURL', ''),
+                ('enabled', True),
+                ('autoupdate', ''),
+                ('proxy', ''),
+                ('userAgent', ''),
+                ('filter', ''),
+                ('lastUpdated', ''),
+                ('sortOrder', 0),
+                ('lastDecoderId', data.pop('decoderId', '')),
+                ('lastSyncStatus', ''),
+                ('lastSyncError', ''),
+                ('profileCount', 0),
+            )
+        }
 
-class UserSub:
-    """Represent user sub."""
+        for name in (
+            'remark',
+            'webURL',
+            'autoupdate',
+            'proxy',
+            'userAgent',
+            'filter',
+            'lastUpdated',
+            'lastDecoderId',
+            'lastSyncStatus',
+            'lastSyncError',
+        ):
+            known[name] = str(known[name] or '')
 
-    unique: dict[str, dict]
+        if isinstance(known['enabled'], str):
+            known['enabled'] = known['enabled'].strip().casefold() in (
+                '1',
+                'true',
+                'yes',
+                'on',
+            )
+        else:
+            known['enabled'] = bool(known['enabled'])
+
+        for name in ('sortOrder', 'profileCount'):
+            try:
+                known[name] = max(0, int(known[name]))
+            except (TypeError, ValueError):
+                known[name] = 0
+
+        extras = dict(nestedExtras) if isinstance(nestedExtras, Mapping) else {}
+        extras.update(data)
+
+        return cls(id=str(unique), **known, extras=extras)
+
+    def toMapping(self) -> dict[str, Any]:
+        """Return the backward-compatible persisted group mapping."""
+        result = dict(self.extras)
+        result.update(
+            {
+                'remark': self.remark,
+                'webURL': self.webURL,
+                'enabled': self.enabled,
+                'autoupdate': self.autoupdate,
+                'proxy': self.proxy,
+                'userAgent': self.userAgent,
+                'filter': self.filter,
+                'lastUpdated': self.lastUpdated,
+                'sortOrder': self.sortOrder,
+                'lastDecoderId': self.lastDecoderId,
+                'lastSyncStatus': self.lastSyncStatus,
+                'lastSyncError': self.lastSyncError,
+                'profileCount': self.profileCount,
+            }
+        )
+
+        return result
 
 
 class UserSubs(Mixins.CleanupOnExit, StorageBackend):
@@ -69,7 +154,19 @@ class UserSubs(Mixins.CleanupOnExit, StorageBackend):
 
                 return {}
 
-        self._data = restore()
+        restored = restore()
+
+        self._data = restored if isinstance(restored, dict) else {}
+
+        # Normalize legacy URL-only entries into the current group schema. The
+        # dictionary key remains the stable group ID used by existing profiles.
+        for order, (unique, value) in enumerate(tuple(self._data.items())):
+            group = SubscriptionGroup.fromMapping(unique, value)
+
+            if not group.sortOrder:
+                group.sortOrder = order
+
+            self._data[unique] = group.toMapping()
 
     def sync(self):
         """Persist the current user subs data."""
@@ -84,6 +181,45 @@ class UserSubs(Mixins.CleanupOnExit, StorageBackend):
         # Shallow copy
         """Return the data managed by the user subs."""
         return self._data
+
+    def groups(self) -> tuple[SubscriptionGroup, ...]:
+        """Return subscription groups ordered independently from table rows."""
+        return tuple(
+            sorted(
+                (
+                    SubscriptionGroup.fromMapping(unique, value)
+                    for unique, value in self._data.items()
+                ),
+                key=lambda group: (group.sortOrder, group.remark.casefold(), group.id),
+            )
+        )
+
+    def group(self, unique: str) -> SubscriptionGroup | None:
+        """Return one group by stable ID."""
+        value = self._data.get(unique)
+
+        return (
+            SubscriptionGroup.fromMapping(unique, value)
+            if isinstance(value, Mapping)
+            else None
+        )
+
+    def upsertGroup(self, group: SubscriptionGroup):
+        """Insert or replace one group without changing its identity."""
+        if not group.id:
+            raise ValueError('subscription group ID must not be empty')
+
+        self._data[group.id] = group.toMapping()
+
+    def removeGroup(self, unique: str) -> SubscriptionGroup | None:
+        """Remove and return one group definition."""
+        value = self._data.pop(unique, None)
+
+        return (
+            SubscriptionGroup.fromMapping(unique, value)
+            if isinstance(value, Mapping)
+            else None
+        )
 
     def cleanup(self):
         """Release resources owned by the user subs."""

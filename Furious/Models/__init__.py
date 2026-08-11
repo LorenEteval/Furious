@@ -32,6 +32,7 @@ from .Profile import (
     ServerProfile,
     connectionOf,
     ensureProfile,
+    profileConnectionFingerprint,
 )
 from .Protocol import Protocol
 
@@ -48,4 +49,5 @@ __all__ = [
     'UJSONEncoder',
     'connectionOf',
     'ensureProfile',
+    'profileConnectionFingerprint',
 ]

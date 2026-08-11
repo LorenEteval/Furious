@@ -242,6 +242,7 @@ class SubscriptionItem:
     configuration: Optional[Mapping[str, Any]] = None
     name: str = ''
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    upstreamId: str = ''
 
     def __post_init__(self):
         """Require exactly one serialized or normalized profile value."""
