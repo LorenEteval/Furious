@@ -29,7 +29,6 @@ from .SubscriptionPage import SubscriptionPage
 from .NetworkTestDialog import NetworkTestDialog
 from .ProxyBypassDialog import ProxyBypassDialog
 from .QRCodeWindow import QRCodeWindow
-from .SubscriptionWindow import SubscriptionWindow
 from .TextEditorWindow import TextEditorWindow
 from .TunSettingsDialog import TunSettingsDialog
 
@@ -44,7 +43,6 @@ __all__ = [
     'NetworkTestDialog',
     'ProxyBypassDialog',
     'QRCodeWindow',
-    'SubscriptionWindow',
     'TextEditorWindow',
     'TunSettingsDialog',
 ]

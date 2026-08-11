@@ -100,4 +100,12 @@ ABBR_TO_LANGUAGE = {value: key for key, value in LANGUAGE_TO_ABBR.items()}
 
 SUPPORTED_LANGUAGE = list(LANGUAGE_TO_ABBR.values())
 
+_SMART_CHOSEN_LANGUAGE = (
+    SYSTEM_LANGUAGE if SYSTEM_LANGUAGE in SUPPORTED_LANGUAGE else 'EN'
+)
+
+registerAppSettings(
+    'Language', validRange=SUPPORTED_LANGUAGE, default=_SMART_CHOSEN_LANGUAGE
+)
+
 installTranslation(TRANSLATION)

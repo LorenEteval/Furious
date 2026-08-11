@@ -29,7 +29,6 @@ from .Import import (
     ImportQRCodeOnTheScreenAction,
     ImportURIFromClipboardAction,
 )
-from .Language import LanguageAction
 from .Routing import RoutingAction
 
 __all__ = [
@@ -41,7 +40,6 @@ __all__ = [
     'ImportJSONFromClipboardAction',
     'ImportQRCodeOnTheScreenAction',
     'ImportURIFromClipboardAction',
-    'LanguageAction',
     'RoutingAction',
     'ShowHomePageAction',
 ]

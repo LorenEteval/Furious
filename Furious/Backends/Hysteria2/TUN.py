@@ -31,7 +31,6 @@ __all__ = [
     'DEFAULT_HYSTERIA2_TUN_SETTINGS',
     'buildHysteria2TUNConfig',
     'getHysteria2TUNSettings',
-    'hasHysteria2TUNConfig',
     'isHysteria2TUNEnabled',
     'resolveHysteria2ServerAddresses',
     'saveHysteria2TUNSettings',
@@ -258,8 +257,3 @@ def buildHysteria2TUNConfig(settings=None, serverAddresses=()) -> dict:
         result['route'] = route
 
     return result
-
-
-def hasHysteria2TUNConfig(config) -> bool:
-    """Return whether a Hysteria 2 configuration contains native TUN mode."""
-    return isinstance(config.get('tun'), dict)

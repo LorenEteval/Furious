@@ -6,8 +6,7 @@ TRANSLATION = {
             "Furious.Qt.QtWidgets",
             "Furious.Widget.ServerTableView",
             "Furious.Widget.SubscriptionTableView",
-            "Furious.Window.SubscriptionPage",
-            "Furious.Window.SubscriptionWindow"
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "Удалить",
         "ZH": "删除",
@@ -228,7 +227,6 @@ TRANSLATION = {
             "Furious.Window.NetworkTestDialog",
             "Furious.Window.ProxyBypassDialog",
             "Furious.Window.SubscriptionPage",
-            "Furious.Window.SubscriptionWindow",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Отмена",
@@ -664,51 +662,24 @@ TRANSLATION = {
     },
     "Add Subscription": {
         "source": [
-            "Furious.Window.SubscriptionPage",
-            "Furious.Window.SubscriptionWindow"
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "Добавить подписку",
         "ZH": "添加订阅",
         "isReviewed": "True"
     },
-    "Enter subscription remark:": {
-        "source": [
-            "Furious.Window.SubscriptionWindow"
-        ],
-        "RU": "Введите примечание о подписке:",
-        "ZH": "输入订阅名称：",
-        "isReviewed": "True"
-    },
-    "Enter subscription URL:": {
-        "source": [
-            "Furious.Window.SubscriptionWindow"
-        ],
-        "RU": "Введите URL-адрес подписки:",
-        "ZH": "输入订阅URL：",
-        "isReviewed": "True"
-    },
     "Edit Subscription": {
         "source": [
-            "Furious.Window.SubscriptionPage",
-            "Furious.Window.SubscriptionWindow"
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "Редактировать подписку",
         "ZH": "编辑订阅",
         "isReviewed": "True"
     },
-    "Subscription List": {
-        "source": [
-            "Furious.Window.SubscriptionWindow"
-        ],
-        "RU": "Список подписок",
-        "ZH": "订阅列表",
-        "isReviewed": "True"
-    },
     "Add": {
         "source": [
             "Furious.Backends.Xray.RoutingWindow",
-            "Furious.Window.SubscriptionPage",
-            "Furious.Window.SubscriptionWindow"
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "Добавить",
         "ZH": "添加",
@@ -953,7 +924,6 @@ TRANSLATION = {
     },
     "Language": {
         "source": [
-            "Furious.Actions.Language",
             "Furious.Window.SettingsPage"
         ],
         "RU": "Язык",
@@ -1307,8 +1277,7 @@ TRANSLATION = {
             "Furious.Window.IndentDialog",
             "Furious.Window.NetworkTestDialog",
             "Furious.Window.ProxyBypassDialog",
-            "Furious.Window.SubscriptionPage",
-            "Furious.Window.SubscriptionWindow"
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "OK",
         "ZH": "OK",
