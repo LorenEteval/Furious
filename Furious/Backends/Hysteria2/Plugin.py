@@ -26,6 +26,7 @@ from Furious.Backends.Configuration import *
 from .Process import Hysteria2
 from .ProtocolEditors import HYSTERIA2_PROTOCOL_EDITORS
 from .Protocols import HYSTERIA2_PROTOCOL_HANDLERS
+from .Stats import Hysteria2StatsProvider, configuredHysteria2StatsTarget
 from .TUN import *
 
 import logging
@@ -136,6 +137,7 @@ class Hysteria2KernelFactory(KernelFactory):
             exitCallback=request.exitCallback,
             msgCallback=request.messageCallback,
         )
+        process.hysteria2StatsTarget = configuredHysteria2StatsTarget()
 
         return KernelLaunch(
             process,
@@ -181,5 +183,6 @@ class Hysteria2Plugin(FuriousPlugin):
             *HYSTERIA2_PROTOCOL_HANDLERS,
             *HYSTERIA2_PROTOCOL_EDITORS,
             Hysteria2KernelFactory(),
+            Hysteria2StatsProvider(),
             Hysteria2ActionProvider(),
         )
