@@ -213,6 +213,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self.editButton = AppQPushButton(_('Edit'))
         self.deleteButton = AppQPushButton(_('Delete'))
         self.copyURLButton = AppQPushButton(_('Copy URL'))
+        self.viewProfilesButton = AppQPushButton(_('View Profiles'))
         self.updateSelectedButton = AppQPushButton(_('Update Selected'))
         self.updateAllButton = AppQPushButton(_('Update All'))
 
@@ -221,6 +222,9 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             parent=self,
         )
         self.table.doubleClicked.connect(lambda _index: self.editSelected())
+        self.table.groupsChanged.connect(
+            self.serverTable.subsManager.subscriptionsChanged.emit
+        )
 
         self.serverTable.subsManager.subscriptionsChanged.connect(self.table.flushAll)
 
@@ -228,6 +232,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self.editButton.clicked.connect(self.editSelected)
         self.deleteButton.clicked.connect(self.table.deleteSelectedItem)
         self.copyURLButton.clicked.connect(self.copySelectedURL)
+        self.viewProfilesButton.clicked.connect(self.viewSelectedProfiles)
         self.updateSelectedButton.clicked.connect(self.updateSelected)
         self.updateAllButton.clicked.connect(self.updateAll)
 
@@ -251,6 +256,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         actions.addWidget(self.editButton)
         actions.addWidget(self.deleteButton)
         actions.addWidget(self.copyURLButton)
+        actions.addWidget(self.viewProfilesButton)
         actions.addStretch(1)
 
         content = QWidget()
@@ -273,10 +279,18 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         indexes = [
             index
             for index, server in enumerate(Storage.UserServers())
-            if server.itemSubscription == unique
+            if server.itemSubscription == unique and server.itemSubscriptionManaged
         ]
 
         self.serverTable.deleteItemByIndex(indexes, showProgress=False)
+
+        for server in Storage.UserServers():
+            if server.itemSubscription == unique:
+                server.metadata.subscriptionSource = ''
+                server.metadata.subscriptionManaged = False
+                server.metadata.subscriptionProfileKey = ''
+
+        self.serverTable.flushAll()
 
     def _selectedUnique(self):
         """Return the first selected subscription ID, if any."""
@@ -389,6 +403,26 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
                 str(Storage.UserSubs()[unique].get('webURL', ''))
             )
 
+    @QtCore.Slot()
+    def viewSelectedProfiles(self):
+        """Open Home filtered to the selected subscription group."""
+        unique = self._selectedUnique()
+
+        if unique is None:
+            return
+
+        mainWindow = self.window()
+
+        homePage = getattr(mainWindow, 'homePage', None)
+
+        if homePage is not None:
+            homePage.showSubscriptionGroup(unique)
+
+        showPage = getattr(mainWindow, 'showPage', None)
+
+        if callable(showPage):
+            showPage('home')
+
     def _selectedProxy(self):
         """Resolve the proxy policy selected for manual synchronization."""
         key = self.proxyComboBox.currentData() or ''
@@ -445,6 +479,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             (self.editButton, 'pencil-square.svg'),
             (self.deleteButton, 'trash.svg'),
             (self.copyURLButton, 'link-45deg.svg'),
+            (self.viewProfilesButton, 'funnel.svg'),
             (self.updateSelectedButton, 'arrow-repeat.svg'),
             (self.updateAllButton, 'cloud-arrow-down.svg'),
         ):

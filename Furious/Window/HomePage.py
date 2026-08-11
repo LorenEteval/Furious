@@ -548,8 +548,11 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         )
 
         self.searchButton = SearchButton()
+        self.subscriptionFilterComboBox = AppQComboBox()
+        self.subscriptionFilterComboBox.setMinimumWidth(180)
 
         self.searchLayout.addWidget(self.searchLineEdit)
+        self.searchLayout.addWidget(self.subscriptionFilterComboBox)
         self.searchLayout.addWidget(self.searchButton)
 
         self._layout.addLayout(self.searchLayout)
@@ -558,10 +561,21 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.searchButton.clicked.connect(
             lambda: self.userServersQTableWidget.search(self.searchLineEdit.text())
         )
+
         self.searchLineEdit.returnPressed.connect(
             lambda: self.userServersQTableWidget.search(self.searchLineEdit.text())
         )
         self.searchLineEdit.textChanged.connect(self.handleUserServersSearchTextChanged)
+
+        self.subscriptionFilterComboBox.currentIndexChanged.connect(
+            self.handleSubscriptionFilterChanged
+        )
+
+        self.userServersQTableWidget.subsManager.subscriptionsChanged.connect(
+            self.refreshSubscriptionFilter
+        )
+
+        self.refreshSubscriptionFilter()
 
         self.setCentralWidget(self._widget)
 
@@ -570,6 +584,42 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         """Handle user servers search text changed."""
         if not text:
             self.userServersQTableWidget.clearSearch()
+
+    @QtCore.Slot()
+    def refreshSubscriptionFilter(self):
+        """Refresh the stable group selector without losing its selection."""
+        selected = self.subscriptionFilterComboBox.currentData()
+
+        with Mixins.QBlockSignalContext(self.subscriptionFilterComboBox):
+            self.subscriptionFilterComboBox.clear()
+            self.subscriptionFilterComboBox.addItem(_('All Profiles'), None)
+            self.subscriptionFilterComboBox.addItem(_('Manual Profiles'), '')
+
+            for group in Storage.SubscriptionGroups():
+                self.subscriptionFilterComboBox.addItem(
+                    group.remark or group.webURL or group.id,
+                    group.id,
+                )
+
+            index = self.subscriptionFilterComboBox.findData(selected)
+
+            self.subscriptionFilterComboBox.setCurrentIndex(max(0, index))
+
+        self.handleSubscriptionFilterChanged()
+
+    @QtCore.Slot()
+    def handleSubscriptionFilterChanged(self):
+        """Apply the selected ownership group to the server table."""
+        self.userServersQTableWidget.filterBySubscription(
+            self.subscriptionFilterComboBox.currentData()
+        )
+
+    def showSubscriptionGroup(self, unique: str):
+        """Select one group in the Home profile filter."""
+        index = self.subscriptionFilterComboBox.findData(unique)
+
+        if index >= 0:
+            self.subscriptionFilterComboBox.setCurrentIndex(index)
 
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
         """Update subs by unique."""

@@ -24,7 +24,7 @@ from Furious.Interface import *
 from Furious.Models import ServerProfile
 from Furious.Repository.Routings import UserRoutings
 from Furious.Repository.Servers import UserServers
-from Furious.Repository.Subscriptions import UserSubs
+from Furious.Repository.Subscriptions import SubscriptionGroup, UserSubs
 from Furious.Repository.TunSettings import UserTUNSettings
 
 from typing import Union
@@ -88,6 +88,26 @@ class Storage:
     def UserSubs() -> dict[str, dict]:
         """Return the user subs value."""
         return Storage._UserSubsStorage().data()
+
+    @staticmethod
+    def SubscriptionGroups() -> tuple[SubscriptionGroup, ...]:
+        """Return first-class subscription groups in their display order."""
+        return Storage._UserSubsStorage().groups()
+
+    @staticmethod
+    def SubscriptionGroup(unique: str) -> SubscriptionGroup | None:
+        """Return one subscription group by stable ID."""
+        return Storage._UserSubsStorage().group(unique)
+
+    @staticmethod
+    def upsertSubscriptionGroup(group: SubscriptionGroup):
+        """Persist one subscription group through the shared repository."""
+        Storage._UserSubsStorage().upsertGroup(group)
+
+    @staticmethod
+    def removeSubscriptionGroup(unique: str) -> SubscriptionGroup | None:
+        """Remove one subscription group through the shared repository."""
+        return Storage._UserSubsStorage().removeGroup(unique)
 
     @staticmethod
     def UserTUNSettings() -> dict[str, str]:

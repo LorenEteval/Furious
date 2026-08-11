@@ -47,6 +47,7 @@ from .SubscriptionImporter import (
     SubscriptionImportService,
     SubscriptionSource,
 )
+from .SubscriptionSync import SubscriptionSyncResult, SubscriptionSynchronizer
 from .TrafficStatsManager import (
     TrafficStatsSample,
     TrafficStatsManager,
@@ -77,6 +78,8 @@ __all__ = [
     'SubscriptionImportResult',
     'SubscriptionImportService',
     'SubscriptionSource',
+    'SubscriptionSyncResult',
+    'SubscriptionSynchronizer',
     'TrafficStatsSample',
     'TrafficStatsManager',
     'UpdateManager',

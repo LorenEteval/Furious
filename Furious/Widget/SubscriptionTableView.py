@@ -335,6 +335,7 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
                     1
                     for profile in Storage.UserServers()
                     if profile.itemSubscription == unique
+                    and profile.itemSubscriptionManaged
                 )
             )
 
@@ -468,6 +469,7 @@ _TRANSLATABLE_HEADERS = [
 class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
     """Represent user subs Qt table view."""
 
+    groupsChanged = QtCore.Signal()
     RowHeight = 42
 
     AutoUpdateOptions = {
@@ -558,6 +560,15 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
         contextMenuActions = [
             AppQAction(
+                _('Move Up'),
+                callback=lambda: self.moveSelectedGroup(-1),
+            ),
+            AppQAction(
+                _('Move Down'),
+                callback=lambda: self.moveSelectedGroup(1),
+            ),
+            AppQSeperator(),
+            AppQAction(
                 _('Delete'),
                 callback=lambda: self.deleteSelectedItem(),
             ),
@@ -614,7 +625,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
                         deleteIndex,
                     )
 
-                    Storage.UserSubs().pop(deleteUnique)
+                    Storage.removeSubscriptionGroup(deleteUnique)
 
                     # Begin timer cleanup
                     qtimer = self.timers[deleteIndex]
@@ -642,7 +653,11 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
                     if callable(self.deleteUniqueCallback):
                         self.deleteUniqueCallback(deleteUnique)
 
+                for order, value in enumerate(Storage.UserSubs().values()):
+                    value['sortOrder'] = order
+
                 self.flushAll()
+                self.groupsChanged.emit()
             else:
                 # Do not delete
                 pass
@@ -667,6 +682,44 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
         # Show the MessageBox asynchronously
         mbox.open()
+
+    def moveSelectedGroup(self, offset: int):
+        """Move one group while preserving its stable ID and timer."""
+        indexes = self.selectedIndex
+
+        if len(indexes) != 1 or offset not in (-1, 1):
+            return
+
+        source = indexes[0]
+        target = source + offset
+
+        items = list(Storage.UserSubs().items())
+
+        if target < 0 or target >= len(items):
+            return
+
+        self.sourceModel.layoutAboutToBeChanged.emit()
+
+        item = items.pop(source)
+
+        items.insert(target, item)
+
+        Storage.UserSubs().clear()
+        Storage.UserSubs().update(items)
+
+        timer = self.timers.pop(source)
+
+        timerConnected = self.timerConnected.pop(source)
+
+        self.timers.insert(target, timer)
+        self.timerConnected.insert(target, timerConnected)
+
+        for order, (unique, value) in enumerate(items):
+            value['sortOrder'] = order
+
+        self.sourceModel.layoutChanged.emit()
+        self.selectRow(target)
+        self.groupsChanged.emit()
 
     def _configureAutoUpdate(self, row: int):
         """Configure one subscription timer independently of table columns."""
@@ -800,23 +853,26 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             kwargs.pop('lastUpdated', ''),
         )
 
-        # The internal subs object
-        subsob = {
-            unique: {
-                'remark': remark,
-                'webURL': webURL,
-                'enabled': bool(enabled),
-                'autoupdate': autoupdate,
-                'proxy': proxy,
-                'userAgent': userAgent,
-                'filter': profileFilter,
-                'lastUpdated': lastUpdated,
-            }
-        }
+        group = Storage.SubscriptionGroup(unique) or SubscriptionGroup(
+            id=unique,
+            sortOrder=len(Storage.UserSubs()),
+        )
+        group.remark = remark
+        group.webURL = webURL
+        group.enabled = bool(enabled)
+        group.autoupdate = autoupdate
+        group.proxy = proxy
+        group.userAgent = userAgent
+        group.filter = profileFilter
+        group.lastUpdated = lastUpdated
+
+        subsob = {unique: group.toMapping()}
 
         if unique in Storage.UserSubs():
             row = list(Storage.UserSubs().keys()).index(unique)
-            Storage.UserSubs().update(subsob)
+
+            Storage.upsertSubscriptionGroup(group)
+
             self.flushRow(row, subsob[unique])
         else:
             row = self.sourceModel.rowCount()
@@ -826,10 +882,14 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             self.timerConnected.append(False)
 
             self.sourceModel.beginInsertRows(QtCore.QModelIndex(), row, row)
-            Storage.UserSubs().update(subsob)
+
+            Storage.upsertSubscriptionGroup(group)
+
             self.sourceModel.endInsertRows()
 
             self.flushRow(row, subsob[unique])
+
+        self.groupsChanged.emit()
 
     @staticmethod
     def updateSubsByUnique(

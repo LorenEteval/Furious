@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Models import ServerProfile
+from Furious.Models import ServerProfile, profileConnectionFingerprint
 from Furious.Plugins import getPluginRegistry, profileFromAny
 
 from dataclasses import dataclass, field
@@ -71,12 +71,14 @@ class SubscriptionImportService:
 
         profiles = []
         rejected = 0
+        identityOccurrences = {}
 
         for item in result.items:
             value = item.configuration if item.configuration is not None else item.uri
             metadata = {
                 **dict(item.metadata),
                 'subscriptionSource': source.id,
+                'subscriptionManaged': True,
                 'updatedAt': source.updatedAt,
             }
 
@@ -87,6 +89,17 @@ class SubscriptionImportService:
                 value,
                 registry=self.registry,
                 **metadata,
+            )
+
+            baseIdentity = (
+                f'upstream:{item.upstreamId}'
+                if item.upstreamId
+                else f'config:{profileConnectionFingerprint(profile)}'
+            )
+            occurrence = identityOccurrences.get(baseIdentity, 0)
+            identityOccurrences[baseIdentity] = occurrence + 1
+            profile.metadata.subscriptionProfileKey = (
+                baseIdentity if occurrence == 0 else f'{baseIdentity}#{occurrence + 1}'
             )
 
             if not self.registry.validateConfig(profile):

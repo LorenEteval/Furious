@@ -20,5 +20,6 @@
 from __future__ import annotations
 
 from .Storage import Storage
+from .Subscriptions import SubscriptionGroup
 
-__all__ = ['Storage']
+__all__ = ['Storage', 'SubscriptionGroup']
