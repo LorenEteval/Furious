@@ -19,7 +19,13 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import APP, AppSettings, Mixins, registerAppSettings
+from Furious.Frozenlib import (
+    APP,
+    AppBinarySettings,
+    AppSettings,
+    Mixins,
+    registerAppSettings,
+)
 from Furious.Plugins import TrafficCounters, getPluginRegistry
 
 from PySide6 import QtCore
@@ -34,6 +40,7 @@ import operator
 
 __all__ = [
     'CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING',
+    'METRICS_COLLECTION_SETTING',
     'TrafficStatsSample',
     'TrafficStatsManager',
     'formatTrafficSpeed',
@@ -46,8 +53,14 @@ KIBIBYTE = 1024
 MEBIBYTE = KIBIBYTE * KIBIBYTE
 TRAFFIC_STATS_SAMPLE_INTERVAL = 2000
 CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING = 'ClearTrafficUsageOnReconnect'
+METRICS_COLLECTION_SETTING = 'EnableMetricsCollection'
 
 registerAppSettings(CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING, isBinary=True)
+registerAppSettings(
+    METRICS_COLLECTION_SETTING,
+    isBinary=True,
+    default=AppBinarySettings.ON_,
+)
 
 
 @dataclass(frozen=True)
@@ -201,6 +214,8 @@ class TrafficStatsManager(
         self._previousSampleTime = None
         self._usageAccumulator = _TrafficUsageAccumulator()
         self._hasConnected = False
+        self._connected = False
+        self._collectionEnabled = AppSettings.isStateON_(METRICS_COLLECTION_SETTING)
 
         self._sampleTimer = QtCore.QTimer(self)
         self._sampleTimer.setInterval(TRAFFIC_STATS_SAMPLE_INTERVAL)
@@ -209,7 +224,7 @@ class TrafficStatsManager(
 
     def _resumeSampling(self):
         """Resume polling whenever a statistics monitor is available."""
-        if self._monitor is None:
+        if not self._collectionEnabled or self._monitor is None:
             return
 
         if not self._ensureExecutor():
@@ -311,10 +326,41 @@ class TrafficStatsManager(
 
         self._resumeSampling()
 
+    def _deactivateMonitor(self):
+        """Stop statistics work without changing the connection lifecycle."""
+        self._sampleTimer.stop()
+        self._generation += 1
+        self._monitor = None
+        self._resetSamples()
+        self._beginConnectionUsage()
+        self._closeExecutor()
+        self.statisticsUnavailable.emit()
+
+    @QtCore.Slot(bool)
+    def setCollectionEnabled(self, enabled: bool):
+        """Apply the metrics preference immediately to the active connection."""
+        enabled = bool(enabled)
+
+        if enabled == self._collectionEnabled:
+            return
+
+        self._collectionEnabled = enabled
+
+        if not enabled:
+            self._deactivateMonitor()
+
+            return
+
+        if self._connected:
+            monitor = getPluginRegistry().trafficStatsMonitorForKernels(
+                self._activeProcesses()
+            )
+            self._activateMonitor(monitor)
+
     @QtCore.Slot()
     def _requestSample(self):
         """Queue one statistics query unless another query is still running."""
-        if self._monitor is None or self._queryInFlight:
+        if not self._collectionEnabled or self._monitor is None or self._queryInFlight:
             return
 
         if not self._ensureExecutor():
@@ -433,6 +479,13 @@ class TrafficStatsManager(
             self._clearSessionUsage()
 
         self._hasConnected = True
+        self._connected = True
+
+        if not self._collectionEnabled:
+            self._deactivateMonitor()
+
+            return
+
         monitor = getPluginRegistry().trafficStatsMonitorForKernels(
             self._activeProcesses()
         )
@@ -440,6 +493,7 @@ class TrafficStatsManager(
 
     def disconnectedCallback(self):
         """Stop sampling and clear traffic speeds after disconnecting."""
+        self._connected = False
         self._sampleTimer.stop()
         self._generation += 1
         self._monitor = None
