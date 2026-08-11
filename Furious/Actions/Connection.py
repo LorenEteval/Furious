@@ -122,10 +122,11 @@ class ConnectAction(AppQAction):
         APP().systemTray.RoutingAction.setDisabled(value)
         APP().systemTray.SystemProxyAction.setDisabled(value)
 
-        # TODO: Need this?
         if PLATFORM == 'Linux' or SystemRuntime.isAdmin():
-            TUNModeAction = APP().systemTray.SettingsAction.getTUNModeAction()
-            TUNModeAction.setDisabled(value)
+            try:
+                APP().mainWindow.settingsPage.setTUNModeControlEnabled(not value)
+            except (AttributeError, RuntimeError):
+                pass
 
     def isConnected(self) -> bool:
         """Return whether connected."""
