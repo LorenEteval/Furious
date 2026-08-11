@@ -56,9 +56,8 @@ class TrayIcon(
         actions = [
             ConnectAction(isTrayAction=True),
             RoutingAction(isTrayAction=True),
-            SystemProxyAction(isTrayAction=True),
-            AppQSeperator(),
             ImportAction(isTrayAction=True),
+            AppQSeperator(),
             ShowHomePageAction(isTrayAction=True),
             AppQSeperator(),
             ExitAction(isTrayAction=True),

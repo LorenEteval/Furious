@@ -34,6 +34,7 @@ class _SubscriptionEditorDialog(AppQDialog):
         super().__init__(parent)
 
         subscription = dict(subscription or {})
+
         self.remarkEdit = QLineEdit(subscription.get('remark', ''))
         self.urlEdit = QLineEdit(subscription.get('webURL', ''))
         self.enabledCheckBox = QCheckBox()
@@ -56,6 +57,7 @@ class _SubscriptionEditorDialog(AppQDialog):
 
         autoIndex = self.autoUpdateComboBox.findData(subscription.get('autoupdate', ''))
         proxyIndex = self.proxyComboBox.findData(subscription.get('proxy', ''))
+
         self.autoUpdateComboBox.setCurrentIndex(max(autoIndex, 0))
         self.proxyComboBox.setCurrentIndex(max(proxyIndex, 0))
 
@@ -79,6 +81,7 @@ class _SubscriptionEditorDialog(AppQDialog):
         form.addRow(_('User Agent'), self.userAgentEdit)
         form.addRow(_('Profile Filter (Regex)'), self.filterEdit)
         form.addRow(self.buttons)
+
         self.setLayout(form)
 
         self.setWindowTitle(
@@ -155,6 +158,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             parent=self,
         )
         self.table.doubleClicked.connect(lambda _index: self.editSelected())
+
         self.serverTable.subsManager.subscriptionsChanged.connect(self.table.flushAll)
 
         self.addButton.clicked.connect(self.addSubscription)
@@ -190,12 +194,14 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
         content = QWidget()
         content.setObjectName('SubscriptionPageContent')
+
         layout = QVBoxLayout(content)
         layout.setContentsMargins(20, 18, 20, 20)
         layout.setSpacing(12)
         layout.addLayout(controls)
         layout.addLayout(actions)
         layout.addWidget(self.table, 1)
+
         self.setCentralWidget(content)
 
         self.setIconsByTheme(APP().theme())
@@ -208,6 +214,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             for index, server in enumerate(Storage.UserServers())
             if server.itemSubscription == unique
         ]
+
         self.serverTable.deleteItemByIndex(indexes, showProgress=False)
 
     def _selectedUnique(self):
@@ -219,6 +226,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
     def _openEditor(self, unique=None, initial=None):
         """Open and retain an asynchronous add/edit dialog."""
         source = Storage.UserSubs().get(unique, initial or {})
+
         dialog = _SubscriptionEditorDialog(source, parent=self)
         dialog.setWindowTitle(
             _('Edit Subscription') if unique else _('Add Subscription')
@@ -232,6 +240,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
             subscriptionUnique = unique or str(uuid.uuid4())
             existing = Storage.UserSubs().get(subscriptionUnique, {})
+
             self.table.appendNewItem(
                 unique=subscriptionUnique,
                 lastUpdated=existing.get('lastUpdated', ''),
@@ -366,6 +375,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
                 self.proxyComboBox.addItem(_(key), key)
 
             index = self.proxyComboBox.findData(selectedProxy)
+
             self.proxyComboBox.setCurrentIndex(max(index, 0))
 
         self.pageTitleLabel.setText(_('Subscriptions'))

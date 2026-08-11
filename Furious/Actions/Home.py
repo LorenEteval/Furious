@@ -37,8 +37,14 @@ class ShowHomePageAction(AppQAction):
             **kwargs,
         )
 
-        self.setToolTip(_('Show the server management Home page'))
-        self.setStatusTip(_('Show the server management Home page'))
+        self._setDescription()
+
+    def _setDescription(self):
+        """Apply translated explanatory text to hover/status surfaces."""
+        description = _('Show the server management Home page')
+
+        self.setToolTip(description)
+        self.setStatusTip(description)
 
     def triggeredCallback(self, checked):
         """Handle activation of the action."""
@@ -57,7 +63,4 @@ class ShowHomePageAction(AppQAction):
         """Refresh the action text and explanatory hover text."""
         super().retranslate()
 
-        description = _('Show the server management Home page')
-
-        self.setToolTip(description)
-        self.setStatusTip(description)
+        self._setDescription()

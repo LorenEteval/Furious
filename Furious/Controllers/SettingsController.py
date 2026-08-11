@@ -42,6 +42,10 @@ registerAppSettings(
     'ShowProgressBarWhenConnecting', isBinary=True, default=AppBinarySettings.ON_
 )
 registerAppSettings('ShowTabAndSpacesInEditor', isBinary=True)
+registerAppSettings(
+    'SystemProxyMode',
+    validRange=list(mode.value for mode in AppBuiltinProxyMode),
+)
 
 
 class SettingsController:
@@ -134,6 +138,14 @@ class SettingsController:
         """Persist local system-proxy address normalization."""
         cls._setBinary('ForceToLocalhostWhenSettingLocalProxy', enabled)
         showMBoxNewChangesNextTime()
+
+    @staticmethod
+    def setSystemProxyMode(mode: str):
+        """Persist how Furious manages the operating-system proxy."""
+        validModes = tuple(item.value for item in AppBuiltinProxyMode)
+
+        if mode in validModes:
+            AppSettings.set('SystemProxyMode', mode)
 
     @classmethod
     def setAutoUpdateAssets(cls, enabled: bool):

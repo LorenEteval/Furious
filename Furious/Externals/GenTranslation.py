@@ -968,7 +968,6 @@ TRANSLATION = {
     },
     "TUN Mode": {
         "source": [
-            "Furious.Actions.Settings",
             "Furious.Window.SettingsPage"
         ],
         "RU": "TUN режим",
@@ -977,7 +976,6 @@ TRANSLATION = {
     },
     "TUN Mode Disabled (Administrator)": {
         "source": [
-            "Furious.Actions.Settings",
             "Furious.Window.SettingsPage"
         ],
         "RU": "TUN режим отключен (Administrator)",
@@ -986,7 +984,6 @@ TRANSLATION = {
     },
     "TUN Mode Disabled (Superuser)": {
         "source": [
-            "Furious.Actions.Settings",
             "Furious.Window.SettingsPage"
         ],
         "RU": "TUN режим отключен  (Superuser)",
@@ -1052,7 +1049,7 @@ TRANSLATION = {
     },
     "System Proxy": {
         "source": [
-            "Furious.Actions.SystemProxy"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Системный прокси",
         "ZH": "系统代理",
@@ -1060,7 +1057,7 @@ TRANSLATION = {
     },
     "Automatically Configure System Proxy": {
         "source": [
-            "Furious.Actions.SystemProxy"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Автоматическая настройка системного прокси-сервера",
         "ZH": "自动配置系统代理",
@@ -1068,7 +1065,7 @@ TRANSLATION = {
     },
     "Do Not Change System Proxy": {
         "source": [
-            "Furious.Actions.SystemProxy"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Не изменять системный прокси-сервер",
         "ZH": "不修改系统代理",
@@ -2664,160 +2661,184 @@ TRANSLATION = {
         "source": [
             "Furious.Window.SettingsPage"
         ],
+        "RU": "Очищать статистику трафика при переподключении",
         "ZH": "重新连接时清除流量使用统计",
-        "isReviewed": "True",
-        "RU": "Очищать статистику трафика при переподключении"
+        "isReviewed": "True"
     },
     "Start accumulated upload and download usage from zero after reconnecting.": {
         "source": [
             "Furious.Window.SettingsPage"
         ],
+        "RU": "После переподключения начинать подсчёт накопленного исходящего и входящего трафика с нуля.",
         "ZH": "重新连接后，将累计上传和下载流量从零开始计算。",
-        "isReviewed": "True",
-        "RU": "После переподключения начинать подсчёт накопленного исходящего и входящего трафика с нуля."
+        "isReviewed": "True"
     },
     "Show Home Page...": {
         "source": [
-            "Furious.Actions.Configuration"
+            "Furious.Actions.Home"
         ],
+        "RU": "Показать главную страницу...",
         "ZH": "显示主页...",
-        "isReviewed": "True",
-        "RU": "Показать главную страницу..."
+        "isReviewed": "True"
     },
     "Show the server management Home page": {
         "source": [
-            "Furious.Actions.Configuration"
+            "Furious.Actions.Home"
         ],
+        "RU": "Показать главную страницу управления серверами",
         "ZH": "显示服务器管理主页",
-        "isReviewed": "True",
-        "RU": "Показать главную страницу управления серверами"
+        "isReviewed": "True"
     },
     "Last Updated": {
         "source": [
             "Furious.Widget.SubscriptionTableView"
         ],
+        "RU": "Последнее обновление",
         "ZH": "上次更新",
-        "isReviewed": "True",
-        "RU": "Последнее обновление"
+        "isReviewed": "True"
     },
     "Profiles": {
         "source": [
             "Furious.Widget.SubscriptionTableView"
         ],
+        "RU": "Профили",
         "ZH": "配置文件",
-        "isReviewed": "True",
-        "RU": "Профили"
+        "isReviewed": "True"
     },
     "Plugin Settings": {
         "source": [
             "Furious.Window.SettingsPage"
         ],
+        "RU": "Настройки плагинов",
         "ZH": "插件设置",
-        "isReviewed": "True",
-        "RU": "Настройки плагинов"
+        "isReviewed": "True"
     },
     "Enable Metrics Collection": {
         "source": [
             "Furious.Window.SettingsPage"
         ],
+        "RU": "Включить сбор метрик",
         "ZH": "启用指标收集",
-        "isReviewed": "True",
-        "RU": "Включить сбор метрик"
+        "isReviewed": "True"
     },
     "Collect network speed and traffic history while connected.": {
         "source": [
             "Furious.Window.SettingsPage"
         ],
+        "RU": "Собирать историю скорости сети и трафика при подключении.",
         "ZH": "连接时收集网络速度和流量历史记录。",
-        "isReviewed": "True",
-        "RU": "Собирать историю скорости сети и трафика при подключении."
+        "isReviewed": "True"
     },
     "URL": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
+        "RU": "URL",
         "ZH": "URL",
-        "isReviewed": "True",
-        "RU": "URL"
+        "isReviewed": "True"
     },
     "User Agent": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
+        "RU": "User-Agent",
         "ZH": "用户代理",
-        "isReviewed": "True",
-        "RU": "User-Agent"
+        "isReviewed": "True"
     },
     "Profile Filter (Regex)": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
+        "RU": "Фильтр профилей (регулярное выражение)",
         "ZH": "配置文件筛选器（正则表达式）",
-        "isReviewed": "True",
-        "RU": "Фильтр профилей (регулярное выражение)"
+        "isReviewed": "True"
     },
     "Please enter a subscription remark.": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
+        "RU": "Введите название подписки.",
         "ZH": "请输入订阅备注。",
-        "isReviewed": "True",
-        "RU": "Введите название подписки."
+        "isReviewed": "True"
     },
     "Please enter a valid subscription URL.": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
+        "RU": "Введите корректный URL подписки.",
         "ZH": "请输入有效的订阅 URL。",
-        "isReviewed": "True",
-        "RU": "Введите корректный URL подписки."
+        "isReviewed": "True"
     },
     "Subscriptions": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
+        "RU": "Подписки",
         "ZH": "订阅管理",
-        "isReviewed": "True",
-        "RU": "Подписки"
+        "isReviewed": "True"
     },
     "Update Using": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
+        "RU": "Способ обновления",
         "ZH": "更新方式",
-        "isReviewed": "True",
-        "RU": "Способ обновления"
+        "isReviewed": "True"
     },
     "Add From Clipboard": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
+        "RU": "Добавить из буфера обмена",
         "ZH": "从剪贴板添加",
-        "isReviewed": "True",
-        "RU": "Добавить из буфера обмена"
+        "isReviewed": "True"
     },
     "Copy URL": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
-        "ZH": "复制 URL",
-        "isReviewed": "True",
-        "RU": "Копировать URL"
+        "RU": "Копировать URL",
+        "ZH": "复制URL",
+        "isReviewed": "True"
     },
     "Update Selected": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
+        "RU": "Обновить выбранные",
         "ZH": "更新所选项",
-        "isReviewed": "True",
-        "RU": "Обновить выбранные"
+        "isReviewed": "True"
     },
     "Update All": {
         "source": [
             "Furious.Window.SubscriptionPage"
         ],
+        "RU": "Обновить все",
         "ZH": "全部更新",
-        "isReviewed": "True",
-        "RU": "Обновить все"
+        "isReviewed": "True"
+    },
+    "Official Hysteria 2 protocol, editor, and runtime support.": {
+        "source": [
+            "Furious.Backends.Hysteria2.Plugin"
+        ],
+        "RU": "Официальная поддержка протокола, редактора и среды выполнения Hysteria 2.",
+        "ZH": "Hysteria 2官方协议、编辑器和运行时支持。",
+        "isReviewed": "True"
+    },
+    "Official Xray protocol, editor, and runtime support.": {
+        "source": [
+            "Furious.Backends.Xray.Plugin"
+        ],
+        "RU": "Официальная поддержка протокола, редактора и среды выполнения Xray.",
+        "ZH": "Xray官方协议、编辑器和运行时支持。",
+        "isReviewed": "True"
+    },
+    "Choose whether Furious automatically configures the operating system proxy.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Выберите, должен ли Furious автоматически настраивать системный прокси.",
+        "ZH": "选择Furious是否自动配置操作系统代理。",
+        "isReviewed": "True"
     }
 }

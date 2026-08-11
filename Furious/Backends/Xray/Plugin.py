@@ -393,6 +393,17 @@ class XrayKernelFactory(KernelFactory):
         assetDownloadManager.download()
 
 
+def _placeholder(x):
+    return x
+
+
+_ = _placeholder
+
+_TRANSLATABLE = [
+    _('Official Xray protocol, editor, and runtime support.'),
+]
+
+
 class XrayPlugin(FuriousPlugin):
     """Bundle official Xray protocol handlers and its runtime backend."""
 

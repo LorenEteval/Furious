@@ -23,22 +23,25 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Models.Encoding import *
 
+from dataclasses import dataclass
+
 __all__ = ['UserSubs']
 
 registerAppSettings('CustomSubscription')
 
 
+@dataclass
 class UserSubEntry:
     """Describe one user sub entry."""
 
-    remark: str
-    webURL: str
-    enabled: bool
-    autoupdate: str
-    proxy: str
-    userAgent: str
-    filter: str
-    lastUpdated: str
+    remark: str = ''
+    webURL: str = ''
+    enabled: bool = True
+    autoupdate: str = ''
+    proxy: str = ''
+    userAgent: str = ''
+    filter: str = ''
+    lastUpdated: str = ''
 
 
 class UserSub:
