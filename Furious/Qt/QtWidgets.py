@@ -53,7 +53,6 @@ __all__ = [
     'AppQPushButton',
     'AppQSpinBox',
     'AppQTableView',
-    'AppQTableWidget',
     'AppQTabWidget',
     'AppQToolBar',
     'IconTextPushButton',
@@ -868,68 +867,6 @@ class AppQTableView(QTableView):
         """Set default row height."""
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.verticalHeader().setDefaultSectionSize(height)
-
-
-class AppQTableWidget(QTableWidget):
-    """Provide the app Qt table widget."""
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the AppQTableWidget."""
-        super().__init__(*args, **kwargs)
-
-        self.setWordWrap(False)
-        self.setAlternatingRowColors(True)
-
-    @property
-    def selectedIndex(self):
-        """Return the selected index value."""
-        return sorted(list(set(index.row() for index in self.selectedIndexes())))
-
-    def activateItemByIndex(self, index, activate):
-        """Activate item by index."""
-        if activate:
-            for column in range(self.columnCount()):
-                item = self.item(int(index), column)
-
-                if item is None:
-                    # Do nothing
-                    continue
-
-                font = item.font()
-                font.setBold(True)
-
-                item.setFont(font)
-                item.setForeground(QColor(AppHue.currentColor()))
-        else:
-            for column in range(self.columnCount()):
-                item = self.item(int(index), column)
-
-                if item is None:
-                    # Do nothing
-                    continue
-
-                font = item.font()
-                font.setBold(False)
-
-                item.setFont(font)
-                item.setForeground(QBrush())
-
-    def selectMultipleRows(self, indexes: list[int], clearCurrentSelection: bool):
-        """Select multiple rows."""
-        if clearCurrentSelection:
-            self.selectionModel().clearSelection()
-
-        selection = self.selectionModel().selection()
-
-        for index in indexes:
-            selection.select(
-                self.model().index(index, 0),
-                self.model().index(index, self.columnCount() - 1),
-            )
-
-        self.selectionModel().select(
-            selection, QtCore.QItemSelectionModel.SelectionFlag.Select
-        )
 
 
 class AppQTabWidget(Mixins.QTranslatable, QTabWidget):

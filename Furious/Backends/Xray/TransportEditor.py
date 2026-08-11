@@ -1593,69 +1593,6 @@ class GuiVTransportItemAuthHysteria(GuiEditorItemTextInput):
             self.setText('')
 
 
-class GuiVTransportItemPasswordHysteria(GuiEditorItemTextInput):
-    """Represent GUI v transport item password hysteria."""
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the GuiVTransportItemPasswordHysteria."""
-        super().__init__(*args, **kwargs)
-
-    def inputToFactory(self, config: ConfigFactory) -> bool:
-        """Apply the current editor value to the configuration."""
-        streamSettings = ConfigXray.getProxyOutboundStream(config)
-
-        if not isinstance(streamSettings.get('finalmask'), dict):
-            streamSettings['finalmask'] = {}
-
-        finalmaskObject = streamSettings['finalmask']
-
-        if not isinstance(finalmaskObject.get('salamander'), dict):
-            finalmaskObject['salamander'] = {}
-
-        salamander = finalmaskObject['salamander']
-
-        try:
-            oldPassword = salamander.get('password', '')
-        except Exception:
-            # Any non-exit exceptions
-
-            oldPassword = ''
-
-        newPassword = self.text()
-
-        def setNewPassword():
-            """Set new password."""
-            if newPassword == '':
-                finalmaskObject.pop('salamander', None)
-            else:
-                salamander['password'] = newPassword
-
-        if isinstance(oldPassword, str):
-            if newPassword != oldPassword:
-                setNewPassword()
-
-                return True
-            else:
-                return False
-        else:
-            setNewPassword()
-
-            return True
-
-    def factoryToInput(self, config: ConfigFactory):
-        """Load the configuration value into the editor."""
-        try:
-            salamander = ConfigXray.getProxyOutboundStream(config)['finalmask'][
-                'salamander'
-            ]
-
-            self.setText(salamander.get('password', ''))
-        except Exception:
-            # Any non-exit exceptions
-
-            self.setText('')
-
-
 class GuiVTransportPageXXX(GuiEditorWidgetQWidget):
     """Represent GUI v transport page xxx."""
 
@@ -1882,7 +1819,6 @@ class GuiVTransportPageHysteria(GuiVTransportPageXXX):
             GuiVTransportItemFinalMask(title='Finalmask', translatable=False),
             GuiVTransportItemVersionHysteria(title='Version', translatable=False),
             GuiVTransportItemAuthHysteria(title='Auth', translatable=False),
-            # GuiVTransportItemPasswordHysteria(title='Password', translatable=False),
         ]
 
 
