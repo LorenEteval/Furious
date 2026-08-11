@@ -22,6 +22,7 @@ from __future__ import annotations
 from .ConnectionProgressWidget import ConnectionProgressWidget
 from .MetricsGraph import MetricsGraphWidget
 from .NavigationView import NavigationView
+from .RoutingSelector import RoutingSelector
 from .ServerTableView import ServerTableView
 from .SubscriptionTableView import SubscriptionTableView
 from .WaitingSpinner import WaitingSpinner
@@ -30,6 +31,7 @@ __all__ = [
     'ConnectionProgressWidget',
     'MetricsGraphWidget',
     'NavigationView',
+    'RoutingSelector',
     'ServerTableView',
     'SubscriptionTableView',
     'WaitingSpinner',

@@ -17,6 +17,7 @@
 
 """Expose presentation-independent application controllers."""
 
+from .RoutingController import RoutingController
 from .SettingsController import SettingsController
 
-__all__ = ['SettingsController']
+__all__ = ['RoutingController', 'SettingsController']

@@ -180,7 +180,7 @@ class ConnectAction(AppQAction):
         self.setDisabled(value)
 
         try:
-            APP().systemTray.RoutingAction.setDisabled(value)
+            APP().routingController.setInteractionEnabled(not value)
         except (AttributeError, RuntimeError):
             pass
 

@@ -53,6 +53,7 @@ from .QtNetwork import AppQNetworkAccessManager
 from .QtWidgets import (
     AppQCheckBox,
     AppQComboBox,
+    AppQComboBoxSeparatorDelegate,
     AppQDialog,
     AppQDialogButtonBox,
     AppQGroupBox,
@@ -102,6 +103,7 @@ __all__ = [
     'AppQActionGroup',
     'AppQCheckBox',
     'AppQComboBox',
+    'AppQComboBoxSeparatorDelegate',
     'AppQDialog',
     'AppQDialogButtonBox',
     'AppQGroupBox',

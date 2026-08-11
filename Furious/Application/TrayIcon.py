@@ -55,7 +55,7 @@ class TrayIcon(
 
         actions = [
             APP().connectionAction,
-            RoutingAction(isTrayAction=True),
+            RoutingAction(APP().routingController, isTrayAction=True),
             ImportAction(isTrayAction=True),
             AppQSeperator(),
             ShowHomePageAction(isTrayAction=True),

@@ -15,19 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Implement tray actions for routing."""
+"""Present shared routing state through the tray action menu."""
 
 from __future__ import annotations
 
-from Furious.Frozenlib import *
-from Furious.Repository import *
-from Furious.Plugins import getPluginRegistry
+from Furious.Controllers import RoutingController
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
-__all__ = ['RoutingAction']
+from PySide6 import QtCore
 
-registerAppSettings('Routing', default=AppBuiltinRouting.BypassMainlandChina.value)
+__all__ = ['RoutingAction']
 
 # ALL BUILTIN ROUTING VALUE
 _TRANSLATABLE_BUILTIN_ROUTING = [
@@ -38,33 +36,32 @@ _TRANSLATABLE_BUILTIN_ROUTING = [
 
 
 class RoutingChildAction(AppQAction):
-    """Handle the routing child action."""
+    """Forward one tray route choice to the shared controller."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        controller: RoutingController,
+        routingValue: str,
+        **kwargs,
+    ):
         """Initialize the RoutingChildAction."""
-        self.routingValue = kwargs.pop('routingValue', None)
+        self.controller = controller
+        self.routingValue = routingValue
 
         super().__init__(*args, **kwargs)
 
     def triggeredCallback(self, checked):
         """Handle activation of the action."""
-        textEnglish = self.routingValue or self.textEnglish
-
-        if AppSettings.get('Routing') != textEnglish:
-            AppSettings.set('Routing', textEnglish)
-
-            if APP().isSystemTrayConnected():
-                APP().systemTray.ConnectAction.doReconnect()
+        self.controller.selectRouting(self.routingValue)
 
 
 class RoutingAction(AppQAction):
-    """Handle the routing action."""
+    """Render application routing options as a synchronized tray menu."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, controller: RoutingController, **kwargs):
         """Initialize the RoutingAction."""
-        if AppSettings.get('Routing') == 'Bypass':
-            # Update value for backward compatibility
-            AppSettings.set('Routing', AppBuiltinRouting.BypassMainlandChina.value)
+        self.controller = controller
 
         super().__init__(
             _('Routing'),
@@ -73,17 +70,13 @@ class RoutingAction(AppQAction):
             **kwargs,
         )
 
-        self.rebuildMenu()
+        self.controller.stateChanged.connect(self._applyState)
+        self.controller.interactionEnabledChanged.connect(self.setEnabled)
 
-    def routingActions(self):
-        """Return routing actions supported by the active core plugin."""
-        config = self.activeConfig()
-        if config is None:
-            return list()
+        self._applyState(*self.controller.state())
 
-        pluginRegistry = getPluginRegistry()
-        options = pluginRegistry.routingOptions(config)
-        routing = pluginRegistry.normalizeRouting(config, AppSettings.get('Routing'))
+    def routingActions(self, options, routing: str):
+        """Build tray actions from one shared controller snapshot."""
         actions = list()
 
         for option in options:
@@ -97,6 +90,7 @@ class RoutingAction(AppQAction):
                         if option.translatable
                         else option.displayName
                     ),
+                    controller=self.controller,
                     routingValue=option.id,
                     checkable=True,
                     checked=routing == option.id,
@@ -105,27 +99,20 @@ class RoutingAction(AppQAction):
 
         return actions
 
-    @staticmethod
-    def activeConfig():
-        """Return the currently selected server configuration, if any."""
-        try:
-            index = Storage.UserActivatedItemIndex()
-            servers = Storage.UserServers()
+    @QtCore.Slot(object, str)
+    def _applyState(self, options, routing: str):
+        """Rebuild the tray menu from one controller state snapshot."""
+        oldActionGroup = getattr(self, '_actionGroup', None)
 
-            if 0 <= index < len(servers):
-                return servers[index]
-        except Exception:
-            # The tray may be built before persistent storage is available.
-            pass
-
-        return None
-
-    def rebuildMenu(self):
-        """Handle rebuild menu for the routing action."""
         self._menu.clear()
         self._menu._actions.clear()
+
+        if oldActionGroup is not None:
+            oldActionGroup.deleteLater()
+
         self._actionGroup = AppQActionGroup(self)
-        actions = self.routingActions()
+
+        actions = self.routingActions(options, routing)
 
         for action in actions:
             if isinstance(action, AppQSeperator):
@@ -137,15 +124,8 @@ class RoutingAction(AppQAction):
                 self._actionGroup.addAction(action)
 
         self.setVisible(bool(actions))
+        self.setEnabled(self.controller.interactionEnabled)
 
-    def getGlobalAction(self):
-        """Return the active plugin's global routing action, if supported."""
-        return next(
-            (
-                action
-                for action in self._menu._actions
-                if isinstance(action, RoutingChildAction)
-                and action.routingValue == AppBuiltinRouting.Global.value
-            ),
-            None,
-        )
+    def rebuildMenu(self):
+        """Refresh plugin options immediately before the tray menu opens."""
+        self.controller.refresh(force=True)
