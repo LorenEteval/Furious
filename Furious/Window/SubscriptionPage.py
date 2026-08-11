@@ -21,9 +21,29 @@ from PySide6 import QtCore
 from PySide6.QtWidgets import *
 
 from urllib.parse import urlsplit
+
 import uuid
 
 __all__ = ['SubscriptionPage']
+
+
+def _validSubscriptionURL(value) -> str:
+    """Return a normalized HTTP(S) subscription URL or an empty string."""
+    url = str(value or '').strip()
+
+    if not url or any(character.isspace() for character in url):
+        return ''
+
+    try:
+        parsed = urlsplit(url)
+        hostname = parsed.hostname
+    except ValueError:
+        return ''
+
+    if parsed.scheme.casefold() not in ('http', 'https') or not hostname:
+        return ''
+
+    return url
 
 
 class _SubscriptionEditorDialog(AppQDialog):
@@ -39,15 +59,20 @@ class _SubscriptionEditorDialog(AppQDialog):
         self.urlEdit = QLineEdit(subscription.get('webURL', ''))
         self.enabledCheckBox = QCheckBox()
         self.enabledCheckBox.setChecked(subscription.get('enabled', True))
-        self.autoUpdateComboBox = QComboBox()
-        self.proxyComboBox = QComboBox()
+        self.autoUpdateComboBox = AppQComboBox()
+        self.proxyComboBox = AppQComboBox()
         self.userAgentEdit = QLineEdit(subscription.get('userAgent', ''))
         self.filterEdit = QLineEdit(subscription.get('filter', ''))
 
-        self.remarkEdit.setMaximumWidth(520)
-        self.urlEdit.setMaximumWidth(520)
-        self.userAgentEdit.setMaximumWidth(520)
-        self.filterEdit.setMaximumWidth(520)
+        self.remarkEdit.setMinimumWidth(240)
+        self.remarkEdit.setMaximumWidth(360)
+        self.urlEdit.setMinimumWidth(420)
+        self.autoUpdateComboBox.setMinimumWidth(220)
+        self.autoUpdateComboBox.setMaximumWidth(320)
+        self.proxyComboBox.setMinimumWidth(220)
+        self.proxyComboBox.setMaximumWidth(320)
+        self.userAgentEdit.setMinimumWidth(260)
+        self.filterEdit.setMinimumWidth(260)
 
         for value in SubscriptionTableView.AutoUpdateOptions:
             self.autoUpdateComboBox.addItem(_(value), value)
@@ -70,24 +95,62 @@ class _SubscriptionEditorDialog(AppQDialog):
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 
-        form = QFormLayout()
-        form.setContentsMargins(18, 18, 18, 18)
-        form.setSpacing(12)
-        form.addRow(_('Remark'), self.remarkEdit)
-        form.addRow(_('URL'), self.urlEdit)
-        form.addRow(_('Enabled'), self.enabledCheckBox)
-        form.addRow(_('Auto Update'), self.autoUpdateComboBox)
-        form.addRow(_('Auto Update Use Proxy'), self.proxyComboBox)
-        form.addRow(_('User Agent'), self.userAgentEdit)
-        form.addRow(_('Profile Filter (Regex)'), self.filterEdit)
-        form.addRow(self.buttons)
+        formWidget = QFrame()
+        formWidget.setObjectName('SubscriptionEditorForm')
 
-        self.setLayout(form)
+        form = QGridLayout(formWidget)
+        form.setContentsMargins(20, 18, 20, 18)
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(14)
+        form.setColumnStretch(1, 1)
+        form.setColumnStretch(3, 1)
+
+        self.remarkLabel = AppQLabel(_('Remark'))
+        self.urlLabel = AppQLabel(_('URL'))
+        self.enabledLabel = AppQLabel(_('Enabled'))
+        self.autoUpdateLabel = AppQLabel(_('Auto Update'))
+        self.proxyLabel = AppQLabel(_('Auto Update Use Proxy'))
+        self.userAgentLabel = AppQLabel(_('User Agent'))
+        self.filterLabel = AppQLabel(_('Profile Filter (Regex)'))
+
+        enabledControl = QWidget()
+
+        enabledLayout = QHBoxLayout(enabledControl)
+        enabledLayout.setContentsMargins(0, 0, 0, 0)
+        enabledLayout.setSpacing(10)
+        enabledLayout.addWidget(self.enabledLabel)
+        enabledLayout.addWidget(self.enabledCheckBox)
+        enabledLayout.addStretch(1)
+
+        form.addWidget(self.remarkLabel, 0, 0)
+        form.addWidget(self.remarkEdit, 0, 1)
+        form.addWidget(enabledControl, 0, 2, 1, 2)
+        form.addWidget(self.urlLabel, 1, 0)
+        form.addWidget(self.urlEdit, 1, 1, 1, 3)
+        form.addWidget(self.autoUpdateLabel, 2, 0)
+        form.addWidget(self.autoUpdateComboBox, 2, 1)
+        form.addWidget(self.proxyLabel, 2, 2)
+        form.addWidget(self.proxyComboBox, 2, 3)
+        form.addWidget(self.userAgentLabel, 3, 0)
+        form.addWidget(self.userAgentEdit, 3, 1)
+        form.addWidget(self.filterLabel, 3, 2)
+        form.addWidget(self.filterEdit, 3, 3)
+
+        buttonsLayout = QHBoxLayout()
+        buttonsLayout.setContentsMargins(0, 0, 0, 0)
+        buttonsLayout.addStretch(1)
+        buttonsLayout.addWidget(self.buttons)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 18)
+        layout.setSpacing(16)
+        layout.addWidget(formWidget)
+        layout.addLayout(buttonsLayout)
 
         self.setWindowTitle(
             _('Edit Subscription') if subscription else _('Add Subscription')
         )
-        self.resize(700, 360)
+        self.resize(900, 330)
 
     def _showValidationError(self, message: str):
         """Show one non-blocking validation message owned by this dialog."""
@@ -101,16 +164,17 @@ class _SubscriptionEditorDialog(AppQDialog):
 
     def accept(self):
         """Validate required fields before accepting the definition."""
-        remark = self.remarkEdit.text().strip()
-        url = self.urlEdit.text().strip()
-        parsed = urlsplit(url)
+        remark, url = (
+            self.remarkEdit.text().strip(),
+            _validSubscriptionURL(self.urlEdit.text()),
+        )
 
         if not remark:
             self._showValidationError(_('Please enter a subscription remark.'))
 
             return
 
-        if parsed.scheme.casefold() not in ('http', 'https') or not parsed.netloc:
+        if not url:
             self._showValidationError(_('Please enter a valid subscription URL.'))
 
             return
@@ -139,19 +203,18 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
         self.setObjectName('SubscriptionPage')
         self.serverTable = serverTable
-        self.pageTitleLabel = AppQLabel(translatable=False)
+        self.pageTitleLabel = AppQLabel(_('Subscriptions'))
         self.pageTitleLabel.setObjectName('SubscriptionPageTitle')
-        self.proxyLabel = AppQLabel(translatable=False)
-        self.proxyComboBox = QComboBox()
+        self.proxyLabel = AppQLabel(_('Update Using'))
+        self.proxyComboBox = AppQComboBox()
         self.proxyComboBox.setMinimumWidth(160)
 
-        self.addButton = QPushButton()
-        self.addFromClipboardButton = QPushButton()
-        self.editButton = QPushButton()
-        self.deleteButton = QPushButton()
-        self.copyURLButton = QPushButton()
-        self.updateSelectedButton = QPushButton()
-        self.updateAllButton = QPushButton()
+        self.addButton = AppQPushButton(_('Add'))
+        self.editButton = AppQPushButton(_('Edit'))
+        self.deleteButton = AppQPushButton(_('Delete'))
+        self.copyURLButton = AppQPushButton(_('Copy URL'))
+        self.updateSelectedButton = AppQPushButton(_('Update Selected'))
+        self.updateAllButton = AppQPushButton(_('Update All'))
 
         self.table = SubscriptionTableView(
             deleteUniqueCallback=self._deleteProfilesForSubscription,
@@ -162,7 +225,6 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self.serverTable.subsManager.subscriptionsChanged.connect(self.table.flushAll)
 
         self.addButton.clicked.connect(self.addSubscription)
-        self.addFromClipboardButton.clicked.connect(self.addFromClipboard)
         self.editButton.clicked.connect(self.editSelected)
         self.deleteButton.clicked.connect(self.table.deleteSelectedItem)
         self.copyURLButton.clicked.connect(self.copySelectedURL)
@@ -186,7 +248,6 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         actions.setContentsMargins(0, 0, 0, 0)
         actions.setSpacing(8)
         actions.addWidget(self.addButton)
-        actions.addWidget(self.addFromClipboardButton)
         actions.addWidget(self.editButton)
         actions.addWidget(self.deleteButton)
         actions.addWidget(self.copyURLButton)
@@ -251,21 +312,56 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         dialog.finished.connect(finished)
         dialog.open()
 
+        return dialog
+
     @QtCore.Slot()
     def addSubscription(self):
-        """Open the full subscription editor for a new group."""
-        self._openEditor()
+        """Offer a valid clipboard URL before opening the normal editor."""
+        url = _validSubscriptionURL(QApplication.clipboard().text())
 
-    @QtCore.Slot()
-    def addFromClipboard(self):
-        """Seed a subscription from an HTTP(S) URL on the clipboard."""
-        url = QApplication.clipboard().text().strip()
-        parsed = urlsplit(url)
-
-        if parsed.scheme.casefold() not in ('http', 'https') or not parsed.netloc:
+        if not url:
             self._openEditor()
 
             return
+
+        messageBox = AppQMessageBox(
+            icon=AppQMessageBox.Icon.Question,
+            parent=self,
+        )
+        messageBox.setWindowTitle(_('Add Subscription'))
+        messageBox.setText(_('Use the subscription URL from the clipboard?'))
+        messageBox.setInformativeText(url)
+        messageBox.setStandardButtons(
+            AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.No
+        )
+        messageBox.setDefaultButton(AppQMessageBox.StandardButton.Yes)
+        messageBox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+
+        def finished(code):
+            """Continue with clipboard assistance or the regular workflow."""
+            if code == PySide6Legacy.enumValueWrapper(
+                AppQMessageBox.StandardButton.Yes
+            ):
+                self.addFromClipboard(url)
+            else:
+                self._openEditor()
+
+        messageBox.finished.connect(finished)
+        messageBox.open()
+
+    def addFromClipboard(self, clipboardURL=None):
+        """Seed a subscription from an HTTP(S) URL on the clipboard."""
+        if clipboardURL is None:
+            clipboardURL = QApplication.clipboard().text()
+
+        url = _validSubscriptionURL(clipboardURL)
+
+        if not url:
+            self._openEditor()
+
+            return
+
+        parsed = urlsplit(url)
 
         self._openEditor(
             initial={
@@ -346,7 +442,6 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
         for button, iconName in (
             (self.addButton, 'plus-lg.svg'),
-            (self.addFromClipboardButton, 'clipboard-plus.svg'),
             (self.editButton, 'pencil-square.svg'),
             (self.deleteButton, 'trash.svg'),
             (self.copyURLButton, 'link-45deg.svg'),
@@ -362,28 +457,9 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
     def showEvent(self, event):
         """Refresh persisted subscription data whenever the page is shown."""
         super().showEvent(event)
+
         self.table.flushAll()
 
     def retranslate(self):
-        """Refresh page labels, commands, and proxy choices."""
-        selectedProxy = self.proxyComboBox.currentData()
-
-        with Mixins.QBlockSignalContext(self.proxyComboBox):
-            self.proxyComboBox.clear()
-
-            for key in SubscriptionTableView.ProxyOptions:
-                self.proxyComboBox.addItem(_(key), key)
-
-            index = self.proxyComboBox.findData(selectedProxy)
-
-            self.proxyComboBox.setCurrentIndex(max(index, 0))
-
-        self.pageTitleLabel.setText(_('Subscriptions'))
-        self.proxyLabel.setText(_('Update Using'))
-        self.addButton.setText(_('Add'))
-        self.addFromClipboardButton.setText(_('Add From Clipboard'))
-        self.editButton.setText(_('Edit'))
-        self.deleteButton.setText(_('Delete'))
-        self.copyURLButton.setText(_('Copy URL'))
-        self.updateSelectedButton.setText(_('Update Selected'))
-        self.updateAllButton.setText(_('Update All'))
+        """Handle page-level dynamic translation state."""
+        pass

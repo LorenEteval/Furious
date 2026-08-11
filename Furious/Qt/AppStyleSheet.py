@@ -359,6 +359,12 @@ class AppStyleSheet:
                 background-color: {palette['panel_alt']};
             }}
 
+            QFrame#SubscriptionEditorForm {{
+                border: 1px solid {palette['border']};
+                border-radius: 9px;
+                background-color: {palette['panel']};
+            }}
+
             QLabel#SettingsCardTitle {{
                 color: {palette['text_strong']};
                 font-weight: 600;

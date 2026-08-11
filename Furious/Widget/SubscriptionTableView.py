@@ -37,17 +37,39 @@ logger = logging.getLogger(__name__)
 
 __all__ = ['SubscriptionTableView']
 
-# Migrate legacy settings
-registerAppSettings('SubscriptionWidgetSectionSizeTable')
-registerAppSettings('UserSubsHeaderViewState')
+# Use a versioned state key so incompatible layouts from the former table do
+# not get restored onto the expanded subscription model.
+SUBSCRIPTION_HEADER_STATE_SETTING = 'UserSubsHeaderViewStateV2'
+registerAppSettings(SUBSCRIPTION_HEADER_STATE_SETTING)
 
 
 class SubscriptionTableHorizontalHeader(AppQHeaderView):
     """Provide the user subs Qt table view horizontal table header."""
 
+    DefaultSectionSizes = (260, 420, 120, 180, 220, 180, 120)
+
     def __init__(self, *args, **kwargs):
         """Initialize the SubscriptionTableHorizontalHeader."""
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
+
+    def configureSections(self, restoreSavedState: bool):
+        """Apply a stable interactive layout for the current column schema."""
+        if restoreSavedState:
+            self.restoreSectionSize()
+
+        self.setSectionsMovable(False)
+        self.setCascadingSectionResizes(False)
+        self.setMinimumSectionSize(80)
+
+        for section in range(self.count()):
+            self.setSectionResizeMode(section, QHeaderView.ResizeMode.Interactive)
+
+        self.setStretchLastSection(True)
+
+        if not restoreSavedState:
+            for section, size in enumerate(self.DefaultSectionSizes):
+                if section < self.count():
+                    self.resizeSection(section, size)
 
 
 class SubscriptionTableVerticalHeader(AppQHeaderView):
@@ -374,15 +396,17 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         self.setHorizontalHeader(
             SubscriptionTableHorizontalHeader(
                 parent=self,
-                legacySectionSizeSettingsName='SubscriptionWidgetSectionSizeTable',
-                sectionSizeSettingsName='UserSubsHeaderViewState',
+                sectionSizeSettingsName=SUBSCRIPTION_HEADER_STATE_SETTING,
             )
         )
         self.setVerticalHeader(SubscriptionTableVerticalHeader(self))
         self.setDefaultRowHeight(self.RowHeight)
 
-        self.horizontalHeader().setCustomSectionResizeMode()
-        self.horizontalHeader().restoreSectionSize()
+        header = self.horizontalHeader()
+        header.configureSections(
+            restoreSavedState=AppSettings.get(SUBSCRIPTION_HEADER_STATE_SETTING)
+            is not None
+        )
 
         self.setSortingEnabled(False)
 
