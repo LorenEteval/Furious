@@ -513,6 +513,14 @@ class PluginRegistry:
         """Return registered runtime traffic-statistics providers."""
         return self.capabilities(CapabilityKind.TrafficStats)
 
+    def pluginSettingsProviders(self):
+        """Return providers contributing host-rendered settings sections."""
+        return self.capabilities(CapabilityKind.PluginSettings)
+
+    def navigationPageProviders(self):
+        """Return providers contributing application navigation pages."""
+        return self.capabilities(CapabilityKind.NavigationPage)
+
     def handlerForProtocol(self, protocol):
         """Return the handler registered for a protocol identifier."""
         entry = self._protocols.get(_normalizeIdentifier(protocol))

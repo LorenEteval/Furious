@@ -41,6 +41,7 @@ from .MetricsDataManager import (
     MetricSample,
     MetricsDataManager,
 )
+from .PluginUIManager import PluginNavigationManager, isCoreActive
 from .SubscriptionImporter import (
     SubscriptionImportResult,
     SubscriptionImportService,
@@ -71,6 +72,7 @@ __all__ = [
     'MetricPoint',
     'MetricSample',
     'MetricsDataManager',
+    'PluginNavigationManager',
     'coreLogCallback',
     'SubscriptionImportResult',
     'SubscriptionImportService',
@@ -81,4 +83,5 @@ __all__ = [
     'formatTrafficSpeed',
     'formatTrafficUsage',
     'formatLogEntry',
+    'isCoreActive',
 ]

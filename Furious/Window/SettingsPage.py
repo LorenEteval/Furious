@@ -19,35 +19,40 @@
 
 from __future__ import annotations
 
-from Furious.Actions.Language import LANGUAGE_TO_ABBR
-from Furious.Actions.Settings import (
-    SettingsController,
-    TUNModeAction,
-)
-from Furious.Backends.Hysteria2.Stats import (
-    HYSTERIA2_STATS_CLIENT_ID_SETTING,
-    HYSTERIA2_STATS_SECRET_SETTING,
-    HYSTERIA2_STATS_URL_SETTING,
-)
+from Furious.Actions.Settings import TUNModeAction
+from Furious.Controllers import SettingsController
 from Furious.Frozenlib import *
+from Furious.Plugins import (
+    CapabilityKind,
+    PluginSettingControl,
+    PluginSettingDescriptor,
+    PluginSettingsSection,
+    getPluginRegistry,
+)
 from Furious.Qt import *
 from Furious.Qt import gettext as _
+from Furious.Service import isCoreActive
 from Furious.Service.TrafficStatsManager import (
     CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
+    METRICS_COLLECTION_SETTING,
 )
 
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import *
 
 from collections.abc import Callable
+import logging
 
 __all__ = ['SettingsPage']
+
+logger = logging.getLogger(__name__)
 
 
 class _SettingsSwitch(QCheckBox):
     """Paint a lightweight Fluent-style binary switch with Qt."""
 
     ControlSize = QtCore.QSize(38, 22)
+    AnimationDuration = 160
 
     def __init__(self, parent=None):
         """Initialize the compact switch control."""
@@ -56,13 +61,70 @@ class _SettingsSwitch(QCheckBox):
         self.setObjectName('SettingsToggle')
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         self.setFixedSize(self.ControlSize)
-        self.toggled.connect(lambda _checked: self.update())
+        self._thumbPosition = 0.0
+        self._animation = QtCore.QPropertyAnimation(
+            self,
+            b'thumbPosition',
+            parent=self,
+        )
+        self._animation.setDuration(self.AnimationDuration)
+        self._animation.setEasingCurve(QtCore.QEasingCurve.Type.OutCubic)
+        self.toggled.connect(self._animateToggle)
+
+    def _getThumbPosition(self) -> float:
+        """Return the normalized thumb position used by the animation."""
+        return self._thumbPosition
+
+    def _setThumbPosition(self, position: float):
+        """Update the animated thumb position and repaint the switch."""
+        self._thumbPosition = min(max(float(position), 0.0), 1.0)
+        self.update()
+
+    thumbPosition = QtCore.Property(
+        float,
+        _getThumbPosition,
+        _setThumbPosition,
+    )
+
+    @QtCore.Slot(bool)
+    def _animateToggle(self, checked: bool):
+        """Animate the Fluent thumb and track to the requested state."""
+        self._animation.stop()
+        self._animation.setStartValue(self._thumbPosition)
+        self._animation.setEndValue(1.0 if checked else 0.0)
+        self._animation.start()
+
+    def syncChecked(self, checked: bool):
+        """Synchronize external state without playing an entrance animation."""
+        blocker = QtCore.QSignalBlocker(self)
+
+        self.setChecked(bool(checked))
+        self._animation.stop()
+        self._setThumbPosition(1.0 if checked else 0.0)
+
+        del blocker
+
+    @staticmethod
+    def _blendColor(start, end, progress: float) -> QtGui.QColor:
+        """Interpolate two theme colors for a smooth track transition."""
+        startColor, endColor = (
+            QtGui.QColor(start),
+            QtGui.QColor(end),
+        )
+
+        return QtGui.QColor.fromRgbF(
+            startColor.redF() + (endColor.redF() - startColor.redF()) * progress,
+            startColor.greenF() + (endColor.greenF() - startColor.greenF()) * progress,
+            startColor.blueF() + (endColor.blueF() - startColor.blueF()) * progress,
+            startColor.alphaF() + (endColor.alphaF() - startColor.alphaF()) * progress,
+        )
 
     def paintEvent(self, event):
         """Draw the track and animated-position-equivalent thumb."""
         del event
 
         palette = AppStyleSheet.Palettes[APP().theme()]
+
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
 
@@ -75,17 +137,23 @@ class _SettingsSwitch(QCheckBox):
                 palette['border'],
                 palette['disabled'],
             )
-        elif self.isChecked():
-            background, border, thumb = (
-                palette['accent'],
-                palette['accent'],
-                palette['accent_text'],
-            )
         else:
             background, border, thumb = (
-                palette['raised'],
-                palette['border_strong'],
-                palette['muted'],
+                self._blendColor(
+                    palette['raised'],
+                    palette['accent'],
+                    self._thumbPosition,
+                ),
+                self._blendColor(
+                    palette['border_strong'],
+                    palette['accent'],
+                    self._thumbPosition,
+                ),
+                self._blendColor(
+                    palette['muted'],
+                    palette['accent_text'],
+                    self._thumbPosition,
+                ),
             )
 
         painter.setPen(QtGui.QPen(QtGui.QColor(border), 1))
@@ -93,9 +161,9 @@ class _SettingsSwitch(QCheckBox):
         painter.drawRoundedRect(track, radius, radius)
 
         thumbDiameter = track.height() - 6
-        thumbX = (
-            track.right() - thumbDiameter - 3 if self.isChecked() else track.left() + 3
-        )
+        thumbStart = track.left() + 3
+        thumbEnd = track.right() - thumbDiameter - 3
+        thumbX = thumbStart + ((thumbEnd - thumbStart) * self._thumbPosition)
         thumbRect = QtCore.QRectF(
             thumbX,
             track.top() + 3,
@@ -177,18 +245,45 @@ class _ToggleSettingsCard(_SettingsCard):
         """Initialize a persistent binary setting card."""
         self.settingName = settingName
         self.checkBox = _SettingsSwitch()
-        self.checkBox.setChecked(AppSettings.isStateON_(settingName))
+        self.checkBox.syncChecked(AppSettings.isStateON_(settingName))
         self.checkBox.toggled.connect(callback)
 
         super().__init__(iconFileName, self.checkBox, parent)
 
     def sync(self):
         """Refresh the control from persistent state without applying it."""
-        blocker = QtCore.QSignalBlocker(self.checkBox)
+        self.checkBox.syncChecked(AppSettings.isStateON_(self.settingName))
 
-        self.checkBox.setChecked(AppSettings.isStateON_(self.settingName))
 
-        del blocker
+class _ActionToggleSettingsCard(_SettingsCard):
+    """Present a plugin-provided checkable action as a Fluent switch."""
+
+    def __init__(self, iconFileName, action, parent=None):
+        """Bind switch requests and external action-state changes."""
+        self.action = action
+        self.checkBox = _SettingsSwitch()
+        self.checkBox.syncChecked(action.isChecked())
+        self.checkBox.setEnabled(action.isEnabled())
+        self.checkBox.toggled.connect(self._requestedState)
+
+        action.toggled.connect(self.sync)
+        action.changed.connect(self.sync)
+
+        super().__init__(iconFileName, self.checkBox, parent)
+
+    @QtCore.Slot(bool)
+    def _requestedState(self, checked: bool):
+        """Trigger the action only when its state differs from the switch."""
+        if self.action.isChecked() != checked:
+            self.action.trigger()
+
+    @QtCore.Slot()
+    def sync(self, *_args):
+        """Synchronize state changed by another plugin UI entry point."""
+        if self.checkBox.isChecked() != self.action.isChecked():
+            self.checkBox.syncChecked(self.action.isChecked())
+
+        self.checkBox.setEnabled(self.action.isEnabled())
 
 
 class _ActionSettingsCard(_SettingsCard):
@@ -346,8 +441,13 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
 
         self.generalSection = _SettingsSection()
         self.connectionSection = _SettingsSection()
-        self.hysteriaSection = _SettingsSection()
         self.applicationSection = _SettingsSection()
+        self.pluginSettingsTitleLabel = QLabel()
+        self.pluginSettingsTitleLabel.setObjectName('SettingsSectionTitle')
+        self.pluginSections = []
+        self._pluginDescriptorCards = []
+        self._pluginActionCards = []
+        self._pluginActions = []
 
         self.tunModeAction = TUNModeAction(
             checkable=True,
@@ -417,6 +517,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             self.networkTestCard,
             self.forceLocalhostCard,
             self.connectionProgressCard,
+            self.metricsCollectionCard,
             self.clearTrafficUsageCard,
             self.editorWhitespaceCard,
         ) = (
@@ -443,6 +544,11 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 SettingsController.setConnectionProgressVisible,
             ),
             _ToggleSettingsCard(
+                'speedometer2.svg',
+                METRICS_COLLECTION_SETTING,
+                SettingsController.setMetricsCollectionEnabled,
+            ),
+            _ToggleSettingsCard(
                 'arrow-repeat.svg',
                 CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
                 SettingsController.setClearTrafficUsageOnReconnect,
@@ -461,6 +567,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.connectionSection.addCard(self.networkTestCard)
         self.connectionSection.addCard(self.forceLocalhostCard)
         self.connectionSection.addCard(self.connectionProgressCard)
+        self.connectionSection.addCard(self.metricsCollectionCard)
         self.connectionSection.addCard(self.clearTrafficUsageCard)
         self.connectionSection.addCard(self.editorWhitespaceCard)
 
@@ -474,31 +581,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         else:
             self.autoAssetsCard = None
 
-        (
-            self.hysteriaURLCard,
-            self.hysteriaClientIdCard,
-            self.hysteriaSecretCard,
-        ) = (
-            _LineEditSettingsCard(
-                'activity.svg',
-                HYSTERIA2_STATS_URL_SETTING,
-                placeholder='http://server:9999',
-            ),
-            _LineEditSettingsCard(
-                'person-badge.svg',
-                HYSTERIA2_STATS_CLIENT_ID_SETTING,
-            ),
-            _LineEditSettingsCard(
-                'key.svg',
-                HYSTERIA2_STATS_SECRET_SETTING,
-                secret=True,
-                strip=False,
-            ),
-        )
-
-        self.hysteriaSection.addCard(self.hysteriaURLCard)
-        self.hysteriaSection.addCard(self.hysteriaClientIdCard)
-        self.hysteriaSection.addCard(self.hysteriaSecretCard)
+        self._buildPluginSections()
 
         (
             self.updateCard,
@@ -544,7 +627,13 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         contentLayout.addWidget(self.pageTitleLabel)
         contentLayout.addWidget(self.generalSection)
         contentLayout.addWidget(self.connectionSection)
-        contentLayout.addWidget(self.hysteriaSection)
+
+        if self.pluginSections:
+            contentLayout.addWidget(self.pluginSettingsTitleLabel)
+
+            for section in self.pluginSections:
+                contentLayout.addWidget(section)
+
         contentLayout.addWidget(self.applicationSection)
         contentLayout.addStretch(1)
 
@@ -557,6 +646,162 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
 
         self.retranslate()
 
+    @staticmethod
+    def _translatedPluginText(value: str, translatable: bool) -> str:
+        """Translate host-owned plugin metadata only when explicitly requested."""
+        return _(value) if translatable else value
+
+    def _cardFromPluginDescriptor(self, descriptor: PluginSettingDescriptor):
+        """Create one host-owned Fluent card from a plugin descriptor."""
+        if not descriptor.id or not descriptor.title:
+            raise ValueError('plugin settings require non-empty IDs and titles')
+
+        try:
+            control = PluginSettingControl(descriptor.control)
+        except ValueError as ex:
+            raise ValueError(
+                f'unsupported plugin setting control: {descriptor.control!r}'
+            ) from ex
+
+        if control == PluginSettingControl.Toggle:
+            if not descriptor.settingName:
+                raise ValueError('toggle plugin settings require settingName')
+
+            callback = descriptor.callback
+
+            if callback is None:
+
+                def callback(enabled, settingName=descriptor.settingName):
+                    """Persist a declarative plugin toggle by default."""
+                    if enabled:
+                        AppSettings.turnON_(settingName)
+                    else:
+                        AppSettings.turnOFF(settingName)
+
+            card = _ToggleSettingsCard(
+                descriptor.iconFileName,
+                descriptor.settingName,
+                callback,
+            )
+        elif control in (PluginSettingControl.Text, PluginSettingControl.Password):
+            if not descriptor.settingName:
+                raise ValueError('text plugin settings require settingName')
+
+            card = _LineEditSettingsCard(
+                descriptor.iconFileName,
+                descriptor.settingName,
+                placeholder=descriptor.placeholder,
+                secret=control == PluginSettingControl.Password,
+                strip=descriptor.strip,
+            )
+        else:
+            if not callable(descriptor.callback):
+                raise ValueError('action plugin settings require a callback')
+
+            card = _ActionSettingsCard(
+                descriptor.iconFileName,
+                descriptor.callback,
+            )
+
+        self._pluginDescriptorCards.append((card, descriptor))
+
+        return card
+
+    def _addPluginDescriptorSection(
+        self,
+        sectionDescriptor: PluginSettingsSection,
+    ):
+        """Validate and append one declarative plugin settings section."""
+        if not isinstance(sectionDescriptor, PluginSettingsSection):
+            raise TypeError('plugin settings providers must return sections')
+
+        section = _SettingsSection()
+        section._pluginDescriptor = sectionDescriptor
+
+        for descriptor in sectionDescriptor.settings:
+            if not isinstance(descriptor, PluginSettingDescriptor):
+                raise TypeError('plugin settings sections must contain descriptors')
+
+            section.addCard(self._cardFromPluginDescriptor(descriptor))
+
+        if section.cards:
+            self.pluginSections.append(section)
+
+    def _addPluginActionSection(self, plugin, metadata, registry):
+        """Move legacy plugin management actions into dynamic Settings cards."""
+        actions = registry.managementActions(
+            plugin,
+            parent=self,
+            isCoreActive=isCoreActive,
+        )
+
+        section = _SettingsSection()
+        section._pluginActionMetadata = metadata
+
+        for action in actions:
+            if isinstance(action, AppQSeperator):
+                continue
+
+            if not isinstance(action, AppQAction):
+                continue
+
+            self._pluginActions.append(action)
+
+            iconFileName = action.iconFileName or 'plugin.svg'
+
+            if action.isCheckable():
+                card = _ActionToggleSettingsCard(iconFileName, action)
+            else:
+                card = _ActionSettingsCard(
+                    iconFileName,
+                    lambda _checked=False, target=action: target.trigger(),
+                )
+
+            self._pluginActionCards.append((card, action, metadata))
+
+            action.changed.connect(
+                lambda target=card, source=action, owner=metadata: target.setTexts(
+                    source.text(),
+                    owner.description or owner.displayName,
+                )
+            )
+
+            section.addCard(card)
+
+        if section.cards:
+            self.pluginSections.append(section)
+
+    def _buildPluginSections(self):
+        """Build plugin settings/actions without hard-coding plugin identities."""
+        registry = getPluginRegistry()
+
+        for plugin in registry.plugins():
+            metadata = registry.metadataFor(plugin)
+
+            for provider in registry.capabilities(
+                CapabilityKind.PluginSettings,
+                plugin,
+            ):
+                try:
+                    sections = tuple(provider.createSections(parent=self))
+
+                    for section in sections:
+                        self._addPluginDescriptorSection(section)
+                except Exception as ex:
+                    logger.error(
+                        f'failed to create settings from plugin '
+                        f'{metadata.id!r}: {ex}'
+                    )
+
+            if registry.capabilities(CapabilityKind.ActionProvider, plugin):
+                try:
+                    self._addPluginActionSection(plugin, metadata, registry)
+                except Exception as ex:
+                    logger.error(
+                        f'failed to create management settings from plugin '
+                        f'{metadata.id!r}: {ex}'
+                    )
+
     def _setTUNMode(self, enabled: bool):
         """Trigger the compatibility action used by connection state."""
         if self.tunModeAction.isChecked() != enabled:
@@ -565,12 +810,10 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
     @QtCore.Slot()
     def _syncTUNModeAction(self, *_args):
         """Mirror compatibility-action state into the settings control."""
-        blocker = QtCore.QSignalBlocker(self.tunModeCard.checkBox)
+        if self.tunModeCard.checkBox.isChecked() != self.tunModeAction.isChecked():
+            self.tunModeCard.checkBox.syncChecked(self.tunModeAction.isChecked())
 
-        self.tunModeCard.checkBox.setChecked(self.tunModeAction.isChecked())
         self.tunModeCard.checkBox.setEnabled(self.tunModeAction.isEnabled())
-
-        del blocker
 
     def _openTUNSettings(self):
         """Create and retain the existing Tun2socks settings dialog."""
@@ -595,6 +838,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             self.generalSection,
             self.connectionSection,
             self.applicationSection,
+            *self.pluginSections,
         ):
             for card in section.cards:
                 sync = getattr(card, 'sync', None)
@@ -609,7 +853,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.pageTitleLabel.setText(_('Settings'))
         self.generalSection.titleLabel.setText(_('General'))
         self.connectionSection.titleLabel.setText(_('Connection and Interface'))
-        self.hysteriaSection.titleLabel.setText(_('Hysteria2 Traffic Statistics'))
+        self.pluginSettingsTitleLabel.setText(_('Plugin Settings'))
         self.applicationSection.titleLabel.setText(_('Application'))
 
         tunTitle = _('TUN Mode')
@@ -677,6 +921,10 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             _('Show Progress Bar When Connecting'),
             _('Show connection progress while proxy services are starting.'),
         )
+        self.metricsCollectionCard.setTexts(
+            _('Enable Metrics Collection'),
+            _('Collect network speed and traffic history while connected.'),
+        )
         self.clearTrafficUsageCard.setTexts(
             _('Clear Traffic Usage Statistics On Reconnect'),
             _(
@@ -694,18 +942,44 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 _('Keep supported proxy-core data files up to date.'),
             )
 
-        self.hysteriaURLCard.setTexts(
-            _('Traffic Stats API URL'),
-            _('Hysteria2 server API address; /traffic is appended automatically.'),
-        )
-        self.hysteriaClientIdCard.setTexts(
-            _('Traffic Stats Client ID'),
-            _('Authentication ID reported by the Hysteria2 server.'),
-        )
-        self.hysteriaSecretCard.setTexts(
-            _('Traffic Stats API Secret'),
-            _('Authorization value configured by the Hysteria2 server.'),
-        )
+        for section in self.pluginSections:
+            descriptor = getattr(section, '_pluginDescriptor', None)
+            metadata = getattr(section, '_pluginActionMetadata', None)
+
+            if descriptor is not None:
+                section.titleLabel.setText(
+                    self._translatedPluginText(
+                        descriptor.title,
+                        descriptor.translatable,
+                    )
+                )
+            elif metadata is not None:
+                section.titleLabel.setText(metadata.displayName)
+
+        for card, descriptor in self._pluginDescriptorCards:
+            title = self._translatedPluginText(
+                descriptor.title,
+                descriptor.translatable,
+            )
+            description = self._translatedPluginText(
+                descriptor.description,
+                descriptor.translatable,
+            )
+            card.setTexts(title, description)
+
+            if isinstance(card, _ActionSettingsCard):
+                card.button.setText(
+                    self._translatedPluginText(
+                        descriptor.buttonText,
+                        descriptor.translatable,
+                    )
+                )
+
+        for card, action, metadata in self._pluginActionCards:
+            card.setTexts(action.text(), metadata.description or metadata.displayName)
+
+            if isinstance(card, _ActionSettingsCard):
+                card.button.setText(_('Open'))
 
         self._setActionCardText(
             self.updateCard,

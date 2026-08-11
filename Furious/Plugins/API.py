@@ -31,9 +31,15 @@ __all__ = [
     'KernelFactory',
     'KernelLaunch',
     'KernelRequest',
+    'NavigationPageDescriptor',
+    'NavigationPageProvider',
     'PluginCapability',
     'PluginContext',
     'PluginMetadata',
+    'PluginSettingControl',
+    'PluginSettingDescriptor',
+    'PluginSettingsProvider',
+    'PluginSettingsSection',
     'ProtocolDescriptor',
     'ProtocolEditorProvider',
     'ProtocolHandler',
@@ -59,6 +65,8 @@ class CapabilityKind(str, Enum):
     SubscriptionDecoder = 'subscription-decoder'
     KernelFactory = 'kernel-factory'
     TrafficStats = 'traffic-stats'
+    PluginSettings = 'plugin-settings'
+    NavigationPage = 'navigation-page'
     Utility = 'utility'
 
 
@@ -98,6 +106,86 @@ class ActionProvider(PluginCapability):
 
     def createActions(self, parent=None, **kwargs):
         """Return actions contributed to the plugin management UI."""
+        return tuple()
+
+
+class PluginSettingControl(str, Enum):
+    """Identify host-rendered controls available to plugin settings."""
+
+    Toggle = 'toggle'
+    Text = 'text'
+    Password = 'password'
+    Action = 'action'
+
+
+@dataclass(frozen=True)
+class PluginSettingDescriptor:
+    """Describe one setting without coupling a plugin to host widgets."""
+
+    id: str
+    title: str
+    description: str = ''
+    iconFileName: str = 'plugin.svg'
+    control: PluginSettingControl = PluginSettingControl.Text
+    settingName: str = ''
+    callback: Optional[Callable] = None
+    buttonText: str = 'Open'
+    placeholder: str = ''
+    translatable: bool = False
+    strip: bool = True
+
+
+@dataclass(frozen=True)
+class PluginSettingsSection:
+    """Group declarative settings contributed by one plugin."""
+
+    id: str
+    title: str
+    settings: Tuple[PluginSettingDescriptor, ...]
+    translatable: bool = False
+
+
+class PluginSettingsProvider(PluginCapability):
+    """Contribute host-rendered settings sections dynamically."""
+
+    capabilityKind = CapabilityKind.PluginSettings
+    providerId = ''
+
+    @property
+    def capabilityId(self) -> str:
+        """Return the settings-provider identifier."""
+        return self.providerId
+
+    def createSections(self, parent=None, **kwargs):
+        """Return ``PluginSettingsSection`` values for the Settings page."""
+        return tuple()
+
+
+@dataclass(frozen=True)
+class NavigationPageDescriptor:
+    """Describe a lazily constructed plugin navigation page."""
+
+    id: str
+    title: str
+    iconFileName: str
+    factory: Callable
+    order: int = 0
+    translatable: bool = False
+
+
+class NavigationPageProvider(PluginCapability):
+    """Contribute pages to the application's Fluent navigation rail."""
+
+    capabilityKind = CapabilityKind.NavigationPage
+    providerId = ''
+
+    @property
+    def capabilityId(self) -> str:
+        """Return the navigation-page provider identifier."""
+        return self.providerId
+
+    def pageDescriptors(self):
+        """Return ``NavigationPageDescriptor`` values."""
         return tuple()
 
 

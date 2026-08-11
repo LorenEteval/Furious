@@ -26,7 +26,13 @@ from Furious.Backends.Configuration import *
 from .Process import Hysteria2
 from .ProtocolEditors import HYSTERIA2_PROTOCOL_EDITORS
 from .Protocols import HYSTERIA2_PROTOCOL_HANDLERS
-from .Stats import Hysteria2StatsProvider, configuredHysteria2StatsTarget
+from .Stats import (
+    HYSTERIA2_STATS_CLIENT_ID_SETTING,
+    HYSTERIA2_STATS_SECRET_SETTING,
+    HYSTERIA2_STATS_URL_SETTING,
+    Hysteria2StatsProvider,
+    configuredHysteria2StatsTarget,
+)
 from .TUN import *
 
 import logging
@@ -34,6 +40,74 @@ import logging
 __all__ = ['Hysteria2Plugin']
 
 logger = logging.getLogger(__name__)
+
+
+def _placeholder(x):
+    return x
+
+
+_ = _placeholder
+
+# Register host-owned descriptor text with the static translation extractor
+# without making the headless plugin module import Qt presentation code.
+_TRANSLATABLE_SETTINGS = (
+    _('Hysteria2 Traffic Statistics'),
+    _('Traffic Stats API URL'),
+    _('Hysteria2 server API address; /traffic is appended automatically.'),
+    _('Traffic Stats Client ID'),
+    _('Authentication ID reported by the Hysteria2 server.'),
+    _('Traffic Stats API Secret'),
+    _('Authorization value configured by the Hysteria2 server.'),
+)
+
+
+class Hysteria2SettingsProvider(PluginSettingsProvider):
+    """Declare Hysteria 2 traffic-API preferences for the host UI."""
+
+    providerId = 'official.hysteria2.settings'
+
+    def createSections(self, parent=None, **kwargs):
+        """Return host-rendered Hysteria 2 settings descriptors."""
+        del parent, kwargs
+
+        return (
+            PluginSettingsSection(
+                'traffic-statistics',
+                'Hysteria2 Traffic Statistics',
+                (
+                    PluginSettingDescriptor(
+                        'stats-url',
+                        'Traffic Stats API URL',
+                        'Hysteria2 server API address; /traffic is appended automatically.',
+                        'activity.svg',
+                        PluginSettingControl.Text,
+                        HYSTERIA2_STATS_URL_SETTING,
+                        placeholder='http://server:9999',
+                        translatable=True,
+                    ),
+                    PluginSettingDescriptor(
+                        'stats-client-id',
+                        'Traffic Stats Client ID',
+                        'Authentication ID reported by the Hysteria2 server.',
+                        'person-badge.svg',
+                        PluginSettingControl.Text,
+                        HYSTERIA2_STATS_CLIENT_ID_SETTING,
+                        translatable=True,
+                    ),
+                    PluginSettingDescriptor(
+                        'stats-secret',
+                        'Traffic Stats API Secret',
+                        'Authorization value configured by the Hysteria2 server.',
+                        'key.svg',
+                        PluginSettingControl.Password,
+                        HYSTERIA2_STATS_SECRET_SETTING,
+                        translatable=True,
+                        strip=False,
+                    ),
+                ),
+                translatable=True,
+            ),
+        )
 
 
 class Hysteria2ActionProvider(ActionProvider):
@@ -137,7 +211,8 @@ class Hysteria2KernelFactory(KernelFactory):
             exitCallback=request.exitCallback,
             msgCallback=request.messageCallback,
         )
-        process.hysteria2StatsTarget = configuredHysteria2StatsTarget()
+
+        setattr(process, 'hysteria2StatsTarget', configuredHysteria2StatsTarget())
 
         return KernelLaunch(
             process,
@@ -167,6 +242,17 @@ class Hysteria2KernelFactory(KernelFactory):
         return (r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})',)
 
 
+def _placeholder(x):
+    return x
+
+
+_ = _placeholder
+
+_TRANSLATABLE = [
+    _('Official Hysteria 2 protocol, editor, and runtime support.'),
+]
+
+
 class Hysteria2Plugin(FuriousPlugin):
     """Bundle official Hysteria 2 protocol and runtime capabilities."""
 
@@ -184,5 +270,6 @@ class Hysteria2Plugin(FuriousPlugin):
             *HYSTERIA2_PROTOCOL_EDITORS,
             Hysteria2KernelFactory(),
             Hysteria2StatsProvider(),
+            Hysteria2SettingsProvider(),
             Hysteria2ActionProvider(),
         )
