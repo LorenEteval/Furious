@@ -327,6 +327,7 @@ class AppStyleSheet:
             QWidget#SettingsPageContent,
             QScrollArea#SubscriptionScrollArea,
             QWidget#SubscriptionPageContent,
+            QWidget#HomePageContent,
             QWidget#LogPageContent {{
                 border: none;
                 background-color: {palette['window']};
@@ -335,6 +336,7 @@ class AppStyleSheet:
             QLabel#MetricsPageTitle,
             QLabel#LogPageTitle,
             QLabel#SubscriptionPageTitle,
+            QLabel#HomePageTitle,
             QLabel#SettingsPageTitle {{
                 color: {palette['text_strong']};
                 font-size: 16pt;

@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from .Connection import ConnectAction
+from .Connection import ConnectionState, ConnectAction
 from .Exit import ExitAction
 from .Home import ShowHomePageAction
 from .Import import (
@@ -34,6 +34,7 @@ from .Routing import RoutingAction
 
 __all__ = [
     'ConnectAction',
+    'ConnectionState',
     'ExitAction',
     'ImportAction',
     'ImportFromFileAction',

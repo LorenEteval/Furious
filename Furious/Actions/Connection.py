@@ -36,15 +36,34 @@ from Furious.Widget.ConnectionProgressWidget import ConnectionProgressWidget
 
 from PySide6 import QtCore
 
+from enum import Enum
+
 import queue
 import logging
 import functools
 
-__all__ = ['ConnectAction']
+__all__ = ['ConnectionState', 'ConnectAction']
 
 logger = logging.getLogger(__name__)
 
 registerAppSettings('Connect', isBinary=True)
+
+
+class ConnectionState(Enum):
+    """Describe the shared application connection lifecycle."""
+
+    Disconnected = 'Connect'
+    Connecting = 'Connecting'
+    Connected = 'Disconnect'
+    Disconnecting = 'Disconnecting'
+
+
+_TRANSLATABLE_CONNECTION_STATES = (
+    _('Connect'),
+    _('Connecting'),
+    _('Disconnect'),
+    _('Disconnecting'),
+)
 
 
 def validateProxyServer(server) -> bool:
@@ -63,7 +82,9 @@ def validateProxyServer(server) -> bool:
 
 
 class ConnectAction(AppQAction):
-    """Handle the connect action."""
+    """Own connection operations and expose their state to every UI surface."""
+
+    stateChanged = QtCore.Signal(object)
 
     def __init__(self, **kwargs):
         """Initialize the ConnectAction."""
@@ -77,23 +98,62 @@ class ConnectAction(AppQAction):
         self.actionQueue = queue.Queue()
         self.coreManager = ConnectionManager()
         self.progressBar = ConnectionProgressWidget()
+        self._state = ConnectionState.Disconnected
+        self._activeConfiguration = None
 
         self.actionTimer = QtCore.QTimer()
         self.actionTimer.timeout.connect(lambda: self.callActionFromQueue())
 
         self.updatesManager = UpdateManager()
 
+    @property
+    def state(self) -> ConnectionState:
+        """Return the current connection lifecycle state."""
+        return self._state
+
+    @property
+    def activeConfiguration(self):
+        """Return the configuration owned by the current connection attempt."""
+        return self._activeConfiguration
+
+    def _applyStatePresentation(self):
+        """Apply the tray action presentation for the shared lifecycle state."""
+        state = self.state
+        self.setText(_(state.value))
+        self.setChecked(
+            state
+            in (
+                ConnectionState.Connecting,
+                ConnectionState.Connected,
+            )
+        )
+
+        if state in (ConnectionState.Connecting, ConnectionState.Connected):
+            self.setIcon(bootstrapIcon('lock-fill.svg'))
+        else:
+            self.setIcon(bootstrapIcon('unlock-fill.svg'))
+
+        self.setDisabledAction(
+            state in (ConnectionState.Connecting, ConnectionState.Disconnecting)
+        )
+
+    def _setState(self, state: ConnectionState):
+        """Publish one atomic lifecycle transition and its action presentation."""
+        changed = state is not self._state
+        self._state = state
+        self._applyStatePresentation()
+
+        if changed:
+            self.stateChanged.emit(state)
+
     def reset(self):
         """Restore the connect action to its initial state."""
         self.hideProgressBar(True)
-        self.setText(_('Connect'))
-        self.setIcon(bootstrapIcon('unlock-fill.svg'))
-        self.setChecked(False)
+        self._activeConfiguration = None
 
         AppSettings.turnOFF('Connect')
 
-        # Accept new action
-        self.setDisabledAction(False)
+        self._setState(ConnectionState.Disconnected)
 
     def showProgressBar(self):
         """Show progress bar."""
@@ -119,7 +179,10 @@ class ConnectAction(AppQAction):
         """Set disabled action."""
         self.setDisabled(value)
 
-        APP().systemTray.RoutingAction.setDisabled(value)
+        try:
+            APP().systemTray.RoutingAction.setDisabled(value)
+        except (AttributeError, RuntimeError):
+            pass
 
         try:
             APP().mainWindow.settingsPage.setConnectionControlsEnabled(not value)
@@ -128,35 +191,38 @@ class ConnectAction(AppQAction):
 
     def isConnected(self) -> bool:
         """Return whether connected."""
-        return self.textCompare('Disconnect')
+        return self.state is ConnectionState.Connected
 
     def isConnecting(self):
         """Return whether connecting."""
-        return self.textCompare('Connecting')
+        return self.state is ConnectionState.Connecting
+
+    def isDisconnecting(self):
+        """Return whether disconnecting."""
+        return self.state is ConnectionState.Disconnecting
 
     def doConnecting(self):
         """Handle do connecting for the connect action."""
-        self.setText(_('Connecting'))
-        self.setIcon(bootstrapIcon('lock-fill.svg'))
-        # Do not accept new action
-        self.setDisabledAction(True)
+        self._setState(ConnectionState.Connecting)
         self.showProgressBar()
 
     def doConnected(self):
         """Handle do connected for the connect action."""
         self.hideProgressBar(True)
-        # Connected
-        self.setText(_('Disconnect'))
 
         AppSettings.turnON_('Connect')
 
-        Mixins.ConnectionAware.callConnectedCallback()
+        self._setState(ConnectionState.Connected)
 
-        # Accept new action
-        self.setDisabledAction(False)
+        Mixins.ConnectionAware.callConnectedCallback()
 
     def doDisconnect(self):
         """Handle do disconnect for the connect action."""
+        if self.state is ConnectionState.Disconnected:
+            return
+
+        self._setState(ConnectionState.Disconnecting)
+
         SystemProxy.off()
 
         self.actionTimer.stop()
@@ -188,7 +254,7 @@ class ConnectAction(AppQAction):
     def doConnect(self):
         # Connect action
         """Return the do connect value used by the connect action."""
-        assert self.textCompare('Connect')
+        assert self.state is ConnectionState.Disconnected
 
         if not Storage.UserServers():
             AppSettings.turnOFF('Connect')
@@ -261,6 +327,7 @@ class ConnectAction(AppQAction):
 
                 return
 
+            self._activeConfiguration = config
             self.doConnecting()
 
             logManager = AppLogManager()
@@ -424,10 +491,15 @@ class ConnectAction(AppQAction):
 
     def triggeredCallback(self, checked):
         """Handle activation of the action."""
-        if checked:
+        if self.state is ConnectionState.Disconnected:
             self.doConnect()
-        else:
-            # Disconnect action
-            assert self.textCompare('Disconnect')
-
+        elif self.state is ConnectionState.Connected:
             self.doDisconnectWithTrayMessage(_('Disconnected'))
+        else:
+            # A disabled transition action should not normally be triggered.
+            # Restore its checked presentation if code triggered it directly.
+            self._applyStatePresentation()
+
+    def retranslate(self):
+        """Refresh the state-derived action text."""
+        self._applyStatePresentation()

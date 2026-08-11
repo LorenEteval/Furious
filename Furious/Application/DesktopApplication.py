@@ -30,6 +30,7 @@ from Furious.Qt.TextEditorTheme import configureEditorLogMetadata
 from Furious.Qt import gettext as _
 from Furious.Repository import *
 from Furious.Service import ApplicationLogHandler, LogManager
+from Furious.Actions.Connection import ConnectAction
 from Furious.Application.TrayIcon import *
 from Furious.Window.LogPage import *
 from Furious.Window.MainWindow import *
@@ -179,6 +180,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
         self.mainWindow = None
         self.systemTray = None
+        self.connectionAction = None
 
         # Unified logging service and presentation
         self.logManager = None
@@ -295,10 +297,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
     def isSystemTrayConnected(self):
         """Return whether system tray connected."""
-        if isinstance(self.systemTray, TrayIcon):
-            return self.systemTray.ConnectAction.isConnected()
-        else:
-            return False
+        return self.connectionAction is not None and self.connectionAction.isConnected()
 
     def isDarkMode(self):
         """Return whether dark mode."""
@@ -544,6 +543,10 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                 # Automatically configure
                 SystemProxy.off()
                 SystemProxy.daemonOn_()
+
+            # The application owns the connection operation. Home and tray bind
+            # to this same action, regardless of their construction order.
+            self.connectionAction = ConnectAction(isTrayAction=True)
 
             self.mainWindow = MainWindow()
             self.systemTray = TrayIcon()

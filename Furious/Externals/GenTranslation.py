@@ -2875,5 +2875,13 @@ TRANSLATION = {
         "RU": "Неизвестная подписка",
         "ZH": "未知订阅",
         "isReviewed": "True"
+    },
+    "Disconnecting": {
+        "source": [
+            "Furious.Actions.Connection"
+        ],
+        "RU": "Отключение",
+        "ZH": "正在断开连接",
+        "isReviewed": "True"
     }
 }
