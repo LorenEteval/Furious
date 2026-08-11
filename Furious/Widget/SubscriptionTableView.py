@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
+from Furious.Models import UJSONEncoder
 from Furious.Repository import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
@@ -37,26 +38,33 @@ logger = logging.getLogger(__name__)
 
 __all__ = ['SubscriptionTableView']
 
-# Use a versioned state key so incompatible layouts from the former table do
-# not get restored onto the expanded subscription model.
-SUBSCRIPTION_HEADER_STATE_SETTING = 'UserSubsHeaderViewStateV2'
+# Keep the original setting names. The primary value now stores semantic widths
+# instead of QHeaderView's schema-dependent opaque state.
+LEGACY_SUBSCRIPTION_SECTION_SIZE_SETTING = 'SubscriptionWidgetSectionSizeTable'
+SUBSCRIPTION_HEADER_STATE_SETTING = 'UserSubsHeaderViewState'
+
+registerAppSettings(LEGACY_SUBSCRIPTION_SECTION_SIZE_SETTING)
 registerAppSettings(SUBSCRIPTION_HEADER_STATE_SETTING)
 
 
 class SubscriptionTableHorizontalHeader(AppQHeaderView):
     """Provide the user subs Qt table view horizontal table header."""
 
-    DefaultSectionSizes = (260, 420, 120, 180, 220, 180, 120)
+    ColumnKeys = ('remark', 'webURL', 'enabled', 'lastUpdated', 'profiles')
+    DefaultSectionSizes = (260, 520, 120, 220, 140)
+    LegacyColumnKeys = ('remark', 'webURL', 'autoupdate', 'proxy')
+
+    # Format discriminator for the semantic JSON stored under
+    # UserSubsHeaderViewState. The namespace and version let us reject
+    # unrelated strings or a future incompatible semantic format.
+    StateFormat = 'Furious.SubscriptionHeaderWidths/1'
 
     def __init__(self, *args, **kwargs):
         """Initialize the SubscriptionTableHorizontalHeader."""
         super().__init__(QtCore.Qt.Orientation.Horizontal, *args, **kwargs)
 
-    def configureSections(self, restoreSavedState: bool):
-        """Apply a stable interactive layout for the current column schema."""
-        if restoreSavedState:
-            self.restoreSectionSize()
-
+    def _configureInteractiveSections(self):
+        """Normalize interaction without changing the logical column order."""
         self.setSectionsMovable(False)
         self.setCascadingSectionResizes(False)
         self.setMinimumSectionSize(80)
@@ -66,10 +74,161 @@ class SubscriptionTableHorizontalHeader(AppQHeaderView):
 
         self.setStretchLastSection(True)
 
-        if not restoreSavedState:
-            for section, size in enumerate(self.DefaultSectionSizes):
-                if section < self.count():
-                    self.resizeSection(section, size)
+    def _applyDefaultSectionSizes(self):
+        """Apply balanced widths for the concise subscription table."""
+        self.setStretchLastSection(False)
+
+        for section, size in enumerate(self.DefaultSectionSizes):
+            if section < self.count():
+                self.resizeSection(section, size)
+
+    @classmethod
+    def _semanticWidths(cls, state) -> dict[str, int]:
+        """Decode the schema-independent header format, if present."""
+        if not isinstance(state, str):
+            return {}
+
+        try:
+            decoded = UJSONEncoder.decode(state)
+        except Exception:
+            # Any non-exit exceptions
+
+            return {}
+
+        if not isinstance(decoded, dict) or decoded.get('format') != cls.StateFormat:
+            return {}
+
+        widths = decoded.get('widths')
+
+        if not isinstance(widths, dict):
+            return {}
+
+        return {
+            key: width
+            for key, width in widths.items()
+            if key in cls.ColumnKeys
+            and isinstance(width, (int, float))
+            and not isinstance(width, bool)
+            and width > 0
+        }
+
+    @classmethod
+    def _legacyHeaderWidths(cls, state) -> dict[str, int]:
+        """Extract widths from a legacy Qt state without touching this header."""
+        if state is None or isinstance(state, str):
+            return {}
+
+        probe = QTableView()
+        probeModel = QStandardItemModel(0, 1, probe)
+        probe.setModel(probeModel)
+        probeHeader = probe.horizontalHeader()
+
+        # restoreState() is intentionally used only on this disposable probe
+        # as a read-only, one-time compatibility path for the original
+        # four-column UserSubsHeaderViewState. Applying the opaque Qt state to
+        # the live five-column header could recreate phantom sections, legacy
+        # ordering, hidden state, and incompatible resize behavior.
+        try:
+            if not probeHeader.restoreState(state):
+                return {}
+        except Exception:
+            # Any non-exit exceptions
+
+            return {}
+
+        if probeHeader.count() != len(cls.LegacyColumnKeys):
+            return {}
+
+        for section in range(probeHeader.count()):
+            probeHeader.showSection(section)
+
+        return {
+            key: probeHeader.sectionSize(section)
+            for section, key in enumerate(cls.LegacyColumnKeys)
+            if key in cls.ColumnKeys and section < probeHeader.count()
+        }
+
+    @classmethod
+    def _oldestSectionWidths(cls) -> dict[str, int]:
+        """Read the original index-based width table as a final fallback."""
+        try:
+            widths = UJSONEncoder.decode(
+                AppSettings.get(LEGACY_SUBSCRIPTION_SECTION_SIZE_SETTING)
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            return {}
+
+        if not isinstance(widths, dict):
+            return {}
+
+        result = {}
+
+        for section, key in enumerate(cls.LegacyColumnKeys):
+            width = widths.get(str(section))
+
+            if (
+                key in cls.ColumnKeys
+                and isinstance(width, (int, float))
+                and not isinstance(width, bool)
+                and width > 0
+            ):
+                result[key] = width
+
+        return result
+
+    def _applyWidths(self, widths: dict[str, int]):
+        """Apply semantic widths to the matching logical sections."""
+        for section, key in enumerate(self.ColumnKeys):
+            width = widths.get(key)
+
+            if width is not None:
+                self.resizeSection(
+                    section,
+                    max(self.minimumSectionSize(), round(width)),
+                )
+
+    def configureSections(self):
+        """Restore semantic widths or safely read either historical format."""
+        self._configureInteractiveSections()
+        self._applyDefaultSectionSizes()
+
+        state = AppSettings.get(SUBSCRIPTION_HEADER_STATE_SETTING)
+        widths = self._semanticWidths(state) or self._legacyHeaderWidths(state)
+
+        if not widths:
+            widths = self._oldestSectionWidths()
+
+        self._applyWidths(widths)
+
+        # Saved Qt state may contain moved, hidden, or non-interactive sections.
+        # It is never restored onto the live header; the current schema owns
+        # order and interaction behavior.
+        for section in range(self.count()):
+            self.showSection(section)
+
+        self._configureInteractiveSections()
+
+    def cleanup(self):
+        """Persist semantic widths under the established setting name."""
+        # Do not use QHeaderView.saveState() here. Its opaque binary data also
+        # records the section count, order, visibility, and resize modes, so it
+        # is unsafe to restore after the table schema changes. Persist only
+        # widths keyed by stable field names instead.
+        AppSettings.set(
+            SUBSCRIPTION_HEADER_STATE_SETTING,
+            UJSONEncoder.encode(
+                {
+                    'format': self.StateFormat,
+                    'widths': {
+                        key: self.sectionSize(section)
+                        for section, key in enumerate(self.ColumnKeys)
+                        if section < self.count()
+                    },
+                }
+            ),
+        )
 
 
 class SubscriptionTableVerticalHeader(AppQHeaderView):
@@ -102,20 +261,6 @@ class SubscriptionTableColumn:
     def __str__(self):
         """Return the display text for the user subs Qt table view headers."""
         return self.name
-
-
-class UserSubsAppQComboBox(AppQComboBox):
-    """Represent user subs app q combo box."""
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the UserSubsAppQComboBox."""
-        super().__init__(*args, **kwargs)
-
-    def retranslate(self):
-        # Do not emit 'currentTextChanged' when retranslate
-        """Refresh translated text for the user subs app q combo box."""
-        with Mixins.QBlockSignalContext(self):
-            super().retranslate()
 
 
 class UserSubsTableModel(QtCore.QAbstractTableModel):
@@ -357,10 +502,6 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             'Enabled',
             lambda item: 'Enabled' if item.get('enabled', True) else 'Disabled',
         ),
-        SubscriptionTableColumn('Auto Update', lambda item: item.get('autoupdate', '')),
-        SubscriptionTableColumn(
-            'Auto Update Use Proxy', lambda item: item.get('proxy', '')
-        ),
         SubscriptionTableColumn(
             'Last Updated',
             lambda item: item.get('lastUpdated', ''),
@@ -373,8 +514,6 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         'remark',
         'webURL',
         'enabled',
-        'autoupdate',
-        'proxy',
         'lastUpdated',
         'profiles',
     ]
@@ -403,10 +542,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         self.setDefaultRowHeight(self.RowHeight)
 
         header = self.horizontalHeader()
-        header.configureSections(
-            restoreSavedState=AppSettings.get(SUBSCRIPTION_HEADER_STATE_SETTING)
-            is not None
-        )
+        header.configureSections()
 
         self.setSortingEnabled(False)
 
@@ -532,27 +668,35 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         # Show the MessageBox asynchronously
         mbox.open()
 
-    def handleAutoUpdateComboBoxCurrentTextChanged(self, text: str, row: int):
-        """Handle auto update combo box current text changed."""
-        textEnglish = _(text, 'EN')
-
+    def _configureAutoUpdate(self, row: int):
+        """Configure one subscription timer independently of table columns."""
         unique = list(Storage.UserSubs().keys())[row]
         subsob = Storage.UserSubs()[unique]
 
-        remark, webURL = subsob['remark'], subsob['webURL']
+        remark, webURL, autoUpdate, proxy = (
+            subsob['remark'],
+            subsob['webURL'],
+            subsob.get('autoupdate', ''),
+            subsob.get('proxy', ''),
+        )
 
         try:
-            timems = self.AutoUpdateOptions[textEnglish]
+            timems = self.AutoUpdateOptions[autoUpdate]
         except KeyError:
             # Invalid key. Reset
-            logger.error(f'\'{textEnglish}\' is not in auto update options. Reset')
+            logger.error(f'\'{autoUpdate}\' is not in auto update options. Reset')
 
-            textEnglish = ''
+            autoUpdate = ''
 
             # Write to subs object
-            subsob['autoupdate'] = textEnglish
+            subsob['autoupdate'] = autoUpdate
 
-            timems = self.AutoUpdateOptions[textEnglish]
+            timems = self.AutoUpdateOptions[autoUpdate]
+
+        if proxy not in self.ProxyOptions:
+            logger.error(f'\'{proxy}\' is not in proxy options. Reset')
+
+            subsob['proxy'] = ''
 
         qtimer = self.timers[row]
 
@@ -603,101 +747,19 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             qtimer.stop()
 
         # Write to subs object
-        subsob['autoupdate'] = textEnglish
-        self.sourceModel.emitRowChanged(row, self.Headers.index('Auto Update'))
-
-        # Return potentially fixed value
-        return textEnglish
-
-    def handleProxyComboBoxCurrentTextChanged(self, text: str, row: int):
-        """Handle proxy combo box current text changed."""
-        textEnglish = _(text, 'EN')
-
-        unique = list(Storage.UserSubs().keys())[row]
-        subsob = Storage.UserSubs()[unique]
-
-        try:
-            proxyFn = self.ProxyOptions[textEnglish]
-        except KeyError:
-            # Invalid key. Reset
-            logger.error(f'\'{textEnglish}\' is not in proxy options. Reset')
-
-            textEnglish = ''
-
-            # Write to subs object
-            subsob['proxy'] = textEnglish
-
-            proxyFn = self.ProxyOptions[textEnglish]
-
-        assert callable(proxyFn)
-
-        # Write to subs object
-        subsob['proxy'] = textEnglish
-        self.sourceModel.emitRowChanged(
-            row, self.Headers.index('Auto Update Use Proxy')
-        )
-
-        # Return potentially fixed value
-        return textEnglish
+        subsob['autoupdate'] = autoUpdate
 
     def flushItem(self, row, column, item):
         """Refresh item."""
         if row < 0 or row >= self.sourceModel.rowCount():
             return
 
-        index = self.sourceModel.index(row, column)
-
-        if column == self.Headers.index('Auto Update'):
-            header = self.Headers[column]
-
-            newItem = UserSubsAppQComboBox(parent=self.viewport())
-            newItem.addItems(list(_(key) for key in self.AutoUpdateOptions.keys()))
-            newItem.setFont(QFont(AppFontName()))
-
-            itemIndex = newItem.findText(
-                _(self.handleAutoUpdateComboBoxCurrentTextChanged(header(item), row))
-            )
-
-            if itemIndex >= 0:
-                newItem.setCurrentIndex(itemIndex)
-
-            newItem.currentTextChanged.connect(
-                functools.partial(
-                    self.handleAutoUpdateComboBoxCurrentTextChanged,
-                    row=row,
-                )
-            )
-
-            self.setIndexWidget(index, newItem)
-            self.sourceModel.emitRowChanged(row, column)
-        elif column == self.Headers.index('Auto Update Use Proxy'):
-            header = self.Headers[column]
-
-            newItem = UserSubsAppQComboBox(parent=self.viewport())
-            newItem.addItems(list(_(key) for key in self.ProxyOptions.keys()))
-            newItem.setFont(QFont(AppFontName()))
-
-            itemIndex = newItem.findText(
-                _(self.handleProxyComboBoxCurrentTextChanged(header(item), row))
-            )
-
-            if itemIndex >= 0:
-                newItem.setCurrentIndex(itemIndex)
-
-            newItem.currentTextChanged.connect(
-                functools.partial(
-                    self.handleProxyComboBoxCurrentTextChanged,
-                    row=row,
-                )
-            )
-
-            self.setIndexWidget(index, newItem)
-            self.sourceModel.emitRowChanged(row, column)
-        else:
-            self.sourceModel.emitRowChanged(row, column)
+        self.sourceModel.emitRowChanged(row, column)
 
     def flushRow(self, row, item):
         """Refresh row."""
+        self._configureAutoUpdate(row)
+
         for column in list(range(self.sourceModel.columnCount())):
             self.flushItem(row, column, item)
 
