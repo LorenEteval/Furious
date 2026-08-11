@@ -388,6 +388,7 @@ TRANSLATION = {
     "View": {
         "source": [
             "Furious.Window.LogPage",
+            "Furious.Window.SettingsPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Вид",
@@ -811,6 +812,7 @@ TRANSLATION = {
     },
     "Log": {
         "source": [
+            "Furious.Window.LogPage",
             "Furious.Window.MainWindow"
         ],
         "RU": "Журнал событий",
@@ -873,14 +875,6 @@ TRANSLATION = {
         "ZH": "编辑订阅...",
         "isReviewed": "True"
     },
-    "Tools": {
-        "source": [
-            "Furious.Window.HomePage"
-        ],
-        "RU": "Инструменты",
-        "ZH": "工具",
-        "isReviewed": "True"
-    },
     "Plugins": {
         "source": [
             "Furious.Window.HomePage"
@@ -899,7 +893,7 @@ TRANSLATION = {
     },
     "Open Application Folder": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Открыть папку приложения",
         "ZH": "打开应用程序文件夹",
@@ -907,7 +901,7 @@ TRANSLATION = {
     },
     "Check For Updates": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Проверка обновлений",
         "ZH": "检查更新",
@@ -915,7 +909,7 @@ TRANSLATION = {
     },
     "About": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "О нас",
         "ZH": "关于",
@@ -1004,7 +998,8 @@ TRANSLATION = {
     },
     "Language": {
         "source": [
-            "Furious.Actions.Language"
+            "Furious.Actions.Language",
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Язык",
         "ZH": "语言",
@@ -1020,7 +1015,8 @@ TRANSLATION = {
     },
     "TUN Mode": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Actions.Settings",
+            "Furious.Window.SettingsPage"
         ],
         "RU": "TUN режим",
         "ZH": "TUN模式",
@@ -1028,7 +1024,8 @@ TRANSLATION = {
     },
     "TUN Mode Disabled (Administrator)": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Actions.Settings",
+            "Furious.Window.SettingsPage"
         ],
         "RU": "TUN режим отключен (Administrator)",
         "ZH": "TUN模式已禁用（管理员）",
@@ -1036,7 +1033,8 @@ TRANSLATION = {
     },
     "TUN Mode Disabled (Superuser)": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Actions.Settings",
+            "Furious.Window.SettingsPage"
         ],
         "RU": "TUN режим отключен  (Superuser)",
         "ZH": "TUN模式已禁用（Superuser）",
@@ -1044,7 +1042,9 @@ TRANSLATION = {
     },
     "Settings": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Actions.Settings",
+            "Furious.Window.MainWindow",
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Настройки",
         "ZH": "设置",
@@ -1052,7 +1052,7 @@ TRANSLATION = {
     },
     "Dark Mode": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Темный режим",
         "ZH": "深色模式",
@@ -1060,7 +1060,7 @@ TRANSLATION = {
     },
     "Startup On Boot": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Автозапуск при загрузке системы",
         "ZH": "开机启动",
@@ -1068,7 +1068,7 @@ TRANSLATION = {
     },
     "Force To 127.0.0.1 When Setting Local Proxy": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Принудительно 127.0.0.1 для локального прокси",
         "ZH": "设置本地代理时强制使用127.0.0.1",
@@ -1076,7 +1076,7 @@ TRANSLATION = {
     },
     "Automatically Update Asset Files": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Автоматически обновлять файлы активов",
         "ZH": "自动更新资源文件",
@@ -1084,7 +1084,7 @@ TRANSLATION = {
     },
     "Show Progress Bar When Connecting": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Отображение индикатора выполнения при подключении",
         "ZH": "连接时显示进度条",
@@ -1092,7 +1092,7 @@ TRANSLATION = {
     },
     "Show Tab And Spaces In Editor": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Показывать табуляцию и пробелы в редакторе",
         "ZH": "在编辑器中显示制表符和空格",
@@ -1210,14 +1210,6 @@ TRANSLATION = {
         "ZH": "请完善服务器配置",
         "isReviewed": "True"
     },
-    "Help": {
-        "source": [
-            "Furious.Window.HomePage"
-        ],
-        "RU": "Помощь",
-        "ZH": "帮助",
-        "isReviewed": "True"
-    },
     "Test Tcping Latency": {
         "source": [
             "Furious.Widget.ServerTableView"
@@ -1302,7 +1294,7 @@ TRANSLATION = {
     },
     "Use Monochrome Tray Icon": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Использовать монохромный значок в трее",
         "ZH": "使用单色托盘图标",
@@ -1310,7 +1302,7 @@ TRANSLATION = {
     },
     "Hide Dock Icon": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Скрыть значок Dock",
         "ZH": "隐藏程序坞图标",
@@ -1350,7 +1342,7 @@ TRANSLATION = {
     },
     "Power Save Mode": {
         "source": [
-            "Furious.Actions.Settings"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Режим энергосбережения",
         "ZH": "省电模式",
@@ -1580,8 +1572,7 @@ TRANSLATION = {
     },
     "Customize Tun2socks Settings...": {
         "source": [
-            "Furious.Actions.Settings",
-            "Furious.Window.HomePage"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Настроить параметры Tun2socks...",
         "ZH": "自定义Tun2socks设置...",
@@ -1677,7 +1668,7 @@ TRANSLATION = {
     },
     "Restart The Application As Administrator": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Перезапустите приложение от имени администратора",
         "ZH": "以管理员身份重新启动应用程序",
@@ -1685,7 +1676,7 @@ TRANSLATION = {
     },
     "Restart The Application As Superuser": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Перезапустите приложение от имени суперпользователя",
         "ZH": "以Superuser身份重新启动应用程序",
@@ -1717,7 +1708,7 @@ TRANSLATION = {
     },
     "Customize System Proxy Bypass Address...": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Настроить адреса исключений системного прокси...",
         "ZH": "自定义系统代理绕过地址...",
@@ -1750,7 +1741,7 @@ TRANSLATION = {
     },
     "Customize Network Test URL...": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Настроить URL теста сети...",
         "ZH": "自定义网络测试URL...",
@@ -2292,7 +2283,8 @@ TRANSLATION = {
     },
     "Application": {
         "source": [
-            "Furious.Window.LogPage"
+            "Furious.Window.LogPage",
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Приложение",
         "ZH": "应用程序",
@@ -2484,6 +2476,238 @@ TRANSLATION = {
         ],
         "RU": "Ожидание сетевой статистики",
         "ZH": "正在等待网络统计数据",
+        "isReviewed": "True"
+    },
+    "General": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Общие",
+        "ZH": "常规",
+        "isReviewed": "True"
+    },
+    "Connection and Interface": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Подключение и интерфейс",
+        "ZH": "连接和接口",
+        "isReviewed": "True"
+    },
+    "Hysteria2 Traffic Statistics": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Статистика трафика Hysteria2",
+        "ZH": "Hysteria2流量统计",
+        "isReviewed": "True"
+    },
+    "Route system traffic through the active proxy connection.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Направлять системный трафик через активное прокси-подключение.",
+        "ZH": "通过当前代理连接路由系统流量。",
+        "isReviewed": "True"
+    },
+    "Use the application dark theme instead of automatic appearance.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Использовать тёмную тему приложения вместо автоматического оформления.",
+        "ZH": "使用应用程序深色主题，而不跟随自动外观。",
+        "isReviewed": "True"
+    },
+    "Choose the language used by the application interface.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Выберите язык интерфейса приложения.",
+        "ZH": "选择应用程序界面使用的语言。",
+        "isReviewed": "True"
+    },
+    "Use a theme-aware single-color system tray icon.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Использовать одноцветный значок в системном трее с учётом темы.",
+        "ZH": "使用适配主题的单色系统托盘图标。",
+        "isReviewed": "True"
+    },
+    "Start the application automatically after signing in.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Автоматически запускать приложение после входа в систему.",
+        "ZH": "登录系统后自动启动应用程序。",
+        "isReviewed": "True"
+    },
+    "Reduce background activity when the application is idle.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Снижать фоновую активность, когда приложение не используется.",
+        "ZH": "应用程序空闲时减少后台活动。",
+        "isReviewed": "True"
+    },
+    "Keep the application available from the menu bar only.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Оставлять приложение доступным только из строки меню.",
+        "ZH": "仅通过菜单栏保留应用程序入口。",
+        "isReviewed": "True"
+    },
+    "Open": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Открыть",
+        "ZH": "打开",
+        "isReviewed": "True"
+    },
+    "Configure the external Tun2socks network interface and routing.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Настройте внешний сетевой интерфейс Tun2socks и маршрутизацию.",
+        "ZH": "配置外部Tun2socks网络接口和路由。",
+        "isReviewed": "True"
+    },
+    "Choose destinations that bypass the operating system proxy.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Выберите адреса, которые обходят системный прокси.",
+        "ZH": "选择绕过操作系统代理的目标地址。",
+        "isReviewed": "True"
+    },
+    "Choose the URL used for download speed tests.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Выберите URL для тестов скорости загрузки.",
+        "ZH": "选择下载速度测试使用的URL。",
+        "isReviewed": "True"
+    },
+    "Use the IPv4 loopback address when configuring the system proxy.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Использовать IPv4-адрес обратной петли при настройке системного прокси.",
+        "ZH": "配置系统代理时使用IPv4回环地址。",
+        "isReviewed": "True"
+    },
+    "Show connection progress while proxy services are starting.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Показывать ход подключения во время запуска прокси-служб.",
+        "ZH": "代理服务启动时显示连接进度。",
+        "isReviewed": "True"
+    },
+    "Display whitespace markers in configuration editors.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Показывать маркеры пробелов в редакторах конфигурации.",
+        "ZH": "在配置编辑器中显示空白字符标记。",
+        "isReviewed": "True"
+    },
+    "Keep supported proxy-core data files up to date.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Поддерживать файлы данных прокси-ядер в актуальном состоянии.",
+        "ZH": "保持受支持的代理核心数据文件为最新版本。",
+        "isReviewed": "True"
+    },
+    "Traffic Stats API URL": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "URL API статистики трафика",
+        "ZH": "流量统计API URL",
+        "isReviewed": "True"
+    },
+    "Hysteria2 server API address; /traffic is appended automatically.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Адрес API сервера Hysteria2; /traffic добавляется автоматически.",
+        "ZH": "Hysteria2服务器API地址；将自动附加 /traffic。",
+        "isReviewed": "True"
+    },
+    "Traffic Stats Client ID": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Идентификатор клиента статистики",
+        "ZH": "流量统计客户端ID",
+        "isReviewed": "True"
+    },
+    "Traffic Stats API Secret": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Секрет API статистики трафика",
+        "ZH": "流量统计API密钥",
+        "isReviewed": "True"
+    },
+    "Authorization value configured by the Hysteria2 server.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Значение авторизации, настроенное на сервере Hysteria2.",
+        "ZH": "Hysteria2服务器配置的Authorization值。",
+        "isReviewed": "True"
+    },
+    "Check": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Проверить",
+        "ZH": "检查",
+        "isReviewed": "True"
+    },
+    "Check for a newer application and proxy-core release.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Проверить наличие новой версии приложения и прокси-ядра.",
+        "ZH": "检查应用程序和代理核心是否有新版本。",
+        "isReviewed": "True"
+    },
+    "Restart": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Перезапустить",
+        "ZH": "重新启动",
+        "isReviewed": "True"
+    },
+    "Restart with privileges required by system-level networking.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Перезапустить с правами, необходимыми для системной настройки сети.",
+        "ZH": "使用系统级网络所需的权限重新启动。",
+        "isReviewed": "True"
+    },
+    "Open the folder containing the current application.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Открыть папку с текущим приложением.",
+        "ZH": "打开包含当前应用程序的文件夹。",
+        "isReviewed": "True"
+    },
+    "Authentication ID reported by the Hysteria2 server.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Идентификатор аутентификации, указанный сервером Hysteria2.",
+        "ZH": "Hysteria2服务器报告的身份验证 ID。",
         "isReviewed": "True"
     }
 }

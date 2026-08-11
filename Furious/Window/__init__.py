@@ -24,6 +24,7 @@ from .HomePage import HomePage
 from .LogPage import LogPage
 from .MetricsPage import MetricsPage
 from .MainWindow import MainWindow
+from .SettingsPage import SettingsPage
 from .NetworkTestDialog import NetworkTestDialog
 from .ProxyBypassDialog import ProxyBypassDialog
 from .QRCodeWindow import QRCodeWindow
@@ -37,6 +38,7 @@ __all__ = [
     'LogPage',
     'MetricsPage',
     'MainWindow',
+    'SettingsPage',
     'NetworkTestDialog',
     'ProxyBypassDialog',
     'QRCodeWindow',

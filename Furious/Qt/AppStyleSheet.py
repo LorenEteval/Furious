@@ -322,15 +322,77 @@ class AppStyleSheet:
             }}
 
             QScrollArea#MetricsScrollArea,
-            QWidget#MetricsPageContent {{
+            QWidget#MetricsPageContent,
+            QScrollArea#SettingsScrollArea,
+            QWidget#SettingsPageContent,
+            QWidget#LogPageContent {{
                 border: none;
                 background-color: {palette['window']};
             }}
 
-            QLabel#MetricsPageTitle {{
+            QLabel#MetricsPageTitle,
+            QLabel#LogPageTitle,
+            QLabel#SettingsPageTitle {{
                 color: {palette['text_strong']};
                 font-size: 16pt;
                 font-weight: 600;
+            }}
+
+            QLabel#SettingsSectionTitle {{
+                padding: 4px 2px;
+                color: {palette['text_strong']};
+                font-size: 12pt;
+                font-weight: 600;
+            }}
+
+            QFrame#SettingsCard {{
+                border: 1px solid {palette['border']};
+                border-radius: 9px;
+                background-color: {palette['panel']};
+            }}
+
+            QFrame#SettingsCard:hover {{
+                border-color: {palette['border_strong']};
+                background-color: {palette['panel_alt']};
+            }}
+
+            QLabel#SettingsCardTitle {{
+                color: {palette['text_strong']};
+                font-weight: 600;
+            }}
+
+            QLabel#SettingsCardDescription {{
+                color: {palette['muted']};
+            }}
+
+            QPushButton#SettingsActionButton {{
+                min-width: 82px;
+            }}
+
+            QCheckBox#SettingsToggle::indicator {{
+                width: 34px;
+                height: 18px;
+                border: 1px solid {palette['border_strong']};
+                border-radius: 9px;
+                background-color: {palette['raised']};
+                image: none;
+            }}
+
+            QCheckBox#SettingsToggle::indicator:hover {{
+                border-color: {palette['accent']};
+                background-color: {palette['hover']};
+            }}
+
+            QCheckBox#SettingsToggle::indicator:checked {{
+                border-color: {palette['accent']};
+                background-color: {palette['accent']};
+                image: none;
+            }}
+
+            QCheckBox#SettingsToggle::indicator:disabled {{
+                border-color: {palette['border']};
+                background-color: {palette['raised']};
+                image: none;
             }}
 
             QFrame#MetricsSection {{

@@ -61,7 +61,6 @@ class TrayIcon(
             ImportAction(isTrayAction=True),
             EditConfigurationAction(isTrayAction=True),
             AppQSeperator(),
-            LanguageAction(isTrayAction=True),
             SettingsAction(isTrayAction=True),
             AppQSeperator(),
             ExitAction(isTrayAction=True),

@@ -132,7 +132,9 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.manager = manager
         self._preferredFilter = str(AppSettings.get('LogViewerSelectedCategory'))
 
-        self.filterLabel = AppQLabel(_('Log Type'))
+        self.pageTitleLabel = AppQLabel(translatable=False)
+        self.pageTitleLabel.setObjectName('LogPageTitle')
+        self.filterLabel = AppQLabel(translatable=False)
         self.filterComboBox = QComboBox()
         self.filterComboBox.setMinimumWidth(180)
 
@@ -143,15 +145,21 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.textBrowser.setLineWrapMode(DraculaTextBrowser.LineWrapMode.NoWrap)
 
         filterLayout = QHBoxLayout()
+        filterLayout.setContentsMargins(0, 0, 0, 0)
+        filterLayout.setSpacing(8)
+        filterLayout.addWidget(self.pageTitleLabel)
+        filterLayout.addStretch(1)
         filterLayout.addWidget(self.filterLabel)
         filterLayout.addWidget(self.filterComboBox)
-        filterLayout.addStretch()
 
         centralLayout = QVBoxLayout()
+        centralLayout.setContentsMargins(20, 18, 20, 20)
+        centralLayout.setSpacing(14)
         centralLayout.addLayout(filterLayout)
         centralLayout.addWidget(self.textBrowser)
 
         centralWidget = QWidget()
+        centralWidget.setObjectName('LogPageContent')
         centralWidget.setLayout(centralLayout)
 
         self.setCentralWidget(centralWidget)
@@ -220,6 +228,8 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.manager.categoryRegistered.connect(self._categoryRegistered)
         self.manager.entryAdded.connect(self._entryAdded)
         self.manager.entriesCleared.connect(self._entriesCleared)
+
+        self.retranslate()
 
     def _categoryText(self, category) -> str:
         """Return a category's translated or literal display label."""
@@ -313,5 +323,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         selectedCategoryId = self.filterComboBox.currentData()
 
+        self.pageTitleLabel.setText(_('Log'))
+        self.filterLabel.setText(_('Log Type'))
         self._populateFilters(selectedCategoryId)
         self._refreshEntries()
