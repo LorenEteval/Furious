@@ -23,12 +23,13 @@ from Furious.Frozenlib import *
 from Furious.Models import ConfigFactory, ServerProfile
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Service import MetricsDataManager
+from Furious.Service import MetricsDataManager, PluginNavigationManager
 from Furious.Widget.NavigationView import NavigationView
 from Furious.Window.HomePage import HomePage
 from Furious.Window.LogPage import LogPage
 from Furious.Window.MetricsPage import MetricsPage
 from Furious.Window.SettingsPage import SettingsPage
+from Furious.Window.SubscriptionPage import SubscriptionPage
 
 from PySide6 import QtCore
 
@@ -50,6 +51,7 @@ registerAppSettings('AppMainWindowNavigationExpanded', isBinary=True)
 _TRANSLATABLE_NAVIGATION_LABELS = (
     _('Home'),
     _('Log'),
+    _('Subscription'),
     _('Metrics'),
     _('Settings'),
 )
@@ -72,6 +74,10 @@ class MainWindow(AppQMainWindow):
 
         self.navigationView = NavigationView(parent=self)
         self.homePage = HomePage(parent=self.navigationView)
+        self.subscriptionPage = SubscriptionPage(
+            self.homePage.userServersQTableWidget,
+            parent=self.navigationView,
+        )
         self.metricsDataManager = MetricsDataManager(parent=self)
         self.homePage.trafficStatsManager.sampleChanged.connect(
             self.metricsDataManager.recordTrafficSample
@@ -111,6 +117,14 @@ class MainWindow(AppQMainWindow):
             'pin-angle.svg',
         )
         self.navigationView.addPage(
+            'subscription',
+            self.subscriptionPage,
+            'Subscription',
+            'collection.svg',
+        )
+        self.pluginNavigationManager = PluginNavigationManager()
+        self.pluginNavigationManager.registerPages(self.navigationView)
+        self.navigationView.addPage(
             'metrics',
             self.metricsPage,
             'Metrics',
@@ -137,7 +151,7 @@ class MainWindow(AppQMainWindow):
 
         # Preserve the established application-facing server-management API.
         self.userServersQTableWidget = self.homePage.userServersQTableWidget
-        self.userSubsWindow = self.homePage.userSubsWindow
+        self.userSubsWindow = self.subscriptionPage
         self.networkConnectivityManager = self.homePage.networkConnectivityManager
         self.networkState = self.homePage.networkState
         self.trafficStats = self.homePage.trafficStats
@@ -171,9 +185,14 @@ class MainWindow(AppQMainWindow):
         self.show()
         self.showPage('settings')
 
+    def showSubscriptionPage(self):
+        """Navigate directly to subscription management."""
+        self.show()
+        self.showPage('subscription')
+
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
-        """Forward a subscription update to the home page."""
-        self.homePage.updateSubsByUnique(unique, httpProxy, **kwargs)
+        """Forward a subscription update to the dedicated page controller."""
+        self.subscriptionPage.updateSubsByUnique(unique, httpProxy, **kwargs)
 
     def appendNewItemByFactory(self, factory: ConfigFactory | ServerProfile):
         """Forward a new server profile to the home page."""

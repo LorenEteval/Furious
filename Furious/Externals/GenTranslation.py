@@ -6,6 +6,7 @@ TRANSLATION = {
             "Furious.Qt.QtWidgets",
             "Furious.Widget.ServerTableView",
             "Furious.Widget.SubscriptionTableView",
+            "Furious.Window.SubscriptionPage",
             "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Удалить",
@@ -86,7 +87,8 @@ TRANSLATION = {
     },
     "Invalid data": {
         "source": [
-            "Furious.Actions.Import"
+            "Furious.Actions.Import",
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "Неверные данные",
         "ZH": "无效的数据",
@@ -225,6 +227,7 @@ TRANSLATION = {
             "Furious.Window.IndentDialog",
             "Furious.Window.NetworkTestDialog",
             "Furious.Window.ProxyBypassDialog",
+            "Furious.Window.SubscriptionPage",
             "Furious.Window.SubscriptionWindow",
             "Furious.Window.TextEditorWindow"
         ],
@@ -361,6 +364,7 @@ TRANSLATION = {
     "Edit": {
         "source": [
             "Furious.Window.LogPage",
+            "Furious.Window.SubscriptionPage",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Редактировать",
@@ -448,7 +452,8 @@ TRANSLATION = {
             "Furious.Backends.Xray.VlessEditor",
             "Furious.Backends.Xray.VmessEditor",
             "Furious.Widget.ServerTableView",
-            "Furious.Widget.SubscriptionTableView"
+            "Furious.Widget.SubscriptionTableView",
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "Примечание",
         "ZH": "别名",
@@ -509,7 +514,8 @@ TRANSLATION = {
     "Subscription": {
         "source": [
             "Furious.Widget.ServerTableView",
-            "Furious.Window.HomePage"
+            "Furious.Window.MainWindow",
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "Подписка",
         "ZH": "订阅",
@@ -530,14 +536,6 @@ TRANSLATION = {
         ],
         "RU": "Скорость",
         "ZH": "速度",
-        "isReviewed": "True"
-    },
-    "Edit Configuration...": {
-        "source": [
-            "Furious.Actions.Configuration"
-        ],
-        "RU": "Изменить конфигурацию...",
-        "ZH": "编辑配置...",
         "isReviewed": "True"
     },
     "Move Up": {
@@ -664,6 +662,7 @@ TRANSLATION = {
     },
     "Add Subscription": {
         "source": [
+            "Furious.Window.SubscriptionPage",
             "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Добавить подписку",
@@ -688,6 +687,7 @@ TRANSLATION = {
     },
     "Edit Subscription": {
         "source": [
+            "Furious.Window.SubscriptionPage",
             "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Редактировать подписку",
@@ -705,6 +705,7 @@ TRANSLATION = {
     "Add": {
         "source": [
             "Furious.Backends.Xray.RoutingWindow",
+            "Furious.Window.SubscriptionPage",
             "Furious.Window.SubscriptionWindow"
         ],
         "RU": "Добавить",
@@ -841,54 +842,6 @@ TRANSLATION = {
         ],
         "RU": "Свернуть навигацию",
         "ZH": "折叠导航",
-        "isReviewed": "True"
-    },
-    "Update Subscription (Use Current Proxy)": {
-        "source": [
-            "Furious.Window.HomePage"
-        ],
-        "RU": "Обновить подписки (использовать текущий прокси-сервер)",
-        "ZH": "更新订阅（使用当前代理）",
-        "isReviewed": "True"
-    },
-    "Update Subscription (Force Proxy)": {
-        "source": [
-            "Furious.Window.HomePage"
-        ],
-        "RU": "Обновить подписки (обязательно через прокси-сервер)",
-        "ZH": "更新订阅（强制代理）",
-        "isReviewed": "True"
-    },
-    "Update Subscription (No Proxy)": {
-        "source": [
-            "Furious.Window.HomePage"
-        ],
-        "RU": "Обновить подписки (не использовать прокси)",
-        "ZH": "更新订阅（无代理）",
-        "isReviewed": "True"
-    },
-    "Edit Subscription...": {
-        "source": [
-            "Furious.Window.HomePage"
-        ],
-        "RU": "Редактировать подписки...",
-        "ZH": "编辑订阅...",
-        "isReviewed": "True"
-    },
-    "Plugins": {
-        "source": [
-            "Furious.Window.HomePage"
-        ],
-        "RU": "Плагины",
-        "ZH": "插件",
-        "isReviewed": "True"
-    },
-    "Core": {
-        "source": [
-            "Furious.Window.HomePage"
-        ],
-        "RU": "Core",
-        "ZH": "Core",
         "isReviewed": "True"
     },
     "Open Application Folder": {
@@ -1042,7 +995,6 @@ TRANSLATION = {
     },
     "Settings": {
         "source": [
-            "Furious.Actions.Settings",
             "Furious.Window.MainWindow",
             "Furious.Window.SettingsPage"
         ],
@@ -1356,6 +1308,7 @@ TRANSLATION = {
             "Furious.Window.IndentDialog",
             "Furious.Window.NetworkTestDialog",
             "Furious.Window.ProxyBypassDialog",
+            "Furious.Window.SubscriptionPage",
             "Furious.Window.SubscriptionWindow"
         ],
         "RU": "OK",
@@ -1412,7 +1365,8 @@ TRANSLATION = {
     },
     "Auto Update": {
         "source": [
-            "Furious.Widget.SubscriptionTableView"
+            "Furious.Widget.SubscriptionTableView",
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "Автообновление",
         "ZH": "自动更新",
@@ -1420,7 +1374,8 @@ TRANSLATION = {
     },
     "Auto Update Use Proxy": {
         "source": [
-            "Furious.Widget.SubscriptionTableView"
+            "Furious.Widget.SubscriptionTableView",
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "Автообновление (используя прокси)",
         "ZH": "自动更新使用代理",
@@ -2014,7 +1969,9 @@ TRANSLATION = {
     },
     "Enabled": {
         "source": [
-            "Furious.Backends.Xray.RoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow",
+            "Furious.Widget.SubscriptionTableView",
+            "Furious.Window.SubscriptionPage"
         ],
         "RU": "Включено",
         "ZH": "已启用",
@@ -2022,7 +1979,8 @@ TRANSLATION = {
     },
     "Disabled": {
         "source": [
-            "Furious.Backends.Xray.RoutingWindow"
+            "Furious.Backends.Xray.RoutingWindow",
+            "Furious.Widget.SubscriptionTableView"
         ],
         "RU": "Отключено",
         "ZH": "已禁用",
@@ -2265,14 +2223,6 @@ TRANSLATION = {
         "ZH": "自定义Hysteria2 TUN设置...",
         "isReviewed": "True"
     },
-    "Extensions": {
-        "source": [
-            "Furious.Window.HomePage"
-        ],
-        "RU": "Расширения",
-        "ZH": "扩展功能",
-        "isReviewed": "True"
-    },
     "Log Type": {
         "source": [
             "Furious.Window.LogPage"
@@ -2496,7 +2446,7 @@ TRANSLATION = {
     },
     "Hysteria2 Traffic Statistics": {
         "source": [
-            "Furious.Window.SettingsPage"
+            "Furious.Backends.Hysteria2.Plugin"
         ],
         "RU": "Статистика трафика Hysteria2",
         "ZH": "Hysteria2流量统计",
@@ -2624,7 +2574,7 @@ TRANSLATION = {
     },
     "Traffic Stats API URL": {
         "source": [
-            "Furious.Window.SettingsPage"
+            "Furious.Backends.Hysteria2.Plugin"
         ],
         "RU": "URL API статистики трафика",
         "ZH": "流量统计API URL",
@@ -2632,7 +2582,7 @@ TRANSLATION = {
     },
     "Hysteria2 server API address; /traffic is appended automatically.": {
         "source": [
-            "Furious.Window.SettingsPage"
+            "Furious.Backends.Hysteria2.Plugin"
         ],
         "RU": "Адрес API сервера Hysteria2; /traffic добавляется автоматически.",
         "ZH": "Hysteria2服务器API地址；将自动附加 /traffic。",
@@ -2640,7 +2590,7 @@ TRANSLATION = {
     },
     "Traffic Stats Client ID": {
         "source": [
-            "Furious.Window.SettingsPage"
+            "Furious.Backends.Hysteria2.Plugin"
         ],
         "RU": "Идентификатор клиента статистики",
         "ZH": "流量统计客户端ID",
@@ -2648,7 +2598,7 @@ TRANSLATION = {
     },
     "Traffic Stats API Secret": {
         "source": [
-            "Furious.Window.SettingsPage"
+            "Furious.Backends.Hysteria2.Plugin"
         ],
         "RU": "Секрет API статистики трафика",
         "ZH": "流量统计API密钥",
@@ -2656,7 +2606,7 @@ TRANSLATION = {
     },
     "Authorization value configured by the Hysteria2 server.": {
         "source": [
-            "Furious.Window.SettingsPage"
+            "Furious.Backends.Hysteria2.Plugin"
         ],
         "RU": "Значение авторизации, настроенное на сервере Hysteria2.",
         "ZH": "Hysteria2服务器配置的Authorization值。",
@@ -2704,7 +2654,7 @@ TRANSLATION = {
     },
     "Authentication ID reported by the Hysteria2 server.": {
         "source": [
-            "Furious.Window.SettingsPage"
+            "Furious.Backends.Hysteria2.Plugin"
         ],
         "RU": "Идентификатор аутентификации, указанный сервером Hysteria2.",
         "ZH": "Hysteria2服务器报告的身份验证 ID。",
@@ -2725,5 +2675,149 @@ TRANSLATION = {
         "ZH": "重新连接后，将累计上传和下载流量从零开始计算。",
         "isReviewed": "True",
         "RU": "После переподключения начинать подсчёт накопленного исходящего и входящего трафика с нуля."
+    },
+    "Show Home Page...": {
+        "source": [
+            "Furious.Actions.Configuration"
+        ],
+        "ZH": "显示主页...",
+        "isReviewed": "True",
+        "RU": "Показать главную страницу..."
+    },
+    "Show the server management Home page": {
+        "source": [
+            "Furious.Actions.Configuration"
+        ],
+        "ZH": "显示服务器管理主页",
+        "isReviewed": "True",
+        "RU": "Показать главную страницу управления серверами"
+    },
+    "Last Updated": {
+        "source": [
+            "Furious.Widget.SubscriptionTableView"
+        ],
+        "ZH": "上次更新",
+        "isReviewed": "True",
+        "RU": "Последнее обновление"
+    },
+    "Profiles": {
+        "source": [
+            "Furious.Widget.SubscriptionTableView"
+        ],
+        "ZH": "配置文件",
+        "isReviewed": "True",
+        "RU": "Профили"
+    },
+    "Plugin Settings": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "ZH": "插件设置",
+        "isReviewed": "True",
+        "RU": "Настройки плагинов"
+    },
+    "Enable Metrics Collection": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "ZH": "启用指标收集",
+        "isReviewed": "True",
+        "RU": "Включить сбор метрик"
+    },
+    "Collect network speed and traffic history while connected.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "ZH": "连接时收集网络速度和流量历史记录。",
+        "isReviewed": "True",
+        "RU": "Собирать историю скорости сети и трафика при подключении."
+    },
+    "URL": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "URL",
+        "isReviewed": "True",
+        "RU": "URL"
+    },
+    "User Agent": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "用户代理",
+        "isReviewed": "True",
+        "RU": "User-Agent"
+    },
+    "Profile Filter (Regex)": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "配置文件筛选器（正则表达式）",
+        "isReviewed": "True",
+        "RU": "Фильтр профилей (регулярное выражение)"
+    },
+    "Please enter a subscription remark.": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "请输入订阅备注。",
+        "isReviewed": "True",
+        "RU": "Введите название подписки."
+    },
+    "Please enter a valid subscription URL.": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "请输入有效的订阅 URL。",
+        "isReviewed": "True",
+        "RU": "Введите корректный URL подписки."
+    },
+    "Subscriptions": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "订阅管理",
+        "isReviewed": "True",
+        "RU": "Подписки"
+    },
+    "Update Using": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "更新方式",
+        "isReviewed": "True",
+        "RU": "Способ обновления"
+    },
+    "Add From Clipboard": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "从剪贴板添加",
+        "isReviewed": "True",
+        "RU": "Добавить из буфера обмена"
+    },
+    "Copy URL": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "复制 URL",
+        "isReviewed": "True",
+        "RU": "Копировать URL"
+    },
+    "Update Selected": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "更新所选项",
+        "isReviewed": "True",
+        "RU": "Обновить выбранные"
+    },
+    "Update All": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "ZH": "全部更新",
+        "isReviewed": "True",
+        "RU": "Обновить все"
     }
 }
