@@ -217,9 +217,34 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             parent=self,
         )
 
-        self.menuBar().addMenu(self._fileMenu)
-        self.menuBar().addMenu(self._editMenu)
-        self.menuBar().addMenu(self._viewMenu)
+        self.fileButton = AppQMenuPushButton(
+            _('File'),
+            icon=bootstrapIcon('file-earmark.svg'),
+            popupMenu=self._fileMenu,
+        )
+        self.editButton = AppQMenuPushButton(
+            _('Edit'),
+            icon=bootstrapIcon('pencil-square.svg'),
+            popupMenu=self._editMenu,
+        )
+        self.viewButton = AppQMenuPushButton(
+            _('View'),
+            icon=bootstrapIcon('eye.svg'),
+            popupMenu=self._viewMenu,
+        )
+
+        actionLayout = QHBoxLayout()
+        actionLayout.setContentsMargins(0, 0, 0, 0)
+        actionLayout.setSpacing(8)
+        actionLayout.addWidget(self.fileButton)
+        actionLayout.addWidget(self.editButton)
+        actionLayout.addWidget(self.viewButton)
+        actionLayout.addStretch(1)
+
+        centralLayout.insertLayout(1, actionLayout)
+
+        for menu in (self._fileMenu, self._editMenu, self._viewMenu):
+            self._registerMenuShortcuts(menu)
 
         self._populateFilters(self._preferredFilter)
         self._refreshEntries()
@@ -230,6 +255,19 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.manager.entriesCleared.connect(self._entriesCleared)
 
         self.retranslate()
+
+    def _registerMenuShortcuts(self, menu):
+        """Associate popup actions with the page so shortcuts stay active."""
+        for action in menu.actions():
+            if action.isSeparator():
+                continue
+
+            self.addAction(action)
+
+            submenu = action.menu() if hasattr(action, 'menu') else None
+
+            if submenu is not None:
+                self._registerMenuShortcuts(submenu)
 
     def _categoryText(self, category) -> str:
         """Return a category's translated or literal display label."""
