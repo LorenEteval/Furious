@@ -477,13 +477,11 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         )
 
         self.serverMenu = AppQMenu(*serverActions, parent=self)
-        self.serverButton = AppQPushButton(
+        self.serverButton = AppQMenuPushButton(
             _('Server'),
             icon=bootstrapIcon('server.svg'),
+            popupMenu=self.serverMenu,
         )
-        # Keep the protocol/profile creation menu without presenting this as a
-        # split or drop-down button. The regular button opens the menu itself.
-        self.serverButton.clicked.connect(self.showServerMenu)
 
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.NoContextMenu)
 
@@ -587,15 +585,6 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.handleServerSelectionChanged()
 
         self.setCentralWidget(self._widget)
-
-    @QtCore.Slot()
-    def showServerMenu(self):
-        """Open server creation actions below the regular Server button."""
-        position = self.serverButton.mapToGlobal(
-            QtCore.QPoint(0, self.serverButton.height() + 2)
-        )
-
-        self.serverMenu.popup(position)
 
     @QtCore.Slot()
     def handleServerSelectionChanged(self, *_args):

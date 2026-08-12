@@ -51,6 +51,7 @@ __all__ = [
     'AppQMenuBar',
     'AppQMessageBox',
     'AppQIconTextPushButton',
+    'AppQMenuPushButton',
     'AppQPushButton',
     'AppQSpinBox',
     'AppQTableView',
@@ -830,6 +831,39 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
     def retranslate(self):
         """Refresh translated text for the app q push button."""
         self.setText(_(self.text()))
+
+
+class AppQMenuPushButton(AppQPushButton):
+    """Open a popup menu from a regular Fluent-style push button."""
+
+    def __init__(self, *args, popupMenu=None, **kwargs):
+        """Initialize a button without Qt's native menu indicator."""
+        super().__init__(*args, **kwargs)
+
+        self._popupMenu = None
+        self.setPopupMenu(popupMenu)
+        self.clicked.connect(self.showPopupMenu)
+
+    def popupMenu(self):
+        """Return the menu presented by this button."""
+        return self._popupMenu
+
+    def setPopupMenu(self, menu):
+        """Set the menu presented below this button."""
+        if menu is not None and not isinstance(menu, QMenu):
+            raise TypeError('popupMenu must be a QMenu or None')
+
+        self._popupMenu = menu
+
+    @QtCore.Slot()
+    def showPopupMenu(self):
+        """Open the configured menu immediately below the button."""
+        if self._popupMenu is None:
+            return
+
+        position = self.mapToGlobal(QtCore.QPoint(0, self.height() + 2))
+
+        self._popupMenu.popup(position)
 
 
 class AppQIconTextPushButton(
