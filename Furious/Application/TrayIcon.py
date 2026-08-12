@@ -107,6 +107,7 @@ class TrayIcon(
 
             self.setContextMenu(self._menu)
 
+        self._menu.setMenuRole('tray', recursive=True)
         self._menu.aboutToShow.connect(self.rebuildDynamicMenus)
 
         self.setDisconnectedIcon()

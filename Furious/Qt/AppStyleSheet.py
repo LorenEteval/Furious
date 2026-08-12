@@ -487,26 +487,31 @@ class AppStyleSheet:
             QMenu {{
                 padding: 6px;
                 border: 1px solid {palette['border_strong']};
-                border-radius: 8px;
+                border-radius: 9px;
                 background-color: {palette['overlay']};
             }}
 
             QMenu::separator {{
                 height: 1px;
-                margin: 5px 8px;
-                background-color: {palette['border']};
+                margin: 6px 9px;
+                background-color: {palette['border_strong']};
             }}
 
             QMenu::item {{
-                min-width: 156px;
-                min-height: 20px;
-                padding: 7px 30px 7px 28px;
-                border-radius: 5px;
+                min-width: 160px;
+                min-height: 22px;
+                padding: 7px 32px;
+                border-radius: 6px;
                 background-color: transparent;
             }}
 
             QMenu::item:selected {{
-                background-color: {palette['accent_soft']};
+                background-color: {palette['accent_soft_hover']};
+                color: {palette['text_strong']};
+            }}
+
+            QMenu::item:pressed {{
+                background-color: {palette['pressed']};
                 color: {palette['text_strong']};
             }}
 
@@ -515,16 +520,20 @@ class AppStyleSheet:
                 color: {palette['disabled']};
             }}
 
+            QMenu::item:disabled:selected {{
+                background-color: transparent;
+            }}
+
             QMenu::icon {{
                 position: relative;
-                left: 7px;
+                left: 8px;
             }}
 
             QMenu::indicator {{
                 width: 14px;
                 height: 14px;
                 position: relative;
-                left: 7px;
+                left: 8px;
             }}
 
             QMenu::indicator:checked {{
@@ -536,7 +545,33 @@ class AppStyleSheet:
             QMenu::right-arrow {{
                 width: 9px;
                 height: 9px;
+                position: relative;
+                right: 8px;
                 image: url("{caretRightIcon}");
+            }}
+
+            QMenu[menuRole="tray"] {{
+                padding: 7px;
+                border-radius: 10px;
+            }}
+
+            QMenu[menuRole="tray"]::item {{
+                min-width: 176px;
+                min-height: 24px;
+                padding: 8px 34px;
+            }}
+
+            QMenu[menuRole="tray"]::separator {{
+                margin: 6px 10px;
+            }}
+
+            QMenu[menuRole="tray"]::icon,
+            QMenu[menuRole="tray"]::indicator {{
+                left: 9px;
+            }}
+
+            QMenu[menuRole="tray"]::right-arrow {{
+                right: 9px;
             }}
 
             QToolBar {{
