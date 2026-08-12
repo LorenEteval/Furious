@@ -74,6 +74,7 @@ class SettingsController:
             assert SystemRuntime.isAdmin()
 
         cls._setBinary('VPNMode', enabled)
+
         showMBoxNewChangesNextTime()
 
     @classmethod
@@ -87,6 +88,8 @@ class SettingsController:
             else:
                 APP().switchToAutoMode()
         except Exception:
+            # Any non-exit exceptions
+
             # The controller can be exercised before the full desktop UI exists.
             pass
 
@@ -98,6 +101,7 @@ class SettingsController:
 
         if AppSettings.get('Language') != language:
             AppSettings.set('Language', language)
+
             Mixins.QTranslatable.retranslateAll()
 
     @classmethod
@@ -108,7 +112,7 @@ class SettingsController:
         try:
             if enabled:
                 APP().systemTray.setMonochromeIcon()
-            elif APP().isSystemTrayConnected():
+            elif APP().connectionController.isConnected():
                 APP().systemTray.setConnectedIcon()
             else:
                 APP().systemTray.setDisconnectedIcon()
@@ -139,12 +143,14 @@ class SettingsController:
     def setPowerSaveMode(cls, enabled: bool):
         """Persist power-saving behavior for the next connection."""
         cls._setBinary('PowerSaveMode', enabled)
+
         showMBoxNewChangesNextTime()
 
     @classmethod
     def setForceLocalProxy(cls, enabled: bool):
         """Persist local system-proxy address normalization."""
         cls._setBinary('ForceToLocalhostWhenSettingLocalProxy', enabled)
+
         showMBoxNewChangesNextTime()
 
     @staticmethod

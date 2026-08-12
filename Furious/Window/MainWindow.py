@@ -101,6 +101,14 @@ class MainWindow(AppQMainWindow):
             parent=self.navigationView,
         )
 
+        APP().connectionController.interactionEnabledChanged.connect(
+            self.settingsPage.setConnectionControlsEnabled
+        )
+
+        self.settingsPage.setConnectionControlsEnabled(
+            APP().connectionController.interactionEnabled
+        )
+
         if not isinstance(self.logPage, LogPage):
             raise TypeError('application log page must be a LogPage')
 

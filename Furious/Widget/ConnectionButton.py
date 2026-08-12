@@ -15,35 +15,38 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Provide connection controls backed by the shared connection action."""
+"""Provide a Home connection control backed by ConnectionController."""
 
 from __future__ import annotations
 
-from Furious.Actions.Connection import ConnectionState
+from Furious.Controllers import ConnectionController, ConnectionState
+from Furious.Frozenlib import Mixins
+from Furious.Qt import bootstrapIcon, AppQPushButton
+from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import QPushButton, QSizePolicy
+from PySide6.QtWidgets import QSizePolicy
 
 from typing import Callable
 
 __all__ = ['ConnectionButton']
 
 
-class ConnectionButton(QPushButton):
-    """Present a shared connection action with a local selection policy."""
+class ConnectionButton(AppQPushButton):
+    """Present connection state while retaining Home's selection policy."""
 
     def __init__(
         self,
-        connectionAction,
+        controller: ConnectionController,
         activateSelected: Callable[[], bool],
         parent=None,
     ):
-        """Bind to one connection action without duplicating its state machine."""
-        super().__init__(parent)
-
-        self.connectionAction = connectionAction
+        """Bind Home presentation and selection policy to the controller."""
+        self.controller = controller
         self.activateSelected = activateSelected
         self._selectionCount = 0
+
+        super().__init__(parent, useQSetDisabled=False)
 
         self.setObjectName('ConnectionButton')
         self.setMinimumWidth(124)
@@ -51,8 +54,7 @@ class ConnectionButton(QPushButton):
         self.setIconSize(QtCore.QSize(18, 18))
 
         self.clicked.connect(self._handleClicked)
-        self.connectionAction.changed.connect(self.syncPresentation)
-        self.connectionAction.stateChanged.connect(self.syncPresentation)
+        self.controller.stateChanged.connect(self.syncPresentation)
 
         self.syncPresentation()
 
@@ -63,19 +65,28 @@ class ConnectionButton(QPushButton):
 
     @QtCore.Slot()
     def syncPresentation(self, *_args):
-        """Mirror text/icon/state while applying only Home's selection rule."""
-        action = self.connectionAction
-        state = action.state
+        """Render controller state while applying only Home's selection rule."""
+        state = self.controller.state
 
-        self.setText(action.text())
-        self.setIcon(action.icon())
+        self.setText(_(state.value))
+        self.setIcon(
+            bootstrapIcon(
+                'lock-fill.svg'
+                if state
+                in (
+                    ConnectionState.Connecting,
+                    ConnectionState.Connected,
+                )
+                else 'unlock-fill.svg'
+            )
+        )
 
         if state is ConnectionState.Disconnected:
             # Zero-selection remains intentionally clickable but is a no-op.
-            enabled = self._selectionCount <= 1 and action.isEnabled()
+            enabled = self._selectionCount <= 1
         elif state is ConnectionState.Connected:
             # Disconnect always targets the active connection, not selection.
-            enabled = action.isEnabled()
+            enabled = True
         else:
             enabled = False
 
@@ -83,14 +94,17 @@ class ConnectionButton(QPushButton):
 
     @QtCore.Slot()
     def _handleClicked(self):
-        """Delegate connect/disconnect to the shared action."""
-        state = self.connectionAction.state
+        """Apply Home selection policy, then delegate the lifecycle operation."""
+        state = self.controller.state
 
         if state is ConnectionState.Disconnected:
             if self._selectionCount != 1 or not self.activateSelected():
                 return
 
-            if self.connectionAction.state is ConnectionState.Disconnected:
-                self.connectionAction.trigger()
+            self.controller.toggle()
         elif state is ConnectionState.Connected:
-            self.connectionAction.trigger()
+            self.controller.toggle()
+
+    def retranslate(self):
+        """Refresh state-derived Home connection text and icon."""
+        self.syncPresentation()

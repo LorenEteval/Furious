@@ -1066,7 +1066,7 @@ def showMBoxNewChangesNextTime(**kwargs):
     def handleResultCode(code):
         """Handle result code."""
         if code == PySide6Legacy.enumValueWrapper(AppQMessageBox.StandardButton.Yes):
-            APP().systemTray.ConnectAction.doReconnect()
+            APP().connectionController.startReconnection()
         else:
             # Do nothing
             pass
@@ -1074,7 +1074,7 @@ def showMBoxNewChangesNextTime(**kwargs):
     try:
         method = kwargs.pop('method', 'open')
 
-        if APP().isSystemTrayConnected():
+        if APP().connectionController.isConnected():
             mbox = MBoxNewChangesNextTime(**kwargs)
 
             if isinstance(mbox.parent(), QMainWindow):
@@ -1139,7 +1139,7 @@ def showMBoxDirectRulesNotAllowed(**kwargs):
 
             controller, wasConnected = (
                 app.routingController,
-                app.isSystemTrayConnected(),
+                app.connectionController.isConnected(),
             )
 
             changed = controller.selectRouting(AppBuiltinRouting.Global.value)
@@ -1148,7 +1148,7 @@ def showMBoxDirectRulesNotAllowed(**kwargs):
                 # Selecting a route reconnects an established connection itself.
                 # During an initial connection attempt, resume that attempt here.
                 if not wasConnected:
-                    app.connectionAction.trigger()
+                    app.connectionController.startConnection()
         else:
             # Do nothing
             pass

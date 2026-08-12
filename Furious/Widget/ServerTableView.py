@@ -1043,13 +1043,12 @@ class DeleteServersProgressDialog(AppQDialog):
 
             self.table.activeServerChanged.emit()
 
-            if APP().isSystemTrayConnected():
-                if self.showTrayMessage:
-                    # Trigger disconnect
-                    APP().systemTray.ConnectAction.trigger()
-                else:
-                    # Trigger disconnect silently
-                    APP().systemTray.ConnectAction.doDisconnect()
+            controller = APP().connectionController
+
+            if controller.isConnected():
+                controller.startDisconnection(
+                    _('Disconnected') if self.showTrayMessage else ''
+                )
 
         self.accept()
 
@@ -1818,7 +1817,7 @@ class ServerTableView(
             # Same item activated. Do nothing
             return
 
-        if APP().systemTray.ConnectAction.isConnecting():
+        if APP().connectionController.isConnecting():
             mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
             mbox.setWindowTitle(_('Connecting'))
             mbox.setText(_('Connecting. Please wait...'))
@@ -1838,8 +1837,8 @@ class ServerTableView(
 
         self.activateItemByIndex(newIndex, True)
 
-        if APP().isSystemTrayConnected():
-            APP().systemTray.ConnectAction.doReconnect()
+        if APP().connectionController.isConnected():
+            APP().connectionController.startReconnection()
 
     @functools.lru_cache(None)
     def getGuiEditorByProtocol(self, protocol, **kwargs):
@@ -2264,13 +2263,12 @@ class ServerTableView(
 
             self.activeServerChanged.emit()
 
-            if APP().isSystemTrayConnected():
-                if showTrayMessage:
-                    # Trigger disconnect
-                    APP().systemTray.ConnectAction.trigger()
-                else:
-                    # Trigger disconnect silently
-                    APP().systemTray.ConnectAction.doDisconnect()
+            controller = APP().connectionController
+
+            if controller.isConnected():
+                controller.startDisconnection(
+                    _('Disconnected') if showTrayMessage else ''
+                )
 
         return len(indexes)
 
@@ -2567,7 +2565,7 @@ class ServerTableView(
                 active.itemSubscription == unique and active.itemSubscriptionManaged
             )
 
-        wasConnected = APP().isSystemTrayConnected()
+        wasConnected = APP().connectionController.isConnected()
 
         self.sourceModel.beginResetModel()
 
@@ -2594,9 +2592,9 @@ class ServerTableView(
 
         if wasConnected and activeProfileId:
             if newActivatedIndex < 0 and activeWasManagedByGroup:
-                APP().systemTray.ConnectAction.doDisconnect()
+                APP().connectionController.startDisconnection()
             elif activeProfileId in result.changedProfileIds:
-                APP().systemTray.ConnectAction.doReconnect()
+                APP().connectionController.startReconnection()
 
         return result
 
@@ -2622,7 +2620,7 @@ class ServerTableView(
             self.setCurrentIndex(self.proxyIndexFromSourceRow(0))
 
             # Try to be user-friendly in some extreme cases
-            if not APP().isSystemTrayConnected():
+            if not APP().connectionController.isConnected():
                 # Activate automatically
                 self.activateItemByIndex(0, True)
 

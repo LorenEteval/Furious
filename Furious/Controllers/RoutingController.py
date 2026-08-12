@@ -136,8 +136,8 @@ class RoutingController(QtCore.QObject):
 
         app = APP()
 
-        if app is not None and app.isSystemTrayConnected():
-            app.connectionAction.doReconnect()
+        if app is not None and app.connectionController.isConnected():
+            app.connectionController.startReconnection()
 
         return True
 

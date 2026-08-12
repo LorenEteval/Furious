@@ -237,9 +237,9 @@ class TrafficStatsManager(
 
     @staticmethod
     def _activeProcesses():
-        """Return the processes owned by the active tray connection."""
+        """Return the processes owned by the active connection controller."""
         try:
-            return tuple(APP().systemTray.ConnectAction.coreManager.processesPool)
+            return APP().connectionController.processes
         except (AttributeError, RuntimeError):
             return tuple()
 

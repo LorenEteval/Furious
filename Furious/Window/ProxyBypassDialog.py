@@ -33,8 +33,6 @@ __all__ = ['ProxyBypassDialog']
 
 logger = logging.getLogger(__name__)
 
-registerAppSettings('CustomProxyBypass')
-
 
 class ProxyBypassDialog(AppQDialog):
     """Present the GUI customize proxy bypass dialog."""

@@ -90,7 +90,7 @@ class AppConnectivityManager(ConnectivityManager):
 
     def startSingleTest(self):
         """Start single test."""
-        if not APP().isSystemTrayConnected():
+        if not APP().connectionController.isConnected():
             parent = self.parent()
 
             if isinstance(parent, HomePage):
@@ -512,7 +512,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.pageTitleLabel.setObjectName('HomePageTitle')
 
         self.connectButton = ConnectionButton(
-            APP().connectionAction,
+            APP().connectionController,
             self.activateSelectedServerForConnection,
             parent=self,
         )

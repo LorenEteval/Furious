@@ -23,7 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Core import Tun2socks
 from Furious.Backends import OFFICIAL_PLUGIN_TYPES
-from Furious.Controllers import RoutingController
+from Furious.Controllers import ConnectionController, RoutingController
 from Furious.Extensions import BUNDLED_EXTENSION_TYPES
 from Furious.Plugins import getPluginRegistry, initializePluginRegistry
 from Furious.Qt import AppStyleSheet
@@ -31,7 +31,6 @@ from Furious.Qt.TextEditorTheme import configureEditorLogMetadata
 from Furious.Qt import gettext as _
 from Furious.Repository import *
 from Furious.Service import ApplicationLogHandler, LogManager
-from Furious.Actions.Connection import ConnectAction
 from Furious.Application.TrayIcon import *
 from Furious.Window.LogPage import *
 from Furious.Window.MainWindow import *
@@ -181,7 +180,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
         self.mainWindow = None
         self.systemTray = None
-        self.connectionAction = None
+        self.connectionController = None
         self.routingController = None
 
         # Unified logging service and presentation
@@ -297,10 +296,6 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         self._userSubs = Storage.UserSubs()
         self._userTUNSettings = Storage.UserTUNSettings()
 
-    def isSystemTrayConnected(self):
-        """Return whether system tray connected."""
-        return self.connectionAction is not None and self.connectionAction.isConnected()
-
     def isDarkMode(self):
         """Return whether dark mode."""
         backgroudColor = self.palette().color(QPalette.ColorRole.Window)
@@ -374,6 +369,11 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
     @QtCore.Slot()
     def cleanup():
         """Release resources owned by the application."""
+        controller = getattr(APP(), 'connectionController', None)
+
+        if controller is not None:
+            controller.shutdown()
+
         getPluginRegistry().shutdown()
         Mixins.CleanupOnExit.cleanupAll()
 
@@ -452,6 +452,13 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
             self.addEnviron()
             self.addStorage()
+            # Controllers exist before presentation services so even early
+            # widgets and plugin UI can observe a stable disconnected state.
+            self.connectionController = ConnectionController(parent=self)
+            self.routingController = RoutingController(parent=self)
+            self.connectionController.interactionEnabledChanged.connect(
+                self.routingController.setInteractionEnabled
+            )
             self.addCustomFont()
             # self.configureApplicationFont()
             self.configureLogging()
@@ -546,11 +553,6 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                 SystemProxy.off()
                 SystemProxy.daemonOn_()
 
-            # The application owns connection and routing operations. Home and
-            # tray bind to these same objects regardless of construction order.
-            self.routingController = RoutingController(parent=self)
-            self.connectionAction = ConnectAction(isTrayAction=True)
-
             self.mainWindow = MainWindow()
             self.systemTray = TrayIcon()
 
@@ -564,7 +566,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                     if state == QtCore.Qt.ApplicationState.ApplicationActive:
                         if (
                             not self.mainWindow.isVisible()
-                            and not self.systemTray.ConnectAction.isConnecting()
+                            and not self.connectionController.isConnecting()
                         ):
                             self.mainWindow.show()
 
@@ -579,6 +581,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
             self.systemTray.show()
             self.systemTray.setCustomToolTip()
             self.systemTray.bootstrap()
+            self.connectionController.restoreStartupState()
 
             return self.exec()
         except SystemTrayUnavailable:
