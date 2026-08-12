@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Controllers import RoutingController
+from Furious.Frozenlib import AppRoutingController
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
@@ -38,30 +38,23 @@ _TRANSLATABLE_BUILTIN_ROUTING = [
 class RoutingChildAction(AppQAction):
     """Forward one tray route choice to the shared controller."""
 
-    def __init__(
-        self,
-        *args,
-        controller: RoutingController,
-        routingValue: str,
-        **kwargs,
-    ):
+    def __init__(self, *args, routingValue: str, **kwargs):
         """Initialize the RoutingChildAction."""
-        self.controller = controller
         self.routingValue = routingValue
 
         super().__init__(*args, **kwargs)
 
     def triggeredCallback(self, checked):
         """Handle activation of the action."""
-        self.controller.selectRouting(self.routingValue)
+        AppRoutingController().selectRouting(self.routingValue)
 
 
 class RoutingAction(AppQAction):
     """Render application routing options as a synchronized tray menu."""
 
-    def __init__(self, controller: RoutingController, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the RoutingAction."""
-        self.controller = controller
+        self.controller = AppRoutingController()
 
         super().__init__(
             _('Routing'),
@@ -90,7 +83,6 @@ class RoutingAction(AppQAction):
                         if option.translatable
                         else option.displayName
                     ),
-                    controller=self.controller,
                     routingValue=option.id,
                     checkable=True,
                     checked=routing == option.id,

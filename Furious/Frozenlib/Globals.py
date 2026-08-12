@@ -25,9 +25,12 @@ import functools
 
 __all__ = [
     'APP',
+    'AppConnectionController',
     'AppFontName',
     'AppLogManager',
     'AppLogPage',
+    'AppRoutingController',
+    'AppSettingsController',
     'AppThreadPool',
 ]
 
@@ -40,13 +43,19 @@ def getAppAttributes(name: str):
 
 
 (
+    AppConnectionController,
     AppFontName,
     AppLogManager,
     AppLogPage,
+    AppRoutingController,
+    AppSettingsController,
     AppThreadPool,
 ) = (
+    functools.partial(getAppAttributes, 'connectionController'),
     functools.partial(getAppAttributes, 'customFontName'),
     functools.partial(getAppAttributes, 'logManager'),
     functools.partial(getAppAttributes, 'logPage'),
+    functools.partial(getAppAttributes, 'routingController'),
+    functools.partial(getAppAttributes, 'settingsController'),
     functools.partial(getAppAttributes, 'threadPool'),
 )

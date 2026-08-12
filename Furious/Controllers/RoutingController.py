@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import (
-    APP,
+    AppConnectionController,
     AppBuiltinRouting,
     AppSettings,
     registerAppSettings,
@@ -134,10 +134,8 @@ class RoutingController(QtCore.QObject):
 
         self.refresh(force=True)
 
-        app = APP()
-
-        if app is not None and app.connectionController.isConnected():
-            app.connectionController.startReconnection()
+        if AppConnectionController().isConnected():
+            AppConnectionController().startReconnection()
 
         return True
 

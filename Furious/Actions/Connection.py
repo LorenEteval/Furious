@@ -20,11 +20,10 @@
 from __future__ import annotations
 
 from Furious.Controllers.ConnectionController import (
-    ConnectionController,
     ConnectionError,
     ConnectionState,
 )
-from Furious.Frozenlib import APP, AppSettings
+from Furious.Frozenlib import APP, AppConnectionController, AppSettings
 from Furious.Qt import AppQAction, AppQMessageBox, bootstrapIcon
 from Furious.Qt import gettext as _
 from Furious.Widget.ConnectionProgressWidget import ConnectionProgressWidget
@@ -44,9 +43,9 @@ _TRANSLATABLE_CONNECTION_STATES = (
 class ConnectAction(AppQAction):
     """Adapt connection state and operations to a tray QAction."""
 
-    def __init__(self, controller: ConnectionController, **kwargs):
+    def __init__(self, **kwargs):
         """Bind tray presentation to the shared connection controller."""
-        self.controller = controller
+        self.controller = AppConnectionController()
 
         super().__init__(
             _('Connect'),

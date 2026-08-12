@@ -90,7 +90,7 @@ class AppConnectivityManager(ConnectivityManager):
 
     def startSingleTest(self):
         """Start single test."""
-        if not APP().connectionController.isConnected():
+        if not AppConnectionController().isConnected():
             parent = self.parent()
 
             if isinstance(parent, HomePage):
@@ -512,12 +512,10 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.pageTitleLabel.setObjectName('HomePageTitle')
 
         self.connectButton = ConnectionButton(
-            APP().connectionController,
             self.activateSelectedServerForConnection,
             parent=self,
         )
-        self.routingController = APP().routingController
-        self.routingSelector = RoutingSelector(self.routingController, parent=self)
+        self.routingSelector = RoutingSelector(parent=self)
 
         self.searchLineEdit = AppQLineEdit()
         self.searchLineEdit.setPlaceholderText(
@@ -582,7 +580,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             self.handleServerSelectionChanged
         )
         self.userServersQTableWidget.activeServerChanged.connect(
-            self.routingController.refresh
+            AppRoutingController().refresh
         )
 
         self.refreshSubscriptionFilter()
@@ -614,7 +612,8 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             return False
 
         self.userServersQTableWidget.activateSelectedServer()
-        self.routingController.refresh()
+
+        AppRoutingController().refresh()
 
         return Storage.UserActivatedItemIndex() == indexes[0]
 

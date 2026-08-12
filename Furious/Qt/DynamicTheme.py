@@ -64,7 +64,7 @@ class AppHue:
     @staticmethod
     def currentColor() -> str:
         """Return the current color value."""
-        if APP().connectionController.isConnected():
+        if AppConnectionController().isConnected():
             return AppHue.connectedColor()
         else:
             return AppHue.disconnectedColor()
@@ -72,7 +72,7 @@ class AppHue:
     @staticmethod
     def currentWindowIcon() -> AppQIcon:
         """Return the current window icon value."""
-        if APP().connectionController.isConnected():
+        if AppConnectionController().isConnected():
             return AppHue.connectedWindowIcon()
         else:
             return AppHue.disconnectedWindowIcon()

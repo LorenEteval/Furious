@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import (
     APP,
+    AppConnectionController,
     AppBinarySettings,
     AppSettings,
     Mixins,
@@ -239,7 +240,7 @@ class TrafficStatsManager(
     def _activeProcesses():
         """Return the processes owned by the active connection controller."""
         try:
-            return APP().connectionController.processes
+            return AppConnectionController().processes
         except (AttributeError, RuntimeError):
             return tuple()
 
