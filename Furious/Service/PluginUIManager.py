@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import APP
+from Furious.Frozenlib import AppConnectionController
 from Furious.Plugins import (
     CapabilityKind,
     NavigationPageDescriptor,
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 def isCoreActive(coreType) -> bool:
     """Return whether the active connection owns a core of ``coreType``."""
     try:
-        controller = APP().connectionController
+        controller = AppConnectionController()
 
         return controller.isConnected() and any(
             isinstance(process, coreType) for process in controller.processes

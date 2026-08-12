@@ -112,7 +112,7 @@ class SettingsController:
         try:
             if enabled:
                 APP().systemTray.setMonochromeIcon()
-            elif APP().connectionController.isConnected():
+            elif AppConnectionController().isConnected():
                 APP().systemTray.setConnectedIcon()
             else:
                 APP().systemTray.setDisconnectedIcon()

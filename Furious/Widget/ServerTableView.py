@@ -1043,7 +1043,7 @@ class DeleteServersProgressDialog(AppQDialog):
 
             self.table.activeServerChanged.emit()
 
-            controller = APP().connectionController
+            controller = AppConnectionController()
 
             if controller.isConnected():
                 controller.startDisconnection(
@@ -1817,7 +1817,7 @@ class ServerTableView(
             # Same item activated. Do nothing
             return
 
-        if APP().connectionController.isConnecting():
+        if AppConnectionController().isConnecting():
             mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
             mbox.setWindowTitle(_('Connecting'))
             mbox.setText(_('Connecting. Please wait...'))
@@ -1837,8 +1837,8 @@ class ServerTableView(
 
         self.activateItemByIndex(newIndex, True)
 
-        if APP().connectionController.isConnected():
-            APP().connectionController.startReconnection()
+        if AppConnectionController().isConnected():
+            AppConnectionController().startReconnection()
 
     @functools.lru_cache(None)
     def getGuiEditorByProtocol(self, protocol, **kwargs):
@@ -2263,7 +2263,7 @@ class ServerTableView(
 
             self.activeServerChanged.emit()
 
-            controller = APP().connectionController
+            controller = AppConnectionController()
 
             if controller.isConnected():
                 controller.startDisconnection(
@@ -2565,7 +2565,7 @@ class ServerTableView(
                 active.itemSubscription == unique and active.itemSubscriptionManaged
             )
 
-        wasConnected = APP().connectionController.isConnected()
+        wasConnected = AppConnectionController().isConnected()
 
         self.sourceModel.beginResetModel()
 
@@ -2592,9 +2592,9 @@ class ServerTableView(
 
         if wasConnected and activeProfileId:
             if newActivatedIndex < 0 and activeWasManagedByGroup:
-                APP().connectionController.startDisconnection()
+                AppConnectionController().startDisconnection()
             elif activeProfileId in result.changedProfileIds:
-                APP().connectionController.startReconnection()
+                AppConnectionController().startReconnection()
 
         return result
 
@@ -2620,7 +2620,7 @@ class ServerTableView(
             self.setCurrentIndex(self.proxyIndexFromSourceRow(0))
 
             # Try to be user-friendly in some extreme cases
-            if not APP().connectionController.isConnected():
+            if not AppConnectionController().isConnected():
                 # Activate automatically
                 self.activateItemByIndex(0, True)
 

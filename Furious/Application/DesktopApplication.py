@@ -23,7 +23,11 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Core import Tun2socks
 from Furious.Backends import OFFICIAL_PLUGIN_TYPES
-from Furious.Controllers import ConnectionController, RoutingController
+from Furious.Controllers import (
+    ConnectionController,
+    RoutingController,
+    SettingsController,
+)
 from Furious.Extensions import BUNDLED_EXTENSION_TYPES
 from Furious.Plugins import getPluginRegistry, initializePluginRegistry
 from Furious.Qt import AppStyleSheet
@@ -182,6 +186,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         self.systemTray = None
         self.connectionController = None
         self.routingController = None
+        self.settingsController = None
 
         # Unified logging service and presentation
         self.logManager = None
@@ -369,7 +374,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
     @QtCore.Slot()
     def cleanup():
         """Release resources owned by the application."""
-        controller = getattr(APP(), 'connectionController', None)
+        controller = AppConnectionController()
 
         if controller is not None:
             controller.shutdown()
@@ -452,13 +457,23 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
             self.addEnviron()
             self.addStorage()
-            # Controllers exist before presentation services so even early
-            # widgets and plugin UI can observe a stable disconnected state.
-            self.connectionController = ConnectionController(parent=self)
-            self.routingController = RoutingController(parent=self)
+
+            # The application owns these lifetime-scoped services; Frozenlib
+            # exposes them through App*Controller accessors.
+            (
+                self.connectionController,
+                self.routingController,
+                self.settingsController,
+            ) = (
+                ConnectionController(parent=self),
+                RoutingController(parent=self),
+                SettingsController(),
+            )
+
             self.connectionController.interactionEnabledChanged.connect(
                 self.routingController.setInteractionEnabled
             )
+
             self.addCustomFont()
             # self.configureApplicationFont()
             self.configureLogging()
@@ -566,7 +581,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                     if state == QtCore.Qt.ApplicationState.ApplicationActive:
                         if (
                             not self.mainWindow.isVisible()
-                            and not self.connectionController.isConnecting()
+                            and not AppConnectionController().isConnecting()
                         ):
                             self.mainWindow.show()
 
@@ -581,7 +596,8 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
             self.systemTray.show()
             self.systemTray.setCustomToolTip()
             self.systemTray.bootstrap()
-            self.connectionController.restoreStartupState()
+
+            AppConnectionController().restoreStartupState()
 
             return self.exec()
         except SystemTrayUnavailable:

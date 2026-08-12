@@ -19,7 +19,6 @@
 
 from __future__ import annotations
 
-from Furious.Controllers import SettingsController
 from Furious.Frozenlib import *
 from Furious.Plugins import (
     CapabilityKind,
@@ -499,7 +498,7 @@ class _LanguageSettingsCard(_SettingsCard):
         language = self.comboBox.currentData()
 
         if isinstance(language, str):
-            SettingsController.setLanguage(language)
+            AppSettingsController().setLanguage(language)
 
 
 class _SystemProxySettingsCard(_SettingsCard):
@@ -550,7 +549,7 @@ class _SystemProxySettingsCard(_SettingsCard):
         mode = self.comboBox.currentData()
 
         if isinstance(mode, str):
-            SettingsController.setSystemProxyMode(mode)
+            AppSettingsController().setSystemProxyMode(mode)
 
 
 class _SettingsSection(QWidget):
@@ -645,7 +644,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.tunModeCard = _ToggleSettingsCard(
             'shield-check.svg',
             'VPNMode',
-            SettingsController.setTUNMode,
+            AppSettingsController().setTUNMode,
             _tunModeTitle(),
             _('Route system traffic through the active proxy connection.'),
         )
@@ -661,7 +660,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             _ToggleSettingsCard(
                 'moon-stars.svg',
                 'DarkMode',
-                SettingsController.setDarkMode,
+                AppSettingsController().setDarkMode,
                 _('Dark Mode'),
                 _('Use the application dark theme instead of automatic appearance.'),
             ),
@@ -672,21 +671,21 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             _ToggleSettingsCard(
                 'circle-half.svg',
                 'UseMonochromeTrayIcon',
-                SettingsController.setMonochromeTrayIcon,
+                AppSettingsController().setMonochromeTrayIcon,
                 _('Use Monochrome Tray Icon'),
                 _('Use a theme-aware single-color system tray icon.'),
             ),
             _ToggleSettingsCard(
                 'power.svg',
                 'StartupOnBoot',
-                SettingsController.setStartupOnBoot,
+                AppSettingsController().setStartupOnBoot,
                 _('Startup On Boot'),
                 _('Start the application automatically after signing in.'),
             ),
             _ToggleSettingsCard(
                 'battery-half.svg',
                 'PowerSaveMode',
-                SettingsController.setPowerSaveMode,
+                AppSettingsController().setPowerSaveMode,
                 _('Power Save Mode'),
                 _('Reduce background activity when the application is idle.'),
             ),
@@ -701,7 +700,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             self.hideDockCard = _ToggleSettingsCard(
                 'window.svg',
                 'HideDockIcon',
-                SettingsController.setDockIconHidden,
+                AppSettingsController().setDockIconHidden,
                 _('Hide Dock Icon'),
                 _('Keep the application available from the menu bar only.'),
             )
@@ -753,28 +752,28 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             _ToggleSettingsCard(
                 'pc-display-horizontal.svg',
                 'ForceToLocalhostWhenSettingLocalProxy',
-                SettingsController.setForceLocalProxy,
+                AppSettingsController().setForceLocalProxy,
                 _('Force To 127.0.0.1 When Setting Local Proxy'),
                 _('Use the IPv4 loopback address when configuring the system proxy.'),
             ),
             _ToggleSettingsCard(
                 'hourglass-split.svg',
                 'ShowProgressBarWhenConnecting',
-                SettingsController.setConnectionProgressVisible,
+                AppSettingsController().setConnectionProgressVisible,
                 _('Show Progress Bar When Connecting'),
                 _('Show connection progress while proxy services are starting.'),
             ),
             _ToggleSettingsCard(
                 'speedometer2.svg',
                 METRICS_COLLECTION_SETTING,
-                SettingsController.setMetricsCollectionEnabled,
+                AppSettingsController().setMetricsCollectionEnabled,
                 _('Enable Metrics Collection'),
                 _('Collect network speed and traffic history while connected.'),
             ),
             _ToggleSettingsCard(
                 'arrow-repeat.svg',
                 CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
-                SettingsController.setClearTrafficUsageOnReconnect,
+                AppSettingsController().setClearTrafficUsageOnReconnect,
                 _('Clear Traffic Usage Statistics On Reconnect'),
                 _(
                     'Start accumulated upload and download usage from zero after reconnecting.'
@@ -783,7 +782,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             _ToggleSettingsCard(
                 'text-paragraph.svg',
                 'ShowTabAndSpacesInEditor',
-                SettingsController.setEditorWhitespaceVisible,
+                AppSettingsController().setEditorWhitespaceVisible,
                 _('Show Tab And Spaces In Editor'),
                 _('Display whitespace markers in configuration editors.'),
             ),
@@ -805,7 +804,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             self.autoAssetsCard = _ToggleSettingsCard(
                 'cloud-arrow-down.svg',
                 'AutoUpdateAssetFiles',
-                SettingsController.setAutoUpdateAssets,
+                AppSettingsController().setAutoUpdateAssets,
                 _('Automatically Update Asset Files'),
                 _('Keep supported proxy-core data files up to date.'),
             )

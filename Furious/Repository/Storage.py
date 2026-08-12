@@ -127,7 +127,8 @@ class Storage:
         def UserHttpProxy() -> Union[str, None]:
             """Return the user HTTP proxy value."""
             try:
-                controller = APP().connectionController
+                controller = AppConnectionController()
+
                 configuration = controller.activeConfiguration
 
                 if controller.isConnected() and isinstance(
@@ -145,7 +146,8 @@ class Storage:
         def UserServerRemark() -> Union[str, None]:
             """Return the user server remark value."""
             try:
-                controller = APP().connectionController
+                controller = AppConnectionController()
+
                 configuration = controller.activeConfiguration
 
                 if not controller.isConnected() or not isinstance(

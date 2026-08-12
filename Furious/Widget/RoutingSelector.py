@@ -19,8 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Controllers import RoutingController
-from Furious.Frozenlib import Mixins
+from Furious.Frozenlib import AppRoutingController, Mixins
 from Furious.Qt import AppQComboBox
 from Furious.Qt import gettext as _
 
@@ -33,9 +32,9 @@ __all__ = ['RoutingSelector']
 class RoutingSelector(AppQComboBox):
     """Select routes through the application-wide routing controller."""
 
-    def __init__(self, controller: RoutingController, parent=None):
+    def __init__(self, parent=None):
         """Bind the selector to one shared routing controller."""
-        self.controller = controller
+        self.controller = AppRoutingController()
 
         # This widget restores its enabled state from the shared controller in
         # retranslate(), so the generic translation disable/enable wrapper is

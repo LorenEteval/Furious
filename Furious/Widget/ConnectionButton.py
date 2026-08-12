@@ -19,8 +19,8 @@
 
 from __future__ import annotations
 
-from Furious.Controllers import ConnectionController, ConnectionState
-from Furious.Frozenlib import Mixins
+from Furious.Controllers import ConnectionState
+from Furious.Frozenlib import AppConnectionController, Mixins
 from Furious.Qt import bootstrapIcon, AppQPushButton
 from Furious.Qt import gettext as _
 
@@ -37,12 +37,11 @@ class ConnectionButton(AppQPushButton):
 
     def __init__(
         self,
-        controller: ConnectionController,
         activateSelected: Callable[[], bool],
         parent=None,
     ):
         """Bind Home presentation and selection policy to the controller."""
-        self.controller = controller
+        self.controller = AppConnectionController()
         self.activateSelected = activateSelected
         self._selectionCount = 0
 

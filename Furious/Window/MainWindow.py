@@ -101,12 +101,12 @@ class MainWindow(AppQMainWindow):
             parent=self.navigationView,
         )
 
-        APP().connectionController.interactionEnabledChanged.connect(
+        AppConnectionController().interactionEnabledChanged.connect(
             self.settingsPage.setConnectionControlsEnabled
         )
 
         self.settingsPage.setConnectionControlsEnabled(
-            APP().connectionController.interactionEnabled
+            AppConnectionController().interactionEnabled
         )
 
         if not isinstance(self.logPage, LogPage):
