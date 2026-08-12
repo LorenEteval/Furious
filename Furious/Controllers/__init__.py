@@ -17,7 +17,18 @@
 
 """Expose presentation-independent application controllers."""
 
+from .ConnectionController import (
+    ConnectionController,
+    ConnectionError,
+    ConnectionState,
+)
 from .RoutingController import RoutingController
 from .SettingsController import SettingsController
 
-__all__ = ['RoutingController', 'SettingsController']
+__all__ = [
+    'ConnectionController',
+    'ConnectionError',
+    'ConnectionState',
+    'RoutingController',
+    'SettingsController',
+]

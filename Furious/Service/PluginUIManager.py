@@ -38,11 +38,10 @@ logger = logging.getLogger(__name__)
 def isCoreActive(coreType) -> bool:
     """Return whether the active connection owns a core of ``coreType``."""
     try:
-        connectAction = APP().systemTray.ConnectAction
+        controller = APP().connectionController
 
-        return connectAction.isConnected() and any(
-            isinstance(process, coreType)
-            for process in connectAction.coreManager.processesPool
+        return controller.isConnected() and any(
+            isinstance(process, coreType) for process in controller.processes
         )
     except (AttributeError, RuntimeError):
         return False

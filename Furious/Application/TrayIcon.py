@@ -54,7 +54,7 @@ class TrayIcon(
         super().__init__(*args, **kwargs)
 
         actions = [
-            APP().connectionAction,
+            ConnectAction(APP().connectionController, isTrayAction=True),
             RoutingAction(APP().routingController, isTrayAction=True),
             ImportAction(isTrayAction=True),
             AppQSeperator(),
@@ -135,9 +135,6 @@ class TrayIcon(
             # Rrefresh startup application location
             StartupOnBoot.on_()
 
-        if AppSettings.isStateON_('Connect'):
-            self.ConnectAction.trigger()
-
     def showMessage(self, message: str, *args, **kwargs):
         """Show message."""
         if message:
@@ -176,7 +173,7 @@ class TrayIcon(
 
     def setMonochromeIcon(self):
         """Set monochrome icon."""
-        if APP().isSystemTrayConnected():
+        if APP().connectionController.isConnected():
             self.setConnectedMonochromeIcon()
         else:
             self.setDisconnectedMonochromeIcon()
@@ -268,7 +265,7 @@ class TrayIcon(
 
             return
 
-        if APP().isSystemTrayConnected():
+        if APP().connectionController.isConnected():
             self.setConnectedIcon()
         else:
             self.setDisconnectedIcon()

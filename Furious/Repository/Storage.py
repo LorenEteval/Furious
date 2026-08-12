@@ -127,19 +127,15 @@ class Storage:
         def UserHttpProxy() -> Union[str, None]:
             """Return the user HTTP proxy value."""
             try:
-                if APP().isSystemTrayConnected():
-                    index, servers = (
-                        Storage.UserActivatedItemIndex(),
-                        Storage.UserServers(),
-                    )
+                controller = APP().connectionController
+                configuration = controller.activeConfiguration
 
-                    if index >= 0:
-                        return servers[index].httpProxy()
-                    else:
-                        # Should not reach here
-                        return None
-                else:
-                    return None
+                if controller.isConnected() and isinstance(
+                    configuration, ServerProfile
+                ):
+                    return configuration.httpProxy()
+
+                return None
             except Exception:
                 # Any non-exit exceptions
 
@@ -149,19 +145,25 @@ class Storage:
         def UserServerRemark() -> Union[str, None]:
             """Return the user server remark value."""
             try:
-                if APP().isSystemTrayConnected():
-                    index, servers = (
-                        Storage.UserActivatedItemIndex(),
-                        Storage.UserServers(),
-                    )
+                controller = APP().connectionController
+                configuration = controller.activeConfiguration
 
-                    if index >= 0:
-                        return f'{index + 1} - ' + servers[index].itemRemark
-                    else:
-                        # Should not reach here
-                        return ''
-                else:
+                if not controller.isConnected() or not isinstance(
+                    configuration, ServerProfile
+                ):
                     return ''
+
+                index = next(
+                    (
+                        index
+                        for index, server in enumerate(Storage.UserServers())
+                        if server is configuration
+                    ),
+                    -1,
+                )
+                prefix = f'{index + 1} - ' if index >= 0 else ''
+
+                return prefix + configuration.itemRemark
             except Exception:
                 # Any non-exit exceptions
 
