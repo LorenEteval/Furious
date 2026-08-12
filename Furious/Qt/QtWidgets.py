@@ -534,6 +534,8 @@ class AppQMenu(Mixins.QTranslatable, QMenu):
 
     def __init__(self, *actions, **kwargs):
         """Initialize the AppQMenu."""
+        menuRole = kwargs.pop('menuRole', '')
+
         super().__init__(**kwargs)
 
         # In some old version PySide6, the self.actions() method
@@ -551,6 +553,28 @@ class AppQMenu(Mixins.QTranslatable, QMenu):
             else:
                 # Do nothing
                 pass
+
+        if menuRole:
+            self.setMenuRole(menuRole)
+
+    def setMenuRole(self, role: str, recursive=False):
+        """Apply a reusable visual role to this menu and its submenus."""
+        self.setProperty('menuRole', str(role))
+
+        if recursive:
+            for action in self.actions():
+                submenu = action.menu() if hasattr(action, 'menu') else None
+
+                if isinstance(submenu, AppQMenu):
+                    submenu.setMenuRole(role, recursive=True)
+
+        # Dynamic properties participate in QSS selector matching only after
+        # the widget is repolished when an application stylesheet is active.
+        style = self.style()
+        style.unpolish(self)
+        style.polish(self)
+
+        self.update()
 
     def retranslate(self):
         """Refresh translated text for the app q menu."""
