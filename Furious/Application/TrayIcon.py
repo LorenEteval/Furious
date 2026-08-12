@@ -238,7 +238,7 @@ class TrayIcon(
     def handleActivated(self, reason):
         """Handle activated."""
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            APP().mainWindow.show()
+            AppMainWindow().show()
 
     def setCustomToolTip(self):
         """Set custom tool tip."""

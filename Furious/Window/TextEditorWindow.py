@@ -304,7 +304,7 @@ class TextEditorWindow(AppQMainWindow):
             Storage.UserServers()[index] = new
 
             try:
-                APP().mainWindow.flushRow(index, new)
+                AppMainWindow().flushRow(index, new)
             except Exception:
                 # Any non-exit exceptions
 

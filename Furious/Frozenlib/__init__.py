@@ -73,8 +73,10 @@ from .Globals import (
     AppFontName,
     AppLogManager,
     AppLogPage,
+    AppMainWindow,
     AppRoutingController,
     AppSettingsController,
+    AppSystemTray,
     AppThreadPool,
 )
 from .Mixins import Mixins
@@ -123,10 +125,12 @@ __all__ = [
     'AppFontName',
     'AppLogManager',
     'AppLogPage',
+    'AppMainWindow',
     'AppResources',
     'AppSettings',
     'AppRoutingController',
     'AppSettingsController',
+    'AppSystemTray',
     'AppThreadPool',
     'CORE_CHECK_ALIVE_INTERVAL',
     'CRASH_LOG_DIR',

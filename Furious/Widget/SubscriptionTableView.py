@@ -913,7 +913,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         else:
             realHttpProxy = httpProxy
 
-        APP().mainWindow.updateSubsByUnique(
+        AppMainWindow().updateSubsByUnique(
             unique, realHttpProxy, showMessageBox=showMessageBox, **kwargs
         )
 
