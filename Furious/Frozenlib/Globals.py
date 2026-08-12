@@ -29,8 +29,10 @@ __all__ = [
     'AppFontName',
     'AppLogManager',
     'AppLogPage',
+    'AppMainWindow',
     'AppRoutingController',
     'AppSettingsController',
+    'AppSystemTray',
     'AppThreadPool',
 ]
 
@@ -47,15 +49,19 @@ def getAppAttributes(name: str):
     AppFontName,
     AppLogManager,
     AppLogPage,
+    AppMainWindow,
     AppRoutingController,
     AppSettingsController,
+    AppSystemTray,
     AppThreadPool,
 ) = (
     functools.partial(getAppAttributes, 'connectionController'),
     functools.partial(getAppAttributes, 'customFontName'),
     functools.partial(getAppAttributes, 'logManager'),
     functools.partial(getAppAttributes, 'logPage'),
+    functools.partial(getAppAttributes, 'mainWindow'),
     functools.partial(getAppAttributes, 'routingController'),
     functools.partial(getAppAttributes, 'settingsController'),
+    functools.partial(getAppAttributes, 'systemTray'),
     functools.partial(getAppAttributes, 'threadPool'),
 )

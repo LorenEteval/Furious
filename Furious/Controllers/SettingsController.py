@@ -111,11 +111,11 @@ class SettingsController:
 
         try:
             if enabled:
-                APP().systemTray.setMonochromeIcon()
+                AppSystemTray().setMonochromeIcon()
             elif AppConnectionController().isConnected():
-                APP().systemTray.setConnectedIcon()
+                AppSystemTray().setConnectedIcon()
             else:
-                APP().systemTray.setDisconnectedIcon()
+                AppSystemTray().setDisconnectedIcon()
         except (AttributeError, RuntimeError):
             pass
 
@@ -182,7 +182,7 @@ class SettingsController:
         cls._setBinary(METRICS_COLLECTION_SETTING, enabled)
 
         try:
-            APP().mainWindow.trafficStatsManager.setCollectionEnabled(enabled)
+            AppMainWindow().trafficStatsManager.setCollectionEnabled(enabled)
         except (AttributeError, RuntimeError):
             pass
 
@@ -193,8 +193,8 @@ class SettingsController:
 
         try:
             if enabled:
-                APP().mainWindow.showTabAndSpaces()
+                AppMainWindow().showTabAndSpaces()
             else:
-                APP().mainWindow.hideTabAndSpaces()
+                AppMainWindow().hideTabAndSpaces()
         except (AttributeError, RuntimeError):
             pass

@@ -75,7 +75,7 @@ def importURIFromClipboard(clipboard: str):
     if not factory.isValid():
         showMBoxImportError(clipboard)
     else:
-        APP().mainWindow.appendNewItemByFactory(factory)
+        AppMainWindow().appendNewItemByFactory(factory)
 
         mbox = MBoxImportSuccess(icon=AppQMessageBox.Icon.Information)
         mbox.remark = factory.itemRemark
@@ -91,7 +91,7 @@ def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
         dialog = ImportURIsProgressDialog(
             uris,
             failureCallback=failureCallback,
-            parent=getattr(APP(), 'mainWindow', None),
+            parent=AppMainWindow(),
         )
         dialog.open()
 
@@ -104,7 +104,7 @@ def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
         factory = profileFromAny(uri.strip())
 
         if factory.isValid():
-            APP().mainWindow.appendNewItemByFactory(factory)
+            AppMainWindow().appendNewItemByFactory(factory)
 
             imported.append(factory.itemRemark)
 
@@ -252,7 +252,7 @@ class ImportURIsProgressDialog(AppQDialog):
 
             self.currentRemark = self.limitedRemark(remark)
 
-            APP().mainWindow.appendNewItemByFactory(factory)
+            AppMainWindow().appendNewItemByFactory(factory)
 
             self.imported.append(remark)
         else:
@@ -432,7 +432,7 @@ class ImportFromFileAction(AppQAction):
                 factory = profileFromAny(plainText, remark=os.path.basename(filename))
 
                 if factory.isValid():
-                    APP().mainWindow.appendNewItemByFactory(factory)
+                    AppMainWindow().appendNewItemByFactory(factory)
 
                     mbox = MBoxImportSuccess(icon=AppQMessageBox.Icon.Information)
                     mbox.remark = factory.itemRemark

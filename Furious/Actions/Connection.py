@@ -23,7 +23,11 @@ from Furious.Controllers.ConnectionController import (
     ConnectionError,
     ConnectionState,
 )
-from Furious.Frozenlib import APP, AppConnectionController, AppSettings
+from Furious.Frozenlib import (
+    AppConnectionController,
+    AppSettings,
+    AppSystemTray,
+)
 from Furious.Qt import AppQAction, AppQMessageBox, bootstrapIcon
 from Furious.Qt import gettext as _
 from Furious.Widget.ConnectionProgressWidget import ConnectionProgressWidget
@@ -112,7 +116,7 @@ class ConnectAction(AppQAction):
     def showNotification(message: str):
         """Present a controller notification through the system tray."""
         try:
-            APP().systemTray.showMessage(message)
+            AppSystemTray().showMessage(message)
         except (AttributeError, RuntimeError):
             pass
 

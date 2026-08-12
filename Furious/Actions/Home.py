@@ -48,7 +48,7 @@ class ShowHomePageAction(AppQAction):
 
     def triggeredCallback(self, checked):
         """Handle activation of the action."""
-        mainWindow = APP().mainWindow
+        mainWindow = AppMainWindow()
 
         if mainWindow.isMinimized():
             mainWindow.showNormal()

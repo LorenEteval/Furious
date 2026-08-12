@@ -424,7 +424,7 @@ TRANSLATION = {
     },
     "Invalid server configuration": {
         "source": [
-            "Furious.Actions.Connection",
+            "Furious.Controllers.ConnectionController",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Неверная конфигурация сервера",
@@ -867,7 +867,7 @@ TRANSLATION = {
     },
     "Unable to connect": {
         "source": [
-            "Furious.Actions.Connection",
+            "Furious.Controllers.ConnectionController",
             "Furious.Qt.QtWidgets"
         ],
         "RU": "Не удается подключиться",
@@ -876,7 +876,7 @@ TRANSLATION = {
     },
     "Server configuration empty. Please configure your server first": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Controllers.ConnectionController"
         ],
         "RU": "Конфигурация сервера пуста. Пожалуйста, сначала настройте свой сервер",
         "ZH": "服务器配置为空。请先配置服务器",
@@ -884,7 +884,7 @@ TRANSLATION = {
     },
     "Connected": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Controllers.ConnectionController"
         ],
         "RU": "Подключен",
         "ZH": "已连接",
@@ -892,7 +892,7 @@ TRANSLATION = {
     },
     "Unknown error": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Controllers.ConnectionController"
         ],
         "RU": "Неизвестная ошибка",
         "ZH": "未知错误",
@@ -900,7 +900,7 @@ TRANSLATION = {
     },
     "Failed to start core": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Controllers.ConnectionController"
         ],
         "RU": "Сбой при запуске ядра",
         "ZH": "内核启动失败",
@@ -908,7 +908,7 @@ TRANSLATION = {
     },
     "Core terminated unexpectedly": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Controllers.ConnectionController"
         ],
         "RU": "Неожиданное завершение работы ядра",
         "ZH": "内核意外终止",
@@ -916,7 +916,8 @@ TRANSLATION = {
     },
     "Disconnected": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Controllers.ConnectionController",
+            "Furious.Widget.ServerTableView"
         ],
         "RU": "Отключен",
         "ZH": "已断开",
@@ -932,7 +933,8 @@ TRANSLATION = {
     },
     "Routing": {
         "source": [
-            "Furious.Actions.Routing"
+            "Furious.Actions.Routing",
+            "Furious.Widget.RoutingSelector"
         ],
         "RU": "Маршрутизация",
         "ZH": "路由",
@@ -1117,7 +1119,7 @@ TRANSLATION = {
     },
     "Furious cannot find any valid http proxy endpoint in the configuration": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Controllers.ConnectionController"
         ],
         "RU": "Я не могу найти ни одной допустимой конечной точки http-прокси в конфигурации",
         "ZH": "Furious在配置中无法找到任何有效的http代理端点",
@@ -1125,7 +1127,7 @@ TRANSLATION = {
     },
     "Please complete your server configuration": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Controllers.ConnectionController"
         ],
         "RU": "Пожалуйста, завершите настройку вашего сервера",
         "ZH": "请完善服务器配置",
@@ -1255,7 +1257,7 @@ TRANSLATION = {
     },
     "Select and press Enter to activate configuration and connect": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Controllers.ConnectionController"
         ],
         "RU": "Выберите конфигурацию и нажмите Enter, чтобы активировать ее и подключиться",
         "ZH": "选择并按下Enter键以激活配置并连接",
@@ -1293,7 +1295,7 @@ TRANSLATION = {
     },
     "is available to download": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Controllers.ConnectionController"
         ],
         "RU": "доступен для скачивания",
         "ZH": "可供下载",
