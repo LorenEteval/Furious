@@ -30,8 +30,6 @@ from PySide6.QtWidgets import *
 
 from typing import Callable, Sequence
 
-import functools
-
 __all__ = [
     'GuiEditorItemTextInput',
     'GuiEditorItemTextSpinBox',
@@ -384,6 +382,7 @@ class GuiEditorWidgetQDialog(EditorBinding, AppQDialog):
             kwargs.pop('tabTranslatable', False),
             kwargs.pop('style', 'grid'),
         )
+        self._groupBoxes = None
 
         super().__init__(*args, **kwargs)
 
@@ -417,9 +416,15 @@ class GuiEditorWidgetQDialog(EditorBinding, AppQDialog):
 
         self.setLayout(layout)
 
-    @functools.lru_cache(None)
     def groupBoxSequence(self) -> Sequence[GuiEditorWidgetQGroupBox]:
-        """Return the configuration group boxes in display order."""
+        """Return this dialog's configuration group boxes."""
+        if self._groupBoxes is None:
+            self._groupBoxes = tuple(self.createGroupBoxSequence())
+
+        return self._groupBoxes
+
+    def createGroupBoxSequence(self) -> Sequence[GuiEditorWidgetQGroupBox]:
+        """Create the configuration group boxes in display order."""
         raise NotImplementedError
 
     def setGroupBoxStyle(self, style: str):
@@ -440,8 +445,9 @@ class GuiEditorWidgetQDialog(EditorBinding, AppQDialog):
 
     def closeEvent(self, event):
         """Handle closure of the GUI editor widget Qt dialog."""
-        self.accepted.disconnect()
-        self.rejected.disconnect()
+        # Preserve QDialog's rejection/finished lifecycle for a title-bar close.
+        # Server-editor callbacks disconnect themselves from the rejected signal.
+        super().closeEvent(event)
 
     def inputToFactory(self, config: dict) -> bool:
         """Apply the current editor value to the configuration."""

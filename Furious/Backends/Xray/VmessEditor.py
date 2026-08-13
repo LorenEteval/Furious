@@ -375,9 +375,8 @@ class VmessEditor(GuiEditorWidgetQDialog):
 
         self.setTabText(Protocol.VMess.value)
 
-    @functools.lru_cache(None)
-    def groupBoxSequence(self):
-        """Return the configuration group boxes in display order."""
+    def createGroupBoxSequence(self):
+        """Create the configuration group boxes in display order."""
         return [
             GuiVMessGroupBoxBasic(),
             GuiVMessGroupBoxProxy(),

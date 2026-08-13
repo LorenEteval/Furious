@@ -1840,27 +1840,21 @@ class ServerTableView(
         if AppConnectionController().isConnected():
             AppConnectionController().startReconnection()
 
-    @functools.lru_cache(None)
-    def getGuiEditorByProtocol(self, protocol, **kwargs):
-        """Return GUI editor by protocol."""
-        protocolId = getattr(protocol, 'value', protocol)
-        logger.debug(f'getGuiEditorByProtocol called with protocol {protocolId}')
-
-        return getPluginRegistry().createEditorForProtocol(
-            protocol,
-            parent=self,
-            **kwargs,
-        )
-
     def getGuiEditorByFactory(
         self, factory, **kwargs
     ) -> Union[GuiEditorWidgetQDialog, None]:
         """Return GUI editor by factory."""
-        return getPluginRegistry().createEditorForConfig(
-            factory,
-            parent=self,
-            **kwargs,
+        editor = getPluginRegistry().createEditorForConfig(
+            factory, parent=self, **kwargs
         )
+
+        if editor is not None:
+            # These editors are created for a single add/edit operation. A Qt
+            # parent alone would keep every closed native widget tree alive for
+            # the lifetime of the server table.
+            editor.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
+
+        return editor
 
     @QtCore.Slot(QtCore.QModelIndex)
     def handleItemDoubleClicked(self, modelIndex: QtCore.QModelIndex):

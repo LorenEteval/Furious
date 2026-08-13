@@ -366,9 +366,8 @@ class VlessEditor(GuiEditorWidgetQDialog):
 
         self.setTabText(Protocol.VLESS.value)
 
-    @functools.lru_cache(None)
-    def groupBoxSequence(self):
-        """Return the configuration group boxes in display order."""
+    def createGroupBoxSequence(self):
+        """Create the configuration group boxes in display order."""
         return [
             GuiVLESSGroupBoxBasic(),
             GuiVLESSGroupBoxProxy(),

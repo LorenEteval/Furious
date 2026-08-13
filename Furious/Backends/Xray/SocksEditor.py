@@ -166,9 +166,8 @@ class SocksEditor(GuiEditorWidgetQDialog):
 
         self.setTabText(Protocol.Socks.value)
 
-    @functools.lru_cache(None)
-    def groupBoxSequence(self):
-        """Return the configuration group boxes in display order."""
+    def createGroupBoxSequence(self):
+        """Create the configuration group boxes in display order."""
         return [
             GuiSocksGroupBoxBasic(),
             GuiSocksGroupBoxProxy(),
