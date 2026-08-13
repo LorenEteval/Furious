@@ -920,29 +920,6 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setSortingEnabled(False)
         self.doubleClicked.connect(self.editSelectedRules)
-        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
-
-        self.contextPreviewAction = AppQAction(
-            _('Preview'),
-            icon=bootstrapIcon('file-earmark-text.svg'),
-            callback=lambda: self.previewSelectedItem(),
-        )
-        self.contextRenameAction = AppQAction(
-            _('Rename'),
-            callback=lambda: self.renameSelectedItem(),
-        )
-        self.contextDeleteAction = AppQAction(
-            _('Delete'),
-            callback=lambda: self.deleteSelectedItem(),
-        )
-        self.contextMenu = AppQMenu(
-            self.contextPreviewAction,
-            self.contextRenameAction,
-            AppQSeperator(),
-            self.contextDeleteAction,
-            parent=self,
-        )
 
         self.setDefaultRowHeight(self.RowHeight)
         self.configureHeader()
@@ -966,18 +943,6 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
     def routingUniqueByRow(self, row):
         """Return the routing unique by row value used by the user routing table view."""
         return self.sourceModel.routingUniqueByRow(row)
-
-    @QtCore.Slot(QtCore.QPoint)
-    def handleCustomContextMenuRequested(self, point):
-        """Handle custom context menu requested."""
-        indexes = self.selectedIndex
-
-        isUniqueFlag = len(indexes) == 1
-
-        for action in [self.contextPreviewAction, self.contextRenameAction]:
-            action.setEnabled(isUniqueFlag)
-
-        self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def flushItem(self, row: int, column: int):
         """Refresh item."""
@@ -1205,18 +1170,33 @@ class XrayRoutingWindow(AppQMainWindow):
             _('Add'),
             icon=bootstrapIcon('plus-lg.svg'),
         )
+        self.previewButton = AppQPushButton(
+            _('Preview'),
+            icon=bootstrapIcon('file-earmark-text.svg'),
+        )
+        self.renameButton = AppQPushButton(
+            _('Rename'),
+            icon=bootstrapIcon('pencil-square.svg'),
+        )
         self.deleteButton = AppQPushButton(
             _('Delete'),
             icon=bootstrapIcon('trash.svg'),
         )
 
         self.addButton.clicked.connect(self.tableView.appendNewItem)
+        self.previewButton.clicked.connect(self.tableView.previewSelectedItem)
+        self.renameButton.clicked.connect(self.tableView.renameSelectedItem)
         self.deleteButton.clicked.connect(self.tableView.deleteSelectedItem)
+        self.tableView.selectionModel().selectionChanged.connect(
+            self.updateSelectionActions
+        )
 
         actionLayout = QHBoxLayout()
         actionLayout.setContentsMargins(0, 0, 0, 0)
         actionLayout.setSpacing(8)
         actionLayout.addWidget(self.addButton)
+        actionLayout.addWidget(self.previewButton)
+        actionLayout.addWidget(self.renameButton)
         actionLayout.addWidget(self.deleteButton)
         actionLayout.addStretch(1)
 
@@ -1230,6 +1210,16 @@ class XrayRoutingWindow(AppQMainWindow):
         layout.addWidget(self.tableView)
 
         self.setCentralWidget(centralWidget)
+        self.updateSelectionActions()
+
+    def updateSelectionActions(self, *_args):
+        """Enable routing actions according to the current row selection."""
+        selectedCount = len(self.tableView.selectedIndex)
+        hasSingleSelection = selectedCount == 1
+
+        self.previewButton.setEnabled(hasSingleSelection)
+        self.renameButton.setEnabled(hasSingleSelection)
+        self.deleteButton.setEnabled(selectedCount > 0)
 
     def setWidthAndHeight(self):
         """Apply the default size for the user routing window."""
