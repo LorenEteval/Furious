@@ -26,6 +26,7 @@ from PySide6 import QtCore
 from collections import deque
 from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 
 import math
 import time
@@ -60,10 +61,18 @@ class MetricSample:
 
 @dataclass(frozen=True)
 class MetricPoint:
-    """Represent one graph-ready aggregated metric value."""
+    """Represent one graph-ready raw or aggregated metric value."""
 
     sampledAt: float
     value: float
+    firstSampledAt: float | None = None
+    lastSampledAt: float | None = None
+    sampleCount: int = 1
+
+    @property
+    def isAggregated(self) -> bool:
+        """Return whether this point summarizes multiple raw samples."""
+        return self.sampleCount > 1
 
 
 class MetricsDataManager(QtCore.QObject):
@@ -73,6 +82,21 @@ class MetricsDataManager(QtCore.QObject):
 
     MaximumHistorySeconds = 24 * 60 * 60
     AutoBucketTarget = 120
+    AutoGranularities = (
+        1,
+        2,
+        5,
+        10,
+        15,
+        30,
+        60,
+        2 * 60,
+        5 * 60,
+        10 * 60,
+        15 * 60,
+        30 * 60,
+        60 * 60,
+    )
 
     def __init__(self, parent=None, *, maximumHistorySeconds=None):
         """Initialize generic metric definitions and bounded sample storage."""
@@ -108,6 +132,10 @@ class MetricsDataManager(QtCore.QObject):
         """Return the number of raw samples retained in memory."""
         return len(self._samples)
 
+    def rawSamples(self) -> tuple[MetricSample, ...]:
+        """Return an immutable snapshot of the original recorded samples."""
+        return tuple(self._samples)
+
     def clearHistory(self):
         """Discard all retained metrics and notify interested consumers."""
         if not self._samples:
@@ -135,7 +163,12 @@ class MetricsDataManager(QtCore.QObject):
                 changed = True
 
             if retainedValues:
-                retainedSamples.append(MetricSample(sample.sampledAt, retainedValues))
+                retainedSamples.append(
+                    MetricSample(
+                        sample.sampledAt,
+                        MappingProxyType(retainedValues),
+                    )
+                )
 
         if changed:
             self._samples = retainedSamples
@@ -196,7 +229,12 @@ class MetricsDataManager(QtCore.QObject):
         if self._samples and timestamp < self._samples[-1].sampledAt:
             timestamp = self._samples[-1].sampledAt
 
-        self._samples.append(MetricSample(timestamp, normalizedValues))
+        self._samples.append(
+            MetricSample(
+                timestamp,
+                MappingProxyType(normalizedValues),
+            )
+        )
         self._pruneHistory(timestamp)
         self.historyChanged.emit()
 
@@ -215,7 +253,15 @@ class MetricsDataManager(QtCore.QObject):
         if granularitySeconds > 0:
             return min(granularitySeconds, rangeSeconds)
 
-        return max(rangeSeconds / self.AutoBucketTarget, 1.0)
+        target = max(rangeSeconds / self.AutoBucketTarget, 1.0)
+
+        return min(
+            next(
+                (float(value) for value in self.AutoGranularities if value >= target),
+                rangeSeconds,
+            ),
+            rangeSeconds,
+        )
 
     def series(
         self,
@@ -236,36 +282,56 @@ class MetricsDataManager(QtCore.QObject):
 
         rangeSeconds = max(float(rangeSeconds), 1.0)
         currentTime = time.monotonic() if now is None else float(now)
-        startTime = currentTime - rangeSeconds
         granularity = self.effectiveGranularity(
             rangeSeconds,
             granularitySeconds,
         )
+        startTime = currentTime - rangeSeconds
+        firstBucketIndex = math.floor(startTime / granularity)
+        firstBucketStart = firstBucketIndex * granularity
         buckets = {}
 
         for sample in self._samples:
-            if sample.sampledAt < startTime or sample.sampledAt > currentTime:
+            if sample.sampledAt < firstBucketStart:
+                continue
+
+            if sample.sampledAt > currentTime:
                 continue
 
             if metricKey not in sample.values:
                 continue
 
-            bucketIndex = int((sample.sampledAt - startTime) / granularity)
+            # Align every bucket to the process's absolute monotonic clock.
+            # Moving ``now`` therefore changes only the visible window; it
+            # never shifts boundaries and re-groups historical samples.
+            bucketIndex = math.floor(sample.sampledAt / granularity)
             bucket = buckets.setdefault(bucketIndex, [])
-            bucket.append(float(sample.values[metricKey]))
+            bucket.append((sample.sampledAt, float(sample.values[metricKey])))
 
         points = []
 
-        for bucketIndex, values in sorted(buckets.items()):
+        for _bucketIndex, samples in sorted(buckets.items()):
+            sampleTimes = tuple(sample[0] for sample in samples)
+            values = tuple(sample[1] for sample in samples)
+
             if aggregation == LAST_AGGREGATION:
                 value = values[-1]
             else:
                 value = sum(values) / len(values)
 
-            bucketEnd = min(
-                startTime + ((bucketIndex + 1) * granularity),
-                currentTime,
+            sampledAt = sampleTimes[-1]
+
+            if sampledAt < startTime:
+                continue
+
+            points.append(
+                MetricPoint(
+                    sampledAt,
+                    value,
+                    sampleTimes[0],
+                    sampleTimes[-1],
+                    len(samples),
+                )
             )
-            points.append(MetricPoint(bucketEnd, value))
 
         return tuple(points)

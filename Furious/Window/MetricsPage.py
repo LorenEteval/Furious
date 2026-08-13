@@ -102,6 +102,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
     """Coordinate time controls and visible-only graph rendering."""
 
     RenderDelay = 100
+    TimelineRefreshInterval = 1000
     DefaultTimeRange = 15 * 60
     DefaultGranularity = 0
 
@@ -184,6 +185,12 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self._renderTimer.setInterval(self.RenderDelay)
         self._renderTimer.timeout.connect(self._renderLatest)
 
+        # This timer advances only the visible rolling window. Statistics
+        # collection remains independent, and hidden pages do no graph work.
+        self._timelineTimer = QtCore.QTimer(self)
+        self._timelineTimer.setInterval(self.TimelineRefreshInterval)
+        self._timelineTimer.timeout.connect(self._timelineAdvanced)
+
         self.manager.historyChanged.connect(self._historyChanged)
         self.timeRangeComboBox.currentIndexChanged.connect(self._selectionChanged)
         self.granularityComboBox.currentIndexChanged.connect(self._selectionChanged)
@@ -254,6 +261,15 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self._scheduleRender()
 
     @QtCore.Slot()
+    def _timelineAdvanced(self):
+        """Move the visible time window without altering stored samples."""
+        if not self._pageCanRender():
+            return
+
+        self._dirty = True
+        self._scheduleRender()
+
+    @QtCore.Slot()
     def _renderLatest(self):
         """Prepare and submit graph series only while the page is visible."""
         if not self._dirty or not self._pageCanRender():
@@ -295,11 +311,13 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         super().showEvent(event)
 
         self._dirty = True
+        self._timelineTimer.start()
         self._scheduleRender()
 
     def hideEvent(self, event):
         """Stop pending rendering while leaving data collection untouched."""
         self._renderTimer.stop()
+        self._timelineTimer.stop()
         self._dirty = True
 
         super().hideEvent(event)

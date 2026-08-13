@@ -237,16 +237,27 @@ class MetricsGraphWidget(QWidget):
 
     def _pointPosition(self, point, chartRect, maximumValue):
         """Map one metric point into plot coordinates."""
-        startTime = self._currentTime - self._rangeSeconds
-        xRatio = min(
-            max((point.sampledAt - startTime) / self._rangeSeconds, 0.0),
-            1.0,
+        xRatio = self._normalizedTimePosition(
+            point.sampledAt,
+            self._rangeSeconds,
+            self._currentTime,
         )
         yRatio = min(max(point.value / maximumValue, 0.0), 1.0)
 
         return QtCore.QPointF(
             chartRect.left() + (xRatio * chartRect.width()),
             chartRect.bottom() - (yRatio * chartRect.height()),
+        )
+
+    @staticmethod
+    def _normalizedTimePosition(sampledAt, rangeSeconds, currentTime) -> float:
+        """Map an absolute timestamp into a rolling window's normalized x-axis."""
+        rangeSeconds = max(float(rangeSeconds), 1.0)
+        startTime = float(currentTime) - rangeSeconds
+
+        return min(
+            max((float(sampledAt) - startTime) / rangeSeconds, 0.0),
+            1.0,
         )
 
     def _graphPath(self, chartRect, maximumValue):
@@ -317,10 +328,30 @@ class MetricsGraphWidget(QWidget):
 
     def _tooltipText(self, point) -> str:
         """Return timestamp and formatted metric details for one point."""
-        recordedAt = self._currentWallTime - (self._currentTime - point.sampledAt)
-        timestamp = QtCore.QDateTime.fromMSecsSinceEpoch(
-            int(recordedAt * 1000)
-        ).toString('yyyy-MM-dd HH:mm:ss')
+
+        def timestampFor(monotonicTime):
+            """Translate one sample's monotonic time to local wall time."""
+            recordedAt = self._currentWallTime - (self._currentTime - monotonicTime)
+
+            return QtCore.QDateTime.fromMSecsSinceEpoch(
+                int(recordedAt * 1000)
+            ).toString('yyyy-MM-dd HH:mm:ss')
+
+        timestamp = timestampFor(point.sampledAt)
+
+        if point.isAggregated:
+            firstSampledAt = (
+                point.sampledAt
+                if point.firstSampledAt is None
+                else point.firstSampledAt
+            )
+            lastSampledAt = (
+                point.sampledAt if point.lastSampledAt is None else point.lastSampledAt
+            )
+            timestamp = (
+                f'{timestampFor(firstSampledAt)} – {timestampFor(lastSampledAt)}'
+            )
+
         value = self._valueFormatter(point.value)
 
         if self._metricLabel:
