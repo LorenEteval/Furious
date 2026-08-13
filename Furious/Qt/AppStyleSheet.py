@@ -321,6 +321,100 @@ class AppStyleSheet:
                 background-color: {palette['panel_alt']};
             }}
 
+            QFrame#AppMessageBoxMask {{
+                border: none;
+                background-color: rgba(0, 0, 0, 84);
+            }}
+
+            QDialog#AppMessageBox {{
+                border: none;
+                background-color: transparent;
+            }}
+
+            QFrame#AppMessageBoxSurface {{
+                border: 1px solid {palette['border_strong']};
+                border-radius: 10px;
+                background-color: {palette['panel']};
+            }}
+
+            QFrame#AppMessageBoxContent,
+            QWidget#AppMessageBoxTextWidget,
+            QScrollArea#AppMessageBoxTextViewport,
+            QScrollArea#AppMessageBoxTextViewport > QWidget > QWidget,
+            QLabel#AppMessageBoxIcon {{
+                border: none;
+                background-color: transparent;
+            }}
+
+            QLabel#AppMessageBoxTitle {{
+                padding: 0;
+                border: none;
+                background-color: transparent;
+                color: {palette['text_strong']};
+            }}
+
+            QLabel#AppMessageBoxBody {{
+                padding: 0;
+                border: none;
+                background-color: transparent;
+                color: {palette['muted']};
+            }}
+
+            QFrame#AppMessageBoxButtonBar {{
+                border-top: 1px solid {palette['border']};
+                border-left: none;
+                border-right: none;
+                border-bottom-left-radius: 10px;
+                border-bottom-right-radius: 10px;
+                background-color: {palette['panel_alt']};
+            }}
+
+            QFrame#AppMessageBoxButtonBar QPushButton {{
+                padding: 5px 14px;
+                border: 1px solid {palette['border']};
+                border-radius: 6px;
+                background-color: {palette['input']};
+                color: {palette['text']};
+            }}
+
+            QFrame#AppMessageBoxButtonBar QPushButton:hover {{
+                border-color: {palette['border_strong']};
+                background-color: {palette['hover']};
+            }}
+
+            QFrame#AppMessageBoxButtonBar QPushButton:pressed {{
+                background-color: {palette['pressed']};
+            }}
+
+            QFrame#AppMessageBoxButtonBar QPushButton[messageBoxRole="primary"] {{
+                border-color: {palette['accent']};
+                background-color: {palette['accent']};
+                color: {palette['accent_text']};
+                font-weight: 600;
+            }}
+
+            QFrame#AppMessageBoxButtonBar QPushButton[messageBoxRole="primary"]:hover {{
+                border-color: {palette['accent_hover']};
+                background-color: {palette['accent_hover']};
+            }}
+
+            QFrame#AppMessageBoxButtonBar QPushButton[messageBoxRole="primary"]:pressed {{
+                border-color: {palette['accent_pressed']};
+                background-color: {palette['accent_pressed']};
+            }}
+
+            QFrame#AppMessageBoxButtonBar QPushButton[messageBoxRole="destructive"] {{
+                border-color: {palette['danger']};
+                background-color: {palette['danger_soft']};
+                color: {palette['danger']};
+            }}
+
+            QFrame#AppMessageBoxButtonBar QPushButton:disabled {{
+                border-color: {palette['border']};
+                background-color: {palette['raised']};
+                color: {palette['disabled']};
+            }}
+
             QStackedWidget#ApplicationPageStack {{
                 border: none;
                 background-color: {palette['window']};
