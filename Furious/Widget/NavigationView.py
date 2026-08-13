@@ -162,11 +162,20 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.pageStack = QStackedWidget(parent=self)
         self.pageStack.setObjectName('ApplicationPageStack')
 
+        # Keep the layout's navigation reservation at the compact rail width.
+        # The real panel is a sibling overlay, mirroring Fluent NavigationView:
+        # expanding it changes only the panel geometry, never the page geometry.
+        self.navigationRail = QFrame(parent=self)
+        self.navigationRail.setObjectName('NavigationRailPlaceholder')
+        self.navigationRail.setFixedWidth(self.CollapsedWidth)
+
         self._layout = QHBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(0)
-        self._layout.addWidget(self.navigationPanel)
+        self._layout.addWidget(self.navigationRail)
         self._layout.addWidget(self.pageStack, 1)
+
+        self.navigationPanel.raise_()
 
         self._widthAnimation = QtCore.QPropertyAnimation(
             self,
@@ -324,9 +333,16 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         return self._navigationWidth
 
     def _setNavigationWidth(self, width: int):
-        """Apply an animated width to the navigation panel."""
+        """Apply an animated overlay width without resizing the page stack."""
         self._navigationWidth = int(width)
-        self.navigationPanel.setFixedWidth(self._navigationWidth)
+
+        self.navigationPanel.setGeometry(
+            0,
+            0,
+            self._navigationWidth,
+            self.height(),
+        )
+        self.navigationPanel.raise_()
 
     navigationWidth = QtCore.Property(
         int,
@@ -344,6 +360,12 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         """Finish label compaction after a collapse animation."""
         if not self._expanded:
             self._setPageButtonsExpanded(False)
+
+    def resizeEvent(self, event):
+        """Keep the navigation overlay as tall as the page container."""
+        super().resizeEvent(event)
+
+        self._setNavigationWidth(self._navigationWidth)
 
     @staticmethod
     def _refreshWidgetStyle(widget: QWidget):
