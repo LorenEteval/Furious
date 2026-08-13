@@ -594,10 +594,66 @@ class AppQMenuBar(QMenuBar):
         super().__init__(*args, **kwargs)
 
 
-class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
-    """Represent app q message box."""
+class _AppMessageBoxMask(QFrame):
+    """Dim the owning window while a Fluent message box is active."""
+
+    def __init__(self, parent):
+        """Cover *parent* without participating in its layout."""
+        super().__init__(parent)
+
+        self.setObjectName('AppMessageBoxMask')
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setGeometry(parent.rect())
+
+        parent.installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        """Follow the owning window when it is resized."""
+        if watched is self.parentWidget() and event.type() == QtCore.QEvent.Type.Resize:
+            self.setGeometry(watched.rect())
+
+        return super().eventFilter(watched, event)
+
+
+class AppQMessageBox(AppQTransientDialog):
+    """Present a responsive Fluent dialog with QMessageBox-compatible APIs."""
+
+    Icon = QMessageBox.Icon
+    StandardButton = QMessageBox.StandardButton
+    StandardButtons = QMessageBox.StandardButtons
+    ButtonRole = QMessageBox.ButtonRole
+
+    buttonClicked = QtCore.Signal(QAbstractButton)
+
+    ButtonSpacing = 14
+    ButtonMinimumWidth = 104
+    ButtonMaximumWidth = 220
+    SingleActionBaseWidth = 380
+    DoubleActionBaseWidth = 460
+    MultipleActionBaseWidth = 520
+    MaximumSurfaceWidth = 720
 
     _openMessageBoxes = {}
+    _standardButtonOrder = (
+        StandardButton.Ok,
+        StandardButton.Save,
+        StandardButton.SaveAll,
+        StandardButton.Open,
+        StandardButton.Yes,
+        StandardButton.YesToAll,
+        StandardButton.No,
+        StandardButton.NoToAll,
+        StandardButton.Abort,
+        StandardButton.Retry,
+        StandardButton.Ignore,
+        StandardButton.Close,
+        StandardButton.Cancel,
+        StandardButton.Discard,
+        StandardButton.Help,
+        StandardButton.Apply,
+        StandardButton.Reset,
+        StandardButton.RestoreDefaults,
+    )
 
     @staticmethod
     def _releaseOpenMessageBox(key, *_args):
@@ -606,9 +662,39 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
 
     def __init__(self, *args, **kwargs):
         """Initialize the AppQMessageBox."""
-        super().__init__(*args, **kwargs)
+        icon, parent, title, text, buttons = (
+            kwargs.pop('icon', self.Icon.NoIcon),
+            kwargs.pop('parent', None),
+            kwargs.pop('title', ''),
+            kwargs.pop('text', ''),
+            kwargs.pop('buttons', self.StandardButton.NoButton),
+        )
+
+        if args:
+            if isinstance(args[0], self.Icon):
+                icon = args[0]
+                title = args[1] if len(args) > 1 else title
+                text = args[2] if len(args) > 2 else text
+                buttons = args[3] if len(args) > 3 else buttons
+                parent = args[4] if len(args) > 4 else parent
+            else:
+                parent = args[0]
+
+        super().__init__(parent=parent, **kwargs)
 
         self._lifetimeKey = id(self)
+        self._windowMask = None
+        self._icon = self.Icon.NoIcon
+        self._text = ''
+        self._informativeText = ''
+        self._minimumContentWidth = 0
+        self._standardButtons = self.StandardButton.NoButton
+        self._standardButtonMap = {}
+        self._buttonRoles = {}
+        self._defaultButton = None
+        self._escapeButton = None
+        self._clickedButton = None
+        self._handlingButton = False
 
         release = functools.partial(
             AppQMessageBox._releaseOpenMessageBox,
@@ -618,11 +704,703 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
         self.finished.connect(release)
         self.destroyed.connect(release)
 
-        # Message boxes in Furious are one-shot notifications or questions.
-        # Parent ownership must not retain a hidden native box after completion.
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        self.setObjectName('AppMessageBox')
+        self.setWindowFlag(QtCore.Qt.WindowType.FramelessWindowHint, True)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setModal(True)
 
-        self.setWindowIcon(AppHue.currentWindowIcon())
+        self.surface = QFrame(self)
+        self.surface.setObjectName('AppMessageBoxSurface')
+
+        self.contentFrame = QFrame(self.surface)
+        self.contentFrame.setObjectName('AppMessageBoxContent')
+
+        self.iconLabel = QLabel(self.contentFrame)
+        self.iconLabel.setObjectName('AppMessageBoxIcon')
+        self.iconLabel.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignHCenter | QtCore.Qt.AlignmentFlag.AlignTop
+        )
+
+        self.textViewport = QScrollArea(self.contentFrame)
+        self.textViewport.setObjectName('AppMessageBoxTextViewport')
+        self.textViewport.setFrameShape(QFrame.Shape.NoFrame)
+        self.textViewport.setHorizontalScrollBarPolicy(
+            QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.textViewport.setWidgetResizable(False)
+
+        self.textWidget = QWidget()
+        self.textWidget.setObjectName('AppMessageBoxTextWidget')
+
+        self.titleLabel = QLabel(self.textWidget)
+        self.titleLabel.setObjectName('AppMessageBoxTitle')
+        self.titleLabel.setWordWrap(True)
+        self.titleLabel.setTextInteractionFlags(
+            QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+
+        self.informativeLabel = QLabel(self.textWidget)
+        self.informativeLabel.setObjectName('AppMessageBoxBody')
+        self.informativeLabel.setWordWrap(True)
+        self.informativeLabel.setTextInteractionFlags(
+            QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+
+        self.textLayout = QVBoxLayout(self.textWidget)
+        self.textLayout.setContentsMargins(0, 0, 0, 0)
+        self.textLayout.setSpacing(8)
+        self.textLayout.addWidget(self.titleLabel)
+        self.textLayout.addWidget(self.informativeLabel)
+
+        self.textViewport.setWidget(self.textWidget)
+
+        self.contentLayout = QHBoxLayout(self.contentFrame)
+        self.contentLayout.setContentsMargins(28, 24, 28, 22)
+        self.contentLayout.setSpacing(18)
+        self.contentLayout.addWidget(
+            self.iconLabel,
+            0,
+            QtCore.Qt.AlignmentFlag.AlignTop,
+        )
+        self.contentLayout.addWidget(self.textViewport, 1)
+
+        self.buttonFrame = QFrame(self.surface)
+        self.buttonFrame.setObjectName('AppMessageBoxButtonBar')
+
+        self.buttonLayout = QHBoxLayout(self.buttonFrame)
+        self.buttonLayout.setContentsMargins(24, 14, 24, 14)
+        # Explicit spacers are inserted while rebuilding the row.  Unlike a
+        # style-derived layout spacing, these gaps cannot collapse when long
+        # translated button labels approach the dialog's maximum width.
+        self.buttonLayout.setSpacing(0)
+
+        self.surfaceLayout = QVBoxLayout(self.surface)
+        self.surfaceLayout.setContentsMargins(0, 0, 0, 0)
+        self.surfaceLayout.setSpacing(0)
+        self.surfaceLayout.addWidget(self.contentFrame)
+        self.surfaceLayout.addWidget(self.buttonFrame)
+
+        self.dialogLayout = QVBoxLayout(self)
+        self.dialogLayout.setContentsMargins(12, 12, 12, 12)
+        self.dialogLayout.addWidget(self.surface)
+
+        shadow = QGraphicsDropShadowEffect(self.surface)
+        shadow.setBlurRadius(28)
+        shadow.setOffset(0, 8)
+        shadow.setColor(QColor(0, 0, 0, 70))
+
+        self.surface.setGraphicsEffect(shadow)
+
+        self.setWindowTitle(title)
+        self.setText(text)
+        self.setIcon(icon)
+
+        if buttons != self.StandardButton.NoButton:
+            self.setStandardButtons(buttons)
+
+    @staticmethod
+    def _dialogStandardButton(button):
+        """Map a QMessageBox standard button to QDialogButtonBox."""
+        return getattr(QDialogButtonBox.StandardButton, button.name)
+
+    def _standardButtonText(self, standardButton):
+        """Use Qt's translated platform text for a standard button."""
+        btnBox = QDialogButtonBox(self._dialogStandardButton(standardButton))
+        result = btnBox.button(self._dialogStandardButton(standardButton)).text()
+
+        btnBox.deleteLater()
+
+        return result
+
+    def _createButton(self, text, role, standardButton=None):
+        """Create and register one semantic action button."""
+        button = QPushButton(str(text), self.buttonFrame)
+        button.setMinimumHeight(34)
+        button.setAttribute(QtCore.Qt.WidgetAttribute.WA_LayoutUsesWidgetRect)
+        button.clicked.connect(functools.partial(self._buttonWasClicked, button))
+
+        self._buttonRoles[button] = role
+
+        if standardButton is not None:
+            self._standardButtonMap[standardButton] = button
+
+        self._rebuildButtonLayout()
+
+        return button
+
+    def _rebuildButtonLayout(self):
+        """Lay out one action compactly and multiple actions evenly."""
+        while self.buttonLayout.count():
+            self.buttonLayout.takeAt(0)
+
+        buttons = self.buttons()
+
+        self.buttonLayout.addStretch(1)
+
+        if len(buttons) == 1:
+            self.buttonLayout.addWidget(buttons[0])
+        else:
+            for index, button in enumerate(buttons):
+                if index:
+                    self.buttonLayout.addSpacing(self.ButtonSpacing)
+
+                button.setSizePolicy(
+                    QSizePolicy.Policy.Fixed,
+                    QSizePolicy.Policy.Fixed,
+                )
+                self.buttonLayout.addWidget(button)
+
+        self.buttonLayout.addStretch(1)
+
+        self._refreshButtonRoles()
+
+    def _preferredButtonWidth(self, button):
+        """Return a slim button width that accommodates translated text."""
+        iconWidth = button.iconSize().width() + 8 if not button.icon().isNull() else 0
+        naturalWidth = button.fontMetrics().horizontalAdvance(button.text()) + 40
+
+        return max(
+            self.ButtonMinimumWidth,
+            min(self.ButtonMaximumWidth, naturalWidth + iconWidth),
+        )
+
+    def _preferredButtonRowWidth(self):
+        """Return the natural width required by translated action labels."""
+        buttons = self.buttons()
+
+        if not buttons:
+            return 0
+
+        return (
+            sum(self._preferredButtonWidth(button) for button in buttons)
+            + max(0, len(buttons) - 1) * self.ButtonSpacing
+        )
+
+    def _applyButtonWidths(self, surfaceWidth):
+        """Fit translated actions within the available footer width."""
+        buttons = self.buttons()
+
+        if not buttons:
+            return
+
+        margins = self.buttonLayout.contentsMargins()
+        gapsWidth = max(0, len(buttons) - 1) * self.ButtonSpacing
+        surfaceInset = self.surface.frameWidth() * 2
+        availableButtonsWidth = max(
+            len(buttons),
+            surfaceWidth - surfaceInset - margins.left() - margins.right() - gapsWidth,
+        )
+        preferredWidths = [self._preferredButtonWidth(button) for button in buttons]
+        equalWidth = max(preferredWidths)
+
+        if equalWidth * len(buttons) <= availableButtonsWidth:
+            buttonWidths = [equalWidth] * len(buttons)
+        elif sum(preferredWidths) <= availableButtonsWidth:
+            # Preserve every translated label when equal proportions would
+            # consume more width than the parent can comfortably provide.
+            buttonWidths = preferredWidths
+        else:
+            # The owner is too narrow for the natural row.  Share the available
+            # space proportionally; clipping is then limited to this genuinely
+            # constrained case rather than being caused by equal-width styling.
+            scale = availableButtonsWidth / sum(preferredWidths)
+            buttonWidths = [max(1, int(width * scale)) for width in preferredWidths]
+            buttonWidths[-1] += availableButtonsWidth - sum(buttonWidths)
+
+        for button, width in zip(buttons, buttonWidths):
+            button.setFixedWidth(width)
+
+        self.buttonLayout.invalidate()
+
+    def _refreshButtonRoles(self):
+        """Choose primary, secondary, and destructive Fluent presentations."""
+        buttons = self.buttons()
+        primaryButton = self._defaultButton
+
+        if primaryButton is None:
+            primaryButton = next(
+                (
+                    button
+                    for button in buttons
+                    if self.buttonRole(button)
+                    in (
+                        self.ButtonRole.AcceptRole,
+                        self.ButtonRole.YesRole,
+                    )
+                ),
+                buttons[0] if buttons else None,
+            )
+
+        for button in buttons:
+            role = self.buttonRole(button)
+
+            if role == self.ButtonRole.DestructiveRole:
+                visualRole = 'destructive'
+            elif button is primaryButton:
+                visualRole = 'primary'
+            else:
+                visualRole = 'secondary'
+
+            button.setProperty('messageBoxRole', visualRole)
+
+            style = button.style()
+            style.unpolish(button)
+            style.polish(button)
+
+    def _ensureButtons(self):
+        """Match QMessageBox by supplying OK when no actions were configured."""
+        if not self.buttons():
+            self.setStandardButtons(self.StandardButton.Ok)
+
+    def setText(self, text):
+        """Set the primary message text."""
+        self._text = str(text)
+        self.titleLabel.setText(self._text)
+
+        if self.isVisible():
+            self._updateDialogSize()
+
+    def text(self):
+        """Return the primary message text."""
+        return self._text
+
+    def setInformativeText(self, text):
+        """Set secondary supporting text."""
+        self._informativeText = str(text)
+        self.informativeLabel.setText(self._informativeText)
+        self.informativeLabel.setVisible(bool(self._informativeText))
+
+        if self.isVisible():
+            self._updateDialogSize()
+
+    def informativeText(self):
+        """Return secondary supporting text."""
+        return self._informativeText
+
+    def setIcon(self, icon):
+        """Set the semantic message icon."""
+        self._icon = self.Icon(icon)
+
+        standardPixmap = {
+            self.Icon.Information: QStyle.StandardPixmap.SP_MessageBoxInformation,
+            self.Icon.Warning: QStyle.StandardPixmap.SP_MessageBoxWarning,
+            self.Icon.Critical: QStyle.StandardPixmap.SP_MessageBoxCritical,
+            self.Icon.Question: QStyle.StandardPixmap.SP_MessageBoxQuestion,
+        }.get(self._icon)
+
+        if standardPixmap is None:
+            self.iconLabel.clear()
+            self.iconLabel.hide()
+        else:
+            pixmap = self.style().standardIcon(standardPixmap).pixmap(36, 36)
+
+            self.iconLabel.setPixmap(pixmap)
+            self.iconLabel.setFixedSize(40, 40)
+            self.iconLabel.show()
+
+        if self.isVisible():
+            self._updateDialogSize()
+
+    def icon(self):
+        """Return the semantic message icon."""
+        return self._icon
+
+    def setIconPixmap(self, pixmap):
+        """Set a custom message icon pixmap."""
+        self._icon = self.Icon.NoIcon
+        self.iconLabel.setPixmap(pixmap)
+        self.iconLabel.setFixedSize(pixmap.size())
+        self.iconLabel.setVisible(not pixmap.isNull())
+
+    def iconPixmap(self):
+        """Return the currently displayed icon pixmap."""
+        return self.iconLabel.pixmap()
+
+    def addButton(self, button, role=None):
+        """Add a standard button or a custom text/role button."""
+        if isinstance(button, self.StandardButton):
+            standardButton = button
+
+            existing = self._standardButtonMap.get(standardButton)
+
+            if existing is not None:
+                return existing
+
+            standardRole = {
+                self.StandardButton.Ok: self.ButtonRole.AcceptRole,
+                self.StandardButton.Save: self.ButtonRole.AcceptRole,
+                self.StandardButton.SaveAll: self.ButtonRole.AcceptRole,
+                self.StandardButton.Open: self.ButtonRole.AcceptRole,
+                self.StandardButton.Yes: self.ButtonRole.YesRole,
+                self.StandardButton.YesToAll: self.ButtonRole.YesRole,
+                self.StandardButton.No: self.ButtonRole.NoRole,
+                self.StandardButton.NoToAll: self.ButtonRole.NoRole,
+                self.StandardButton.Abort: self.ButtonRole.RejectRole,
+                self.StandardButton.Retry: self.ButtonRole.AcceptRole,
+                self.StandardButton.Ignore: self.ButtonRole.AcceptRole,
+                self.StandardButton.Close: self.ButtonRole.RejectRole,
+                self.StandardButton.Cancel: self.ButtonRole.RejectRole,
+                self.StandardButton.Discard: self.ButtonRole.DestructiveRole,
+                self.StandardButton.Help: self.ButtonRole.HelpRole,
+                self.StandardButton.Apply: self.ButtonRole.ApplyRole,
+                self.StandardButton.Reset: self.ButtonRole.ResetRole,
+                self.StandardButton.RestoreDefaults: self.ButtonRole.ResetRole,
+            }.get(standardButton, self.ButtonRole.InvalidRole)
+
+            self._standardButtons |= standardButton
+
+            return self._createButton(
+                self._standardButtonText(standardButton),
+                standardRole,
+                standardButton,
+            )
+
+        if isinstance(button, QAbstractButton):
+            customButton = button
+            customButton.setParent(self.buttonFrame)
+            customButton.setAttribute(QtCore.Qt.WidgetAttribute.WA_LayoutUsesWidgetRect)
+            customButton.clicked.connect(
+                functools.partial(self._buttonWasClicked, customButton)
+            )
+
+            self._buttonRoles[customButton] = role
+            self._rebuildButtonLayout()
+
+            return customButton
+
+        if role is None:
+            raise TypeError('a custom button requires a QMessageBox.ButtonRole')
+
+        return self._createButton(button, role)
+
+    def removeButton(self, button):
+        """Remove one custom or standard button."""
+        self._buttonRoles.pop(button, None)
+
+        for standardButton, candidate in tuple(self._standardButtonMap.items()):
+            if candidate is button:
+                self._standardButtons &= ~standardButton
+                self._standardButtonMap.pop(standardButton, None)
+
+        button.setParent(None)
+        self._rebuildButtonLayout()
+
+    def buttons(self):
+        """Return the registered action buttons in semantic order."""
+        return list(self._buttonRoles)
+
+    def button(self, standardButton):
+        """Return the button for one standard result."""
+        return self._standardButtonMap.get(standardButton)
+
+    def buttonRole(self, button):
+        """Return the semantic role registered for *button*."""
+        return self._buttonRoles.get(button, self.ButtonRole.InvalidRole)
+
+    def standardButton(self, button):
+        """Return the standard result represented by *button*."""
+        for standardButton, candidate in self._standardButtonMap.items():
+            if candidate is button:
+                return standardButton
+
+        return self.StandardButton.NoButton
+
+    def setStandardButtons(self, buttons):
+        """Replace the current standard-button set."""
+        for button in tuple(self._standardButtonMap.values()):
+            self.removeButton(button)
+            button.deleteLater()
+
+        requested = self.StandardButtons(buttons)
+
+        for standardButton in self._standardButtonOrder:
+            if requested & standardButton:
+                self.addButton(standardButton)
+
+    def standardButtons(self):
+        """Return the configured standard-button flags."""
+        return self.StandardButtons(self._standardButtons)
+
+    def setDefaultButton(self, button):
+        """Set the button activated by Return and styled as primary."""
+        if isinstance(button, self.StandardButton):
+            button = self.button(button)
+
+        self._defaultButton = button
+
+        if button is not None:
+            button.setDefault(True)
+            button.setFocus()
+
+        self._refreshButtonRoles()
+
+    def defaultButton(self):
+        """Return the configured default button."""
+        return self._defaultButton
+
+    def setEscapeButton(self, button):
+        """Set the button represented by Escape/window close."""
+        if isinstance(button, self.StandardButton):
+            button = self.button(button)
+
+        self._escapeButton = button
+
+    def escapeButton(self):
+        """Return the configured escape button."""
+        return self._escapeButton
+
+    def clickedButton(self):
+        """Return the action that most recently completed the dialog."""
+        return self._clickedButton
+
+    def _buttonWasClicked(self, button):
+        """Emit compatibility signals and finish with a QMessageBox result."""
+        if self._handlingButton:
+            return
+
+        self._handlingButton = True
+        self._clickedButton = button
+
+        try:
+            self.buttonClicked.emit(button)
+        finally:
+            self._handlingButton = False
+
+        standardButton = self.standardButton(button)
+
+        if standardButton != self.StandardButton.NoButton:
+            result = int(standardButton)
+        elif self.buttonRole(button) in (
+            self.ButtonRole.RejectRole,
+            self.ButtonRole.NoRole,
+        ):
+            result = int(QDialog.DialogCode.Rejected)
+        else:
+            result = int(QDialog.DialogCode.Accepted)
+
+        self.done(result)
+
+    def _effectiveEscapeButton(self):
+        """Resolve the action used for Escape and window close."""
+        if self._escapeButton in self.buttons():
+            return self._escapeButton
+
+        return next(
+            (
+                button
+                for button in reversed(self.buttons())
+                if self.buttonRole(button)
+                in (
+                    self.ButtonRole.RejectRole,
+                    self.ButtonRole.NoRole,
+                )
+            ),
+            None,
+        )
+
+    def reject(self):
+        """Complete through the semantic escape action when available."""
+        escapeButton = self._effectiveEscapeButton()
+
+        if escapeButton is not None:
+            self._buttonWasClicked(escapeButton)
+        else:
+            self.done(int(QDialog.DialogCode.Rejected))
+
+    def closeEvent(self, event):
+        """Avoid a nested close while a button callback is still executing."""
+        if self._handlingButton:
+            event.ignore()
+        else:
+            super().closeEvent(event)
+
+    def setContentMinimumWidth(self, width: int):
+        """Set a bounded content preference for summary-style messages."""
+        self._minimumContentWidth = max(0, int(width))
+
+        if self.isVisible():
+            self._updateDialogSize()
+
+    @staticmethod
+    def _wrappedHeight(label, width):
+        """Return QLabel's wrapped height for a fixed content width."""
+        label.setFixedWidth(width)
+
+        height = max(label.fontMetrics().height(), label.heightForWidth(width))
+
+        label.setFixedHeight(height)
+
+        return height
+
+    def _updateDialogSize(self):
+        """Fit short content compactly and bound translated/long content."""
+        # QSS frame widths and button size hints participate in the geometry
+        # calculation, so resolve them before the dialog's first native show.
+        self.ensurePolished()
+        self.surface.ensurePolished()
+        self.buttonFrame.ensurePolished()
+
+        for button in self.buttons():
+            button.ensurePolished()
+
+        owner = self.parentWidget().window() if self.parentWidget() else None
+        screen = self.screen() or QApplication.primaryScreen()
+
+        available = owner.size() if owner is not None else screen.availableSize()
+
+        buttonMargins = self.buttonLayout.contentsMargins()
+        preferredButtonsWidth = (
+            self._preferredButtonRowWidth()
+            + buttonMargins.left()
+            + buttonMargins.right()
+            + self.surface.frameWidth() * 2
+        )
+        parentWidthLimit = max(240, available.width() - 24)
+        relativeWidthLimit = max(
+            240,
+            min(
+                self.MaximumSurfaceWidth,
+                int(available.width() * 0.78),
+                parentWidthLimit,
+            ),
+        )
+        # Text wraps at the normal parent-relative limit.  Buttons cannot wrap,
+        # so a narrow owner may lend the dialog more width (up to its usable
+        # area) when translated action labels require it.
+        maximumSurfaceWidth = min(
+            self.MaximumSurfaceWidth,
+            parentWidthLimit,
+            max(relativeWidthLimit, preferredButtonsWidth),
+        )
+        buttonCount = len(self.buttons())
+
+        if buttonCount <= 1:
+            baseSurfaceWidth = self.SingleActionBaseWidth
+        elif buttonCount == 2:
+            baseSurfaceWidth = self.DoubleActionBaseWidth
+        else:
+            baseSurfaceWidth = self.MultipleActionBaseWidth
+
+        baseSurfaceWidth = min(baseSurfaceWidth, maximumSurfaceWidth)
+        hasIcon = not self.iconLabel.isHidden()
+        iconSpace = 58 if hasIcon else 0
+        horizontalChrome = 56 + iconSpace
+        maximumTextWidth = max(120, maximumSurfaceWidth - horizontalChrome)
+        comfortableTextWidth = min(260, maximumTextWidth)
+
+        textWidths = [
+            self.titleLabel.fontMetrics().horizontalAdvance(line)
+            for line in self._text.splitlines() or ['']
+        ]
+        textWidths.extend(
+            self.informativeLabel.fontMetrics().horizontalAdvance(line)
+            for line in self._informativeText.splitlines()
+        )
+
+        naturalTextWidth = max(textWidths or [240]) + 4
+        preferredTextWidth = max(
+            comfortableTextWidth,
+            self._minimumContentWidth - horizontalChrome,
+            naturalTextWidth,
+        )
+        textWidth = min(maximumTextWidth, preferredTextWidth)
+
+        titleHeight = self._wrappedHeight(self.titleLabel, textWidth)
+        bodyHeight = 0
+
+        if self._informativeText:
+            bodyHeight = self._wrappedHeight(self.informativeLabel, textWidth) + 8
+        else:
+            self.informativeLabel.setFixedHeight(0)
+
+        textHeight = titleHeight + bodyHeight
+        maximumTextHeight = max(
+            72,
+            min(
+                320,
+                int(available.height() * 0.46),
+                available.height() - 150,
+            ),
+        )
+        needsScrollBar = textHeight > maximumTextHeight
+
+        if needsScrollBar:
+            scrollBarWidth = self.style().pixelMetric(
+                QStyle.PixelMetric.PM_ScrollBarExtent,
+                None,
+                self.textViewport,
+            )
+            textWidth = max(220, textWidth - scrollBarWidth)
+            titleHeight = self._wrappedHeight(self.titleLabel, textWidth)
+            bodyHeight = 0
+
+            if self._informativeText:
+                bodyHeight = self._wrappedHeight(self.informativeLabel, textWidth) + 8
+
+            textHeight = titleHeight + bodyHeight
+        else:
+            scrollBarWidth = 0
+
+        viewportHeight = min(textHeight, maximumTextHeight)
+
+        self.textWidget.setFixedSize(textWidth, textHeight)
+        self.textViewport.setFixedSize(
+            textWidth + scrollBarWidth,
+            viewportHeight + 2,
+        )
+
+        surfaceWidth = max(
+            baseSurfaceWidth,
+            horizontalChrome + textWidth + scrollBarWidth,
+            preferredButtonsWidth,
+        )
+        surfaceWidth = min(maximumSurfaceWidth, surfaceWidth)
+        contentMargins = self.contentLayout.contentsMargins()
+        contentHeight = (
+            max(40 if hasIcon else 0, viewportHeight + 2)
+            + contentMargins.top()
+            + contentMargins.bottom()
+        )
+        buttonHeight = (
+            max(
+                (button.sizeHint().height() for button in self.buttons()),
+                default=34,
+            )
+            + buttonMargins.top()
+            + buttonMargins.bottom()
+        )
+
+        self._applyButtonWidths(surfaceWidth)
+        self.contentFrame.setFixedHeight(contentHeight)
+        self.buttonFrame.setFixedHeight(buttonHeight)
+        self.surface.setFixedSize(surfaceWidth, contentHeight + buttonHeight)
+        self.setFixedSize(self.surface.size() + QtCore.QSize(24, 24))
+
+    def _showWindowMask(self):
+        """Create one theme-aware mask over the owning window."""
+        parent = self.parentWidget()
+
+        if parent is None:
+            return
+
+        owner = parent.window()
+
+        if owner is self or not owner.isVisible():
+            return
+
+        self._removeWindowMask()
+        self._windowMask = _AppMessageBoxMask(owner)
+        self._windowMask.show()
+        self._windowMask.raise_()
+
+    def _removeWindowMask(self, *_args):
+        """Remove the transient mask without retaining its owner."""
+        mask = self._windowMask
+
+        self._windowMask = None
+
+        if mask is not None:
+            mask.deleteLater()
 
     def moveToCenter(self):
         """Move to center."""
@@ -632,14 +1410,19 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
 
     def show(self):
         """Show the app q message box."""
-        return super().show()
+        self._ensureButtons()
+        self._updateDialogSize()
+        self._showWindowMask()
+
+        QDialog.show(self)
+
+        self.moveToCenter()
 
     def exec(self):
         """Show and execute the app q message box modally."""
         self.show()
-        self.moveToCenter()
 
-        return super().exec()
+        return QDialog.exec(self)
 
     def open(self):
         """Open and retain the message box until it finishes or is destroyed."""
@@ -648,15 +1431,20 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
 
         try:
             self.show()
-            self.moveToCenter()
 
-            return super().open()
+            return QDialog.open(self)
         except Exception:
             # Any non-exit exceptions
 
             AppQMessageBox._releaseOpenMessageBox(key)
 
             raise
+
+    def done(self, result):
+        """Release the dimming mask before completing the transient dialog."""
+        self._removeWindowMask()
+
+        QDialog.done(self, result)
 
     def retranslate(self):
         """Refresh translated text for the app q message box."""

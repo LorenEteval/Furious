@@ -131,10 +131,9 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
         return text
 
     def setColumnMinWidth(self):
-        """Set column min width."""
+        """Keep long subscription summaries readable in the Fluent dialog."""
         if PLATFORM == 'Windows':
-            self.findChild(QGridLayout).setColumnMinimumWidth(
-                2,
+            self.setContentMinimumWidth(
                 max((len(row) + 10) for row in self.text().split('\n'))
                 * self.fontMetrics().averageCharWidth(),
             )
