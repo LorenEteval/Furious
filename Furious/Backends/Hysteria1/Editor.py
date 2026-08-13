@@ -30,7 +30,6 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 import logging
-import functools
 
 __all__ = ['Hysteria1Editor']
 
@@ -375,9 +374,8 @@ class Hysteria1Editor(GuiEditorWidgetQDialog):
 
         self.setTabText(Protocol.Hysteria1.value)
 
-    @functools.lru_cache(None)
-    def groupBoxSequence(self):
-        """Return the configuration group boxes in display order."""
+    def createGroupBoxSequence(self):
+        """Create the configuration group boxes in display order."""
         return [
             GuiHy1GroupBoxBasic(),
             GuiHy1GroupBoxProxy(),

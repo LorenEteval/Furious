@@ -348,9 +348,8 @@ class TunSettingsDialog(GuiEditorWidgetQDialog):
         for groupBox in self.groupBoxSequence():
             groupBox.factoryToInput(config)
 
-    @functools.lru_cache(None)
-    def groupBoxSequence(self):
-        """Return the configuration group boxes in display order."""
+    def createGroupBoxSequence(self):
+        """Create the configuration group boxes in display order."""
         return [
             GuiTUNSettingsGroupBoxBasic(),
             GuiTUNSettingsGroupBoxMemory(),

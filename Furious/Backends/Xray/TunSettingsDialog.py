@@ -32,7 +32,6 @@ from .TUN import *
 
 import copy
 import logging
-import functools
 
 __all__ = ['XrayTunSettingsDialog']
 
@@ -270,9 +269,8 @@ class XrayTunSettingsDialog(GuiEditorWidgetQDialog):
         if SystemRuntime.isTUNMode() and self._isConnectionActive():
             showMBoxNewChangesNextTime()
 
-    @functools.lru_cache(None)
-    def groupBoxSequence(self):
-        """Return Xray TUN setting groups in display order."""
+    def createGroupBoxSequence(self):
+        """Create Xray TUN setting groups in display order."""
         return [
             GuiXrayTUNSettingsGroupBoxInterface(),
             GuiXrayTUNSettingsGroupBoxNetwork(),

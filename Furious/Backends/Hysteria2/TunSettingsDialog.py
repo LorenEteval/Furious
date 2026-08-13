@@ -32,7 +32,6 @@ from .TUN import *
 
 import copy
 import logging
-import functools
 
 __all__ = ['Hysteria2TunSettingsDialog']
 
@@ -305,9 +304,8 @@ class Hysteria2TunSettingsDialog(GuiEditorWidgetQDialog):
         if SystemRuntime.isTUNMode() and self._isConnectionActive():
             showMBoxNewChangesNextTime()
 
-    @functools.lru_cache(None)
-    def groupBoxSequence(self):
-        """Return Hysteria 2 TUN setting groups in display order."""
+    def createGroupBoxSequence(self):
+        """Create Hysteria 2 TUN setting groups in display order."""
         return [
             GuiHysteria2TUNSettingsGroupBoxInterface(),
             GuiHysteria2TUNSettingsGroupBoxNetwork(),
