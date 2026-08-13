@@ -161,6 +161,24 @@ class MsgQueue(multiprocessing.queues.Queue):
         """Stop timer."""
         self.timer.stop()
 
+    def dispose(self):
+        """Release Qt and multiprocessing resources after final process use."""
+        self.stopTimer()
+
+        try:
+            self.timer.timeout.disconnect(self.processMsg)
+        except (RuntimeError, TypeError):
+            pass
+
+        self.timer.deleteLater()
+        self.callback = None
+        self.backgroundOptimizer = None
+
+        try:
+            self.close()
+        except (OSError, ValueError):
+            pass
+
     @property
     def optimizer(self):
         """Return the optimizer value."""
@@ -293,6 +311,19 @@ class CoreProcessMonitor(CoreProcess, ABC):
 
         self.process = None
 
+    def dispose(self):
+        """Release the monitor timer after this kernel leaves its owner pool."""
+        self.daemon.stop()
+
+        try:
+            self.daemon.timeout.disconnect(self.queryIsAlive)
+        except (RuntimeError, TypeError):
+            pass
+
+        self.daemon.deleteLater()
+        self.closeProcess()
+        self._exitCallback = None
+
 
 class CoreProcessWorker(CoreProcessMonitor, ABC):
     """Run and monitor a proxy core in a child process."""
@@ -324,6 +355,12 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
 
         # Reset internal process
         self.closeProcess()
+
+    def dispose(self):
+        """Release final queue, callback, process, and Qt timer ownership."""
+        self.msgQueue.dispose()
+
+        super().dispose()
 
     def start(self, **kwargs) -> bool:
         """Start the core process worker."""

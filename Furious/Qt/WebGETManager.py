@@ -28,7 +28,6 @@ from PySide6.QtNetwork import *
 from typing import Union
 
 import logging
-import functools
 
 __all__ = ['WebGETManager']
 
@@ -46,6 +45,7 @@ class WebGETManager(AppQNetworkAccessManager):
 
         self.mustCallOnce = kwargs.pop('mustCallOnce', True)
         self.mustCalled = False
+        self._replyContexts = {}
 
     def successCallback(self, networkReply: QNetworkReply, **kwargs):
         """Handle a successful network operation."""
@@ -86,6 +86,29 @@ class WebGETManager(AppQNetworkAccessManager):
         """Handle ready read by network reply."""
         self.hasDataCallback(networkReply, **kwargs)
 
+    @QtCore.Slot()
+    def _handleReadyRead(self):
+        """Dispatch ready-read data without a closure retaining the reply."""
+        networkReply = self.sender()
+
+        if isinstance(networkReply, QNetworkReply):
+            self.handleReadyReadByNetworkReply(
+                networkReply,
+                **self._replyContexts.get(id(networkReply), {}),
+            )
+
+    @QtCore.Slot()
+    def _handleFinished(self):
+        """Dispatch and release one completed network reply."""
+        networkReply = self.sender()
+
+        if not isinstance(networkReply, QNetworkReply):
+            return
+
+        kwargs = self._replyContexts.pop(id(networkReply), {})
+
+        self.handleFinishedByNetworkReply(networkReply, **kwargs)
+
     def handleFinishedByNetworkReply(self, networkReply: QNetworkReply, **kwargs):
         """Handle finished by network reply."""
         try:
@@ -113,7 +136,14 @@ class WebGETManager(AppQNetworkAccessManager):
 
                 self.successCallback(networkReply, **kwargs)
         finally:
-            self.must(**kwargs)
+            try:
+                self.must(**kwargs)
+            finally:
+                # QNetworkAccessManager owns replies by default and does not
+                # remove completed children automatically.  All response data
+                # has been consumed by this point.  The shared slots above use
+                # sender(), so no per-request closure retains this wrapper.
+                networkReply.deleteLater()
 
     def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
         """Configure HTTP proxy."""
@@ -133,19 +163,11 @@ class WebGETManager(AppQNetworkAccessManager):
         else:
             networkReply = self.get(QNetworkRequest(QtCore.QUrl(request)))
 
-        networkReply.readyRead.connect(
-            functools.partial(
-                self.handleReadyReadByNetworkReply,
-                networkReply,
-                **kwargs,
-            )
-        )
-        networkReply.finished.connect(
-            functools.partial(
-                self.handleFinishedByNetworkReply,
-                networkReply,
-                **kwargs,
-            )
-        )
+        key = id(networkReply)
+
+        self._replyContexts[key] = dict(kwargs)
+
+        networkReply.readyRead.connect(self._handleReadyRead)
+        networkReply.finished.connect(self._handleFinished)
 
         return networkReply

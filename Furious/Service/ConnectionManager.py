@@ -547,6 +547,16 @@ class ConnectionManager(Mixins.CleanupOnExit):
                     # Any non-exit exceptions
 
                     logger.error(f'error stopping core process: {ex}')
+                finally:
+                    dispose = getattr(process, 'dispose', None)
+
+                    if callable(dispose):
+                        try:
+                            dispose()
+                        except Exception as ex:
+                            # Any non-exit exceptions
+
+                            logger.error(f'error disposing core process: {ex}')
         finally:
             self.processesPool.clear()
 

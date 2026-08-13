@@ -26,7 +26,6 @@ from PySide6 import QtCore
 from PySide6.QtNetwork import *
 
 import logging
-import functools
 
 __all__ = ['ConnectivityManager']
 
@@ -47,11 +46,22 @@ class ConnectivityManager(Mixins.ConnectionAware, WebGETManager):
 
         self.jobStatus = False
         self.jobInterval = ConnectivityManager.MIN_JOB_INTERVAL
+        self._testingEnabled = False
+        self._activeReply = None
 
-        self.jobTimeoutTimer = QtCore.QTimer()
-        self.jobArrangeTimer = QtCore.QTimer()
+        self.jobTimeoutTimer = QtCore.QTimer(self)
+        self.jobTimeoutTimer.setSingleShot(True)
+        self.jobTimeoutTimer.timeout.connect(self._abortActiveReply)
 
-        self.jobArrangeTimer.timeout.connect(lambda: self.startSingleTest())
+        self.jobArrangeTimer = QtCore.QTimer(self)
+        self.jobArrangeTimer.setSingleShot(True)
+        self.jobArrangeTimer.timeout.connect(self.startSingleTest)
+
+    @QtCore.Slot()
+    def _abortActiveReply(self):
+        """Abort the one currently active connectivity request."""
+        if isinstance(self._activeReply, QNetworkReply):
+            self._activeReply.abort()
 
     def recalculateJobInterval(self, jobStatus: bool) -> int:
         """Return the recalculate job interval value used by the network connectivity manager."""
@@ -72,17 +82,30 @@ class ConnectivityManager(Mixins.ConnectionAware, WebGETManager):
 
     def successCallback(self, networkReply, **kwargs):
         """Handle a successful network operation."""
+        if self._activeReply is networkReply:
+            self._activeReply = None
+
         self.jobTimeoutTimer.stop()
-        self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=True))
+
+        if self._testingEnabled:
+            self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=True))
 
     def failureCallback(self, networkReply, **kwargs):
         """Handle a failed network operation."""
+        if self._activeReply is networkReply:
+            self._activeReply = None
+
         self.jobTimeoutTimer.stop()
-        self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=False))
+
+        if self._testingEnabled:
+            self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=False))
 
     def startSingleTest(self):
         # Use custom network connectivity test URL if possible
         """Start single test."""
+        if not self._testingEnabled or self._activeReply is not None:
+            return
+
         settings = AppSettings.get('CustomNetworkConnectivityTestURL')
 
         if isinstance(settings, str):
@@ -90,20 +113,15 @@ class ConnectivityManager(Mixins.ConnectionAware, WebGETManager):
         else:
             url = NETWORK_CONNECTIVITY_TEST_URL
 
-        networkReply = self.webGET(url)
-
-        def abort(_networkReply):
-            """Cancel the active network connectivity manager operation."""
-            if isinstance(_networkReply, QNetworkReply):
-                _networkReply.abort()
-
-        self.jobTimeoutTimer.timeout.connect(functools.partial(abort, networkReply))
+        self._activeReply = self.webGET(url)
         self.jobTimeoutTimer.start(ConnectivityManager.MIN_JOB_INTERVAL - 500)
 
     def stopTest(self):
         """Stop test."""
+        self._testingEnabled = False
         self.jobArrangeTimer.stop()
         self.jobTimeoutTimer.stop()
+        self._abortActiveReply()
 
     def connectedCallback(self):
         """Update the network connectivity manager for a connected state."""
@@ -114,6 +132,7 @@ class ConnectivityManager(Mixins.ConnectionAware, WebGETManager):
             self.stopTest()
         else:
             self.jobInterval = ConnectivityManager.MIN_JOB_INTERVAL
+            self._testingEnabled = True
 
             self.jobArrangeTimer.start(self.jobInterval)
 

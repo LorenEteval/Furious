@@ -38,21 +38,22 @@ class ConnectionProgressBar(Mixins.ConnectionAware, QProgressBar):
 
         self.setRange(0, 100)
 
-        @QtCore.Slot()
-        def update():
-            # Update the progress bar value
-            """Update the auto update progress bar."""
-            if self.value() < 90:
-                self.setValue(self.value() + 1)
-
-            # Stop the timer when the progress bar reaches 100%
-            if self.value() > 99:
-                self.timer.stop()
-
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(update)
+        # The timer belongs to the progress bar.  Parenting it and connecting
+        # to a normal method avoids a parentless timer/closure cycle surviving
+        # after the widget's Qt lifetime ends.
+        self.timer = QtCore.QTimer(self)
+        self.timer.timeout.connect(self._advance)
 
         self._setConnectionState('disconnected')
+
+    @QtCore.Slot()
+    def _advance(self):
+        """Advance the connection progress animation."""
+        if self.value() < 90:
+            self.setValue(self.value() + 1)
+
+        if self.value() > 99:
+            self.timer.stop()
 
     def _setConnectionState(self, state: str):
         """Expose semantic state to the application-owned progress style."""

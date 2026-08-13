@@ -125,7 +125,7 @@ def routingObjectFromProfile(routingProfile: dict):
     }
 
 
-class RoutingPreviewDialog(AppQDialog):
+class RoutingPreviewDialog(AppQTransientDialog):
     """Present the routing preview dialog."""
 
     def __init__(self, routingProfile: dict, parent=None):
@@ -168,7 +168,7 @@ class RoutingPreviewDialog(AppQDialog):
         self.setFixedSize(400, int(400 * GOLDEN_RATIO))
 
 
-class RoutingTextEditDialog(AppQDialog):
+class RoutingTextEditDialog(AppQTransientDialog):
     """Present the routing text edit dialog."""
 
     def __init__(self, text='', parent=None):
@@ -358,7 +358,7 @@ class RoutingProfilesModel(QtCore.QAbstractTableModel):
         )
 
 
-class RoutingRuleEditDialog(AppQDialog):
+class RoutingRuleEditDialog(AppQTransientDialog):
     """Present the routing rule edit dialog."""
 
     MatchInputHeight = 72
@@ -587,7 +587,7 @@ class RoutingRuleEditDialog(AppQDialog):
         return rule
 
 
-class RoutingRemarkEditDialog(AppQDialog):
+class RoutingRemarkEditDialog(AppQTransientDialog):
     """Present the routing remark edit dialog."""
 
     def __init__(self, remark: str, parent=None):
@@ -623,7 +623,7 @@ class RoutingRemarkEditDialog(AppQDialog):
         return self.remarkEdit.text().strip()
 
 
-class RoutingProfileEditDialog(AppQDialog):
+class RoutingProfileEditDialog(AppQTransientDialog):
     """Present the routing profile edit dialog."""
 
     def __init__(self, parent=None):
@@ -770,7 +770,7 @@ class RoutingRulesQListWidget(AppQListWidget):
         self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
 
-class RoutingRulesDialog(AppQDialog):
+class RoutingRulesDialog(AppQTransientDialog):
     """Present the routing rules dialog."""
 
     def __init__(self, routing: dict, parent=None):

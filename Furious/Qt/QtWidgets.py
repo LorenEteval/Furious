@@ -40,6 +40,7 @@ __all__ = [
     'AppQComboBox',
     'AppQComboBoxSeparatorDelegate',
     'AppQDialog',
+    'AppQTransientDialog',
     'AppQDialogButtonBox',
     'AppQGroupBox',
     'AppQHeaderView',
@@ -186,21 +187,19 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         """Initialize the AppQDialog."""
         super().__init__(*args, **kwargs)
 
-        @callOnceOnly
-        def connect(key):
-            """Connect the lifetime release signals once."""
-            release = functools.partial(AppQDialog._releaseOpenDialog, key)
+        self._lifetimeKey = id(self)
+        self._firstShowPending = True
 
-            self.finished.connect(release)
-            self.destroyed.connect(release)
+        # Do not store a nested closure that captures this dialog on the dialog
+        # itself.  Such a self-cycle delays wrapper collection and is especially
+        # costly for widget trees in compiled builds.
+        release = functools.partial(
+            AppQDialog._releaseOpenDialog,
+            self._lifetimeKey,
+        )
 
-        @callOnceOnly
-        def firstShow():
-            """Apply the first-show sizing once."""
-            self.setWidthAndHeight()
-
-        self._connectOnce = connect
-        self._firstShow = firstShow
+        self.finished.connect(release)
+        self.destroyed.connect(release)
 
         if PLATFORM != 'Darwin':
             self.setWidthAndHeight()
@@ -219,10 +218,8 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
 
     def open(self):
         """Open and retain the dialog until it finishes or is destroyed."""
-        key = id(self)
+        key = self._lifetimeKey
         AppQDialog._openDialogs[key] = self
-
-        self._connectOnce(key)
 
         try:
             self.show()
@@ -239,8 +236,9 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         """Show and position the app Qt dialog."""
         super().show()
 
-        if PLATFORM == 'Darwin':
-            self._firstShow()
+        if PLATFORM == 'Darwin' and self._firstShowPending:
+            self._firstShowPending = False
+            self.setWidthAndHeight()
 
         moveToCenter(self)
 
@@ -255,6 +253,19 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
     def connectedCallback(self):
         """Update the app Qt dialog for a connected state."""
         self.setWindowIcon(AppHue.connectedWindowIcon())
+
+
+class AppQTransientDialog(AppQDialog):
+    """Present a one-shot dialog that destroys its Qt object when closed."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize a dialog whose accepted/rejected lifetime is transient."""
+        super().__init__(*args, **kwargs)
+
+        # QDialog normally hides on accept/reject.  A long-lived Qt parent then
+        # keeps each closed dialog in its child tree indefinitely.  Transient
+        # dialogs opt into native deletion so both Qt and Python ownership end.
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
 
 
 class AppQDialogButtonBox(Mixins.QTranslatable, QDialogButtonBox):
@@ -449,19 +460,14 @@ class AppQMainWindow(
         """Initialize the AppQMainWindow."""
         super().__init__(*args, **kwargs)
 
-        @callOnceOnly
-        def connect(key):
-            """Connect the lifetime release signal once."""
-            release = functools.partial(AppQMainWindow._releaseOpenWindow, key)
-            self.destroyed.connect(release)
+        self._lifetimeKey = id(self)
+        self._firstShowPending = True
 
-        @callOnceOnly
-        def firstShow():
-            """Apply the first-show sizing once."""
-            self.setWidthAndHeight()
-
-        self._connectOnce = connect
-        self._firstShow = firstShow
+        release = functools.partial(
+            AppQMainWindow._releaseOpenWindow,
+            self._lifetimeKey,
+        )
+        self.destroyed.connect(release)
 
         self.setWindowIcon(AppHue.currentWindowIcon())
 
@@ -477,10 +483,8 @@ class AppQMainWindow(
 
     def show(self):
         """Show, position, and retain the window until it closes."""
-        key = id(self)
+        key = self._lifetimeKey
         AppQMainWindow._openWindows[key] = self
-
-        self._connectOnce(key)
 
         try:
             super().show()
@@ -491,8 +495,9 @@ class AppQMainWindow(
 
             raise
 
-        if PLATFORM == 'Darwin':
-            self._firstShow()
+        if PLATFORM == 'Darwin' and self._firstShowPending:
+            self._firstShowPending = False
+            self.setWidthAndHeight()
 
         moveToCenter(self)
 
@@ -508,7 +513,7 @@ class AppQMainWindow(
         result = super().event(event)
 
         if closes and event.isAccepted():
-            AppQMainWindow._releaseOpenWindow(id(self))
+            AppQMainWindow._releaseOpenWindow(self._lifetimeKey)
 
         return result
 
@@ -603,15 +608,19 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
         """Initialize the AppQMessageBox."""
         super().__init__(*args, **kwargs)
 
-        @callOnceOnly
-        def connect(key):
-            """Connect the lifetime release signals once."""
-            release = functools.partial(AppQMessageBox._releaseOpenMessageBox, key)
+        self._lifetimeKey = id(self)
 
-            self.finished.connect(release)
-            self.destroyed.connect(release)
+        release = functools.partial(
+            AppQMessageBox._releaseOpenMessageBox,
+            self._lifetimeKey,
+        )
 
-        self._connectOnce = connect
+        self.finished.connect(release)
+        self.destroyed.connect(release)
+
+        # Message boxes in Furious are one-shot notifications or questions.
+        # Parent ownership must not retain a hidden native box after completion.
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
 
         self.setWindowIcon(AppHue.currentWindowIcon())
 
@@ -634,10 +643,8 @@ class AppQMessageBox(Mixins.QTranslatable, Mixins.ConnectionAware, QMessageBox):
 
     def open(self):
         """Open and retain the message box until it finishes or is destroyed."""
-        key = id(self)
+        key = self._lifetimeKey
         AppQMessageBox._openMessageBoxes[key] = self
-
-        self._connectOnce(key)
 
         try:
             self.show()

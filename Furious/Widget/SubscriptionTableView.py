@@ -648,6 +648,10 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
                     self.timers.pop(deleteIndex)
                     self.timerConnected.pop(deleteIndex)
 
+                    # The table is the timer's Qt parent, so dropping the list
+                    # reference alone would retain it until application exit.
+                    qtimer.deleteLater()
+
                     self.sourceModel.endRemoveRows()
 
                     if callable(self.deleteUniqueCallback):

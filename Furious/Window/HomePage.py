@@ -436,6 +436,9 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             importActionsFactory=self.serverImportActions,
         )
         pluginRegistry = getPluginRegistry()
+
+        # These two settings dialogs intentionally remain parent-owned and are
+        # refreshed/reused by SettingsPage instead of being recreated.
         self.customizeProxyBypassDialog = ProxyBypassDialog(parent=self)
         self.customizeNetworkTestDialog = NetworkTestDialog(parent=self)
 
@@ -669,16 +672,10 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.userServersQTableWidget.hideTabAndSpaces()
 
     def getGuiTUNSettings(self, **kwargs):
-        """Return GUI TUN settings."""
+        """Create a transient TUN settings editor for the settings page."""
+        parent = kwargs.pop('parent', self)
 
-        @functools.lru_cache(None)
-        def cachedGuiTUNSettings():
-            """Return the TUN settings editor owned by the home page."""
-            parent = kwargs.pop('parent', self)
-
-            return TunSettingsDialog(parent=parent, **kwargs)
-
-        guiTUNSettings = cachedGuiTUNSettings()
+        guiTUNSettings = TunSettingsDialog(parent=parent, **kwargs)
         guiTUNSettings.factoryToInput(Storage.UserTUNSettings())
 
         return guiTUNSettings

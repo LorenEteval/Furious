@@ -28,7 +28,7 @@ from PySide6.QtWidgets import *
 __all__ = ['IndentDialog']
 
 
-class IndentDialog(AppQDialog):
+class IndentDialog(AppQTransientDialog):
     """Represent indent spin box."""
 
     def __init__(self, parent=None):
