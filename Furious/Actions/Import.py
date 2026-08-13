@@ -130,10 +130,8 @@ def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
             mbox.open()
 
 
-class ImportURIsProgressDialog(AppQDialog):
+class ImportURIsProgressDialog(AppQTransientDialog):
     """Present progress and cancellation controls for import ur is."""
-
-    ActiveDialogs = list()
 
     def __init__(
         self,
@@ -190,8 +188,6 @@ class ImportURIsProgressDialog(AppQDialog):
 
     def open(self):
         """Open the import ur is progress dialog asynchronously."""
-        ImportURIsProgressDialog.ActiveDialogs.append(self)
-
         result = super().open()
 
         self.spinner.start()
@@ -270,11 +266,6 @@ class ImportURIsProgressDialog(AppQDialog):
         self.finishedImport = True
         self.spinner.stop()
         self.accept()
-
-        try:
-            ImportURIsProgressDialog.ActiveDialogs.remove(self)
-        except ValueError:
-            pass
 
         if self.canceled:
             return

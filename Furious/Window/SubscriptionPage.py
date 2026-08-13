@@ -54,7 +54,7 @@ def _validSubscriptionURL(value) -> str:
     return url
 
 
-class _SubscriptionEditorDialog(AppQDialog):
+class _SubscriptionEditorDialog(AppQTransientDialog):
     """Edit one complete subscription definition with validation."""
 
     def __init__(self, subscription=None, parent=None):

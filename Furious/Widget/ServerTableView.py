@@ -524,11 +524,11 @@ class TestDownloadSpeedWorker(WebGETManager):
         self.networkReply = None
         self.elapsedTimer = QtCore.QElapsedTimer()
 
-        self.timeoutTimer = QtCore.QTimer()
+        self.timeoutTimer = QtCore.QTimer(self)
         self.timeoutTimer.setSingleShot(True)
         self.timeoutTimer.timeout.connect(self.handleTimeout)
 
-    def mustCall(self):
+    def mustCall(self, **kwargs):
         """Perform the required completion hook."""
         self.timeoutTimer.stop()
         self.finished.emit(self)
@@ -880,10 +880,16 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
             return
 
         self.releasePort(port)
+
+        # Completed workers are children of the long-lived scheduler.  Merely
+        # removing the Python dictionary entry would leave every worker (and
+        # its network/timer children) in the scheduler's QObject tree.
+        worker.deleteLater()
+
         self.scheduleDrain()
 
 
-class DeleteServersProgressDialog(AppQDialog):
+class DeleteServersProgressDialog(AppQTransientDialog):
     """Present progress and cancellation controls for delete servers."""
 
     def __init__(self, table, indexes, showTrayMessage=True, parent=None):

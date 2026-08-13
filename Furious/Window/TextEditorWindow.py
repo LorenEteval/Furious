@@ -400,6 +400,10 @@ class TextEditorWindow(AppQMainWindow):
     def closeEvent(self, event: QtCore.QEvent):
         """Handle closure of the text editor window."""
         if self.modified:
+            # A close event arrives accepted by default.  Keep the reusable
+            # editor alive unless the user explicitly saves or discards.
+            event.ignore()
+
             mbox = MBoxQuestionSave(icon=AppQMessageBox.Icon.Question, parent=self)
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
@@ -428,8 +432,11 @@ class TextEditorWindow(AppQMainWindow):
 
             # Show the MessageBox and wait for the user to close it
             mbox.exec()
+
+            if event.isAccepted():
+                super().closeEvent(event)
         else:
-            event.accept()
+            super().closeEvent(event)
 
     def retranslate(self):
         # Do nothing

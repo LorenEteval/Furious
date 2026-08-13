@@ -372,7 +372,7 @@ class GuiEditorWidgetQGroupBox(GuiEditorWidget, AppQGroupBox):
         return layout
 
 
-class GuiEditorWidgetQDialog(EditorBinding, AppQDialog):
+class GuiEditorWidgetQDialog(EditorBinding, AppQTransientDialog):
     """Present the GUI editor widget Qt dialog."""
 
     def __init__(self, *args, **kwargs):
