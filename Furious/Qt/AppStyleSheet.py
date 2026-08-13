@@ -316,6 +316,11 @@ class AppStyleSheet:
                 background-color: {palette['panel_alt']};
             }}
 
+            QFrame#NavigationRailPlaceholder {{
+                border: none;
+                background-color: {palette['panel_alt']};
+            }}
+
             QStackedWidget#ApplicationPageStack {{
                 border: none;
                 background-color: {palette['window']};
