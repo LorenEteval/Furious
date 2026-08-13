@@ -126,6 +126,7 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self._currentPageId = ''
         self._expanded = False
         self._navigationWidth = self.CollapsedWidth
+        self._outsideClickFilterInstalled = False
 
         self.setObjectName('NavigationView')
 
@@ -326,7 +327,54 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
                 self._setPageButtonsExpanded(False)
 
         if changed:
+            self._setOutsideClickFilterEnabled(expanded and self.isVisible())
             self.expandedChanged.emit(expanded)
+
+    def _setOutsideClickFilterEnabled(self, enabled: bool):
+        """Observe application clicks only while the overlay is expanded."""
+        application = QApplication.instance()
+
+        if application is None or enabled == self._outsideClickFilterInstalled:
+            return
+
+        if enabled:
+            application.installEventFilter(self)
+        else:
+            application.removeEventFilter(self)
+
+        self._outsideClickFilterInstalled = enabled
+
+    def _isOutsideNavigationClick(self, watched, event) -> bool:
+        """Return whether *event* targets this window outside the panel."""
+        if not self._expanded or not isinstance(watched, QWidget):
+            return False
+
+        if watched.window() is not self.window():
+            # Popup menus, combo-box popups, message boxes, and child dialogs
+            # are separate top-level windows and keep their normal behavior.
+            return False
+
+        (
+            globalPosition,
+            panelTopLeft,
+        ) = (
+            event.globalPosition().toPoint(),
+            self.navigationPanel.mapToGlobal(QtCore.QPoint()),
+        )
+
+        panelGeometry = QtCore.QRect(panelTopLeft, self.navigationPanel.size())
+
+        return not panelGeometry.contains(globalPosition)
+
+    def eventFilter(self, watched, event):
+        """Animate closed after an outside press without consuming the click."""
+        if (
+            event.type() == QtCore.QEvent.Type.MouseButtonPress
+            and self._isOutsideNavigationClick(watched, event)
+        ):
+            self.setExpanded(False)
+
+        return False
 
     def _getNavigationWidth(self) -> int:
         """Return the width exposed to the property animation."""
@@ -366,6 +414,18 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         super().resizeEvent(event)
 
         self._setNavigationWidth(self._navigationWidth)
+
+    def showEvent(self, event):
+        """Resume outside-click observation when an expanded view is shown."""
+        super().showEvent(event)
+
+        self._setOutsideClickFilterEnabled(self._expanded)
+
+    def hideEvent(self, event):
+        """Suspend the application filter while this view cannot be used."""
+        self._setOutsideClickFilterEnabled(False)
+
+        super().hideEvent(event)
 
     @staticmethod
     def _refreshWidgetStyle(widget: QWidget):
