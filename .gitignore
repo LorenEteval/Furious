@@ -195,3 +195,5 @@ rpmbuild/
 *.rpm
 
 uv.lock
+
+.codegraph/
