@@ -21,9 +21,42 @@ from __future__ import annotations
 
 from Furious.Plugins.API import ProtocolEditorProvider
 
-from importlib import import_module
-
 __all__ = ['XRAY_PROTOCOL_EDITORS']
+
+
+def _createVmessEditor(parent=None, **kwargs):
+    """Create the VMess editor without importing Qt during plugin discovery."""
+    from .VmessEditor import VmessEditor
+
+    return VmessEditor(parent=parent, **kwargs)
+
+
+def _createVlessEditor(parent=None, **kwargs):
+    """Create the VLESS editor without importing Qt during plugin discovery."""
+    from .VlessEditor import VlessEditor
+
+    return VlessEditor(parent=parent, **kwargs)
+
+
+def _createShadowsocksEditor(parent=None, **kwargs):
+    """Create the Shadowsocks editor without importing Qt during plugin discovery."""
+    from .ShadowsocksEditor import ShadowsocksEditor
+
+    return ShadowsocksEditor(parent=parent, **kwargs)
+
+
+def _createTrojanEditor(parent=None, **kwargs):
+    """Create the Trojan editor without importing Qt during plugin discovery."""
+    from .TrojanEditor import TrojanEditor
+
+    return TrojanEditor(parent=parent, **kwargs)
+
+
+def _createSocksEditor(parent=None, **kwargs):
+    """Create the SOCKS editor without importing Qt during plugin discovery."""
+    from .SocksEditor import SocksEditor
+
+    return SocksEditor(parent=parent, **kwargs)
 
 
 class XrayProtocolEditors(ProtocolEditorProvider):
@@ -31,27 +64,15 @@ class XrayProtocolEditors(ProtocolEditorProvider):
 
     editorId = 'official.xray.editors'
     protocolIds = ('vmess', 'vless', 'shadowsocks', 'trojan', 'socks')
+    # Keep these as callables containing literal imports. They preserve lazy Qt
+    # initialization while allowing standalone compilers such as Nuitka to see
+    # every editor dependency during static import analysis.
     _editors = {
-        'vmess': (
-            'Furious.Backends.Xray.VmessEditor',
-            'VmessEditor',
-        ),
-        'vless': (
-            'Furious.Backends.Xray.VlessEditor',
-            'VlessEditor',
-        ),
-        'shadowsocks': (
-            'Furious.Backends.Xray.ShadowsocksEditor',
-            'ShadowsocksEditor',
-        ),
-        'trojan': (
-            'Furious.Backends.Xray.TrojanEditor',
-            'TrojanEditor',
-        ),
-        'socks': (
-            'Furious.Backends.Xray.SocksEditor',
-            'SocksEditor',
-        ),
+        'vmess': _createVmessEditor,
+        'vless': _createVlessEditor,
+        'shadowsocks': _createShadowsocksEditor,
+        'trojan': _createTrojanEditor,
+        'socks': _createSocksEditor,
     }
 
     def createEditor(self, protocolId: str, parent=None, **kwargs):
@@ -61,10 +82,7 @@ class XrayProtocolEditors(ProtocolEditorProvider):
         if editor is None:
             return None
 
-        moduleName, typeName = editor
-        editorType = getattr(import_module(moduleName), typeName)
-
-        return editorType(parent=parent, **kwargs)
+        return editor(parent=parent, **kwargs)
 
 
 XRAY_PROTOCOL_EDITORS = (XrayProtocolEditors(),)
