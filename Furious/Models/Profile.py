@@ -251,7 +251,15 @@ class ServerProfile(MutableMapping[str, Any]):
 
     def toURI(self, remark: str = '') -> str:
         """Serialize the connection document as a share URI."""
-        return self.connection.toURI(remark or self.metadata.displayName)
+        exportOptions = (
+            {'profileMetadata': self.metadata}
+            if self.itemProtocol.casefold() == 'shadowsocks'
+            else {}
+        )
+
+        return self.connection.toURI(
+            remark or self.metadata.displayName, **exportOptions
+        )
 
     def httpProxy(self) -> str:
         """Return the connection's HTTP proxy endpoint."""

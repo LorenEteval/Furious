@@ -24,6 +24,10 @@ from Furious.Backends.Configuration import (
     ConfigXray,
     configXrayEmptyProxyOutboundObject,
 )
+from Furious.Backends.ShadowsocksURI import (
+    SHADOWSOCKS_PLUGIN_METADATA_KEY,
+    parseShadowsocksURI,
+)
 from Furious.Plugins.API import (
     ProtocolDescriptor,
     ProtocolHandler,
@@ -65,6 +69,13 @@ class XrayProtocolHandler(ProtocolHandler):
         """Parse this handler's URI directly into an Xray configuration."""
         parser = getattr(ConfigXray, self._parserName)
         remark, proxyOutbound = parser(uri)
+        metadata = {'displayName': remark}
+
+        if self.protocolId == 'shadowsocks':
+            plugin = parseShadowsocksURI(uri).plugin
+
+            if plugin:
+                metadata[SHADOWSOCKS_PLUGIN_METADATA_KEY] = plugin
 
         if (
             not proxyOutbound
@@ -77,7 +88,7 @@ class XrayProtocolHandler(ProtocolHandler):
 
         return ProtocolParseResult(
             ConfigXray(config),
-            {'displayName': remark},
+            metadata,
         )
 
     def fromMapping(self, configuration, **kwargs):
@@ -107,6 +118,19 @@ class XrayProtocolHandler(ProtocolHandler):
     def export(self, configuration, remark: str = '') -> str:
         """Export an owned Xray configuration to its share-link format."""
         return configuration.toURI(remark) if self.supports(configuration) else ''
+
+    def exportProfile(self, profile, remark: str = '') -> str:
+        """Export Xray profile metadata required by protocol share formats."""
+        configuration = getattr(profile, 'connection', profile)
+
+        return (
+            configuration.toURI(
+                remark,
+                profileMetadata=getattr(profile, 'metadata', None),
+            )
+            if self.supports(configuration)
+            else ''
+        )
 
 
 def _placeholder(x):

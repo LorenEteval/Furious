@@ -670,7 +670,8 @@ class PluginRegistry:
             # Any non-exit exceptions
 
             logger.error(
-                f'failed to parse {handler.descriptor.id!r} configuration: {ex}'
+                f'failed to parse {handler.descriptor.id!r} configuration: {ex}. '
+                f'URI: {uri!r}'
             )
 
             return None
@@ -828,7 +829,7 @@ class PluginRegistry:
         if not remark:
             remark = str(getattr(config, 'itemRemark', ''))
 
-        return handler.export(_connectionOf(config), remark)
+        return handler.exportProfile(config, remark)
 
     def validateConfig(self, config):
         """Validate a configuration through its protocol capability."""

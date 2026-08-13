@@ -295,6 +295,10 @@ class ProtocolHandler(PluginCapability):
         """Serialize one owned configuration to a share URI."""
         return ''
 
+    def exportProfile(self, profile, remark: str = '') -> str:
+        """Serialize a profile while keeping older handlers source-compatible."""
+        return self.export(getattr(profile, 'connection', profile), remark)
+
     def validate(self, configuration) -> Tuple[str, ...]:
         """Return validation errors for one owned configuration."""
         if not self.supports(configuration):

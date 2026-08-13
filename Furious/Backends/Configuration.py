@@ -22,6 +22,12 @@ from __future__ import annotations
 from Furious.Models.Configuration import ConfigFactory
 from Furious.Models.Encoding import *
 from Furious.Models.Protocol import Protocol
+from Furious.Backends.ShadowsocksURI import (
+    SHADOWSOCKS_PLUGIN_METADATA_KEY,
+    ShadowsocksURIData,
+    parseShadowsocksURI,
+    serializeShadowsocksURI,
+)
 
 from typing import Union, Tuple
 
@@ -1255,59 +1261,16 @@ class ConfigXray(ConfigFactory):
     @staticmethod
     def URI2ProxyOutboundObjectSS(URI: str) -> Tuple[str, dict]:
         """Parse a Shadowsocks URI into a remark and Xray proxy outbound."""
-        try:
-            result = urlparse(URI)
-            remark = unquote(result.fragment)
-        except Exception:
-            # Any non-exit exceptions
-
-            return '', {}
-
-        def getSSParams():
-            # Begin SIP002...
-            """Return ss params."""
-            try:
-                # Try pack with 3 element
-                userinfo, server = result.netloc.split('@')
-
-                # Some old SS share link doesn't add padding
-                # in base64 encoding. Add padding to userinfo
-                return [
-                    *PyBase64Encoder.decode(userinfo + '===').decode().split(':', 1),
-                    *_parseHostPort(server),
-                ]
-            except Exception:
-                # Any non-exit exceptions
-
-                pass
-
-            try:
-                # Try pack with 4 element
-                userinfo, server = result.netloc.split('@')
-
-                return [*userinfo.split(':', 1), *_parseHostPort(server)]
-            except Exception:
-                # Any non-exit exceptions
-
-                pass
-
-            try:
-                # ss://base64...#fragment
-                userinfo, server = (
-                    PyBase64Encoder.decode(result.netloc).decode().split('@')
-                )
-
-                return [*userinfo.split(':', 1), *_parseHostPort(server)]
-            except Exception:
-                # Any non-exit exceptions
-
-                pass
-
-            raise ValueError(f'Invalid SS URI format {URI}')
+        parsed = parseShadowsocksURI(URI)
 
         return (
-            remark,
-            ConfigXrayProxyOutboundObjectSS(*getSSParams()),
+            parsed.tag,
+            ConfigXrayProxyOutboundObjectSS(
+                parsed.method,
+                parsed.password,
+                parsed.host,
+                parsed.port,
+            ),
         )
 
     @staticmethod
@@ -1408,7 +1371,7 @@ class ConfigXray(ConfigFactory):
 
         return super().toJSONString(indent=indent)
 
-    def toURI(self, remark: str = '') -> str:
+    def toURI(self, remark: str = '', **kwargs) -> str:
         """Export the configuration as a share URI."""
         override = remark
 
@@ -1479,10 +1442,25 @@ class ConfigXray(ConfigFactory):
                 self.proxyServerObject[value]
                 for value in ['method', 'password', 'address', 'port']
             )
+            plugin = str(kwargs.get('shadowsocksPlugin', '') or '')
+            profileMetadata = kwargs.get('profileMetadata')
 
-            netloc = f'{quote(method)}:{quote(password)}@{address}:{port}'
+            if not plugin and profileMetadata is not None:
+                extras = getattr(profileMetadata, 'extras', {})
 
-            return urlunparse(['ss', netloc, '', '', '', quote(override)])
+                if isinstance(extras, dict):
+                    plugin = str(extras.get(SHADOWSOCKS_PLUGIN_METADATA_KEY, '') or '')
+
+            return serializeShadowsocksURI(
+                ShadowsocksURIData(
+                    str(method),
+                    str(password),
+                    str(address),
+                    int(port),
+                    plugin,
+                    override,
+                )
+            )
 
         if protocol == 'socks':
             address, port = list(
