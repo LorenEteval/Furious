@@ -122,20 +122,6 @@ class TextEditorWindow(AppQMainWindow):
         self.jsonEditor.registerModificationChangedCb(modificationCallback)
         self.jsonEditor.registerCursorPositionChangedCb(cursorChangedCallback)
 
-        self.setCentralWidget(self.jsonEditor)
-
-        if PLATFORM == 'Darwin':
-            self.toolbar = AppQToolBar(
-                AppQAction(
-                    _('Close'),
-                    icon=bootstrapIcon('window-x.svg'),
-                    callback=lambda: self.close(),
-                ),
-                parent=self,
-            )
-
-            self.addToolBar(self.toolbar)
-
         self.fileMenu = AppQMenu(
             AppQAction(
                 _('Save'),
@@ -153,10 +139,11 @@ class TextEditorWindow(AppQMainWindow):
             AppQSeperator(),
             AppQAction(
                 _('Close Window'),
+                icon=bootstrapIcon('window-x.svg'),
                 callback=lambda: self.close(),
             ),
             title=_('File'),
-            parent=self.menuBar(),
+            parent=self,
         )
 
         self.editMenu = AppQMenu(
@@ -221,7 +208,7 @@ class TextEditorWindow(AppQMainWindow):
                 callback=lambda: self.setIndent(),
             ),
             title=_('Edit'),
-            parent=self.menuBar(),
+            parent=self,
         )
 
         self.viewMenu = AppQMenu(
@@ -242,12 +229,57 @@ class TextEditorWindow(AppQMainWindow):
                 ),
             ),
             title=_('View'),
-            parent=self.menuBar(),
+            parent=self,
         )
 
-        self.menuBar().addMenu(self.fileMenu)
-        self.menuBar().addMenu(self.editMenu)
-        self.menuBar().addMenu(self.viewMenu)
+        self.fileButton = AppQMenuPushButton(
+            _('File'),
+            icon=bootstrapIcon('file-earmark.svg'),
+            popupMenu=self.fileMenu,
+        )
+        self.editButton = AppQMenuPushButton(
+            _('Edit'),
+            icon=bootstrapIcon('pencil-square.svg'),
+            popupMenu=self.editMenu,
+        )
+        self.viewButton = AppQMenuPushButton(
+            _('View'),
+            icon=bootstrapIcon('eye.svg'),
+            popupMenu=self.viewMenu,
+        )
+        self.closeWindowButton = AppQPushButton(
+            _('Close Window'),
+            icon=bootstrapIcon('window-x.svg'),
+        )
+        self.closeWindowButton.clicked.connect(self.close)
+
+        actionLayout = QHBoxLayout()
+        actionLayout.setContentsMargins(0, 0, 0, 0)
+        actionLayout.setSpacing(8)
+        actionLayout.addWidget(self.fileButton)
+        actionLayout.addWidget(self.editButton)
+        actionLayout.addWidget(self.viewButton)
+        actionLayout.addStretch(1)
+        actionLayout.addWidget(self.closeWindowButton)
+
+        contentWidget = QWidget()
+        contentWidget.setObjectName('TextEditorWindowContent')
+
+        contentLayout = QVBoxLayout(contentWidget)
+        contentLayout.setContentsMargins(10, 10, 10, 8)
+        contentLayout.setSpacing(10)
+        contentLayout.addLayout(actionLayout)
+        contentLayout.addWidget(self.jsonEditor, 1)
+
+        self.setCentralWidget(contentWidget)
+        self.menuBar().hide()
+
+        # The menus are no longer installed in a QMenuBar, so associate their
+        # reusable actions with the window to preserve WindowShortcut behavior.
+        for menu in (self.fileMenu, self.editMenu, self.viewMenu):
+            for action in menu.actions():
+                if not action.isSeparator():
+                    self.addAction(action)
 
     def markAsModified(self):
         """Handle mark as modified for the text editor window."""
