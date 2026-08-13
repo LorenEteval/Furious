@@ -769,10 +769,7 @@ class AppQMessageBox(AppQTransientDialog):
 
         self.buttonLayout = QHBoxLayout(self.buttonFrame)
         self.buttonLayout.setContentsMargins(24, 14, 24, 14)
-        # Explicit spacers are inserted while rebuilding the row.  Unlike a
-        # style-derived layout spacing, these gaps cannot collapse when long
-        # translated button labels approach the dialog's maximum width.
-        self.buttonLayout.setSpacing(0)
+        self.buttonLayout.setSpacing(self.ButtonSpacing)
 
         self.surfaceLayout = QVBoxLayout(self.surface)
         self.surfaceLayout.setContentsMargins(0, 0, 0, 0)
@@ -829,28 +826,24 @@ class AppQMessageBox(AppQTransientDialog):
         return button
 
     def _rebuildButtonLayout(self):
-        """Lay out one action compactly and multiple actions evenly."""
+        """Lay out actions with Fluent-style margins and equal stretch."""
         while self.buttonLayout.count():
             self.buttonLayout.takeAt(0)
 
         buttons = self.buttons()
 
-        self.buttonLayout.addStretch(1)
-
         if len(buttons) == 1:
-            self.buttonLayout.addWidget(buttons[0])
+            # A single action occupies the middle third of the footer while
+            # remaining bounded by its translated size and maximum width.
+            self.buttonLayout.addStretch(1)
+            self.buttonLayout.addWidget(buttons[0], 1)
+            self.buttonLayout.addStretch(1)
         else:
-            for index, button in enumerate(buttons):
-                if index:
-                    self.buttonLayout.addSpacing(self.ButtonSpacing)
-
-                button.setSizePolicy(
-                    QSizePolicy.Policy.Fixed,
-                    QSizePolicy.Policy.Fixed,
-                )
-                self.buttonLayout.addWidget(button)
-
-        self.buttonLayout.addStretch(1)
+            # This mirrors the standard Qt composition used by Fluent
+            # dialogs: every action shares the available row evenly and the
+            # layout's spacing provides a stable visual gap.
+            for button in buttons:
+                self.buttonLayout.addWidget(button, 1)
 
         self._refreshButtonRoles()
 
@@ -865,50 +858,56 @@ class AppQMessageBox(AppQTransientDialog):
         )
 
     def _preferredButtonRowWidth(self):
-        """Return the natural width required by translated action labels."""
+        """Return the equal-width row required by translated action labels."""
         buttons = self.buttons()
 
         if not buttons:
             return 0
 
+        if len(buttons) == 1:
+            return self._preferredButtonWidth(buttons[0])
+
         return (
-            sum(self._preferredButtonWidth(button) for button in buttons)
+            max(self._preferredButtonWidth(button) for button in buttons) * len(buttons)
             + max(0, len(buttons) - 1) * self.ButtonSpacing
         )
 
     def _applyButtonWidths(self, surfaceWidth):
-        """Fit translated actions within the available footer width."""
+        """Apply bounded single-action or equal expanding button policies."""
         buttons = self.buttons()
 
         if not buttons:
             return
 
-        margins = self.buttonLayout.contentsMargins()
-        gapsWidth = max(0, len(buttons) - 1) * self.ButtonSpacing
-        surfaceInset = self.surface.frameWidth() * 2
-        availableButtonsWidth = max(
-            len(buttons),
-            surfaceWidth - surfaceInset - margins.left() - margins.right() - gapsWidth,
-        )
-        preferredWidths = [self._preferredButtonWidth(button) for button in buttons]
-        equalWidth = max(preferredWidths)
-
-        if equalWidth * len(buttons) <= availableButtonsWidth:
-            buttonWidths = [equalWidth] * len(buttons)
-        elif sum(preferredWidths) <= availableButtonsWidth:
-            # Preserve every translated label when equal proportions would
-            # consume more width than the parent can comfortably provide.
-            buttonWidths = preferredWidths
+        if len(buttons) == 1:
+            button = buttons[0]
+            button.setMinimumWidth(self._preferredButtonWidth(button))
+            button.setMaximumWidth(self.ButtonMaximumWidth)
+            button.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
         else:
-            # The owner is too narrow for the natural row.  Share the available
-            # space proportionally; clipping is then limited to this genuinely
-            # constrained case rather than being caused by equal-width styling.
-            scale = availableButtonsWidth / sum(preferredWidths)
-            buttonWidths = [max(1, int(width * scale)) for width in preferredWidths]
-            buttonWidths[-1] += availableButtonsWidth - sum(buttonWidths)
+            margins = self.buttonLayout.contentsMargins()
+            availableWidth = max(
+                len(buttons),
+                surfaceWidth
+                - margins.left()
+                - margins.right()
+                - self.ButtonSpacing * (len(buttons) - 1),
+            )
+            constrainedMinimum = min(
+                self.ButtonMinimumWidth,
+                availableWidth // len(buttons),
+            )
 
-        for button, width in zip(buttons, buttonWidths):
-            button.setFixedWidth(width)
+            for button in buttons:
+                button.setMinimumWidth(constrainedMinimum)
+                button.setMaximumWidth(self.MaximumSurfaceWidth)
+                button.setSizePolicy(
+                    QSizePolicy.Policy.Expanding,
+                    QSizePolicy.Policy.Fixed,
+                )
 
         self.buttonLayout.invalidate()
 
