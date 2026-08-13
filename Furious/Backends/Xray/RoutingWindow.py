@@ -1200,25 +1200,33 @@ class XrayRoutingWindow(AppQMainWindow):
         self.setWindowTitle(_('Edit Routing'))
 
         self.tableView = UserRoutingTableView(parent=self)
-        self.toolbar = AppQToolBar(
-            AppQAction(
-                _('Add'),
-                icon=bootstrapIcon('plus-lg.svg'),
-                callback=lambda: self.tableView.appendNewItem(),
-            ),
-            AppQAction(
-                _('Delete'),
-                icon=bootstrapIcon('dash-lg.svg'),
-                callback=lambda: self.tableView.deleteSelectedItem(),
-            ),
-            parent=self,
+
+        self.addButton = AppQPushButton(
+            _('Add'),
+            icon=bootstrapIcon('plus-lg.svg'),
         )
-        self.toolbar.setObjectName('UserRoutingWindow_AppQToolBar')
-        self.addToolBar(self.toolbar)
+        self.deleteButton = AppQPushButton(
+            _('Delete'),
+            icon=bootstrapIcon('trash.svg'),
+        )
+
+        self.addButton.clicked.connect(self.tableView.appendNewItem)
+        self.deleteButton.clicked.connect(self.tableView.deleteSelectedItem)
+
+        actionLayout = QHBoxLayout()
+        actionLayout.setContentsMargins(0, 0, 0, 0)
+        actionLayout.setSpacing(8)
+        actionLayout.addWidget(self.addButton)
+        actionLayout.addWidget(self.deleteButton)
+        actionLayout.addStretch(1)
 
         centralWidget = QWidget()
+        centralWidget.setObjectName('UserRoutingWindowContent')
 
         layout = QVBoxLayout(centralWidget)
+        layout.setContentsMargins(20, 18, 20, 20)
+        layout.setSpacing(14)
+        layout.addLayout(actionLayout)
         layout.addWidget(self.tableView)
 
         self.setCentralWidget(centralWidget)
