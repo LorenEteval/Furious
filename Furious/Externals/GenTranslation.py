@@ -1999,8 +1999,7 @@ TRANSLATION = {
     },
     "Close": {
         "source": [
-            "Furious.Backends.Xray.RoutingWindow",
-            "Furious.Window.TextEditorWindow"
+            "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Закрыть",
         "ZH": "关闭",
@@ -2259,16 +2258,16 @@ TRANSLATION = {
         "source": [
             "Furious.Window.MainWindow"
         ],
-        "RU": "Метрики",
-        "ZH": "指标",
+        "RU": "Статистика",
+        "ZH": "统计",
         "isReviewed": "True"
     },
     "Network Metrics": {
         "source": [
             "Furious.Window.MetricsPage"
         ],
-        "RU": "Сетевые метрики",
-        "ZH": "网络指标",
+        "RU": "Сетевая статистика",
+        "ZH": "网络统计",
         "isReviewed": "True"
     },
     "Time Range": {
@@ -2691,8 +2690,8 @@ TRANSLATION = {
         "source": [
             "Furious.Window.SettingsPage"
         ],
-        "RU": "Включить сбор метрик",
-        "ZH": "启用指标收集",
+        "RU": "Включить сбор сетевой статистики",
+        "ZH": "启用网络统计",
         "isReviewed": "True"
     },
     "Collect network speed and traffic history while connected.": {
