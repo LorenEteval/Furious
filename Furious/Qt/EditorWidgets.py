@@ -382,6 +382,7 @@ class GuiEditorWidgetQDialog(EditorBinding, AppQTransientDialog):
             kwargs.pop('tabTranslatable', False),
             kwargs.pop('style', 'grid'),
         )
+
         self._groupBoxes = None
 
         super().__init__(*args, **kwargs)
