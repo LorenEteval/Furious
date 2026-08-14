@@ -696,16 +696,25 @@ class RoutingRulesQListWidget(AppQListWidget):
         self.setSelectionMode(AppQListWidget.SelectionMode.ExtendedSelection)
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
 
-        self.itemDoubleClicked.connect(lambda _item: self.editRequested.emit())
+        self.itemDoubleClicked.connect(self._requestEdit)
         self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
 
-        self.contextDeleteAction = AppQAction(
-            _('Delete'),
-            callback=lambda: self.deleteRequested.emit(),
-        )
+        self.contextDeleteAction = AppQAction(_('Delete'))
+        self.contextDeleteAction.triggered.connect(self._requestDelete)
+
         self.contextMenu = AppQMenu(self.contextDeleteAction, parent=self)
 
         self.flushAll()
+
+    @QtCore.Slot(QListWidgetItem)
+    def _requestEdit(self, _item):
+        """Forward a row double-click without retaining a Python closure."""
+        self.editRequested.emit()
+
+    @QtCore.Slot(bool)
+    def _requestDelete(self, _checked=False):
+        """Request deletion without retaining a callback closure."""
+        self.deleteRequested.emit()
 
     def rules(self):
         """Return the rules value used by the routing rules Qt list widget."""
@@ -824,7 +833,10 @@ class RoutingRulesDialog(AppQTransientDialog):
     def addRule(self):
         """Add rule."""
         rule = {'type': 'field', 'outboundTag': 'proxy', 'ruleTag': 'New Rule'}
-        dialog = RoutingRuleEditDialog(rule, parent=None)
+        # This editor is subordinate to the transient rules dialog.  Parenting
+        # it prevents an asynchronous child from outliving its owner and later
+        # invoking a callback on a deleted list widget.
+        dialog = RoutingRuleEditDialog(rule, parent=self)
 
         def handleResultCode(code):
             """Handle result code."""
@@ -842,7 +854,7 @@ class RoutingRulesDialog(AppQTransientDialog):
             return
 
         index = indexes[0]
-        dialog = RoutingRuleEditDialog(self.listWidget.ruleAt(index), parent=None)
+        dialog = RoutingRuleEditDialog(self.listWidget.ruleAt(index), parent=self)
 
         def handleResultCode(_index, code):
             """Handle result code."""
@@ -1149,8 +1161,13 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         routing = self.sourceModel.routingByRow(indexes[0])
 
         dialog = RoutingRulesDialog(routing, parent=self)
-        dialog.finished.connect(lambda _code: self.flushAll())
+        dialog.finished.connect(self._rulesDialogFinished)
         dialog.open()
+
+    @QtCore.Slot(int)
+    def _rulesDialogFinished(self, _code):
+        """Refresh routing presentation after the rules dialog finishes."""
+        self.flushAll()
 
 
 class XrayRoutingWindow(AppQMainWindow):

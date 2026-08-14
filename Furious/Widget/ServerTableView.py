@@ -1891,29 +1891,24 @@ class ServerTableView(
 
             logger.error(f'error while converting factory to input: {ex}')
 
-        guiEditor.accepted.connect(
-            functools.partial(
-                self.handleGuiEditorAccepted,
-                guiEditor,
-                index,
-                factory,
-            )
-        )
-        guiEditor.rejected.connect(
-            functools.partial(
-                self.handleGuiEditorRejected,
-                guiEditor,
-            )
-        )
+        # Keep operation metadata on the transient editor and use QObject-bound
+        # slots.  Partials stored by PySide otherwise retain both the complete
+        # editor tree and this application-lifetime table until disconnection.
+        guiEditor._modContext = (index, factory)
+        guiEditor.accepted.connect(self.handleGuiEditorAccepted)
+        guiEditor.rejected.connect(self.handleGuiEditorRejected)
         guiEditor.open()
 
-    def handleGuiEditorAccepted(
-        self,
-        editor: GuiEditorWidgetQDialog,
-        index: int,
-        factory: ServerProfile,
-    ):
+    @QtCore.Slot()
+    def handleGuiEditorAccepted(self):
         """Handle GUI editor accepted."""
+        editor = self.sender()
+
+        if not isinstance(editor, GuiEditorWidgetQDialog):
+            return
+
+        index, factory = editor._modContext
+
         logger.debug(f'guiEditor accepted with index {index}')
 
         modified = editor.inputToFactory(factory)
@@ -1927,11 +1922,21 @@ class ServerTableView(
         editor.accepted.disconnect()
         editor.rejected.disconnect()
 
-    @staticmethod
-    def handleGuiEditorRejected(editor: GuiEditorWidgetQDialog):
+        del editor._modContext
+
+    @QtCore.Slot()
+    def handleGuiEditorRejected(self):
         """Handle GUI editor rejected."""
+        editor = self.sender()
+
+        if not isinstance(editor, GuiEditorWidgetQDialog):
+            return
+
         editor.accepted.disconnect()
         editor.rejected.disconnect()
+
+        if hasattr(editor, '_modContext'):
+            del editor._modContext
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
@@ -2052,27 +2057,21 @@ class ServerTableView(
 
             logger.error(f'error while converting factory to input: {ex}')
 
-        guiEditor.accepted.connect(
-            functools.partial(
-                self.handleAddServerViaGuiAccepted,
-                guiEditor,
-                factory,
-            )
-        )
-        guiEditor.rejected.connect(
-            functools.partial(
-                self.handleAddServerViaGuiRejected,
-                guiEditor,
-            )
-        )
+        guiEditor._addContext = factory
+        guiEditor.accepted.connect(self.handleAddServerViaGuiAccepted)
+        guiEditor.rejected.connect(self.handleAddServerViaGuiRejected)
         guiEditor.open()
 
-    def handleAddServerViaGuiAccepted(
-        self,
-        editor: GuiEditorWidgetQDialog,
-        factory: ServerProfile,
-    ):
+    @QtCore.Slot()
+    def handleAddServerViaGuiAccepted(self):
         """Handle add server via GUI accepted."""
+        editor = self.sender()
+
+        if not isinstance(editor, GuiEditorWidgetQDialog):
+            return
+
+        factory = editor._addContext
+
         editor.inputToFactory(factory)
 
         self.appendNewItemByFactory(factory)
@@ -2080,10 +2079,21 @@ class ServerTableView(
         editor.accepted.disconnect()
         editor.rejected.disconnect()
 
-    def handleAddServerViaGuiRejected(self, editor: GuiEditorWidgetQDialog):
+        del editor._addContext
+
+    @QtCore.Slot()
+    def handleAddServerViaGuiRejected(self):
         """Handle add server via GUI rejected."""
+        editor = self.sender()
+
+        if not isinstance(editor, GuiEditorWidgetQDialog):
+            return
+
         editor.accepted.disconnect()
         editor.rejected.disconnect()
+
+        if hasattr(editor, '_addContext'):
+            del editor._addContext
 
     def flushRow(self, row: int, item: ServerProfile):
         """Refresh row."""

@@ -174,17 +174,21 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
         if shortcut is not None:
             self.setShortcut(shortcut)
 
-        @QtCore.Slot(bool)
-        def triggerSignal(paramChecked):
-            """Handle trigger signal for the app q action."""
-            logger.info(f'action is \'{self.textEnglish}\'. Checked is {paramChecked}')
+        # Connect to a real QObject method rather than a nested closure that
+        # captures this action.  PySide stores Python callables connected to a
+        # signal outside the normal Python object graph; a closure here leaves
+        # an otherwise unowned QAction alive indefinitely.
+        self.triggered.connect(self._handleTriggered)
 
-            if callable(self.callback):
-                self.callback()
+    @QtCore.Slot(bool)
+    def _handleTriggered(self, paramChecked):
+        """Dispatch activation without creating a signal/self reference cycle."""
+        logger.info(f'action is \'{self.textEnglish}\'. Checked is {paramChecked}')
 
-            self.triggeredCallback(paramChecked)
+        if callable(self.callback):
+            self.callback()
 
-        self.triggered.connect(triggerSignal)
+        self.triggeredCallback(paramChecked)
 
     def addAction(self, action):
         """Add action."""

@@ -274,7 +274,7 @@ class AppQTextBrowser(SupportPointSizeSettings, QTextBrowser):
 
             if delta > 0:
                 self.zoomIn()
-            if delta < 0:
+            elif delta < 0:
                 self.zoomOut()
         else:
             super().wheelEvent(event)
@@ -306,23 +306,26 @@ class DraculaTextEditor(Mixins.ThemeAware, AppQPlainTextEdit):
             )
         )
 
-        @QtCore.Slot(bool)
-        def handleModificationChanged(changed):
-            """Handle modification changed."""
-            if changed:
-                self.document().setModified(False)
+        # QObject-bound slots are important here.  Nested closures connected to
+        # the editor's own signals retain the complete editor widget tree in
+        # PySide even after its window has been destroyed.
+        self.modificationChanged.connect(self._handleModificationChanged)
+        self.cursorPositionChanged.connect(self._handleCursorPositionChanged)
 
-                if callable(self._modificationChangedCb):
-                    self._modificationChangedCb()
+    @QtCore.Slot(bool)
+    def _handleModificationChanged(self, changed):
+        """Notify the registered modification callback for a real edit."""
+        if changed:
+            self.document().setModified(False)
 
-        @QtCore.Slot()
-        def handleCursorPositionChanged():
-            """Handle cursor position changed."""
-            if callable(self._cursorPositionChangedCb):
-                self._cursorPositionChangedCb(self.textCursor())
+            if callable(self._modificationChangedCb):
+                self._modificationChangedCb()
 
-        self.modificationChanged.connect(handleModificationChanged)
-        self.cursorPositionChanged.connect(handleCursorPositionChanged)
+    @QtCore.Slot()
+    def _handleCursorPositionChanged(self):
+        """Notify the registered cursor-position callback."""
+        if callable(self._cursorPositionChangedCb):
+            self._cursorPositionChangedCb(self.textCursor())
 
     def themeChangedCallback(self, theme: str):
         """Refresh editor chrome after an application theme change."""

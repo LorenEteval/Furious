@@ -30,7 +30,6 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 import logging
-import functools
 
 __all__ = ['TunSettingsDialog']
 
@@ -307,21 +306,22 @@ class TunSettingsDialog(GuiEditorWidgetQDialog):
             self.setFixedSize(int(620 * GOLDEN_RATIO), int(620))
 
         # Shallow copy
-        config = Storage.UserTUNSettings()
+        self._config = Storage.UserTUNSettings()
 
         try:
-            self.factoryToInput(config)
+            self.factoryToInput(self._config)
         except Exception as ex:
             # Any non-exit exceptions
 
             logger.error(f'error while converting factory to input: {ex}')
 
-        self.accepted.connect(functools.partial(self.handleAccepted, config))
-        self.rejected.connect(functools.partial(self.handleRejected))
+        self.accepted.connect(self.handleAccepted)
+        self.rejected.connect(self.handleRejected)
 
-    def handleAccepted(self, config: dict):
+    @QtCore.Slot()
+    def handleAccepted(self):
         """Handle accepted."""
-        modified = self.inputToFactory(config)
+        modified = self.inputToFactory(self._config)
 
         if modified and SystemRuntime.isTUNMode():
             showMBoxNewChangesNextTime()
@@ -329,6 +329,7 @@ class TunSettingsDialog(GuiEditorWidgetQDialog):
         self.accepted.disconnect()
         self.rejected.disconnect()
 
+    @QtCore.Slot()
     def handleRejected(self):
         """Handle rejected."""
         self.accepted.disconnect()

@@ -373,42 +373,42 @@ class TextEditorWindow(AppQMainWindow):
 
     def setIndent(self):
         """Set indent."""
-
-        def handleResultCode(_indentSpinBox, code):
-            """Handle result code."""
-            if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
-                plain = self.jsonEditor.toPlainText()
-
-                try:
-                    jsonObject = JSONEncoder.decode(plain)
-                except Exception as ex:
-                    # Any non-exit exceptions
-
-                    mbox = MBoxJSONDecodeError(
-                        icon=AppQMessageBox.Icon.Critical, parent=self
-                    )
-                    mbox.error = str(ex)
-                    mbox.setWindowTitle(_('Error setting indent'))
-                    mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
-                    mbox.setText(mbox.customText())
-
-                    # Show the MessageBox asynchronously
-                    mbox.open()
-                else:
-                    text = JSONEncoder.encode(jsonObject, indent=_indentSpinBox.value())
-
-                    self.setPlainText(text, False)
-            else:
-                # Do nothing
-                pass
-
         indentSpinBox = IndentDialog(parent=self)
-        indentSpinBox.finished.connect(
-            functools.partial(handleResultCode, indentSpinBox)
-        )
+        indentSpinBox.finished.connect(self._indentDialogFinished)
 
         # Show the MessageBox asynchronously
         indentSpinBox.open()
+
+    @QtCore.Slot(int)
+    def _indentDialogFinished(self, code):
+        """Apply the selected indentation without retaining the dialog."""
+        indentSpinBox = self.sender()
+
+        if not isinstance(indentSpinBox, IndentDialog):
+            return
+
+        if code != PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
+            return
+
+        plain = self.jsonEditor.toPlainText()
+
+        try:
+            jsonObject = JSONEncoder.decode(plain)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            mbox = MBoxJSONDecodeError(icon=AppQMessageBox.Icon.Critical, parent=self)
+            mbox.error = str(ex)
+            mbox.setWindowTitle(_('Error setting indent'))
+            mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+            mbox.setText(mbox.customText())
+
+            # Show the MessageBox asynchronously
+            mbox.open()
+        else:
+            text = JSONEncoder.encode(jsonObject, indent=indentSpinBox.value())
+
+            self.setPlainText(text, False)
 
     def showTabAndSpaces(self):
         """Show tab and spaces."""

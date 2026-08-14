@@ -187,7 +187,11 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         """Initialize the AppQDialog."""
         super().__init__(*args, **kwargs)
 
-        self._lifetimeKey = id(self)
+        # Use a per-instance token rather than id(self).  A finished transient
+        # can release its Python wrapper before Qt processes deleteLater(); an
+        # ID reused by a newer dialog must not let the older destroyed signal
+        # evict that newer dialog from the asynchronous lifetime registry.
+        self._lifetimeKey = object()
         self._firstShowPending = True
 
         # Do not store a nested closure that captures this dialog on the dialog
@@ -460,7 +464,7 @@ class AppQMainWindow(
         """Initialize the AppQMainWindow."""
         super().__init__(*args, **kwargs)
 
-        self._lifetimeKey = id(self)
+        self._lifetimeKey = object()
         self._firstShowPending = True
 
         release = functools.partial(
@@ -614,6 +618,19 @@ class _AppMessageBoxMask(QFrame):
 
         return super().eventFilter(watched, event)
 
+    def dispose(self):
+        """Detach from the long-lived owner before scheduling destruction."""
+        owner = self.parentWidget()
+
+        if owner is not None:
+            try:
+                owner.removeEventFilter(self)
+            except RuntimeError:
+                # The owner can be destroyed as part of the same close path.
+                pass
+
+        self.deleteLater()
+
 
 class AppQMessageBox(AppQTransientDialog):
     """Present a responsive Fluent dialog with QMessageBox-compatible APIs."""
@@ -682,7 +699,7 @@ class AppQMessageBox(AppQTransientDialog):
 
         super().__init__(parent=parent, **kwargs)
 
-        self._lifetimeKey = id(self)
+        self._lifetimeKey = object()
         self._windowMask = None
         self._icon = self.Icon.NoIcon
         self._text = ''
@@ -814,7 +831,7 @@ class AppQMessageBox(AppQTransientDialog):
         button = QPushButton(str(text), self.buttonFrame)
         button.setMinimumHeight(34)
         button.setAttribute(QtCore.Qt.WidgetAttribute.WA_LayoutUsesWidgetRect)
-        button.clicked.connect(functools.partial(self._buttonWasClicked, button))
+        button.clicked.connect(self._handleButtonClicked)
 
         self._buttonRoles[button] = role
 
@@ -1058,9 +1075,7 @@ class AppQMessageBox(AppQTransientDialog):
             customButton = button
             customButton.setParent(self.buttonFrame)
             customButton.setAttribute(QtCore.Qt.WidgetAttribute.WA_LayoutUsesWidgetRect)
-            customButton.clicked.connect(
-                functools.partial(self._buttonWasClicked, customButton)
-            )
+            customButton.clicked.connect(self._handleButtonClicked)
 
             self._buttonRoles[customButton] = role
             self._rebuildButtonLayout()
@@ -1071,6 +1086,14 @@ class AppQMessageBox(AppQTransientDialog):
             raise TypeError('a custom button requires a QMessageBox.ButtonRole')
 
         return self._createButton(button, role)
+
+    @QtCore.Slot(bool)
+    def _handleButtonClicked(self, _checked=False):
+        """Dispatch a child button through sender-based QObject ownership."""
+        button = self.sender()
+
+        if isinstance(button, QAbstractButton):
+            self._buttonWasClicked(button)
 
     def removeButton(self, button):
         """Remove one custom or standard button."""
@@ -1399,7 +1422,7 @@ class AppQMessageBox(AppQTransientDialog):
         self._windowMask = None
 
         if mask is not None:
-            mask.deleteLater()
+            mask.dispose()
 
     def moveToCenter(self):
         """Move to center."""

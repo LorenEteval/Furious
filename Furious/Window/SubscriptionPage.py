@@ -229,7 +229,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             deleteUniqueCallback=self._deleteProfilesForSubscription,
             parent=self,
         )
-        self.table.doubleClicked.connect(lambda _index: self.editSelected())
+        self.table.doubleClicked.connect(self._editDoubleClicked)
         self.table.groupsChanged.connect(
             self.serverTable.subsManager.subscriptionsChanged.emit
         )
@@ -281,6 +281,11 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
         self.setIconsByTheme(APP().theme())
         self.retranslate()
+
+    @QtCore.Slot(QtCore.QModelIndex)
+    def _editDoubleClicked(self, _index):
+        """Edit the selected subscription after a table double-click."""
+        self.editSelected()
 
     def _deleteProfilesForSubscription(self, unique: str):
         """Remove profiles belonging to a deleted subscription group."""
