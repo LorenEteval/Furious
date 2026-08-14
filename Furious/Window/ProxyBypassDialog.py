@@ -27,7 +27,6 @@ from PySide6 import QtCore
 from PySide6.QtWidgets import *
 
 import logging
-import functools
 
 __all__ = ['ProxyBypassDialog']
 
@@ -65,7 +64,7 @@ class ProxyBypassDialog(AppQDialog):
         self.dialogBtns.rejected.connect(self.reject)
 
         self.resetBtn = AppQPushButton(_('Reset'))
-        self.resetBtn.clicked.connect(functools.partial(self.handleResetButtonClicked))
+        self.resetBtn.clicked.connect(self.handleResetButtonClicked)
 
         self.hboxLayout = QHBoxLayout()
         self.hboxLayout.addWidget(self.resetBtn)
@@ -79,7 +78,7 @@ class ProxyBypassDialog(AppQDialog):
 
         self.setLayout(layout)
 
-        self.finished.connect(functools.partial(self.handleResultCode))
+        self.finished.connect(self.handleResultCode)
 
     def setWidthAndHeight(self):
         """Apply the default size for the GUI customize proxy bypass dialog."""

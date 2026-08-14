@@ -486,6 +486,9 @@ class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
         super().__init__(
             _('Scan QR Code On The Screen'),
             icon=bootstrapIcon('qr-code-scan.svg'),
+            # Tray and page actions each own a distinct native screen-capture
+            # handle, so every instance must close its own handle at shutdown.
+            uniqueCleanup=False,
             **kwargs,
         )
 

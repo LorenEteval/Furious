@@ -27,7 +27,6 @@ from PySide6 import QtCore
 from PySide6.QtWidgets import *
 
 import logging
-import functools
 
 __all__ = ['NetworkTestDialog']
 
@@ -76,13 +75,9 @@ class NetworkTestDialog(AppQDialog):
         self.dialogBtns.rejected.connect(self.reject)
 
         self.speedTestURLResetBtn = AppQPushButton(_('Reset'))
-        self.speedTestURLResetBtn.clicked.connect(
-            lambda: self.speedTestURLEdit.setText(NETWORK_SPEED_TEST_URL)
-        )
+        self.speedTestURLResetBtn.clicked.connect(self._resetSpeedTestURL)
         self.connectivityResetBtn = AppQPushButton(_('Reset'))
-        self.connectivityResetBtn.clicked.connect(
-            lambda: self.connectivityEdit.setText(NETWORK_CONNECTIVITY_TEST_URL)
-        )
+        self.connectivityResetBtn.clicked.connect(self._resetConnectivityURL)
 
         self.speedTestURLHboxLayout = QHBoxLayout()
         self.speedTestURLHboxLayout.addWidget(self.speedTestURLEdit)
@@ -102,7 +97,17 @@ class NetworkTestDialog(AppQDialog):
 
         self.setLayout(layout)
 
-        self.finished.connect(functools.partial(self.handleResultCode))
+        self.finished.connect(self.handleResultCode)
+
+    @QtCore.Slot()
+    def _resetSpeedTestURL(self):
+        """Restore the default speed-test URL."""
+        self.speedTestURLEdit.setText(NETWORK_SPEED_TEST_URL)
+
+    @QtCore.Slot()
+    def _resetConnectivityURL(self):
+        """Restore the default connectivity-test URL."""
+        self.connectivityEdit.setText(NETWORK_CONNECTIVITY_TEST_URL)
 
     def setWidthAndHeight(self):
         """Apply the default size for the GUI customize network test dialog."""

@@ -729,10 +729,8 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         """Handle the home-page request to restart with elevated privileges."""
         if not SystemRuntime.isScriptMode():
             if not SystemRuntime.isAdmin():
-                process = QtCore.QProcess()
-
                 if PLATFORM == 'Windows':
-                    process.startDetached(
+                    QtCore.QProcess.startDetached(
                         'powershell',
                         arguments=[
                             '-Command',
@@ -741,7 +739,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
                         ],
                     )
                 elif PLATFORM == 'Darwin':
-                    process.startDetached(
+                    QtCore.QProcess.startDetached(
                         'osascript',
                         arguments=[
                             '-e',

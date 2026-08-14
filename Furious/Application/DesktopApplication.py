@@ -49,7 +49,6 @@ import sys
 import logging
 import platform
 import threading
-import functools
 import traceback
 import darkdetect
 
@@ -199,19 +198,33 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         self._userTUNSettings = None
 
         # ThreadPool
-        self.threadPool = QtCore.QThreadPool()
+        self.threadPool = QtCore.QThreadPool(self)
         self.threadPool.setMaxThreadCount(max(OS_CPU_COUNT // 2, 1))
 
     @callRateLimited(maxCallPerSecond=2)
     @QtCore.Slot()
     def handleNewConnection(self):
         """Handle new connection."""
-        socket = self.server.nextPendingConnection()
-        socket.readyRead.connect(functools.partial(self.handleNewData, socket))
+        while self.server.hasPendingConnections():
+            socket = self.server.nextPendingConnection()
 
-    @QtCore.Slot(QLocalSocket)
-    def handleNewData(self, socket: QLocalSocket):
+            if socket is None:
+                continue
+
+            # QLocalServer owns pending sockets until they are explicitly
+            # released.  Use sender() instead of a partial that retains each
+            # socket and dispose it after the one-command protocol completes.
+            socket.readyRead.connect(self.handleNewData)
+            socket.disconnected.connect(socket.deleteLater)
+
+    @QtCore.Slot()
+    def handleNewData(self):
         """Handle new data."""
+        socket = self.sender()
+
+        if not isinstance(socket, QLocalSocket):
+            return
+
         data = socket.readAll().data()
 
         if isinstance(data, bytes):
@@ -234,6 +247,14 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         else:
             # TODO: Not implemented
             pass
+
+        # The singleton IPC channel carries exactly one command.  Closing it
+        # here both wakes RunAs clients and prevents completed QLocalSocket
+        # children from accumulating under the application-wide server.
+        socket.disconnectFromServer()
+
+        if socket.state() == QLocalSocket.LocalSocketState.UnconnectedState:
+            socket.deleteLater()
 
     def configureLogging(self):
         """Configure logging."""
@@ -528,7 +549,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                         self.handleSystemThemeChanged(currentTheme)
 
                 self.currentTheme = self.systemTheme()
-                self.themeDetectTimer = QtCore.QTimer()
+                self.themeDetectTimer = QtCore.QTimer(self)
                 self.themeDetectTimer.timeout.connect(handleTimeout)
                 self.themeDetectTimer.start(1000)
             else:
@@ -545,7 +566,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                             'darkdetect listener is not implemented on this platform'
                         )
 
-                self.themeDetector = ApplicationThemeDetector()
+                self.themeDetector = ApplicationThemeDetector(self)
                 self.themeDetector.themeChanged.connect(self.handleSystemThemeChanged)
 
                 self.themeListenerThread = threading.Thread(
