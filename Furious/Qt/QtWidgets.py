@@ -1634,8 +1634,8 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
         if not self.iconFileName:
             return
 
-        if AppSettings.isStateON_('DarkMode'):
-            # Custom dark mode
+        if APP().usesForcedDarkTheme():
+            # Explicit dark theme
             super().setIcon(bootstrapIconWhite(self.iconFileName))
 
             return
@@ -1729,7 +1729,7 @@ class AppQIconTextPushButton(
         if not self.iconFileName:
             return
 
-        if AppSettings.isStateON_('DarkMode'):
+        if APP().usesForcedDarkTheme():
             IconTextPushButton.setIcon(
                 self,
                 bootstrapIconWhite(self.iconFileName),

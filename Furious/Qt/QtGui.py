@@ -235,8 +235,8 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
         if not self.iconFileName:
             return
 
-        if AppSettings.isStateON_('DarkMode'):
-            # Custom dark mode
+        if APP().usesForcedDarkTheme():
+            # Explicit dark theme
             super().setIcon(bootstrapIconWhite(self.iconFileName))
 
             return

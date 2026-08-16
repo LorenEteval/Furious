@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+from Furious.Controllers import APPLICATION_THEME_SETTING
 from Furious.Frozenlib import *
 from Furious.Plugins import (
     CapabilityKind,
@@ -501,6 +502,61 @@ class _LanguageSettingsCard(_SettingsCard):
             AppSettingsController().setLanguage(language)
 
 
+class _ApplicationThemeSettingsCard(_SettingsCard):
+    """Select the source of the application light or dark appearance."""
+
+    Options = (
+        ('Follow System Appearance', ApplicationTheme.System),
+        ('Light Theme', ApplicationTheme.Light),
+        ('Dark Theme', ApplicationTheme.Dark),
+    )
+
+    _TranslatableOptions = (
+        _('Follow System Appearance'),
+        _('Light Theme'),
+        _('Dark Theme'),
+    )
+
+    def __init__(self, title='', description='', parent=None):
+        """Initialize the translated application-theme selector."""
+        self.comboBox = AppQComboBox()
+        self.comboBox.setObjectName('SettingsComboBox')
+        self.comboBox.setMinimumWidth(260)
+
+        for label, preference in self.Options:
+            self.comboBox.addItem(_(label), preference.value)
+
+        self.sync()
+
+        self.comboBox.currentIndexChanged.connect(self._selectionChanged)
+
+        super().__init__(
+            'moon-stars.svg',
+            self.comboBox,
+            title,
+            description,
+            parent=parent,
+        )
+
+    def sync(self):
+        """Select the persisted preference without applying it again."""
+        blocker = QtCore.QSignalBlocker(self.comboBox)
+
+        index = self.comboBox.findData(AppSettings.get(APPLICATION_THEME_SETTING))
+
+        self.comboBox.setCurrentIndex(max(index, 0))
+
+        del blocker
+
+    @QtCore.Slot(int)
+    def _selectionChanged(self, _index: int):
+        """Persist and apply the selected application theme preference."""
+        preference = self.comboBox.currentData()
+
+        if isinstance(preference, str):
+            AppSettingsController().setApplicationTheme(preference)
+
+
 class _SystemProxySettingsCard(_SettingsCard):
     """Select how Furious manages the operating-system proxy."""
 
@@ -651,18 +707,15 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.tunModeCard.checkBox.setEnabled(self._tunModeAvailable)
 
         (
-            self.darkModeCard,
+            self.applicationThemeCard,
             self.languageCard,
             self.monochromeCard,
             self.startupCard,
             self.powerSaveCard,
         ) = (
-            _ToggleSettingsCard(
-                'moon-stars.svg',
-                'DarkMode',
-                AppSettingsController().setDarkMode,
-                _('Dark Mode'),
-                _('Use the application dark theme instead of automatic appearance.'),
+            _ApplicationThemeSettingsCard(
+                _('Application Theme'),
+                _('Choose how the application appearance is determined.'),
             ),
             _LanguageSettingsCard(
                 _('Language'),
@@ -692,7 +745,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         )
 
         self.generalSection.addCard(self.tunModeCard)
-        self.generalSection.addCard(self.darkModeCard)
+        self.generalSection.addCard(self.applicationThemeCard)
         self.generalSection.addCard(self.languageCard)
         self.generalSection.addCard(self.monochromeCard)
 

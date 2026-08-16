@@ -22,10 +22,19 @@ from __future__ import annotations
 from enum import Enum
 
 __all__ = [
+    'ApplicationTheme',
     'AppBuiltinCommand',
     'AppBuiltinRouting',
     'AppBuiltinProxyMode',
 ]
+
+
+class ApplicationTheme(Enum):
+    """Enumerate the persisted application appearance preferences."""
+
+    System = 'System'
+    Light = 'Light'
+    Dark = 'Dark'
 
 
 class AppBuiltinCommand(Enum):

@@ -66,7 +66,12 @@ from .Constants import (
     XRAY_ASSET_PATH_GEOIP,
     XRAY_ASSET_PATH_GEOSITE,
 )
-from .Enum import AppBuiltinCommand, AppBuiltinProxyMode, AppBuiltinRouting
+from .Enum import (
+    ApplicationTheme,
+    AppBuiltinCommand,
+    AppBuiltinProxyMode,
+    AppBuiltinRouting,
+)
 from .Globals import (
     APP,
     AppConnectionController,
@@ -117,6 +122,7 @@ __all__ = [
     'APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS',
     'APPLICATION_TUN2SOCKS_NETWORK_INTERFACE_NAME',
     'APPLICATION_VERSION',
+    'ApplicationTheme',
     'AppBinarySettings',
     'AppBuiltinCommand',
     'AppBuiltinProxyMode',

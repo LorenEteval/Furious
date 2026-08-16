@@ -24,6 +24,7 @@ from Furious.Interface import *
 from Furious.Core import Tun2socks
 from Furious.Backends import OFFICIAL_PLUGIN_TYPES
 from Furious.Controllers import (
+    APPLICATION_THEME_SETTING,
     ConnectionController,
     RoutingController,
     SettingsController,
@@ -322,8 +323,8 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         self._userSubs = Storage.UserSubs()
         self._userTUNSettings = Storage.UserTUNSettings()
 
-    def isDarkMode(self):
-        """Return whether dark mode."""
+    def isSystemDarkMode(self):
+        """Return whether the current system palette appears dark."""
         backgroudColor = self.palette().color(QPalette.ColorRole.Window)
 
         return backgroudColor.lightness() < 128
@@ -340,24 +341,26 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
             logger.error('darkdetect.theme() is not implemented on this platform')
 
-        return AppStyleSheet.Dark if self.isDarkMode() else AppStyleSheet.Light
+        return AppStyleSheet.Dark if self.isSystemDarkMode() else AppStyleSheet.Light
 
-    def isDarkModeEnabled(self):
-        # if SystemRuntime.flatpakID():
-        #     return self.isDarkMode()
-        #
-        # if not SystemRuntime.isAdmin():
-        #     return AppSettings.isStateON_('DarkMode')
-        # else:
-        #     return self.isDarkMode()
+    def themePreference(self) -> ApplicationTheme:
+        """Return the authoritative persisted application theme preference."""
+        return ApplicationTheme(AppSettings.get(APPLICATION_THEME_SETTING))
 
-        """Return whether dark mode enabled."""
-        return AppSettings.isStateON_('DarkMode')
+    def followsSystemAppearance(self) -> bool:
+        """Return whether system appearance controls the application theme."""
+        return self.themePreference() == ApplicationTheme.System
+
+    def usesForcedDarkTheme(self) -> bool:
+        """Return whether the application explicitly forces its dark theme."""
+        return self.themePreference() == ApplicationTheme.Dark
 
     def theme(self):
-        """Return the theme value used by the application."""
-        if self.isDarkModeEnabled():
-            return AppStyleSheet.Dark
+        """Resolve the effective light or dark application theme."""
+        preference = self.themePreference()
+
+        if preference != ApplicationTheme.System:
+            return preference.value
 
         return self.systemTheme()
 
@@ -365,15 +368,9 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         """Handle apply style sheet for theme for the application."""
         self.setStyleSheet(AppStyleSheet.forTheme(theme))
 
-    def switchToDarkMode(self):
-        """Handle switch to dark mode for the application."""
-        self.applyStyleSheetForTheme(AppStyleSheet.Dark)
-
-        Mixins.ThemeAware.callThemeChangedCallbackUnchecked(AppStyleSheet.Dark)
-
-    def switchToAutoMode(self):
-        """Handle switch to auto mode for the application."""
-        theme = self.systemTheme()
+    def applyThemePreference(self):
+        """Apply the resolved preference and refresh every theme-aware object."""
+        theme = self.theme()
 
         self.applyStyleSheetForTheme(theme)
 
@@ -382,11 +379,18 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
     @QtCore.Slot(str)
     def handleSystemThemeChanged(self, theme):
         """Handle system theme changed."""
+        if not self.followsSystemAppearance():
+            logger.info(
+                f'ignore system theme \'{theme}\' change while application theme '
+                f'is forced to \'{self.themePreference().value}\''
+            )
+
+            return
+
         if theme not in [AppStyleSheet.Dark, AppStyleSheet.Light]:
             theme = self.systemTheme()
 
-        if not self.isDarkModeEnabled():
-            self.applyStyleSheetForTheme(theme)
+        self.applyStyleSheetForTheme(theme)
 
         Mixins.ThemeAware.callThemeChangedCallback(theme)
 
@@ -590,6 +594,10 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                 SystemProxy.off()
                 SystemProxy.daemonOn_()
 
+            # Resolve the stored preference before constructing application UI so
+            # newly created widgets use the correct palette from their first frame.
+            self.applyThemePreference()
+
             self.mainWindow = MainWindow()
             self.systemTray = TrayIcon()
 
@@ -609,11 +617,6 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
                 # Ensure the main window is shown when the dock icon is clicked
                 self.applicationStateChanged.connect(onApplicationStateChange)
-
-            if AppSettings.isStateON_('DarkMode'):
-                self.switchToDarkMode()
-            else:
-                self.switchToAutoMode()
 
             self.systemTray.show()
             self.systemTray.setCustomToolTip()

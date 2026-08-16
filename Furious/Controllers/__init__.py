@@ -23,9 +23,10 @@ from .ConnectionController import (
     ConnectionState,
 )
 from .RoutingController import RoutingController
-from .SettingsController import SettingsController
+from .SettingsController import APPLICATION_THEME_SETTING, SettingsController
 
 __all__ = [
+    'APPLICATION_THEME_SETTING',
     'ConnectionController',
     'ConnectionError',
     'ConnectionState',

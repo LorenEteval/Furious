@@ -128,8 +128,8 @@ class XrayAssetListWidget(Mixins.ThemeAware, AppQListWidget):
                 item = QListWidgetItem(f'{filename:{maxlen + 6}}{mdate}')
                 item.setFont(QFont(AppFontName()))
 
-                if AppSettings.isStateON_('DarkMode'):
-                    # Custom dark mode
+                if APP().usesForcedDarkTheme():
+                    # Explicit dark theme
                     item.setIcon(bootstrapIconWhite('file-earmark.svg'))
                 else:
                     if theme == 'Dark':

@@ -974,14 +974,6 @@ TRANSLATION = {
         "ZH": "设置",
         "isReviewed": "True"
     },
-    "Dark Mode": {
-        "source": [
-            "Furious.Window.SettingsPage"
-        ],
-        "RU": "Темный режим",
-        "ZH": "深色模式",
-        "isReviewed": "True"
-    },
     "Startup On Boot": {
         "source": [
             "Furious.Window.SettingsPage"
@@ -2423,14 +2415,6 @@ TRANSLATION = {
         "ZH": "通过当前代理连接路由系统流量。",
         "isReviewed": "True"
     },
-    "Use the application dark theme instead of automatic appearance.": {
-        "source": [
-            "Furious.Window.SettingsPage"
-        ],
-        "RU": "Использовать тёмную тему приложения вместо автоматического оформления.",
-        "ZH": "使用应用程序深色主题，而不跟随自动外观。",
-        "isReviewed": "True"
-    },
     "Choose the language used by the application interface.": {
         "source": [
             "Furious.Window.SettingsPage"
@@ -2846,5 +2830,45 @@ TRANSLATION = {
         "RU": "Отключение",
         "ZH": "正在断开连接",
         "isReviewed": "True"
+    },
+    "Follow System Appearance": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "ZH": "跟随系统外观",
+        "isReviewed": "True",
+        "RU": "Следовать оформлению системы"
+    },
+    "Light Theme": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "ZH": "浅色主题",
+        "isReviewed": "True",
+        "RU": "Светлая тема"
+    },
+    "Dark Theme": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "ZH": "深色主题",
+        "isReviewed": "True",
+        "RU": "Тёмная тема"
+    },
+    "Application Theme": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "ZH": "应用程序主题",
+        "isReviewed": "True",
+        "RU": "Тема приложения"
+    },
+    "Choose how the application appearance is determined.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "ZH": "选择应用程序外观的确定方式。",
+        "isReviewed": "True",
+        "RU": "Выберите способ определения оформления приложения."
     }
 }

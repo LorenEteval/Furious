@@ -187,20 +187,7 @@ class Mixins:
 
         @staticmethod
         def callThemeChangedCallback(theme: str):
-            """Call theme changed callback."""
-            try:
-                app = QApplication.instance()
-
-                if app is not None and app.isDarkModeEnabled():
-                    # Ignore application dark detect system
-                    logger.info(f'ignore system theme \'{theme}\' changes in dark mode')
-
-                    return
-            except Exception:
-                # Any non-exit exceptions
-
-                pass
-
+            """Notify registered objects after an accepted system theme change."""
             logger.info(f'system theme changed to \'{theme}\'')
 
             Mixins.ThemeAware.callThemeChangedCallbackUnchecked(theme)

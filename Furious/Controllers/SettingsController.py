@@ -27,10 +27,21 @@ from Furious.Service.TrafficStatsManager import (
     METRICS_COLLECTION_SETTING,
 )
 
-__all__ = ['SettingsController']
+from PySide6 import QtCore
+
+__all__ = ['APPLICATION_THEME_SETTING', 'SettingsController']
+
+APPLICATION_THEME_SETTING = 'ApplicationTheme'
+# Migrate legacy settings
+_LEGACY_DARK_MODE_SETTING = 'DarkMode'
 
 registerAppSettings('VPNMode', isBinary=True)
-registerAppSettings('DarkMode', isBinary=True)
+registerAppSettings(
+    APPLICATION_THEME_SETTING,
+    validRange=[theme.value for theme in ApplicationTheme],
+    default=ApplicationTheme.System.value,
+)
+registerAppSettings(_LEGACY_DARK_MODE_SETTING, isBinary=True)
 registerAppSettings('UseMonochromeTrayIcon', isBinary=True)
 
 if PLATFORM == 'Darwin':
@@ -56,8 +67,62 @@ registerAppSettings(
 )
 
 
+def _legacyDarkModeValue(preference: ApplicationTheme) -> str:
+    """Return the closest legacy binary representation of a preference."""
+    if preference == ApplicationTheme.Dark:
+        return AppBinarySettings.ON_
+
+    # Legacy releases represented both automatic and forced light as "not dark".
+    return AppBinarySettings.OFF
+
+
+def _synchronizeLegacyDarkModeSetting():
+    """Reconcile and retain the legacy dark-mode compatibility setting."""
+    settings = QtCore.QSettings()
+
+    hasLegacyValue, hasThemeValue = (
+        settings.contains(_LEGACY_DARK_MODE_SETTING),
+        settings.contains(APPLICATION_THEME_SETTING),
+    )
+
+    if hasLegacyValue:
+        legacyValue = settings.value(_LEGACY_DARK_MODE_SETTING)
+
+        legacyDarkEnabled = str(legacyValue).strip().lower() == AppBinarySettings.ON_
+
+        if not hasThemeValue:
+            preference = (
+                ApplicationTheme.Dark if legacyDarkEnabled else ApplicationTheme.System
+            )
+
+            AppSettings.set(APPLICATION_THEME_SETTING, preference.value)
+        else:
+            preference = ApplicationTheme(AppSettings.get(APPLICATION_THEME_SETTING))
+
+            # A mismatch means an older release changed its binary setting.
+            if legacyDarkEnabled and preference != ApplicationTheme.Dark:
+                preference = ApplicationTheme.Dark
+
+                AppSettings.set(APPLICATION_THEME_SETTING, preference.value)
+            elif not legacyDarkEnabled and preference == ApplicationTheme.Dark:
+                preference = ApplicationTheme.System
+
+                AppSettings.set(APPLICATION_THEME_SETTING, preference.value)
+    else:
+        preference = ApplicationTheme(AppSettings.get(APPLICATION_THEME_SETTING))
+
+    AppSettings.set(
+        _LEGACY_DARK_MODE_SETTING,
+        _legacyDarkModeValue(preference),
+    )
+
+
 class SettingsController:
     """Apply application settings independently from their presentation."""
+
+    def __init__(self):
+        """Synchronize theme persistence after Qt application metadata is ready."""
+        _synchronizeLegacyDarkModeSetting()
 
     @staticmethod
     def _setBinary(settingName: str, enabled: bool):
@@ -77,21 +142,24 @@ class SettingsController:
 
         showMBoxNewChangesNextTime()
 
-    @classmethod
-    def setDarkMode(cls, enabled: bool):
-        """Switch between the explicit dark theme and automatic mode."""
-        cls._setBinary('DarkMode', enabled)
-
+    @staticmethod
+    def setApplicationTheme(theme: ApplicationTheme | str):
+        """Persist and immediately apply one application theme preference."""
         try:
-            if enabled:
-                APP().switchToDarkMode()
-            else:
-                APP().switchToAutoMode()
-        except Exception:
-            # Any non-exit exceptions
+            preference = ApplicationTheme(theme)
+        except (TypeError, ValueError):
+            return
 
-            # The controller can be exercised before the full desktop UI exists.
-            pass
+        AppSettings.set(APPLICATION_THEME_SETTING, preference.value)
+        AppSettings.set(
+            _LEGACY_DARK_MODE_SETTING,
+            _legacyDarkModeValue(preference),
+        )
+
+        applyThemePreference = getattr(APP(), 'applyThemePreference', None)
+
+        if callable(applyThemePreference):
+            applyThemePreference()
 
     @staticmethod
     def setLanguage(language: str):
