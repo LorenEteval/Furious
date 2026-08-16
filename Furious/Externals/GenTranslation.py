@@ -639,7 +639,8 @@ TRANSLATION = {
     "Connecting": {
         "source": [
             "Furious.Actions.Connection",
-            "Furious.Widget.ServerTableView"
+            "Furious.Widget.ServerTableView",
+            "Furious.Window.HomePage"
         ],
         "RU": "Подключение",
         "ZH": "正在连接",
@@ -885,7 +886,8 @@ TRANSLATION = {
     },
     "Connected": {
         "source": [
-            "Furious.Controllers.ConnectionController"
+            "Furious.Controllers.ConnectionController",
+            "Furious.Window.HomePage"
         ],
         "RU": "Подключен",
         "ZH": "已连接",
@@ -918,7 +920,8 @@ TRANSLATION = {
     "Disconnected": {
         "source": [
             "Furious.Controllers.ConnectionController",
-            "Furious.Widget.ServerTableView"
+            "Furious.Widget.ServerTableView",
+            "Furious.Window.HomePage"
         ],
         "RU": "Отключен",
         "ZH": "已断开",
@@ -2825,7 +2828,8 @@ TRANSLATION = {
     },
     "Disconnecting": {
         "source": [
-            "Furious.Actions.Connection"
+            "Furious.Actions.Connection",
+            "Furious.Window.HomePage"
         ],
         "RU": "Отключение",
         "ZH": "正在断开连接",

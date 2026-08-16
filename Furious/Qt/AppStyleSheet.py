@@ -1258,39 +1258,65 @@ class AppStyleSheet:
                 border: none;
             }}
 
-            QWidget#NetworkStateBadge {{
+            QFrame#NetworkStateBadge {{
                 min-height: 24px;
-                padding: 0 2px;
                 border: 1px solid {palette['border']};
                 border-radius: 6px;
                 background-color: {palette['raised']};
                 color: {palette['muted']};
             }}
 
-            QWidget#NetworkStateBadge QLabel {{
+            QFrame#NetworkStateBadge QLabel {{
                 border: none;
                 padding: 0;
                 background-color: transparent;
                 color: {palette['muted']};
             }}
 
-            QWidget#NetworkStateBadge[networkState="success"] {{
+            QFrame#NetworkStateBadge QLabel#NetworkStateLabel {{
+                color: {palette['text_strong']};
+                font-weight: 600;
+            }}
+
+            QFrame#NetworkStateBadge[networkState="disconnected"] QLabel#NetworkStateLabel {{
+                color: {palette['muted']};
+            }}
+
+            QFrame#NetworkStateBadge[networkState="connecting"] {{
+                border-color: {palette['accent']};
+                background-color: {palette['accent_soft']};
+            }}
+
+            QFrame#NetworkStateBadge[networkState="connecting"] QLabel#NetworkStateLabel {{
+                color: {palette['accent']};
+            }}
+
+            QFrame#NetworkStateBadge[networkState="connected"],
+            QFrame#NetworkStateBadge[networkState="success"] {{
                 border-color: {palette['success']};
                 background-color: {palette['success_soft']};
-                color: {palette['text_strong']};
             }}
 
-            QWidget#NetworkStateBadge[networkState="success"] QLabel {{
-                color: {palette['text_strong']};
+            QFrame#NetworkStateBadge[networkState="connected"] QLabel#NetworkStateLabel,
+            QFrame#NetworkStateBadge[networkState="success"] QLabel#NetworkStateLabel {{
+                color: {palette['success']};
             }}
 
-            QWidget#NetworkStateBadge[networkState="failure"] {{
+            QFrame#NetworkStateBadge[networkState="disconnecting"] {{
+                border-color: {palette['warning']};
+                background-color: {palette['warning_soft']};
+            }}
+
+            QFrame#NetworkStateBadge[networkState="disconnecting"] QLabel#NetworkStateLabel {{
+                color: {palette['warning']};
+            }}
+
+            QFrame#NetworkStateBadge[networkState="failure"] {{
                 border-color: {palette['danger']};
                 background-color: {palette['danger_soft']};
-                color: {palette['text_strong']};
             }}
 
-            QWidget#NetworkStateBadge[networkState="failure"] QLabel {{
+            QFrame#NetworkStateBadge[networkState="failure"] QLabel#NetworkStateLabel {{
                 color: {palette['danger']};
             }}
 
