@@ -54,3 +54,4 @@ class LogEntry:
     categoryTranslatable: bool = False
     source: str = ''
     severity: str = ''
+    sequence: int = 0

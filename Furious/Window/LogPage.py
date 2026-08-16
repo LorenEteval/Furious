@@ -143,6 +143,10 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             pointSizeSettingsName='LogViewerWidgetPointSize',
         )
         self.textBrowser.setLineWrapMode(DraculaTextBrowser.LineWrapMode.NoWrap)
+        self.textBrowser.document().setMaximumBlockCount(manager.maximumEntries)
+
+        self._entriesDirty = True
+        self._renderedSequence = 0
 
         filterLayout = QHBoxLayout()
         filterLayout.setContentsMargins(0, 0, 0, 0)
@@ -247,7 +251,6 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             self._registerMenuShortcuts(menu)
 
         self._populateFilters(self._preferredFilter)
-        self._refreshEntries()
 
         self.filterComboBox.currentIndexChanged.connect(self._filterChanged)
         self.manager.categoryRegistered.connect(self._categoryRegistered)
@@ -301,14 +304,24 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
     def _refreshEntries(self):
         """Render the current immutable filtered-entry snapshot."""
         selectedCategoryId = self.filterComboBox.currentData()
+        sequence, entries = self.manager.snapshot(selectedCategoryId)
 
-        content = '\n'.join(
-            formatLogEntry(entry) for entry in self.manager.entries(selectedCategoryId)
-        )
+        content = '\n'.join(formatLogEntry(entry) for entry in entries)
+
         self.textBrowser.setPlainText(content)
+        self._renderedSequence = sequence
 
         scrollbar = self.textBrowser.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
+
+        self._entriesDirty = False
+
+    def _refreshEntriesIfVisible(self):
+        """Render pending entries only while this page is actually visible."""
+        if self.isVisible():
+            self._refreshEntries()
+        else:
+            self._entriesDirty = True
 
     @QtCore.Slot(int)
     def _filterChanged(self, _index: int):
@@ -322,7 +335,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         AppSettings.set('LogViewerSelectedCategory', categoryId)
 
-        self._refreshEntries()
+        self._refreshEntriesIfVisible()
 
     @QtCore.Slot(object)
     def _categoryRegistered(self, category):
@@ -338,6 +351,20 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
     @QtCore.Slot(object)
     def _entryAdded(self, entry):
         """Append an entry when it matches the active filter."""
+        if not self.isVisible():
+            self._entriesDirty = True
+
+            return
+
+        if entry.sequence <= self._renderedSequence:
+            return
+
+        if entry.sequence != self._renderedSequence + 1:
+            self._refreshEntries()
+
+            return
+
+        self._renderedSequence = entry.sequence
         categoryId = self.filterComboBox.currentData()
 
         if categoryId in (ALL_LOGS_FILTER, entry.categoryId):
@@ -346,7 +373,14 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
     @QtCore.Slot(object)
     def _entriesCleared(self, _categoryIds):
         """Refresh the presentation after the underlying collection changes."""
-        self._refreshEntries()
+        self._refreshEntriesIfVisible()
+
+    def showEvent(self, event):
+        """Render entries accumulated while the page was hidden."""
+        super().showEvent(event)
+
+        if self._entriesDirty:
+            self._refreshEntries()
 
     def plainText(self) -> str:
         """Return the plain text currently shown by the selected filter."""
@@ -364,4 +398,4 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.pageTitleLabel.setText(_('Log'))
         self.filterLabel.setText(_('Log Type'))
         self._populateFilters(selectedCategoryId)
-        self._refreshEntries()
+        self._refreshEntriesIfVisible()

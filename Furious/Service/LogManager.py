@@ -23,6 +23,7 @@ from Furious.Models.Logging import LogCategory, LogEntry
 
 from PySide6 import QtCore
 
+from collections import deque
 from datetime import datetime
 from typing import Optional
 
@@ -54,17 +55,28 @@ def formatLogEntry(entry: LogEntry) -> str:
 class LogManager(QtCore.QObject):
     """Own the application-wide categorized log stream."""
 
+    DefaultMaximumEntries = 10_000
+
     categoryRegistered = QtCore.Signal(object)
     entryAdded = QtCore.Signal(object)
     entriesCleared = QtCore.Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, maximumEntries=DefaultMaximumEntries):
         """Initialize the category registry and thread-safe entry collection."""
         super().__init__(parent)
 
+        if (
+            isinstance(maximumEntries, bool)
+            or not isinstance(maximumEntries, int)
+            or maximumEntries <= 0
+        ):
+            raise ValueError('maximumEntries must be a positive integer')
+
         self._lock = threading.RLock()
         self._categories: dict[str, LogCategory] = {}
-        self._entries: list[LogEntry] = []
+        self._maximumEntries = maximumEntries
+        self._entries: deque[LogEntry] = deque(maxlen=maximumEntries)
+        self._sequence = 0
 
         self.registerCategory(
             LogCategory(
@@ -88,6 +100,11 @@ class LogManager(QtCore.QObject):
                 runtime=True,
             )
         )
+
+    @property
+    def maximumEntries(self) -> int:
+        """Return the maximum number of structured entries retained in memory."""
+        return self._maximumEntries
 
     def registerCategory(self, category: LogCategory) -> LogCategory:
         """Register a filterable category and publish it exactly once."""
@@ -161,6 +178,8 @@ class LogManager(QtCore.QObject):
             elif not isinstance(timestamp, datetime):
                 raise TypeError('log timestamp must be a datetime')
 
+            self._sequence += 1
+
             entry = LogEntry(
                 message=str(message).rstrip('\r\n'),
                 timestamp=timestamp,
@@ -169,7 +188,9 @@ class LogManager(QtCore.QObject):
                 categoryTranslatable=category.translatable,
                 source=str(source) if source else '',
                 severity=str(severity) if severity else '',
+                sequence=self._sequence,
             )
+
             self._entries.append(entry)
 
         self.entryAdded.emit(entry)
@@ -203,13 +224,22 @@ class LogManager(QtCore.QObject):
 
     def entries(self, categoryId: Optional[str] = None) -> tuple[LogEntry, ...]:
         """Return an immutable snapshot, optionally filtered by category."""
+        return self.snapshot(categoryId)[1]
+
+    def snapshot(
+        self,
+        categoryId: Optional[str] = None,
+    ) -> tuple[int, tuple[LogEntry, ...]]:
+        """Return the current sequence and its immutable filtered entries."""
         with self._lock:
             if categoryId in (None, ALL_LOGS_FILTER):
-                return tuple(self._entries)
+                entries = tuple(self._entries)
+            else:
+                entries = tuple(
+                    entry for entry in self._entries if entry.categoryId == categoryId
+                )
 
-            return tuple(
-                entry for entry in self._entries if entry.categoryId == categoryId
-            )
+            return self._sequence, entries
 
     def clear(
         self,
@@ -238,14 +268,20 @@ class LogManager(QtCore.QObject):
 
             if clearedCategoryIds is None:
                 changed = bool(self._entries)
+
                 self._entries.clear()
             else:
                 oldLength = len(self._entries)
-                self._entries = [
-                    entry
-                    for entry in self._entries
-                    if entry.categoryId not in clearedCategoryIds
-                ]
+
+                self._entries = deque(
+                    (
+                        entry
+                        for entry in self._entries
+                        if entry.categoryId not in clearedCategoryIds
+                    ),
+                    maxlen=self._maximumEntries,
+                )
+
                 changed = len(self._entries) != oldLength
 
         if changed:
