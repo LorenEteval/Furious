@@ -722,8 +722,26 @@ class AppQMessageBox(AppQTransientDialog):
         self.destroyed.connect(release)
 
         self.setObjectName('AppMessageBox')
-        self.setWindowFlag(QtCore.Qt.WindowType.FramelessWindowHint, True)
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        windowFlags = (
+            QtCore.Qt.WindowType.Window
+            | QtCore.Qt.WindowType.FramelessWindowHint
+            | QtCore.Qt.WindowType.NoDropShadowWindowHint
+        )
+
+        self.setWindowFlags(windowFlags)
+        self.setAttribute(
+            QtCore.Qt.WidgetAttribute.WA_TranslucentBackground,
+            True,
+        )
+        self.setAutoFillBackground(False)
+
+        windowPalette = self.palette()
+        windowPalette.setColor(
+            QPalette.ColorRole.Window,
+            QColor(QtCore.Qt.GlobalColor.transparent),
+        )
+        self.setPalette(windowPalette)
+
         self.setModal(True)
 
         self.surface = QFrame(self)
@@ -795,15 +813,8 @@ class AppQMessageBox(AppQTransientDialog):
         self.surfaceLayout.addWidget(self.buttonFrame)
 
         self.dialogLayout = QVBoxLayout(self)
-        self.dialogLayout.setContentsMargins(12, 12, 12, 12)
+        self.dialogLayout.setContentsMargins(0, 0, 0, 0)
         self.dialogLayout.addWidget(self.surface)
-
-        shadow = QGraphicsDropShadowEffect(self.surface)
-        shadow.setBlurRadius(28)
-        shadow.setOffset(0, 8)
-        shadow.setColor(QColor(0, 0, 0, 70))
-
-        self.surface.setGraphicsEffect(shadow)
 
         self.setWindowTitle(title)
         self.setText(text)
@@ -1396,7 +1407,7 @@ class AppQMessageBox(AppQTransientDialog):
         self.contentFrame.setFixedHeight(contentHeight)
         self.buttonFrame.setFixedHeight(buttonHeight)
         self.surface.setFixedSize(surfaceWidth, contentHeight + buttonHeight)
-        self.setFixedSize(self.surface.size() + QtCore.QSize(24, 24))
+        self.setFixedSize(self.surface.size())
 
     def _showWindowMask(self):
         """Create one theme-aware mask over the owning window."""
