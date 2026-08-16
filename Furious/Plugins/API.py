@@ -200,6 +200,7 @@ class ProtocolDescriptor:
     separatorBefore: bool = False
     configurationSchema: Mapping[str, Any] = field(default_factory=dict)
     translatable: bool = False
+    subscriptionImportable: bool = True
 
 
 @dataclass(frozen=True)
@@ -430,6 +431,10 @@ class KernelFactory(PluginCapability):
     def prepareTUN(self, config) -> bool:
         """Prepare native TUN and return whether the backend handles it."""
         return False
+
+    def usesApplicationTun2socks(self, config) -> bool:
+        """Return whether the host should provide tun2socks for this profile."""
+        return True
 
     def routingOptions(self, config=None):
         """Return routing modes supported for a backend configuration."""

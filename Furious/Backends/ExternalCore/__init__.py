@@ -15,29 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose official backend plugin types without importing runtimes eagerly."""
+"""Expose the official External Core plugin and its public model/runtime."""
 
 from __future__ import annotations
 
-__all__ = ['OFFICIAL_PLUGIN_TYPES']
+from .Configuration import ConfigExternalCore, ExternalCoreConfigurationError
+from .Plugin import ExternalCorePlugin
+from .Process import ExternalCoreProcess
 
-
-def __getattr__(name: str):
-    """Load official plugin types only when the application requests them."""
-    if name != 'OFFICIAL_PLUGIN_TYPES':
-        raise AttributeError(name)
-
-    from .Hysteria1.Plugin import Hysteria1Plugin
-    from .Hysteria2.Plugin import Hysteria2Plugin
-    from .ExternalCore.Plugin import ExternalCorePlugin
-    from .Xray.Plugin import XrayPlugin
-
-    pluginTypes = (
-        XrayPlugin,
-        Hysteria1Plugin,
-        Hysteria2Plugin,
-        ExternalCorePlugin,
-    )
-    globals()[name] = pluginTypes
-
-    return pluginTypes
+__all__ = [
+    'ConfigExternalCore',
+    'ExternalCoreConfigurationError',
+    'ExternalCorePlugin',
+    'ExternalCoreProcess',
+]

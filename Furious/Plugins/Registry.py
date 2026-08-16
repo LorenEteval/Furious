@@ -197,6 +197,11 @@ class PluginRegistry:
                 if not isinstance(descriptor.translatable, bool):
                     raise TypeError('protocol translatable flag must be a boolean')
 
+                if not isinstance(descriptor.subscriptionImportable, bool):
+                    raise TypeError(
+                        'protocol subscription-importable flag must be a boolean'
+                    )
+
                 if protocolId in self._protocols or protocolId in localProtocolIds:
                     raise ValueError(
                         f'protocol {descriptor.id!r} is already registered'
@@ -903,6 +908,30 @@ class PluginRegistry:
             # Any non-exit exceptions
 
             logger.error(f'TUN preparation failed for {factory.factoryId!r}: {ex}')
+
+            return False
+
+    def usesApplicationTun2socks(self, config) -> bool:
+        """Return whether a configuration opts into host-managed tun2socks."""
+        factory = self.factoryForConfig(config)
+
+        if factory is None:
+            return True
+
+        try:
+            enabled = factory.usesApplicationTun2socks(_connectionOf(config))
+
+            if not isinstance(enabled, bool):
+                raise TypeError('kernel application tun2socks result must be a boolean')
+
+            return enabled
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(
+                f'application tun2socks capability check failed for '
+                f'{factory.factoryId!r}: {ex}'
+            )
 
             return False
 

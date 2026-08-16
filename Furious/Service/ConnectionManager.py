@@ -78,6 +78,12 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
         self.uniqueCleanup = False
         self.processesPool = list()
+        self._lastStartError = ''
+
+    @property
+    def lastStartError(self) -> str:
+        """Return the concise failure reported by the latest runtime start."""
+        return self._lastStartError
 
     def _startKernel(
         self,
@@ -88,7 +94,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
         proxyModeOnly=False,
         log=True,
         **kwargs,
-    ) -> Tuple[Union[CoreProcessWorker, None], bool]:
+    ) -> Tuple[Union[CoreProcess, None], bool]:
         """Construct and start the runtime kernel selected for a configuration."""
         return getPluginRegistry().startKernel(
             config,
@@ -130,6 +136,8 @@ class ConnectionManager(Mixins.CleanupOnExit):
         **kwargs,
     ) -> bool:
         """Start the selected proxy core and configure TUN mode when requested."""
+        self._lastStartError = ''
+
         if deepcopy:
             configcopy = config.deepcopy()
         else:
@@ -144,9 +152,26 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
             return False
 
-        pluginTUN = False
-        if not proxyModeOnly and SystemRuntime.isTUNMode():
-            pluginTUN = getPluginRegistry().prepareTUN(configcopy)
+        tunModeRequested = not proxyModeOnly and SystemRuntime.isTUNMode()
+        pluginTUN, applicationTun2socks = False, False
+
+        if tunModeRequested:
+            registry = getPluginRegistry()
+            pluginTUN = registry.prepareTUN(configcopy)
+
+            if not pluginTUN:
+                applicationTun2socks = registry.usesApplicationTun2socks(configcopy)
+
+                if applicationTun2socks:
+                    logger.info(
+                        f'application-managed tun2socks selected. Remote '
+                        f'address: {configcopy.itemAddress!r}'
+                    )
+                else:
+                    logger.info(
+                        'application-managed tun2socks skipped by the active '
+                        'kernel configuration'
+                    )
 
         process, success = self._startKernel(
             configcopy,
@@ -162,6 +187,12 @@ class ConnectionManager(Mixins.CleanupOnExit):
             self.processesPool.append(process)
 
         if not success:
+            if isinstance(process, CoreProcess):
+                startError = getattr(process, 'startError', None)
+
+                if callable(startError):
+                    self._lastStartError = startError()
+
             if isinstance(process, CoreProcessWorker):
                 logger.error(f'core {process.name()} start failed')
 
@@ -170,7 +201,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
             return False
 
         # TUN Mode handling
-        if not proxyModeOnly and SystemRuntime.isTUNMode() and not pluginTUN:
+        if tunModeRequested and applicationTun2socks:
             if PLATFORM == 'Windows':
                 # cleanup first
                 SystemRoutingTable.delete(

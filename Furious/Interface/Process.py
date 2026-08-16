@@ -51,11 +51,24 @@ class RuntimeKernel(ABC):
         super().__init__()
 
         self._exitCallback = exitCallback
+        self._startError = ''
 
     def callExitCallback(self, exitcode: int):
         """Call exit callback."""
         if callable(self._exitCallback):
             self._exitCallback(self, exitcode)
+
+    def startError(self) -> str:
+        """Return the most recent concise startup failure, if any."""
+        return self._startError
+
+    def setStartError(self, message: str):
+        """Store a concise user-facing startup failure."""
+        self._startError = str(message or '')
+
+    def clearStartError(self):
+        """Clear a startup failure before another launch attempt."""
+        self._startError = ''
 
     @functools.singledispatchmethod
     def toJSONString(self, config, **kwargs) -> str:

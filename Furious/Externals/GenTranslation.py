@@ -87,6 +87,7 @@ TRANSLATION = {
     "Invalid data": {
         "source": [
             "Furious.Actions.Import",
+            "Furious.Backends.ExternalCore.Editor",
             "Furious.Window.SubscriptionPage"
         ],
         "RU": "Неверные данные",
@@ -442,6 +443,7 @@ TRANSLATION = {
     },
     "Remark": {
         "source": [
+            "Furious.Backends.ExternalCore.Editor",
             "Furious.Backends.Hysteria1.Editor",
             "Furious.Backends.Hysteria2.Editor",
             "Furious.Backends.Xray.RoutingWindow",
@@ -770,6 +772,7 @@ TRANSLATION = {
     },
     "All files (*)": {
         "source": [
+            "Furious.Backends.ExternalCore.Editor",
             "Furious.Backends.Xray.AssetWindow"
         ],
         "RU": "Все файлы (*)",
@@ -2839,40 +2842,176 @@ TRANSLATION = {
         "source": [
             "Furious.Window.SettingsPage"
         ],
+        "RU": "Следовать оформлению системы",
         "ZH": "跟随系统外观",
-        "isReviewed": "True",
-        "RU": "Следовать оформлению системы"
+        "isReviewed": "True"
     },
     "Light Theme": {
         "source": [
             "Furious.Window.SettingsPage"
         ],
+        "RU": "Светлая тема",
         "ZH": "浅色主题",
-        "isReviewed": "True",
-        "RU": "Светлая тема"
+        "isReviewed": "True"
     },
     "Dark Theme": {
         "source": [
             "Furious.Window.SettingsPage"
         ],
+        "RU": "Тёмная тема",
         "ZH": "深色主题",
-        "isReviewed": "True",
-        "RU": "Тёмная тема"
+        "isReviewed": "True"
     },
     "Application Theme": {
         "source": [
             "Furious.Window.SettingsPage"
         ],
+        "RU": "Тема приложения",
         "ZH": "应用程序主题",
-        "isReviewed": "True",
-        "RU": "Тема приложения"
+        "isReviewed": "True"
     },
     "Choose how the application appearance is determined.": {
         "source": [
             "Furious.Window.SettingsPage"
         ],
+        "RU": "Выберите способ определения оформления приложения.",
         "ZH": "选择应用程序外观的确定方式。",
-        "isReviewed": "True",
-        "RU": "Выберите способ определения оформления приложения."
+        "isReviewed": "True"
+    },
+    "Add External Core...": {
+        "source": [
+            "Furious.Backends.ExternalCore.Protocols"
+        ],
+        "RU": "Добавить внешнее ядро...",
+        "ZH": "添加外部Core...",
+        "isReviewed": "True"
+    },
+    "External Core": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Внешнее ядро",
+        "ZH": "外部Core",
+        "isReviewed": "True"
+    },
+    "Browse...": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Обзор...",
+        "ZH": "浏览...",
+        "isReviewed": "True"
+    },
+    "Select Executable": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Выберите исполняемый файл",
+        "ZH": "选择可执行程序",
+        "isReviewed": "True"
+    },
+    "Select Working Directory": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Выберите рабочий каталог",
+        "ZH": "选择工作目录",
+        "isReviewed": "True"
+    },
+    "HTTP Proxy": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "HTTP-прокси",
+        "ZH": "HTTP代理",
+        "isReviewed": "True"
+    },
+    "SOCKS Proxy": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "SOCKS-прокси",
+        "ZH": "SOCKS代理",
+        "isReviewed": "True"
+    },
+    "Use Application tun2socks": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Использовать tun2socks приложения",
+        "ZH": "使用应用程序的tun2socks",
+        "isReviewed": "True"
+    },
+    "TUN Remote Address": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Удалённый адрес TUN",
+        "ZH": "TUN远程地址",
+        "isReviewed": "True"
+    },
+    "Hostname, IPv4, or IPv6 address": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Имя узла, адрес IPv4 или IPv6",
+        "ZH": "主机名、IPv4或IPv6地址",
+        "isReviewed": "True"
+    },
+    "Arguments": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Аргументы",
+        "ZH": "参数",
+        "isReviewed": "True"
+    },
+    "Environment Variables": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Переменные среды",
+        "ZH": "环境变量",
+        "isReviewed": "True"
+    },
+    "KEY=VALUE, one per line": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "KEY=VALUE, по одной на строку",
+        "ZH": "KEY=VALUE，每行一个",
+        "isReviewed": "True"
+    },
+    "Shutdown Timeout (seconds)": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Тайм-аут завершения (секунды)",
+        "ZH": "关闭超时（秒）",
+        "isReviewed": "True"
+    },
+    "Separate arguments with spaces; quote values containing spaces.": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Разделяйте аргументы пробелами; значения с пробелами заключайте в кавычки.",
+        "ZH": "使用空格分隔参数；包含空格的值请使用引号。",
+        "isReviewed": "True"
+    },
+    "Arguments contain invalid quoting.": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "В аргументах используются недопустимые кавычки.",
+        "ZH": "参数中的引号格式无效。",
+        "isReviewed": "True"
+    },
+    "Environment variables must use KEY=VALUE, one per line.": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Переменные среды должны иметь формат KEY=VALUE, по одной на строку.",
+        "ZH": "环境变量必须使用KEY=VALUE格式，每行一个。",
+        "isReviewed": "True"
     }
 }

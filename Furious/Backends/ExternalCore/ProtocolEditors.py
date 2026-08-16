@@ -15,29 +15,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Expose official backend plugin types without importing runtimes eagerly."""
+"""Provide the lazily imported External Core profile editor."""
 
 from __future__ import annotations
 
-__all__ = ['OFFICIAL_PLUGIN_TYPES']
+from Furious.Plugins.API import ProtocolEditorProvider
+
+from .Configuration import EXTERNAL_CORE_TYPE
+
+__all__ = ['EXTERNAL_CORE_PROTOCOL_EDITORS']
 
 
-def __getattr__(name: str):
-    """Load official plugin types only when the application requests them."""
-    if name != 'OFFICIAL_PLUGIN_TYPES':
-        raise AttributeError(name)
+class ExternalCoreProtocolEditor(ProtocolEditorProvider):
+    """Create the External Core editor only when requested by the UI."""
 
-    from .Hysteria1.Plugin import Hysteria1Plugin
-    from .Hysteria2.Plugin import Hysteria2Plugin
-    from .ExternalCore.Plugin import ExternalCorePlugin
-    from .Xray.Plugin import XrayPlugin
+    editorId = 'official.external-core.editor'
+    protocolIds = (EXTERNAL_CORE_TYPE,)
 
-    pluginTypes = (
-        XrayPlugin,
-        Hysteria1Plugin,
-        Hysteria2Plugin,
-        ExternalCorePlugin,
-    )
-    globals()[name] = pluginTypes
+    def createEditor(self, protocolId: str, parent=None, **kwargs):
+        """Create one transient External Core configuration editor."""
+        from .Editor import ExternalCoreEditor
 
-    return pluginTypes
+        return ExternalCoreEditor(parent=parent, **kwargs)
+
+
+EXTERNAL_CORE_PROTOCOL_EDITORS = (ExternalCoreProtocolEditor(),)

@@ -295,8 +295,11 @@ class ConnectionController(QtCore.QObject):
         if not success:
             logger.error('failed to start core manager')
 
+            startError = getattr(self._coreManager, 'lastStartError', '')
+
             self.startDisconnection(
-                f'{configuration.coreName()}: ' + _('Unknown error')
+                f'{configuration.coreName()}: '
+                + (_(startError) if startError else _('Unknown error'))
             )
 
             return False

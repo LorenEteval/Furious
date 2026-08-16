@@ -90,6 +90,12 @@ class SubscriptionImportService:
                 registry=self.registry,
                 **metadata,
             )
+            handler = self.registry.handlerForConfig(profile)
+
+            if handler is not None and not handler.descriptor.subscriptionImportable:
+                rejected += 1
+
+                continue
 
             baseIdentity = (
                 f'upstream:{item.upstreamId}'

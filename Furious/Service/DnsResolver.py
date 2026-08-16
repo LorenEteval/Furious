@@ -72,10 +72,36 @@ class _DnsResolver(WebGETManager):
 
             resultMap['error'] = True
         else:
-            logger.info(f'DNS resolution for \'{domain}\' success')
+            answers = (
+                replyObject.get('Answer') if isinstance(replyObject, dict) else None
+            )
 
-            for record in replyObject['Answer']:
-                address = record['data']
+            if not isinstance(answers, list) or not answers:
+                status = (
+                    replyObject.get('Status') if isinstance(replyObject, dict) else None
+                )
+
+                logger.error(
+                    f'DNS resolution for \'{domain}\' returned no answer. '
+                    f'Status: {status!r}'
+                )
+
+                resultMap['error'] = True
+                answers = []
+            else:
+                logger.info(f'DNS resolution for \'{domain}\' success')
+
+            for record in answers:
+                address = record.get('data') if isinstance(record, dict) else None
+
+                if not isinstance(address, str) or not address:
+                    logger.error(
+                        f'DNS resolution for \'{domain}\' returned an invalid '
+                        f'answer record'
+                    )
+                    resultMap['error'] = True
+
+                    continue
 
                 logger.info(f'\'{domain}\' resolved to \'{address}\'')
 
@@ -154,6 +180,7 @@ class _DnsResolver(WebGETManager):
             logger.error(
                 f'DNS resolution for \'{domain}\' reached timeout {timeout // 1000}s'
             )
+            resultMap['error'] = True
 
             for networkReply in resultMap['reference']:
                 if (
