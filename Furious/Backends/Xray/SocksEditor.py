@@ -91,7 +91,7 @@ class GuiSocksItemBasicPort(GuiEditorItemTextSpinBox):
         """Initialize the GuiSocksItemBasicPort."""
         super().__init__(*args, **kwargs)
 
-        self.setRange(0, 65535)
+        self.setRange(1, 65535)
 
     def inputToFactory(self, config: ConfigFactory) -> bool:
         """Apply the current editor value to the configuration."""
@@ -117,11 +117,11 @@ class GuiSocksItemBasicPort(GuiEditorItemTextSpinBox):
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
 
-            self.setValue(proxyOutboundServer.get('port', 0))
+            self.setValue(proxyOutboundServer.get('port', 1))
         except Exception:
             # Any non-exit exceptions
 
-            self.setValue(0)
+            self.setValue(1)
 
 
 class GuiSocksGroupBoxBasic(GuiEditorWidgetQGroupBox):

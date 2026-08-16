@@ -28,6 +28,12 @@ from Furious.Backends.ShadowsocksURI import (
     parseShadowsocksURI,
     serializeShadowsocksURI,
 )
+from Furious.Backends.SocksURI import (
+    SOCKS_URI_SCHEMES,
+    SocksURIData,
+    parseSocksURI,
+    serializeSocksURI,
+)
 
 from typing import Union, Tuple
 
@@ -1276,20 +1282,16 @@ class ConfigXray(ConfigFactory):
     @staticmethod
     def URI2ProxyOutboundObjectSocks(URI: str) -> Tuple[str, dict]:
         """Parse a SOCKS URI into a remark and Xray proxy outbound."""
-        result = urlparse(URI)
-        remark = unquote(result.fragment)
-
-        address = result.hostname or ''
-        port = result.port or 0
-        user = unquote(result.username or '')
-        password = unquote(result.password or '')
-
-        if address == '' or port == 0:
-            raise ValueError(f'Invalid SOCKS URI format {URI}')
+        parsed = parseSocksURI(URI)
 
         return (
-            remark,
-            ConfigXrayProxyOutboundObjectSocks(address, port, user, password),
+            parsed.tag,
+            ConfigXrayProxyOutboundObjectSocks(
+                parsed.host,
+                parsed.port,
+                parsed.username,
+                parsed.password,
+            ),
         )
 
     @staticmethod
@@ -1317,19 +1319,21 @@ class ConfigXray(ConfigFactory):
     @staticmethod
     def URI2ProxyOutboundObject(URI: str) -> Tuple[str, dict]:
         """Dispatch a supported share URI to its Xray outbound parser."""
-        if URI.startswith('vmess://'):
+        scheme = urlparse(URI.strip()).scheme.casefold()
+
+        if scheme == 'vmess':
             return ConfigXray.URI2ProxyOutboundObjectVMess(URI)
 
-        if URI.startswith('vless://'):
+        if scheme == 'vless':
             return ConfigXray.URI2ProxyOutboundObjectVLESS(URI)
 
-        if URI.startswith('ss://'):
+        if scheme == 'ss':
             return ConfigXray.URI2ProxyOutboundObjectSS(URI)
 
-        if URI.startswith(('socks://', 'socks5://', 'socks5h://')):
+        if scheme in SOCKS_URI_SCHEMES:
             return ConfigXray.URI2ProxyOutboundObjectSocks(URI)
 
-        if URI.startswith('trojan://'):
+        if scheme == 'trojan':
             return ConfigXray.URI2ProxyOutboundObjectTrojan(URI)
 
         raise ValueError(f'Unrecognized URI scheme {URI}')
@@ -1469,12 +1473,15 @@ class ConfigXray(ConfigFactory):
             user = self.proxyUserObject.get('user', '')
             password = self.proxyUserObject.get('pass', '')
 
-            if user != '' or password != '':
-                netloc = f'{quote(user)}:{quote(password)}@{address}:{port}'
-            else:
-                netloc = f'{address}:{port}'
-
-            return urlunparse(['socks5', netloc, '', '', '', quote(override)])
+            return serializeSocksURI(
+                SocksURIData(
+                    str(address),
+                    int(port),
+                    str(user),
+                    str(password),
+                    override,
+                )
+            )
 
         if protocol == 'trojan':
             password, address, port = list(

@@ -28,6 +28,12 @@ from Furious.Backends.ShadowsocksURI import (
     SHADOWSOCKS_PLUGIN_METADATA_KEY,
     parseShadowsocksURI,
 )
+from Furious.Backends.SocksURI import (
+    SOCKS_URI_SCHEMES,
+    SocksURIData,
+    SocksURIError,
+    serializeSocksURI,
+)
 from Furious.Plugins.API import (
     ProtocolDescriptor,
     ProtocolHandler,
@@ -133,6 +139,31 @@ class XrayProtocolHandler(ProtocolHandler):
         )
 
 
+class SocksProtocolHandler(XrayProtocolHandler):
+    """Validate SOCKS fields through the same codec used for sharing."""
+
+    def validate(self, configuration):
+        """Return semantic SOCKS endpoint validation errors."""
+        if not self.supports(configuration):
+            return ('Unsupported protocol',)
+
+        server = configuration.proxyServerObject
+
+        try:
+            serializeSocksURI(
+                SocksURIData(
+                    server.get('address', ''),
+                    server.get('port', 0),
+                    server.get('user', ''),
+                    server.get('pass', ''),
+                )
+            )
+        except (SocksURIError, TypeError, ValueError) as ex:
+            return (str(ex),)
+
+        return tuple()
+
+
 def _placeholder(x):
     return x
 
@@ -212,7 +243,7 @@ XRAY_PROTOCOL_HANDLERS = (
         ('trojan',),
         'URI2ProxyOutboundObjectTrojan',
     ),
-    XrayProtocolHandler(
+    SocksProtocolHandler(
         ProtocolDescriptor(
             'SOCKS',
             'SOCKS',
@@ -226,7 +257,7 @@ XRAY_PROTOCOL_HANDLERS = (
             },
             True,
         ),
-        ('socks', 'socks5', 'socks5h'),
+        SOCKS_URI_SCHEMES,
         'URI2ProxyOutboundObjectSocks',
     ),
 )
