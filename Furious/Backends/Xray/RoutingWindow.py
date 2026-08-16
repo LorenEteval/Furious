@@ -135,18 +135,6 @@ class RoutingPreviewDialog(AppQTransientDialog):
         self.setWindowTitle(_('Preview Routing'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        if PLATFORM == 'Darwin':
-            self.toolbar = AppQToolBar(
-                AppQAction(
-                    _('Close'),
-                    icon=bootstrapIcon('window-x.svg'),
-                    callback=lambda: self.close(),
-                ),
-                parent=self,
-            )
-        else:
-            self.toolbar = None
-
         self.textEditor = DraculaJSONTextEditor(fontFamily=AppFontName())
         self.textEditor.setLineWrapMode(DraculaJSONTextEditor.LineWrapMode.NoWrap)
         self.textEditor.setPlainText(
@@ -155,10 +143,6 @@ class RoutingPreviewDialog(AppQTransientDialog):
         self.textEditor.setReadOnly(True)
 
         layout = QVBoxLayout()
-
-        if self.toolbar is not None:
-            layout.addWidget(self.toolbar)
-
         layout.addWidget(self.textEditor)
 
         self.setLayout(layout)
@@ -680,10 +664,7 @@ class RoutingProfileEditDialog(AppQTransientDialog):
 class RoutingRulesQListWidget(AppQListWidget):
     """Provide the routing rules Qt list widget."""
 
-    editRequested, deleteRequested = (
-        QtCore.Signal(),
-        QtCore.Signal(),
-    )
+    editRequested = QtCore.Signal()
 
     def __init__(self, routing: dict, parent=None):
         """Initialize the RoutingRulesQListWidget."""
@@ -694,15 +675,7 @@ class RoutingRulesQListWidget(AppQListWidget):
         self.setAlternatingRowColors(True)
         self.setSelectionBehavior(AppQListWidget.SelectionBehavior.SelectRows)
         self.setSelectionMode(AppQListWidget.SelectionMode.ExtendedSelection)
-        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-
         self.itemDoubleClicked.connect(self._requestEdit)
-        self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
-
-        self.contextDeleteAction = AppQAction(_('Delete'))
-        self.contextDeleteAction.triggered.connect(self._requestDelete)
-
-        self.contextMenu = AppQMenu(self.contextDeleteAction, parent=self)
 
         self.flushAll()
 
@@ -710,11 +683,6 @@ class RoutingRulesQListWidget(AppQListWidget):
     def _requestEdit(self, _item):
         """Forward a row double-click without retaining a Python closure."""
         self.editRequested.emit()
-
-    @QtCore.Slot(bool)
-    def _requestDelete(self, _checked=False):
-        """Request deletion without retaining a callback closure."""
-        self.deleteRequested.emit()
 
     def rules(self):
         """Return the rules value used by the routing rules Qt list widget."""
@@ -773,11 +741,6 @@ class RoutingRulesQListWidget(AppQListWidget):
         for rule in self.rules():
             self.addItem(self.ruleText(rule))
 
-    @QtCore.Slot(QtCore.QPoint)
-    def handleCustomContextMenuRequested(self, point):
-        """Handle custom context menu requested."""
-        self.contextMenu.exec(self.viewport().mapToGlobal(point))
-
 
 class RoutingRulesDialog(AppQTransientDialog):
     """Present the routing rules dialog."""
@@ -790,39 +753,48 @@ class RoutingRulesDialog(AppQTransientDialog):
         self.setWindowTitle(_('Routing Rules'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        if PLATFORM == 'Darwin':
-            self.toolbar = AppQToolBar(
-                AppQAction(
-                    _('Close'),
-                    icon=bootstrapIcon('window-x.svg'),
-                    callback=lambda: self.close(),
-                ),
-                parent=self,
-            )
-        else:
-            self.toolbar = None
-
         self.listWidget = RoutingRulesQListWidget(self.routing, parent=self)
         self.listWidget.editRequested.connect(self.editRule)
-        self.listWidget.deleteRequested.connect(self.deleteRule)
 
-        self.addButton = AppQPushButton(_('Add'))
+        self.addButton = AppQPushButton(
+            _('Add'),
+            icon=bootstrapIcon('plus-lg.svg'),
+        )
         self.addButton.clicked.connect(self.addRule)
 
-        self.deleteButton = AppQPushButton(_('Delete'))
+        self.deleteButton = AppQPushButton(
+            _('Delete'),
+            icon=bootstrapIcon('trash.svg'),
+        )
         self.deleteButton.clicked.connect(self.deleteRule)
 
-        buttonLayout = QHBoxLayout()
-        buttonLayout.addWidget(self.addButton)
-        buttonLayout.addWidget(self.deleteButton)
+        self.closeWindowButton = AppQPushButton(
+            _('Close Window'),
+            icon=bootstrapIcon('window-x.svg'),
+        )
+        self.closeWindowButton.clicked.connect(self.close)
+
+        for button in (
+            self.addButton,
+            self.deleteButton,
+            self.closeWindowButton,
+        ):
+            button.setAutoDefault(False)
+            button.setDefault(False)
+
+        actionLayout = QHBoxLayout()
+        actionLayout.setContentsMargins(0, 0, 0, 0)
+        actionLayout.setSpacing(8)
+        actionLayout.addWidget(self.addButton)
+        actionLayout.addWidget(self.deleteButton)
+        actionLayout.addStretch(1)
+        actionLayout.addWidget(self.closeWindowButton)
 
         layout = QVBoxLayout()
-
-        if self.toolbar is not None:
-            layout.addWidget(self.toolbar)
-
+        layout.setContentsMargins(20, 18, 20, 20)
+        layout.setSpacing(14)
+        layout.addLayout(actionLayout)
         layout.addWidget(self.listWidget)
-        layout.addLayout(buttonLayout)
 
         self.setLayout(layout)
 
@@ -1183,30 +1155,29 @@ class XrayRoutingWindow(AppQMainWindow):
 
         self.tableView = UserRoutingTableView(parent=self)
 
-        self.addButton = AppQPushButton(
-            _('Add'),
-            icon=bootstrapIcon('plus-lg.svg'),
-        )
-        self.previewButton = AppQPushButton(
-            _('Preview'),
-            icon=bootstrapIcon('file-earmark-text.svg'),
-        )
-        self.renameButton = AppQPushButton(
-            _('Rename'),
-            icon=bootstrapIcon('pencil-square.svg'),
-        )
-        self.deleteButton = AppQPushButton(
-            _('Delete'),
-            icon=bootstrapIcon('trash.svg'),
+        self.addButton, self.previewButton, self.renameButton, self.deleteButton = (
+            AppQPushButton(
+                _('Add'),
+                icon=bootstrapIcon('plus-lg.svg'),
+            ),
+            AppQPushButton(
+                _('Preview'),
+                icon=bootstrapIcon('file-earmark-text.svg'),
+            ),
+            AppQPushButton(
+                _('Rename'),
+                icon=bootstrapIcon('pencil-square.svg'),
+            ),
+            AppQPushButton(
+                _('Delete'),
+                icon=bootstrapIcon('trash.svg'),
+            ),
         )
 
         self.addButton.clicked.connect(self.tableView.appendNewItem)
         self.previewButton.clicked.connect(self.tableView.previewSelectedItem)
         self.renameButton.clicked.connect(self.tableView.renameSelectedItem)
         self.deleteButton.clicked.connect(self.tableView.deleteSelectedItem)
-        self.tableView.selectionModel().selectionChanged.connect(
-            self.updateSelectionActions
-        )
 
         actionLayout = QHBoxLayout()
         actionLayout.setContentsMargins(0, 0, 0, 0)
@@ -1227,16 +1198,6 @@ class XrayRoutingWindow(AppQMainWindow):
         layout.addWidget(self.tableView)
 
         self.setCentralWidget(centralWidget)
-        self.updateSelectionActions()
-
-    def updateSelectionActions(self, *_args):
-        """Enable routing actions according to the current row selection."""
-        selectedCount = len(self.tableView.selectedIndex)
-        hasSingleSelection = selectedCount == 1
-
-        self.previewButton.setEnabled(hasSingleSelection)
-        self.renameButton.setEnabled(hasSingleSelection)
-        self.deleteButton.setEnabled(selectedCount > 0)
 
     def setWidthAndHeight(self):
         """Apply the default size for the user routing window."""

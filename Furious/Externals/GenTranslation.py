@@ -284,6 +284,7 @@ TRANSLATION = {
     },
     "Close Window": {
         "source": [
+            "Furious.Backends.Xray.RoutingWindow",
             "Furious.Window.TextEditorWindow"
         ],
         "RU": "Закрыть окно",
@@ -1995,14 +1996,6 @@ TRANSLATION = {
         ],
         "RU": "Предпросмотр",
         "ZH": "预览",
-        "isReviewed": "True"
-    },
-    "Close": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "Закрыть",
-        "ZH": "关闭",
         "isReviewed": "True"
     },
     "Generate": {
