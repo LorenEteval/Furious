@@ -401,6 +401,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
             controller.shutdown()
 
         getPluginRegistry().shutdown()
+
         Mixins.CleanupOnExit.cleanupAll()
 
         if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:
