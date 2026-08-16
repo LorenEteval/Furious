@@ -62,6 +62,8 @@ __all__ = ['HomePage']
 
 logger = logging.getLogger(__name__)
 
+STATUS_ITEM_SEPARATOR = '•'
+
 
 class AppConnectivityManager(ConnectivityManager):
     """Coordinate app network connectivity operations."""
@@ -120,62 +122,6 @@ class AppConnectivityManager(ConnectivityManager):
         super().disconnectedCallback()
 
 
-class _ElidedStatusLabel(AppQLabel):
-    """Keep a full status value while presenting a width-bounded label."""
-
-    MaximumTextWidth = 260
-
-    def __init__(self, parent=None):
-        """Initialize a compact label that elides overflowing profile names."""
-        super().__init__(translatable=False, parent=parent)
-
-        self._fullText = ''
-
-        self.setMinimumWidth(0)
-        self.setMaximumWidth(self.MaximumTextWidth)
-        self.setSizePolicy(
-            QSizePolicy.Policy.Ignored,
-            QSizePolicy.Policy.Preferred,
-        )
-
-    def setFullText(self, text: str):
-        """Store *text* and refresh its elided presentation."""
-        self._fullText = text
-
-        self._updateElidedText()
-        self.updateGeometry()
-
-    def sizeHint(self):
-        """Return a bounded natural size for status-bar layout negotiation."""
-        hint = super().sizeHint()
-        textWidth = self.fontMetrics().horizontalAdvance(self._fullText)
-
-        hint.setWidth(min(textWidth, self.MaximumTextWidth))
-
-        return hint
-
-    def resizeEvent(self, event):
-        """Refresh the visible text whenever the available width changes."""
-        super().resizeEvent(event)
-
-        self._updateElidedText()
-
-    def _updateElidedText(self):
-        """Render the stored value using the currently available label width."""
-        availableWidth = self.width()
-
-        if availableWidth <= 0:
-            visibleText = self._fullText
-        else:
-            visibleText = self.fontMetrics().elidedText(
-                self._fullText,
-                QtCore.Qt.TextElideMode.ElideRight,
-                availableWidth,
-            )
-
-        QLabel.setText(self, visibleText)
-
-
 class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
     """Present connection and connectivity state as one compact Fluent badge."""
 
@@ -195,8 +141,6 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
     )
     ConnectivityStates = frozenset(('success', 'failure'))
     IconSize = QtCore.QSize(16, 16)
-    MaximumWidth = 380
-    MinimumVisibleProfileWidth = 120
 
     def __init__(self, parent=None):
         """Initialize the NetworkStateBadge."""
@@ -211,16 +155,21 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
 
         self.setObjectName('NetworkStateBadge')
         self.setProperty('networkState', self.currentConnectionState)
-        self.setMaximumWidth(self.MaximumWidth)
         self.setSizePolicy(
             QSizePolicy.Policy.Maximum,
             QSizePolicy.Policy.Fixed,
         )
 
-        self.iconLabel = QLabel(parent=self)
-        self.stateLabel = AppQLabel(translatable=False, parent=self)
-        self.separatorLabel = AppQLabel('·', translatable=False, parent=self)
-        self.profileLabel = _ElidedStatusLabel(parent=self)
+        self.iconLabel, self.stateLabel, self.separatorLabel, self.profileLabel = (
+            QLabel(parent=self),
+            AppQLabel(translatable=False, parent=self),
+            AppQLabel(
+                STATUS_ITEM_SEPARATOR,
+                translatable=False,
+                parent=self,
+            ),
+            AppQLabel(translatable=False, parent=self),
+        )
 
         self.iconLabel.setFixedSize(self.IconSize)
         self.stateLabel.setSizePolicy(
@@ -231,6 +180,11 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
             QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Preferred,
         )
+        self.profileLabel.setSizePolicy(
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Preferred,
+        )
+
         self.stateLabel.setObjectName('NetworkStateLabel')
         self.separatorLabel.setObjectName('NetworkStatusSeparator')
         self.profileLabel.setObjectName('NetworkProfileLabel')
@@ -289,10 +243,11 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
             'success': _('Network OK'),
             'failure': _('Network error'),
         }[self.presentationState()]
+
         remark = self.profileRemark()
 
         if remark:
-            return f'{stateText} · {remark}'
+            return f'{stateText} {STATUS_ITEM_SEPARATOR} {remark}'
 
         return stateText
 
@@ -304,26 +259,32 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
         return self.activeProfileRemark() or self.currentRemark
 
     def widthWithProfile(self) -> int:
-        """Return the width needed to show a useful profile-name fragment."""
+        """Return the width needed to show the complete profile remark."""
+        self.ensurePolished()
+
         margins = self._layout.contentsMargins()
         spacing = self._layout.spacing()
 
         return (
-            margins.left()
+            self.frameWidth() * 2
+            + margins.left()
             + margins.right()
             + self.iconLabel.sizeHint().width()
             + self.stateLabel.sizeHint().width()
             + self.separatorLabel.sizeHint().width()
-            + self.MinimumVisibleProfileWidth
+            + self.profileLabel.sizeHint().width()
             + spacing * 3
         )
 
     def widthWithoutProfile(self) -> int:
         """Return the natural compact width for icon and state text only."""
+        self.ensurePolished()
+
         margins = self._layout.contentsMargins()
 
         return (
-            margins.left()
+            self.frameWidth() * 2
+            + margins.left()
             + margins.right()
             + self.iconLabel.sizeHint().width()
             + self.stateLabel.sizeHint().width()
@@ -333,14 +294,15 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
     def _updateWidthConstraints(self):
         """Publish size constraints for the current responsive presentation."""
         if self._profileDetailsVisible:
-            self.setMinimumWidth(self.widthWithProfile())
-            self.setMaximumWidth(self.MaximumWidth)
+            requiredWidth = self.widthWithProfile()
+            self.setMinimumWidth(requiredWidth)
+            self.setMaximumWidth(requiredWidth)
         else:
             self.setMinimumWidth(0)
             self.setMaximumWidth(self.widthWithoutProfile())
 
     def setProfileDetailsVisible(self, visible: bool):
-        """Show profile details only when the parent can allocate useful space."""
+        """Show profile details whenever an active profile is available."""
         visible = bool(visible and self.profileRemark())
 
         if visible == self._profileDetailsVisible:
@@ -349,9 +311,6 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
         self._profileDetailsVisible = visible
         self.separatorLabel.setVisible(visible)
         self.profileLabel.setVisible(visible)
-        self.profileLabel.setMinimumWidth(
-            self.MinimumVisibleProfileWidth if visible else 0
-        )
         self._updateWidthConstraints()
         self._layout.invalidate()
         self.updateGeometry()
@@ -368,11 +327,12 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
     def updateStatusText(self):
         """Update status text."""
         fullText = self.statusText()
-        stateText, separator, remark = fullText.partition(' · ')
+        stateText, separator, remark = fullText.partition(f' {STATUS_ITEM_SEPARATOR} ')
+
         tooltip = self.statusToolTip()
 
         self.stateLabel.setText(stateText)
-        self.profileLabel.setFullText(remark)
+        self.profileLabel.setText(remark)
         self.separatorLabel.setVisible(bool(separator) and self._profileDetailsVisible)
         self.profileLabel.setVisible(bool(remark) and self._profileDetailsVisible)
         self._updateWidthConstraints()
@@ -381,6 +341,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
         self.stateLabel.setToolTip(tooltip)
         self.separatorLabel.setToolTip(tooltip)
         self.profileLabel.setToolTip(tooltip)
+
         self.layoutRequirementChanged.emit()
 
     def refreshPresentation(self):
@@ -415,7 +376,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
 
     @QtCore.Slot(object)
     def handleActiveConfigurationChanged(self, _configuration):
-        """Refresh the bounded profile label after the active profile changes."""
+        """Refresh the profile label after the active profile changes."""
         self.refreshPresentation()
 
     def setStatus(self, state: str, remark: str, errorString: str = ''):
@@ -475,12 +436,21 @@ class TrafficStatsBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         self.setObjectName('TrafficStatsBadge')
         self.setVisible(False)
 
-        self.downloadIconLabel = QLabel(parent=self)
-        self.downloadTextLabel = AppQLabel(translatable=False, parent=self)
-        self.downloadUsageLabel = AppQLabel(translatable=False, parent=self)
-        self.uploadIconLabel = QLabel(parent=self)
-        self.uploadTextLabel = AppQLabel(translatable=False, parent=self)
-        self.uploadUsageLabel = AppQLabel(translatable=False, parent=self)
+        (
+            self.downloadIconLabel,
+            self.downloadTextLabel,
+            self.downloadUsageLabel,
+            self.uploadIconLabel,
+            self.uploadTextLabel,
+            self.uploadUsageLabel,
+        ) = (
+            QLabel(parent=self),
+            AppQLabel(translatable=False, parent=self),
+            AppQLabel(translatable=False, parent=self),
+            QLabel(parent=self),
+            AppQLabel(translatable=False, parent=self),
+            AppQLabel(translatable=False, parent=self),
+        )
 
         self.downloadTextLabel.setObjectName('TrafficSpeedLabel')
         self.uploadTextLabel.setObjectName('TrafficSpeedLabel')
@@ -558,8 +528,13 @@ class TrafficStatsBadge(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
     @QtCore.Slot(object, object)
     def setUsage(self, upload: int, download: int):
         """Display formatted cumulative upload and download usage."""
-        self.uploadUsageLabel.setText(f'• {formatTrafficUsage(upload)}')
-        self.downloadUsageLabel.setText(f'• {formatTrafficUsage(download)}')
+        self.uploadUsageLabel.setText(
+            f'{STATUS_ITEM_SEPARATOR} {formatTrafficUsage(upload)}'
+        )
+        self.downloadUsageLabel.setText(
+            f'{STATUS_ITEM_SEPARATOR} {formatTrafficUsage(download)}'
+        )
+
         self.setVisible(True)
         self.layoutRequirementChanged.emit()
 
@@ -606,22 +581,15 @@ class ConnectionStatusWidget(QWidget):
         self._updateResponsiveLayout()
 
     def resizeEvent(self, event):
-        """Re-evaluate optional profile details after status-bar resizing."""
+        """Preserve the complete active-profile presentation after resizing."""
         super().resizeEvent(event)
 
         self._updateResponsiveLayout()
 
     @QtCore.Slot()
     def _updateResponsiveLayout(self):
-        """Keep traffic metrics visible and show only useful profile fragments."""
-        requiredWidth = self.networkState.widthWithProfile()
-
-        if self.trafficStats.isVisible():
-            requiredWidth += (
-                self.trafficStats.sizeHint().width() + self._layout.spacing()
-            )
-
-        self.networkState.setProfileDetailsVisible(self.width() >= requiredWidth)
+        """Keep the active profile's complete remark visible in the status group."""
+        self.networkState.setProfileDetailsVisible(True)
 
 
 class SearchButton(AppQIconTextPushButton):

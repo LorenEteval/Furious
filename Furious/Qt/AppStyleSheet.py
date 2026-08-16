@@ -1248,7 +1248,7 @@ class AppStyleSheet:
             }}
 
             QStatusBar {{
-                min-height: 24px;
+                min-height: 30px;
                 border-top: 1px solid {palette['border']};
                 background-color: {palette['panel']};
                 color: {palette['muted']};
