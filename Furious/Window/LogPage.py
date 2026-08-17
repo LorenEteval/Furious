@@ -31,7 +31,10 @@ from Furious.Service.LogManager import (
 )
 
 from PySide6 import QtCore
+from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import *
+
+from bisect import bisect_left
 
 __all__ = ['LogPage']
 
@@ -113,6 +116,10 @@ def saveAsFile(content: str):
 class LogPage(Mixins.QTranslatable, QMainWindow):
     """Present and filter the unified application log stream as a page."""
 
+    UpdateDelay = 25
+    HighlightBatchSize = 250
+    TailTolerance = 10
+
     def __init__(self, *args, **kwargs):
         """Initialize the logging page."""
         manager, fontFamily = (
@@ -143,10 +150,34 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             pointSizeSettingsName='LogViewerWidgetPointSize',
         )
         self.textBrowser.setLineWrapMode(DraculaTextBrowser.LineWrapMode.NoWrap)
+        self.textBrowser.setUndoRedoEnabled(False)
         self.textBrowser.document().setMaximumBlockCount(manager.maximumEntries)
 
         self._entriesDirty = True
+        self._representationInvalid = True
         self._renderedSequence = 0
+        self._renderedCategoryId = None
+        self._renderedEntrySequences = tuple()
+        self._followTail = True
+        self._documentMutation = False
+        self._highlightNextBlock = None
+        self._pendingScrollRatio = None
+
+        self._updateTimer = QtCore.QTimer(self)
+        self._updateTimer.setSingleShot(True)
+        self._updateTimer.timeout.connect(self._renderPendingEntries)
+
+        self._highlightTimer = QtCore.QTimer(self)
+        self._highlightTimer.setSingleShot(True)
+        self._highlightTimer.timeout.connect(self._highlightNextBatch)
+
+        self._scrollTimer = QtCore.QTimer(self)
+        self._scrollTimer.setSingleShot(True)
+        self._scrollTimer.timeout.connect(self._restoreScrollPosition)
+
+        self._followStateTimer = QtCore.QTimer(self)
+        self._followStateTimer.setSingleShot(True)
+        self._followStateTimer.timeout.connect(self._updateFollowTailFromScrollbar)
 
         filterLayout = QHBoxLayout()
         filterLayout.setContentsMargins(0, 0, 0, 0)
@@ -257,6 +288,10 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.manager.entryAdded.connect(self._entryAdded)
         self.manager.entriesCleared.connect(self._entriesCleared)
 
+        scrollbar = self.textBrowser.verticalScrollBar()
+        scrollbar.actionTriggered.connect(self._scrollActionTriggered)
+        scrollbar.sliderReleased.connect(self._scrollActionTriggered)
+
         self.retranslate()
 
     def _registerMenuShortcuts(self, menu):
@@ -301,27 +336,300 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         finally:
             self.filterComboBox.blockSignals(False)
 
-    def _refreshEntries(self):
-        """Render the current immutable filtered-entry snapshot."""
-        selectedCategoryId = self.filterComboBox.currentData()
-        sequence, entries = self.manager.snapshot(selectedCategoryId)
+    def _pageCanRender(self) -> bool:
+        """Return whether document work can currently reach the screen."""
+        window = self.window()
+
+        return self.isVisible() and not (
+            hasattr(window, 'isMinimized') and window.isMinimized()
+        )
+
+    def _requestRefresh(self, *, invalidate=False, immediate=False):
+        """Mark the presentation stale and coalesce visible catch-up work."""
+        self._entriesDirty = True
+
+        if invalidate:
+            self._representationInvalid = True
+
+        if not self._pageCanRender():
+            return
+
+        if immediate:
+            self._updateTimer.stop()
+            self._updateTimer.start(0)
+        elif not self._updateTimer.isActive():
+            self._updateTimer.start(self.UpdateDelay)
+
+    @staticmethod
+    def _incrementalPlan(oldSequences, currentSequences):
+        """Return leading removals and the first new snapshot entry.
+
+        Retention pruning can only remove a prefix, while ordinary collection
+        can only append a suffix.  Any other relationship requires one clean
+        rebuild because a clear/filter change invalidated the representation.
+        """
+        if not oldSequences:
+            return 0, 0
+
+        if not currentSequences:
+            return len(oldSequences), 0
+
+        oldStart = bisect_left(oldSequences, currentSequences[0])
+        survivors = oldSequences[oldStart:]
+
+        if len(currentSequences) < len(survivors):
+            return None
+
+        if tuple(currentSequences[: len(survivors)]) != survivors:
+            return None
+
+        return oldStart, len(survivors)
+
+    def _scrollRatio(self) -> float:
+        """Return the current vertical position as a bounded range ratio."""
+        scrollbar = self.textBrowser.verticalScrollBar()
+
+        if scrollbar.maximum() <= 0:
+            return 1.0
+
+        return min(1.0, max(0.0, scrollbar.value() / scrollbar.maximum()))
+
+    def _removeLeadingBlocks(self, count: int):
+        """Remove *count* rendered entries in one document edit."""
+        if count <= 0:
+            return
+
+        if count >= len(self._renderedEntrySequences):
+            self.textBrowser.clear()
+
+            return
+
+        document = self.textBrowser.document()
+        firstRetainedBlock = document.findBlockByNumber(count)
+
+        if not firstRetainedBlock.isValid():
+            self.textBrowser.clear()
+
+            return
+
+        cursor = QTextCursor(document)
+        cursor.setPosition(0)
+        cursor.setPosition(
+            firstRetainedBlock.position(),
+            QTextCursor.MoveMode.KeepAnchor,
+        )
+        cursor.removeSelectedText()
+
+    def _appendEntries(self, entries, *, hasExistingEntries: bool):
+        """Append one formatted batch and return its first block number."""
+        if not entries:
+            return None
+
+        content = '\n'.join(formatLogEntry(entry) for entry in entries)
+
+        if not hasExistingEntries:
+            self.textBrowser.setPlainText(content)
+
+            return 0
+
+        document = self.textBrowser.document()
+
+        firstChangedBlock = max(0, document.blockCount() - 1)
+
+        cursor = QTextCursor(document)
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        cursor.insertBlock()
+        cursor.insertText(content)
+
+        # Inserting the paragraph separator also invalidates the previous last
+        # block, so progressive highlighting must resume there rather than at
+        # the first newly inserted block.
+        return firstChangedBlock
+
+    def _replaceEntries(self, entries):
+        """Replace the text in one cheap unhighlighted document operation."""
+        self._highlightTimer.stop()
+        self._highlightNextBlock = None
 
         content = '\n'.join(formatLogEntry(entry) for entry in entries)
 
         self.textBrowser.setPlainText(content)
+
+        return 0 if entries else None
+
+    def _synchronizeDocument(self, entries, categoryId: str):
+        """Apply one snapshot with the smallest safe document mutation."""
+        currentSequences = tuple(entry.sequence for entry in entries)
+        fullRebuild = (
+            self._representationInvalid or self._renderedCategoryId != categoryId
+        )
+        plan = None
+
+        if not fullRebuild:
+            plan = self._incrementalPlan(
+                self._renderedEntrySequences,
+                currentSequences,
+            )
+            fullRebuild = plan is None
+
+        oldRatio = self._scrollRatio()
+        firstHighlightBlock = None
+        restoreManualPosition = fullRebuild
+        leadingBoundaryChanged = False
+
+        self._documentMutation = True
+        self.textBrowser.setUpdatesEnabled(False)
+        self.textBrowser.setSyntaxHighlightingEnabled(False)
+
+        try:
+            if fullRebuild:
+                firstHighlightBlock = self._replaceEntries(entries)
+            else:
+                dropCount, firstNewEntry = plan
+
+                if self._highlightNextBlock is not None and dropCount:
+                    self._highlightNextBlock = max(
+                        0,
+                        self._highlightNextBlock - dropCount,
+                    )
+
+                self._removeLeadingBlocks(dropCount)
+
+                leadingBoundaryChanged = bool(dropCount)
+
+                newEntries = entries[firstNewEntry:]
+                firstHighlightBlock = self._appendEntries(
+                    newEntries,
+                    hasExistingEntries=bool(currentSequences[:firstNewEntry]),
+                )
+                restoreManualPosition = bool(dropCount)
+        finally:
+            self.textBrowser.setSyntaxHighlightingEnabled(True)
+
+            if leadingBoundaryChanged:
+                firstBlock = self.textBrowser.document().firstBlock()
+
+                if firstBlock.isValid():
+                    # Removing a retained prefix invalidates the new leading
+                    # paragraph independently from the appended tail range.
+                    self.textBrowser.rehighlightBlock(firstBlock)
+
+            self.textBrowser.setUpdatesEnabled(True)
+            self._documentMutation = False
+
+        self.textBrowser.viewport().update()
+        self._renderedCategoryId = categoryId
+        self._renderedEntrySequences = currentSequences
+        self._representationInvalid = False
+
+        if firstHighlightBlock is not None:
+            self._scheduleHighlight(firstHighlightBlock)
+
+        if self._followTail:
+            self._scheduleScrollRestore()
+        elif restoreManualPosition:
+            self._scheduleScrollRestore(oldRatio)
+
+    @QtCore.Slot()
+    def _renderPendingEntries(self):
+        """Catch the visible document up to one immutable manager snapshot."""
+        if not self._entriesDirty or not self._pageCanRender():
+            return
+
+        selectedCategoryId = self.filterComboBox.currentData()
+
+        if not isinstance(selectedCategoryId, str):
+            selectedCategoryId = ALL_LOGS_FILTER
+
+        sequence, entries = self.manager.snapshot(selectedCategoryId)
+
+        self._synchronizeDocument(entries, selectedCategoryId)
         self._renderedSequence = sequence
-
-        scrollbar = self.textBrowser.verticalScrollBar()
-        scrollbar.setValue(scrollbar.maximum())
-
         self._entriesDirty = False
 
-    def _refreshEntriesIfVisible(self):
-        """Render pending entries only while this page is actually visible."""
-        if self.isVisible():
-            self._refreshEntries()
+    def _scheduleHighlight(self, firstBlock: int):
+        """Coalesce incremental highlighting from the earliest changed block."""
+        if self._highlightNextBlock is None:
+            self._highlightNextBlock = firstBlock
         else:
-            self._entriesDirty = True
+            self._highlightNextBlock = min(self._highlightNextBlock, firstBlock)
+
+        if self._pageCanRender() and not self._highlightTimer.isActive():
+            self._highlightTimer.start(0)
+
+    @QtCore.Slot()
+    def _highlightNextBatch(self):
+        """Format a bounded block batch and yield back to the event loop."""
+        if self._highlightNextBlock is None or not self._pageCanRender():
+            return
+
+        document = self.textBrowser.document()
+        start = self._highlightNextBlock
+        end = min(document.blockCount(), start + self.HighlightBatchSize)
+
+        for blockNumber in range(start, end):
+            block = document.findBlockByNumber(blockNumber)
+
+            if block.isValid():
+                self.textBrowser.rehighlightBlock(block)
+
+        if end < document.blockCount():
+            self._highlightNextBlock = end
+            self._highlightTimer.start(0)
+        else:
+            self._highlightNextBlock = None
+
+        if self._followTail:
+            self._scheduleScrollRestore()
+
+    def _scheduleScrollRestore(self, ratio=None):
+        """Restore tail or reading position after document layout settles."""
+        self._pendingScrollRatio = ratio
+
+        if self._pageCanRender():
+            self._scrollTimer.start(0)
+
+    @QtCore.Slot()
+    def _restoreScrollPosition(self):
+        """Apply a coalesced post-layout scroll position without changing intent."""
+        if not self._pageCanRender():
+            return
+
+        scrollbar = self.textBrowser.verticalScrollBar()
+
+        self._documentMutation = True
+
+        try:
+            if self._followTail:
+                scrollbar.setValue(scrollbar.maximum())
+
+                self.textBrowser.horizontalScrollBar().setValue(0)
+            elif self._pendingScrollRatio is not None:
+                scrollbar.setValue(
+                    round(scrollbar.maximum() * self._pendingScrollRatio)
+                )
+        finally:
+            self._documentMutation = False
+            self._pendingScrollRatio = None
+
+    @QtCore.Slot()
+    def _updateFollowTailFromScrollbar(self):
+        """Capture whether the user's viewport is following the newest entry."""
+        if self._documentMutation:
+            return
+
+        scrollbar = self.textBrowser.verticalScrollBar()
+
+        self._followTail = scrollbar.maximum() - scrollbar.value() <= self.TailTolerance
+
+    def _scrollActionTriggered(self, *_args):
+        """Defer follow-state capture until the user scroll action is applied."""
+        if self._documentMutation:
+            return
+
+        self._scrollTimer.stop()
+        self._pendingScrollRatio = None
+        self._followStateTimer.start(0)
 
     @QtCore.Slot(int)
     def _filterChanged(self, _index: int):
@@ -335,7 +643,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         AppSettings.set('LogViewerSelectedCategory', categoryId)
 
-        self._refreshEntriesIfVisible()
+        self._requestRefresh(invalidate=True, immediate=True)
 
     @QtCore.Slot(object)
     def _categoryRegistered(self, category):
@@ -350,37 +658,38 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
     @QtCore.Slot(object)
     def _entryAdded(self, entry):
-        """Append an entry when it matches the active filter."""
-        if not self.isVisible():
-            self._entriesDirty = True
-
-            return
-
+        """Coalesce newly collected entries into the visible presentation."""
         if entry.sequence <= self._renderedSequence:
             return
 
-        if entry.sequence != self._renderedSequence + 1:
-            self._refreshEntries()
-
-            return
-
-        self._renderedSequence = entry.sequence
-        categoryId = self.filterComboBox.currentData()
-
-        if categoryId in (ALL_LOGS_FILTER, entry.categoryId):
-            self.textBrowser.appendLine(formatLogEntry(entry))
+        self._requestRefresh()
 
     @QtCore.Slot(object)
     def _entriesCleared(self, _categoryIds):
         """Refresh the presentation after the underlying collection changes."""
-        self._refreshEntriesIfVisible()
+        self._requestRefresh(invalidate=True, immediate=True)
 
     def showEvent(self, event):
         """Render entries accumulated while the page was hidden."""
         super().showEvent(event)
 
         if self._entriesDirty:
-            self._refreshEntries()
+            self._requestRefresh(immediate=True)
+        elif self._highlightNextBlock is not None:
+            self._highlightTimer.start(0)
+
+        if self._followTail:
+            self._scheduleScrollRestore()
+
+    def hideEvent(self, event):
+        """Pause presentation work while preserving collection and scroll intent."""
+        self._updateFollowTailFromScrollbar()
+        self._updateTimer.stop()
+        self._highlightTimer.stop()
+        self._scrollTimer.stop()
+        self._followStateTimer.stop()
+
+        super().hideEvent(event)
 
     def plainText(self) -> str:
         """Return the plain text currently shown by the selected filter."""
@@ -398,4 +707,4 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.pageTitleLabel.setText(_('Log'))
         self.filterLabel.setText(_('Log Type'))
         self._populateFilters(selectedCategoryId)
-        self._refreshEntriesIfVisible()
+        self._requestRefresh(immediate=True)

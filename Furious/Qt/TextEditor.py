@@ -374,6 +374,14 @@ class DraculaTextBrowser(Mixins.ThemeAware, AppQTextBrowser):
             )
         )
 
+    def setSyntaxHighlightingEnabled(self, enabled: bool):
+        """Enable or suspend automatic syntax highlighting for document edits."""
+        self._syntaxHighlighter.setHighlightingEnabled(enabled)
+
+    def rehighlightBlock(self, block):
+        """Rehighlight one document block without rebuilding the document."""
+        self._syntaxHighlighter.rehighlightBlock(block)
+
     def themeChangedCallback(self, theme: str):
         """Refresh browser chrome after an application theme change."""
         self.setStyleSheet(

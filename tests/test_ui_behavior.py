@@ -49,10 +49,12 @@ from tests.support import (
     collectAtBoundary,
     isolatedSettings,
     processQtEvents,
+    waitFor,
 )
 
 import copy
 import unittest
+import weakref
 
 from unittest import mock
 
@@ -166,6 +168,23 @@ class UnifiedLogPageTest(unittest.TestCase):
         """Create the process-wide headless QApplication."""
         application()
 
+    def tearDown(self):
+        """Finish deferred document and widget cleanup between tests."""
+        collectAtBoundary()
+
+    def assertRendered(self, page, *, highlighting=True):
+        """Wait for the coalesced snapshot and optional highlighting batches."""
+        self.assertTrue(waitFor(lambda: not page._entriesDirty))
+
+        if highlighting:
+            self.assertTrue(waitFor(lambda: page._highlightNextBlock is None))
+
+    @staticmethod
+    def disposePage(page):
+        """Release one persistent page and its owned timers."""
+        page.close()
+        page.deleteLater()
+
     def testHiddenPageRendersOneOrderedSnapshotWhenShown(self):
         """Do not mutate the document while hidden; catch up exactly once."""
         with isolatedSettings():
@@ -182,7 +201,7 @@ class UnifiedLogPageTest(unittest.TestCase):
 
             page.show()
 
-            processQtEvents()
+            self.assertRendered(page)
 
             self.assertEqual(
                 page.textBrowser.toPlainText().splitlines(),
@@ -198,7 +217,7 @@ class UnifiedLogPageTest(unittest.TestCase):
 
             page.show()
 
-            processQtEvents()
+            self.assertRendered(page)
 
             self.assertEqual(
                 page.textBrowser.toPlainText().splitlines(),
@@ -208,15 +227,288 @@ class UnifiedLogPageTest(unittest.TestCase):
             coreIndex = page.filterComboBox.findData(CORE_LOG_CATEGORY)
             page.filterComboBox.setCurrentIndex(coreIndex)
 
-            processQtEvents()
+            self.assertRendered(page)
 
             self.assertEqual(
                 page.textBrowser.toPlainText().splitlines(),
                 ['core one', 'core two'],
             )
 
-            page.close()
-            page.deleteLater()
+            self.disposePage(page)
+
+    def testLargeHiddenBacklogDefersOneBulkDocumentCatchUp(self):
+        """Return from show before rendering and avoid per-entry replay."""
+        with isolatedSettings():
+            entryCount = 5_000
+            manager = LogManager(maximumEntries=entryCount)
+
+            page = LogPage(manager=manager)
+            page.resize(900, 420)
+
+            for index in range(entryCount):
+                manager.append(f'bulk entry {index:05d}')
+
+            self.assertEqual(page.textBrowser.toPlainText(), '')
+
+            page.show()
+
+            # showEvent only schedules the catch-up; it does not synchronously
+            # build and highlight thousands of QTextDocument blocks.
+            self.assertTrue(page._entriesDirty)
+            self.assertEqual(page.textBrowser.toPlainText(), '')
+
+            self.assertRendered(page)
+
+            lines = page.textBrowser.toPlainText().splitlines()
+
+            self.assertEqual(len(lines), entryCount)
+            self.assertEqual(lines[0], 'bulk entry 00000')
+            self.assertEqual(lines[-1], 'bulk entry 04999')
+            self.assertEqual(page.textBrowser.document().blockCount(), entryCount)
+
+            self.disposePage(page)
+
+    def testFollowingTailSurvivesHideAndCatchUp(self):
+        """Restore the newest entry after collecting while the page is hidden."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=500)
+
+            page = LogPage(manager=manager)
+            page.resize(800, 320)
+
+            for index in range(200):
+                manager.append(f'before hide {index:03d}')
+
+            page.show()
+
+            self.assertRendered(page)
+
+            scrollbar = page.textBrowser.verticalScrollBar()
+
+            self.assertGreater(scrollbar.maximum(), 0)
+            self.assertEqual(scrollbar.value(), scrollbar.maximum())
+            self.assertTrue(page._followTail)
+
+            page.hide()
+
+            for index in range(25):
+                manager.append(f'while hidden {index:03d}')
+
+            page.show()
+
+            self.assertRendered(page)
+            self.assertTrue(waitFor(lambda: scrollbar.value() == scrollbar.maximum()))
+
+            self.assertTrue(page._followTail)
+            self.assertTrue(page.plainText().endswith('while hidden 024'))
+
+            self.disposePage(page)
+
+    def testManualHistoryReadingDisablesAndThenResumesTail(self):
+        """Do not yank an upward-scrolled viewport until it returns to bottom."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=500)
+
+            page = LogPage(manager=manager)
+            page.resize(800, 320)
+
+            for index in range(200):
+                manager.append(f'history {index:03d}')
+
+            page.show()
+
+            self.assertRendered(page)
+
+            scrollbar = page.textBrowser.verticalScrollBar()
+            scrollbar.setValue(0)
+
+            page._updateFollowTailFromScrollbar()
+
+            self.assertFalse(page._followTail)
+
+            manager.append('arrived while reading')
+
+            self.assertRendered(page)
+
+            self.assertEqual(scrollbar.value(), 0)
+            self.assertLess(scrollbar.value(), scrollbar.maximum())
+
+            scrollbar.setValue(scrollbar.maximum())
+
+            page._updateFollowTailFromScrollbar()
+
+            self.assertTrue(page._followTail)
+
+            manager.append('tail resumed')
+
+            self.assertRendered(page)
+            self.assertTrue(waitFor(lambda: scrollbar.value() == scrollbar.maximum()))
+            self.assertTrue(page.plainText().endswith('tail resumed'))
+
+            self.disposePage(page)
+
+    def testFilteredTailCatchUpAndPruningRemainExact(self):
+        """Keep filtered tail semantics and discard pruned filtered entries."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=40)
+
+            page = LogPage(manager=manager)
+            page.resize(800, 260)
+
+            for index in range(30):
+                manager.append(f'application {index:03d}', APPLICATION_LOG_CATEGORY)
+                manager.append(f'core {index:03d}', CORE_LOG_CATEGORY)
+
+            coreIndex = page.filterComboBox.findData(CORE_LOG_CATEGORY)
+
+            page.filterComboBox.setCurrentIndex(coreIndex)
+            page.show()
+
+            self.assertRendered(page)
+
+            scrollbar = page.textBrowser.verticalScrollBar()
+
+            self.assertTrue(page.plainText().endswith('core 029'))
+            self.assertEqual(scrollbar.value(), scrollbar.maximum())
+
+            page.hide()
+
+            for index in range(45):
+                manager.append(
+                    f'new application {index:03d}',
+                    APPLICATION_LOG_CATEGORY,
+                )
+
+            manager.append('new core tail', CORE_LOG_CATEGORY)
+
+            page.show()
+
+            self.assertRendered(page)
+            self.assertTrue(waitFor(lambda: scrollbar.value() == scrollbar.maximum()))
+
+            self.assertEqual(page.plainText(), 'new core tail')
+            self.assertTrue(page._followTail)
+
+            self.disposePage(page)
+
+    def testIncrementalBatchesRehighlightChangedBoundaryBlocks(self):
+        """Color paragraph boundaries invalidated by append and retention edits."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=24)
+            page = LogPage(manager=manager)
+
+            def appendEntries(start, count):
+                """Append deterministic lines matched by several log rules."""
+                for index in range(start, start + count):
+                    manager.append(
+                        '2026/08/17 18:45:'
+                        f'{index % 60:02d}.000000 from '
+                        f'127.0.0.1:{5000 + index} accepted '
+                        '//example.com:443 [http >> proxy]'
+                    )
+
+            def missingFormats():
+                """Return blocks that fell back to the default text format."""
+                document = page.textBrowser.document()
+
+                return tuple(
+                    blockNumber
+                    for blockNumber in range(document.blockCount())
+                    if not document.findBlockByNumber(blockNumber).layout().formats()
+                )
+
+            appendEntries(0, 20)
+
+            page.show()
+
+            self.assertRendered(page)
+
+            appendEntries(20, 3)
+
+            self.assertRendered(page)
+
+            self.assertEqual(missingFormats(), ())
+
+            # This batch prunes four old entries as it appends five new ones,
+            # exercising both the new first and previous last block boundaries.
+            appendEntries(23, 5)
+
+            self.assertRendered(page)
+
+            self.assertEqual(page.textBrowser.document().blockCount(), 24)
+            self.assertEqual(missingFormats(), ())
+
+            self.disposePage(page)
+
+    def testRepeatedVisibilityCyclesReuseTimersWithoutDuplicateEntries(self):
+        """Keep one owned render pipeline stable through repeated page visits."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=500)
+            page = LogPage(manager=manager)
+            timers = (
+                page._updateTimer,
+                page._highlightTimer,
+                page._scrollTimer,
+                page._followStateTimer,
+            )
+
+            page.show()
+
+            self.assertRendered(page)
+
+            expected = []
+
+            for index in range(30):
+                page.hide()
+
+                line = f'visibility cycle {index:02d}'
+
+                expected.append(line)
+                manager.append(line)
+
+                page.show()
+
+                self.assertRendered(page, highlighting=False)
+
+            self.assertEqual(page.plainText().splitlines(), expected)
+            self.assertEqual(
+                (
+                    page._updateTimer,
+                    page._highlightTimer,
+                    page._scrollTimer,
+                    page._followStateTimer,
+                ),
+                timers,
+            )
+
+            self.disposePage(page)
+
+    def testPageDestructionReleasesOwnedRenderTimers(self):
+        """Do not retain the page or its persistent timers after destruction."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=20)
+            page = LogPage(manager=manager)
+            references = tuple(
+                weakref.ref(value)
+                for value in (
+                    page,
+                    page._updateTimer,
+                    page._highlightTimer,
+                    page._scrollTimer,
+                    page._followStateTimer,
+                )
+            )
+
+            page.show()
+
+            self.assertRendered(page)
+            self.disposePage(page)
+
+            del page
+
+            collectAtBoundary()
+
+            self.assertTrue(all(reference() is None for reference in references))
 
 
 class DialogBehaviorTest(unittest.TestCase):

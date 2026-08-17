@@ -123,10 +123,19 @@ class AppQSyntaxHighlighter(Mixins.ThemeAware, QSyntaxHighlighter):
     def __init__(self, *args, **kwargs):
         """Initialize the AppQSyntaxHighlighter."""
         self._theme = AppStyleSheet.normalizeTheme(kwargs.pop('theme', _currentTheme()))
+        self._highlightingEnabled = True
 
         super().__init__(*args, **kwargs)
 
         self.highlightRules = list()
+
+    def setHighlightingEnabled(self, enabled: bool):
+        """Enable or suspend formatting of blocks changed by the document.
+
+        Suspending is useful for a large bulk replacement whose blocks will be
+        rehighlighted incrementally by its persistent presentation owner.
+        """
+        self._highlightingEnabled = bool(enabled)
 
     def buildHighlightRules(self, palette):
         """Return highlight rules for *palette*."""
@@ -145,6 +154,9 @@ class AppQSyntaxHighlighter(Mixins.ThemeAware, QSyntaxHighlighter):
 
     def highlightBlock(self, text):
         """Handle highlight block for the app q syntax highlighter."""
+        if not self._highlightingEnabled:
+            return
+
         for highlightRule in self.highlightRules:
             iterator = highlightRule.regex.globalMatch(text)
 
