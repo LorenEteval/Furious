@@ -33,6 +33,9 @@ __all__ = [
     'ShadowsocksURIError',
     'parseShadowsocksURI',
     'serializeShadowsocksURI',
+    # Begin export for testing
+    'formatPluginArgument',
+    # End export for testing
 ]
 
 SHADOWSOCKS_PLUGIN_METADATA_KEY = 'shadowsocksPlugin'
