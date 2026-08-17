@@ -36,14 +36,20 @@ import functools
 
 from .Routing import cleanRoutingRule
 
-__all__ = ['XrayRoutingWindow']
+__all__ = [
+    'XrayRoutingWindow',
+    # Begin export for testing
+    'RoutingPreviewDialog',
+    'RoutingRuleEditDialog',
+    'RoutingRulesDialog',
+    # End export for testing
+]
 
 logger = logging.getLogger(__name__)
 
 registerAppSettings('UserRoutingWindowGeometry')
 registerAppSettings('UserRoutingWindowState')
 registerAppSettings('UserRoutingHeaderViewState')
-
 
 DOMAIN_STRATEGIES, ROUTING_STATES = (
     ['AsIs', 'IPIfNonMatch', 'IPOnDemand'],
