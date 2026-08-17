@@ -20,6 +20,8 @@
 from __future__ import annotations
 
 from Furious.Backends.ExternalCore.Editor import ExternalCoreEditor
+from Furious.Backends.Hysteria1.Editor import Hysteria1Editor
+from Furious.Backends.Hysteria2.Editor import Hysteria2Editor
 from Furious.Backends.Hysteria2.TunSettingsDialog import Hysteria2TunSettingsDialog
 from Furious.Backends.Xray.RoutingWindow import (
     RoutingPreviewDialog,
@@ -27,7 +29,11 @@ from Furious.Backends.Xray.RoutingWindow import (
     RoutingRulesDialog,
 )
 from Furious.Backends.Xray.SocksEditor import SocksEditor
+from Furious.Backends.Xray.ShadowsocksEditor import ShadowsocksEditor
+from Furious.Backends.Xray.TrojanEditor import TrojanEditor
 from Furious.Backends.Xray.TunSettingsDialog import XrayTunSettingsDialog
+from Furious.Backends.Xray.VlessEditor import VlessEditor
+from Furious.Backends.Xray.VmessEditor import VmessEditor
 from Furious.Frozenlib import Mixins
 from Furious.Qt import (
     AppQAction,
@@ -284,6 +290,12 @@ class QtLifetimeTest(unittest.TestCase):
         factories = (
             ('external-core', ExternalCoreEditor, 35),
             ('socks-protocol', SocksEditor, 35),
+            ('vless-protocol', VlessEditor, 12),
+            ('vmess-protocol', VmessEditor, 12),
+            ('trojan-protocol', TrojanEditor, 12),
+            ('shadowsocks-protocol', ShadowsocksEditor, 12),
+            ('hysteria1-protocol', Hysteria1Editor, 12),
+            ('hysteria2-protocol', Hysteria2Editor, 12),
             ('xray-tun-settings', XrayTunSettingsDialog, 25),
             ('hysteria2-tun-settings', Hysteria2TunSettingsDialog, 25),
             (

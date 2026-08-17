@@ -21,13 +21,18 @@ from __future__ import annotations
 
 from Furious.Frozenlib import Mixins
 from Furious.Qt import AppQAction, AppQMenu, AppQTransientDialog
+from Furious.Backends.Hysteria2.Editor import Hysteria2Editor
+from Furious.Backends.Xray.RoutingWindow import RoutingPreviewDialog
+from Furious.Backends.Xray.VlessEditor import VlessEditor
 
-from PySide6 import QtCore
+from PySide6 import QtCore, QtGui
 
 from tests.support import (
     application,
     collectAtBoundary,
     currentRSS,
+    currentNativeHandleCount,
+    isolatedSettings,
     qObjectCount,
 )
 
@@ -208,6 +213,106 @@ class QtMemoryStressTest(unittest.TestCase):
             )
         finally:
             tracemalloc.stop()
+
+    def testRealDialogFamiliesPlateauAcrossBatches(self):
+        """Measure representative production editors instead of only a probe."""
+        factories = (
+            ('routing-preview', lambda: RoutingPreviewDialog({'rules': []})),
+            ('vless-editor', VlessEditor),
+            ('hysteria2-editor', Hysteria2Editor),
+        )
+        warmupIterations, batchIterations, batchCount = 3, 8, 3
+
+        with isolatedSettings():
+            for family, factory in factories:
+                with self.subTest(family=family):
+                    collectAtBoundary()
+
+                    baseline = {
+                        'timer': qObjectCount(QtCore.QTimer),
+                        'action': qObjectCount(QtGui.QAction),
+                        'menu': qObjectCount(AppQMenu),
+                        'translationPool': len(Mixins.QTranslatable.ObjectsPool),
+                        'themePool': len(Mixins.ThemeAware.ObjectsPool),
+                        'connectionPool': len(Mixins.ConnectionAware.ObjectsPool),
+                    }
+
+                    references, destroyed, samples = [], [], []
+
+                    for batch, iterations in enumerate(
+                        (warmupIterations,) + (batchIterations,) * batchCount
+                    ):
+                        for _index in range(iterations):
+                            dialog = factory()
+                            dialog.destroyed.connect(
+                                lambda *_args, _destroyed=destroyed: _destroyed.append(
+                                    True
+                                )
+                            )
+
+                            references.append(weakref.ref(dialog))
+
+                            dialog.show()
+                            dialog.close()
+
+                        del dialog
+
+                        collectAtBoundary()
+
+                        samples.append(
+                            {
+                                'batch': batch,
+                                'timer': qObjectCount(QtCore.QTimer),
+                                'action': qObjectCount(QtGui.QAction),
+                                'menu': qObjectCount(AppQMenu),
+                                'handles': currentNativeHandleCount(),
+                                'rss': currentRSS(),
+                            }
+                        )
+
+                    total = warmupIterations + batchIterations * batchCount
+
+                    self.assertEqual(len(destroyed), total)
+                    self.assertTrue(
+                        all(reference() is None for reference in references)
+                    )
+
+                    for sample in samples:
+                        self.assertEqual(sample['timer'], baseline['timer'])
+                        self.assertEqual(sample['action'], baseline['action'])
+                        self.assertEqual(sample['menu'], baseline['menu'])
+
+                    self.assertEqual(
+                        len(Mixins.QTranslatable.ObjectsPool),
+                        baseline['translationPool'],
+                    )
+                    self.assertEqual(
+                        len(Mixins.ThemeAware.ObjectsPool),
+                        baseline['themePool'],
+                    )
+                    self.assertEqual(
+                        len(Mixins.ConnectionAware.ObjectsPool),
+                        baseline['connectionPool'],
+                    )
+
+                    handles = tuple(
+                        sample['handles']
+                        for sample in samples
+                        if sample['handles'] is not None
+                    )
+
+                    if len(handles) == len(samples):
+                        self.assertLessEqual(max(handles) - min(handles), 4)
+
+                    print(
+                        'Qt real-dialog stress:',
+                        {
+                            'family': family,
+                            'iterations': total,
+                            'destroyed': len(destroyed),
+                            'samples': samples,
+                        },
+                    )
 
 
 if __name__ == '__main__':

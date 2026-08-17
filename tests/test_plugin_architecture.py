@@ -41,7 +41,12 @@ from Furious.Service.SubscriptionImporter import (
     SubscriptionSource,
 )
 
+from PySide6 import QtCore, QtWidgets
+
+from tests.support import application, collectAtBoundary, waitFor
+
 import unittest
+import weakref
 
 
 class FixtureConfiguration(ConfigFactory):
@@ -359,6 +364,151 @@ class PluginRollbackTest(unittest.TestCase):
 
             self.assertEqual(registry.plugins(), (first,))
             self.assertIsNotNone(registry.parseURI('fixture://node'))
+        finally:
+            registry.shutdown()
+
+
+class PluginFailureIsolationTest(unittest.TestCase):
+    """Keep optional plugin failures bounded to the owning capability."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create Qt before exercising a plugin-provided editor widget."""
+        application()
+
+    def tearDown(self):
+        """Drain deferred deletes after plugin UI tests."""
+        collectAtBoundary()
+
+    def testDecoderExceptionFallsThroughToNextCandidate(self):
+        """Allow one broken decoder without blocking later valid decoders."""
+
+        class RaisingDecoder(SubscriptionDecoder):
+            decoderId = 'raising-decoder'
+            displayName = 'Raising decoder'
+            priority = 200
+
+            def decode(self, data: bytes):
+                raise RuntimeError('decoder fixture')
+
+        class RaisingPlugin(FuriousPlugin):
+            metadata = PluginMetadata('tests.raising-decoder', 'Raising decoder')
+            capabilities = (RaisingDecoder(),)
+
+        registry = PluginRegistry()
+        registry.register(RaisingPlugin())
+        registry.register(FixturePlugin())
+
+        try:
+            result = registry.decodeSubscription(b'fixture')
+
+            self.assertIsNotNone(result)
+            self.assertEqual(result.decoderId, 'fixture-decoder')
+        finally:
+            registry.shutdown()
+
+    def testKernelFactoryExceptionReturnsControlledStartFailure(self):
+        """Translate construction failure into a false runtime result."""
+
+        class RaisingFactory(KernelFactory):
+            factoryId = 'raising-factory'
+            configurationTypes = (FixtureConfiguration,)
+            kernelTypes = (FixtureKernel,)
+
+            def create(self, request: KernelRequest):
+                raise RuntimeError('factory fixture')
+
+        class RaisingPlugin(FuriousPlugin):
+            metadata = PluginMetadata('tests.raising-factory', 'Raising factory')
+            capabilities = (RaisingFactory(),)
+
+        registry = PluginRegistry()
+        registry.register(RaisingPlugin())
+
+        try:
+            kernel, success = registry.startKernel(
+                FixtureConfiguration({'type': 'fixture'}),
+                'direct',
+            )
+
+            self.assertIsNone(kernel)
+            self.assertFalse(success)
+        finally:
+            registry.shutdown()
+
+    def testShutdownExceptionDoesNotBlockOtherPlugins(self):
+        """Run every shutdown hook once even when one hook raises."""
+        stopped = []
+
+        class OrderedPlugin(FuriousPlugin):
+            capabilities = tuple()
+
+            def __init__(self, identifier: str, *, raises=False):
+                self.metadata = PluginMetadata(identifier, identifier)
+                self.raises = raises
+
+            def shutdown(self):
+                stopped.append(self.metadata.id)
+
+                if self.raises:
+                    raise RuntimeError('shutdown fixture')
+
+        registry = PluginRegistry()
+        registry.register(OrderedPlugin('tests.shutdown.first'))
+        registry.register(OrderedPlugin('tests.shutdown.second', raises=True))
+        registry.register(OrderedPlugin('tests.shutdown.third'))
+
+        registry.shutdown()
+        registry.shutdown()
+
+        self.assertEqual(
+            stopped,
+            [
+                'tests.shutdown.third',
+                'tests.shutdown.second',
+                'tests.shutdown.first',
+            ],
+        )
+
+    def testRegistryStoresEditorFactoryButNotTransientEditorInstance(self):
+        """Destroy a plugin editor while its provider remains registered."""
+
+        class WidgetEditorProvider(ProtocolEditorProvider):
+            editorId = 'fixture.widget-editor'
+            protocolIds = ('FIXTURE',)
+
+            def createEditor(self, protocolId: str, parent=None, **kwargs):
+                editor = QtWidgets.QDialog(parent)
+                editor.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
+
+                return editor
+
+        class WidgetPlugin(FuriousPlugin):
+            metadata = PluginMetadata('tests.widget-editor', 'Widget editor')
+            capabilities = (
+                FixtureProtocolHandler(),
+                WidgetEditorProvider(),
+            )
+
+        registry = PluginRegistry()
+        registry.register(WidgetPlugin())
+
+        try:
+            editor = registry.createEditorForConfig(
+                FixtureConfiguration({'type': 'fixture', 'value': 'node'})
+            )
+            editorReference = weakref.ref(editor)
+            editor.show()
+            editor.close()
+            editor = None
+
+            self.assertTrue(waitFor(lambda: editorReference() is None))
+            self.assertIsNotNone(
+                registry.capability(
+                    CapabilityKind.ProtocolEditor,
+                    'fixture.widget-editor',
+                )
+            )
         finally:
             registry.shutdown()
 

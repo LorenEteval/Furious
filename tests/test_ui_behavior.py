@@ -25,6 +25,11 @@ from Furious.Backends.ExternalCore.Configuration import (
 )
 from Furious.Backends.ExternalCore.Editor import ExternalCoreEditor
 from Furious.Backends.Xray.RoutingWindow import RoutingRulesDialog
+from Furious.Actions.Connection import ConnectAction
+from Furious.Controllers.ConnectionController import (
+    ConnectionController,
+    ConnectionState,
+)
 from Furious.Models import ProfileMetadata, ServerProfile
 from Furious.Qt import AppQMessageBox
 from Furious.Service import (
@@ -34,6 +39,10 @@ from Furious.Service import (
 )
 from Furious.Window.LogPage import LogPage
 from Furious.Window.SubscriptionPage import _SubscriptionEditorDialog
+from Furious.Widget.ConnectionButton import ConnectionButton
+
+from PySide6 import QtCore
+from PySide6.QtTest import QTest
 
 from tests.support import (
     application,
@@ -44,6 +53,8 @@ from tests.support import (
 
 import copy
 import unittest
+
+from unittest import mock
 
 
 class EditorMappingTest(unittest.TestCase):
@@ -259,6 +270,167 @@ class DialogBehaviorTest(unittest.TestCase):
         self.assertEqual(clicked, [yesButton])
         self.assertEqual(finished, [int(AppQMessageBox.StandardButton.Yes)])
         self.assertIs(messageBox.clickedButton(), yesButton)
+
+    def testMessageBoxButtonsHaveAdaptiveFluentLayoutAndRoles(self):
+        """Keep one, two, and three actions slim, separated, and content-driven."""
+        configurations = (
+            (AppQMessageBox.StandardButton.Ok, 1),
+            (
+                AppQMessageBox.StandardButton.Ok | AppQMessageBox.StandardButton.Cancel,
+                2,
+            ),
+            (
+                AppQMessageBox.StandardButton.Save
+                | AppQMessageBox.StandardButton.Discard
+                | AppQMessageBox.StandardButton.Cancel,
+                3,
+            ),
+        )
+        widths = []
+
+        for buttons, count in configurations:
+            with self.subTest(buttonCount=count):
+                messageBox = AppQMessageBox(
+                    icon=AppQMessageBox.Icon.Question,
+                    text='Ready',
+                    buttons=buttons,
+                )
+                messageBox.show()
+
+                processQtEvents()
+
+                actionButtons = messageBox.buttons()
+
+                self.assertEqual(len(actionButtons), count)
+                self.assertTrue(
+                    all(
+                        button.width() > button.height() * 2 for button in actionButtons
+                    )
+                )
+
+                geometries = sorted(
+                    (button.geometry() for button in actionButtons),
+                    key=lambda geometry: geometry.x(),
+                )
+
+                for left, right in zip(geometries, geometries[1:]):
+                    self.assertGreaterEqual(
+                        right.left() - left.right() - 1,
+                        messageBox.ButtonSpacing,
+                    )
+
+                if count > 1:
+                    self.assertLessEqual(
+                        max(button.width() for button in actionButtons)
+                        - min(button.width() for button in actionButtons),
+                        1,
+                    )
+
+                if buttons & AppQMessageBox.StandardButton.Discard:
+                    discard = messageBox.button(AppQMessageBox.StandardButton.Discard)
+                    self.assertEqual(
+                        discard.property('messageBoxRole'),
+                        'destructive',
+                    )
+
+                widths.append(messageBox.width())
+
+                messageBox.close()
+
+        self.assertLess(widths[0], widths[2])
+
+    def testMessageBoxEscapeUsesConfiguredCancelResult(self):
+        """Preserve Escape semantics without leaving masks or open-box owners."""
+        messageBox = AppQMessageBox(
+            text='Continue?',
+            buttons=(
+                AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.Cancel
+            ),
+        )
+
+        finished = []
+
+        messageBox.finished.connect(finished.append)
+        messageBox.setEscapeButton(AppQMessageBox.StandardButton.Cancel)
+        messageBox.show()
+
+        QTest.keyClick(messageBox, QtCore.Qt.Key.Key_Escape)
+
+        processQtEvents()
+
+        self.assertEqual(
+            finished,
+            [int(AppQMessageBox.StandardButton.Cancel)],
+        )
+        self.assertEqual(AppQMessageBox._openMessageBoxes, {})
+
+
+class SharedConnectionPresentationTest(unittest.TestCase):
+    """Keep Home and tray adapters synchronized to one controller state."""
+
+    @classmethod
+    def setUpClass(cls):
+        application()
+
+    def tearDown(self):
+        collectAtBoundary()
+
+    def testHomeSelectionPolicyAndTrayPresentationShareController(self):
+        """Apply selection only to Home while lifecycle text remains identical."""
+        controller = ConnectionController()
+        activation = mock.Mock(return_value=True)
+
+        with (
+            mock.patch(
+                'Furious.Widget.ConnectionButton.AppConnectionController',
+                return_value=controller,
+            ),
+            mock.patch(
+                'Furious.Actions.Connection.AppConnectionController',
+                return_value=controller,
+            ),
+            mock.patch.object(controller, 'toggle', return_value=True) as toggle,
+        ):
+            home = ConnectionButton(activation)
+            tray = ConnectAction()
+
+            home.setSelectionCount(0)
+
+            self.assertTrue(home.isEnabled())
+
+            home.click()
+            toggle.assert_not_called()
+
+            home.setSelectionCount(2)
+
+            self.assertFalse(home.isEnabled())
+
+            home.setSelectionCount(1)
+
+            self.assertTrue(home.isEnabled())
+
+            home.click()
+            activation.assert_called_once()
+            toggle.assert_called_once()
+
+            for state, enabled in (
+                (ConnectionState.Connecting, False),
+                (ConnectionState.Connected, True),
+                (ConnectionState.Disconnecting, False),
+                (ConnectionState.Disconnected, True),
+            ):
+                controller._setState(state)
+
+                processQtEvents()
+
+                self.assertEqual(home.text(), tray.text())
+                self.assertEqual(home.isEnabled(), enabled)
+                self.assertEqual(tray.isEnabled(), enabled)
+
+            tray.deleteLater()
+            home.deleteLater()
+
+        controller.deleteLater()
 
 
 if __name__ == '__main__':

@@ -26,6 +26,7 @@ import os
 import gc
 import time
 import uuid
+import atexit
 import ctypes
 import tempfile
 import weakref
@@ -96,6 +97,47 @@ class TestApplication(QApplication):
 
 
 _application = None
+_settingsDirectory = None
+
+
+def _initializeSettingsSandbox():
+    """Install one process-lifetime QSettings root owned by the test suite."""
+    global _settingsDirectory
+
+    if _settingsDirectory is not None:
+        return Path(_settingsDirectory.name)
+
+    _settingsDirectory = tempfile.TemporaryDirectory(
+        prefix='furious-tests-settings-root-'
+    )
+    atexit.register(_settingsDirectory.cleanup)
+
+    root = Path(_settingsDirectory.name).resolve()
+
+    QtCore.QSettings.setDefaultFormat(QtCore.QSettings.Format.IniFormat)
+    QtCore.QSettings.setPath(
+        QtCore.QSettings.Format.IniFormat,
+        QtCore.QSettings.Scope.UserScope,
+        str(root),
+    )
+
+    return root
+
+
+def settingsSandboxPath() -> Path:
+    """Return the suite-owned root containing every test QSettings file."""
+    return _initializeSettingsSandbox()
+
+
+def assertIsolatedSettings(settings: QtCore.QSettings):
+    """Raise when *settings* resolves outside the suite-owned sandbox."""
+    settingsPath = Path(settings.fileName()).resolve()
+    sandbox = settingsSandboxPath()
+
+    if settingsPath != sandbox and sandbox not in settingsPath.parents:
+        raise AssertionError(
+            f'test QSettings escaped sandbox: {settingsPath} (root: {sandbox})'
+        )
 
 
 def application() -> QApplication:
@@ -105,6 +147,7 @@ def application() -> QApplication:
     current = QApplication.instance()
 
     if current is None:
+        _initializeSettingsSandbox()
         _application = TestApplication()
 
         current = _application
@@ -226,38 +269,62 @@ def currentRSS() -> int | None:
     return None
 
 
+def currentNativeHandleCount() -> int | None:
+    """Return process handles/descriptors when the platform exposes them safely."""
+    if os.name == 'nt':
+        count = ctypes.c_ulong()
+
+        kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+        kernel32.GetCurrentProcess.argtypes = ()
+        kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+        kernel32.GetProcessHandleCount.argtypes = (
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_ulong),
+        )
+        kernel32.GetProcessHandleCount.restype = ctypes.c_int
+
+        if kernel32.GetProcessHandleCount(
+            kernel32.GetCurrentProcess(),
+            ctypes.byref(count),
+        ):
+            return int(count.value)
+
+        return None
+
+    descriptors = Path('/proc/self/fd')
+
+    if descriptors.exists():
+        return sum(1 for _path in descriptors.iterdir())
+
+    return None
+
+
 @contextmanager
 def isolatedSettings():
     """Route every QSettings read/write to one temporary test namespace."""
     app = application()
+    oldOrganization, oldApplication = (
+        app.organizationName(),
+        app.applicationName(),
+    )
 
-    with tempfile.TemporaryDirectory(prefix='furious-tests-settings-') as directory:
-        oldOrganization, oldApplication = (
-            app.organizationName(),
-            app.applicationName(),
-        )
+    namespace = uuid.uuid4().hex
 
-        namespace = uuid.uuid4().hex
+    app.setOrganizationName(f'Furious Tests {namespace}')
+    app.setApplicationName(f'Furious Tests {namespace}')
 
-        QtCore.QSettings.setDefaultFormat(QtCore.QSettings.Format.IniFormat)
-        QtCore.QSettings.setPath(
-            QtCore.QSettings.Format.IniFormat,
-            QtCore.QSettings.Scope.UserScope,
-            directory,
-        )
+    settings = QtCore.QSettings()
 
-        app.setOrganizationName(f'Furious Tests {namespace}')
-        app.setApplicationName(f'Furious Tests {namespace}')
+    assertIsolatedSettings(settings)
 
-        settings = QtCore.QSettings()
+    settings.clear()
+    settings.sync()
+
+    try:
+        yield settings
+    finally:
         settings.clear()
         settings.sync()
 
-        try:
-            yield settings
-        finally:
-            settings.clear()
-            settings.sync()
-
-            app.setOrganizationName(oldOrganization)
-            app.setApplicationName(oldApplication)
+        app.setOrganizationName(oldOrganization)
+        app.setApplicationName(oldApplication)

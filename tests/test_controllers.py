@@ -49,10 +49,19 @@ class ControllerConfiguration(ConfigFactory):
 class FixtureCoreManager:
     """Record lifecycle calls without launching a subprocess or changing routes."""
 
-    def __init__(self, *, startResult=True, startError=''):
+    def __init__(
+        self,
+        *,
+        startResult=True,
+        startError='',
+        startException=None,
+        stopException=None,
+    ):
         """Initialize deterministic start behavior."""
         self.startResult = startResult
         self.lastStartError = startError
+        self.startException = startException
+        self.stopException = stopException
         self.processesPool = []
         self.startCalls = []
         self.stopCalls = 0
@@ -61,12 +70,18 @@ class FixtureCoreManager:
         """Record one requested start and return the configured result."""
         self.startCalls.append((configuration, kwargs))
 
+        if self.startException is not None:
+            raise self.startException
+
         return self.startResult
 
     def stopAll(self):
         """Record one bounded cleanup operation."""
         self.stopCalls += 1
         self.processesPool.clear()
+
+        if self.stopException is not None:
+            raise self.stopException
 
 
 class FixtureUpdatesManager:
@@ -240,6 +255,85 @@ class ConnectionControllerTest(unittest.TestCase):
                 AppBinarySettings.ON_,
             )
             self.assertEqual(core.stopCalls, 1)
+
+            controller.deleteLater()
+
+    def testDuplicateStartIsRejectedWithoutASecondRuntime(self):
+        """Keep one lifecycle owner while already connected."""
+        with isolatedSettings():
+            core = FixtureCoreManager()
+            controller = ConnectionController(
+                coreManager=core,
+                updatesManager=FixtureUpdatesManager(),
+            )
+
+            with (
+                mock.patch('Furious.Controllers.ConnectionController.SystemProxy.set'),
+                mock.patch('Furious.Controllers.ConnectionController.SystemProxy.off'),
+                mock.patch.object(controller, '_runPostConnectTasksOnce'),
+            ):
+                self.assertTrue(controller.startConnection(self.profile))
+                self.assertFalse(controller.startConnection(self.profile))
+                self.assertEqual(len(core.startCalls), 1)
+                self.assertTrue(controller.startDisconnection())
+
+            controller.deleteLater()
+
+    def testStartAndProxyExceptionsReturnToStableDisconnectedState(self):
+        """Clean every partially acquired resource after injected failures."""
+        for core, proxySideEffect in (
+            (FixtureCoreManager(startException=RuntimeError('start')), None),
+            (FixtureCoreManager(), RuntimeError('proxy')),
+        ):
+            with self.subTest(
+                startException=core.startException,
+                proxyException=proxySideEffect,
+            ), isolatedSettings():
+                controller = ConnectionController(
+                    coreManager=core,
+                    updatesManager=FixtureUpdatesManager(),
+                )
+
+                with (
+                    mock.patch(
+                        'Furious.Controllers.ConnectionController.SystemProxy.set',
+                        side_effect=proxySideEffect,
+                    ),
+                    mock.patch(
+                        'Furious.Controllers.ConnectionController.SystemProxy.off'
+                    ),
+                    mock.patch.object(controller, '_runPostConnectTasksOnce'),
+                ):
+                    self.assertFalse(controller.startConnection(self.profile))
+
+                self.assertEqual(controller.state, ConnectionState.Disconnected)
+                self.assertIsNone(controller.activeConfiguration)
+                self.assertEqual(core.stopCalls, 1)
+                self.assertFalse(controller._actionTimer.isActive())
+
+                controller.deleteLater()
+
+    def testStopExceptionCannotStrandConnectionControls(self):
+        """Complete disconnect even when the runtime reports cleanup failure."""
+        with isolatedSettings():
+            core = FixtureCoreManager(stopException=RuntimeError('stop'))
+            controller = ConnectionController(
+                coreManager=core,
+                updatesManager=FixtureUpdatesManager(),
+            )
+
+            with (
+                mock.patch('Furious.Controllers.ConnectionController.SystemProxy.set'),
+                mock.patch('Furious.Controllers.ConnectionController.SystemProxy.off'),
+                mock.patch.object(controller, '_runPostConnectTasksOnce'),
+            ):
+                self.assertTrue(controller.startConnection(self.profile))
+                self.assertTrue(controller.startDisconnection())
+
+            self.assertEqual(controller.state, ConnectionState.Disconnected)
+            self.assertIsNone(controller.activeConfiguration)
+            self.assertTrue(controller.interactionEnabled)
+            self.assertFalse(controller._actionTimer.isActive())
 
             controller.deleteLater()
 

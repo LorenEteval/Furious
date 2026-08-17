@@ -13,11 +13,15 @@ system proxy, TUN, routing, update network clients, or real proxy cores.
 | Configuration, profiles, migration, repositories | `test_models_and_services.py` |
 | Plugin registration, capability dispatch, factories, rollback | `test_plugin_architecture.py` |
 | Controller state and error transitions with injected runtimes | `test_controllers.py` |
-| SOCKS URI codec and import boundaries | `test_socks_uri.py` |
+| SOCKS/SIP002 Shadowsocks codecs and generated round trips | `test_socks_uri.py`, `test_shadowsocks_uri.py` |
+| Subscription-group reconciliation and ownership isolation | `test_subscription_sync.py` |
 | External process launch, output, shutdown, threads, TUN metadata | `test_external_core.py` |
-| Editor mappings, lazy log rendering, routing/message-box behavior | `test_ui_behavior.py` |
+| Rolling metrics, stable buckets, lazy rendering, and hover | `test_metrics_behavior.py` |
+| Settings sandbox and navigation overlay behavior | `test_isolation_and_navigation.py` |
+| Editor mappings, lazy log rendering, routing/message-box/connection UI | `test_ui_behavior.py` |
 | Direct Qt ownership and destruction across independent UI families | `test_qt_lifetime.py` |
-| Batched Qt object, Python allocation, and RSS trends | `test_qt_stress.py` |
+| Batched real/probe Qt object, handle, Python allocation, and RSS trends | `test_qt_stress.py` |
+| Repeated harmless subprocess, pipe, thread, handle, and RSS trends | `test_process_stress.py` |
 
 The lifecycle tests classify `AppQTransientDialog`, protocol/plugin editors,
 routing dialogs, subscription editors, message boxes, QR windows, and TUN
@@ -29,33 +33,48 @@ than by starting the production application runtime.
 
 ## Commands
 
-From the repository root on Windows PowerShell:
+From the repository root, select the offscreen Qt platform for your shell.
+
+Windows PowerShell:
 
 ```powershell
 $env:QT_QPA_PLATFORM = 'offscreen'
-
-# Everything
-.\.venv-python313\Scripts\python.exe -m unittest discover -s tests -v
-
-# Fast logic, persistence, plugin, controller, process, codec, and UI behavior
-.\.venv-python313\Scripts\python.exe -m unittest `
-    tests.test_models_and_services `
-    tests.test_plugin_architecture `
-    tests.test_controllers `
-    tests.test_external_core `
-    tests.test_socks_uri `
-    tests.test_ui_behavior -v
-
-# Direct Qt destruction/lifetime checks
-.\.venv-python313\Scripts\python.exe -m unittest tests.test_qt_lifetime -v
-
-# Hundreds-of-cycles allocation/RSS trend check
-.\.venv-python313\Scripts\python.exe -m unittest tests.test_qt_stress -v
 ```
 
-Equivalent commands work on Linux/macOS after replacing the virtual-environment
-executable path with the platform's Python path. No external network access or
-installed Xray/Hysteria executable is required.
+Windows Command Prompt:
+
+```cmd
+set QT_QPA_PLATFORM=offscreen
+```
+
+Linux, macOS, and other Unix-compatible shells:
+
+```sh
+export QT_QPA_PLATFORM=offscreen
+```
+
+Then run the desired test tier. These commands use the active Python
+environment, so activate the project's virtual environment first when needed.
+
+```text
+# Everything
+python -m unittest discover -s tests -v
+
+# Fast logic, persistence, plugin, controller, codec, and UI behavior
+python -m unittest tests.test_models_and_services tests.test_plugin_architecture tests.test_controllers tests.test_subscription_sync tests.test_socks_uri tests.test_shadowsocks_uri tests.test_metrics_behavior tests.test_isolation_and_navigation tests.test_ui_behavior -v
+
+# Direct Qt/process integration and destruction/lifetime checks
+python -m unittest tests.test_external_core tests.test_qt_lifetime -v
+
+# Explicit slow stress tier
+python -m unittest tests.test_qt_stress tests.test_process_stress -v
+
+# Order-independence spot check (reverse the module order, then run all tests)
+python -m unittest tests.test_ui_behavior tests.test_isolation_and_navigation tests.test_metrics_behavior tests.test_subscription_sync tests.test_controllers tests.test_plugin_architecture tests.test_models_and_services -v
+python -m unittest discover -s tests -v
+```
+
+No external network access or installed Xray/Hysteria executable is required.
 
 ## Packaged-build smoke procedure
 
