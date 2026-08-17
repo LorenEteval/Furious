@@ -241,7 +241,10 @@ class MainWindow(AppQMainWindow):
                 windowSize = AppSettings.get('ServerWidgetWindowSize').split(',')
                 width, height = tuple(int(size) for size in windowSize)
 
-                if (width, height) == (640, 480):
+                # TODO: write better condition
+                # (640, 480) is the size without navigation bar on macOS
+                # (702, 480) is the size with navigation bar on macOS
+                if (width, height) in ((640, 480), (702, 480)):
                     self.resize(self.DEFAULT_WINDOW_SIZE)
                 else:
                     self.resize(width, height)
@@ -269,7 +272,10 @@ class MainWindow(AppQMainWindow):
 
                 size = self.size()
 
-                if size == QtCore.QSize(640, 480):
+                # TODO: write better condition
+                # (640, 480) is the size without navigation bar on macOS
+                # (702, 480) is the size with navigation bar on macOS
+                if size in (QtCore.QSize(640, 480), QtCore.QSize(702, 480)):
                     logger.error(
                         f'detected unresolved Qt bug on macOS. '
                         f'Resizing main window to default '
