@@ -365,7 +365,7 @@ class RoutingRuleEditDialog(AppQTransientDialog):
     @staticmethod
     def lineEdit(text=''):
         """Return the line edit value used by the routing rule edit dialog."""
-        widget = QLineEdit(text)
+        widget = AppQLineEdit(text)
         widget.setFixedHeight(RoutingRuleEditDialog.MatchInputHeight)
 
         return widget
@@ -587,7 +587,7 @@ class RoutingRemarkEditDialog(AppQTransientDialog):
         self.setWindowTitle(_('Edit Routing Remark'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        self.remarkEdit = QLineEdit(remark)
+        self.remarkEdit = AppQLineEdit(remark)
 
         self.dialogBtns = AppQDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
         self.dialogBtns.addButton(_('OK'), AppQDialogButtonBox.ButtonRole.AcceptRole)
@@ -623,7 +623,7 @@ class RoutingProfileEditDialog(AppQTransientDialog):
         self.setWindowTitle(_('Add Routing'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        self.remarkEdit = QLineEdit(_('New Routing'))
+        self.remarkEdit = AppQLineEdit(_('New Routing'))
 
         self.domainStrategyCombo = AppQComboBox(translatable=False)
         self.domainStrategyCombo.addItems(DOMAIN_STRATEGIES)

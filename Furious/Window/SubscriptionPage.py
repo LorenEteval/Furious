@@ -63,14 +63,14 @@ class _SubscriptionEditorDialog(AppQTransientDialog):
 
         subscription = dict(subscription or {})
 
-        self.remarkEdit = QLineEdit(subscription.get('remark', ''))
-        self.urlEdit = QLineEdit(subscription.get('webURL', ''))
+        self.remarkEdit = AppQLineEdit(subscription.get('remark', ''))
+        self.urlEdit = AppQLineEdit(subscription.get('webURL', ''))
         self.enabledSwitch = AppQSwitch()
         self.enabledSwitch.syncChecked(subscription.get('enabled', True))
         self.autoUpdateComboBox = AppQComboBox()
         self.proxyComboBox = AppQComboBox()
-        self.userAgentEdit = QLineEdit(subscription.get('userAgent', ''))
-        self.filterEdit = QLineEdit(subscription.get('filter', ''))
+        self.userAgentEdit = AppQLineEdit(subscription.get('userAgent', ''))
+        self.filterEdit = AppQLineEdit(subscription.get('filter', ''))
 
         self.remarkEdit.setMinimumWidth(240)
         self.remarkEdit.setMaximumWidth(360)

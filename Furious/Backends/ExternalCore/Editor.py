@@ -24,6 +24,7 @@ from Furious.Interface import EditorWidgetBinding
 from Furious.Models import ConfigFactory, ServerProfile
 from Furious.Qt import (
     AppQLabel,
+    AppQLineEdit,
     AppQMessageBox,
     AppQPushButton,
     GuiEditorItemBasicRemark,
@@ -39,10 +40,11 @@ from Furious.Qt import gettext as _
 from PySide6 import QtCore
 from PySide6.QtWidgets import (
     QFileDialog,
+    QFormLayout,
     QHBoxLayout,
-    QLineEdit,
     QPlainTextEdit,
     QSizePolicy,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -76,7 +78,7 @@ class ExternalCorePathInput(EditorWidgetBinding):
         self._key = key
         self._directory = directory
         self._title = AppQLabel(_(title), translatable=True)
-        self._input = QLineEdit()
+        self._input = AppQLineEdit()
         self._input.setPlaceholderText(_(placeholder) if placeholder else '')
         self._browse = AppQPushButton(_('Browse...'))
         self._browse.clicked.connect(self.browse)
@@ -155,10 +157,8 @@ class ExternalCoreArgumentsInput(EditorWidgetBinding):
         super().__init__()
 
         self._title = AppQLabel(_('Arguments'), translatable=True)
-        self._input = QLineEdit()
-        self._input.setPlaceholderText(
-            _('Separate arguments with spaces; quote values containing spaces.')
-        )
+        self._input = AppQLineEdit()
+        self._input.setPlaceholderText(_('Space-separated arguments'))
 
     def widgets(self):
         """Return the form-row label and line editor."""
@@ -295,7 +295,7 @@ class ExternalCoreApplicationTun2socksInput(GuiEditorItemTextSwitch):
 
     def __init__(self):
         """Initialize the application tun2socks opt-in control."""
-        super().__init__(title=_('Use Application tun2socks'), translatable=True)
+        super().__init__(title=_('Use Application Tun2socks'), translatable=True)
 
     def connectToggled(self, callback):
         """Connect a same-lifetime field-state callback to this control."""
@@ -320,7 +320,7 @@ class ExternalCoreTunRemoteAddressInput(EditorWidgetBinding):
         super().__init__()
 
         self._title = AppQLabel(_('TUN Remote Address'), translatable=True)
-        self._input = QLineEdit()
+        self._input = AppQLineEdit()
         self._input.setMaximumWidth(self.MaximumWidth)
         self._input.setPlaceholderText(_('Hostname, IPv4, or IPv6 address'))
 
@@ -378,23 +378,50 @@ class ExternalCoreConfigurationGroup(GuiEditorWidgetQGroupBox):
         socksProxyInput = GuiEditorItemProxySocks(title=_('SOCKS Proxy'))
         socksProxyInput.widgets()[1].setMaximumWidth(self.ProxyEndpointWidth)
 
-        return [
+        self._processContainers = (
             remarkInput,
-            ExternalCorePathInput('Executable', 'executable'),
+            ExternalCorePathInput(_('Executable'), 'executable'),
             ExternalCorePathInput(
-                'Working Directory',
+                _('Working Directory'),
                 'workingDirectory',
                 directory=True,
-                placeholder='Defaults to the executable directory',
+                placeholder=_('Defaults to executable folder'),
             ),
             self._argumentsInput,
             self._environmentInput,
+        )
+        self._runtimeContainers = (
             ExternalCoreShutdownTimeoutInput(),
             httpProxyInput,
             socksProxyInput,
             self._applicationTun2socksInput,
             self._tunRemoteAddressInput,
-        ]
+        )
+
+        return [*self._processContainers, *self._runtimeContainers]
+
+    @staticmethod
+    def _formLayout(containers):
+        """Align one related section independently from the other section."""
+        layout = QFormLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+
+        for container in containers:
+            layout.addRow(*container.widgets())
+
+        return layout
+
+    def setupPageLayout(self):
+        """Keep process fields independent from runtime-network label widths."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(18)
+        layout.addLayout(self._formLayout(self._processContainers))
+        layout.addLayout(self._formLayout(self._runtimeContainers))
+
+        return layout
 
 
 class ExternalCoreEditor(GuiEditorWidgetQDialog):
@@ -415,7 +442,7 @@ class ExternalCoreEditor(GuiEditorWidgetQDialog):
 
         super().__init__(*args, **kwargs)
 
-        dialogWidth = 600
+        dialogWidth = 540
 
         self.setFixedSize(dialogWidth, int(dialogWidth * GOLDEN_RATIO))
         self.setTabText(_('External Core'))

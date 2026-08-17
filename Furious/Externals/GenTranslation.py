@@ -2886,6 +2886,22 @@ TRANSLATION = {
         "ZH": "添加外部Core...",
         "isReviewed": "True"
     },
+    "Executable": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Исполняемый файл",
+        "ZH": "可执行文件",
+        "isReviewed": "True"
+    },
+    "Working Directory": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Рабочий каталог",
+        "ZH": "工作目录",
+        "isReviewed": "True"
+    },
     "External Core": {
         "source": [
             "Furious.Backends.ExternalCore.Editor"
@@ -2934,12 +2950,12 @@ TRANSLATION = {
         "ZH": "SOCKS代理",
         "isReviewed": "True"
     },
-    "Use Application tun2socks": {
+    "Use Application Tun2socks": {
         "source": [
             "Furious.Backends.ExternalCore.Editor"
         ],
-        "RU": "Использовать tun2socks приложения",
-        "ZH": "使用应用程序的tun2socks",
+        "RU": "Использовать Tun2socks приложения",
+        "ZH": "使用应用程序的Tun2socks",
         "isReviewed": "True"
     },
     "TUN Remote Address": {
@@ -2990,12 +3006,20 @@ TRANSLATION = {
         "ZH": "关闭超时（秒）",
         "isReviewed": "True"
     },
-    "Separate arguments with spaces; quote values containing spaces.": {
+    "Space-separated arguments": {
         "source": [
             "Furious.Backends.ExternalCore.Editor"
         ],
-        "RU": "Разделяйте аргументы пробелами; значения с пробелами заключайте в кавычки.",
-        "ZH": "使用空格分隔参数；包含空格的值请使用引号。",
+        "RU": "Аргументы через пробел",
+        "ZH": "参数以空格分隔",
+        "isReviewed": "True"
+    },
+    "Defaults to executable folder": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Папка исполняемого файла",
+        "ZH": "默认使用可执行文件目录",
         "isReviewed": "True"
     },
     "Arguments contain invalid quoting.": {

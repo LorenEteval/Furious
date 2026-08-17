@@ -47,7 +47,7 @@ class NetworkTestDialog(AppQDialog):
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         self.speedTestURLText = AppQLabel(_('Enter network speed test URL:'))
-        self.speedTestURLEdit = QLineEdit()
+        self.speedTestURLEdit = AppQLineEdit()
 
         speedTestURLSettings = AppSettings.get('CustomNetworkSpeedTestURL')
 
@@ -57,7 +57,7 @@ class NetworkTestDialog(AppQDialog):
             self.speedTestURLEdit.setText(NETWORK_SPEED_TEST_URL)
 
         self.connectivityText = AppQLabel(_('Enter network connectivity test URL:'))
-        self.connectivityEdit = QLineEdit()
+        self.connectivityEdit = AppQLineEdit()
 
         connectivitySettings = AppSettings.get('CustomNetworkConnectivityTestURL')
 

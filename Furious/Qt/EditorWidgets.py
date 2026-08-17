@@ -59,7 +59,7 @@ class GuiEditorItemTextInput(EditorWidgetBinding):
             title = _(title)
 
         self._title = AppQLabel(title, translatable=translatable, parent=parent)
-        self._input = QLineEdit(parent=parent)
+        self._input = AppQLineEdit(parent=parent)
 
     def text(self) -> str:
         """Return the text value."""

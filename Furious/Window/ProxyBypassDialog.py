@@ -46,7 +46,7 @@ class ProxyBypassDialog(AppQDialog):
         self.proxyBypassText = AppQLabel(
             _('Enter system proxy bypass address (separated by semicolons):')
         )
-        self.proxyBypassEdit = QLineEdit()
+        self.proxyBypassEdit = AppQLineEdit()
 
         settings = AppSettings.get('CustomProxyBypass')
 

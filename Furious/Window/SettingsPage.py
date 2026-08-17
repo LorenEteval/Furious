@@ -303,7 +303,7 @@ class _LineEditSettingsCard(_SettingsCard):
         self.lineEdit.setText(str(AppSettings.get(settingName) or ''))
 
         if secret:
-            self.lineEdit.setEchoMode(QLineEdit.EchoMode.Password)
+            self.lineEdit.setEchoMode(AppQLineEdit.EchoMode.Password)
 
         self.lineEdit.editingFinished.connect(self.persist)
 
