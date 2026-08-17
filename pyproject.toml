@@ -22,6 +22,10 @@ dependencies = [
     "mss",
     "zxing-cpp",
     "pillow",
+    "Xray-core",
+    "hysteria",
+    "hysteria2",
+    "tun2socks",
     "sysproxy; sys_platform == 'win32'",
     "win32session; sys_platform == 'win32'",
     "darkdetect; sys_platform != 'darwin'",
@@ -51,7 +55,7 @@ Homepage = "https://github.com/LorenEteval/Furious"
 Furious = "Furious.__main__:main"
 
 [tool.setuptools]
-packages = { find = {} }
+packages = { find = { } }
 include-package-data = true
 
 [tool.setuptools.dynamic]

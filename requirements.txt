@@ -7,6 +7,10 @@ icmplib
 mss
 zxing-cpp
 pillow
+Xray-core
+hysteria
+hysteria2
+tun2socks
 sysproxy; sys_platform == "win32"
 win32session; sys_platform == "win32"
 darkdetect; sys_platform != "darwin"
