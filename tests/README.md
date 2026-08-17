@@ -16,6 +16,7 @@ system proxy, TUN, routing, update network clients, or real proxy cores.
 | SOCKS/SIP002 Shadowsocks codecs and generated round trips | `test_socks_uri.py`, `test_shadowsocks_uri.py` |
 | Subscription-group reconciliation and ownership isolation | `test_subscription_sync.py` |
 | External process launch, output, shutdown, threads, TUN metadata | `test_external_core.py` |
+| Xray/Hysteria2 native-TUN ownership and proxy-only stripping | `test_native_tun_semantics.py` |
 | Rolling metrics, stable buckets, lazy rendering, and hover | `test_metrics_behavior.py` |
 | Settings sandbox and navigation overlay behavior | `test_isolation_and_navigation.py` |
 | Editor mappings, lazy log rendering, routing/message-box/connection UI | `test_ui_behavior.py` |
@@ -61,7 +62,7 @@ environment, so activate the project's virtual environment first when needed.
 python -m unittest discover -s tests -v
 
 # Fast logic, persistence, plugin, controller, codec, and UI behavior
-python -m unittest tests.test_models_and_services tests.test_plugin_architecture tests.test_controllers tests.test_subscription_sync tests.test_socks_uri tests.test_shadowsocks_uri tests.test_metrics_behavior tests.test_isolation_and_navigation tests.test_ui_behavior -v
+python -m unittest tests.test_models_and_services tests.test_plugin_architecture tests.test_controllers tests.test_subscription_sync tests.test_socks_uri tests.test_shadowsocks_uri tests.test_native_tun_semantics tests.test_metrics_behavior tests.test_isolation_and_navigation tests.test_ui_behavior -v
 
 # Direct Qt/process integration and destruction/lifetime checks
 python -m unittest tests.test_external_core tests.test_qt_lifetime -v

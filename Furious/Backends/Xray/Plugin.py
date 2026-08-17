@@ -170,9 +170,12 @@ class XrayKernelFactory(KernelFactory):
         return None
 
     def prepareTUN(self, config) -> bool:
-        """Add the configured Xray native TUN inbound when enabled."""
+        """Preserve user TUN or replace it with Furious-managed native TUN."""
         if not isXrayTUNEnabled():
-            return False
+            # An explicit user inbound is authoritative when Furious-managed
+            # native TUN is disabled.  Reporting it as handled prevents the
+            # normal connection path from also starting application tun2socks.
+            return hasXrayTUNInbound(config)
 
         inbounds = config.get('inbounds')
 
@@ -190,6 +193,10 @@ class XrayKernelFactory(KernelFactory):
         config['inbounds'].append(buildXrayTUNInbound())
 
         return True
+
+    def usesApplicationTun2socks(self, config) -> bool:
+        """Use host tun2socks only when the runtime has no native TUN inbound."""
+        return not hasXrayTUNInbound(config)
 
     def routingOptions(self, config=None):
         """Return built-in and named routing modes supported by Xray."""

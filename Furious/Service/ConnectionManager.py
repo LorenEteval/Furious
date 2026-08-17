@@ -157,7 +157,15 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
         if tunModeRequested:
             registry = getPluginRegistry()
-            pluginTUN = registry.prepareTUN(configcopy)
+
+            try:
+                pluginTUN = registry.prepareTUN(configcopy)
+            except TUNPreparationError as ex:
+                self._lastStartError = str(ex)
+
+                return abortStart(
+                    f'native TUN preparation failed: {self._lastStartError}'
+                )
 
             if not pluginTUN:
                 applicationTun2socks = registry.usesApplicationTun2socks(configcopy)

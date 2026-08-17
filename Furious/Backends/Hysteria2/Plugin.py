@@ -161,26 +161,19 @@ class Hysteria2KernelFactory(KernelFactory):
     kernelTypes = (Hysteria2,)
 
     def prepareTUN(self, config) -> bool:
-        """Add Hysteria 2 native TUN mode when enabled and safe to route."""
+        """Preserve user TUN or replace it with Furious-managed native TUN."""
         if not isHysteria2TUNEnabled():
-            # Work on ConnectionManager's copy so a stored native TUN block
-            # cannot run alongside the external tun2socks implementation.
-            config.pop('tun', None)
-
-            return False
+            # Presence is authoritative even when the block is malformed: the
+            # core must report that error instead of Furious silently changing
+            # the connection to application tun2socks.
+            return hasHysteria2TUNConfig(config)
 
         if PLATFORM == 'Linux' and not SystemRuntime.isAdmin():
             # Native Hysteria 2 creates the interface and routing table in its
             # own process, so it cannot use ConnectionManager's privileged helper.
-            # Keep the existing external tun2socks path available instead.
-            config.pop('tun', None)
-
-            logger.warning(
-                'Hysteria 2 native TUN requires superuser privileges on '
-                'Linux; falling back to external tun2socks'
+            raise TUNPreparationError(
+                'Hysteria 2 native TUN requires Linux superuser privileges'
             )
-
-            return False
 
         settings = getHysteria2TUNSettings()
         serverAddresses = resolveHysteria2ServerAddresses(config)
@@ -188,19 +181,19 @@ class Hysteria2KernelFactory(KernelFactory):
         hasManualExclusions = bool(route.get('ipv4Exclude') or route.get('ipv6Exclude'))
 
         if not serverAddresses and not hasManualExclusions:
-            config.pop('tun', None)
-
-            logger.error(
-                'Hysteria 2 native TUN disabled for this connection because '
+            raise TUNPreparationError(
+                'Hysteria 2 native TUN cannot start because '
                 'the server address could not be resolved and no manual route '
                 'exclusion is configured'
             )
 
-            return False
-
         config['tun'] = buildHysteria2TUNConfig(settings, serverAddresses)
 
         return True
+
+    def usesApplicationTun2socks(self, config) -> bool:
+        """Use host tun2socks only when the runtime has no native TUN block."""
+        return not hasHysteria2TUNConfig(config)
 
     def create(self, request: KernelRequest):
         """Create a prepared Hysteria 2 kernel launch."""

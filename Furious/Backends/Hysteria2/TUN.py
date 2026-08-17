@@ -31,6 +31,7 @@ __all__ = [
     'DEFAULT_HYSTERIA2_TUN_SETTINGS',
     'buildHysteria2TUNConfig',
     'getHysteria2TUNSettings',
+    'hasHysteria2TUNConfig',
     'isHysteria2TUNEnabled',
     'resolveHysteria2ServerAddresses',
     'saveHysteria2TUNSettings',
@@ -70,6 +71,17 @@ def setHysteria2TUNEnabled(enabled: bool):
         'useHysteria2TUN',
         AppBinarySettings.ON_ if enabled else AppBinarySettings.OFF,
     )
+
+
+def hasHysteria2TUNConfig(config) -> bool:
+    """Return whether a Hysteria 2 document explicitly defines native TUN.
+
+    Presence, rather than shape, is intentional.  A malformed user-provided
+    block remains authoritative for a normal connection so Hysteria 2 can
+    report its validation error instead of Furious silently selecting
+    application tun2socks.
+    """
+    return 'tun' in config
 
 
 def _normalizedStringList(value) -> list[str]:

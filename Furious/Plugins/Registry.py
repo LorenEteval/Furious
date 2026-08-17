@@ -904,6 +904,10 @@ class PluginRegistry:
                 raise TypeError('kernel TUN preparation result must be a boolean')
 
             return handled
+        except TUNPreparationError:
+            # A managed native-TUN request must fail the connection rather than
+            # silently changing the user's selected networking implementation.
+            raise
         except Exception as ex:
             # Any non-exit exceptions
 

@@ -47,6 +47,7 @@ from .API import (
     TrafficCounters,
     TrafficStatsMonitor,
     TrafficStatsProvider,
+    TUNPreparationError,
 )
 from .Profile import (
     blankConfiguration,
@@ -95,6 +96,7 @@ __all__ = [
     'TrafficCounters',
     'TrafficStatsMonitor',
     'TrafficStatsProvider',
+    'TUNPreparationError',
     'blankConfiguration',
     'blankProfile',
     'configurationFromAny',

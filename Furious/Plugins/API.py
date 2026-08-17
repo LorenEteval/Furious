@@ -51,9 +51,14 @@ __all__ = [
     'TrafficCounters',
     'TrafficStatsMonitor',
     'TrafficStatsProvider',
+    'TUNPreparationError',
 ]
 
 PLUGIN_API_VERSION = 3
+
+
+class TUNPreparationError(RuntimeError):
+    """Report that requested native TUN cannot be prepared safely."""
 
 
 class CapabilityKind(str, Enum):
@@ -429,7 +434,14 @@ class KernelFactory(PluginCapability):
         return None
 
     def prepareTUN(self, config) -> bool:
-        """Prepare native TUN and return whether the backend handles it."""
+        """Prepare normal-connection TUN and report native TUN ownership.
+
+        Implementations must preserve an explicit user native-TUN definition
+        when host-managed native TUN is disabled.  Proxy-only operations strip
+        native TUN explicitly in their own preparation method instead.  Raise
+        ``TUNPreparationError`` when requested managed TUN cannot be prepared
+        safely; the host must not silently choose another TUN implementation.
+        """
         return False
 
     def usesApplicationTun2socks(self, config) -> bool:
