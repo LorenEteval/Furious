@@ -607,7 +607,7 @@ class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
         self.setText(value)
 
 
-class GuiHy2ItemTLSInsecure(GuiEditorItemTextCheckBox):
+class GuiHy2ItemTLSInsecure(GuiEditorItemTextSwitch):
     """Represent GUI hy2 item TLS insecure."""
 
     def __init__(self, *args, **kwargs):

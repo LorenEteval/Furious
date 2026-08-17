@@ -374,7 +374,7 @@ class GuiVTLSItemTLSXXXTextInput(GuiEditorItemTextInput):
             self.setText('')
 
 
-class GuiVTLSItemTLSAllowInsecure(GuiEditorItemTextCheckBox):
+class GuiVTLSItemTLSAllowInsecure(GuiEditorItemTextSwitch):
     """Represent GUI vtls item TLS allow insecure."""
 
     def __init__(self, *args, **kwargs):

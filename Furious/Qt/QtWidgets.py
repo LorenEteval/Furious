@@ -36,7 +36,6 @@ import functools
 
 __all__ = [
     'moveToCenter',
-    'AppQCheckBox',
     'AppQSwitch',
     'AppQComboBox',
     'AppQComboBoxSeparatorDelegate',
@@ -88,31 +87,20 @@ def moveToCenter(widget, parent=None):
     widget.move(geometry.topLeft())
 
 
-class AppQCheckBox(Mixins.QTranslatable, QCheckBox):
-    """Represent app q check box."""
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the AppQCheckBox."""
-        super().__init__(*args, **kwargs)
-
-    def retranslate(self):
-        """Refresh translated text for the app q check box."""
-        self.setText(_(self.text()))
-
-
 class AppQSwitch(Mixins.ThemeAware, QCheckBox):
     """Paint one compact, animated Fluent-style binary switch."""
 
     ControlSize = QtCore.QSize(38, 22)
+    CompactControlSize = QtCore.QSize(34, 20)
     AnimationDuration = 160
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, compact=False):
         """Initialize the reusable switch and its owned thumb animation."""
         super().__init__(parent)
 
         self.setObjectName('SettingsToggle')
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        self.setFixedSize(self.ControlSize)
+        self.setFixedSize(self.CompactControlSize if compact else self.ControlSize)
 
         self._thumbPosition = 0.0
 

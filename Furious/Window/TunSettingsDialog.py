@@ -106,11 +106,11 @@ class GuiTUNSettingsItemSpinBoxBufferSizeXXX(GuiEditorItemTextSpinBox):
         self.setValue(oldValue)
 
 
-class GuiTUNSettingsItemCheckBoxXXX(GuiEditorItemTextCheckBox):
-    """Represent GUI TUN settings item check box xxx."""
+class GuiTUNSettingsItemSwitchXXX(GuiEditorItemTextSwitch):
+    """Represent GUI TUN settings item switch xxx."""
 
     def __init__(self, *args, **kwargs):
-        """Initialize the GuiTUNSettingsItemCheckBoxXXX."""
+        """Initialize the GuiTUNSettingsItemSwitchXXX."""
         self.key = kwargs.pop('key', '')
         self.default = kwargs.pop('default', 'False')
 
@@ -245,7 +245,7 @@ class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
                 title=_('Bypass Tun2socks Adapter Interface IP (separated by commas)'),
                 key='bypassTUNAdapterInterfaceIP',
             ),
-            GuiTUNSettingsItemCheckBoxXXX(
+            GuiTUNSettingsItemSwitchXXX(
                 title=_(
                     'Disable Primary Adapter Interface DNS (Mitigating DNS leaks on Windows)'
                 ),
@@ -280,7 +280,7 @@ class GuiTUNSettingsGroupBoxMemory(GuiEditorWidgetQGroupBox):
                 start=1,
                 end=4,
             ),
-            GuiTUNSettingsItemCheckBoxXXX(
+            GuiTUNSettingsItemSwitchXXX(
                 title=_('TCP Receive Buffer Auto-tuning'),
                 key='tcpAutoTuning',
                 default='False',

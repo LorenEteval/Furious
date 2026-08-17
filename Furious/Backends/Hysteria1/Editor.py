@@ -188,7 +188,7 @@ class GuiHy1ItemSpeedDownMbps(GuiEditorItemTextSpinBox):
             self.setValue(96)
 
 
-class GuiHy1ItemTLSInsecure(GuiEditorItemTextCheckBox):
+class GuiHy1ItemTLSInsecure(GuiEditorItemTextSwitch):
     """Represent GUI hy1 item TLS insecure."""
 
     def __init__(self, *args, **kwargs):

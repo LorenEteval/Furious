@@ -31,7 +31,7 @@ from .EditorWidgets import (
     GuiEditorItemBasicRemark,
     GuiEditorItemProxyHttp,
     GuiEditorItemProxySocks,
-    GuiEditorItemTextCheckBox,
+    GuiEditorItemTextSwitch,
     GuiEditorItemTextComboBox,
     GuiEditorItemTextInput,
     GuiEditorItemTextSpinBox,
@@ -51,7 +51,6 @@ from .QtGui import (
 )
 from .QtNetwork import AppQNetworkAccessManager
 from .QtWidgets import (
-    AppQCheckBox,
     AppQComboBox,
     AppQComboBoxSeparatorDelegate,
     AppQDialog,
@@ -104,7 +103,6 @@ __all__ = [
     'AppHue',
     'AppQAction',
     'AppQActionGroup',
-    'AppQCheckBox',
     'AppQComboBox',
     'AppQComboBoxSeparatorDelegate',
     'AppQDialog',
@@ -142,7 +140,7 @@ __all__ = [
     'GuiEditorItemBasicRemark',
     'GuiEditorItemProxyHttp',
     'GuiEditorItemProxySocks',
-    'GuiEditorItemTextCheckBox',
+    'GuiEditorItemTextSwitch',
     'GuiEditorItemTextComboBox',
     'GuiEditorItemTextInput',
     'GuiEditorItemTextSpinBox',

@@ -34,7 +34,7 @@ __all__ = [
     'GuiEditorItemTextInput',
     'GuiEditorItemTextSpinBox',
     'GuiEditorItemTextComboBox',
-    'GuiEditorItemTextCheckBox',
+    'GuiEditorItemTextSwitch',
     'GuiEditorItemBasicRemark',
     'GuiEditorItemProxyHttp',
     'GuiEditorItemProxySocks',
@@ -146,18 +146,22 @@ class GuiEditorItemTextComboBox(EditorWidgetBinding):
         return self._title, self._input
 
 
-class GuiEditorItemTextCheckBox(EditorWidgetBinding):
-    """Represent GUI editor item text check box."""
+class GuiEditorItemTextSwitch(EditorWidgetBinding):
+    """Represent one labeled, compact Fluent switch in an editor form."""
 
     def __init__(self, *args, **kwargs):
-        """Initialize the GuiEditorItemTextCheckBox."""
+        """Initialize the editor label and its form-sized switch."""
         title = kwargs.pop('title', '')
         translatable = kwargs.pop('translatable', True)
         parent = kwargs.pop('parent', None)
 
         super().__init__(*args, **kwargs)
 
-        self._input = AppQCheckBox(_(title), translatable=translatable, parent=parent)
+        if translatable:
+            title = _(title)
+
+        self._title = AppQLabel(title, translatable=translatable, parent=parent)
+        self._input = AppQSwitch(parent=parent, compact=True)
 
     def isChecked(self) -> bool:
         """Return whether checked."""
@@ -169,7 +173,7 @@ class GuiEditorItemTextCheckBox(EditorWidgetBinding):
 
     def widgets(self):
         """Return the widgets owned by this editor item."""
-        return (self._input,)
+        return self._title, self._input
 
 
 class GuiEditorItemBasicRemark(GuiEditorItemTextInput):

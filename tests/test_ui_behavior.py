@@ -36,7 +36,7 @@ from Furious.Controllers.SettingsController import (
 )
 from Furious.Frozenlib import AppSettings
 from Furious.Models import ProfileMetadata, ServerProfile
-from Furious.Qt import AppQMessageBox
+from Furious.Qt import AppQMessageBox, AppQSwitch
 from Furious.Service import (
     APPLICATION_LOG_CATEGORY,
     CORE_LOG_CATEGORY,
@@ -108,6 +108,12 @@ class EditorMappingTest(unittest.TestCase):
                 {'TOKEN': 'one=two', 'UNICODE': '测试'},
             )
             self.assertTrue(editor._applicationTun2socksInput.isChecked())
+
+            tunLabel, tunSwitch = editor._applicationTun2socksInput.widgets()
+
+            self.assertTrue(tunLabel.text())
+            self.assertIsInstance(tunSwitch, AppQSwitch)
+            self.assertEqual(tunSwitch.size(), AppQSwitch.CompactControlSize)
             self.assertTrue(editor._tunRemoteAddressInput.widgets()[1].isEnabled())
             self.assertEqual(editor._tunRemoteAddressInput.text(), '2001:db8::42')
             self.assertEqual(len(editor.groupBoxSequence()), 1)
@@ -152,6 +158,12 @@ class EditorMappingTest(unittest.TestCase):
 
             values = dialog.subscription()
 
+            self.assertIsInstance(dialog.enabledSwitch, AppQSwitch)
+            self.assertEqual(dialog.enabledSwitch.size(), AppQSwitch.ControlSize)
+            self.assertEqual(
+                dialog.enabledSwitch.parentWidget().objectName(),
+                'SubscriptionEditorForm',
+            )
             self.assertEqual(values['remark'], 'Fixture subscription')
             self.assertEqual(values['webURL'], 'https://example.test/subscription')
             self.assertFalse(values['enabled'])

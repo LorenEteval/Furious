@@ -29,7 +29,7 @@ from Furious.Qt import (
     GuiEditorItemBasicRemark,
     GuiEditorItemProxyHttp,
     GuiEditorItemProxySocks,
-    GuiEditorItemTextCheckBox,
+    GuiEditorItemTextSwitch,
     GuiEditorItemTextSpinBox,
     GuiEditorWidgetQDialog,
     GuiEditorWidgetQGroupBox,
@@ -290,7 +290,7 @@ class ExternalCoreShutdownTimeoutInput(GuiEditorItemTextSpinBox):
         self.setValue(value if isinstance(value, int) else 5)
 
 
-class ExternalCoreApplicationTun2socksInput(GuiEditorItemTextCheckBox):
+class ExternalCoreApplicationTun2socksInput(GuiEditorItemTextSwitch):
     """Bind this profile's host-managed tun2socks participation flag."""
 
     def __init__(self):

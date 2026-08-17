@@ -65,8 +65,8 @@ class _SubscriptionEditorDialog(AppQTransientDialog):
 
         self.remarkEdit = QLineEdit(subscription.get('remark', ''))
         self.urlEdit = QLineEdit(subscription.get('webURL', ''))
-        self.enabledCheckBox = QCheckBox()
-        self.enabledCheckBox.setChecked(subscription.get('enabled', True))
+        self.enabledSwitch = AppQSwitch()
+        self.enabledSwitch.syncChecked(subscription.get('enabled', True))
         self.autoUpdateComboBox = AppQComboBox()
         self.proxyComboBox = AppQComboBox()
         self.userAgentEdit = QLineEdit(subscription.get('userAgent', ''))
@@ -113,26 +113,34 @@ class _SubscriptionEditorDialog(AppQTransientDialog):
         form.setColumnStretch(1, 1)
         form.setColumnStretch(3, 1)
 
-        self.remarkLabel = AppQLabel(_('Remark'))
-        self.urlLabel = AppQLabel(_('URL'))
-        self.enabledLabel = AppQLabel(_('Enabled'))
-        self.autoUpdateLabel = AppQLabel(_('Auto Update'))
-        self.proxyLabel = AppQLabel(_('Auto Update Use Proxy'))
-        self.userAgentLabel = AppQLabel(_('User Agent'))
-        self.filterLabel = AppQLabel(_('Profile Filter (Regex)'))
+        (
+            self.remarkLabel,
+            self.urlLabel,
+            self.enabledLabel,
+            self.autoUpdateLabel,
+            self.proxyLabel,
+            self.userAgentLabel,
+            self.filterLabel,
+        ) = (
+            AppQLabel(_('Remark')),
+            AppQLabel(_('URL')),
+            AppQLabel(_('Enabled')),
+            AppQLabel(_('Auto Update')),
+            AppQLabel(_('Auto Update Use Proxy')),
+            AppQLabel(_('User Agent')),
+            AppQLabel(_('Profile Filter (Regex)')),
+        )
 
-        enabledControl = QWidget()
-
-        enabledLayout = QHBoxLayout(enabledControl)
+        enabledLayout = QHBoxLayout()
         enabledLayout.setContentsMargins(0, 0, 0, 0)
         enabledLayout.setSpacing(10)
         enabledLayout.addWidget(self.enabledLabel)
-        enabledLayout.addWidget(self.enabledCheckBox)
+        enabledLayout.addWidget(self.enabledSwitch)
         enabledLayout.addStretch(1)
 
         form.addWidget(self.remarkLabel, 0, 0)
         form.addWidget(self.remarkEdit, 0, 1)
-        form.addWidget(enabledControl, 0, 2, 1, 2)
+        form.addLayout(enabledLayout, 0, 2, 1, 2)
         form.addWidget(self.urlLabel, 1, 0)
         form.addWidget(self.urlEdit, 1, 1, 1, 3)
         form.addWidget(self.autoUpdateLabel, 2, 0)
@@ -194,7 +202,7 @@ class _SubscriptionEditorDialog(AppQTransientDialog):
         return {
             'remark': self.remarkEdit.text().strip(),
             'webURL': self.urlEdit.text().strip(),
-            'enabled': self.enabledCheckBox.isChecked(),
+            'enabled': self.enabledSwitch.isChecked(),
             'autoupdate': self.autoUpdateComboBox.currentData() or '',
             'proxy': self.proxyComboBox.currentData() or '',
             'userAgent': self.userAgentEdit.text().strip(),
