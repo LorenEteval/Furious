@@ -3018,16 +3018,24 @@ TRANSLATION = {
         "source": [
             "Furious.Window.LogPage"
         ],
+        "RU": "Автопрокрутка вниз",
         "ZH": "自动滚动到底部",
-        "isReviewed": "True",
-        "RU": "Автопрокрутка вниз"
+        "isReviewed": "True"
     },
     "Auto Clear Log": {
         "source": [
             "Furious.Window.LogPage"
         ],
+        "RU": "Автоочистка журнала",
         "ZH": "自动清理日志",
-        "isReviewed": "True",
-        "RU": "Автоочистка журнала"
+        "isReviewed": "True"
+    },
+    "Processing...": {
+        "source": [
+            "Furious.Window.LogPage"
+        ],
+        "RU": "Обработка...",
+        "ZH": "处理中...",
+        "isReviewed": "True"
     }
 }

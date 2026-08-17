@@ -34,8 +34,9 @@ from Furious.Service.LogManager import (
     LogManager,
     formatLogEntry,
 )
+from Furious.Widget.WaitingSpinner import WaitingSpinner
 
-from PySide6 import QtCore
+from PySide6 import QtCore, QtGui
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import *
 
@@ -122,7 +123,10 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
     """Present and filter the unified application log stream as a page."""
 
     UpdateDelay = 25
-    HighlightBatchSize = 250
+    HighlightBatchSize = 64
+    HighlightTimeBudget = 8
+    HighlightBusyThreshold = 100
+    BusyIndicatorDelay = 16
     TailTolerance = 10
 
     def __init__(self, *args, **kwargs):
@@ -160,6 +164,34 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.textBrowser.setLineWrapMode(DraculaTextBrowser.LineWrapMode.NoWrap)
         self.textBrowser.setUndoRedoEnabled(False)
         self.textBrowser.document().setMaximumBlockCount(manager.maximumEntries)
+
+        self.highlightOverlay = QFrame(self.textBrowser.viewport())
+        self.highlightOverlay.setObjectName('LogHighlightOverlay')
+        self.highlightOverlay.setAutoFillBackground(True)
+        self.highlightOverlay.setBackgroundRole(QtGui.QPalette.ColorRole.Base)
+        self.highlightOverlay.setAttribute(
+            QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+
+        self.highlightSpinner = WaitingSpinner(
+            self.highlightOverlay,
+            center_on_parent=False,
+            lines=12,
+            line_length=7,
+            line_width=3,
+            radius=5,
+        )
+        self.highlightStatusLabel = AppQLabel(translatable=False)
+
+        highlightLayout = QHBoxLayout(self.highlightOverlay)
+        highlightLayout.setContentsMargins(16, 16, 16, 16)
+        highlightLayout.setSpacing(10)
+        highlightLayout.addStretch(1)
+        highlightLayout.addWidget(self.highlightSpinner)
+        highlightLayout.addWidget(self.highlightStatusLabel)
+        highlightLayout.addStretch(1)
+
+        self.highlightOverlay.hide()
 
         self._entriesDirty = True
         self._representationInvalid = True
@@ -379,11 +411,36 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         if not self._pageCanRender():
             return
 
+        if self._representationInvalid:
+            self._setHighlightBusy(True)
+
         if immediate:
             self._updateTimer.stop()
-            self._updateTimer.start(0)
+            self._updateTimer.start(
+                self.BusyIndicatorDelay if self.highlightSpinner.is_spinning else 0
+            )
         elif not self._updateTimer.isActive():
             self._updateTimer.start(self.UpdateDelay)
+
+    def _syncHighlightOverlayGeometry(self):
+        """Cover the log viewport without affecting its layout or scrollbars."""
+        self.highlightOverlay.setGeometry(self.textBrowser.viewport().rect())
+
+    def _setHighlightBusy(self, busy: bool):
+        """Show or hide the cooperative highlighting progress presentation."""
+        if busy and self._pageCanRender():
+            self.highlightSpinner.color = self.palette().color(
+                QtGui.QPalette.ColorRole.Text
+            )
+
+            self._syncHighlightOverlayGeometry()
+
+            self.highlightOverlay.raise_()
+            self.highlightOverlay.show()
+            self.highlightSpinner.start()
+        else:
+            self.highlightSpinner.stop()
+            self.highlightOverlay.hide()
 
     @staticmethod
     def _incrementalPlan(oldSequences, currentSequences):
@@ -549,6 +606,8 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         if firstHighlightBlock is not None:
             self._scheduleHighlight(firstHighlightBlock)
+        else:
+            self._setHighlightBusy(False)
 
         if self._followTail:
             self._scheduleScrollRestore()
@@ -579,6 +638,12 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         else:
             self._highlightNextBlock = min(self._highlightNextBlock, firstBlock)
 
+        if (
+            self.textBrowser.document().blockCount() - self._highlightNextBlock
+            >= self.HighlightBusyThreshold
+        ):
+            self._setHighlightBusy(True)
+
         if self._pageCanRender() and not self._highlightTimer.isActive():
             self._highlightTimer.start(0)
 
@@ -590,19 +655,28 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         document = self.textBrowser.document()
         start = self._highlightNextBlock
-        end = min(document.blockCount(), start + self.HighlightBatchSize)
+        maximumEnd = min(document.blockCount(), start + self.HighlightBatchSize)
+        elapsed = QtCore.QElapsedTimer()
+        elapsed.start()
+        end = start
 
-        for blockNumber in range(start, end):
-            block = document.findBlockByNumber(blockNumber)
+        while end < maximumEnd:
+            block = document.findBlockByNumber(end)
 
             if block.isValid():
                 self.textBrowser.rehighlightBlock(block)
+
+            end += 1
+
+            if elapsed.elapsed() >= self.HighlightTimeBudget:
+                break
 
         if end < document.blockCount():
             self._highlightNextBlock = end
             self._highlightTimer.start(0)
         else:
             self._highlightNextBlock = None
+            self._setHighlightBusy(False)
 
         if self._followTail:
             self._scheduleScrollRestore()
@@ -724,8 +798,10 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         super().showEvent(event)
 
         if self._entriesDirty:
+            self._setHighlightBusy(True)
             self._requestRefresh(immediate=True)
         elif self._highlightNextBlock is not None:
+            self._setHighlightBusy(True)
             self._highlightTimer.start(0)
 
         if self._followTail:
@@ -738,8 +814,16 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self._highlightTimer.stop()
         self._scrollTimer.stop()
         self._followStateTimer.stop()
+        self._setHighlightBusy(False)
 
         super().hideEvent(event)
+
+    def resizeEvent(self, event):
+        """Keep the highlighting overlay aligned with the log viewport."""
+        super().resizeEvent(event)
+
+        if hasattr(self, 'highlightOverlay'):
+            self._syncHighlightOverlayGeometry()
 
     def plainText(self) -> str:
         """Return the plain text currently shown by the selected filter."""
@@ -758,6 +842,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.filterLabel.setText(_('Log Type'))
         self.autoScrollLabel.setText(_('Auto Scroll Down'))
         self.autoClearLabel.setText(_('Auto Clear Log'))
+        self.highlightStatusLabel.setText(_('Processing...'))
 
         self._populateFilters(selectedCategoryId)
         self._requestRefresh(immediate=True)

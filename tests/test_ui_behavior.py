@@ -262,8 +262,13 @@ class UnifiedLogPageTest(unittest.TestCase):
             # build and highlight thousands of QTextDocument blocks.
             self.assertTrue(page._entriesDirty)
             self.assertEqual(page.textBrowser.toPlainText(), '')
+            self.assertTrue(page.highlightOverlay.isVisible())
+            self.assertTrue(page.highlightSpinner.is_spinning)
 
             self.assertRendered(page)
+
+            self.assertFalse(page.highlightOverlay.isVisible())
+            self.assertFalse(page.highlightSpinner.is_spinning)
 
             lines = page.textBrowser.toPlainText().splitlines()
 
@@ -630,6 +635,9 @@ class UnifiedLogPageTest(unittest.TestCase):
                     page._followStateTimer,
                     page.autoScrollSwitch,
                     page.autoClearSwitch,
+                    page.highlightOverlay,
+                    page.highlightSpinner,
+                    page.highlightStatusLabel,
                 )
             )
 
