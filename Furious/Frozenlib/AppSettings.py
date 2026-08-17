@@ -106,11 +106,12 @@ class AppSettings:
             else:
                 return value
         else:
-            logger.error(
-                f'settings \'{settings.name}\' has value \'{value}\', '
-                f'which is not in valid range {settings.validRange}. '
-                f'Set to default \'{settings.default}\''
-            )
+            if value is not None:
+                logger.error(
+                    f'settings \'{settings.name}\' has value \'{value}\', '
+                    f'which is not in valid range {settings.validRange}. '
+                    f'Set to default \'{settings.default}\''
+                )
 
             # Value not in valid range, set to default
             QtCore.QSettings().setValue(settings.name, settings.default)
