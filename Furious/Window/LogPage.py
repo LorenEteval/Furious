@@ -19,6 +19,11 @@
 
 from __future__ import annotations
 
+from Furious.Controllers.SettingsController import (
+    LOG_AUTO_CLEAR_SETTING,
+    LOG_AUTO_SCROLL_DOWN_SETTING,
+    SettingsController,
+)
 from Furious.Frozenlib import AppSettings, Mixins, registerAppSettings
 from Furious.Qt import *
 from Furious.Qt import gettext as _
@@ -136,8 +141,11 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         _migratePointSizeSettings()
 
-        self.manager = manager
         self._preferredFilter = str(AppSettings.get('LogViewerSelectedCategory'))
+        self._autoScrollDown = AppSettings.isStateON_(LOG_AUTO_SCROLL_DOWN_SETTING)
+
+        self.manager = manager
+        self.manager.setAutoClearEnabled(AppSettings.isStateON_(LOG_AUTO_CLEAR_SETTING))
 
         self.pageTitleLabel = AppQLabel(translatable=False)
         self.pageTitleLabel.setObjectName('LogPageTitle')
@@ -158,7 +166,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self._renderedSequence = 0
         self._renderedCategoryId = None
         self._renderedEntrySequences = tuple()
-        self._followTail = True
+        self._followTail = self._autoScrollDown
         self._documentMutation = False
         self._highlightNextBlock = None
         self._pendingScrollRatio = None
@@ -268,6 +276,16 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             popupMenu=self._viewMenu,
         )
 
+        self.autoScrollLabel = AppQLabel(translatable=False)
+
+        self.autoScrollSwitch = AppQSwitch()
+        self.autoScrollSwitch.syncChecked(self._autoScrollDown)
+
+        self.autoClearLabel = AppQLabel(translatable=False)
+
+        self.autoClearSwitch = AppQSwitch()
+        self.autoClearSwitch.syncChecked(self.manager.autoClearEnabled)
+
         actionLayout = QHBoxLayout()
         actionLayout.setContentsMargins(0, 0, 0, 0)
         actionLayout.setSpacing(8)
@@ -275,6 +293,11 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         actionLayout.addWidget(self.editButton)
         actionLayout.addWidget(self.viewButton)
         actionLayout.addStretch(1)
+        actionLayout.addWidget(self.autoScrollLabel)
+        actionLayout.addWidget(self.autoScrollSwitch)
+        actionLayout.addSpacing(12)
+        actionLayout.addWidget(self.autoClearLabel)
+        actionLayout.addWidget(self.autoClearSwitch)
 
         centralLayout.insertLayout(1, actionLayout)
 
@@ -284,6 +307,8 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self._populateFilters(self._preferredFilter)
 
         self.filterComboBox.currentIndexChanged.connect(self._filterChanged)
+        self.autoScrollSwitch.toggled.connect(self._autoScrollChanged)
+        self.autoClearSwitch.toggled.connect(self._autoClearChanged)
         self.manager.categoryRegistered.connect(self._categoryRegistered)
         self.manager.entryAdded.connect(self._entryAdded)
         self.manager.entriesCleared.connect(self._entriesCleared)
@@ -618,9 +643,33 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         if self._documentMutation:
             return
 
+        if not self._autoScrollDown:
+            self._followTail = False
+
+            return
+
         scrollbar = self.textBrowser.verticalScrollBar()
 
         self._followTail = scrollbar.maximum() - scrollbar.value() <= self.TailTolerance
+
+    @QtCore.Slot(bool)
+    def _autoScrollChanged(self, enabled: bool):
+        """Persist and immediately apply the master tail-follow preference."""
+        self._autoScrollDown = bool(enabled)
+        self._followTail = self._autoScrollDown
+
+        SettingsController.setLogAutoScrollDown(self._autoScrollDown)
+
+        if self._followTail:
+            self._scheduleScrollRestore()
+        else:
+            self._scrollTimer.stop()
+            self._pendingScrollRatio = None
+
+    @QtCore.Slot(bool)
+    def _autoClearChanged(self, enabled: bool):
+        """Persist and immediately apply Core-triggered log clearing."""
+        SettingsController.setLogAutoClear(enabled, manager=self.manager)
 
     def _scrollActionTriggered(self, *_args):
         """Defer follow-state capture until the user scroll action is applied."""
@@ -640,6 +689,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             categoryId = ALL_LOGS_FILTER
 
         self._preferredFilter = categoryId
+        self._followTail = self._autoScrollDown
 
         AppSettings.set('LogViewerSelectedCategory', categoryId)
 
@@ -706,5 +756,8 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         self.pageTitleLabel.setText(_('Log'))
         self.filterLabel.setText(_('Log Type'))
+        self.autoScrollLabel.setText(_('Auto Scroll Down'))
+        self.autoClearLabel.setText(_('Auto Clear Log'))
+
         self._populateFilters(selectedCategoryId)
         self._requestRefresh(immediate=True)

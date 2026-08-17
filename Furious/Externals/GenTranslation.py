@@ -3013,5 +3013,21 @@ TRANSLATION = {
         "RU": "Переменные среды должны иметь формат KEY=VALUE, по одной на строку.",
         "ZH": "环境变量必须使用KEY=VALUE格式，每行一个。",
         "isReviewed": "True"
+    },
+    "Auto Scroll Down": {
+        "source": [
+            "Furious.Window.LogPage"
+        ],
+        "ZH": "自动滚动到底部",
+        "isReviewed": "True",
+        "RU": "Автопрокрутка вниз"
+    },
+    "Auto Clear Log": {
+        "source": [
+            "Furious.Window.LogPage"
+        ],
+        "ZH": "自动清理日志",
+        "isReviewed": "True",
+        "RU": "Автоочистка журнала"
     }
 }

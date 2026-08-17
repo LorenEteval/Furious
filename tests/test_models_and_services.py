@@ -30,6 +30,7 @@ from Furious.Repository.Subscriptions import SubscriptionGroup, UserSubs
 from Furious.Service.LogManager import (
     APPLICATION_LOG_CATEGORY,
     CORE_LOG_CATEGORY,
+    TUN2SOCKS_LOG_CATEGORY,
     LogManager,
 )
 from Furious.Service.MetricsDataManager import (
@@ -279,6 +280,72 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(len(entries), 300)
         self.assertEqual(sequences, tuple(range(1, 301)))
         self.assertEqual(len({entry.message for entry in entries}), 300)
+
+    def testAutoClearRetainsOnlyApplicationHistoryAtCoreThreshold(self):
+        """Clear every non-Application category at the Core threshold."""
+        manager = LogManager(
+            maximumEntries=20,
+            autoClearMaximumEntries=3,
+        )
+        cleared = []
+        componentCategory = manager.registerComponent(
+            'component.fixture',
+            'Fixture',
+        )
+
+        manager.entriesCleared.connect(cleared.append)
+        manager.append('application retained', APPLICATION_LOG_CATEGORY)
+
+        for index in range(3):
+            manager.append(f'old core {index}', CORE_LOG_CATEGORY)
+
+        manager.append('old tun2socks', TUN2SOCKS_LOG_CATEGORY)
+        manager.append('old component', componentCategory.id)
+
+        manager.append('new core after clear', CORE_LOG_CATEGORY)
+
+        self.assertEqual(
+            tuple(entry.message for entry in manager.entries()),
+            ('application retained', 'new core after clear'),
+        )
+        self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 1)
+        self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 0)
+        self.assertEqual(manager.entryCount(componentCategory.id), 0)
+        self.assertEqual(manager.entryCount(APPLICATION_LOG_CATEGORY), 1)
+        self.assertEqual(
+            cleared,
+            [
+                frozenset(
+                    {
+                        CORE_LOG_CATEGORY,
+                        TUN2SOCKS_LOG_CATEGORY,
+                        componentCategory.id,
+                    }
+                )
+            ],
+        )
+
+    def testDisablingAutoClearLeavesOnlyGlobalBoundActive(self):
+        """Do not apply the Core threshold while automatic clearing is disabled."""
+        manager = LogManager(
+            maximumEntries=10,
+            autoClearMaximumEntries=3,
+            autoClearEnabled=False,
+        )
+        manager.append('application retained', APPLICATION_LOG_CATEGORY)
+
+        for index in range(3):
+            manager.append(f'core {index}', CORE_LOG_CATEGORY)
+            manager.append(f'tun2socks {index}', TUN2SOCKS_LOG_CATEGORY)
+
+        self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 3)
+
+        manager.setAutoClearEnabled(True)
+
+        self.assertTrue(manager.autoClearEnabled)
+        self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 0)
+        self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 0)
+        self.assertEqual(manager.entryCount(APPLICATION_LOG_CATEGORY), 1)
 
 
 class MetricsDataManagerTest(unittest.TestCase):

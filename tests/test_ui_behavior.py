@@ -30,11 +30,17 @@ from Furious.Controllers.ConnectionController import (
     ConnectionController,
     ConnectionState,
 )
+from Furious.Controllers.SettingsController import (
+    LOG_AUTO_CLEAR_SETTING,
+    LOG_AUTO_SCROLL_DOWN_SETTING,
+)
+from Furious.Frozenlib import AppSettings
 from Furious.Models import ProfileMetadata, ServerProfile
 from Furious.Qt import AppQMessageBox
 from Furious.Service import (
     APPLICATION_LOG_CATEGORY,
     CORE_LOG_CATEGORY,
+    TUN2SOCKS_LOG_CATEGORY,
     LogManager,
 )
 from Furious.Window.LogPage import LogPage
@@ -304,6 +310,132 @@ class UnifiedLogPageTest(unittest.TestCase):
 
             self.disposePage(page)
 
+    def testLogPreferencesDefaultOnAndPersistAcrossPageRecreation(self):
+        """Restore both switch preferences without rewriting them at startup."""
+        with isolatedSettings():
+            firstManager = LogManager(maximumEntries=20)
+            firstPage = LogPage(manager=firstManager)
+
+            self.assertTrue(firstPage.autoScrollSwitch.isChecked())
+            self.assertTrue(firstPage.autoClearSwitch.isChecked())
+            self.assertTrue(AppSettings.isStateON_(LOG_AUTO_SCROLL_DOWN_SETTING))
+            self.assertTrue(AppSettings.isStateON_(LOG_AUTO_CLEAR_SETTING))
+
+            firstPage.autoScrollSwitch.setChecked(False)
+            firstPage.autoClearSwitch.setChecked(False)
+
+            self.assertFalse(AppSettings.isStateON_(LOG_AUTO_SCROLL_DOWN_SETTING))
+            self.assertFalse(AppSettings.isStateON_(LOG_AUTO_CLEAR_SETTING))
+            self.assertFalse(firstManager.autoClearEnabled)
+
+            self.disposePage(firstPage)
+
+            processQtEvents()
+
+            secondManager = LogManager(maximumEntries=20)
+            secondPage = LogPage(manager=secondManager)
+
+            self.assertFalse(secondPage.autoScrollSwitch.isChecked())
+            self.assertFalse(secondPage.autoClearSwitch.isChecked())
+            self.assertFalse(secondManager.autoClearEnabled)
+
+            secondPage.autoScrollSwitch.setChecked(True)
+            secondPage.autoClearSwitch.setChecked(True)
+
+            self.assertTrue(AppSettings.isStateON_(LOG_AUTO_SCROLL_DOWN_SETTING))
+            self.assertTrue(AppSettings.isStateON_(LOG_AUTO_CLEAR_SETTING))
+            self.assertTrue(secondManager.autoClearEnabled)
+
+            self.disposePage(secondPage)
+
+    def testAutoScrollPreferenceMastersTailFollowing(self):
+        """Never move a disabled viewer and resume at the newest entry on enable."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=500)
+
+            page = LogPage(manager=manager)
+            page.resize(800, 320)
+
+            for index in range(200):
+                manager.append(f'initial {index:03d}')
+
+            page.show()
+
+            self.assertRendered(page)
+
+            scrollbar = page.textBrowser.verticalScrollBar()
+            page.autoScrollSwitch.setChecked(False)
+            scrollbar.setValue(0)
+            manager.append('must not move the viewport')
+
+            self.assertRendered(page)
+
+            self.assertEqual(scrollbar.value(), 0)
+            self.assertFalse(page._followTail)
+
+            page.autoScrollSwitch.setChecked(True)
+
+            self.assertTrue(waitFor(lambda: scrollbar.value() == scrollbar.maximum()))
+            self.assertTrue(page._followTail)
+
+            page.hide()
+            manager.append('arrived while hidden')
+            page.show()
+
+            self.assertRendered(page)
+            self.assertTrue(waitFor(lambda: scrollbar.value() == scrollbar.maximum()))
+            self.assertTrue(page.plainText().endswith('arrived while hidden'))
+
+            self.disposePage(page)
+
+    def testHiddenCoreClearRebuildsWithoutForcingScroll(self):
+        """Invalidate hidden runtime state and honor disabled tail follow on show."""
+        with isolatedSettings():
+            manager = LogManager(
+                maximumEntries=50,
+                autoClearMaximumEntries=3,
+            )
+
+            page = LogPage(manager=manager)
+            page.resize(800, 260)
+
+            coreIndex = page.filterComboBox.findData(CORE_LOG_CATEGORY)
+
+            page.filterComboBox.setCurrentIndex(coreIndex)
+            page.autoScrollSwitch.setChecked(False)
+
+            for index in range(3):
+                manager.append(f'old core {index}', CORE_LOG_CATEGORY)
+
+            manager.append('old tun2socks', TUN2SOCKS_LOG_CATEGORY)
+
+            processQtEvents()
+
+            manager.append('new core after clear', CORE_LOG_CATEGORY)
+            manager.append('application retained', APPLICATION_LOG_CATEGORY)
+
+            self.assertEqual(page.plainText(), '')
+            self.assertEqual(
+                tuple(entry.message for entry in manager.entries(CORE_LOG_CATEGORY)),
+                ('new core after clear',),
+            )
+            self.assertEqual(manager.entries(TUN2SOCKS_LOG_CATEGORY), tuple())
+
+            page.show()
+
+            self.assertRendered(page)
+
+            self.assertEqual(page.plainText(), 'new core after clear')
+            self.assertFalse(page._followTail)
+            self.assertEqual(
+                tuple(
+                    entry.message for entry in manager.entries(APPLICATION_LOG_CATEGORY)
+                ),
+                ('application retained',),
+            )
+
+            self.disposePage(page)
+
     def testManualHistoryReadingDisablesAndThenResumesTail(self):
         """Do not yank an upward-scrolled viewport until it returns to bottom."""
         with isolatedSettings():
@@ -496,6 +628,8 @@ class UnifiedLogPageTest(unittest.TestCase):
                     page._highlightTimer,
                     page._scrollTimer,
                     page._followStateTimer,
+                    page.autoScrollSwitch,
+                    page.autoClearSwitch,
                 )
             )
 

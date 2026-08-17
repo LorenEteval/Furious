@@ -36,7 +36,7 @@ from Furious.Service.TrafficStatsManager import (
     METRICS_COLLECTION_SETTING,
 )
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore
 from PySide6.QtWidgets import *
 
 from collections import Counter
@@ -66,140 +66,6 @@ def _restartApplicationTitle() -> str:
         return _('Restart The Application As Administrator')
 
     return _('Restart The Application As Superuser')
-
-
-class _SettingsSwitch(QCheckBox):
-    """Paint a lightweight Fluent-style binary switch with Qt."""
-
-    ControlSize = QtCore.QSize(38, 22)
-    AnimationDuration = 160
-
-    def __init__(self, parent=None):
-        """Initialize the compact switch control."""
-        super().__init__(parent)
-
-        self.setObjectName('SettingsToggle')
-        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        self.setFixedSize(self.ControlSize)
-        self._thumbPosition = 0.0
-        self._animation = QtCore.QPropertyAnimation(
-            self,
-            b'thumbPosition',
-            parent=self,
-        )
-        self._animation.setDuration(self.AnimationDuration)
-        self._animation.setEasingCurve(QtCore.QEasingCurve.Type.OutCubic)
-        self.toggled.connect(self._animateToggle)
-
-    def _getThumbPosition(self) -> float:
-        """Return the normalized thumb position used by the animation."""
-        return self._thumbPosition
-
-    def _setThumbPosition(self, position: float):
-        """Update the animated thumb position and repaint the switch."""
-        self._thumbPosition = min(max(float(position), 0.0), 1.0)
-        self.update()
-
-    thumbPosition = QtCore.Property(
-        float,
-        _getThumbPosition,
-        _setThumbPosition,
-    )
-
-    @QtCore.Slot(bool)
-    def _animateToggle(self, checked: bool):
-        """Animate the Fluent thumb and track to the requested state."""
-        self._animation.stop()
-        self._animation.setStartValue(self._thumbPosition)
-        self._animation.setEndValue(1.0 if checked else 0.0)
-        self._animation.start()
-
-    def syncChecked(self, checked: bool):
-        """Synchronize external state without playing an entrance animation."""
-        blocker = QtCore.QSignalBlocker(self)
-
-        self.setChecked(bool(checked))
-        self._animation.stop()
-        self._setThumbPosition(1.0 if checked else 0.0)
-
-        del blocker
-
-    @staticmethod
-    def _blendColor(start, end, progress: float) -> QtGui.QColor:
-        """Interpolate two theme colors for a smooth track transition."""
-        startColor, endColor = (
-            QtGui.QColor(start),
-            QtGui.QColor(end),
-        )
-
-        return QtGui.QColor.fromRgbF(
-            startColor.redF() + (endColor.redF() - startColor.redF()) * progress,
-            startColor.greenF() + (endColor.greenF() - startColor.greenF()) * progress,
-            startColor.blueF() + (endColor.blueF() - startColor.blueF()) * progress,
-            startColor.alphaF() + (endColor.alphaF() - startColor.alphaF()) * progress,
-        )
-
-    def paintEvent(self, event):
-        """Draw the track and animated-position-equivalent thumb."""
-        del event
-
-        palette = AppStyleSheet.Palettes[APP().theme()]
-
-        painter = QtGui.QPainter(self)
-        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
-
-        track = QtCore.QRectF(1, 2, self.width() - 2, self.height() - 4)
-        radius = track.height() / 2
-
-        if not self.isEnabled():
-            background, border, thumb = (
-                palette['raised'],
-                palette['border'],
-                palette['disabled'],
-            )
-        else:
-            background, border, thumb = (
-                self._blendColor(
-                    palette['raised'],
-                    palette['accent'],
-                    self._thumbPosition,
-                ),
-                self._blendColor(
-                    palette['border_strong'],
-                    palette['accent'],
-                    self._thumbPosition,
-                ),
-                self._blendColor(
-                    palette['muted'],
-                    palette['accent_text'],
-                    self._thumbPosition,
-                ),
-            )
-
-        painter.setPen(QtGui.QPen(QtGui.QColor(border), 1))
-        painter.setBrush(QtGui.QColor(background))
-        painter.drawRoundedRect(track, radius, radius)
-
-        thumbDiameter = track.height() - 6
-        thumbStart = track.left() + 3
-        thumbEnd = track.right() - thumbDiameter - 3
-        thumbX = thumbStart + ((thumbEnd - thumbStart) * self._thumbPosition)
-        thumbRect = QtCore.QRectF(
-            thumbX,
-            track.top() + 3,
-            thumbDiameter,
-            thumbDiameter,
-        )
-
-        painter.setPen(QtCore.Qt.PenStyle.NoPen)
-        painter.setBrush(QtGui.QColor(thumb))
-        painter.drawEllipse(thumbRect)
-
-        if self.hasFocus():
-            focusRect = track.adjusted(-0.5, -0.5, 0.5, 0.5)
-            painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
-            painter.setPen(QtGui.QPen(QtGui.QColor(palette['accent']), 1))
-            painter.drawRoundedRect(focusRect, radius, radius)
 
 
 class _SettingsCard(Mixins.ThemeAware, QFrame):
@@ -307,7 +173,8 @@ class _ToggleSettingsCard(_SettingsCard):
     ):
         """Initialize a persistent binary setting card."""
         self.settingName = settingName
-        self.checkBox = _SettingsSwitch()
+
+        self.checkBox = AppQSwitch()
         self.checkBox.syncChecked(AppSettings.isStateON_(settingName))
         self.checkBox.toggled.connect(callback)
 
@@ -340,7 +207,8 @@ class _ActionToggleSettingsCard(_SettingsCard):
     ):
         """Bind switch requests and external action-state changes."""
         self.action = action
-        self.checkBox = _SettingsSwitch()
+
+        self.checkBox = AppQSwitch()
         self.checkBox.syncChecked(action.isChecked())
         self.checkBox.setEnabled(action.isEnabled())
         self.checkBox.toggled.connect(self._requestedState)

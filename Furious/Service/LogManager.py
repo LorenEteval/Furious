@@ -56,12 +56,20 @@ class LogManager(QtCore.QObject):
     """Own the application-wide categorized log stream."""
 
     DefaultMaximumEntries = 10_000
+    DefaultAutoClearMaximumEntries = 5_000
 
     categoryRegistered = QtCore.Signal(object)
     entryAdded = QtCore.Signal(object)
     entriesCleared = QtCore.Signal(object)
 
-    def __init__(self, parent=None, *, maximumEntries=DefaultMaximumEntries):
+    def __init__(
+        self,
+        parent=None,
+        *,
+        maximumEntries=DefaultMaximumEntries,
+        autoClearMaximumEntries=DefaultAutoClearMaximumEntries,
+        autoClearEnabled=True,
+    ):
         """Initialize the category registry and thread-safe entry collection."""
         super().__init__(parent)
 
@@ -72,10 +80,20 @@ class LogManager(QtCore.QObject):
         ):
             raise ValueError('maximumEntries must be a positive integer')
 
+        if (
+            isinstance(autoClearMaximumEntries, bool)
+            or not isinstance(autoClearMaximumEntries, int)
+            or autoClearMaximumEntries <= 0
+        ):
+            raise ValueError('autoClearMaximumEntries must be a positive integer')
+
         self._lock = threading.RLock()
         self._categories: dict[str, LogCategory] = {}
         self._maximumEntries = maximumEntries
+        self._autoClearMaximumEntries = autoClearMaximumEntries
+        self._autoClearEnabled = bool(autoClearEnabled)
         self._entries: deque[LogEntry] = deque(maxlen=maximumEntries)
+        self._categoryEntryCounts: dict[str, int] = {}
         self._sequence = 0
 
         self.registerCategory(
@@ -106,6 +124,61 @@ class LogManager(QtCore.QObject):
         """Return the maximum number of structured entries retained in memory."""
         return self._maximumEntries
 
+    @property
+    def autoClearMaximumEntries(self) -> int:
+        """Return the automatic-clear threshold for replaceable runtime logs."""
+        return self._autoClearMaximumEntries
+
+    @property
+    def autoClearEnabled(self) -> bool:
+        """Return whether automatic clearing triggered by Core is active."""
+        with self._lock:
+            return self._autoClearEnabled
+
+    def _nonApplicationCategoryIdsLocked(self) -> set[str]:
+        """Return every registered category except the persistent Application log."""
+        return set(self._categories).difference({APPLICATION_LOG_CATEGORY})
+
+    def _removeCategoriesLocked(self, categoryIds: set[str]):
+        """Remove selected categories while the caller owns ``_lock``."""
+        self._entries = deque(
+            (entry for entry in self._entries if entry.categoryId not in categoryIds),
+            maxlen=self._maximumEntries,
+        )
+
+        for categoryId in categoryIds:
+            self._categoryEntryCounts[categoryId] = 0
+
+    def setAutoClearEnabled(self, enabled: bool):
+        """Apply Core-triggered clearing without involving presentation state."""
+        clearedCategoryIds = set()
+
+        with self._lock:
+            self._autoClearEnabled = bool(enabled)
+
+            if (
+                self._autoClearEnabled
+                and self._categoryEntryCounts.get(CORE_LOG_CATEGORY, 0)
+                >= self._autoClearMaximumEntries
+            ):
+                clearedCategoryIds = self._nonApplicationCategoryIdsLocked()
+
+                self._removeCategoriesLocked(clearedCategoryIds)
+
+        if clearedCategoryIds:
+            self.entriesCleared.emit(frozenset(clearedCategoryIds))
+
+    def entryCount(self, categoryId: Optional[str] = None) -> int:
+        """Return the retained total or one category count in constant time."""
+        with self._lock:
+            if categoryId in (None, ALL_LOGS_FILTER):
+                return len(self._entries)
+
+            if categoryId not in self._categories:
+                raise KeyError(f'unknown log category {categoryId!r}')
+
+            return self._categoryEntryCounts.get(categoryId, 0)
+
     def registerCategory(self, category: LogCategory) -> LogCategory:
         """Register a filterable category and publish it exactly once."""
         if not isinstance(category, LogCategory):
@@ -124,6 +197,7 @@ class LogManager(QtCore.QObject):
                 return existing
 
             self._categories[category.id] = category
+            self._categoryEntryCounts[category.id] = 0
 
         self.categoryRegistered.emit(category)
 
@@ -167,6 +241,8 @@ class LogManager(QtCore.QObject):
         severity: str = '',
     ) -> LogEntry:
         """Append a structured entry and notify interested presenters."""
+        clearedCategoryIds = set()
+
         with self._lock:
             category = self._categories.get(categoryId)
 
@@ -191,7 +267,29 @@ class LogManager(QtCore.QObject):
                 sequence=self._sequence,
             )
 
+            if (
+                category.id == CORE_LOG_CATEGORY
+                and self._autoClearEnabled
+                and self._categoryEntryCounts[CORE_LOG_CATEGORY]
+                >= self._autoClearMaximumEntries
+            ):
+                # When the next Core line would exceed its threshold, retain
+                # only Application diagnostics. All other categories belong
+                # to the replaceable runtime stream for this policy.
+                clearedCategoryIds = self._nonApplicationCategoryIdsLocked()
+
+                self._removeCategoriesLocked(clearedCategoryIds)
+
+            if len(self._entries) == self._maximumEntries:
+                evicted = self._entries[0]
+
+                self._categoryEntryCounts[evicted.categoryId] -= 1
+
             self._entries.append(entry)
+            self._categoryEntryCounts[entry.categoryId] += 1
+
+        if clearedCategoryIds:
+            self.entriesCleared.emit(frozenset(clearedCategoryIds))
 
         self.entryAdded.emit(entry)
 
@@ -270,17 +368,13 @@ class LogManager(QtCore.QObject):
                 changed = bool(self._entries)
 
                 self._entries.clear()
+
+                for registeredCategoryId in self._categoryEntryCounts:
+                    self._categoryEntryCounts[registeredCategoryId] = 0
             else:
                 oldLength = len(self._entries)
 
-                self._entries = deque(
-                    (
-                        entry
-                        for entry in self._entries
-                        if entry.categoryId not in clearedCategoryIds
-                    ),
-                    maxlen=self._maximumEntries,
-                )
+                self._removeCategoriesLocked(clearedCategoryIds)
 
                 changed = len(self._entries) != oldLength
 
@@ -312,20 +406,11 @@ class ApplicationLogHandler(logging.Handler):
     def emit(self, record: logging.LogRecord):
         """Publish one logging record without coupling it to a widget."""
         try:
-            categoryId = getattr(
-                record,
-                'furiousCategory',
-                APPLICATION_LOG_CATEGORY,
-            )
-
-            if self.manager.category(categoryId) is None:
-                categoryId = APPLICATION_LOG_CATEGORY
-
             self.manager.append(
                 self.format(record),
-                categoryId,
+                APPLICATION_LOG_CATEGORY,
                 timestamp=datetime.fromtimestamp(record.created),
-                source=getattr(record, 'furiousSource', record.name),
+                source=record.name,
                 severity=record.levelname,
             )
         except Exception:

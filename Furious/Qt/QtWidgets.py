@@ -37,6 +37,7 @@ import functools
 __all__ = [
     'moveToCenter',
     'AppQCheckBox',
+    'AppQSwitch',
     'AppQComboBox',
     'AppQComboBoxSeparatorDelegate',
     'AppQDialog',
@@ -97,6 +98,144 @@ class AppQCheckBox(Mixins.QTranslatable, QCheckBox):
     def retranslate(self):
         """Refresh translated text for the app q check box."""
         self.setText(_(self.text()))
+
+
+class AppQSwitch(Mixins.ThemeAware, QCheckBox):
+    """Paint one compact, animated Fluent-style binary switch."""
+
+    ControlSize = QtCore.QSize(38, 22)
+    AnimationDuration = 160
+
+    def __init__(self, parent=None):
+        """Initialize the reusable switch and its owned thumb animation."""
+        super().__init__(parent)
+
+        self.setObjectName('SettingsToggle')
+        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.setFixedSize(self.ControlSize)
+
+        self._thumbPosition = 0.0
+
+        self._animation = QtCore.QPropertyAnimation(
+            self,
+            b'thumbPosition',
+            parent=self,
+        )
+        self._animation.setDuration(self.AnimationDuration)
+        self._animation.setEasingCurve(QtCore.QEasingCurve.Type.OutCubic)
+
+        self.toggled.connect(self._animateToggle)
+
+    def _getThumbPosition(self) -> float:
+        """Return the normalized thumb position used by the animation."""
+        return self._thumbPosition
+
+    def _setThumbPosition(self, position: float):
+        """Update the animated thumb position and repaint the switch."""
+        self._thumbPosition = min(max(float(position), 0.0), 1.0)
+        self.update()
+
+    thumbPosition = QtCore.Property(
+        float,
+        _getThumbPosition,
+        _setThumbPosition,
+    )
+
+    @QtCore.Slot(bool)
+    def _animateToggle(self, checked: bool):
+        """Animate the Fluent thumb and track to the requested state."""
+        self._animation.stop()
+        self._animation.setStartValue(self._thumbPosition)
+        self._animation.setEndValue(1.0 if checked else 0.0)
+        self._animation.start()
+
+    def syncChecked(self, checked: bool):
+        """Synchronize external state without playing an entrance animation."""
+        blocker = QtCore.QSignalBlocker(self)
+
+        self.setChecked(bool(checked))
+        self._animation.stop()
+        self._setThumbPosition(1.0 if checked else 0.0)
+
+        del blocker
+
+    @staticmethod
+    def _blendColor(start, end, progress: float) -> QColor:
+        """Interpolate two theme colors for a smooth track transition."""
+        startColor, endColor = QColor(start), QColor(end)
+
+        return QColor.fromRgbF(
+            startColor.redF() + (endColor.redF() - startColor.redF()) * progress,
+            startColor.greenF() + (endColor.greenF() - startColor.greenF()) * progress,
+            startColor.blueF() + (endColor.blueF() - startColor.blueF()) * progress,
+            startColor.alphaF() + (endColor.alphaF() - startColor.alphaF()) * progress,
+        )
+
+    def paintEvent(self, event):
+        """Draw the theme-aware track and animated thumb."""
+        del event
+
+        palette = AppStyleSheet.Palettes[APP().theme()]
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        track = QtCore.QRectF(1, 2, self.width() - 2, self.height() - 4)
+        radius = track.height() / 2
+
+        if not self.isEnabled():
+            background, border, thumb = (
+                palette['raised'],
+                palette['border'],
+                palette['disabled'],
+            )
+        else:
+            background, border, thumb = (
+                self._blendColor(
+                    palette['raised'],
+                    palette['accent'],
+                    self._thumbPosition,
+                ),
+                self._blendColor(
+                    palette['border_strong'],
+                    palette['accent'],
+                    self._thumbPosition,
+                ),
+                self._blendColor(
+                    palette['muted'],
+                    palette['accent_text'],
+                    self._thumbPosition,
+                ),
+            )
+
+        painter.setPen(QPen(QColor(border), 1))
+        painter.setBrush(QColor(background))
+        painter.drawRoundedRect(track, radius, radius)
+
+        thumbDiameter = track.height() - 6
+        thumbStart = track.left() + 3
+        thumbEnd = track.right() - thumbDiameter - 3
+        thumbX = thumbStart + ((thumbEnd - thumbStart) * self._thumbPosition)
+        thumbRect = QtCore.QRectF(
+            thumbX,
+            track.top() + 3,
+            thumbDiameter,
+            thumbDiameter,
+        )
+
+        painter.setPen(QtCore.Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(thumb))
+        painter.drawEllipse(thumbRect)
+
+        if self.hasFocus():
+            focusRect = track.adjusted(-0.5, -0.5, 0.5, 0.5)
+            painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(QColor(palette['accent']), 1))
+            painter.drawRoundedRect(focusRect, radius, radius)
+
+    def themeChangedCallback(self, _theme: str):
+        """Repaint the custom-drawn control for the active theme."""
+        self.update()
 
 
 class AppQComboBoxSeparatorDelegate(Mixins.ThemeAware, QAbstractItemDelegate):

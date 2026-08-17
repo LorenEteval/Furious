@@ -29,11 +29,18 @@ from Furious.Service.TrafficStatsManager import (
 
 from PySide6 import QtCore
 
-__all__ = ['APPLICATION_THEME_SETTING', 'SettingsController']
+__all__ = [
+    'APPLICATION_THEME_SETTING',
+    'LOG_AUTO_SCROLL_DOWN_SETTING',
+    'LOG_AUTO_CLEAR_SETTING',
+    'SettingsController',
+]
 
 APPLICATION_THEME_SETTING = 'ApplicationTheme'
 # Migrate legacy settings
 _LEGACY_DARK_MODE_SETTING = 'DarkMode'
+LOG_AUTO_SCROLL_DOWN_SETTING = 'LogAutoScrollDown'
+LOG_AUTO_CLEAR_SETTING = 'LogAutoClear'
 
 registerAppSettings('VPNMode', isBinary=True)
 registerAppSettings(
@@ -61,6 +68,16 @@ registerAppSettings(
     'ShowProgressBarWhenConnecting', isBinary=True, default=AppBinarySettings.ON_
 )
 registerAppSettings('ShowTabAndSpacesInEditor', isBinary=True)
+registerAppSettings(
+    LOG_AUTO_SCROLL_DOWN_SETTING,
+    isBinary=True,
+    default=AppBinarySettings.ON_,
+)
+registerAppSettings(
+    LOG_AUTO_CLEAR_SETTING,
+    isBinary=True,
+    default=AppBinarySettings.ON_,
+)
 registerAppSettings(
     'SystemProxyMode',
     validRange=list(mode.value for mode in AppBuiltinProxyMode),
@@ -238,6 +255,27 @@ class SettingsController:
     def setConnectionProgressVisible(cls, enabled: bool):
         """Persist connection-progress visibility."""
         cls._setBinary('ShowProgressBarWhenConnecting', enabled)
+
+    @classmethod
+    def setLogAutoScrollDown(cls, enabled: bool):
+        """Persist whether the log viewer may automatically follow its tail."""
+        cls._setBinary(LOG_AUTO_SCROLL_DOWN_SETTING, enabled)
+
+    @classmethod
+    def setLogAutoClear(cls, enabled: bool, manager=None):
+        """Persist and immediately apply Core-triggered log clearing."""
+        cls._setBinary(LOG_AUTO_CLEAR_SETTING, enabled)
+
+        if manager is None:
+            try:
+                manager = AppLogManager()
+            except (AttributeError, RuntimeError):
+                return
+
+        apply = getattr(manager, 'setAutoClearEnabled', None)
+
+        if callable(apply):
+            apply(enabled)
 
     @classmethod
     def setClearTrafficUsageOnReconnect(cls, enabled: bool):

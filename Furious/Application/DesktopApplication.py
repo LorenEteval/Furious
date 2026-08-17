@@ -25,6 +25,7 @@ from Furious.Core import Tun2socks
 from Furious.Backends import OFFICIAL_PLUGIN_TYPES
 from Furious.Controllers import (
     APPLICATION_THEME_SETTING,
+    LOG_AUTO_CLEAR_SETTING,
     ConnectionController,
     RoutingController,
     SettingsController,
@@ -259,7 +260,10 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
     def configureLogging(self):
         """Configure logging."""
-        self.logManager = LogManager(parent=self)
+        self.logManager = LogManager(
+            parent=self,
+            autoClearEnabled=AppSettings.isStateON_(LOG_AUTO_CLEAR_SETTING),
+        )
 
         self.logPage = LogPage(
             manager=self.logManager,
