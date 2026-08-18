@@ -26,6 +26,7 @@ import functools
 __all__ = [
     'APP',
     'AppConnectionController',
+    'AppEndpointInfoService',
     'AppFontName',
     'AppLogManager',
     'AppLogPage',
@@ -34,6 +35,7 @@ __all__ = [
     'AppSettingsController',
     'AppSystemTray',
     'AppThreadPool',
+    'AppTrafficStatsManager',
 ]
 
 APP = functools.partial(QApplication.instance)
@@ -44,8 +46,19 @@ def getAppAttributes(name: str):
     return getattr(APP(), name)
 
 
+def getAppNestedAttributes(*names: str):
+    """Return an application-owned object through a stable attribute path."""
+    value = APP()
+
+    for name in names:
+        value = getattr(value, name)
+
+    return value
+
+
 (
     AppConnectionController,
+    AppEndpointInfoService,
     AppFontName,
     AppLogManager,
     AppLogPage,
@@ -54,8 +67,15 @@ def getAppAttributes(name: str):
     AppSettingsController,
     AppSystemTray,
     AppThreadPool,
+    AppTrafficStatsManager,
 ) = (
     functools.partial(getAppAttributes, 'connectionController'),
+    functools.partial(
+        getAppNestedAttributes,
+        'mainWindow',
+        'metricsPage',
+        'endpointInfoService',
+    ),
     functools.partial(getAppAttributes, 'customFontName'),
     functools.partial(getAppAttributes, 'logManager'),
     functools.partial(getAppAttributes, 'logPage'),
@@ -64,4 +84,5 @@ def getAppAttributes(name: str):
     functools.partial(getAppAttributes, 'settingsController'),
     functools.partial(getAppAttributes, 'systemTray'),
     functools.partial(getAppAttributes, 'threadPool'),
+    functools.partial(getAppNestedAttributes, 'mainWindow', 'trafficStatsManager'),
 )

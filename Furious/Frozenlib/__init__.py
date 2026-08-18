@@ -75,6 +75,7 @@ from .Enum import (
 from .Globals import (
     APP,
     AppConnectionController,
+    AppEndpointInfoService,
     AppFontName,
     AppLogManager,
     AppLogPage,
@@ -83,6 +84,7 @@ from .Globals import (
     AppSettingsController,
     AppSystemTray,
     AppThreadPool,
+    AppTrafficStatsManager,
 )
 from .Mixins import Mixins
 from .PySide6Legacy import PySide6Legacy
@@ -128,6 +130,7 @@ __all__ = [
     'AppBuiltinProxyMode',
     'AppBuiltinRouting',
     'AppConnectionController',
+    'AppEndpointInfoService',
     'AppFontName',
     'AppLogManager',
     'AppLogPage',
@@ -138,6 +141,7 @@ __all__ = [
     'AppSettingsController',
     'AppSystemTray',
     'AppThreadPool',
+    'AppTrafficStatsManager',
     'CORE_CHECK_ALIVE_INTERVAL',
     'CRASH_LOG_DIR',
     'DATA_DIR',
