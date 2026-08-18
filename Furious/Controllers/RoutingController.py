@@ -59,14 +59,27 @@ class RoutingController(QtCore.QObject):
 
     @staticmethod
     def activeConfiguration():
-        """Return the active server configuration, if one is available."""
+        """Return the connected profile, falling back to repository selection."""
         try:
-            index = Storage.UserActivatedItemIndex()
-            servers = Storage.UserServers()
+            configuration = AppConnectionController().activeConfiguration
+
+            if configuration is not None:
+                return configuration
+        except (AttributeError, RuntimeError):
+            # The connection controller may not exist during early startup.
+            pass
+
+        try:
+            index, servers = (
+                Storage.UserActivatedItemIndex(),
+                Storage.UserServers(),
+            )
 
             if 0 <= index < len(servers):
                 return servers[index]
         except Exception:
+            # Any non-exit exceptions
+
             # The controller can exist before persistent storage is ready.
             pass
 
@@ -134,8 +147,10 @@ class RoutingController(QtCore.QObject):
 
         self.refresh(force=True)
 
-        if AppConnectionController().isConnected():
-            AppConnectionController().startReconnection()
+        connectionController = AppConnectionController()
+
+        if connectionController.isConnected():
+            connectionController.startReconnection()
 
         return True
 
