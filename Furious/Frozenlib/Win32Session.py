@@ -34,9 +34,27 @@ logger = logging.getLogger(__name__)
 class _Win32Session:
     """Represent win32 session."""
 
+    ShutdownTimeout = 5.0
+
     def __init__(self):
         """Initialize the _Win32Session."""
         self._daemonThread = None
+        self._daemonLock = threading.RLock()
+
+    def _runListener(self, listenerCallback):
+        """Run native session monitoring and release this exact thread on exit."""
+        thread = threading.current_thread()
+
+        try:
+            listenerCallback()
+        except Exception:
+            # Any non-exit exceptions
+
+            logger.exception('Windows session listener terminated with an error')
+        finally:
+            with self._daemonLock:
+                if self._daemonThread is thread:
+                    self._daemonThread = None
 
     @staticmethod
     def set(callback: Callable[[], None]) -> bool:
@@ -56,11 +74,29 @@ class _Win32Session:
             import win32session
 
             if win32session.off():
-                if isinstance(self._daemonThread, threading.Thread):
-                    self._daemonThread.join()
+                with self._daemonLock:
+                    thread = self._daemonThread
 
-                # Reset it
-                self._daemonThread = None
+                if isinstance(thread, threading.Thread):
+                    if thread is threading.current_thread():
+                        logger.error(
+                            'Windows session listener cannot join its own thread'
+                        )
+
+                        return False
+
+                    thread.join(self.ShutdownTimeout)
+
+                    if thread.is_alive():
+                        logger.error(
+                            'Windows session listener did not stop before timeout'
+                        )
+
+                        return False
+
+                with self._daemonLock:
+                    if self._daemonThread is thread:
+                        self._daemonThread = None
 
                 return True
             else:
@@ -73,11 +109,32 @@ class _Win32Session:
         if PLATFORM == 'Windows':
             import win32session
 
-            if self._daemonThread is None:
-                self._daemonThread = threading.Thread(
-                    target=lambda: win32session.run(), daemon=True
+            with self._daemonLock:
+                if (
+                    isinstance(self._daemonThread, threading.Thread)
+                    and self._daemonThread.is_alive()
+                ):
+                    return True
+
+                self._daemonThread = None
+
+                thread = threading.Thread(
+                    target=self._runListener,
+                    args=(win32session.run,),
+                    daemon=True,
                 )
-                self._daemonThread.start()
+
+                self._daemonThread = thread
+
+                try:
+                    thread.start()
+                except Exception:
+                    if self._daemonThread is thread:
+                        self._daemonThread = None
+
+                    logger.exception('failed to start Windows session listener')
+
+                    return False
 
             return True
         else:
