@@ -38,6 +38,8 @@ logger = logging.getLogger(__name__)
 class _DnsResolver(WebGETManager):
     """Represent DNS resolver."""
 
+    MAX_REFERENCE_DEPTH = 32
+
     def __init__(self, parent=None, **kwargs):
         """Initialize the DNS resolver."""
         actionMessage = kwargs.pop('actionMessage', 'DNS resolution')
@@ -56,8 +58,12 @@ class _DnsResolver(WebGETManager):
 
     def successCallback(self, networkReply, **kwargs):
         """Handle a successful network operation."""
-        domain = kwargs.pop('domain', '')
-        resultMap = kwargs.pop('resultMap', {})
+        domain, resultMap, referenceDepth, ancestry = (
+            kwargs.pop('domain', ''),
+            kwargs.pop('resultMap', {}),
+            kwargs.pop('referenceDepth', 0),
+            kwargs.pop('ancestry', tuple()),
+        )
 
         data = networkReply.readAll().data()
 
@@ -107,17 +113,77 @@ class _DnsResolver(WebGETManager):
 
                 if isValidIPAddress(address):
                     resultMap['result'][address] = True
-                else:
-                    resultMap['depth'] += 1
+                    continue
 
+                try:
+                    recordType = int(record.get('type', 0))
+                except (TypeError, ValueError):
+                    recordType = 0
+
+                if recordType != 5:
+                    logger.error(
+                        f'DNS resolution for \'{domain}\' returned an unsupported '
+                        f'non-address answer record'
+                    )
+                    resultMap['error'] = True
+
+                    continue
+
+                reference = address.rstrip('.').strip()
+                normalizedReference = reference.casefold()
+
+                if not reference:
+                    resultMap['error'] = True
+
+                    continue
+
+                if normalizedReference in ancestry:
+                    logger.error(
+                        f'DNS resolution for \'{domain}\' returned a cyclic '
+                        f'reference to \'{reference}\''
+                    )
+                    resultMap['error'] = True
+
+                    continue
+
+                if referenceDepth >= self.MAX_REFERENCE_DEPTH:
+                    logger.error(
+                        f'DNS resolution for \'{domain}\' exceeded the maximum '
+                        f'reference depth {self.MAX_REFERENCE_DEPTH}'
+                    )
+                    resultMap['error'] = True
+
+                    continue
+
+                if normalizedReference in resultMap['visited']:
+                    continue
+
+                resultMap['visited'].add(normalizedReference)
+                resultMap['depth'] += 1
+
+                try:
                     newNetworkReply = self.webGET(
-                        self.request(address),
+                        self.request(reference),
                         logActionMessage=False,
-                        domain=address,
+                        domain=reference,
                         resultMap=resultMap,
+                        referenceDepth=referenceDepth + 1,
+                        ancestry=ancestry + (normalizedReference,),
+                    )
+                except Exception as ex:
+                    # Any non-exit exceptions
+
+                    resultMap['depth'] -= 1
+
+                    logger.error(
+                        f'failed to follow DNS reference \'{reference}\'. {ex}'
                     )
 
-                    resultMap['reference'].append(newNetworkReply)
+                    resultMap['error'] = True
+
+                    continue
+
+                resultMap['reference'].append(newNetworkReply)
 
         resultMap['depth'] -= 1
 
@@ -141,6 +207,7 @@ class _DnsResolver(WebGETManager):
             'error': False,
             'reference': [],
             'result': {},
+            'visited': {str(domain).rstrip('.').strip().casefold()},
         }
 
         resultMap['depth'] += 1
@@ -150,6 +217,8 @@ class _DnsResolver(WebGETManager):
             logActionMessage=False,
             domain=domain,
             resultMap=resultMap,
+            referenceDepth=0,
+            ancestry=(str(domain).rstrip('.').strip().casefold(),),
         )
 
         resultMap['reference'].append(networkReply)
