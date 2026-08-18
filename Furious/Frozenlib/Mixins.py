@@ -238,42 +238,55 @@ class Mixins:
 
         def __init__(self, qobject: QtCore.QObject):
             """Initialize the QSetDisabledContext."""
-            self.qobject = qobject
+            self._qobject = qobject
+            self._wasDisabled = None
 
         def __enter__(self):
             """Enter the q set disabled context context."""
-            if Mixins.qObjectIsValid(self.qobject) and hasattr(
-                self.qobject, 'setDisabled'
+            if (
+                Mixins.qObjectIsValid(self._qobject)
+                and hasattr(self._qobject, 'isEnabled')
+                and hasattr(self._qobject, 'setDisabled')
             ):
-                self.qobject.setDisabled(True)
+                self._wasDisabled = not self._qobject.isEnabled()
+                self._qobject.setDisabled(True)
+
+            return self._qobject
 
         def __exit__(self, exceptionType, exceptionValue, tb):
             """Exit the q set disabled context context and restore state."""
-            if Mixins.qObjectIsValid(self.qobject) and hasattr(
-                self.qobject, 'setDisabled'
+            if (
+                self._wasDisabled is not None
+                and Mixins.qObjectIsValid(self._qobject)
+                and hasattr(self._qobject, 'setDisabled')
             ):
-                self.qobject.setDisabled(False)
+                self._qobject.setDisabled(self._wasDisabled)
 
     class QBlockSignalContext:
         """Manage the q block signal context."""
 
         def __init__(self, qobject: QtCore.QObject):
             """Initialize the QBlockSignalContext."""
-            self.qobject = qobject
+            self._qobject = qobject
+            self._signalsWereBlocked = None
 
         def __enter__(self):
             """Enter the q block signal context context."""
-            if Mixins.qObjectIsValid(self.qobject) and hasattr(
-                self.qobject, 'blockSignals'
+            if Mixins.qObjectIsValid(self._qobject) and hasattr(
+                self._qobject, 'blockSignals'
             ):
-                self.qobject.blockSignals(True)
+                self._signalsWereBlocked = self._qobject.blockSignals(True)
+
+            return self._qobject
 
         def __exit__(self, exceptionType, exceptionValue, tb):
             """Exit the q block signal context context and restore state."""
-            if Mixins.qObjectIsValid(self.qobject) and hasattr(
-                self.qobject, 'blockSignals'
+            if (
+                self._signalsWereBlocked is not None
+                and Mixins.qObjectIsValid(self._qobject)
+                and hasattr(self._qobject, 'blockSignals')
             ):
-                self.qobject.blockSignals(False)
+                self._qobject.blockSignals(self._signalsWereBlocked)
 
     class QTranslatable:
         """Represent q translatable."""
