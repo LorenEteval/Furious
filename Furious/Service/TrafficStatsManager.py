@@ -38,6 +38,8 @@ from typing import Optional, Tuple
 import time
 import logging
 import operator
+import weakref
+import functools
 
 __all__ = [
     'CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING',
@@ -188,6 +190,14 @@ def _queryTrafficStats(monitor):
     return counters, time.monotonic()
 
 
+def _forwardTrafficQueryResult(managerReference, generation, future):
+    """Forward completion without retaining the manager from a worker future."""
+    manager = managerReference()
+
+    if isinstance(manager, TrafficStatsManager):
+        manager._futureCompleted(generation, future)
+
+
 class TrafficStatsManager(
     Mixins.ConnectionAware,
     Mixins.CleanupOnExit,
@@ -246,17 +256,23 @@ class TrafficStatsManager(
 
     def _closeExecutor(self):
         """Cancel queued work and release the background query executor."""
-        future = self._future
         executor = self._executor
 
-        self._future = None
+        self._cancelCurrentQuery()
         self._executor = None
-
-        if future is not None:
-            future.cancel()
 
         if executor is not None:
             executor.shutdown(wait=False, cancel_futures=True)
+
+    def _cancelCurrentQuery(self):
+        """Forget the active generation and cancel it when still queued."""
+        future = self._future
+
+        self._future = None
+        self._queryInFlight = False
+
+        if future is not None:
+            future.cancel()
 
     def _ensureExecutor(self) -> bool:
         """Create the single background query thread when needed."""
@@ -315,12 +331,12 @@ class TrafficStatsManager(
         """Begin sampling one plugin-provided monitor."""
         self._sampleTimer.stop()
         self._generation += 1
+        self._cancelCurrentQuery()
         self._monitor = monitor
         self._resetSamples()
         self._beginConnectionUsage()
 
         if monitor is None:
-            self._closeExecutor()
             self.statisticsUnavailable.emit()
 
             return
@@ -331,10 +347,10 @@ class TrafficStatsManager(
         """Stop statistics work without changing the connection lifecycle."""
         self._sampleTimer.stop()
         self._generation += 1
+        self._cancelCurrentQuery()
         self._monitor = None
         self._resetSamples()
         self._beginConnectionUsage()
-        self._closeExecutor()
         self.statisticsUnavailable.emit()
 
     @QtCore.Slot(bool)
@@ -382,9 +398,10 @@ class TrafficStatsManager(
         self._queryInFlight = True
 
         future.add_done_callback(
-            lambda completed, generation=self._generation: self._futureCompleted(
-                generation,
-                completed,
+            functools.partial(
+                _forwardTrafficQueryResult,
+                weakref.ref(self),
+                self._generation,
             )
         )
 
@@ -497,12 +514,13 @@ class TrafficStatsManager(
         self._connected = False
         self._sampleTimer.stop()
         self._generation += 1
+        self._cancelCurrentQuery()
         self._monitor = None
         self._resetSamples()
         self._beginConnectionUsage()
-        self._closeExecutor()
         self.statisticsUnavailable.emit()
 
     def cleanup(self):
         """Release the timer and background query executor."""
         self.disconnectedCallback()
+        self._closeExecutor()
