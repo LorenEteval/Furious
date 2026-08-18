@@ -38,8 +38,8 @@ class StartupOnBoot:
     """Represent startup on boot."""
 
     @staticmethod
-    def on_():
-        """Enable the startup on boot."""
+    def on_() -> bool:
+        """Enable startup registration and return whether it succeeded."""
 
         def _on_():
             """Return the on value used by the startup on boot."""
@@ -58,8 +58,9 @@ class StartupOnBoot:
                 appFilePath = sys.argv[0].replace('/', '\\')
 
                 settings.setValue(APPLICATION_NAME, f'\"{appFilePath}\"')
+                settings.sync()
 
-                return True
+                return settings.status() == QtCore.QSettings.Status.NoError
 
             if PLATFORM == 'Linux':
                 autostartDir = os.path.join(
@@ -143,14 +144,18 @@ class StartupOnBoot:
                 else:
                     return True
 
-        if _on_():
+        success = bool(_on_())
+
+        if success:
             logger.info('turn on StartupOnBoot success')
         else:
             logger.error('turn on StartupOnBoot failed')
 
+        return success
+
     @staticmethod
-    def off():
-        """Disable the startup on boot."""
+    def off() -> bool:
+        """Disable startup registration and return whether it succeeded."""
 
         def _off():
             """Return the off value used by the startup on boot."""
@@ -161,8 +166,9 @@ class StartupOnBoot:
                 )
 
                 settings.remove(APPLICATION_NAME)
+                settings.sync()
 
-                return True
+                return settings.status() == QtCore.QSettings.Status.NoError
 
             if PLATFORM == 'Linux':
                 autostartDir = os.path.join(
@@ -198,7 +204,11 @@ class StartupOnBoot:
                 else:
                     return True
 
-        if _off():
+        success = bool(_off())
+
+        if success:
             logger.info('turn off StartupOnBoot success')
         else:
             logger.error('turn off StartupOnBoot failed')
+
+        return success
