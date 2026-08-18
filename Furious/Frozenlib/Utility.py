@@ -29,6 +29,7 @@ import time
 import pathlib
 import operator
 import functools
+import threading
 import ipaddress
 import subprocess
 import urllib.parse
@@ -48,30 +49,38 @@ __all__ = [
 
 def callRateLimited(maxCallPerSecond):
     """
-    Decorator function that limits the rate at which a function can be called.
+    Decorate a callable with a non-blocking leading-edge rate limit.
+
+    Calls made before the interval elapses are skipped instead of sleeping the
+    calling thread.  This keeps the helper safe for GUI-thread slots.
     """
-    interval = 1.0 / float(maxCallPerSecond)
-    called = time.monotonic()
+    rate = float(maxCallPerSecond)
+
+    if rate <= 0:
+        raise ValueError('maxCallPerSecond must be greater than zero')
+
+    interval = 1.0 / rate
 
     def decorator(func):
         """Decorate a callable with the enclosing behavior."""
+        call = None
+        lock = threading.Lock()
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # Previously called
             """Invoke the wrapped callable with the enclosing behavior."""
-            nonlocal called
+            nonlocal call
 
-            elapsed = time.monotonic() - called
-            waitsec = interval - elapsed
+            now = time.monotonic()
 
-            if waitsec > 0:
-                time.sleep(waitsec)
+            with lock:
+                if call is not None and now - call < interval:
+                    # Interval is not reached. Return immediately.
+                    return None
 
-            result = func(*args, **kwargs)
-            called = time.monotonic()
+                call = now
 
-            return result
+            return func(*args, **kwargs)
 
         return wrapper
 
@@ -151,7 +160,7 @@ def isValidIPAddress(address) -> bool:
 
 
 # Can throw exceptions
-@functools.lru_cache(None)
+@functools.lru_cache(256)
 def parseHostPort(address: str) -> Tuple[AnyStr | None, str | None]:
     """Parse host port."""
     if address.find('//') == -1:
@@ -173,7 +182,11 @@ def parseHostPort(address: str) -> Tuple[AnyStr | None, str | None]:
 
 
 def runExternalCommand(*args, **kwargs):
-    """Run external command."""
+    """Run a blocking external command with a bounded default wait.
+
+    Callers remain responsible for keeping potentially slow host
+    operations off the GUI thread.
+    """
     if PLATFORM == 'Windows':
         creationflags = kwargs.pop('creationflags', subprocess.CREATE_NO_WINDOW)
 
