@@ -26,6 +26,7 @@ from Furious.Plugins import (
     getPluginRegistry,
 )
 
+from PySide6 import QtCore
 from PySide6.QtWidgets import QWidget
 
 import logging
@@ -54,9 +55,15 @@ class PluginNavigationManager:
         """Initialize with the process-wide registry unless one is supplied."""
         self.registry = registry or getPluginRegistry()
         self._pages = []
+        self._registrationAttempted = False
 
     def registerPages(self, navigationView):
         """Register plugin pages in stable plugin/provider/order sequence."""
+        if self._registrationAttempted:
+            return tuple(self._pages)
+
+        self._registrationAttempted = True
+
         contributions = []
 
         for plugin in self.registry.plugins():
@@ -101,6 +108,9 @@ class PluginNavigationManager:
 
             if not isinstance(page, QWidget):
                 logger.error(f'plugin page {pageId!r} did not create a QWidget')
+
+                if isinstance(page, QtCore.QObject):
+                    page.deleteLater()
 
                 continue
 
