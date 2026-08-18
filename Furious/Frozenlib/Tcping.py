@@ -23,8 +23,6 @@ from typing import Tuple
 
 import time
 import socket
-import ipaddress
-import functools
 
 __all__ = ['tcping']
 
@@ -37,25 +35,31 @@ def tcping(
     interval: float,
 ) -> Tuple[int, list]:
     """Return the tcping value used by the application."""
-    host = socket.gethostbyname(address)
-    addressobject = ipaddress.ip_address(host)
+    candidates = []
+    seen = set()
 
-    if isinstance(addressobject, ipaddress.IPv4Address):
-        socketFn = functools.partial(
-            socket.socket,
-            family=socket.AF_INET,
-            type=socket.SOCK_STREAM,
-            proto=socket.IPPROTO_TCP,
-        )
-    elif isinstance(addressobject, ipaddress.IPv6Address):
-        socketFn = functools.partial(
-            socket.socket,
-            family=socket.AF_INET6,
-            type=socket.SOCK_STREAM,
-            proto=socket.IPPROTO_TCP,
-        )
-    else:
-        raise ValueError('Invalid address')
+    for (
+        family,
+        socketType,
+        protocol,
+        _canonicalName,
+        socketAddress,
+    ) in socket.getaddrinfo(
+        address,
+        port,
+        family=socket.AF_UNSPEC,
+        type=socket.SOCK_STREAM,
+        proto=socket.IPPROTO_TCP,
+    ):
+        candidate = (family, socketType, protocol, socketAddress)
+
+        if candidate not in seen:
+            seen.add(candidate)
+
+            candidates.append(candidate)
+
+    if not candidates:
+        raise OSError(f'no TCP address found for {address!r}')
 
     sent = 0
     rtts = []
@@ -64,20 +68,20 @@ def tcping(
         if sequence > 0:
             time.sleep(interval)
 
-        with socketFn() as sock:
-            sock.settimeout(timeout)
+        counter = time.perf_counter()
 
-            counter = time.perf_counter()
+        for family, socketType, protocol, socketAddress in candidates:
+            with socket.socket(family, socketType, protocol) as sock:
+                sock.settimeout(timeout)
 
-            try:
-                sock.connect((address, port))
-            except Exception:
-                # Any non-exit exceptions
+                try:
+                    sock.connect(socketAddress)
+                except OSError:
+                    continue
 
-                pass
-            else:
                 sent += 1
-
                 rtts.append(time.perf_counter() - counter)
+
+                break
 
     return sent, rtts
