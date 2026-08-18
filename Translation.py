@@ -23,6 +23,7 @@ from Furious.Models import *
 
 import os
 import re
+import ast
 import copy
 
 # import deepl
@@ -40,6 +41,8 @@ logging.raiseExceptions = False
 
 logger = logging.getLogger('Translation')
 
+APP_CONSTANT_PATTERN = re.compile(r'\{([^{}]+)\}')
+
 
 @functools.lru_cache(None)
 def getAppSourceCodePath(path):
@@ -48,7 +51,8 @@ def getAppSourceCodePath(path):
         # Check if __init__.py exists in the current directory
         if '__init__.py' in filenames:
             for filename in filenames:
-                yield os.path.join(dirpath, filename)
+                if filename.endswith('.py'):
+                    yield os.path.join(dirpath, filename)
 
 
 @functools.lru_cache(None)
@@ -62,6 +66,41 @@ def getAppConstantsByName(name):
 
 
 APPLICATION_SOURCE_CODE_PATH = getAppSourceCodePath(PACKAGE_DIR)
+
+
+def getTranslationKeys(content):
+    """Return literal strings passed directly to the translation function."""
+    syntaxTree = ast.parse(content)
+
+    for node in ast.walk(syntaxTree):
+        if not isinstance(node, ast.Call):
+            continue
+
+        if not isinstance(node.func, ast.Name) or node.func.id not in ('_', 'gettext'):
+            continue
+
+        if not node.args:
+            continue
+
+        source = node.args[0]
+
+        if isinstance(source, ast.Constant) and isinstance(source.value, str):
+            yield source.value
+
+
+def resolveAppConstants(source):
+    """Replace application-constant references in a translation key."""
+    return APP_CONSTANT_PATTERN.sub(
+        lambda match: getAppConstantsByName(match.group(1)), source
+    )
+
+
+def addTranslationSource(translation, source, magicName):
+    """Register a source module while preserving deterministic list order."""
+    sources = translation.setdefault(source, {'source': []})['source']
+
+    if magicName not in sources:
+        sources.append(magicName)
 
 
 def main():
@@ -94,34 +133,10 @@ def main():
 
         magicName = getMagicNameFromPath(sourceCodePath)
 
-        pattern = r"(?<![a-zA-Z])_\(\s*f?\s*(?:'([^']*)'|\"([^\"]*)\")\s*\)"
-        matches = re.findall(pattern, content)
+        for source in getTranslationKeys(content):
+            source = resolveAppConstants(source)
 
-        if matches:
-            match = [m[0] or m[1] for m in matches]
-
-            for source in match:
-                foundBraces = True
-
-                while foundBraces:
-                    lBraceIndex = source.find('{')
-                    rBraceIndex = source.find('}')
-
-                    if lBraceIndex >= 0 and rBraceIndex >= 0:
-                        parsed = source[lBraceIndex + 1 : rBraceIndex]
-
-                        source = source.replace(
-                            source[lBraceIndex : rBraceIndex + 1],
-                            getAppConstantsByName(parsed),
-                        )
-                    else:
-                        foundBraces = False
-
-                if source not in translation:
-                    translation[source] = {'source': [magicName]}
-                else:
-                    if magicName not in translation[source]['source']:
-                        translation[source]['source'].append(magicName)
+            addTranslationSource(translation, source, magicName)
 
     nonexist = []
 
