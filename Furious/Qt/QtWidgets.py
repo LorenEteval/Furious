@@ -1808,8 +1808,9 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
         self.setIconByTheme(theme)
 
     def retranslate(self):
-        """Refresh translated text for the app q push button."""
+        """Refresh translated text and tooltip for the app q push button."""
         self.setText(_(self.text()))
+        self.setToolTip(_(self.toolTip()))
 
 
 class AppQMenuPushButton(AppQPushButton):
