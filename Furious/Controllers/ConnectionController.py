@@ -176,6 +176,15 @@ class ConnectionController(QtCore.QObject):
         self._lastError = ConnectionError(_('Unable to connect'), message, details)
         self.errorOccurred.emit(self._lastError)
 
+    def _failConnection(self, message: str, details: str = '') -> bool:
+        """Clean partial runtime state, then publish one structured error."""
+        if self.state is not ConnectionState.Disconnected:
+            self.startDisconnection()
+
+        self._reportError(message, details)
+
+        return False
+
     def _reset(self):
         """Restore disconnected state after all runtime resources stop."""
         self.progressFinished.emit(True)
@@ -266,6 +275,8 @@ class ConnectionController(QtCore.QObject):
         # Retain application diagnostics while starting a fresh runtime log.
         logManager.clear(runtimeOnly=True)
 
+        startExceptionDetails = ''
+
         try:
             success = self._coreManager.start(
                 configuration,
@@ -283,6 +294,7 @@ class ConnectionController(QtCore.QObject):
             logger.error(f'failed to start core manager: {ex}')
 
             success = False
+            startExceptionDetails = str(ex)
 
         self._setProcessesChanged()
 
@@ -297,12 +309,11 @@ class ConnectionController(QtCore.QObject):
 
             startError = getattr(self._coreManager, 'lastStartError', '')
 
-            self.startDisconnection(
+            return self._failConnection(
                 f'{configuration.coreName()}: '
-                + (_(startError) if startError else _('Unknown error'))
+                + (_(startError) if startError else _('Unknown error')),
+                startExceptionDetails,
             )
-
-            return False
 
         settings = AppSettings.get('CustomProxyBypass')
 
@@ -322,11 +333,9 @@ class ConnectionController(QtCore.QObject):
                 f'server bypass settings: {proxyServerBypass}'
             )
 
-            self.startDisconnection(
-                f'{configuration.coreName()}: ' + _('Unknown error')
+            return self._failConnection(
+                f'{configuration.coreName()}: ' + _('Unknown error'), str(ex)
             )
-
-            return False
 
         self._finishConnecting()
         self.notificationRequested.emit(
@@ -482,6 +491,6 @@ class ConnectionController(QtCore.QObject):
                 else f'{core.name()}: ' + _('Core terminated unexpectedly')
             )
 
-        putItem(functools.partial(self.startDisconnection, message))
+        putItem(functools.partial(self._failConnection, message))
 
         return None
