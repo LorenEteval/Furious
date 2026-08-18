@@ -178,8 +178,7 @@ class UserSubs(Mixins.CleanupOnExit, StorageBackend):
         )
 
     def data(self) -> dict[str, dict]:
-        # Shallow copy
-        """Return the data managed by the user subs."""
+        """Return the live mutable collection managed by this repository."""
         return self._data
 
     def groups(self) -> tuple[SubscriptionGroup, ...]:

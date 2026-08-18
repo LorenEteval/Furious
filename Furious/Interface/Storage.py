@@ -35,5 +35,5 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def data(self) -> Any:
-        """Return the data managed by the storage factory."""
+        """Return the live mutable data managed by the storage factory."""
         raise NotImplementedError

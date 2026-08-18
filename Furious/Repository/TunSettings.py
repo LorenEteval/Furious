@@ -58,8 +58,7 @@ class UserTUNSettings(Mixins.CleanupOnExit, StorageBackend):
         )
 
     def data(self) -> dict[str, str]:
-        # Shallow copy
-        """Return the data managed by the user TUN settings."""
+        """Return the live mutable collection managed by this repository."""
         return self._data
 
     def cleanup(self):

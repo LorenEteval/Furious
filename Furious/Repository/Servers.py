@@ -166,8 +166,7 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
         )
 
     def data(self) -> list[ServerProfile]:
-        # Shallow copy
-        """Return the data managed by the user servers."""
+        """Return the live mutable collection managed by this repository."""
         return self._list
 
     def cleanup(self):

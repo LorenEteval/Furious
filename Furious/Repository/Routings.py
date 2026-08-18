@@ -61,8 +61,7 @@ class UserRoutings(Mixins.CleanupOnExit, StorageBackend):
         )
 
     def data(self) -> dict[str, dict]:
-        # Shallow copy
-        """Return the data managed by the user routings."""
+        """Return the live mutable collection managed by this repository."""
         return self._data
 
     def cleanup(self):
