@@ -495,8 +495,7 @@ class ExternalCoreEditor(GuiEditorWidgetQDialog):
             and not self._tunRemoteAddressInput.text()
         ):
             validationMessage = _(
-                'TUN remote address is required when application '
-                'tun2socks is enabled'
+                'TUN remote address is required when application tun2socks is enabled'
             )
 
         if validationMessage:
@@ -506,8 +505,7 @@ class ExternalCoreEditor(GuiEditorWidgetQDialog):
             )
             messageBox.setWindowTitle(_('Invalid data'))
             messageBox.setText(validationMessage)
-            messageBox.exec()
-            messageBox.deleteLater()
+            messageBox.open()
 
             return
 
