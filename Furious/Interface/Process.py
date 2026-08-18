@@ -19,16 +19,21 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import *
+from Furious.Frozenlib.Constants import PLATFORM
+from Furious.Models.Encoding import UJSONEncoder
 
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, Union
 
-import ujson
+import logging
 import functools
 
 __all__ = ['CoreProcess', 'RuntimeKernel']
+
+logger = logging.getLogger(__name__)
+
+_INVALID_CONFIGURATION_ERROR = 'Invalid server configuration'
 
 
 class RuntimeKernel(ABC):
@@ -73,11 +78,27 @@ class RuntimeKernel(ABC):
     @functools.singledispatchmethod
     def toJSONString(self, config, **kwargs) -> str:
         """Serialize the configuration as JSON text."""
+        self.setStartError(_INVALID_CONFIGURATION_ERROR)
+
+        logger.error(
+            f'cannot serialize {type(config).__name__} '
+            f'configuration for {self.name()}',
+        )
+
         return ''
 
     @toJSONString.register(str)
     def _(self, config, **kwargs) -> str:
         """Handle the registered singledispatch variant."""
+        if not config:
+            self.setStartError(_INVALID_CONFIGURATION_ERROR)
+
+            logger.error(f'cannot start {self.name()} with an empty configuration')
+
+            return ''
+
+        self.clearStartError()
+
         return config
 
     @toJSONString.register(dict)
@@ -85,23 +106,29 @@ class RuntimeKernel(ABC):
         """Handle the registered singledispatch variant."""
         serializer = getattr(config, 'toJSONString', None)
 
-        if callable(serializer):
-            return serializer(**kwargs)
-
         try:
-            ensure_ascii = kwargs.pop('ensure_ascii', False)
-            escape_forward_slashes = kwargs.pop('escape_forward_slashes', False)
-
-            return ujson.dumps(
-                config,
-                ensure_ascii=ensure_ascii,
-                escape_forward_slashes=escape_forward_slashes,
-                **kwargs,
-            )
+            if callable(serializer):
+                result = serializer(**kwargs)
+            else:
+                result = UJSONEncoder.encode(config, **kwargs)
         except Exception:
             # Any non-exit exceptions
+            self.setStartError(_INVALID_CONFIGURATION_ERROR)
+
+            logger.exception(f'failed to serialize configuration for {self.name()}')
 
             return ''
+
+        if not isinstance(result, str) or not result:
+            self.setStartError(_INVALID_CONFIGURATION_ERROR)
+
+            logger.error(f'configuration serializer for {self.name()} returned no JSON')
+
+            return ''
+
+        self.clearStartError()
+
+        return result
 
     @staticmethod
     @abstractmethod
