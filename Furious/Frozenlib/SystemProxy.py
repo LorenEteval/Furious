@@ -26,6 +26,7 @@ from Furious.Frozenlib.Utility import *
 from Furious.Frozenlib.SystemRuntime import *
 
 import logging
+import threading
 import subprocess
 
 __all__ = ['SystemProxy']
@@ -101,9 +102,27 @@ def darwinProxyConfig(operation, *args):
 class _SystemProxy:
     """Represent system proxy."""
 
+    DaemonShutdownTimeout = 5.0
+
     def __init__(self):
         """Initialize the _SystemProxy."""
         self._daemonThread = None
+        self._daemonLock = threading.RLock()
+
+    def _runDaemon(self, daemonCallback):
+        """Run the native daemon and release this exact thread on exit."""
+        thread = threading.current_thread()
+
+        try:
+            daemonCallback()
+        except Exception:
+            # Any non-exit exceptions
+
+            logger.exception('proxy daemon terminated with an error')
+        finally:
+            with self._daemonLock:
+                if self._daemonThread is thread:
+                    self._daemonThread = None
 
     @staticmethod
     def pac(pac_url):
@@ -268,15 +287,32 @@ class _SystemProxy:
             if PLATFORM == 'Windows':
                 try:
                     import sysproxy
-                    import threading
 
-                    if self._daemonThread is not None:
-                        return False
+                    with self._daemonLock:
+                        if (
+                            isinstance(self._daemonThread, threading.Thread)
+                            and self._daemonThread.is_alive()
+                        ):
+                            # Daemon is alive. Do nothing
+                            return False
 
-                    self._daemonThread = threading.Thread(
-                        target=lambda: sysproxy.daemon_on_(), daemon=True
-                    )
-                    self._daemonThread.start()
+                        self._daemonThread = None
+
+                        thread = threading.Thread(
+                            target=self._runDaemon,
+                            args=(sysproxy.daemon_on_,),
+                            daemon=True,
+                        )
+
+                        self._daemonThread = thread
+
+                        try:
+                            thread.start()
+                        except Exception:
+                            if self._daemonThread is thread:
+                                self._daemonThread = None
+
+                            raise
 
                     return True
                 except Exception:
@@ -302,18 +338,32 @@ class _SystemProxy:
             if PLATFORM == 'Windows':
                 try:
                     import sysproxy
-                    import threading
 
-                    if self._daemonThread is None:
+                    with self._daemonLock:
+                        thread = self._daemonThread
+
+                    if thread is None:
                         # Already in off state
                         return True
 
-                    assert isinstance(self._daemonThread, threading.Thread)
+                    assert isinstance(thread, threading.Thread)
 
                     if sysproxy.daemon_off():
-                        self._daemonThread.join()
-                        # Reset it
-                        self._daemonThread = None
+                        if thread is threading.current_thread():
+                            logger.error('proxy daemon cannot join its own thread')
+
+                            return False
+
+                        thread.join(self.DaemonShutdownTimeout)
+
+                        if thread.is_alive():
+                            logger.error('proxy daemon did not stop before timeout')
+
+                            return False
+
+                        with self._daemonLock:
+                            if self._daemonThread is thread:
+                                self._daemonThread = None
 
                         return True
                     else:
