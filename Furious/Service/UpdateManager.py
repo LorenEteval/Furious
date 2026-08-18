@@ -31,7 +31,6 @@ from PySide6.QtGui import *
 from typing import Callable
 
 import logging
-import functools
 
 __all__ = ['UpdateManager']
 
@@ -90,16 +89,52 @@ class UpdateManager(WebGETManager):
         # Show the MessageBox asynchronously
         mbox.open()
 
+    @staticmethod
+    def _releaseInformation(data):
+        """Return validated release fields from one GitHub API response."""
+        info = UJSONEncoder.decode(data)
+
+        if not isinstance(info, dict):
+            raise ValueError('release response is not an object')
+
+        tagName, htmlURL = (
+            info.get('tag_name'),
+            info.get('html_url'),
+        )
+
+        if not isinstance(tagName, str) or not tagName.strip():
+            raise ValueError('release response has no valid tag_name')
+
+        if not isinstance(htmlURL, str) or not htmlURL.strip():
+            raise ValueError('release response has no valid html_url')
+
+        parsedURL = QtCore.QUrl(htmlURL)
+
+        if (
+            not parsedURL.isValid()
+            or parsedURL.scheme().casefold() != 'https'
+            or parsedURL.host().casefold() != 'github.com'
+        ):
+            raise ValueError('release response has an untrusted html_url')
+
+        # Validate before the value reaches the version comparison helper.
+        if not isinstance(versionToValue(tagName), int):
+            raise ValueError('release response has an invalid tag_name')
+
+        return tagName, parsedURL
+
     def successCallback(self, networkReply, **kwargs):
         """Handle a successful network operation."""
-        parent = kwargs.pop('parent', None)
-        showMessageBox = kwargs.pop('showMessageBox', True)
-        hasNewVersionCallback = kwargs.pop('hasNewVersionCallback', None)
+        parent, showMessageBox, hasNewVersionCallback = (
+            kwargs.pop('parent', None),
+            kwargs.pop('showMessageBox', True),
+            kwargs.pop('hasNewVersionCallback', None),
+        )
 
         data = networkReply.readAll().data()
 
         try:
-            info = UJSONEncoder.decode(data)
+            tagName, htmlURL = self._releaseInformation(data)
         except Exception as ex:
             # Any non-exit exceptions
 
@@ -108,16 +143,14 @@ class UpdateManager(WebGETManager):
             if showMessageBox:
                 self.showErrorMessageBox(parent)
         else:
-            newVersion = info['tag_name']
-
-            if versionToValue(newVersion) > versionToValue(APPLICATION_VERSION):
+            if versionToValue(tagName) > versionToValue(APPLICATION_VERSION):
 
                 def handleResultCode(code):
                     """Handle result code."""
                     if code == PySide6Legacy.enumValueWrapper(
                         AppQMessageBox.StandardButton.Yes
                     ):
-                        if QDesktopServices.openUrl(QtCore.QUrl(info['html_url'])):
+                        if QDesktopServices.openUrl(htmlURL):
                             logger.info('open download page success')
                         else:
                             logger.error('open download page failed')
@@ -126,17 +159,17 @@ class UpdateManager(WebGETManager):
                         pass
 
                 if callable(hasNewVersionCallback):
-                    hasNewVersionCallback(newVersion)
+                    hasNewVersionCallback(tagName)
 
                 if showMessageBox:
                     mbox = MBoxQuestionUpdate(
                         parent=parent,
                         icon=AppQMessageBox.Icon.Information,
                     )
-                    mbox.version = newVersion
+                    mbox.version = tagName
                     mbox.setText(mbox.customText())
                     mbox.setInformativeText(_('Go to download page?'))
-                    mbox.finished.connect(functools.partial(handleResultCode))
+                    mbox.finished.connect(handleResultCode)
 
                     # Show the MessageBox asynchronously
                     mbox.open()
@@ -154,10 +187,13 @@ class UpdateManager(WebGETManager):
 
     def failureCallback(self, networkReply, **kwargs):
         """Handle a failed network operation."""
-        showMessageBox = kwargs.pop('showMessageBox', True)
+        parent, showMessageBox = (
+            kwargs.pop('parent', None),
+            kwargs.pop('showMessageBox', True),
+        )
 
         if showMessageBox:
-            self.showErrorMessageBox()
+            self.showErrorMessageBox(parent)
 
     def checkForUpdates(
         self,
