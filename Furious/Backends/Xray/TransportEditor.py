@@ -55,7 +55,7 @@ class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
 
         self.addItems(STREAM_NETWORK)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -96,7 +96,7 @@ class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             streamSettings = ConfigXray.getProxyOutboundStream(config)
@@ -115,7 +115,7 @@ class GuiVTransportItemFinalMask(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemFinalMask."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -149,7 +149,7 @@ class GuiVTransportItemFinalMask(GuiEditorItemTextInput):
 
         return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             finalMaskObject = ConfigXray.getProxyOutboundStream(config)['finalmask']
@@ -172,7 +172,7 @@ class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
 
         self.networkKey = networkKey
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -212,7 +212,7 @@ class GuiVTransportItemTypeXXX(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             xxxObject = ConfigXray.getProxyOutboundStream(config)[self.networkKey]
@@ -253,7 +253,7 @@ class GuiVTransportItemHostTcpOrRaw(GuiEditorItemTextInput):
 
         self.networkKey = networkKey
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -299,7 +299,7 @@ class GuiVTransportItemHostTcpOrRaw(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             tcpObject = ConfigXray.getProxyOutboundStream(config)[self.networkKey]
@@ -322,7 +322,7 @@ class GuiVTransportItemPathTcpOrRaw(GuiEditorItemTextInput):
 
         self.networkKey = networkKey
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -365,7 +365,7 @@ class GuiVTransportItemPathTcpOrRaw(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             tcpObject = ConfigXray.getProxyOutboundStream(config)[self.networkKey]
@@ -407,7 +407,7 @@ class GuiVTransportItemSeedKcp(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemSeedKcp."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -444,7 +444,7 @@ class GuiVTransportItemSeedKcp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             kcpObject = ConfigXray.getProxyOutboundStream(config)['kcpSettings']
@@ -463,7 +463,7 @@ class GuiVTransportItemHostWs(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemHostWs."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -503,7 +503,7 @@ class GuiVTransportItemHostWs(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             wsObject = ConfigXray.getProxyOutboundStream(config)['wsSettings']
@@ -522,7 +522,7 @@ class GuiVTransportItemPathWs(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemPathWs."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -559,7 +559,7 @@ class GuiVTransportItemPathWs(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             wsObject = ConfigXray.getProxyOutboundStream(config)['wsSettings']
@@ -578,7 +578,7 @@ class GuiVTransportItemHostHttpUpgrade(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemHostHttpUpgrade."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -615,7 +615,7 @@ class GuiVTransportItemHostHttpUpgrade(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             httpUpgradeObject = ConfigXray.getProxyOutboundStream(config)[
@@ -636,7 +636,7 @@ class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemPathHttpUpgrade."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -673,7 +673,7 @@ class GuiVTransportItemPathHttpUpgrade(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             httpUpgradeObject = ConfigXray.getProxyOutboundStream(config)[
@@ -694,7 +694,7 @@ class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemHostSplitHttp."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -731,7 +731,7 @@ class GuiVTransportItemHostSplitHttp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             splitHttpObject = ConfigXray.getProxyOutboundStream(config)[
@@ -752,7 +752,7 @@ class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemPathSplitHttp."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -789,7 +789,7 @@ class GuiVTransportItemPathSplitHttp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             splitHttpObject = ConfigXray.getProxyOutboundStream(config)[
@@ -810,7 +810,7 @@ class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemHostXHttp."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -847,7 +847,7 @@ class GuiVTransportItemHostXHttp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
@@ -866,7 +866,7 @@ class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemPathXHttp."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -903,7 +903,7 @@ class GuiVTransportItemPathXHttp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
@@ -931,7 +931,7 @@ class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
             ]
         )
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -968,7 +968,7 @@ class GuiVTransportItemModeXHttp(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
@@ -987,7 +987,7 @@ class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemExtraXHttp."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -1032,7 +1032,7 @@ class GuiVTransportItemExtraXHttp(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             xhttpObject = ConfigXray.getProxyOutboundStream(config)['xhttpSettings']
@@ -1054,7 +1054,7 @@ class GuiVTransportItemHostH2(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemHostH2."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -1091,7 +1091,7 @@ class GuiVTransportItemHostH2(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             httpObject = ConfigXray.getProxyOutboundStream(config)['httpSettings']
@@ -1110,7 +1110,7 @@ class GuiVTransportItemPathH2(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemPathH2."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -1147,7 +1147,7 @@ class GuiVTransportItemPathH2(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             httpObject = ConfigXray.getProxyOutboundStream(config)['httpSettings']
@@ -1197,7 +1197,7 @@ class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
             ]
         )
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -1231,7 +1231,7 @@ class GuiVTransportItemSecurityQuic(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             quicObject = ConfigXray.getProxyOutboundStream(config)['quicSettings']
@@ -1250,7 +1250,7 @@ class GuiVTransportItemKeyQuic(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemKeyQuic."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -1287,7 +1287,7 @@ class GuiVTransportItemKeyQuic(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             quicObject = ConfigXray.getProxyOutboundStream(config)['quicSettings']
@@ -1314,7 +1314,7 @@ class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
             ]
         )
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -1356,7 +1356,7 @@ class GuiVTransportItemModeGRPC(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             grpcObject = ConfigXray.getProxyOutboundStream(config)['grpcSettings']
@@ -1382,7 +1382,7 @@ class GuiVTransportItemAuthorityGRPC(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemAuthorityGRPC."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -1419,7 +1419,7 @@ class GuiVTransportItemAuthorityGRPC(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             grpcObject = ConfigXray.getProxyOutboundStream(config)['grpcSettings']
@@ -1438,7 +1438,7 @@ class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemServiceNameGRPC."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -1475,7 +1475,7 @@ class GuiVTransportItemServiceNameGRPC(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             grpcObject = ConfigXray.getProxyOutboundStream(config)['grpcSettings']
@@ -1497,7 +1497,7 @@ class GuiVTransportItemVersionHysteria(GuiEditorItemTextSpinBox):
         # Range. 0 means invalid
         self.setRange(0, 2)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -1521,7 +1521,7 @@ class GuiVTransportItemVersionHysteria(GuiEditorItemTextSpinBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             hysteriaObject = ConfigXray.getProxyOutboundStream(config)[
@@ -1542,7 +1542,7 @@ class GuiVTransportItemAuthHysteria(GuiEditorItemTextInput):
         """Initialize the GuiVTransportItemAuthHysteria."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -1579,7 +1579,7 @@ class GuiVTransportItemAuthHysteria(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             hysteriaObject = ConfigXray.getProxyOutboundStream(config)[
@@ -1866,7 +1866,7 @@ class GuiVTransportQGroupBox(EditorBinding, AppQGroupBox):
         """Initialize the GuiVTransportQGroupBox."""
         super().__init__(_('Transport'), **kwargs)
 
-        self._config = ConfigFactory()
+        self._config = CoreConfiguration()
 
         self._widget = GuiVTransportPageStackedWidget()
         self._widget.connectActivated(self.handleActivated)
@@ -1896,11 +1896,11 @@ class GuiVTransportQGroupBox(EditorBinding, AppQGroupBox):
 
         self.setCurrentIndex(index)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         return self.page(self.currentIndex()).inputToFactory(config)
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         # Shallow copy
         """Load the configuration value into the editor."""
         self._config = config

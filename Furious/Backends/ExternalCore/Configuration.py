@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Models import ConfigFactory
+from Furious.Models import CoreConfiguration
 
 from pathlib import Path
 from typing import Mapping
@@ -54,7 +54,7 @@ class ExternalCoreConfigurationError(ValueError):
     """Describe an invalid external-core process invocation."""
 
 
-class ConfigExternalCore(ConfigFactory):
+class ConfigExternalCore(CoreConfiguration):
     """Store one external executable invocation as structured JSON data."""
 
     def __init__(self, config: Mapping | str = ''):

@@ -55,7 +55,7 @@ class GuiVMessItemBasicAddress(GuiEditorItemTextInput):
         """Initialize the GuiVMessItemBasicAddress."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -78,7 +78,7 @@ class GuiVMessItemBasicAddress(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
@@ -100,7 +100,7 @@ class GuiVMessItemBasicPort(GuiEditorItemTextSpinBox):
         # Range
         self.setRange(0, 65535)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -119,7 +119,7 @@ class GuiVMessItemBasicPort(GuiEditorItemTextSpinBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
@@ -156,7 +156,7 @@ class GuiVMessItemBasicId(GuiEditorItemTextInput):
         """Return the widgets owned by this editor item."""
         return self._title, self._widget
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -179,7 +179,7 @@ class GuiVMessItemBasicId(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
@@ -201,7 +201,7 @@ class GuiVMessItemBasicAlterId(GuiEditorItemTextSpinBox):
         # Range
         self.setRange(0, 65535)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -220,7 +220,7 @@ class GuiVMessItemBasicAlterId(GuiEditorItemTextSpinBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             proxyOutboundUser = getProxyOutboundUser(config)
@@ -250,7 +250,7 @@ class GuiVMessItemBasicSecurity(GuiEditorItemTextComboBox):
             ]
         )
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         proxyOutboundUser = getProxyOutboundUser(config)
 
@@ -269,7 +269,7 @@ class GuiVMessItemBasicSecurity(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             proxyOutboundUser = getProxyOutboundUser(config)

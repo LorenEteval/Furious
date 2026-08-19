@@ -1029,7 +1029,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         )
 
         for action in actions:
-            if isinstance(action, AppQSeperator):
+            if isinstance(action, AppQSeparator):
                 continue
 
             if not isinstance(action, AppQAction):

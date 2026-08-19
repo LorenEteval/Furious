@@ -58,13 +58,13 @@ class RoutingController(QtCore.QObject):
         self.refresh()
 
     @staticmethod
-    def activeConfiguration():
+    def currentProfileForRouting():
         """Return the connected profile, falling back to repository selection."""
         try:
-            configuration = AppConnectionController().activeConfiguration
+            profile = AppConnectionController().activeProfile
 
-            if configuration is not None:
-                return configuration
+            if profile is not None:
+                return profile
         except (AttributeError, RuntimeError):
             # The connection controller may not exist during early startup.
             pass
@@ -106,12 +106,12 @@ class RoutingController(QtCore.QObject):
 
     def refresh(self, *, force=False):
         """Refresh routing capabilities from the active proxy-core plugin."""
-        config = self.activeConfiguration()
+        profile = self.currentProfileForRouting()
         registry = getPluginRegistry()
-        options = registry.routingOptions(config) if config is not None else tuple()
+        options = registry.routingOptions(profile) if profile is not None else tuple()
         routing = (
-            registry.normalizeRouting(config, AppSettings.get('Routing'))
-            if config is not None
+            registry.normalizeRouting(profile, AppSettings.get('Routing'))
+            if profile is not None
             else str(AppSettings.get('Routing'))
         )
 

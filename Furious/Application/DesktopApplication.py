@@ -94,8 +94,8 @@ class SingletonApplication(ApplicationExitHelper):
         self.socket = QLocalSocket(self)
         self.server = QLocalServer(self)
 
-    def hasRunningApp(self) -> bool:
-        """Return whether running app."""
+    def shouldExitForExistingInstance(self) -> bool:
+        """Claim the single-instance endpoint or notify the running instance."""
         self.socket.connectToServer(self.serverName)
 
         if self.socket.waitForConnected(1000):
@@ -473,7 +473,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
     def run(self):
         """Run the application task."""
         try:
-            if self.hasRunningApp():
+            if self.shouldExitForExistingInstance():
                 # See: https://github.com/python/cpython/issues/79908
                 # sys.exit(None) in multiprocessing will produce
                 # exitcode 1 in some Python version, which is

@@ -52,7 +52,7 @@ def dictRepr(returncode, stdout, stderr):
 class SystemRoutingTable:
     """Represent system routing table."""
 
-    Relations = list()
+    managedRoutes = list()
 
     DEFAULT_GATEWAY_WIN32 = re.compile(
         r'0\.0\.0\.0.\s*0\.0\.0\.0.\s*(\S+)\s*(\S+)',
@@ -121,7 +121,7 @@ class SystemRoutingTable:
     @staticmethod
     def addRelations():
         """Add relations."""
-        for sourceIP, destinationIP in SystemRoutingTable.Relations:
+        for sourceIP, destinationIP in SystemRoutingTable.managedRoutes:
             SystemRoutingTable.add(sourceIP, destinationIP)
 
     @staticmethod
@@ -689,13 +689,13 @@ class SystemRoutingTable:
     def deleteRelations(clear=True):
         """Delete relations."""
         if PLATFORM == 'Windows':
-            if len(SystemRoutingTable.Relations):
+            if len(SystemRoutingTable.managedRoutes):
                 SystemRoutingTable.delete(
                     '0.0.0.0', APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS
                 )
 
-        for sourceIP, destinationIP in SystemRoutingTable.Relations[::-1]:
+        for sourceIP, destinationIP in SystemRoutingTable.managedRoutes[::-1]:
             SystemRoutingTable.delete(sourceIP, destinationIP)
 
         if clear:
-            SystemRoutingTable.Relations.clear()
+            SystemRoutingTable.managedRoutes.clear()

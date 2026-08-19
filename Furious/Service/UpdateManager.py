@@ -23,7 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Models import *
 from Furious.Qt.QtWidgets import *
 from Furious.Qt.DynamicTranslate import gettext as _
-from Furious.Qt.WebGETManager import *
+from Furious.Qt.HttpGetManager import *
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -65,7 +65,7 @@ class MBoxQuestionUpdate(AppQMessageBox):
         self.moveToCenter()
 
 
-class UpdateManager(WebGETManager):
+class UpdateManager(HttpGetManager):
     """Coordinate updates operations."""
 
     API_URL = (

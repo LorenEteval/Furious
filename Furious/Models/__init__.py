@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from .Configuration import ConfigFactory
+from .Configuration import CoreConfiguration
 from .Encoding import (
     Base64Encoder,
     JSONEncoder,
@@ -38,7 +38,7 @@ from .Protocol import Protocol
 
 __all__ = [
     'Base64Encoder',
-    'ConfigFactory',
+    'CoreConfiguration',
     'JSONEncoder',
     'LogCategory',
     'LogEntry',

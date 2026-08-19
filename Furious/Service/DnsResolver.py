@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Models import *
-from Furious.Qt.WebGETManager import *
+from Furious.Qt.HttpGetManager import *
 
 from PySide6 import QtCore
 from PySide6.QtNetwork import *
@@ -35,7 +35,7 @@ __all__ = ['DnsResolver']
 logger = logging.getLogger(__name__)
 
 
-class _DnsResolver(WebGETManager):
+class _DnsResolver(HttpGetManager):
     """Represent DNS resolver."""
 
     MAX_REFERENCE_DEPTH = 32

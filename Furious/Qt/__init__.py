@@ -43,7 +43,7 @@ from .QtGui import (
     AppQAction,
     AppQActionGroup,
     AppQIcon,
-    AppQSeperator,
+    AppQSeparator,
     bootstrapIcon,
     bootstrapIconMask,
     bootstrapIconWhite,
@@ -96,7 +96,7 @@ from .TextEditorTheme import (
     DraculaLoggerSyntaxHighlighter,
     configureEditorLogMetadata,
 )
-from .WebGETManager import WebGETManager
+from .HttpGetManager import HttpGetManager
 
 __all__ = [
     'ABBR_TO_LANGUAGE',
@@ -123,7 +123,7 @@ __all__ = [
     'AppQNetworkAccessManager',
     'AppQPlainTextEdit',
     'AppQPushButton',
-    'AppQSeperator',
+    'AppQSeparator',
     'AppQSpinBox',
     'AppQSwitch',
     'AppQTabWidget',
@@ -154,7 +154,7 @@ __all__ = [
     'MBoxQuestionDelete',
     'MBoxUnrecognizedConfig',
     'SUPPORTED_LANGUAGE',
-    'WebGETManager',
+    'HttpGetManager',
     'bootstrapIcon',
     'bootstrapIconMask',
     'bootstrapIconWhite',

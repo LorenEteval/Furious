@@ -84,7 +84,7 @@ class ConnectionController(QtCore.QObject):
     """Coordinate one connection lifecycle and publish observable state."""
 
     stateChanged = QtCore.Signal(object)
-    activeConfigurationChanged = QtCore.Signal(object)
+    activeProfileChanged = QtCore.Signal(object)
     interactionEnabledChanged = QtCore.Signal(bool)
     runtimesChanged = QtCore.Signal(object)
     progressStarted = QtCore.Signal()
@@ -100,7 +100,7 @@ class ConnectionController(QtCore.QObject):
         self._coreManager = coreManager or ConnectionManager()
         self._updatesManager = updatesManager or UpdateManager()
         self._state = ConnectionState.Disconnected
-        self._activeConfiguration = None
+        self._activeProfile = None
         self._lastError = None
 
         self._actionTimer = QtCore.QTimer(self)
@@ -112,9 +112,9 @@ class ConnectionController(QtCore.QObject):
         return self._state
 
     @property
-    def activeConfiguration(self):
+    def activeProfile(self):
         """Return the profile owned by the current connection lifecycle."""
-        return self._activeConfiguration
+        return self._activeProfile
 
     @property
     def runtimes(self):
@@ -159,13 +159,13 @@ class ConnectionController(QtCore.QObject):
         if self.interactionEnabled != interactionWasEnabled:
             self.interactionEnabledChanged.emit(self.interactionEnabled)
 
-    def _setActiveConfiguration(self, configuration):
+    def _setActiveProfile(self, profile):
         """Publish the profile owned by the current lifecycle."""
-        if configuration is self._activeConfiguration:
+        if profile is self._activeProfile:
             return
 
-        self._activeConfiguration = configuration
-        self.activeConfigurationChanged.emit(configuration)
+        self._activeProfile = profile
+        self.activeProfileChanged.emit(profile)
 
     def _emitRuntimesChanged(self):
         """Publish a stable snapshot after managed runtimes change."""
@@ -188,7 +188,7 @@ class ConnectionController(QtCore.QObject):
     def _reset(self):
         """Restore disconnected state after all runtime resources stop."""
         self.progressFinished.emit(True)
-        self._setActiveConfiguration(None)
+        self._setActiveProfile(None)
 
         AppSettings.turnOFF('Connect')
 
@@ -268,7 +268,7 @@ class ConnectionController(QtCore.QObject):
             return False
 
         self._lastError = None
-        self._setActiveConfiguration(configuration)
+        self._setActiveProfile(configuration)
         self._startConnecting()
 
         logManager = AppLogManager()

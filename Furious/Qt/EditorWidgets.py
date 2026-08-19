@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Models import ConfigFactory, ServerProfile
+from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Qt.QtWidgets import *
 
@@ -209,7 +209,7 @@ class GuiEditorItemProxyHttp(GuiEditorItemTextInput):
         """Initialize the GuiEditorItemProxyHttp."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         oldHttp = config.httpProxy()
         newHttp = self.text()
@@ -234,7 +234,7 @@ class GuiEditorItemProxyHttp(GuiEditorItemTextInput):
 
                 return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             self.setText(config.httpProxy())
@@ -251,7 +251,7 @@ class GuiEditorItemProxySocks(GuiEditorItemTextInput):
         """Initialize the GuiEditorItemProxySocks."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         oldSocks = config.socksProxy()
         newSocks = self.text()
@@ -276,7 +276,7 @@ class GuiEditorItemProxySocks(GuiEditorItemTextInput):
 
                 return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             self.setText(config.socksProxy())

@@ -129,12 +129,10 @@ class Storage:
             try:
                 controller = AppConnectionController()
 
-                configuration = controller.activeConfiguration
+                profile = controller.activeProfile
 
-                if controller.isConnected() and isinstance(
-                    configuration, ServerProfile
-                ):
-                    return configuration.httpProxy()
+                if controller.isConnected() and isinstance(profile, ServerProfile):
+                    return profile.httpProxy()
 
                 return None
             except Exception:
@@ -148,10 +146,10 @@ class Storage:
             try:
                 controller = AppConnectionController()
 
-                configuration = controller.activeConfiguration
+                profile = controller.activeProfile
 
                 if not controller.isConnected() or not isinstance(
-                    configuration, ServerProfile
+                    profile, ServerProfile
                 ):
                     return ''
 
@@ -159,7 +157,7 @@ class Storage:
                     (
                         index
                         for index, server in enumerate(Storage.UserServers())
-                        if server is configuration
+                        if server is profile
                     ),
                     -1,
                 )

@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Models import ConfigFactory, Protocol
+from Furious.Models import CoreConfiguration, Protocol
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
@@ -45,7 +45,7 @@ class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
         """Initialize the GuiHy2ItemBasicServer."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         oldServer = config.get('server', '')
         newServer = self.text()
@@ -62,7 +62,7 @@ class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             self.setText(config.get('server', ''))
@@ -79,7 +79,7 @@ class GuiHy2ItemBasicAuth(GuiEditorItemTextInput):
         """Initialize the GuiHy2ItemBasicAuth."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         oldAuth = config.get('auth')
         newAuth = self.text()
@@ -104,7 +104,7 @@ class GuiHy2ItemBasicAuth(GuiEditorItemTextInput):
 
                 return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             self.setText(config.get('auth', ''))
@@ -139,7 +139,7 @@ class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
             # Should not reach here
             raise
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         newValue = self.text()
 
@@ -194,7 +194,7 @@ class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
             else:
                 return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             value = config['congestion'][self.key]
@@ -215,7 +215,7 @@ class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
 
         self.addItems(HY2_OBFS_TYPES)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         try:
             oldObfsType = config['obfs']['type']
@@ -249,7 +249,7 @@ class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
             else:
                 return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             obfsType = config['obfs']['type']
@@ -273,7 +273,7 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
 
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         newObfsPassword = self.text()
 
@@ -313,7 +313,7 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
         else:
             return modified
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             obfsType = config['obfs']['type']
@@ -353,7 +353,7 @@ class GuiHy2ItemObfsPacketSize(GuiEditorItemTextSpinBox):
         self.setRange(1, 2048)
         self.setValue(self.default)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         try:
             obfsType = config['obfs']['type']
@@ -381,7 +381,7 @@ class GuiHy2ItemObfsPacketSize(GuiEditorItemTextSpinBox):
 
         return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             obfsType = config['obfs']['type']
@@ -538,7 +538,7 @@ class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
 
         self.key = key
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         newValue = self.text()
 
@@ -595,7 +595,7 @@ class GuiHy2ItemTLSTextInput(GuiEditorItemTextInput):
             else:
                 return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             value = config['tls'][self.key]
@@ -614,7 +614,7 @@ class GuiHy2ItemTLSInsecure(GuiEditorItemTextSwitch):
         """Initialize the GuiHy2ItemTLSInsecure."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         try:
             oldChecked = config['tls']['insecure']
@@ -646,7 +646,7 @@ class GuiHy2ItemTLSInsecure(GuiEditorItemTextSwitch):
             else:
                 return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             checked = config['tls']['insecure']
@@ -707,7 +707,7 @@ class GuiHy2GroupBoxObfs(EditorBinding, AppQGroupBox):
 
         super().__init__('obfs', **kwargs, translatable=translatable)
 
-        self._config = ConfigFactory()
+        self._config = CoreConfiguration()
 
         self._widget = GuiHy2ObfsPageStackedWidget()
         self._widget.connectActivated(self.handleActivated)
@@ -737,7 +737,7 @@ class GuiHy2GroupBoxObfs(EditorBinding, AppQGroupBox):
 
         self.setCurrentIndex(index)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         oldObfs = config.get('obfs')
         oldObfsType = ''
@@ -772,7 +772,7 @@ class GuiHy2GroupBoxObfs(EditorBinding, AppQGroupBox):
 
         return modified
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         self._config = config
 
@@ -861,11 +861,11 @@ class GuiHy2GroupBoxOther(EditorBinding, AppQGroupBox):
 
         self.setLayout(layout)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         pass
 

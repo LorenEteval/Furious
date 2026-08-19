@@ -57,9 +57,9 @@ class TrayIcon(
             ConnectAction(isTrayAction=True),
             RoutingAction(isTrayAction=True),
             ImportAction(isTrayAction=True),
-            AppQSeperator(),
+            AppQSeparator(),
             ShowHomePageAction(isTrayAction=True),
-            AppQSeperator(),
+            AppQSeparator(),
             ExitAction(isTrayAction=True),
         ]
 
@@ -123,7 +123,7 @@ class TrayIcon(
             menu.clear()
 
             for childAction in action._menu._actions:
-                if isinstance(childAction, AppQSeperator):
+                if isinstance(childAction, AppQSeparator):
                     menu.addSeparator()
                 elif isinstance(childAction, AppQAction):
                     menu.addAction(childAction)

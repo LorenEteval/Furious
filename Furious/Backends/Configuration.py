@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Models.Configuration import ConfigFactory
+from Furious.Models.Configuration import CoreConfiguration
 from Furious.Models.Encoding import *
 from Furious.Models.Protocol import Protocol
 from Furious.Backends.ShadowsocksURI import (
@@ -369,7 +369,7 @@ BLANK_CONFIG_XRAY = {
 }
 
 
-class ConfigXray(ConfigFactory):
+class ConfigXray(CoreConfiguration):
     """Represent Xray configuration and supported share-link formats."""
 
     def __init__(self, config: Union[str, dict] = ''):
@@ -1704,7 +1704,7 @@ BLANK_CONFIG_HYSTERIA1 = {
 }
 
 
-class ConfigHysteria1(ConfigFactory):
+class ConfigHysteria1(CoreConfiguration):
     """Represent Hysteria 1 client configuration and share links."""
 
     def __init__(self, config: Union[str, dict] = ''):
@@ -1978,7 +1978,7 @@ BLANK_CONFIG_HYSTERIA2 = {
 }
 
 
-class ConfigHysteria2(ConfigFactory):
+class ConfigHysteria2(CoreConfiguration):
     """Represent Hysteria 2 client configuration and share links."""
 
     def __init__(self, config: Union[str, dict] = ''):

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Provide Qt support for web get manager."""
+"""Provide reusable Qt support for HTTP GET workflows."""
 
 from __future__ import annotations
 
@@ -29,22 +29,22 @@ from typing import Union
 
 import logging
 
-__all__ = ['WebGETManager']
+__all__ = ['HttpGetManager']
 
 logger = logging.getLogger(__name__)
 
 
-class WebGETManager(AppQNetworkAccessManager):
-    """Coordinate web get operations."""
+class HttpGetManager(AppQNetworkAccessManager):
+    """Coordinate HTTP GET operations and their completion lifecycle."""
 
     def __init__(self, parent=None, actionMessage='web GET', **kwargs):
-        """Initialize the WebGETManager."""
+        """Initialize the HttpGetManager."""
         super().__init__(parent)
 
         self.actionMessage = actionMessage
 
-        self.mustCallOnce = kwargs.pop('mustCallOnce', True)
-        self.mustCalled = False
+        self.completionRunsOnce = kwargs.pop('completionRunsOnce', True)
+        self.completionHasRun = False
         self._replyContexts = {}
 
     def successCallback(self, networkReply: QNetworkReply, **kwargs):
@@ -59,27 +59,27 @@ class WebGETManager(AppQNetworkAccessManager):
         """Handle a failed network operation."""
         pass
 
-    def mustCall(self, **kwargs):
+    def completionCallback(self, **kwargs):
         """Perform the required completion hook."""
         pass
 
-    def must(self, **kwargs):
-        """Run the required completion hook according to its call policy."""
+    def runCompletionCallback(self, **kwargs):
+        """Run the completion callback according to its call policy."""
 
         def call():
             """Invoke the registered completion callback."""
             try:
-                self.mustCall(**kwargs)
+                self.completionCallback(**kwargs)
             except Exception as ex:
                 # Any non-exit exceptions
 
-                logger.error(f'error calling must(): {ex}')
+                logger.error(f'error calling completion callback: {ex}')
             finally:
-                self.mustCalled = True
+                self.completionHasRun = True
 
-        if not self.mustCallOnce:
+        if not self.completionRunsOnce:
             call()
-        elif not self.mustCalled:
+        elif not self.completionHasRun:
             call()
 
     def handleReadyReadByNetworkReply(self, networkReply: QNetworkReply, **kwargs):
@@ -137,7 +137,7 @@ class WebGETManager(AppQNetworkAccessManager):
                 self.successCallback(networkReply, **kwargs)
         finally:
             try:
-                self.must(**kwargs)
+                self.runCompletionCallback(**kwargs)
             finally:
                 # QNetworkAccessManager owns replies by default and does not
                 # remove completed children automatically.  All response data
@@ -157,7 +157,7 @@ class WebGETManager(AppQNetworkAccessManager):
         return useProxy
 
     def webGET(self, request: Union[QNetworkRequest, str], **kwargs) -> QNetworkReply:
-        """Return the web get value used by the web get manager."""
+        """Start an HTTP GET request managed by this instance."""
         if isinstance(request, QNetworkRequest):
             networkReply = self.get(request)
         else:

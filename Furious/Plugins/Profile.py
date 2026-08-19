@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Models import ConfigFactory, ServerProfile, ensureProfile
+from Furious.Models import CoreConfiguration, ServerProfile, ensureProfile
 
 from typing import Mapping, Union
 
@@ -41,10 +41,12 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def configurationFromMapping(config: Mapping, registry=None, **kwargs) -> ConfigFactory:
+def configurationFromMapping(
+    config: Mapping, registry=None, **kwargs
+) -> CoreConfiguration:
     """Construct a connection document from a normalized mapping."""
     if not isinstance(config, Mapping):
-        return ConfigFactory()
+        return CoreConfiguration()
 
     try:
         factory = (registry or getPluginRegistry()).configFromDict(
@@ -57,17 +59,19 @@ def configurationFromMapping(config: Mapping, registry=None, **kwargs) -> Config
 
         factory = None
 
-    return factory if factory is not None else ConfigFactory(dict(config))
+    return factory if factory is not None else CoreConfiguration(dict(config))
 
 
 def configurationFromAny(
-    config: Union[str, Mapping, ConfigFactory, ServerProfile], registry=None, **kwargs
-) -> ConfigFactory:
+    config: Union[str, Mapping, CoreConfiguration, ServerProfile],
+    registry=None,
+    **kwargs,
+) -> CoreConfiguration:
     """Construct a connection document from supported input data."""
     if isinstance(config, ServerProfile):
         return config.connection.deepcopy()
 
-    if isinstance(config, ConfigFactory):
+    if isinstance(config, CoreConfiguration):
         return config.deepcopy()
 
     if isinstance(config, str):
@@ -84,19 +88,19 @@ def configurationFromAny(
         except Exception:
             # Any non-exit exceptions
 
-            return ConfigFactory()
+            return CoreConfiguration()
 
     if isinstance(config, Mapping):
         return configurationFromMapping(config, registry=registry, **kwargs)
 
-    return ConfigFactory()
+    return CoreConfiguration()
 
 
-def blankConfiguration(protocol, registry=None, **kwargs) -> ConfigFactory:
+def blankConfiguration(protocol, registry=None, **kwargs) -> CoreConfiguration:
     """Create a blank connection through an exact protocol capability."""
     factory = (registry or getPluginRegistry()).blankConfig(protocol, **kwargs)
 
-    return factory if factory is not None else ConfigFactory()
+    return factory if factory is not None else CoreConfiguration()
 
 
 def exportConfiguration(config, remark: str = '', registry=None) -> str:
@@ -120,7 +124,7 @@ def profileFromMapping(config: Mapping, registry=None, **metadata) -> ServerProf
 
 
 def profileFromAny(
-    config: Union[str, Mapping, ConfigFactory, ServerProfile],
+    config: Union[str, Mapping, CoreConfiguration, ServerProfile],
     registry=None,
     **metadata,
 ) -> ServerProfile:

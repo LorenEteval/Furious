@@ -48,7 +48,7 @@ class GuiVTLSItemSecurity(GuiEditorItemTextComboBox):
 
         self.addItems(STREAM_SECURITY)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -89,7 +89,7 @@ class GuiVTLSItemSecurity(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             streamSettings = ConfigXray.getProxyOutboundStream(config)
@@ -113,7 +113,7 @@ class GuiVTLSItemXXXServerName(GuiEditorItemTextInput):
 
         self.securityKey = securityKey
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -150,7 +150,7 @@ class GuiVTLSItemXXXServerName(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             xxxObject = ConfigXray.getProxyOutboundStream(config)[self.securityKey]
@@ -194,7 +194,7 @@ class GuiVTLSItemXXXFingerprint(GuiEditorItemTextInput):
 
         self.securityKey = securityKey
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -231,7 +231,7 @@ class GuiVTLSItemXXXFingerprint(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             xxxObject = ConfigXray.getProxyOutboundStream(config)[self.securityKey]
@@ -270,7 +270,7 @@ class GuiVTLSItemTLSAlpn(GuiEditorItemTextInput):
         """Initialize the GuiVTLSItemTLSAlpn."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -307,7 +307,7 @@ class GuiVTLSItemTLSAlpn(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             tlsObject = ConfigXray.getProxyOutboundStream(config)['tlsSettings']
@@ -331,7 +331,7 @@ class GuiVTLSItemTLSXXXTextInput(GuiEditorItemTextInput):
 
         self.key = key
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -362,7 +362,7 @@ class GuiVTLSItemTLSXXXTextInput(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             tlsObject = ConfigXray.getProxyOutboundStream(config)['tlsSettings']
@@ -381,7 +381,7 @@ class GuiVTLSItemTLSAllowInsecure(GuiEditorItemTextSwitch):
         """Initialize the GuiVTLSItemTLSAllowInsecure."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -414,7 +414,7 @@ class GuiVTLSItemTLSAllowInsecure(GuiEditorItemTextSwitch):
             else:
                 return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             tlsObject = ConfigXray.getProxyOutboundStream(config)['tlsSettings']
@@ -438,7 +438,7 @@ class GuiVTLSItemRealityXXX(GuiEditorItemTextInput):
 
         self.realityKey = realityKey
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         streamSettings = ConfigXray.getProxyOutboundStream(config)
 
@@ -475,7 +475,7 @@ class GuiVTLSItemRealityXXX(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             realityObject = ConfigXray.getProxyOutboundStream(config)['realitySettings']
@@ -747,7 +747,7 @@ class GuiVTLSQGroupBox(EditorBinding, AppQGroupBox):
 
         super().__init__('TLS', **kwargs, translatable=translatable)
 
-        self._config = ConfigFactory()
+        self._config = CoreConfiguration()
 
         self._widget = GuiVTLSPageStackedWidget()
         self._widget.connectActivated(self.handleActivated)
@@ -777,11 +777,11 @@ class GuiVTLSQGroupBox(EditorBinding, AppQGroupBox):
 
         self.setCurrentIndex(index)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         return self.page(self.currentIndex()).inputToFactory(config)
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         # Shallow copy
         """Load the configuration value into the editor."""
         self._config = config

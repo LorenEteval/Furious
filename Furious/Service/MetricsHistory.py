@@ -34,9 +34,9 @@ import time
 __all__ = [
     'DOWNLOAD_SPEED_METRIC',
     'DOWNLOAD_USAGE_METRIC',
-    'MetricPoint',
+    'MetricSeriesPoint',
     'MetricSample',
-    'MetricsDataManager',
+    'MetricsHistory',
     'UPLOAD_SPEED_METRIC',
     'UPLOAD_USAGE_METRIC',
 ]
@@ -60,7 +60,7 @@ class MetricSample:
 
 
 @dataclass(frozen=True)
-class MetricPoint:
+class MetricSeriesPoint:
     """Represent one graph-ready raw or aggregated metric value."""
 
     sampledAt: float
@@ -75,7 +75,7 @@ class MetricPoint:
         return self.sampleCount > 1
 
 
-class MetricsDataManager(QtCore.QObject):
+class MetricsHistory(QtCore.QObject):
     """Maintain bounded metric history and aggregate it for consumers."""
 
     historyChanged = QtCore.Signal()
@@ -270,7 +270,7 @@ class MetricsDataManager(QtCore.QObject):
         granularitySeconds=0,
         *,
         now=None,
-    ) -> tuple[MetricPoint, ...]:
+    ) -> tuple[MetricSeriesPoint, ...]:
         """Return graph-ready values aggregated into time buckets."""
         aggregation = self._aggregations.get(metricKey)
 
@@ -325,7 +325,7 @@ class MetricsDataManager(QtCore.QObject):
                 continue
 
             points.append(
-                MetricPoint(
+                MetricSeriesPoint(
                     sampledAt,
                     value,
                     sampleTimes[0],

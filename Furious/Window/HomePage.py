@@ -199,7 +199,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
 
         connectionController = AppConnectionController()
         connectionController.stateChanged.connect(self.handleConnectionStateChanged)
-        connectionController.activeConfigurationChanged.connect(
+        connectionController.activeProfileChanged.connect(
             self.handleActiveConfigurationChanged
         )
 
@@ -226,10 +226,10 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
     @staticmethod
     def activeProfileRemark() -> str:
         """Return the active profile remark without its presentation row index."""
-        configuration = AppConnectionController().activeConfiguration
+        profile = AppConnectionController().activeProfile
 
-        if isinstance(configuration, ServerProfile):
-            return configuration.itemRemark
+        if isinstance(profile, ServerProfile):
+            return profile.itemRemark
 
         return ''
 
@@ -668,7 +668,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
                 continue
 
             if descriptor.separatorBefore and serverActions:
-                serverActions.append(AppQSeperator())
+                serverActions.append(AppQSeparator())
 
             actionText = (
                 _(descriptor.addActionText)
@@ -687,7 +687,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             )
 
         if serverActions:
-            serverActions.append(AppQSeperator())
+            serverActions.append(AppQSeparator())
         serverActions.append(
             AppQAction(
                 _('New Empty Configuration'),
@@ -871,7 +871,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         """Update subs by unique."""
         self.userServersQTableWidget.updateSubsByUnique(unique, httpProxy, **kwargs)
 
-    def appendNewItemByFactory(self, factory: ConfigFactory | ServerProfile):
+    def appendNewItemByFactory(self, factory: CoreConfiguration | ServerProfile):
         """Append new item by factory."""
         self.userServersQTableWidget.appendNewItemByFactory(factory)
 
@@ -907,10 +907,8 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
 
     def setNetworkState(self, success: bool, **kwargs):
         """Set network state."""
-        configuration = AppConnectionController().activeConfiguration
-        remark = (
-            configuration.itemRemark if isinstance(configuration, ServerProfile) else ''
-        )
+        profile = AppConnectionController().activeProfile
+        remark = profile.itemRemark if isinstance(profile, ServerProfile) else ''
 
         if not remark:
             self.resetNetworkState()

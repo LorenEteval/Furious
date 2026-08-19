@@ -136,7 +136,7 @@ class TextEditorWindow(AppQMainWindow):
                 _('Save As...'),
                 callback=lambda: self.saveAsFile(),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Close Window'),
                 icon=bootstrapIcon('window-x.svg'),
@@ -166,7 +166,7 @@ class TextEditorWindow(AppQMainWindow):
                     QtCore.Qt.Key.Key_Z,
                 ),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Cut'),
                 icon=bootstrapIcon('scissors.svg'),
@@ -193,7 +193,7 @@ class TextEditorWindow(AppQMainWindow):
                     QtCore.Qt.Key.Key_V,
                 ),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Select All'),
                 callback=lambda: self.jsonEditor.selectAll(),
@@ -202,7 +202,7 @@ class TextEditorWindow(AppQMainWindow):
                     QtCore.Qt.Key.Key_A,
                 ),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Indent...'),
                 callback=lambda: self.setIndent(),

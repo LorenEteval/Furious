@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
-from Furious.Models import ConfigFactory, Protocol
+from Furious.Models import CoreConfiguration, Protocol
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
@@ -47,7 +47,7 @@ class GuiHy1ItemTextInput(GuiEditorItemTextInput):
 
         self.key = key
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         oldValue = config.get(self.key, '')
         newValue = self.text()
@@ -68,7 +68,7 @@ class GuiHy1ItemTextInput(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             self.setText(config.get(self.key, ''))
@@ -87,7 +87,7 @@ class GuiHy1ItemBasicProtocol(GuiEditorItemTextComboBox):
 
         self.addItems(['', 'udp', 'wechat-video', 'faketcp'])
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         oldProtocol = config.get('protocol', '')
         newProtocol = self.text()
@@ -104,7 +104,7 @@ class GuiHy1ItemBasicProtocol(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             self.setText(config.get('protocol', 'udp'))
@@ -124,7 +124,7 @@ class GuiHy1ItemSpeedUpMbps(GuiEditorItemTextSpinBox):
         # Range
         self.setRange(0, 1048576)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         oldUpMbps = config.get('up_mbps')
         newUpMbps = self.value()
@@ -141,7 +141,7 @@ class GuiHy1ItemSpeedUpMbps(GuiEditorItemTextSpinBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             self.setValue(config.get('up_mbps'))
@@ -161,7 +161,7 @@ class GuiHy1ItemSpeedDownMbps(GuiEditorItemTextSpinBox):
         # Range
         self.setRange(0, 1048576)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         oldDownMbps = config.get('down_mbps')
         newDownMbps = self.value()
@@ -178,7 +178,7 @@ class GuiHy1ItemSpeedDownMbps(GuiEditorItemTextSpinBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             self.setValue(config.get('down_mbps'))
@@ -195,7 +195,7 @@ class GuiHy1ItemTLSInsecure(GuiEditorItemTextSwitch):
         """Initialize the GuiHy1ItemTLSInsecure."""
         super().__init__(*args, **kwargs)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         try:
             oldChecked = config.get('insecure')
@@ -227,7 +227,7 @@ class GuiHy1ItemTLSInsecure(GuiEditorItemTextSwitch):
             # Modified silently
             return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             checked = config['insecure']
@@ -356,11 +356,11 @@ class GuiHy1GroupBoxOther(EditorBinding, AppQGroupBox):
 
         self.setLayout(layout)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         return False
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         pass
 

@@ -54,7 +54,7 @@ class SHA256Worker(QtCore.QObject, QtCore.QRunnable):
         self.finished.emit(hashlib.sha256(self.string).hexdigest())
 
 
-class XrayAssetSHA256DownloadManager(WebGETManager):
+class XrayAssetSHA256DownloadManager(HttpGetManager):
     """Coordinate Xray asset SHA-256 download operations."""
 
     def __init__(self, parent=None, **kwargs):
@@ -124,7 +124,7 @@ class XrayAssetSHA256DownloadManager(WebGETManager):
         )
 
 
-class XrayAssetAssetsDownloadManager(WebGETManager):
+class XrayAssetAssetsDownloadManager(HttpGetManager):
     """Coordinate Xray asset assets download operations."""
 
     def __init__(self, parent=None, **kwargs):

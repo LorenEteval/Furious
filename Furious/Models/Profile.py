@@ -28,7 +28,7 @@ import hashlib
 import json
 import uuid
 
-from .Configuration import ConfigFactory
+from .Configuration import CoreConfiguration
 
 __all__ = [
     'ProfileMetadata',
@@ -180,7 +180,7 @@ class ProfileMetadata:
 class ServerProfile(MutableMapping[str, Any]):
     """Compose profile metadata with a core-neutral connection document."""
 
-    connection: ConfigFactory
+    connection: CoreConfiguration
     metadata: ProfileMetadata = field(default_factory=ProfileMetadata)
     index: int = 0
     deleted: bool = False
@@ -188,7 +188,7 @@ class ServerProfile(MutableMapping[str, Any]):
     @classmethod
     def fromConfiguration(
         cls,
-        configuration: ConfigFactory,
+        configuration: CoreConfiguration,
         metadata: ProfileMetadata | Mapping[str, Any] | None = None,
         *,
         index: int = 0,
@@ -198,8 +198,8 @@ class ServerProfile(MutableMapping[str, Any]):
         if isinstance(configuration, ServerProfile):
             return configuration
 
-        if not isinstance(configuration, ConfigFactory):
-            raise TypeError('profile connection must be a ConfigFactory')
+        if not isinstance(configuration, CoreConfiguration):
+            raise TypeError('profile connection must be a CoreConfiguration')
 
         if isinstance(metadata, ProfileMetadata):
             profileMetadata = copy.deepcopy(metadata)
@@ -244,7 +244,7 @@ class ServerProfile(MutableMapping[str, Any]):
 
         return profile
 
-    def replaceConnection(self, connection: ConfigFactory):
+    def replaceConnection(self, connection: CoreConfiguration):
         """Return this profile's metadata composed with a new connection."""
         return ServerProfile.fromConfiguration(
             connection,

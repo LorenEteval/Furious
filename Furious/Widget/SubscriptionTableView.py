@@ -567,7 +567,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
                 _('Move Down'),
                 callback=lambda: self.moveSelectedGroup(1),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Delete'),
                 callback=lambda: self.deleteSelectedItem(),

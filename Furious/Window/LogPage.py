@@ -261,7 +261,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
                     QtCore.Qt.Key.Key_C,
                 ),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Select All'),
                 callback=lambda: self.textBrowser.selectAll(),

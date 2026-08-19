@@ -72,13 +72,13 @@ class XrayAssetWindow(AppQMainWindow):
                     QtCore.Qt.Key.Key_R,
                 ),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             *openAssetDirectoryActions,
             AppQAction(
                 _('Import From File...'),
                 callback=lambda: self.appendNewItem(),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Exit'),
                 callback=lambda: self.close(),

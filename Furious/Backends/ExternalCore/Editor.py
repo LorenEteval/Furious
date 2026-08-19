@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import GOLDEN_RATIO
 from Furious.Interface import EditorWidgetBinding
-from Furious.Models import ConfigFactory, ServerProfile
+from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Qt import (
     AppQLabel,
     AppQLineEdit,
@@ -131,7 +131,7 @@ class ExternalCorePathInput(EditorWidgetBinding):
         if selected:
             self._input.setText(str(Path(selected).resolve(strict=False)))
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Persist this path without combining it with command arguments."""
         config = _connection(config)
         oldValue = str(config.get(self._key, ''))
@@ -144,7 +144,7 @@ class ExternalCorePathInput(EditorWidgetBinding):
 
         return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load this path from a profile connection mapping."""
         self._input.setText(str(_connection(config).get(self._key, '')))
 
@@ -176,7 +176,7 @@ class ExternalCoreArgumentsInput(EditorWidgetBinding):
         except ValueError as ex:
             raise ValueError('Arguments contain invalid quoting') from ex
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Persist the literal argument vector."""
         config = _connection(config)
         oldValue = config.get('arguments', [])
@@ -189,7 +189,7 @@ class ExternalCoreArgumentsInput(EditorWidgetBinding):
 
         return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the argument vector using reversible quoted syntax."""
         values = _connection(config).get('arguments', [])
 
@@ -237,7 +237,7 @@ class ExternalCoreEnvironmentInput(EditorWidgetBinding):
 
         return result
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Persist validated environment overrides as a mapping."""
         config = _connection(config)
         oldValue = config.get('environment', {})
@@ -250,7 +250,7 @@ class ExternalCoreEnvironmentInput(EditorWidgetBinding):
 
         return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load environment overrides as KEY=VALUE lines."""
         values = _connection(config).get('environment', {})
 
@@ -270,7 +270,7 @@ class ExternalCoreShutdownTimeoutInput(GuiEditorItemTextSpinBox):
 
         self.setRange(1, 60)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Persist the selected shutdown timeout."""
         config = _connection(config)
         oldValue = config.get('shutdownTimeout', 5)
@@ -283,7 +283,7 @@ class ExternalCoreShutdownTimeoutInput(GuiEditorItemTextSpinBox):
 
         return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configured shutdown timeout."""
         value = _connection(config).get('shutdownTimeout', 5)
 
@@ -301,11 +301,11 @@ class ExternalCoreApplicationTun2socksInput(GuiEditorItemTextSwitch):
         """Connect a same-lifetime field-state callback to this control."""
         self._input.toggled.connect(callback)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Persist the explicit application tun2socks preference."""
         return _connection(config).setUseApplicationTun2socks(self.isChecked())
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Restore the application tun2socks preference."""
         self.setChecked(_connection(config).usesApplicationTun2socks())
 
@@ -337,11 +337,11 @@ class ExternalCoreTunRemoteAddressInput(EditorWidgetBinding):
         self._title.setEnabled(enabled)
         self._input.setEnabled(enabled)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Persist the remote destination without interpreting it as a path."""
         return _connection(config).setTunRemoteAddress(self.text())
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Restore the configured TUN remote destination."""
         self._input.setText(_connection(config).tunRemoteAddress())
 
@@ -458,7 +458,7 @@ class ExternalCoreEditor(GuiEditorWidgetQDialog):
             )
         ]
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Persist editor values and normalize both local paths."""
         modified = super().inputToFactory(config)
         connection = _connection(config)

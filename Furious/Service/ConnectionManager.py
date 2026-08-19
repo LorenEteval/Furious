@@ -125,7 +125,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
     def start(
         self,
-        config: ConfigFactory | ServerProfile,
+        config: CoreConfiguration | ServerProfile,
         routing: str,
         exitCallback=None,
         msgCallbackCore=None,
@@ -324,7 +324,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
                         f'error when processing user TUN bypass settings: {ex}'
                     )
 
-                    SystemRoutingTable.Relations.clear()
+                    SystemRoutingTable.managedRoutes.clear()
 
                     return abortStart()
                 else:
@@ -332,14 +332,14 @@ class ConnectionManager(Mixins.CleanupOnExit):
                         if isValidIPAddress(bypass):
                             logger.info(f'processing user TUN bypass IP: {bypass}')
 
-                            SystemRoutingTable.Relations.append([bypass, gateway])
+                            SystemRoutingTable.managedRoutes.append([bypass, gateway])
                         else:
                             logger.error(
                                 f'invalid IP address when processing '
                                 f'user TUN bypass settings: {bypass}'
                             )
 
-                            SystemRoutingTable.Relations.clear()
+                            SystemRoutingTable.managedRoutes.clear()
 
                             return abortStart()
             else:
@@ -356,14 +356,14 @@ class ConnectionManager(Mixins.CleanupOnExit):
                     error, resolved = DnsResolver.resolve(address)
 
                     if error:
-                        SystemRoutingTable.Relations.clear()
+                        SystemRoutingTable.managedRoutes.clear()
 
                         return abortStart(f'DNS resolution failed: {address}')
                     else:
                         for address in resolved:
-                            SystemRoutingTable.Relations.append([address, gateway])
+                            SystemRoutingTable.managedRoutes.append([address, gateway])
                 else:
-                    SystemRoutingTable.Relations.append([address, gateway])
+                    SystemRoutingTable.managedRoutes.append([address, gateway])
 
             # Platform specific implementation
             if PLATFORM == 'Windows':
@@ -442,7 +442,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
                     *list(f'{2 ** (8 - x)}.0.0.0/{x}' for x in range(8, 0, -1)),
                     '198.18.0.0/15',
                 ]:
-                    SystemRoutingTable.Relations.append(
+                    SystemRoutingTable.managedRoutes.append(
                         [address, APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS]
                     )
 
@@ -525,7 +525,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
                 commandBypass = '\n'.join(
                     list(
                         f'ip route add {route(sourceIP, destinationIP)}'
-                        for sourceIP, destinationIP in SystemRoutingTable.Relations
+                        for sourceIP, destinationIP in SystemRoutingTable.managedRoutes
                         if iproute.find(route(sourceIP, destinationIP)) == -1
                     )
                 )

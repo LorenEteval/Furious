@@ -278,15 +278,13 @@ class EndpointInfoService(QtCore.QObject):
         self.httpClient.completed.connect(self._requestCompleted)
 
         stateChanged = getattr(self.controller, 'stateChanged', None)
-        activeConfigurationChanged = getattr(
-            self.controller, 'activeConfigurationChanged', None
-        )
+        activeProfileChanged = getattr(self.controller, 'activeProfileChanged', None)
 
         if stateChanged is not None:
             stateChanged.connect(self._connectionStateChanged)
 
-        if activeConfigurationChanged is not None:
-            activeConfigurationChanged.connect(self._activeConfigurationChanged)
+        if activeProfileChanged is not None:
+            activeProfileChanged.connect(self._activeProfileChanged)
 
         self._syncConnectionState()
 
@@ -362,7 +360,7 @@ class EndpointInfoService(QtCore.QObject):
         self._syncConnectionState()
 
     @QtCore.Slot(object)
-    def _activeConfigurationChanged(self, _configuration):
+    def _activeProfileChanged(self, _profile):
         """Reject late data when the active profile identity changes."""
         self._invalidate()
         self._syncConnectionState()

@@ -558,7 +558,7 @@ class ImportAction(AppQAction):
             menu=AppQMenu(
                 ImportURIFromClipboardAction(),
                 ImportJSONFromClipboardAction(),
-                AppQSeperator(),
+                AppQSeparator(),
                 ImportQRCodeOnTheScreenAction(),
             ),
             useActionGroup=False,

@@ -91,7 +91,7 @@ class XrayActionProvider(ActionProvider):
         # These modules require a fully initialized Furious.Qt package.
         from Furious.Qt import (
             AppQAction,
-            AppQSeperator,
+            AppQSeparator,
             bootstrapIcon,
             showMBoxNewChangesNextTime,
         )
@@ -135,7 +135,7 @@ class XrayActionProvider(ActionProvider):
                 icon=bootstrapIcon('signpost.svg'),
                 callback=showRoutingDialog,
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             useXrayTUNAction,
             AppQAction(
                 _('Customize Xray-core TUN Settings...'),
@@ -144,7 +144,7 @@ class XrayActionProvider(ActionProvider):
                     isConnectionActive=lambda: isCoreActive(XrayCore),
                 ).open(),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Manage Xray-core Asset File...'),
                 callback=assetViewer.show,

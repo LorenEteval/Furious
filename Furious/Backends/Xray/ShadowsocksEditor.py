@@ -50,7 +50,7 @@ class GuiSSItemTextInput(GuiEditorItemTextInput):
 
         self.key = key
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -73,7 +73,7 @@ class GuiSSItemTextInput(GuiEditorItemTextInput):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
@@ -95,7 +95,7 @@ class GuiSSItemBasicPort(GuiEditorItemTextSpinBox):
         # Range
         self.setRange(0, 65535)
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -114,7 +114,7 @@ class GuiSSItemBasicPort(GuiEditorItemTextSpinBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)
@@ -150,7 +150,7 @@ class GuiSSItemBasicMethod(GuiEditorItemTextComboBox):
             ]
         )
 
-    def inputToFactory(self, config: ConfigFactory) -> bool:
+    def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
         proxyOutboundServer = getProxyOutboundServer(config)
 
@@ -169,7 +169,7 @@ class GuiSSItemBasicMethod(GuiEditorItemTextComboBox):
 
             return True
 
-    def factoryToInput(self, config: ConfigFactory):
+    def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
         try:
             proxyOutboundServer = getProxyOutboundServer(config)

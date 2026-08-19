@@ -38,7 +38,7 @@ __all__ = [
     'AppQIcon',
     'AppQAction',
     'AppQActionGroup',
-    'AppQSeperator',
+    'AppQSeparator',
 ]
 
 
@@ -315,9 +315,9 @@ class AppQActionGroup(QActionGroup):
             self.addAction(action)
 
 
-class AppQSeperator(QAction):
-    """Represent app q seperator."""
+class AppQSeparator(QAction):
+    """Represent an application action separator."""
 
     def __init__(self):
-        """Initialize the AppQSeperator."""
+        """Initialize the AppQSeparator."""
         super().__init__()

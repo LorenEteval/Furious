@@ -22,7 +22,7 @@ from __future__ import annotations
 from Furious.Frozenlib import APP
 from Furious.Qt import AppStyleSheet
 from Furious.Qt import gettext as _
-from Furious.Service.MetricsDataManager import MetricPoint
+from Furious.Service.MetricsHistory import MetricSeriesPoint
 
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import QSizePolicy, QToolTip, QWidget
@@ -80,14 +80,14 @@ class MetricsGraphWidget(QWidget):
 
     def setSeries(
         self,
-        points: Iterable[MetricPoint],
+        points: Iterable[MetricSeriesPoint],
         rangeSeconds: float,
         currentTime: float,
         currentWallTime=None,
     ):
         """Replace the prepared series and schedule one repaint."""
         self._points = tuple(
-            point for point in points if isinstance(point, MetricPoint)
+            point for point in points if isinstance(point, MetricSeriesPoint)
         )
         self._pointTimes = tuple(point.sampledAt for point in self._points)
         self._rangeSeconds = max(float(rangeSeconds), 1.0)

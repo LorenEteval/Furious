@@ -149,7 +149,7 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
         self.moveToCenter()
 
 
-class SubscriptionManager(WebGETManager):
+class SubscriptionManager(HttpGetManager):
     """Coordinate subscription operations."""
 
     subscriptionsChanged = QtCore.Signal()
@@ -158,7 +158,7 @@ class SubscriptionManager(WebGETManager):
         """Initialize the SubscriptionManager."""
         actionMessage = kwargs.pop('actionMessage', 'update subs')
 
-        super().__init__(parent, actionMessage=actionMessage, mustCallOnce=False)
+        super().__init__(parent, actionMessage=actionMessage, completionRunsOnce=False)
 
         self.importer = SubscriptionImportService()
         self.synchronizer = SubscriptionSynchronizer()
@@ -212,7 +212,7 @@ class SubscriptionManager(WebGETManager):
 
         self.subscriptionsChanged.emit()
 
-    def mustCall(self, **kwargs):
+    def completionCallback(self, **kwargs):
         """Perform the required completion hook."""
         depthMap = kwargs.get('depthMap', {})
         depthMap['depth'] -= 1
@@ -489,7 +489,7 @@ class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
                 self.finished.emit()
 
 
-class TestDownloadSpeedWorker(WebGETManager):
+class TestDownloadSpeedWorker(HttpGetManager):
     """Run test download speed work in the background."""
 
     progressed = QtCore.Signal()
@@ -527,7 +527,7 @@ class TestDownloadSpeedWorker(WebGETManager):
         self.timeoutTimer.setSingleShot(True)
         self.timeoutTimer.timeout.connect(self.handleTimeout)
 
-    def mustCall(self, **kwargs):
+    def completionCallback(self, **kwargs):
         """Perform the required completion hook."""
         self.timeoutTimer.stop()
         self.finished.emit(self)
@@ -556,9 +556,9 @@ class TestDownloadSpeedWorker(WebGETManager):
             if not self.isFinished():
                 self.abort()
         finally:
-            self.must()
+            self.runCompletionCallback()
 
-    def coreExitCallback(self, config: ConfigFactory, exitcode: int):
+    def coreExitCallback(self, config: CoreConfiguration, exitcode: int):
         """Handle the core exit callback."""
         try:
             if exitcode == CoreRuntime.ExitCode.ConfigurationError.value:
@@ -573,7 +573,7 @@ class TestDownloadSpeedWorker(WebGETManager):
                 self.factory.metadata.speed = f'Core exited {exitcode}'
                 self.sync()
         finally:
-            self.must()
+            self.runCompletionCallback()
 
     def _startCoreRuntime(self, config) -> bool:
         """Prepare and start a download test through its runtime factory."""
@@ -636,7 +636,7 @@ class TestDownloadSpeedWorker(WebGETManager):
                 self.timeoutTimer.start(self.timeout)
         finally:
             if self.networkReply is None:
-                self.must()
+                self.runCompletionCallback()
 
     def successCallback(self, networkReply, **kwargs):
         """Handle a successful network operation."""
@@ -781,7 +781,7 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
                 worker.abort()
 
             worker.coreManager.stopAll()
-            worker.must()
+            worker.runCompletionCallback()
 
     def scheduleDrain(self):
         """Handle schedule drain for the download speed test scheduler."""
@@ -1083,7 +1083,7 @@ class ServerTableVerticalHeader(AppQHeaderView):
 class ServerTableColumn:
     """Describe and render user servers Qt table view table columns."""
 
-    def __init__(self, name: str, func: Callable[[ConfigFactory], str] = None):
+    def __init__(self, name: str, func: Callable[[CoreConfiguration], str] = None):
         """Initialize the ServerTableColumn."""
         self.name = name
         self.func = func
@@ -1597,7 +1597,7 @@ class ServerTableView(
                     QtCore.Qt.Key.Key_Delete,
                 ),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Select All'),
                 callback=lambda: self.selectAll(),
@@ -1606,7 +1606,7 @@ class ServerTableView(
                     QtCore.Qt.Key.Key_A,
                 ),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             self.activateSelectedServerActionRef,
             AppQAction(
                 _('Scroll To Activated Server'),
@@ -1616,7 +1616,7 @@ class ServerTableView(
                     QtCore.Qt.Key.Key_G,
                 ),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Test Ping Latency'),
                 callback=lambda: self.testSelectedItemPingLatency(),
@@ -1657,9 +1657,9 @@ class ServerTableView(
                     QtCore.Qt.Key.Key_R,
                 ),
             ),
-            AppQSeperator(),
+            AppQSeparator(),
             self.advancedActionRef,
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('New Empty Configuration'),
                 callback=lambda: self.newEmptyItem(),
@@ -1669,7 +1669,7 @@ class ServerTableView(
                 ),
             ),
             *importActionsFactory(),
-            AppQSeperator(),
+            AppQSeparator(),
             AppQAction(
                 _('Export Share Link To Clipboard'),
                 callback=lambda: self.exportSelectedItemURI(),
@@ -2607,7 +2607,7 @@ class ServerTableView(
 
         return result
 
-    def appendNewItemByFactory(self, factory: ConfigFactory | ServerProfile):
+    def appendNewItemByFactory(self, factory: CoreConfiguration | ServerProfile):
         """Append new item by factory."""
         factory = ensureProfile(factory)
         index = len(Storage.UserServers())

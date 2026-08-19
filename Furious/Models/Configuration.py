@@ -26,13 +26,13 @@ import functools
 import ujson
 
 __all__ = [
-    'ConfigFactory',
+    'CoreConfiguration',
 ]
 
 
-class ConfigFactory(dict):
+class CoreConfiguration(dict):
     """
-    ConfigurationFactory is how Furious sees the core config.
+    CoreConfiguration is how Furious represents a proxy-core configuration.
 
     It subclasses from dict and can be constructed from:
       1. dictionary -- from existing JSON object
@@ -137,7 +137,7 @@ class ConfigFactory(dict):
 
         return super().__setitem__(item, value)
 
-    def deepcopy(self) -> ConfigFactory:
+    def deepcopy(self) -> CoreConfiguration:
         """Return an independent copy of the configuration."""
         return copy.deepcopy(self)
 

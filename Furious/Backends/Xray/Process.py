@@ -153,7 +153,7 @@ class XrayCore(CoreProcessWorker):
             return '0.0.0'
 
     def launchSpec(
-        self, config: Union[str, ConfigFactory, dict], **kwargs
+        self, config: Union[str, CoreConfiguration, dict], **kwargs
     ) -> Union[CoreLaunchSpec, None]:
         """Build the child-process launch specification."""
         param = self.toJSONString(config)
@@ -170,7 +170,7 @@ class XrayCore(CoreProcessWorker):
             processKwargs=kwargs,
         )
 
-    def start(self, config: Union[str, ConfigFactory, dict], **kwargs) -> bool:
+    def start(self, config: Union[str, CoreConfiguration, dict], **kwargs) -> bool:
         """Start the Xray core."""
         launchSpec = self.launchSpec(config, **kwargs)
 

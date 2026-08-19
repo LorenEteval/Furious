@@ -74,7 +74,7 @@ class RoutingAction(AppQAction):
 
         for option in options:
             if option.separatorBefore and actions:
-                actions.append(AppQSeperator())
+                actions.append(AppQSeparator())
 
             actions.append(
                 RoutingChildAction(
@@ -107,7 +107,7 @@ class RoutingAction(AppQAction):
         actions = self.routingActions(options, routing)
 
         for action in actions:
-            if isinstance(action, AppQSeperator):
+            if isinstance(action, AppQSeparator):
                 self._menu._actions.append(action)
                 self._menu.addSeparator()
             else:

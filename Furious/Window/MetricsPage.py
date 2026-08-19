@@ -28,7 +28,7 @@ from Furious.Service import (
     UPLOAD_SPEED_METRIC,
     UPLOAD_USAGE_METRIC,
     EndpointInfoService,
-    MetricsDataManager,
+    MetricsHistory,
     formatTrafficSpeed,
     formatTrafficUsage,
 )
@@ -114,19 +114,19 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
     def __init__(
         self,
-        manager: MetricsDataManager,
+        history: MetricsHistory,
         parent=None,
         *,
         endpointInfoService=None,
     ):
-        """Initialize the network metrics page around a data-only manager."""
+        """Initialize the network metrics page around its metrics history."""
         super().__init__(parent)
 
-        if not isinstance(manager, MetricsDataManager):
-            raise TypeError('manager must be a MetricsDataManager')
+        if not isinstance(history, MetricsHistory):
+            raise TypeError('history must be a MetricsHistory')
 
         self.setObjectName('MetricsPage')
-        self.manager = manager
+        self.history = history
 
         if endpointInfoService is None:
             self.endpointInfoService = EndpointInfoService(parent=self)
@@ -250,7 +250,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self._timelineTimer.setInterval(self.TimelineRefreshInterval)
         self._timelineTimer.timeout.connect(self._timelineAdvanced)
 
-        self.manager.historyChanged.connect(self._historyChanged)
+        self.history.historyChanged.connect(self._historyChanged)
         self.timeRangeComboBox.currentIndexChanged.connect(self._selectionChanged)
         self.granularityComboBox.currentIndexChanged.connect(self._selectionChanged)
 
@@ -361,7 +361,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
         for graph, metricKey in graphMetrics:
             graph.setSeries(
-                self.manager.series(
+                self.history.series(
                     metricKey,
                     rangeSeconds,
                     granularity,

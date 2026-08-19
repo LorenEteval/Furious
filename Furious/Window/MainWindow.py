@@ -20,10 +20,10 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
-from Furious.Models import ConfigFactory, ServerProfile
+from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Service import MetricsDataManager, PluginNavigationManager
+from Furious.Service import MetricsHistory, PluginNavigationManager
 from Furious.Widget.NavigationView import NavigationView
 from Furious.Window.HomePage import HomePage
 from Furious.Window.LogPage import LogPage
@@ -78,15 +78,15 @@ class MainWindow(AppQMainWindow):
             self.homePage.userServersQTableWidget,
             parent=self.navigationView,
         )
-        self.metricsDataManager = MetricsDataManager(parent=self)
+        self.metricsHistory = MetricsHistory(parent=self)
         self.homePage.trafficStatsManager.sampleChanged.connect(
-            self.metricsDataManager.recordTrafficSample
+            self.metricsHistory.recordTrafficSample
         )
         self.homePage.trafficStatsManager.usageHistoryReset.connect(
-            self.metricsDataManager.clearTrafficUsageHistory
+            self.metricsHistory.clearTrafficUsageHistory
         )
         self.metricsPage = MetricsPage(
-            self.metricsDataManager,
+            self.metricsHistory,
             parent=self.navigationView,
         )
         self.logPage = AppLogPage()
@@ -202,7 +202,7 @@ class MainWindow(AppQMainWindow):
         """Forward a subscription update to the dedicated page controller."""
         self.subscriptionPage.updateSubsByUnique(unique, httpProxy, **kwargs)
 
-    def appendNewItemByFactory(self, factory: ConfigFactory | ServerProfile):
+    def appendNewItemByFactory(self, factory: CoreConfiguration | ServerProfile):
         """Forward a new server profile to the home page."""
         self.homePage.appendNewItemByFactory(factory)
 

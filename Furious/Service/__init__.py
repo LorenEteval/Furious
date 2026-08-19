@@ -40,14 +40,14 @@ from .LogManager import (
     coreLogCallback,
     formatLogEntry,
 )
-from .MetricsDataManager import (
+from .MetricsHistory import (
     DOWNLOAD_SPEED_METRIC,
     DOWNLOAD_USAGE_METRIC,
     UPLOAD_SPEED_METRIC,
     UPLOAD_USAGE_METRIC,
-    MetricPoint,
+    MetricSeriesPoint,
     MetricSample,
-    MetricsDataManager,
+    MetricsHistory,
 )
 from .PluginUIManager import PluginNavigationManager, isCoreActive
 from .SubscriptionImporter import (
@@ -84,9 +84,9 @@ __all__ = [
     'DOWNLOAD_USAGE_METRIC',
     'UPLOAD_SPEED_METRIC',
     'UPLOAD_USAGE_METRIC',
-    'MetricPoint',
+    'MetricSeriesPoint',
     'MetricSample',
-    'MetricsDataManager',
+    'MetricsHistory',
     'PluginNavigationManager',
     'coreLogCallback',
     'SubscriptionImportResult',

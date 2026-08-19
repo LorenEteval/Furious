@@ -680,7 +680,7 @@ class AppQMenu(Mixins.QTranslatable, QMenu):
         self._actions = []
 
         for action in actions:
-            if isinstance(action, AppQSeperator):
+            if isinstance(action, AppQSeparator):
                 self._actions.append(action)
                 self.addSeparator()
             elif isinstance(action, AppQAction):
@@ -1973,7 +1973,7 @@ class AppQToolBar(Mixins.QTranslatable, QToolBar):
         self._actions = []
 
         for action in actions:
-            if isinstance(action, AppQSeperator):
+            if isinstance(action, AppQSeparator):
                 self._actions.append(action)
                 self.addSeparator()
             elif isinstance(action, AppQAction):
