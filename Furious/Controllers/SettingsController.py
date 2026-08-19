@@ -26,6 +26,7 @@ from Furious.Service.TrafficStatsManager import (
     CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
     METRICS_COLLECTION_SETTING,
 )
+from Furious.Service.EndpointInfoService import PROXY_ENDPOINT_INFO_SETTING
 
 from PySide6 import QtCore
 
@@ -33,6 +34,7 @@ __all__ = [
     'APPLICATION_THEME_SETTING',
     'LOG_AUTO_SCROLL_DOWN_SETTING',
     'LOG_AUTO_CLEAR_SETTING',
+    'PROXY_ENDPOINT_INFO_SETTING',
     'SettingsController',
 ]
 
@@ -289,6 +291,16 @@ class SettingsController:
 
         try:
             AppMainWindow().trafficStatsManager.setCollectionEnabled(enabled)
+        except (AttributeError, RuntimeError):
+            pass
+
+    @classmethod
+    def setProxyEndpointInfoEnabled(cls, enabled: bool):
+        """Persist and immediately apply privacy-sensitive endpoint inspection."""
+        cls._setBinary(PROXY_ENDPOINT_INFO_SETTING, enabled)
+
+        try:
+            AppEndpointInfoService().setEnabled(enabled)
         except (AttributeError, RuntimeError):
             pass
 

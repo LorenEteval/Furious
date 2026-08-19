@@ -22,6 +22,14 @@ from __future__ import annotations
 from .ConnectionManager import ConnectionManager
 from .ConnectivityManager import ConnectivityManager
 from .DnsResolver import DnsResolver
+from .EndpointInfoService import (
+    PROXY_ENDPOINT_INFO_SETTING,
+    EndpointInfo,
+    EndpointInfoService,
+    EndpointInfoState,
+    EndpointLocation,
+    ProxyEndpointHttpClient,
+)
 from .LogManager import (
     ALL_LOGS_FILTER,
     APPLICATION_LOG_CATEGORY,
@@ -60,6 +68,12 @@ __all__ = [
     'ConnectionManager',
     'ConnectivityManager',
     'DnsResolver',
+    'EndpointInfo',
+    'EndpointInfoService',
+    'EndpointInfoState',
+    'PROXY_ENDPOINT_INFO_SETTING',
+    'EndpointLocation',
+    'ProxyEndpointHttpClient',
     'ALL_LOGS_FILTER',
     'APPLICATION_LOG_CATEGORY',
     'CORE_LOG_CATEGORY',

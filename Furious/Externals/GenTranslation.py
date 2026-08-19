@@ -328,6 +328,7 @@ TRANSLATION = {
     },
     "Copy": {
         "source": [
+            "Furious.Widget.EndpointInfoWidget",
             "Furious.Window.LogPage",
             "Furious.Window.TextEditorWindow"
         ],
@@ -756,7 +757,8 @@ TRANSLATION = {
     },
     "Refresh": {
         "source": [
-            "Furious.Backends.Xray.AssetWindow"
+            "Furious.Backends.Xray.AssetWindow",
+            "Furious.Widget.EndpointInfoWidget"
         ],
         "RU": "Обновить",
         "ZH": "刷新",
@@ -3060,6 +3062,174 @@ TRANSLATION = {
         ],
         "RU": "Обработка...",
         "ZH": "处理中...",
+        "isReviewed": "True"
+    },
+    "Detecting...": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Определение...",
+        "ZH": "正在检测...",
+        "isReviewed": "True"
+    },
+    "Connect to a proxy to view endpoint information.": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Подключитесь к прокси, чтобы просмотреть информацию о выходном узле.",
+        "ZH": "连接代理后可查看出口信息。",
+        "isReviewed": "True"
+    },
+    "Connecting...": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Подключение...",
+        "ZH": "正在连接...",
+        "isReviewed": "True"
+    },
+    "Proxy endpoint information is unavailable.": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Информация о выходном узле прокси недоступна.",
+        "ZH": "代理出口信息不可用。",
+        "isReviewed": "True"
+    },
+    "Approximate location unavailable": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Приблизительное местоположение недоступно",
+        "ZH": "大致位置信息不可用",
+        "isReviewed": "True"
+    },
+    "Proxy Endpoint Information": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Информация о выходном узле прокси",
+        "ZH": "代理出口信息",
+        "isReviewed": "True"
+    },
+    "Country": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Страна",
+        "ZH": "国家",
+        "isReviewed": "True"
+    },
+    "Approximate Location": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Приблизительное местоположение",
+        "ZH": "大致位置",
+        "isReviewed": "True"
+    },
+    "Organization": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Организация",
+        "ZH": "组织",
+        "isReviewed": "True"
+    },
+    "Location is estimated from the public IP and may be inaccurate.": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Местоположение приблизительно определено по публичному IP и может быть неточным.",
+        "ZH": "位置信息根据公网 IP 估算，可能不准确。",
+        "isReviewed": "True"
+    },
+    "Not available": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Недоступно",
+        "ZH": "不可用",
+        "isReviewed": "True"
+    },
+    "Unknown": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Неизвестно",
+        "ZH": "未知",
+        "isReviewed": "True"
+    },
+    "Endpoint inspection is disabled.": {
+        "source": [
+            "Furious.Widget.EndpointInfoWidget"
+        ],
+        "RU": "Проверка конечной точки отключена.",
+        "ZH": "代理端点检测已禁用。",
+        "isReviewed": "True"
+    },
+    "Enable Proxy Endpoint Information": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Включить информацию о конечной точке прокси",
+        "ZH": "启用代理端点信息",
+        "isReviewed": "True"
+    },
+    "Inspect the active proxy public address and approximate location.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Определять публичный адрес активного прокси и его примерное местоположение.",
+        "ZH": "检测当前代理的公网地址和大致位置。",
+        "isReviewed": "True"
+    },
+    "Proxy Endpoint Information & Privacy": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Информация о выходном узле прокси и конфиденциальность",
+        "ZH": "代理出口信息与隐私",
+        "isReviewed": "True"
+    },
+    "TUN remote address is required when application tun2socks is enabled": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "При включённом Tun2socks приложения необходимо указать удалённый адрес TUN",
+        "ZH": "启用应用程序的Tun2socks时必须填写TUN远程地址",
+        "isReviewed": "True"
+    },
+    "Data usage": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Использование данных",
+        "ZH": "数据使用",
+        "isReviewed": "True"
+    },
+    "<b>Public IP</b><br>\nYour proxy's public IPv4 and IPv6 addresses are checked<br>\nthrough the active proxy connection using Cloudflare,<br>\nwith ipify as a fallback.<br>\nThese services can observe the proxy's public IP.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "<b>Публичный IP-адрес</b><br>\nПубличные IPv4- и IPv6-адреса прокси проверяются<br>\nчерез активное прокси-соединение с помощью Cloudflare,<br>\nа ipify используется как резервный сервис.<br>\nЭти сервисы могут видеть публичный IP-адрес прокси.",
+        "ZH": "<b>公网 IP</b><br>\n系统通过当前代理连接<br>\n使用 Cloudflare 检查代理的公网 IPv4 和 IPv6 地址，<br>\n并以 ipify 作为备用服务。<br>\n这些服务可以看到代理的公网 IP。",
+        "isReviewed": "True"
+    },
+    "<b>Approximate Location</b><br>\nThe detected public IP is sent to ipapi.co<br>\nto estimate country, city, region, and network organization.<br>\nIP-based location can be inaccurate.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "<b>Приблизительное местоположение</b><br>\nОбнаруженный публичный IP-адрес отправляется в ipapi.co<br>\nдля определения страны, города, региона и сетевой организации.<br>\nГеолокация по IP может быть неточной.",
+        "ZH": "<b>大致位置</b><br>\n系统将检测到的公网 IP 发送至 ipapi.co，<br>\n用于估算国家、城市、地区和网络运营组织。<br>\n基于 IP 的位置可能不准确。",
+        "isReviewed": "True"
+    },
+    "<b>Map</b><br>\nMap styles and tiles for the approximate area are loaded<br>\nfrom OpenFreeMap, using OpenStreetMap data.<br>\nOpenFreeMap receives these map requests.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "<b>Карта</b><br>\nСтили и тайлы карты приблизительной области<br>\nзагружаются из OpenFreeMap с использованием данных OpenStreetMap.<br>\nOpenFreeMap получает эти запросы карты.",
+        "ZH": "<b>地图</b><br>\n大致区域的地图样式和图块从 OpenFreeMap 加载，<br>\n并使用 OpenStreetMap 数据。<br>\nOpenFreeMap 会接收这些地图请求。",
         "isReviewed": "True"
     }
 }

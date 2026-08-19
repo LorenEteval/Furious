@@ -30,7 +30,7 @@ from Furious.Plugins import (
 )
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-from Furious.Service import isCoreActive
+from Furious.Service import PROXY_ENDPOINT_INFO_SETTING, isCoreActive
 from Furious.Service.TrafficStatsManager import (
     CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
     METRICS_COLLECTION_SETTING,
@@ -47,6 +47,48 @@ import logging
 __all__ = ['SettingsPage']
 
 logger = logging.getLogger(__name__)
+
+
+def _endpointPrivacyParagraphs():
+    """Return concise translated disclosure text for the current providers."""
+    return (
+        _(
+            '<b>Public IP</b><br>\n'
+            "Your proxy's public IPv4 and IPv6 addresses are checked<br>\n"
+            'through the active proxy connection using Cloudflare,<br>\n'
+            'with ipify as a fallback.<br>\nThese services '
+            "can observe the proxy's public IP."
+        ),
+        _(
+            '<b>Approximate Location</b><br>\n'
+            'The detected public IP is sent to ipapi.co<br>\n'
+            'to estimate country, city, region, and network organization.<br>\n'
+            'IP-based location can be inaccurate.'
+        ),
+        _(
+            '<b>Map</b><br>\n'
+            'Map styles and tiles for the approximate area are loaded<br>\n'
+            'from OpenFreeMap, using OpenStreetMap data.<br>\n'
+            'OpenFreeMap receives these map requests.'
+        ),
+    )
+
+
+def _endpointPrivacyMessageBox(parent=None):
+    """Build one transient Fluent data-usage disclosure."""
+    title = _('Proxy Endpoint Information & Privacy')
+
+    messageBox = AppQMessageBox(
+        icon=AppQMessageBox.Icon.Information,
+        parent=parent,
+        title=title,
+        text=title,
+        buttons=AppQMessageBox.StandardButton.Ok,
+    )
+    messageBox.informativeLabel.setTextFormat(QtCore.Qt.TextFormat.RichText)
+    messageBox.setInformativeText('<br><br>\n'.join(_endpointPrivacyParagraphs()))
+
+    return messageBox
 
 
 def _tunModeTitle() -> str:
@@ -107,17 +149,17 @@ class _SettingsCard(Mixins.ThemeAware, QFrame):
         self.control = control
         self.control.setParent(self)
 
-        textLayout = QVBoxLayout()
-        textLayout.setContentsMargins(0, 0, 0, 0)
-        textLayout.setSpacing(2)
-        textLayout.addWidget(self.titleLabel)
-        textLayout.addWidget(self.descriptionLabel)
+        self.textLayout = QVBoxLayout()
+        self.textLayout.setContentsMargins(0, 0, 0, 0)
+        self.textLayout.setSpacing(2)
+        self.textLayout.addWidget(self.titleLabel)
+        self.textLayout.addWidget(self.descriptionLabel)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(14)
         layout.addWidget(self.iconLabel, 0, QtCore.Qt.AlignmentFlag.AlignTop)
-        layout.addLayout(textLayout, 1)
+        layout.addLayout(self.textLayout, 1)
         layout.addSpacing(16)
         layout.addWidget(self.control, 0, QtCore.Qt.AlignmentFlag.AlignVCenter)
 
@@ -190,6 +232,38 @@ class _ToggleSettingsCard(_SettingsCard):
     def sync(self):
         """Refresh the control from persistent state without applying it."""
         self.checkBox.syncChecked(AppSettings.isStateON_(self.settingName))
+
+
+class _EndpointInfoSettingsCard(_ToggleSettingsCard):
+    """Pair the opt-in endpoint switch with an in-app privacy explanation."""
+
+    def __init__(self, callback, privacyCallback, parent=None):
+        """Initialize one translated privacy-sensitive settings card."""
+        super().__init__(
+            'geo-alt.svg',
+            PROXY_ENDPOINT_INFO_SETTING,
+            callback,
+            _('Enable Proxy Endpoint Information'),
+            _('Inspect the active proxy public address and approximate location.'),
+            parent=parent,
+        )
+
+        self.privacyButton = AppQPushButton(_('Data usage'), parent=self)
+        self.privacyButton.setObjectName('SettingsLinkButton')
+        self.privacyButton.setFlat(True)
+
+        linkFont = self.privacyButton.font()
+        linkFont.setUnderline(True)
+
+        self.privacyButton.setFont(linkFont)
+        self.privacyButton.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.privacyButton.clicked.connect(privacyCallback)
+
+        self.textLayout.addWidget(
+            self.privacyButton,
+            0,
+            QtCore.Qt.AlignmentFlag.AlignLeft,
+        )
 
 
 class _ActionToggleSettingsCard(_SettingsCard):
@@ -640,6 +714,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             self.forceLocalhostCard,
             self.connectionProgressCard,
             self.metricsCollectionCard,
+            self.endpointInfoCard,
             self.clearTrafficUsageCard,
             self.editorWhitespaceCard,
         ) = (
@@ -691,6 +766,10 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 _('Enable Metrics Collection'),
                 _('Collect network speed and traffic history while connected.'),
             ),
+            _EndpointInfoSettingsCard(
+                AppSettingsController().setProxyEndpointInfoEnabled,
+                self._showEndpointPrivacy,
+            ),
             _ToggleSettingsCard(
                 'arrow-repeat.svg',
                 CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
@@ -718,6 +797,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.connectionSection.addCard(self.forceLocalhostCard)
         self.connectionSection.addCard(self.connectionProgressCard)
         self.connectionSection.addCard(self.metricsCollectionCard)
+        self.connectionSection.addCard(self.endpointInfoCard)
         self.connectionSection.addCard(self.clearTrafficUsageCard)
         self.connectionSection.addCard(self.editorWhitespaceCard)
 
@@ -1021,6 +1101,10 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
     def _openTUNSettings(self):
         """Create and retain the existing Tun2socks settings dialog."""
         self._tunSettingsDialogFactory(parent=self).open()
+
+    def _showEndpointPrivacy(self):
+        """Show the end-user disclosure for the active endpoint providers."""
+        _endpointPrivacyMessageBox(self).open()
 
     def setConnectionControlsEnabled(self, enabled: bool):
         """Disable connection-sensitive settings during a transition."""

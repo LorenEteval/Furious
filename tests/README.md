@@ -18,6 +18,7 @@ system proxy, TUN, routing, update network clients, or real proxy cores.
 | External process launch, output, shutdown, threads, TUN metadata | `test_external_core.py` |
 | Xray/Hysteria2 native-TUN ownership and proxy-only stripping | `test_native_tun_semantics.py` |
 | Rolling metrics, stable buckets, lazy rendering, and hover | `test_metrics_behavior.py` |
+| Proxy-only endpoint discovery, caching, and presentation | `test_endpoint_info.py` |
 | Settings sandbox and navigation overlay behavior | `test_isolation_and_navigation.py` |
 | Editor mappings, lazy log rendering, routing/message-box/connection UI | `test_ui_behavior.py` |
 | Direct Qt ownership and destruction across independent UI families | `test_qt_lifetime.py` |

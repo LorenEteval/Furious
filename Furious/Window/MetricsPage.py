@@ -27,10 +27,12 @@ from Furious.Service import (
     DOWNLOAD_USAGE_METRIC,
     UPLOAD_SPEED_METRIC,
     UPLOAD_USAGE_METRIC,
+    EndpointInfoService,
     MetricsDataManager,
     formatTrafficSpeed,
     formatTrafficUsage,
 )
+from Furious.Widget.EndpointInfoWidget import EndpointInfoWidget
 from Furious.Widget.MetricsGraph import MetricsGraphWidget
 
 from PySide6 import QtCore
@@ -106,7 +108,13 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
     DefaultTimeRange = 15 * 60
     DefaultGranularity = 0
 
-    def __init__(self, manager: MetricsDataManager, parent=None):
+    def __init__(
+        self,
+        manager: MetricsDataManager,
+        parent=None,
+        *,
+        endpointInfoService=None,
+    ):
         """Initialize the network metrics page around a data-only manager."""
         super().__init__(parent)
 
@@ -115,6 +123,12 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
         self.setObjectName('MetricsPage')
         self.manager = manager
+
+        if endpointInfoService is None:
+            self.endpointInfoService = EndpointInfoService(parent=self)
+        else:
+            self.endpointInfoService = endpointInfoService
+
         self._dirty = True
         self._renderRevision = 0
 
@@ -153,6 +167,16 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             self.uploadUsageGraph,
         )
 
+        self.endpointInfoWidget = EndpointInfoWidget(
+            self.endpointInfoService,
+            parent=self,
+        )
+        self.endpointInfoWidget.setVisible(self.endpointInfoService.enabled)
+
+        self.endpointInfoService.enabledChanged.connect(
+            self._endpointInfoEnabledChanged
+        )
+
         controlsLayout = QHBoxLayout()
         controlsLayout.setContentsMargins(0, 0, 0, 0)
         controlsLayout.setSpacing(8)
@@ -172,6 +196,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         contentLayout.addLayout(controlsLayout)
         contentLayout.addWidget(self.downloadSection, 1)
         contentLayout.addWidget(self.uploadSection, 1)
+        contentLayout.addWidget(self.endpointInfoWidget)
 
         self.scrollArea = QScrollArea()
         self.scrollArea.setObjectName('MetricsScrollArea')
@@ -254,6 +279,16 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self._dirty = True
         self._scheduleRender()
 
+    @QtCore.Slot(bool)
+    def setEndpointInfoEnabled(self, enabled: bool):
+        """Apply the persisted endpoint-inspection preference to the page service."""
+        self.endpointInfoService.setEnabled(enabled)
+
+    @QtCore.Slot(bool)
+    def _endpointInfoEnabledChanged(self, enabled: bool):
+        """Remove the privacy-sensitive section entirely while it is disabled."""
+        self.endpointInfoWidget.setVisible(enabled)
+
     @QtCore.Slot()
     def _selectionChanged(self):
         """Refresh visible graphs after range or granularity selection."""
@@ -312,6 +347,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
         self._dirty = True
         self._timelineTimer.start()
+        self.endpointInfoService.setPageVisible(True)
         self._scheduleRender()
 
     def hideEvent(self, event):
@@ -319,12 +355,14 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self._renderTimer.stop()
         self._timelineTimer.stop()
         self._dirty = True
+        self.endpointInfoService.setPageVisible(False)
 
         super().hideEvent(event)
 
     def themeChangedCallback(self, theme: str):
         """Repaint custom graphs for a theme change only when visible."""
         self._dirty = True
+        self.endpointInfoWidget.themeChangedCallback(theme)
         self._scheduleRender()
 
     def retranslate(self):
@@ -349,6 +387,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             _('Upload Speed'),
             _('Upload Traffic Usage'),
         )
+        self.endpointInfoWidget.retranslate()
 
         self._populateComboBox(
             self.timeRangeComboBox,

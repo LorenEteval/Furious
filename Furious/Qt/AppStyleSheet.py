@@ -479,6 +479,18 @@ class AppStyleSheet:
                 min-width: 82px;
             }}
 
+            QPushButton#SettingsLinkButton {{
+                min-height: 20px;
+                padding: 0;
+                border: none;
+                background-color: transparent;
+                color: {palette['accent']};
+            }}
+
+            QPushButton#SettingsLinkButton:hover {{
+                color: {palette['text_strong']};
+            }}
+
             QCheckBox#SettingsToggle::indicator {{
                 width: 34px;
                 height: 18px;
@@ -526,6 +538,41 @@ class AppStyleSheet:
             QLabel#MetricCardTitle {{
                 color: {palette['muted']};
                 font-weight: 600;
+            }}
+
+            QLabel#EndpointStatusLabel {{
+                color: {palette['text_strong']};
+                font-weight: 600;
+            }}
+
+            QWidget#EndpointStatusWidget {{
+                background-color: transparent;
+            }}
+
+            QLabel#EndpointFieldName {{
+                color: {palette['muted']};
+            }}
+
+            QLabel#EndpointFieldValue {{
+                color: {palette['text_strong']};
+            }}
+
+            QWidget#EndpointFieldValueContainer {{
+                background-color: transparent;
+            }}
+
+            QLabel#EndpointNoteLabel {{
+                color: {palette['muted']};
+            }}
+
+            QPushButton#EndpointCopyButton {{
+                min-width: 34px;
+                padding: 0;
+            }}
+
+            QWidget#EndpointMapWidget {{
+                border: none;
+                background-color: transparent;
             }}
 
             QWidget#MetricsGraphWidget {{
