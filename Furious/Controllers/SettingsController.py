@@ -217,14 +217,19 @@ class SettingsController:
         cls._setBinary('HideDockIcon', enabled)
 
     @classmethod
-    def setStartupOnBoot(cls, enabled: bool):
-        """Apply the platform startup registration preference."""
+    def setStartupOnBoot(cls, enabled: bool) -> bool:
+        """Persist startup preference only after host registration succeeds."""
         if enabled:
-            StartupOnBoot.on_()
+            success = StartupOnBoot.on_()
         else:
-            StartupOnBoot.off()
+            success = StartupOnBoot.off()
+
+        if not success:
+            return False
 
         cls._setBinary('StartupOnBoot', enabled)
+
+        return True
 
     @classmethod
     def setPowerSaveMode(cls, enabled: bool):
@@ -290,7 +295,7 @@ class SettingsController:
         cls._setBinary(METRICS_COLLECTION_SETTING, enabled)
 
         try:
-            AppMainWindow().trafficStatsManager.setCollectionEnabled(enabled)
+            AppTrafficStatsManager().setCollectionEnabled(enabled)
         except (AttributeError, RuntimeError):
             pass
 
