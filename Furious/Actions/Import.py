@@ -521,7 +521,7 @@ class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
             for barcode in barcodes:
                 data = barcode.text
 
-                logger.debug(f'found QR code on monitor \'{index}\': {data}')
+                logger.debug(f'found QR code on monitor \'{index}\'')
 
                 uris.append(data)
 
