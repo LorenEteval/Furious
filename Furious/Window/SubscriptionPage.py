@@ -20,13 +20,34 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import APP, Mixins, PySide6Legacy
-from Furious.Qt import *
+from Furious.Qt import (
+    AppQComboBox,
+    AppQDialog,
+    AppQDialogButtonBox,
+    AppQLabel,
+    AppQLineEdit,
+    AppQMessageBox,
+    AppQPushButton,
+    AppQSwitch,
+    AppQTransientDialog,
+    AppStyleSheet,
+    bootstrapIcon,
+    bootstrapIconWhite,
+)
 from Furious.Qt import gettext as _
 from Furious.Repository import Storage
 from Furious.Widget.SubscriptionTableView import SubscriptionTableView
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import *
+from PySide6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+)
 
 from urllib.parse import urlsplit
 
@@ -235,6 +256,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
         self.table = SubscriptionTableView(
             deleteUniqueCallback=self._deleteProfilesForSubscription,
+            subscriptionManager=self.serverTable.subsManager,
             parent=self,
         )
         self.table.doubleClicked.connect(self._editDoubleClicked)

@@ -19,15 +19,36 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import *
+from Furious.Frozenlib import (
+    PLATFORM,
+    AppFontName,
+    AppMainWindow,
+    AppSettings,
+    Mixins,
+    PySide6Legacy,
+    registerAppSettings,
+)
 from Furious.Models import UJSONEncoder
-from Furious.Repository import *
-from Furious.Qt import *
+from Furious.Repository import Storage, SubscriptionGroup
+from Furious.Service import (
+    SUBSCRIPTION_AUTO_UPDATE_OPTIONS,
+    SUBSCRIPTION_PROXY_OPTIONS,
+    resolveSubscriptionProxy,
+)
+from Furious.Qt import (
+    MBoxQuestionDelete,
+    AppQAction,
+    AppQHeaderView,
+    AppQMenu,
+    AppQMessageBox,
+    AppQSeparator,
+    AppQTableView,
+)
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+from PySide6.QtGui import QFont, QStandardItemModel
+from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTableView
 
 from typing import Union, Callable
 
@@ -472,29 +493,10 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
     groupsChanged = QtCore.Signal()
     RowHeight = 42
 
-    AutoUpdateOptions = {
-        '': None,
-        'Never': None,
-        'Every 5 mins': 5 * 60 * 1000,
-        'Every 10 mins': 10 * 60 * 1000,
-        'Every 15 mins': 15 * 60 * 1000,
-        'Every 30 mins': 30 * 60 * 1000,
-        'Every 45 mins': 45 * 60 * 1000,
-        'Every 1 hour': 1 * 60 * 60 * 1000,
-        'Every 2 hours': 2 * 60 * 60 * 1000,
-        'Every 3 hours': 3 * 60 * 60 * 1000,
-        'Every 6 hours': 6 * 60 * 60 * 1000,
-        'Every 8 hours': 8 * 60 * 60 * 1000,
-        'Every 10 hours': 10 * 60 * 60 * 1000,
-        'Every 12 hours': 12 * 60 * 60 * 1000,
-        'Every 24 hours': 24 * 60 * 60 * 1000,
-    }
-
+    AutoUpdateOptions = SUBSCRIPTION_AUTO_UPDATE_OPTIONS
     ProxyOptions = {
-        '': lambda: None,
-        'Use current proxy': lambda: Storage.Extras.UserHttpProxy(),
-        'Force proxy': lambda: '127.0.0.1:10809',
-        'No proxy': lambda: None,
+        option: functools.partial(resolveSubscriptionProxy, option)
+        for option in SUBSCRIPTION_PROXY_OPTIONS
     }
 
     Headers = [
@@ -522,14 +524,13 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
     def __init__(self, *args, **kwargs):
         """Initialize the subscription table view."""
-        self.deleteUniqueCallback = kwargs.pop('deleteUniqueCallback', None)
+        self.deleteUniqueCallback, self.subsManager = (
+            kwargs.pop('deleteUniqueCallback', None),
+            kwargs.pop('subscriptionManager', None),
+        )
 
         super().__init__(*args, **kwargs)
 
-        self.timers = list(
-            QtCore.QTimer(self) for _index in range(len(Storage.UserSubs()))
-        )
-        self.timerConnected = list(False for i in range(len(Storage.UserSubs())))
         self.sourceModel = UserSubsTableModel(self.Headers, self.ItemKey, parent=self)
         self.setModel(self.sourceModel)
 
@@ -627,30 +628,8 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
                     Storage.removeSubscriptionGroup(deleteUnique)
 
-                    # Begin timer cleanup
-                    qtimer = self.timers[deleteIndex]
-
-                    assert isinstance(qtimer, QtCore.QTimer)
-
-                    if self.timerConnected[deleteIndex]:
-                        try:
-                            qtimer.timeout.disconnect()
-                        except Exception as ex:
-                            # Any non-exit exceptions
-
-                            # Disconnect all previous signals if possible
-                            pass
-
-                    qtimer.stop()
-                    # End timer cleanup
-
-                    # Remove timer from list
-                    self.timers.pop(deleteIndex)
-                    self.timerConnected.pop(deleteIndex)
-
-                    # The table is the timer's Qt parent, so dropping the list
-                    # reference alone would retain it until application exit.
-                    qtimer.deleteLater()
+                    if self.subsManager is not None:
+                        self.subsManager.removeAutoUpdate(deleteUnique)
 
                     self.sourceModel.endRemoveRows()
 
@@ -711,100 +690,12 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         Storage.UserSubs().clear()
         Storage.UserSubs().update(items)
 
-        timer = self.timers.pop(source)
-
-        timerConnected = self.timerConnected.pop(source)
-
-        self.timers.insert(target, timer)
-        self.timerConnected.insert(target, timerConnected)
-
         for order, (unique, value) in enumerate(items):
             value['sortOrder'] = order
 
         self.sourceModel.layoutChanged.emit()
         self.selectRow(target)
         self.groupsChanged.emit()
-
-    def _configureAutoUpdate(self, row: int):
-        """Configure one subscription timer independently of table columns."""
-        unique = list(Storage.UserSubs().keys())[row]
-        subsob = Storage.UserSubs()[unique]
-
-        remark, webURL, autoUpdate, proxy = (
-            subsob['remark'],
-            subsob['webURL'],
-            subsob.get('autoupdate', ''),
-            subsob.get('proxy', ''),
-        )
-
-        try:
-            timems = self.AutoUpdateOptions[autoUpdate]
-        except KeyError:
-            # Invalid key. Reset
-            logger.error(f'\'{autoUpdate}\' is not in auto update options. Reset')
-
-            autoUpdate = ''
-
-            # Write to subs object
-            subsob['autoupdate'] = autoUpdate
-
-            timems = self.AutoUpdateOptions[autoUpdate]
-
-        if proxy not in self.ProxyOptions:
-            logger.error(f'\'{proxy}\' is not in proxy options. Reset')
-
-            subsob['proxy'] = ''
-
-        qtimer = self.timers[row]
-
-        assert isinstance(qtimer, QtCore.QTimer)
-
-        if timems is not None and subsob.get('enabled', True):
-            logger.info(
-                f'start auto update job for subscription ({remark}, {webURL}). '
-                f'Interval is {timems // (60 * 1000)} mins'
-            )
-
-            def getHttpProxy(_subsob):
-                """Return HTTP proxy."""
-                return self.ProxyOptions[_subsob.get('proxy', '')]()
-
-            if self.timerConnected[row]:
-                try:
-                    qtimer.timeout.disconnect()
-                except Exception as ex:
-                    # Any non-exit exceptions
-
-                    # Disconnect all previous signals if possible
-                    pass
-
-            qtimer.timeout.connect(
-                functools.partial(
-                    self.updateSubsByUnique,
-                    unique=unique,
-                    httpProxy=functools.partial(getHttpProxy, subsob),
-                )
-            )
-            self.timerConnected[row] = True
-            qtimer.start(timems)
-        else:
-            logger.info(f'stop auto update job for subscription ({remark}, {webURL})')
-
-            if self.timerConnected[row]:
-                try:
-                    qtimer.timeout.disconnect()
-                except Exception as ex:
-                    # Any non-exit exceptions
-
-                    # Disconnect all previous signals if possible
-                    pass
-
-                self.timerConnected[row] = False
-
-            qtimer.stop()
-
-        # Write to subs object
-        subsob['autoupdate'] = autoUpdate
 
     def flushItem(self, row, column, item):
         """Refresh item."""
@@ -815,8 +706,6 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
     def flushRow(self, row, item):
         """Refresh row."""
-        self._configureAutoUpdate(row)
-
         for column in list(range(self.sourceModel.columnCount())):
             self.flushItem(row, column, item)
 
@@ -832,6 +721,9 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
         for index, key in enumerate(Storage.UserSubs()):
             self.flushRow(index, Storage.UserSubs()[key])
+
+        if self.subsManager is not None:
+            self.subsManager.refreshAutoUpdates()
 
     def appendNewItem(self, **kwargs):
         """Append new item."""
@@ -881,17 +773,14 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         else:
             row = self.sourceModel.rowCount()
 
-            # Add timer
-            self.timers.append(QtCore.QTimer(self))
-            self.timerConnected.append(False)
-
             self.sourceModel.beginInsertRows(QtCore.QModelIndex(), row, row)
-
             Storage.upsertSubscriptionGroup(group)
-
             self.sourceModel.endInsertRows()
 
             self.flushRow(row, subsob[unique])
+
+        if self.subsManager is not None:
+            self.subsManager.refreshAutoUpdates()
 
         self.groupsChanged.emit()
 

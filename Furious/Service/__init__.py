@@ -55,6 +55,13 @@ from .SubscriptionImporter import (
     SubscriptionImportService,
     SubscriptionSource,
 )
+from .SubscriptionManager import (
+    SUBSCRIPTION_AUTO_UPDATE_OPTIONS,
+    SUBSCRIPTION_PROXY_OPTIONS,
+    SubscriptionManager,
+    SubscriptionUpdateBatch,
+    resolveSubscriptionProxy,
+)
 from .SubscriptionSync import SubscriptionSyncResult, SubscriptionSynchronizer
 from .TrafficStatsManager import (
     TrafficStatsSample,
@@ -92,6 +99,10 @@ __all__ = [
     'SubscriptionImportResult',
     'SubscriptionImportService',
     'SubscriptionSource',
+    'SubscriptionManager',
+    'SubscriptionUpdateBatch',
+    'SUBSCRIPTION_AUTO_UPDATE_OPTIONS',
+    'SUBSCRIPTION_PROXY_OPTIONS',
     'SubscriptionSyncResult',
     'SubscriptionSynchronizer',
     'TrafficStatsSample',
@@ -101,4 +112,5 @@ __all__ = [
     'formatTrafficUsage',
     'formatLogEntry',
     'isCoreActive',
+    'resolveSubscriptionProxy',
 ]

@@ -33,12 +33,11 @@ from Furious.Qt import *
 from Furious.Qt import gettext as _
 from Furious.Service import (
     ConnectionManager,
-    SubscriptionImportService,
-    SubscriptionSource,
-    SubscriptionSynchronizer,
+    SubscriptionManager,
+    SubscriptionUpdateBatch,
     coreLogCallback,
 )
-from Furious.Widget.WaitingSpinner import *
+from Furious.Widget.WaitingSpinner import WaitingSpinner
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -52,7 +51,6 @@ import logging
 import icmplib
 import functools
 import collections
-import datetime
 
 __all__ = ['ServerTableView']
 
@@ -147,251 +145,6 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
         # Ignore informative text, buttons
 
         self.moveToCenter()
-
-
-class SubscriptionManager(HttpGetManager):
-    """Coordinate subscription operations."""
-
-    subscriptionsChanged = QtCore.Signal()
-
-    def __init__(self, parent, **kwargs):
-        """Initialize the SubscriptionManager."""
-        actionMessage = kwargs.pop('actionMessage', 'update subs')
-
-        super().__init__(parent, actionMessage=actionMessage, completionRunsOnce=False)
-
-        self.importer = SubscriptionImportService()
-        self.synchronizer = SubscriptionSynchronizer()
-
-    def handleSynchronizationResults(self, **kwargs):
-        """Commit successful group-scoped synchronization results."""
-        successArgs = kwargs.pop('successArgs', list())
-        failureArgs = kwargs.pop('failureArgs', list())
-        showMessageBox = kwargs.pop('showMessageBox', True)
-
-        for param in successArgs:
-            profiles, unique = param['profiles'], param['unique']
-
-            parent = self.parent()
-
-            if isinstance(parent, ServerTableView):
-                result = parent.synchronizeSubscriptionProfiles(
-                    unique,
-                    profiles,
-                    self.synchronizer,
-                )
-                param['syncResult'] = result
-
-                group = Storage.SubscriptionGroup(unique)
-
-                if group is not None:
-                    group.lastDecoderId = param.get('decoderId', '')
-                    group.lastSyncStatus = 'success'
-                    group.lastSyncError = ''
-                    group.profileCount = len(result.profileIds)
-
-                    Storage.upsertSubscriptionGroup(group)
-
-        if showMessageBox:
-            mbox = MBoxUpdateSubsInfo(
-                successArgs=successArgs,
-                failureArgs=failureArgs,
-                parent=kwargs.pop('parent', None),
-            )
-
-            if successArgs:
-                mbox.setIcon(AppQMessageBox.Icon.Information)
-            else:
-                mbox.setIcon(AppQMessageBox.Icon.Critical)
-
-            mbox.setText(mbox.customText())
-            mbox.setColumnMinWidth()
-
-            # Show the MessageBox asynchronously
-            mbox.open()
-
-        self.subscriptionsChanged.emit()
-
-    def completionCallback(self, **kwargs):
-        """Perform the required completion hook."""
-        depthMap = kwargs.get('depthMap', {})
-        depthMap['depth'] -= 1
-
-        if depthMap['depth'] == 0:
-            self.handleSynchronizationResults(**kwargs)
-
-    def successCallback(self, networkReply, **kwargs):
-        """Handle a successful network operation."""
-        remark = kwargs.get('remark', '')
-        webURL = kwargs.get('webURL', '')
-        successArgs = kwargs.get('successArgs', list())
-        failureArgs = kwargs.get('failureArgs', list())
-
-        data = bytes(networkReply.readAll().data())
-        source = SubscriptionSource(
-            kwargs.get('unique', ''),
-            webURL,
-            remark,
-            kwargs.get('decoderId'),
-        )
-        result = self.importer.importPayload(data, source)
-
-        profileFilter = str(kwargs.get('filter', '')).strip()
-
-        if result is not None and profileFilter:
-            try:
-                pattern = re.compile(profileFilter, re.IGNORECASE)
-            except re.error as ex:
-                logger.error(
-                    f'invalid subscription filter for {remark!r}: {ex}. '
-                    f'Importing all profiles'
-                )
-            else:
-                result = type(result)(
-                    result.decoderId,
-                    tuple(
-                        profile
-                        for profile in result.profiles
-                        if pattern.search(str(getattr(profile, 'itemRemark', '')))
-                    ),
-                    result.rejectedItems,
-                )
-
-        if result is None or not result.profiles:
-            failureArgs.append({'error': 'UnsupportedSubscriptionFormat', **kwargs})
-
-            group = Storage.SubscriptionGroup(kwargs.get('unique', ''))
-
-            if group is not None:
-                group.lastSyncStatus = 'error'
-                group.lastSyncError = 'UnsupportedSubscriptionFormat'
-                Storage.upsertSubscriptionGroup(group)
-        else:
-            logger.info(
-                f'update subs ({remark}, {webURL}) success. '
-                f'Got {len(result.profiles)} profiles from {result.decoderId!r}; '
-                f'rejected {result.rejectedItems}'
-            )
-
-            successArgs.append(
-                {
-                    **kwargs,
-                    'profiles': result.profiles,
-                    'decoderId': result.decoderId,
-                }
-            )
-
-            unique = kwargs.get('unique', '')
-
-            if unique in Storage.UserSubs():
-                group = Storage.SubscriptionGroup(unique)
-
-                if group is not None:
-                    group.lastUpdated = (
-                        datetime.datetime.now()
-                        .astimezone()
-                        .isoformat(timespec='seconds')
-                    )
-                    group.lastDecoderId = result.decoderId
-                    Storage.upsertSubscriptionGroup(group)
-
-    def failureCallback(self, networkReply, **kwargs):
-        """Handle a failed network operation."""
-        remark = kwargs.get('remark', '')
-        webURL = kwargs.get('webURL', '')
-        successArgs = kwargs.get('successArgs', list())
-        failureArgs = kwargs.get('failureArgs', list())
-
-        logger.error(
-            f'update subs ({remark}, {webURL}) failed: {networkReply.errorString()}'
-        )
-
-        failureArgs.append({'error': networkReply.errorString(), **kwargs})
-
-        group = Storage.SubscriptionGroup(kwargs.get('unique', ''))
-
-        if group is not None:
-            group.lastSyncStatus = 'error'
-            group.lastSyncError = networkReply.errorString()
-            Storage.upsertSubscriptionGroup(group)
-
-    def updateSubsByWebGET(self, **kwargs):
-        """Update subs by web get."""
-        url = kwargs.get('webURL', '')
-
-        if not url:
-            # Has url empty check
-            return
-
-        logActionMessage = kwargs.pop('logActionMessage', False)
-
-        # Some providers reject the default Qt User-Agent (e.g. with 503),
-        # so identify ourselves explicitly.
-        request = QNetworkRequest(QtCore.QUrl(url))
-        userAgent = str(kwargs.get('userAgent', '')).strip()
-        request.setRawHeader(
-            b'User-Agent',
-            (userAgent or f'{APPLICATION_NAME}/{APPLICATION_VERSION}').encode(),
-        )
-
-        self.webGET(request, logActionMessage=logActionMessage, **kwargs)
-
-    def updateSubsByUnique(self, unique: str, **kwargs):
-        """Update subs by unique."""
-        subscription = Storage.UserSubs().get(unique)
-
-        if (
-            not subscription
-            or not subscription.get('enabled', True)
-            or not subscription.get('webURL')
-        ):
-            return
-
-        group = Storage.SubscriptionGroup(unique)
-
-        if group is not None:
-            group.lastSyncStatus = 'syncing'
-            group.lastSyncError = ''
-            Storage.upsertSubscriptionGroup(group)
-
-        depthMap = kwargs.get('depthMap', {'depth': 1})
-        successArgs = kwargs.get('successArgs', list())
-        failureArgs = kwargs.get('failureArgs', list())
-
-        if kwargs.get('depthMap') is None:
-            kwargs['depthMap'] = depthMap
-
-        if kwargs.get('successArgs') is None:
-            kwargs['successArgs'] = successArgs
-
-        if kwargs.get('failureArgs') is None:
-            kwargs['failureArgs'] = failureArgs
-
-        self.updateSubsByWebGET(unique=unique, **Storage.UserSubs()[unique], **kwargs)
-
-    def updateSubs(self, **kwargs):
-        """Update subs."""
-        enabledKeys = tuple(
-            key
-            for key, subscription in Storage.UserSubs().items()
-            if subscription.get('enabled', True) and subscription.get('webURL')
-        )
-
-        if not enabledKeys:
-            return
-
-        depthMap = {'depth': len(enabledKeys)}
-        successArgs = list()
-        failureArgs = list()
-
-        for key in enabledKeys:
-            self.updateSubsByUnique(
-                key,
-                depthMap=depthMap,
-                successArgs=successArgs,
-                failureArgs=failureArgs,
-                **kwargs,
-            )
 
 
 class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
@@ -1498,7 +1251,10 @@ class ServerTableView(
         self.setModel(self.proxyModel)
 
         self.subsManager = SubscriptionManager(parent=self)
-        self.subsManager.subscriptionsChanged.connect(self.flushAll)
+        self.subsManager.subscriptionsChanged.connect(self._handleSubscriptionsChanged)
+        self.subsManager.updateCompleted.connect(
+            self._handleSubscriptionUpdateCompleted
+        )
 
         self.downloadSpeedScheduler = DownloadSpeedTestScheduler(
             self,
@@ -2544,6 +2300,8 @@ class ServerTableView(
 
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
         """Update subs by unique."""
+        kwargs.pop('parent', None)
+
         self.subsManager.configureHttpProxy(httpProxy)
         self.subsManager.updateSubsByUnique(unique, **kwargs)
 
@@ -2551,61 +2309,43 @@ class ServerTableView(
         """Update subs."""
         self.selectionModel().clearSelection()
 
+        kwargs.pop('parent', None)
+
         self.subsManager.configureHttpProxy(httpProxy)
         self.subsManager.updateSubs(**kwargs)
 
-    def synchronizeSubscriptionProfiles(
-        self,
-        unique: str,
-        profiles,
-        synchronizer: SubscriptionSynchronizer | None = None,
-    ):
-        """Apply one group update without replacing unrelated profiles."""
-        synchronizer = synchronizer or SubscriptionSynchronizer()
-        servers = Storage.UserServers()
-        activatedIndex = Storage.UserActivatedItemIndex()
-        activeProfileId = ''
-        activeWasManagedByGroup = False
-
-        if 0 <= activatedIndex < len(servers):
-            active = servers[activatedIndex]
-            activeProfileId = active.metadata.profileId
-            activeWasManagedByGroup = (
-                active.itemSubscription == unique and active.itemSubscriptionManaged
-            )
-
-        wasConnected = AppConnectionController().isConnected()
-
+    @QtCore.Slot()
+    def _handleSubscriptionsChanged(self):
+        """Refresh the table after the service commits repository changes."""
         self.sourceModel.beginResetModel()
+        self.sourceModel.endResetModel()
+        self.sourceModel.refreshIndexes()
 
-        try:
-            result = synchronizer.reconcile(servers, profiles, unique)
-        finally:
-            self.sourceModel.endResetModel()
+        self.proxyModel.invalidate()
 
-        newActivatedIndex = next(
-            (
-                index
-                for index, profile in enumerate(servers)
-                if profile.metadata.profileId == activeProfileId
-            ),
-            -1,
-        )
-
-        AppSettings.set('ActivatedItemIndex', str(newActivatedIndex))
+        self.flushAll()
 
         self.activeServerChanged.emit()
 
-        self.sourceModel.refreshIndexes()
-        self.proxyModel.invalidate()
+    @QtCore.Slot(object)
+    def _handleSubscriptionUpdateCompleted(self, batch: SubscriptionUpdateBatch):
+        """Present one semantic subscription update result batch."""
+        if not batch.showMessageBox:
+            return
 
-        if wasConnected and activeProfileId:
-            if newActivatedIndex < 0 and activeWasManagedByGroup:
-                AppConnectionController().startDisconnection()
-            elif activeProfileId in result.changedProfileIds:
-                AppConnectionController().startReconnection()
-
-        return result
+        mbox = MBoxUpdateSubsInfo(
+            successArgs=list(batch.successful),
+            failureArgs=list(batch.failed),
+            parent=self.window(),
+        )
+        mbox.setIcon(
+            AppQMessageBox.Icon.Information
+            if batch.successful
+            else AppQMessageBox.Icon.Critical
+        )
+        mbox.setText(mbox.customText())
+        mbox.setColumnMinWidth()
+        mbox.open()
 
     def appendNewItemByFactory(self, factory: CoreConfiguration | ServerProfile):
         """Append new item by factory."""
