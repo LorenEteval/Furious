@@ -68,8 +68,44 @@ def getAppConstantsByName(name):
 APPLICATION_SOURCE_CODE_PATH = getAppSourceCodePath(PACKAGE_DIR)
 
 
+def _staticTranslationSource(node):
+    """Return a static translation key, including constant-only f-strings."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+
+    if not isinstance(node, ast.JoinedStr):
+        return None
+
+    parts = []
+
+    for value in node.values:
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            parts.append(value.value)
+
+            continue
+
+        if (
+            isinstance(value, ast.FormattedValue)
+            and isinstance(value.value, ast.Name)
+            and value.conversion == -1
+            and value.format_spec is None
+        ):
+            try:
+                getAppConstantsByName(value.value.id)
+            except AttributeError:
+                return None
+
+            parts.append(f'{{{value.value.id}}}')
+
+            continue
+
+        return None
+
+    return ''.join(parts)
+
+
 def getTranslationKeys(content):
-    """Return literal strings passed directly to the translation function."""
+    """Return static strings passed directly to the translation function."""
     syntaxTree = ast.parse(content)
 
     for node in ast.walk(syntaxTree):
@@ -82,10 +118,10 @@ def getTranslationKeys(content):
         if not node.args:
             continue
 
-        source = node.args[0]
+        source = _staticTranslationSource(node.args[0])
 
-        if isinstance(source, ast.Constant) and isinstance(source.value, str):
-            yield source.value
+        if source is not None:
+            yield source
 
 
 def resolveAppConstants(source):
