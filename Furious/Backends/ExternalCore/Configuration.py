@@ -98,6 +98,10 @@ class ConfigExternalCore(ConfigFactory):
 
     @property
     def itemAddress(self) -> str:
+        """Return the remote destination displayed by the server table."""
+        return self.remoteAddress()
+
+    def remoteAddress(self) -> str:
         """Return the remote destination used by routing and TUN code."""
         return self.tunRemoteAddress()
 

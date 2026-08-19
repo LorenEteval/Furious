@@ -1348,6 +1348,10 @@ class ConfigXray(ConfigFactory):
     @property
     def itemAddress(self) -> str:
         """Return the item address value."""
+        return self.remoteAddress()
+
+    def remoteAddress(self) -> str:
+        """Return the proxy server host used by routing and TUN setup."""
         addr = self.proxyServerObject.get('address', '')
 
         return str(addr)
@@ -1719,6 +1723,10 @@ class ConfigHysteria1(ConfigFactory):
     @property
     def itemAddress(self) -> str:
         """Return the item address value."""
+        return self.remoteAddress()
+
+    def remoteAddress(self) -> str:
+        """Return the proxy server host used by routing and TUN setup."""
         server = self.get('server', '')
 
         pos = server.rfind(':')
@@ -2009,6 +2017,10 @@ class ConfigHysteria2(ConfigFactory):
     @property
     def itemAddress(self) -> str:
         """Return the item address value."""
+        return self.remoteAddress()
+
+    def remoteAddress(self) -> str:
+        """Return the proxy server host used by routing and TUN setup."""
         address, _port = self.splitServerAddressPort(self.get('server', ''))
 
         return address

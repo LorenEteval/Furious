@@ -167,7 +167,7 @@ def _serverHost(config) -> str:
 
     if not host:
         try:
-            host = config.itemAddress
+            host = config.remoteAddress()
         except Exception:
             # Any non-exit exceptions
 

@@ -173,7 +173,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
                 if applicationTun2socks:
                     logger.info(
                         f'application-managed tun2socks selected. Remote '
-                        f'address: {configcopy.itemAddress!r}'
+                        f'address: {configcopy.remoteAddress()!r}'
                     )
                 else:
                     logger.info(
@@ -348,7 +348,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
                     f'\'BypassTUNAdapterInterfaceIP\''
                 )
 
-                address = configcopy.itemAddress
+                address = configcopy.remoteAddress()
 
                 if not isValidIPAddress(address):
                     DnsResolver.configureHttpProxy(configcopy.httpProxy())
