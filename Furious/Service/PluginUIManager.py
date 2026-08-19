@@ -42,7 +42,7 @@ def isCoreActive(coreType) -> bool:
         controller = AppConnectionController()
 
         return controller.isConnected() and any(
-            isinstance(process, coreType) for process in controller.processes
+            isinstance(runtime, coreType) for runtime in controller.runtimes
         )
     except (AttributeError, RuntimeError):
         return False

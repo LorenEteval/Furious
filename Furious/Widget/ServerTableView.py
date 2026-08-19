@@ -561,13 +561,13 @@ class TestDownloadSpeedWorker(WebGETManager):
     def coreExitCallback(self, config: ConfigFactory, exitcode: int):
         """Handle the core exit callback."""
         try:
-            if exitcode == CoreProcess.ExitCode.ConfigurationError.value:
+            if exitcode == CoreRuntime.ExitCode.ConfigurationError.value:
                 self.factory.metadata.speed = 'Invalid'
                 self.sync()
-            elif exitcode == CoreProcess.ExitCode.ServerStartFailure.value:
+            elif exitcode == CoreRuntime.ExitCode.ServerStartFailure.value:
                 self.factory.metadata.speed = 'Core start failed'
                 self.sync()
-            elif exitcode == CoreProcess.ExitCode.SystemShuttingDown.value:
+            elif exitcode == CoreRuntime.ExitCode.SystemShuttingDown.value:
                 pass
             else:
                 self.factory.metadata.speed = f'Core exited {exitcode}'
@@ -575,7 +575,7 @@ class TestDownloadSpeedWorker(WebGETManager):
         finally:
             self.must()
 
-    def _startKernel(self, config) -> bool:
+    def _startCoreRuntime(self, config) -> bool:
         """Prepare and start a download test through its runtime factory."""
         configcopy = getPluginRegistry().prepareDownloadTest(config, self.port)
 
@@ -617,7 +617,7 @@ class TestDownloadSpeedWorker(WebGETManager):
                 self.factory.metadata.speed = 'Invalid'
                 self.sync()
             else:
-                if not self._startKernel(self.factory) or appIsExiting():
+                if not self._startCoreRuntime(self.factory) or appIsExiting():
                     return
 
                 self.configureHttpProxy(f'127.0.0.1:{self.port}')

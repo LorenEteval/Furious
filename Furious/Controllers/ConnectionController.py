@@ -86,7 +86,7 @@ class ConnectionController(QtCore.QObject):
     stateChanged = QtCore.Signal(object)
     activeConfigurationChanged = QtCore.Signal(object)
     interactionEnabledChanged = QtCore.Signal(bool)
-    processesChanged = QtCore.Signal(object)
+    runtimesChanged = QtCore.Signal(object)
     progressStarted = QtCore.Signal()
     progressFinished = QtCore.Signal(bool)
     notificationRequested = QtCore.Signal(str)
@@ -117,9 +117,9 @@ class ConnectionController(QtCore.QObject):
         return self._activeConfiguration
 
     @property
-    def processes(self):
-        """Return an immutable snapshot of managed core processes."""
-        return tuple(self._coreManager.processesPool)
+    def runtimes(self):
+        """Return an immutable snapshot of managed core runtimes."""
+        return tuple(self._coreManager.runtimes)
 
     @property
     def lastError(self):
@@ -167,9 +167,9 @@ class ConnectionController(QtCore.QObject):
         self._activeConfiguration = configuration
         self.activeConfigurationChanged.emit(configuration)
 
-    def _setProcessesChanged(self):
-        """Publish a stable process snapshot after runtime changes."""
-        self.processesChanged.emit(self.processes)
+    def _emitRuntimesChanged(self):
+        """Publish a stable snapshot after managed runtimes change."""
+        self.runtimesChanged.emit(self.runtimes)
 
     def _reportError(self, message: str, details: str = ''):
         """Publish a user-facing error without choosing its presentation."""
@@ -296,7 +296,7 @@ class ConnectionController(QtCore.QObject):
             success = False
             startExceptionDetails = str(ex)
 
-        self._setProcessesChanged()
+        self._emitRuntimesChanged()
 
         if not self._actionQueue.empty():
             while not self._actionQueue.empty():
@@ -372,7 +372,7 @@ class ConnectionController(QtCore.QObject):
             # strand every connection UI in the disabled Disconnecting state.
             logger.error(f'failed to stop connection runtime: {ex}')
 
-        self._setProcessesChanged()
+        self._emitRuntimesChanged()
         self._reset()
 
         while not self._actionQueue.empty():
@@ -463,7 +463,7 @@ class ConnectionController(QtCore.QObject):
         if callable(action):
             action()
 
-    def coreExitCallback(self, core: CoreProcess, exitcode: int):
+    def coreExitCallback(self, core: CoreRuntime, exitcode: int):
         """Translate a core exit into a queued lifecycle operation."""
 
         def putItem(item):
@@ -475,12 +475,12 @@ class ConnectionController(QtCore.QObject):
 
                 pass
 
-        if exitcode == CoreProcess.ExitCode.SystemShuttingDown.value:
+        if exitcode == CoreRuntime.ExitCode.SystemShuttingDown.value:
             return None
 
-        if exitcode == CoreProcess.ExitCode.ConfigurationError.value:
+        if exitcode == CoreRuntime.ExitCode.ConfigurationError.value:
             message = f'{core.name()}: ' + _('Invalid server configuration')
-        elif exitcode == CoreProcess.ExitCode.ServerStartFailure.value:
+        elif exitcode == CoreRuntime.ExitCode.ServerStartFailure.value:
             message = f'{core.name()}: ' + _('Failed to start core')
         else:
             pluginMessage = getPluginRegistry().coreExitMessage(core, exitcode)

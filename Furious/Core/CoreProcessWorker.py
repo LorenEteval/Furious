@@ -226,7 +226,7 @@ class MsgQueue(multiprocessing.queues.Queue):
             self.startTimer()
 
 
-class CoreProcessMonitor(CoreProcess, ABC):
+class CoreProcessMonitor(CoreRuntime, ABC):
     """Track the state and lifetime of a proxy-core child process."""
 
     StopJoinTimeout = 3
@@ -312,7 +312,7 @@ class CoreProcessMonitor(CoreProcess, ABC):
         self.process = None
 
     def dispose(self):
-        """Release the monitor timer after this kernel leaves its owner pool."""
+        """Release the monitor timer after this runtime leaves its owner pool."""
         self.daemon.stop()
 
         try:

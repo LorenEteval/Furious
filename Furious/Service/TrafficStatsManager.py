@@ -247,10 +247,10 @@ class TrafficStatsManager(
         self._requestSample()
 
     @staticmethod
-    def _activeProcesses():
-        """Return the processes owned by the active connection controller."""
+    def _activeRuntimes():
+        """Return the runtimes owned by the active connection controller."""
         try:
-            return AppConnectionController().processes
+            return AppConnectionController().runtimes
         except (AttributeError, RuntimeError):
             return tuple()
 
@@ -369,8 +369,8 @@ class TrafficStatsManager(
             return
 
         if self._connected:
-            monitor = getPluginRegistry().trafficStatsMonitorForKernels(
-                self._activeProcesses()
+            monitor = getPluginRegistry().trafficStatsMonitorForRuntimes(
+                self._activeRuntimes()
             )
             self._activateMonitor(monitor)
 
@@ -504,8 +504,8 @@ class TrafficStatsManager(
 
             return
 
-        monitor = getPluginRegistry().trafficStatsMonitorForKernels(
-            self._activeProcesses()
+        monitor = getPluginRegistry().trafficStatsMonitorForRuntimes(
+            self._activeRuntimes()
         )
         self._activateMonitor(monitor)
 

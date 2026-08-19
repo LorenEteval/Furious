@@ -77,7 +77,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
         super().__init__(*args, **kwargs)
 
         self.uniqueCleanup = False
-        self.processesPool = list()
+        self.runtimes = list()
         self._lastStartError = ''
 
     @property
@@ -85,7 +85,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
         """Return the concise failure reported by the latest runtime start."""
         return self._lastStartError
 
-    def _startKernel(
+    def _startCoreRuntime(
         self,
         config,
         routing,
@@ -94,9 +94,9 @@ class ConnectionManager(Mixins.CleanupOnExit):
         proxyModeOnly=False,
         log=True,
         **kwargs,
-    ) -> Tuple[Union[CoreProcess, None], bool]:
-        """Construct and start the runtime kernel selected for a configuration."""
-        return getPluginRegistry().startKernel(
+    ) -> Tuple[Union[CoreRuntime, None], bool]:
+        """Construct and start the core runtime selected for a configuration."""
+        return getPluginRegistry().startCoreRuntime(
             config,
             routing,
             exitCallback=exitCallback,
@@ -178,10 +178,10 @@ class ConnectionManager(Mixins.CleanupOnExit):
                 else:
                     logger.info(
                         'application-managed tun2socks skipped by the active '
-                        'kernel configuration'
+                        'core runtime configuration'
                     )
 
-        process, success = self._startKernel(
+        runtime, success = self._startCoreRuntime(
             configcopy,
             routing,
             exitCallback,
@@ -191,18 +191,18 @@ class ConnectionManager(Mixins.CleanupOnExit):
             **kwargs,
         )
 
-        if process is not None:
-            self.processesPool.append(process)
+        if runtime is not None:
+            self.runtimes.append(runtime)
 
         if not success:
-            if isinstance(process, CoreProcess):
-                startError = getattr(process, 'startError', None)
+            if isinstance(runtime, CoreRuntime):
+                startError = getattr(runtime, 'startError', None)
 
                 if callable(startError):
                     self._lastStartError = startError()
 
-            if isinstance(process, CoreProcessWorker):
-                logger.error(f'core {process.name()} start failed')
+            if isinstance(runtime, CoreProcessWorker):
+                logger.error(f'core {runtime.name()} start failed')
 
             self.stopAll()
 
@@ -260,7 +260,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
                     return abortStart(f'unrecognized platform: {PLATFORM}')
 
             tun = Tun2socks(exitCallback=exitCallback, msgCallback=msgCallbackTUN_)
-            self.processesPool.append(tun)
+            self.runtimes.append(tun)
 
             tcpSendBufferSize, tcpReceiveBufferSize, tcpAutoTuning = (
                 userTcpSendBufferSize(),
@@ -566,28 +566,28 @@ class ConnectionManager(Mixins.CleanupOnExit):
         return True
 
     def allRunning(self) -> bool:
-        """Return whether every managed process is running."""
-        return all(process.isAlive() for process in self.processesPool)
+        """Return whether every managed core runtime is running."""
+        return all(runtime.isAlive() for runtime in self.runtimes)
 
     def anyRunning(self) -> bool:
-        """Return whether any managed process is running."""
-        return any(process.isAlive() for process in self.processesPool)
+        """Return whether any managed core runtime is running."""
+        return any(runtime.isAlive() for runtime in self.runtimes)
 
     def stopAll(self):
-        """Stop every managed proxy and TUN process."""
+        """Stop every managed proxy-core and TUN runtime."""
         try:
-            for process in list(self.processesPool):
-                if not isinstance(process, CoreProcess):
+            for runtime in list(self.runtimes):
+                if not isinstance(runtime, CoreRuntime):
                     continue
 
                 try:
-                    process.stop()
+                    runtime.stop()
                 except Exception as ex:
                     # Any non-exit exceptions
 
-                    logger.error(f'error stopping core process: {ex}')
+                    logger.error(f'error stopping core runtime: {ex}')
                 finally:
-                    dispose = getattr(process, 'dispose', None)
+                    dispose = getattr(runtime, 'dispose', None)
 
                     if callable(dispose):
                         try:
@@ -595,9 +595,9 @@ class ConnectionManager(Mixins.CleanupOnExit):
                         except Exception as ex:
                             # Any non-exit exceptions
 
-                            logger.error(f'error disposing core process: {ex}')
+                            logger.error(f'error disposing core runtime: {ex}')
         finally:
-            self.processesPool.clear()
+            self.runtimes.clear()
 
     def cleanup(self):
         """Release resources owned by the core manager."""

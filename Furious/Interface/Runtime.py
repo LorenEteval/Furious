@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Define the common proxy-core process interface."""
+"""Define the lifecycle contract for one managed proxy-core runtime."""
 
 from __future__ import annotations
 
@@ -26,21 +26,27 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, Union
 
-import logging
 import functools
+import logging
 
-__all__ = ['CoreProcess', 'RuntimeKernel']
+__all__ = ['CoreRuntime']
 
 logger = logging.getLogger(__name__)
 
 _INVALID_CONFIGURATION_ERROR = 'Invalid server configuration'
 
 
-class RuntimeKernel(ABC):
-    """Define the lifecycle shared by plugin-created runtime kernels."""
+class CoreRuntime(ABC):
+    """Manage one startable and stoppable proxy-core runtime instance.
+
+    A runtime represents the semantic lifecycle of one proxy core. Concrete
+    implementations may use a subprocess, multiprocessing, or an in-process
+    binding; those execution mechanisms are intentionally outside this
+    contract.
+    """
 
     class ExitCode(Enum):
-        """Enumerate process exit codes."""
+        """Enumerate shared semantic core exit codes."""
 
         ConfigurationError = 23
         # Windows: 4294967295. Darwin, Linux: 255 (-1)
@@ -50,16 +56,16 @@ class RuntimeKernel(ABC):
 
     def __init__(
         self,
-        exitCallback: Union[Callable[[RuntimeKernel, int], None], None] = None,
+        exitCallback: Union[Callable[[CoreRuntime, int], None], None] = None,
     ):
-        """Initialize the core process."""
+        """Initialize an idle core runtime."""
         super().__init__()
 
         self._exitCallback = exitCallback
         self._startError = ''
 
     def callExitCallback(self, exitcode: int):
-        """Call exit callback."""
+        """Report this runtime's termination to its lifecycle owner."""
         if callable(self._exitCallback):
             self._exitCallback(self, exitcode)
 
@@ -77,7 +83,7 @@ class RuntimeKernel(ABC):
 
     @functools.singledispatchmethod
     def toJSONString(self, config, **kwargs) -> str:
-        """Serialize the configuration as JSON text."""
+        """Serialize a prepared runtime configuration as JSON text."""
         self.setStartError(_INVALID_CONFIGURATION_ERROR)
 
         logger.error(
@@ -89,7 +95,7 @@ class RuntimeKernel(ABC):
 
     @toJSONString.register(str)
     def _(self, config, **kwargs) -> str:
-        """Handle the registered singledispatch variant."""
+        """Accept an already serialized runtime configuration."""
         if not config:
             self.setStartError(_INVALID_CONFIGURATION_ERROR)
 
@@ -103,7 +109,7 @@ class RuntimeKernel(ABC):
 
     @toJSONString.register(dict)
     def _(self, config, **kwargs) -> str:
-        """Handle the registered singledispatch variant."""
+        """Serialize a mapping with its own serializer or the shared encoder."""
         serializer = getattr(config, 'toJSONString', None)
 
         try:
@@ -142,25 +148,21 @@ class RuntimeKernel(ABC):
     @staticmethod
     @abstractmethod
     def name() -> str:
-        """Return the process implementation name."""
+        """Return the proxy-core implementation name."""
         raise NotImplementedError
 
     @staticmethod
     @abstractmethod
     def version() -> str:
-        """Return the bundled core version."""
+        """Return the bundled core version, if one exists."""
         raise NotImplementedError
 
     @abstractmethod
     def start(self, *args, **kwargs) -> bool:
-        """Start the runtime kernel."""
+        """Start this core runtime."""
         raise NotImplementedError
 
     @abstractmethod
     def stop(self):
-        """Stop the runtime kernel."""
+        """Stop this core runtime."""
         raise NotImplementedError
-
-
-# Compatibility name retained for existing process implementations.
-CoreProcess = RuntimeKernel

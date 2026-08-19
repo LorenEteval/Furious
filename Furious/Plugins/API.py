@@ -27,10 +27,10 @@ __all__ = [
     'PLUGIN_API_VERSION',
     'ActionProvider',
     'CapabilityKind',
+    'CoreRuntimeFactory',
+    'CoreRuntimeLaunch',
+    'CoreRuntimeRequest',
     'FuriousPlugin',
-    'KernelFactory',
-    'KernelLaunch',
-    'KernelRequest',
     'NavigationPageDescriptor',
     'NavigationPageProvider',
     'PluginCapability',
@@ -68,7 +68,7 @@ class CapabilityKind(str, Enum):
     Protocol = 'protocol'
     ProtocolEditor = 'protocol-editor'
     SubscriptionDecoder = 'subscription-decoder'
-    KernelFactory = 'kernel-factory'
+    CoreRuntimeFactory = 'core-runtime-factory'
     TrafficStats = 'traffic-stats'
     PluginSettings = 'plugin-settings'
     NavigationPage = 'navigation-page'
@@ -371,25 +371,25 @@ class TrafficStatsMonitor:
 
 
 class TrafficStatsProvider(PluginCapability):
-    """Provide traffic counters for one or more runtime kernel types."""
+    """Provide traffic counters for one or more core-runtime types."""
 
     capabilityKind = CapabilityKind.TrafficStats
     providerId = ''
-    kernelTypes = tuple()
+    runtimeTypes = tuple()
 
     @property
     def capabilityId(self) -> str:
         """Return the traffic-statistics provider identifier."""
         return self.providerId
 
-    def monitorForKernel(self, kernel) -> Optional[TrafficStatsMonitor]:
-        """Return a monitor for *kernel* or ``None`` when unavailable."""
+    def monitorForRuntime(self, runtime) -> Optional[TrafficStatsMonitor]:
+        """Return a monitor for *runtime* or ``None`` when unavailable."""
         return None
 
 
 @dataclass(frozen=True)
-class KernelRequest:
-    """Describe one runtime-kernel construction request."""
+class CoreRuntimeRequest:
+    """Describe one core-runtime construction request."""
 
     configuration: Any
     routing: str
@@ -401,18 +401,18 @@ class KernelRequest:
 
 
 @dataclass(frozen=True)
-class KernelLaunch:
-    """Bind a constructed kernel to its prepared start arguments."""
+class CoreRuntimeLaunch:
+    """Bind a constructed core runtime to its prepared start arguments."""
 
-    kernel: Any
+    runtime: Any
     configuration: Any
     arguments: Tuple[Any, ...] = tuple()
     options: Mapping[str, Any] = field(default_factory=dict)
 
     def start(self) -> bool:
-        """Start the prepared kernel."""
+        """Start the prepared core runtime."""
         return bool(
-            self.kernel.start(
+            self.runtime.start(
                 self.configuration,
                 *self.arguments,
                 **dict(self.options),
@@ -420,13 +420,13 @@ class KernelLaunch:
         )
 
 
-class KernelFactory(PluginCapability):
-    """Construct runtime kernels independently from protocol handling."""
+class CoreRuntimeFactory(PluginCapability):
+    """Construct managed core runtimes independently from protocol handling."""
 
-    capabilityKind = CapabilityKind.KernelFactory
+    capabilityKind = CapabilityKind.CoreRuntimeFactory
     factoryId = ''
     configurationTypes = tuple()
-    kernelTypes = tuple()
+    runtimeTypes = tuple()
 
     @property
     def capabilityId(self) -> str:
@@ -457,10 +457,10 @@ class KernelFactory(PluginCapability):
         return tuple()
 
     def configureEnvironment(self):
-        """Set optional environment required by this backend's process."""
+        """Set optional environment required by this backend's runtime."""
 
-    def create(self, request: KernelRequest) -> Optional[KernelLaunch]:
-        """Create a prepared runtime kernel launch."""
+    def create(self, request: CoreRuntimeRequest) -> Optional[CoreRuntimeLaunch]:
+        """Create a prepared core-runtime launch."""
         return None
 
     def prepareDownloadTest(self, config, port: int):

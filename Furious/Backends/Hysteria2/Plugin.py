@@ -153,12 +153,12 @@ class Hysteria2ActionProvider(ActionProvider):
         )
 
 
-class Hysteria2KernelFactory(KernelFactory):
-    """Construct Hysteria 2 kernels independently of protocol handling."""
+class Hysteria2CoreRuntimeFactory(CoreRuntimeFactory):
+    """Construct Hysteria 2 core runtimes independently of protocol handling."""
 
     factoryId = 'official.hysteria2'
     configurationTypes = (ConfigHysteria2,)
-    kernelTypes = (Hysteria2,)
+    runtimeTypes = (Hysteria2,)
 
     def prepareTUN(self, config) -> bool:
         """Preserve user TUN or replace it with Furious-managed native TUN."""
@@ -195,20 +195,20 @@ class Hysteria2KernelFactory(KernelFactory):
         """Use host tun2socks only when the runtime has no native TUN block."""
         return not hasHysteria2TUNConfig(config)
 
-    def create(self, request: KernelRequest):
-        """Create a prepared Hysteria 2 kernel launch."""
+    def create(self, request: CoreRuntimeRequest):
+        """Create a prepared Hysteria 2 core-runtime launch."""
         if request.log:
             logger.info(f'core {Hysteria2.name()} configured')
 
-        process = Hysteria2(
+        runtime = Hysteria2(
             exitCallback=request.exitCallback,
             msgCallback=request.messageCallback,
         )
 
-        setattr(process, 'hysteria2StatsTarget', configuredHysteria2StatsTarget())
+        setattr(runtime, 'hysteria2StatsTarget', configuredHysteria2StatsTarget())
 
-        return KernelLaunch(
-            process,
+        return CoreRuntimeLaunch(
+            runtime,
             request.configuration,
             options=request.options,
         )
@@ -261,7 +261,7 @@ class Hysteria2Plugin(FuriousPlugin):
         self.capabilities = (
             *HYSTERIA2_PROTOCOL_HANDLERS,
             *HYSTERIA2_PROTOCOL_EDITORS,
-            Hysteria2KernelFactory(),
+            Hysteria2CoreRuntimeFactory(),
             Hysteria2StatsProvider(),
             Hysteria2SettingsProvider(),
             Hysteria2ActionProvider(),

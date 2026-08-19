@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 from Furious.Core import CoreProcessState
-from Furious.Interface import RuntimeKernel
+from Furious.Interface import CoreRuntime
 
 from .Configuration import ConfigExternalCore
 
@@ -38,7 +38,7 @@ __all__ = ['ExternalCoreProcess']
 logger = logging.getLogger(__name__)
 
 
-class ExternalCoreProcess(RuntimeKernel):
+class ExternalCoreProcess(CoreRuntime):
     """Manage one direct external process and its output-reader threads."""
 
     StartupObservationTimeout = 0.25

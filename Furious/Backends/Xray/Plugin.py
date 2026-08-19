@@ -152,12 +152,12 @@ class XrayActionProvider(ActionProvider):
         )
 
 
-class XrayKernelFactory(KernelFactory):
-    """Construct Xray kernels independently of protocols and editors."""
+class XrayCoreRuntimeFactory(CoreRuntimeFactory):
+    """Construct Xray core runtimes independently of protocols and editors."""
 
     factoryId = 'official.xray'
     configurationTypes = (ConfigXray,)
-    kernelTypes = (XrayCore,)
+    runtimeTypes = (XrayCore,)
 
     def fromMapping(self, configuration, **kwargs):
         """Recognize a complete Xray configuration without a proxy profile."""
@@ -237,8 +237,8 @@ class XrayKernelFactory(KernelFactory):
         """Point Xray-core at Furious's bundled geo-asset directory."""
         os.environ['XRAY_LOCATION_ASSET'] = str(XRAY_ASSET_DIR)
 
-    def create(self, request: KernelRequest):
-        """Configure routing and create an Xray-core launch."""
+    def create(self, request: CoreRuntimeRequest):
+        """Configure routing and create an Xray core-runtime launch."""
         config, routing, proxyModeOnly, log = (
             request.configuration,
             request.routing,
@@ -321,13 +321,13 @@ class XrayKernelFactory(KernelFactory):
 
                 statsTarget = None
 
-        process = XrayCore(
+        runtime = XrayCore(
             exitCallback=request.exitCallback,
             msgCallback=request.messageCallback,
         )
-        process.xrayStatsTarget = statsTarget
+        runtime.xrayStatsTarget = statsTarget
 
-        return KernelLaunch(process, config, options=request.options)
+        return CoreRuntimeLaunch(runtime, config, options=request.options)
 
     def prepareDownloadTest(self, config, port: int):
         """Create an Xray configuration with one local HTTP test inbound."""
@@ -426,7 +426,7 @@ class XrayPlugin(FuriousPlugin):
         self.capabilities = (
             *XRAY_PROTOCOL_HANDLERS,
             *XRAY_PROTOCOL_EDITORS,
-            XrayKernelFactory(),
+            XrayCoreRuntimeFactory(),
             XrayStatsProvider(),
             XrayActionProvider(),
         )

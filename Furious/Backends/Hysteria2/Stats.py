@@ -196,11 +196,11 @@ class Hysteria2StatsProvider(TrafficStatsProvider):
     """Expose Hysteria server counters through the shared metrics capability."""
 
     providerId = 'official.hysteria2.stats'
-    kernelTypes = (Hysteria2,)
+    runtimeTypes = (Hysteria2,)
 
-    def monitorForKernel(self, kernel) -> Optional[TrafficStatsMonitor]:
-        """Return a monitor when the active kernel has a configured API target."""
-        target = getattr(kernel, 'hysteria2StatsTarget', None)
+    def monitorForRuntime(self, runtime) -> Optional[TrafficStatsMonitor]:
+        """Return a monitor when the active runtime has a configured API target."""
+        target = getattr(runtime, 'hysteria2StatsTarget', None)
 
         if not isinstance(target, Hysteria2StatsTarget):
             return None

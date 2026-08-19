@@ -271,11 +271,11 @@ class XrayStatsProvider(TrafficStatsProvider):
     """Expose active Xray outbound traffic through the plugin capability API."""
 
     providerId = 'official.xray.stats'
-    kernelTypes = (XrayCore,)
+    runtimeTypes = (XrayCore,)
 
-    def monitorForKernel(self, kernel) -> Optional[TrafficStatsMonitor]:
+    def monitorForRuntime(self, runtime) -> Optional[TrafficStatsMonitor]:
         """Return a monitor when the active core has a valid outbound target."""
-        target = getattr(kernel, 'xrayStatsTarget', None)
+        target = getattr(runtime, 'xrayStatsTarget', None)
 
         if not isinstance(target, XrayStatsTarget):
             return None

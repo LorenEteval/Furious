@@ -21,14 +21,13 @@ from __future__ import annotations
 
 from .Application import ApplicationRunner
 from .Editor import EditorBinding, EditorWidgetBinding
-from .Process import CoreProcess, RuntimeKernel
+from .Runtime import CoreRuntime
 from .Storage import StorageBackend
 
 __all__ = [
     'ApplicationRunner',
-    'CoreProcess',
+    'CoreRuntime',
     'EditorBinding',
     'EditorWidgetBinding',
     'StorageBackend',
-    'RuntimeKernel',
 ]

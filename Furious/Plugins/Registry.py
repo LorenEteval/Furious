@@ -53,6 +53,11 @@ def _normalizeScheme(value) -> str:
     return str(value).strip().rstrip(':').casefold()
 
 
+def _runtimeTypes(capability) -> tuple:
+    """Return the capability's declared managed runtime types."""
+    return tuple(getattr(capability, 'runtimeTypes', tuple()) or tuple())
+
+
 def _schemeFromURI(uri: str) -> str:
     """Extract a normalized scheme from *uri*."""
     try:
@@ -84,7 +89,7 @@ class PluginRegistry:
         self._protocolEditors = {}
         self._factories = {}
         self._configurationFactories = {}
-        self._kernelFactories = {}
+        self._runtimeFactories = {}
         self._trafficStatsProviders = {}
         self._decoders = {}
         self._initializedPlugins = []
@@ -150,8 +155,8 @@ class PluginRegistry:
         localSchemes = set()
         localEditorProtocols = set()
         localConfigurationTypes = []
-        localKernelTypes = []
-        localTrafficStatsKernelTypes = []
+        localRuntimeTypes = []
+        localTrafficStatsRuntimeTypes = []
         entries = []
 
         for capability in capabilities:
@@ -244,13 +249,13 @@ class PluginRegistry:
 
                 localEditorProtocols.update(protocolIds)
                 detail = protocolIds
-            elif isinstance(capability, KernelFactory):
+            elif isinstance(capability, CoreRuntimeFactory):
                 configurationTypes = tuple(capability.configurationTypes)
-                kernelTypes = tuple(capability.kernelTypes)
+                runtimeTypes = _runtimeTypes(capability)
 
                 if not configurationTypes:
                     raise ValueError(
-                        f'kernel factory {capability.factoryId!r} must declare '
+                        f'core runtime factory {capability.factoryId!r} must declare '
                         f'configuration types'
                     )
 
@@ -262,16 +267,16 @@ class PluginRegistry:
                         localConfigurationTypes,
                     ),
                     (
-                        kernelTypes,
-                        'kernel',
-                        tuple(self._kernelFactories),
-                        localKernelTypes,
+                        runtimeTypes,
+                        'runtime',
+                        tuple(self._runtimeFactories),
+                        localRuntimeTypes,
                     ),
                 ):
                     for itemType in values:
                         if not isinstance(itemType, type):
                             raise TypeError(
-                                f'kernel factory {label} types must be classes'
+                                f'core runtime factory {label} types must be classes'
                             )
 
                         if any(
@@ -286,38 +291,38 @@ class PluginRegistry:
 
                         local.append(itemType)
 
-                detail = (configurationTypes, kernelTypes)
+                detail = (configurationTypes, runtimeTypes)
             elif isinstance(capability, TrafficStatsProvider):
-                kernelTypes = tuple(capability.kernelTypes)
+                runtimeTypes = _runtimeTypes(capability)
 
-                if not kernelTypes:
+                if not runtimeTypes:
                     raise ValueError(
                         f'traffic stats provider {capability.providerId!r} must '
-                        f'declare kernel types'
+                        f'declare runtime types'
                     )
 
-                for kernelType in kernelTypes:
-                    if not isinstance(kernelType, type):
+                for runtimeType in runtimeTypes:
+                    if not isinstance(runtimeType, type):
                         raise TypeError(
-                            'traffic stats provider kernel types must be classes'
+                            'traffic stats provider runtime types must be classes'
                         )
 
                     if any(
-                        issubclass(kernelType, registeredType)
-                        or issubclass(registeredType, kernelType)
+                        issubclass(runtimeType, registeredType)
+                        or issubclass(registeredType, runtimeType)
                         for registeredType in (
                             *self._trafficStatsProviders,
-                            *localTrafficStatsKernelTypes,
+                            *localTrafficStatsRuntimeTypes,
                         )
                     ):
                         raise ValueError(
-                            f'traffic stats kernel type '
-                            f'{kernelType.__name__!r} overlaps a registered type'
+                            f'traffic stats runtime type '
+                            f'{runtimeType.__name__!r} overlaps a registered type'
                         )
 
-                    localTrafficStatsKernelTypes.append(kernelType)
+                    localTrafficStatsRuntimeTypes.append(runtimeType)
 
-                detail = kernelTypes
+                detail = runtimeTypes
             elif isinstance(capability, SubscriptionDecoder):
                 if not isinstance(capability.priority, int):
                     raise TypeError('subscription decoder priority must be an integer')
@@ -356,17 +361,17 @@ class PluginRegistry:
 
                 for protocolId in detail:
                     self._protocolEditors[protocolId] = entry
-            elif isinstance(capability, KernelFactory):
-                configurationTypes, kernelTypes = detail
+            elif isinstance(capability, CoreRuntimeFactory):
+                configurationTypes, runtimeTypes = detail
                 self._factories[capabilityId] = entry
 
                 for configType in configurationTypes:
                     self._configurationFactories[configType] = entry
-                for kernelType in kernelTypes:
-                    self._kernelFactories[kernelType] = entry
+                for runtimeType in runtimeTypes:
+                    self._runtimeFactories[runtimeType] = entry
             elif isinstance(capability, TrafficStatsProvider):
-                for kernelType in detail:
-                    self._trafficStatsProviders[kernelType] = entry
+                for runtimeType in detail:
+                    self._trafficStatsProviders[runtimeType] = entry
             elif isinstance(capability, SubscriptionDecoder):
                 self._decoders[capabilityId] = entry
 
@@ -421,7 +426,7 @@ class PluginRegistry:
             '_protocolEditors',
             '_factories',
             '_configurationFactories',
-            '_kernelFactories',
+            '_runtimeFactories',
             '_trafficStatsProviders',
             '_decoders',
         ):
@@ -500,9 +505,9 @@ class PluginRegistry:
         """Return registered protocol editor providers."""
         return self.capabilities(CapabilityKind.ProtocolEditor)
 
-    def kernelFactories(self):
-        """Return registered runtime kernel factories."""
-        return self.capabilities(CapabilityKind.KernelFactory)
+    def coreRuntimeFactories(self):
+        """Return registered core-runtime factories."""
+        return self.capabilities(CapabilityKind.CoreRuntimeFactory)
 
     def subscriptionDecoders(self):
         """Return subscription decoders in auto-detection priority order."""
@@ -571,32 +576,32 @@ class PluginRegistry:
 
         return None
 
-    def factoryForKernel(self, kernel):
-        """Return the runtime factory that owns *kernel*."""
-        for kernelType, (_plugin, factory) in self._kernelFactories.items():
-            if isinstance(kernel, kernelType):
+    def runtimeFactoryFor(self, runtime):
+        """Return the factory that owns *runtime*."""
+        for runtimeType, (_plugin, factory) in self._runtimeFactories.items():
+            if isinstance(runtime, runtimeType):
                 return factory
 
         return None
 
-    def trafficStatsProviderForKernel(self, kernel):
-        """Return the traffic-statistics provider that owns *kernel*."""
-        for kernelType, (_plugin, provider) in self._trafficStatsProviders.items():
-            if isinstance(kernel, kernelType):
+    def trafficStatsProviderForRuntime(self, runtime):
+        """Return the traffic-statistics provider that owns *runtime*."""
+        for runtimeType, (_plugin, provider) in self._trafficStatsProviders.items():
+            if isinstance(runtime, runtimeType):
                 return provider
 
         return None
 
-    def trafficStatsMonitorForKernels(self, kernels):
-        """Return the first available monitor for the active runtime kernels."""
-        for kernel in kernels:
-            provider = self.trafficStatsProviderForKernel(kernel)
+    def trafficStatsMonitorForRuntimes(self, runtimes):
+        """Return the first monitor available for the active core runtimes."""
+        for runtime in runtimes:
+            provider = self.trafficStatsProviderForRuntime(runtime)
 
             if provider is None:
                 continue
 
             try:
-                monitor = provider.monitorForKernel(kernel)
+                monitor = provider.monitorForRuntime(runtime)
             except Exception as ex:
                 # Any non-exit exceptions
 
@@ -652,10 +657,10 @@ class PluginRegistry:
             else None
         )
 
-    def pluginForKernel(self, kernel):
-        """Return the plugin that contributes a kernel's factory."""
-        for kernelType, (plugin, _factory) in self._kernelFactories.items():
-            if isinstance(kernel, kernelType):
+    def pluginForRuntime(self, runtime):
+        """Return the plugin that contributes a runtime's factory."""
+        for runtimeType, (plugin, _factory) in self._runtimeFactories.items():
+            if isinstance(runtime, runtimeType):
                 return plugin
 
         return None
@@ -771,7 +776,7 @@ class PluginRegistry:
             if result is not None:
                 if not isinstance(result, factory.configurationTypes):
                     logger.error(
-                        f'kernel factory {factory.factoryId!r} returned an '
+                        f'core runtime factory {factory.factoryId!r} returned an '
                         f'unowned mapping result'
                     )
                     continue
@@ -780,7 +785,9 @@ class PluginRegistry:
 
         if len(factoryMatches) > 1:
             names = ', '.join(repr(item[0].factoryId) for item in factoryMatches)
-            raise ValueError(f'kernel configuration mapping is ambiguous: {names}')
+            raise ValueError(
+                f'core runtime configuration mapping is ambiguous: {names}'
+            )
 
         return factoryMatches[0][1] if factoryMatches else None
 
@@ -901,7 +908,7 @@ class PluginRegistry:
             handled = factory.prepareTUN(_connectionOf(config))
 
             if not isinstance(handled, bool):
-                raise TypeError('kernel TUN preparation result must be a boolean')
+                raise TypeError('core runtime TUN preparation result must be a boolean')
 
             return handled
         except TUNPreparationError:
@@ -926,7 +933,9 @@ class PluginRegistry:
             enabled = factory.usesApplicationTun2socks(_connectionOf(config))
 
             if not isinstance(enabled, bool):
-                raise TypeError('kernel application tun2socks result must be a boolean')
+                raise TypeError(
+                    'core runtime application tun2socks result must be a boolean'
+                )
 
             return enabled
         except Exception as ex:
@@ -953,7 +962,7 @@ class PluginRegistry:
             for option in options:
                 if not isinstance(option, RoutingOption):
                     raise TypeError(
-                        'kernel routing options must be RoutingOption values'
+                        'core runtime routing options must be RoutingOption values'
                     )
 
                 if not isinstance(option.id, str) or not option.id.strip():
@@ -993,14 +1002,14 @@ class PluginRegistry:
 
         return routing if routing in optionIds else optionIds[0]
 
-    def createKernel(self, config, routing, **kwargs):
-        """Create a prepared kernel launch for *config*."""
+    def createCoreRuntime(self, config, routing, **kwargs):
+        """Create a prepared core-runtime launch for *config*."""
         factory = self.factoryForConfig(config)
 
         if factory is None:
             return None
 
-        request = KernelRequest(
+        request = CoreRuntimeRequest(
             configuration=_connectionOf(config),
             routing=self.normalizeRouting(config, routing),
             exitCallback=kwargs.pop('exitCallback', None),
@@ -1014,35 +1023,42 @@ class PluginRegistry:
         if launch is None:
             return None
 
-        if not isinstance(launch, KernelLaunch):
-            raise TypeError('kernel factory must return a KernelLaunch value')
-
-        if factory.kernelTypes and not isinstance(launch.kernel, factory.kernelTypes):
+        if not isinstance(launch, CoreRuntimeLaunch):
             raise TypeError(
-                f'kernel factory {factory.factoryId!r} returned an unowned kernel'
+                'core runtime factory must return a CoreRuntimeLaunch value'
+            )
+
+        runtimeTypes = _runtimeTypes(factory)
+
+        if runtimeTypes and not isinstance(launch.runtime, runtimeTypes):
+            raise TypeError(
+                f'core runtime factory {factory.factoryId!r} returned an '
+                f'unowned runtime'
             )
 
         return launch
 
-    def startKernel(self, config, routing, **kwargs):
-        """Create and start the runtime kernel selected for *config*."""
+    def startCoreRuntime(self, config, routing, **kwargs):
+        """Create and start the core runtime selected for *config*."""
         try:
-            launch = self.createKernel(config, routing, **kwargs)
+            launch = self.createCoreRuntime(config, routing, **kwargs)
 
             return (
-                (launch.kernel, launch.start()) if launch is not None else (None, False)
+                (launch.runtime, launch.start())
+                if launch is not None
+                else (None, False)
             )
         except Exception as ex:
             # Any non-exit exceptions
 
             factory = self.factoryForConfig(config)
             factoryId = factory.factoryId if factory is not None else 'unknown'
-            logger.error(f'kernel start failed for {factoryId!r}: {ex}')
+            logger.error(f'core runtime start failed for {factoryId!r}: {ex}')
 
             return None, False
 
     def prepareDownloadTest(self, config, port: int):
-        """Create a proxy-only test configuration through its kernel factory."""
+        """Create a proxy-only test configuration through its runtime factory."""
         factory = self.factoryForConfig(config)
 
         return (
@@ -1101,8 +1117,8 @@ class PluginRegistry:
         return None
 
     def configureEnvironment(self):
-        """Allow every kernel factory to configure its process environment."""
-        for factory in self.kernelFactories():
+        """Allow every runtime factory to configure its execution environment."""
+        for factory in self.coreRuntimeFactories():
             try:
                 factory.configureEnvironment()
             except Exception as ex:
@@ -1111,10 +1127,10 @@ class PluginRegistry:
                 logger.error(f'environment hook failed for {factory.factoryId!r}: {ex}')
 
     def coreVersions(self):
-        """Return version strings reported by every kernel factory."""
+        """Return version strings reported by every core-runtime factory."""
         versions = []
 
-        for factory in self.kernelFactories():
+        for factory in self.coreRuntimeFactories():
             try:
                 versions.extend(factory.coreVersions())
             except Exception as ex:
@@ -1127,10 +1143,10 @@ class PluginRegistry:
         return tuple(filter(None, versions))
 
     def logTimestampPatterns(self):
-        """Return timestamp expressions contributed by all kernel factories."""
+        """Return timestamp expressions contributed by runtime factories."""
         patterns = []
 
-        for factory in self.kernelFactories():
+        for factory in self.coreRuntimeFactories():
             try:
                 patterns.extend(factory.logTimestampPatterns())
             except Exception as ex:
@@ -1144,7 +1160,7 @@ class PluginRegistry:
 
     def coreExitMessage(self, core, exitcode: int):
         """Return the owning factory's special exit message, if any."""
-        factory = self.factoryForKernel(core)
+        factory = self.runtimeFactoryFor(core)
 
         if factory is None:
             return None
@@ -1161,8 +1177,8 @@ class PluginRegistry:
             return None
 
     def afterConnected(self, httpProxy=None):
-        """Notify every kernel factory after a connection succeeds."""
-        for factory in self.kernelFactories():
+        """Notify every core-runtime factory after a connection succeeds."""
+        for factory in self.coreRuntimeFactories():
             try:
                 factory.afterConnected(httpProxy)
             except Exception as ex:

@@ -34,12 +34,12 @@ __all__ = ['Hysteria1Plugin']
 logger = logging.getLogger(__name__)
 
 
-class Hysteria1KernelFactory(KernelFactory):
-    """Construct Hysteria 1 kernels independently of protocol handling."""
+class Hysteria1CoreRuntimeFactory(CoreRuntimeFactory):
+    """Construct Hysteria 1 core runtimes independently of protocol handling."""
 
     factoryId = 'official.hysteria1'
     configurationTypes = (ConfigHysteria1,)
-    kernelTypes = (Hysteria1,)
+    runtimeTypes = (Hysteria1,)
 
     def routingOptions(self, config=None):
         """Return the routing modes supported by Hysteria 1."""
@@ -48,8 +48,8 @@ class Hysteria1KernelFactory(KernelFactory):
             for routing in AppBuiltinRouting
         )
 
-    def create(self, request: KernelRequest):
-        """Configure routing and create a Hysteria 1 kernel launch."""
+    def create(self, request: CoreRuntimeRequest):
+        """Configure routing and create a Hysteria 1 core-runtime launch."""
         config, routing = (
             request.configuration,
             request.routing,
@@ -81,13 +81,13 @@ class Hysteria1KernelFactory(KernelFactory):
             logger.info(f'routing is {routing}')
             logger.info(f'RoutingObject: {routingObject}')
 
-        process = Hysteria1(
+        runtime = Hysteria1(
             exitCallback=request.exitCallback,
             msgCallback=request.messageCallback,
         )
 
-        return KernelLaunch(
-            process,
+        return CoreRuntimeLaunch(
+            runtime,
             config,
             arguments=(
                 Hysteria1.rule(routingObject.get('rule', '')),
@@ -135,5 +135,5 @@ class Hysteria1Plugin(FuriousPlugin):
         self.capabilities = (
             *HYSTERIA1_PROTOCOL_HANDLERS,
             *HYSTERIA1_PROTOCOL_EDITORS,
-            Hysteria1KernelFactory(),
+            Hysteria1CoreRuntimeFactory(),
         )

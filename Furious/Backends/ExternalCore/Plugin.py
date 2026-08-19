@@ -15,15 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Integrate user-managed local executables with the Furious kernel API."""
+"""Integrate user-managed local executables with the core-runtime API."""
 
 from __future__ import annotations
 
 from Furious.Plugins.API import (
     FuriousPlugin,
-    KernelFactory,
-    KernelLaunch,
-    KernelRequest,
+    CoreRuntimeFactory,
+    CoreRuntimeLaunch,
+    CoreRuntimeRequest,
     PluginMetadata,
 )
 
@@ -39,20 +39,20 @@ __all__ = ['ExternalCorePlugin']
 logger = logging.getLogger(__name__)
 
 
-class ExternalCoreKernelFactory(KernelFactory):
+class ExternalCoreRuntimeFactory(CoreRuntimeFactory):
     """Construct a managed direct-process runtime from a structured profile."""
 
     factoryId = 'official.external-core'
     configurationTypes = (ConfigExternalCore,)
-    kernelTypes = (ExternalCoreProcess,)
+    runtimeTypes = (ExternalCoreProcess,)
 
     def usesApplicationTun2socks(self, config) -> bool:
         """Honor this profile's explicit host-managed tun2socks preference."""
         return config.usesApplicationTun2socks()
 
-    def create(self, request: KernelRequest):
+    def create(self, request: CoreRuntimeRequest):
         """Create an External Core process launch for the connection manager."""
-        process = ExternalCoreProcess(
+        runtime = ExternalCoreProcess(
             exitCallback=request.exitCallback,
             msgCallback=request.messageCallback,
         )
@@ -72,8 +72,8 @@ class ExternalCoreKernelFactory(KernelFactory):
                     'application-managed TUN will be skipped'
                 )
 
-        return KernelLaunch(
-            process,
+        return CoreRuntimeLaunch(
+            runtime,
             request.configuration,
             options=request.options,
         )
@@ -98,5 +98,5 @@ class ExternalCorePlugin(FuriousPlugin):
         self.capabilities = (
             *EXTERNAL_CORE_PROTOCOL_HANDLERS,
             *EXTERNAL_CORE_PROTOCOL_EDITORS,
-            ExternalCoreKernelFactory(),
+            ExternalCoreRuntimeFactory(),
         )
