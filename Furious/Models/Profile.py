@@ -60,9 +60,26 @@ class ProfileMetadata:
     @classmethod
     def fromMapping(cls, value: Mapping[str, Any] | None = None, **kwargs):
         """Construct metadata from current or legacy persisted field names."""
-        data = dict(value or {})
-        data.update(kwargs)
-        nestedExtras = data.pop('extras', {})
+        explicit = dict(value or {})
+        nestedExtras = explicit.pop('extras', {})
+        explicit.update(kwargs)
+
+        data = dict(nestedExtras) if isinstance(nestedExtras, Mapping) else {}
+        data.update(explicit)
+
+        for legacyName, currentName in {
+            'remark': 'displayName',
+            'subsId': 'subscriptionSource',
+            'delayResult': 'latency',
+            'speedResult': 'speed',
+        }.items():
+            if currentName not in explicit and legacyName in explicit:
+                data[currentName] = explicit[legacyName]
+            elif currentName not in data and legacyName in data:
+                data[currentName] = data[legacyName]
+
+            data.pop(legacyName, None)
+
         tags = data.pop('tags', tuple()) or tuple()
 
         if isinstance(tags, str):
@@ -92,25 +109,24 @@ class ProfileMetadata:
                 'on',
             )
 
+        subscriptionProfileKey = str(data.pop('subscriptionProfileKey', '') or '')
+
         known = {
             'profileId': str(data.pop('profileId', '') or uuid.uuid4()),
-            'displayName': data.pop('displayName', data.pop('remark', '')),
+            'displayName': data.pop('displayName', ''),
             'group': data.pop('group', ''),
             'tags': tags,
             'subscriptionSource': subscriptionSource,
             'subscriptionManaged': bool(subscriptionManaged),
-            'subscriptionProfileKey': str(data.pop('subscriptionProfileKey', '') or ''),
+            'subscriptionProfileKey': subscriptionProfileKey,
             'updatedAt': data.pop('updatedAt', ''),
             'annotations': data.pop('annotations', ''),
             'favorite': bool(favorite),
-            'latency': data.pop('latency', data.pop('delayResult', '')),
-            'speed': data.pop('speed', data.pop('speedResult', '')),
+            'latency': data.pop('latency', ''),
+            'speed': data.pop('speed', ''),
         }
 
-        extras = dict(nestedExtras) if isinstance(nestedExtras, Mapping) else {}
-        extras.update(data)
-
-        return cls(**known, extras=extras)
+        return cls(**known, extras=data)
 
     def toMapping(self) -> dict[str, Any]:
         """Return the normalized persisted metadata mapping."""
@@ -251,15 +267,7 @@ class ServerProfile(MutableMapping[str, Any]):
 
     def toURI(self, remark: str = '') -> str:
         """Serialize the connection document as a share URI."""
-        exportOptions = (
-            {'profileMetadata': self.metadata}
-            if self.itemProtocol.casefold() == 'shadowsocks'
-            else {}
-        )
-
-        return self.connection.toURI(
-            remark or self.metadata.displayName, **exportOptions
-        )
+        return self.connection.toURI(remark or self.metadata.displayName)
 
     def httpProxy(self) -> str:
         """Return the connection's HTTP proxy endpoint."""
@@ -268,6 +276,10 @@ class ServerProfile(MutableMapping[str, Any]):
     def socksProxy(self) -> str:
         """Return the connection's SOCKS proxy endpoint."""
         return self.connection.socksProxy()
+
+    def remoteAddress(self) -> str:
+        """Return the connection's operational remote host."""
+        return self.connection.remoteAddress()
 
     def setHttpProxy(self, endpoint: str) -> bool:
         """Set the connection's HTTP proxy endpoint."""
@@ -351,14 +363,14 @@ def profileConnectionFingerprint(value) -> str:
     try:
         serialized = json.dumps(
             connection,
+            allow_nan=False,
             ensure_ascii=False,
             separators=(',', ':'),
             sort_keys=True,
         )
-    except Exception:
-        # Any non-exit exceptions
-
-        serializer = getattr(connection, 'toJSONString', None)
-        serialized = serializer(indent=0) if callable(serializer) else str(connection)
+    except (TypeError, ValueError) as ex:
+        raise TypeError(
+            'profile connection must contain deterministic JSON-compatible values'
+        ) from ex
 
     return hashlib.sha256(serialized.encode('utf-8')).hexdigest()
