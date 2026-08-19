@@ -154,7 +154,10 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.pageTitleLabel = AppQLabel(translatable=False)
         self.pageTitleLabel.setObjectName('LogPageTitle')
         self.filterLabel = AppQLabel(translatable=False)
-        self.filterComboBox = QComboBox()
+        # Category names can be either translated built-ins or literal plugin
+        # metadata, so LogPage rebuilds this application-styled selector with
+        # the correct per-category translation policy.
+        self.filterComboBox = AppQComboBox(translatable=False)
         self.filterComboBox.setMinimumWidth(180)
 
         self.textBrowser = DraculaTextBrowser(
