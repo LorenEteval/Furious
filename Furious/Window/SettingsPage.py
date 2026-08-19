@@ -215,10 +215,11 @@ class _ToggleSettingsCard(_SettingsCard):
     ):
         """Initialize a persistent binary setting card."""
         self.settingName = settingName
+        self._callback = callback
 
         self.checkBox = AppQSwitch()
         self.checkBox.syncChecked(AppSettings.isStateON_(settingName))
-        self.checkBox.toggled.connect(callback)
+        self.checkBox.toggled.connect(self._requestedState)
 
         super().__init__(
             iconFileName,
@@ -228,6 +229,12 @@ class _ToggleSettingsCard(_SettingsCard):
             translatable=translatable,
             parent=parent,
         )
+
+    @QtCore.Slot(bool)
+    def _requestedState(self, checked: bool):
+        """Apply a requested setting and restore persisted state on failure."""
+        if self._callback(checked) is False:
+            self.sync()
 
     def sync(self):
         """Refresh the control from persistent state without applying it."""
@@ -405,6 +412,8 @@ class _LanguageSettingsCard(_SettingsCard):
 
     def __init__(self, title='', description='', parent=None):
         """Initialize the stable language-name selector."""
+        # These are intentional native-language representations (for example,
+        # "Русский" and "简体中文"), not strings in the active UI locale.
         self.comboBox = QComboBox()
         self.comboBox.setObjectName('SettingsComboBox')
         self.comboBox.setMinimumWidth(180)
