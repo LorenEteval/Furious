@@ -42,7 +42,7 @@ class ExternalCoreProcess(RuntimeKernel):
     """Manage one direct external process and its output-reader threads."""
 
     StartupObservationTimeout = 0.25
-    ForcedShutdownTimeout = 3.0
+    ForcedShutdownTimeout = 5.0
     MaximumPendingOutput = 65536
 
     def __init__(self, *, exitCallback=None, msgCallback=None):
@@ -385,7 +385,10 @@ class ExternalCoreProcess(RuntimeKernel):
                 stderr=subprocess.DEVNULL,
                 check=False,
                 shell=False,
+                timeout=ExternalCoreProcess.ForcedShutdownTimeout,
             )
+        except subprocess.TimeoutExpired:
+            logger.warning('Windows process-tree shutdown command timed out')
         except OSError as ex:
             logger.warning(f'could not invoke Windows process-tree shutdown: {ex}')
 
