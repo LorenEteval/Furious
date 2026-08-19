@@ -19,8 +19,33 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import *
-from Furious.Interface import *
+from Furious.Frozenlib import (
+    APPLICATION_FLATPAK_ID,
+    APPLICATION_NAME,
+    APPLICATION_VERSION,
+    DATA_DIR,
+    LOCAL_SERVER_NAME,
+    ORGANIZATION_DOMAIN,
+    ORGANIZATION_NAME,
+    OS_CPU_COUNT,
+    PLATFORM,
+    PLATFORM_MACHINE,
+    PLATFORM_PYTHON_VERSION,
+    PLATFORM_RELEASE,
+    PYSIDE6_VERSION,
+    SYSTEM_LANGUAGE,
+    AppBuiltinCommand,
+    AppBuiltinProxyMode,
+    AppConnectionController,
+    AppSettings,
+    ApplicationTheme,
+    Mixins,
+    SystemProxy,
+    SystemRuntime,
+    Win32Session,
+    callRateLimited,
+)
+from Furious.Interface import ApplicationRunner
 from Furious.Core import Tun2socks
 from Furious.Backends import OFFICIAL_PLUGIN_TYPES
 from Furious.Controllers import (
@@ -31,30 +56,63 @@ from Furious.Controllers import (
     SettingsController,
 )
 from Furious.Extensions import BUNDLED_EXTENSION_TYPES
-from Furious.Plugins import getPluginRegistry, initializePluginRegistry
+from Furious.Plugins import initializePluginRegistry
 from Furious.Qt import AppStyleSheet
 from Furious.Qt.TextEditorTheme import configureEditorLogMetadata
 from Furious.Qt import gettext as _
-from Furious.Repository import *
+from Furious.Repository import Storage
 from Furious.Service import ApplicationLogHandler, LogManager
-from Furious.Application.TrayIcon import *
-from Furious.Window.LogPage import *
-from Furious.Window.MainWindow import *
+from Furious.Application.TrayIcon import TrayIcon
+from Furious.Window.LogPage import LogPage
+from Furious.Window.MainWindow import MainWindow
 
 from PySide6 import QtCore
-from PySide6.QtGui import *
-from PySide6.QtNetwork import *
-from PySide6.QtWidgets import *
+from PySide6.QtGui import QFontDatabase, QPalette
+from PySide6.QtNetwork import QLocalServer, QLocalSocket
+from PySide6.QtWidgets import QApplication
 
 import os
 import sys
 import logging
 import platform
-import threading
 import traceback
 import darkdetect
 
 logger = logging.getLogger(__name__)
+
+
+class _ApplicationCleanupStack:
+    """Run acquired application-resource cleanup in reverse order exactly once."""
+
+    def __init__(self):
+        self._callbacks = []
+        self._closed = False
+
+    def register(self, stage: str, callback):
+        """Record cleanup after *stage* has completed successfully."""
+        if self._closed:
+            raise RuntimeError('application cleanup has already completed')
+
+        self._callbacks.append((stage, callback))
+
+    def close(self):
+        """Release every acquired stage in reverse order, continuing on errors."""
+        if self._closed:
+            return False
+
+        self._closed = True
+
+        while self._callbacks:
+            stage, callback = self._callbacks.pop()
+
+            try:
+                callback()
+            except Exception:
+                # Any non-exit exceptions
+
+                logger.exception(f'application cleanup failed for stage {stage}')
+
+        return True
 
 
 class SystemTrayUnavailable(Exception):
@@ -148,18 +206,11 @@ class SingletonApplication(ApplicationExitHelper):
         raise NotImplementedError
 
 
-class ApplicationThemeDetector(QtCore.QObject):
-    """Represent application theme detector."""
-
-    themeChanged = QtCore.Signal(str)
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the ApplicationThemeDetector."""
-        super().__init__(*args, **kwargs)
-
-
 class DesktopApplication(ApplicationRunner, SingletonApplication):
     """Represent application."""
+
+    _sessionShutdownRequested = QtCore.Signal()
+    ThreadPoolShutdownTimeout = 5000
 
     def __init__(self, argv):
         """Initialize the desktop application."""
@@ -180,8 +231,6 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         # Theme Detect
         self.currentTheme = None
         self.themeDetectTimer = None
-        self.themeDetector = None
-        self.themeListenerThread = None
 
         self.mainWindow = None
         self.systemTray = None
@@ -202,6 +251,19 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         # ThreadPool
         self.threadPool = QtCore.QThreadPool(self)
         self.threadPool.setMaxThreadCount(max(OS_CPU_COUNT // 2, 1))
+
+        self._cleanupStack = _ApplicationCleanupStack()
+        self._cleanupStack.register('thread pool', self._cleanupThreadPool)
+
+        self._exitRequested = False
+        self._exitCode = ApplicationRunner.ExitCode.ExitSuccess.value
+
+        # win32session invokes its callback on the native listener thread.
+        # Queue the request so every Qt-owned cleanup stage stays on the GUI thread.
+        self._sessionShutdownRequested.connect(
+            self.exit,
+            QtCore.Qt.ConnectionType.QueuedConnection,
+        )
 
     @callRateLimited(maxCallPerSecond=2)
     @QtCore.Slot()
@@ -307,17 +369,27 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         pluginRegistry = initializePluginRegistry(
             (*OFFICIAL_PLUGIN_TYPES, *BUNDLED_EXTENSION_TYPES)
         )
-        configureEditorLogMetadata(
-            lambda: (*pluginRegistry.coreVersions(), Tun2socks.version()),
-            pluginRegistry.logTimestampPatterns,
-        )
-        pluginRegistry.configureEnvironment()
 
-        if SystemRuntime.flatpakID():
-            # https://github.com/flatpak/flatpak/issues/3438
-            os.environ['TMPDIR'] = os.path.join(
-                os.environ.get('XDG_RUNTIME_DIR'), 'app', APPLICATION_FLATPAK_ID
+        try:
+            configureEditorLogMetadata(
+                lambda: (*pluginRegistry.coreVersions(), Tun2socks.version()),
+                pluginRegistry.logTimestampPatterns,
             )
+            pluginRegistry.configureEnvironment()
+
+            if SystemRuntime.flatpakID():
+                # https://github.com/flatpak/flatpak/issues/3438
+                os.environ['TMPDIR'] = os.path.join(
+                    os.environ.get('XDG_RUNTIME_DIR'), 'app', APPLICATION_FLATPAK_ID
+                )
+        except Exception:
+            # Any non-exit exceptions
+
+            pluginRegistry.shutdown()
+
+            raise
+
+        return pluginRegistry
 
     def addStorage(self):
         # Protected storage access
@@ -326,6 +398,192 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         self._userServers = Storage.UserServers()
         self._userSubs = Storage.UserSubs()
         self._userTUNSettings = Storage.UserTUNSettings()
+
+    def _initializeControllers(self):
+        """Create the process-lifetime application state authorities."""
+        try:
+            (
+                self.connectionController,
+                self.routingController,
+                self.settingsController,
+            ) = (
+                ConnectionController(parent=self),
+                RoutingController(parent=self),
+                SettingsController(),
+            )
+
+            self.connectionController.interactionEnabledChanged.connect(
+                self.routingController.setInteractionEnabled
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            self._cleanupControllers()
+
+            raise
+
+    def _cleanupControllers(self):
+        """Shut down and release each controller acquired during startup."""
+        if self.connectionController is not None:
+            try:
+                self.connectionController.shutdown()
+            except Exception:
+                # Any non-exit exceptions
+
+                logger.exception('connection controller shutdown failed')
+
+        for controllerName in ('routingController', 'connectionController'):
+            controller = getattr(self, controllerName)
+
+            if isinstance(controller, QtCore.QObject):
+                controller.deleteLater()
+
+            setattr(self, controllerName, None)
+
+        self.settingsController = None
+
+    def _initializeThemeDetection(self):
+        """Start the one application-owned theme observer."""
+        logger.info('theme detect method uses timer implementation')
+
+        @QtCore.Slot()
+        def handleTimeout():
+            """Apply a changed system theme."""
+            currentTheme = self.systemTheme()
+
+            if self.currentTheme != currentTheme:
+                self.currentTheme = currentTheme
+                self.handleSystemThemeChanged(currentTheme)
+
+        self.currentTheme = self.systemTheme()
+        self.themeDetectTimer = QtCore.QTimer(self)
+        self.themeDetectTimer.timeout.connect(handleTimeout)
+        self.themeDetectTimer.start(1000)
+
+    def _stopThemeDetection(self):
+        """Stop Qt-owned theme polling during rollback or final cleanup."""
+        if isinstance(self.themeDetectTimer, QtCore.QTimer):
+            self.themeDetectTimer.stop()
+
+    def _cleanupThreadPool(self):
+        """Cancel queued work and boundedly finish already-running Qt work."""
+        self.threadPool.clear()
+
+        if not self.threadPool.waitForDone(self.ThreadPoolShutdownTimeout):
+            logger.error('application thread pool did not stop before timeout')
+
+    def _initializeSystemIntegration(self):
+        """Install operating-system session and automatic proxy integration."""
+        self.setQuitOnLastWindowClosed(False)
+
+        if Win32Session.set(self._sessionShutdownRequested.emit):
+            self._cleanupStack.register('Windows session listener', Win32Session.off)
+
+            if not Win32Session.run():
+                logger.error('failed to start Windows session listener')
+
+        if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:
+            SystemProxy.off()
+            SystemProxy.daemonOn_()
+
+            self._cleanupStack.register(
+                'automatic system proxy', self._cleanupSystemProxy
+            )
+
+    @staticmethod
+    def _cleanupSystemProxy():
+        """Release the exact automatic system-proxy integration."""
+        SystemProxy.off()
+        SystemProxy.daemonOff()
+
+    def _initializeUI(self):
+        """Create and bootstrap the application-owned main window and tray."""
+        try:
+            self.applyThemePreference()
+            self.mainWindow = MainWindow()
+            self.systemTray = TrayIcon(parent=self)
+
+            if PLATFORM == 'Darwin':
+                if AppSettings.isStateON_('HideDockIcon'):
+                    self.installDockIconVisibilityFeature()
+
+                def onApplicationStateChange(state):
+                    """Show the main window when the macOS dock activates the app."""
+                    if QtCore.Qt.ApplicationState(state) != (
+                        QtCore.Qt.ApplicationState.ApplicationActive
+                    ):
+                        return
+
+                    controller = AppConnectionController()
+
+                    if (
+                        not self.mainWindow.isVisible()
+                        and controller is not None
+                        and not controller.isConnecting()
+                    ):
+                        self.mainWindow.show()
+
+                self.applicationStateChanged.connect(onApplicationStateChange)
+
+            self.systemTray.show()
+            self.systemTray.setCustomToolTip()
+            self.systemTray.bootstrap()
+        except Exception:
+            # Any non-exit exceptions
+
+            self._cleanupUI()
+
+            raise
+
+    def _cleanupUI(self):
+        """Hide and release application-owned top-level UI objects."""
+        if self.systemTray is not None:
+            self.systemTray.hide()
+            self.systemTray.deleteLater()
+            self.systemTray = None
+
+        if self.mainWindow is not None:
+            self.mainWindow.hide()
+            self.mainWindow.deleteLater()
+            self.mainWindow = None
+
+    def _logRuntimeInformation(self):
+        """Log the initialized runtime environment without acquiring resources."""
+        logger.info(f'application version: {APPLICATION_VERSION}')
+        logger.info(
+            f'Qt version: {QtCore.qVersion()}. PySide6 version: {PYSIDE6_VERSION}'
+        )
+        logger.info(f'Qt build info: {QtCore.QLibraryInfo.build()}')
+        logger.info(f'platform: {PLATFORM}')
+        logger.info(f'platform release: {PLATFORM_RELEASE}')
+        logger.info(f'platform machine: {PLATFORM_MACHINE}')
+
+        if PLATFORM == 'Darwin':
+            logger.info(f'mac_ver: {platform.mac_ver()}')
+
+        appImagePath = SystemRuntime.appImagePath()
+
+        if appImagePath:
+            logger.info(f'running from Linux AppImage: {appImagePath}')
+        else:
+            logger.info(f'not running from Linux AppImage')
+
+        flatpakId = SystemRuntime.flatpakID()
+
+        if flatpakId:
+            logger.info(f'running from Linux flatpak: {flatpakId}')
+        else:
+            logger.info(f'not running from Linux flatpak')
+
+        logger.info(f'python version: {PLATFORM_PYTHON_VERSION}')
+        logger.info(f'system version: {sys.version}')
+        logger.info(f'sys.executable: {sys.executable}')
+        logger.info(f'sys.argv: {sys.argv}')
+        logger.info(f'appFilePath: {self.applicationFilePath()}')
+        logger.info(f'isPythonw: {SystemRuntime.isPythonw()}')
+        logger.info(f'system language is {SYSTEM_LANGUAGE}')
+        logger.info(self.customFontLoadMsg)
+        logger.info(f'current theme is {self.theme()}')
 
     def isSystemDarkMode(self):
         """Return whether the current system palette appears dark."""
@@ -398,28 +656,11 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
         Mixins.ThemeAware.callThemeChangedCallback(theme)
 
-    @staticmethod
-    @callOnceOnly
     @QtCore.Slot()
-    def cleanup():
-        """Release resources owned by the application."""
-        controller = AppConnectionController()
-
-        if controller is not None:
-            controller.shutdown()
-
-        getPluginRegistry().shutdown()
-
-        Mixins.CleanupOnExit.cleanupAll()
-
-        if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:
-            # Automatically configure
-            SystemProxy.off()
-            SystemProxy.daemonOff()
-
-        AppThreadPool().clear()
-
-        logger.info('final cleanup done')
+    def cleanup(self):
+        """Release every successfully acquired application stage exactly once."""
+        if self._cleanupStack.close():
+            logger.info('final cleanup done')
 
     @staticmethod
     def setDockIconVisible(visible: bool):
@@ -459,16 +700,15 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                 self.setDockIconVisible(False)
 
     def exit(self, exitcode=0):
-        """Shut down and exit the application."""
+        """Request normal event-loop termination; ``aboutToQuit`` owns cleanup."""
+        if self._exitRequested:
+            return
+
+        self._exitRequested = True
+        self._exitCode = int(exitcode)
         self.setExitingFlag(True)
 
-        self.threadPool.clear()
-
-        # Dirty exit
-        for timeout in [1000, 2000, 3000]:
-            QtCore.QTimer.singleShot(timeout, APP().exit)
-
-        super().exit(exitcode)
+        QtCore.QCoreApplication.exit(self._exitCode)
 
     def run(self):
         """Run the application task."""
@@ -485,148 +725,40 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                     'TrayIcon is not available on this platform'
                 )
 
-            self.addEnviron()
-            self.addStorage()
+            pluginRegistry = self.addEnviron()
 
-            # The application owns these lifetime-scoped services; Frozenlib
-            # exposes them through App*Controller accessors.
-            (
-                self.connectionController,
-                self.routingController,
-                self.settingsController,
-            ) = (
-                ConnectionController(parent=self),
-                RoutingController(parent=self),
-                SettingsController(),
-            )
+            self._cleanupStack.register('plugins', pluginRegistry.shutdown)
 
-            self.connectionController.interactionEnabledChanged.connect(
-                self.routingController.setInteractionEnabled
+            try:
+                self.addStorage()
+            except Exception:
+                Mixins.CleanupOnExit.cleanupAll()
+
+                raise
+
+            self._cleanupStack.register(
+                'mixin-owned resources', Mixins.CleanupOnExit.cleanupAll
             )
+            self._initializeControllers()
+            self._cleanupStack.register('controllers', self._cleanupControllers)
 
             self.addCustomFont()
             # self.configureApplicationFont()
             self.configureLogging()
+            self._logRuntimeInformation()
 
-            logger.info(f'application version: {APPLICATION_VERSION}')
-            logger.info(
-                f'Qt version: {QtCore.qVersion()}. PySide6 version: {PYSIDE6_VERSION}'
-            )
-            logger.info(f'Qt build info: {QtCore.QLibraryInfo.build()}')
-            logger.info(f'platform: {PLATFORM}')
-            logger.info(f'platform release: {PLATFORM_RELEASE}')
-            logger.info(f'platform machine: {PLATFORM_MACHINE}')
+            self._initializeThemeDetection()
+            self._cleanupStack.register('theme detection', self._stopThemeDetection)
 
-            if PLATFORM == 'Darwin':
-                logger.info(f'mac_ver: {platform.mac_ver()}')
+            self.aboutToQuit.connect(self.cleanup)
+            self._initializeSystemIntegration()
 
-            appImagePath = SystemRuntime.appImagePath()
+            self._initializeUI()
+            self._cleanupStack.register('application UI', self._cleanupUI)
+            self.connectionController.restoreStartupState()
 
-            if appImagePath:
-                logger.info(f'running from Linux AppImage: \'{appImagePath}\'')
-            else:
-                logger.info('not running from Linux AppImage')
-
-            flatpakId = SystemRuntime.flatpakID()
-
-            if flatpakId:
-                logger.info(f'running from Linux flatpak: \'{flatpakId}\'')
-            else:
-                logger.info('not running from Linux flatpak')
-
-            logger.info(f'python version: {PLATFORM_PYTHON_VERSION}')
-            logger.info(f'system version: {sys.version}')
-            logger.info(f'sys.executable: \'{sys.executable}\'')
-            logger.info(f'sys.argv: {sys.argv}')
-            logger.info(f'appFilePath: \'{self.applicationFilePath()}\'')
-            logger.info(f'isPythonw: {SystemRuntime.isPythonw()}')
-            logger.info(f'system language is {SYSTEM_LANGUAGE}')
-            logger.info(self.customFontLoadMsg)
-            logger.info(f'current theme is {self.theme()}')
-
-            if PLATFORM != 'Windows' and not SystemRuntime.isScriptMode():
-                logger.info('theme detect method uses timer implementation')
-
-                @QtCore.Slot()
-                def handleTimeout():
-                    """Handle timeout."""
-                    currentTheme = self.systemTheme()
-
-                    if self.currentTheme != currentTheme:
-                        self.currentTheme = currentTheme
-
-                        self.handleSystemThemeChanged(currentTheme)
-
-                self.currentTheme = self.systemTheme()
-                self.themeDetectTimer = QtCore.QTimer(self)
-                self.themeDetectTimer.timeout.connect(handleTimeout)
-                self.themeDetectTimer.start(1000)
-            else:
-                logger.info('theme detect method uses listener implementation')
-
-                def listener(*args, **kwargs):
-                    """Handle listener for the application."""
-                    try:
-                        darkdetect.listener(*args, **kwargs)
-                    except NotImplementedError:
-                        # Not supported by darkdetect. Ignore
-
-                        logger.error(
-                            'darkdetect listener is not implemented on this platform'
-                        )
-
-                self.themeDetector = ApplicationThemeDetector(self)
-                self.themeDetector.themeChanged.connect(self.handleSystemThemeChanged)
-
-                self.themeListenerThread = threading.Thread(
-                    target=listener,
-                    args=(self.themeDetector.themeChanged.emit,),
-                    daemon=True,
-                )
-                self.themeListenerThread.start()
-
-            # Mandatory
-            self.setQuitOnLastWindowClosed(False)
-
-            self.aboutToQuit.connect(DesktopApplication.cleanup)
-
-            Win32Session.set(DesktopApplication.cleanup)
-            Win32Session.run()
-
-            if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:
-                # Automatically configure
-                SystemProxy.off()
-                SystemProxy.daemonOn_()
-
-            # Resolve the stored preference before constructing application UI so
-            # newly created widgets use the correct palette from their first frame.
-            self.applyThemePreference()
-
-            self.mainWindow = MainWindow()
-            self.systemTray = TrayIcon()
-
-            if PLATFORM == 'Darwin':
-                if AppSettings.isStateON_('HideDockIcon'):
-                    # Hide Dock icon initially, keeping only the tray icon visible
-                    self.installDockIconVisibilityFeature()
-
-                def onApplicationStateChange(state):
-                    """Handle on application state change for the application."""
-                    if state == QtCore.Qt.ApplicationState.ApplicationActive:
-                        if (
-                            not self.mainWindow.isVisible()
-                            and not AppConnectionController().isConnecting()
-                        ):
-                            self.mainWindow.show()
-
-                # Ensure the main window is shown when the dock icon is clicked
-                self.applicationStateChanged.connect(onApplicationStateChange)
-
-            self.systemTray.show()
-            self.systemTray.setCustomToolTip()
-            self.systemTray.bootstrap()
-
-            AppConnectionController().restoreStartupState()
+            if self._exitRequested:
+                return self._exitCode
 
             return self.exec()
         except SystemTrayUnavailable:
@@ -637,3 +769,5 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
             traceback.print_exc()
 
             return ApplicationRunner.ExitCode.UnknownException.value
+        finally:
+            self.cleanup()
