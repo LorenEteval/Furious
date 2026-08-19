@@ -777,6 +777,11 @@ class AppQMessageBox(AppQTransientDialog):
     MultipleActionBaseWidth = 520
     MaximumSurfaceWidth = 720
 
+    # AppQDialog already wires a cleanup callback for its asynchronous registry.
+    # This message-box-specific registry repeats that cleanup so open() can bypass
+    # AppQDialog.open() while preserving QMessageBox-compatible show behavior.
+    # The duplicate cleanup is harmless and idempotent, but future changes must
+    # keep both registries synchronized or consolidate them deliberately.
     _openMessageBoxes = {}
     _standardButtonOrder = (
         StandardButton.Ok,
