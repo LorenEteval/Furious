@@ -120,9 +120,18 @@ class RuntimeKernel(ABC):
             return ''
 
         if not isinstance(result, str) or not result:
-            self.setStartError(_INVALID_CONFIGURATION_ERROR)
+            diagnostic = ''
+            serializationError = getattr(config, 'serializationError', None)
 
-            logger.error(f'configuration serializer for {self.name()} returned no JSON')
+            if callable(serializationError):
+                diagnostic = str(serializationError() or '')
+
+            self.setStartError(diagnostic or _INVALID_CONFIGURATION_ERROR)
+
+            logger.error(
+                f'configuration serializer for {self.name()} returned no JSON'
+                + (f': {diagnostic}' if diagnostic else '')
+            )
 
             return ''
 
