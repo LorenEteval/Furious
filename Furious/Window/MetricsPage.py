@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import Mixins
-from Furious.Qt import AppQLabel
+from Furious.Qt import AppQComboBox, AppQLabel
 from Furious.Qt import gettext as _
 from Furious.Service import (
     DOWNLOAD_SPEED_METRIC,
@@ -51,8 +51,10 @@ class _MetricCard(QFrame):
         super().__init__(parent)
 
         self.setObjectName('MetricCard')
+
         self.titleLabel = AppQLabel(translatable=False, parent=self)
         self.titleLabel.setObjectName('MetricCardTitle')
+
         self.graph = graph
         self.graph.setParent(self)
 
@@ -76,8 +78,10 @@ class _MetricsSection(QFrame):
         super().__init__(parent)
 
         self.setObjectName('MetricsSection')
+
         self.titleLabel = AppQLabel(translatable=False, parent=self)
         self.titleLabel.setObjectName('MetricsSectionTitle')
+
         self.speedCard = _MetricCard(speedGraph, parent=self)
         self.usageCard = _MetricCard(usageGraph, parent=self)
 
@@ -132,39 +136,68 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self._dirty = True
         self._renderRevision = 0
 
-        self.pageTitleLabel = AppQLabel(translatable=False)
+        (
+            self.pageTitleLabel,
+            self.timeRangeLabel,
+            self.granularityLabel,
+            self.timeRangeComboBox,
+            self.granularityComboBox,
+        ) = (
+            AppQLabel(_('Network Metrics')),
+            AppQLabel(_('Time Range')),
+            AppQLabel(_('Granularity')),
+            AppQComboBox(),
+            AppQComboBox(),
+        )
+
         self.pageTitleLabel.setObjectName('MetricsPageTitle')
-        self.timeRangeLabel = AppQLabel(translatable=False)
-        self.granularityLabel = AppQLabel(translatable=False)
-        self.timeRangeComboBox = QComboBox()
-        self.granularityComboBox = QComboBox()
         self.timeRangeComboBox.setMinimumWidth(160)
         self.granularityComboBox.setMinimumWidth(130)
 
-        self.downloadSpeedGraph = MetricsGraphWidget(
-            MetricsGraphWidget.Download,
-            formatTrafficSpeed,
+        self._populateComboBox(
+            self.timeRangeComboBox,
+            self._timeRangeOptions(),
+            self.DefaultTimeRange,
         )
-        self.downloadUsageGraph = MetricsGraphWidget(
-            MetricsGraphWidget.Download,
-            formatTrafficUsage,
-        )
-        self.uploadSpeedGraph = MetricsGraphWidget(
-            MetricsGraphWidget.Upload,
-            formatTrafficSpeed,
-        )
-        self.uploadUsageGraph = MetricsGraphWidget(
-            MetricsGraphWidget.Upload,
-            formatTrafficUsage,
+        self._populateComboBox(
+            self.granularityComboBox,
+            self._granularityOptions(),
+            self.DefaultGranularity,
         )
 
-        self.downloadSection = _MetricsSection(
+        (
             self.downloadSpeedGraph,
             self.downloadUsageGraph,
-        )
-        self.uploadSection = _MetricsSection(
             self.uploadSpeedGraph,
             self.uploadUsageGraph,
+        ) = (
+            MetricsGraphWidget(
+                MetricsGraphWidget.Download,
+                formatTrafficSpeed,
+            ),
+            MetricsGraphWidget(
+                MetricsGraphWidget.Download,
+                formatTrafficUsage,
+            ),
+            MetricsGraphWidget(
+                MetricsGraphWidget.Upload,
+                formatTrafficSpeed,
+            ),
+            MetricsGraphWidget(
+                MetricsGraphWidget.Upload,
+                formatTrafficUsage,
+            ),
+        )
+
+        self.downloadSection, self.uploadSection = (
+            _MetricsSection(
+                self.downloadSpeedGraph,
+                self.downloadUsageGraph,
+            ),
+            _MetricsSection(
+                self.uploadSpeedGraph,
+                self.uploadUsageGraph,
+            ),
         )
 
         self.endpointInfoWidget = EndpointInfoWidget(
@@ -190,6 +223,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
         contentWidget = QWidget()
         contentWidget.setObjectName('MetricsPageContent')
+
         contentLayout = QVBoxLayout(contentWidget)
         contentLayout.setContentsMargins(20, 18, 20, 20)
         contentLayout.setSpacing(14)
@@ -246,7 +280,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
     @staticmethod
     def _populateComboBox(comboBox, options, selectedValue):
-        """Rebuild translated choices while preserving semantic data."""
+        """Populate translated choices and select one semantic value."""
         blocker = QtCore.QSignalBlocker(comboBox)
 
         comboBox.clear()
@@ -366,17 +400,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self._scheduleRender()
 
     def retranslate(self):
-        """Refresh page, section, graph, and selector text."""
-        selectedRange = self.timeRangeComboBox.currentData() or self.DefaultTimeRange
-        selectedGranularity = (
-            self.granularityComboBox.currentData()
-            if self.granularityComboBox.count()
-            else self.DefaultGranularity
-        )
-
-        self.pageTitleLabel.setText(_('Network Metrics'))
-        self.timeRangeLabel.setText(_('Time Range'))
-        self.granularityLabel.setText(_('Granularity'))
+        """Refresh composite section, graph, and endpoint presentation text."""
         self.downloadSection.setTitles(
             _('Download'),
             _('Download Speed'),
@@ -388,17 +412,6 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             _('Upload Traffic Usage'),
         )
         self.endpointInfoWidget.retranslate()
-
-        self._populateComboBox(
-            self.timeRangeComboBox,
-            self._timeRangeOptions(),
-            selectedRange,
-        )
-        self._populateComboBox(
-            self.granularityComboBox,
-            self._granularityOptions(),
-            selectedGranularity,
-        )
 
         self._dirty = True
         self._scheduleRender()
