@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass, field
 from importlib import metadata
 from typing import Optional
 from urllib.parse import urlsplit
@@ -27,7 +28,29 @@ from urllib.parse import urlsplit
 import logging
 import threading
 
-from .API import *
+from .API import (
+    PLUGIN_API_VERSION,
+    ActionProvider,
+    CapabilityKind,
+    CoreRuntimeFactory,
+    CoreRuntimeLaunch,
+    CoreRuntimeRequest,
+    FuriousPlugin,
+    PluginCapability,
+    PluginContext,
+    PluginMetadata,
+    ProtocolDescriptor,
+    ProtocolEditorProvider,
+    ProtocolHandler,
+    ProtocolParseResult,
+    RoutingOption,
+    SubscriptionDecoder,
+    SubscriptionItem,
+    SubscriptionResult,
+    TUNPreparationError,
+    TrafficStatsMonitor,
+    TrafficStatsProvider,
+)
 
 __all__ = [
     'PLUGIN_ENTRY_POINT_GROUP',
@@ -73,6 +96,19 @@ def _connectionOf(value):
     return getattr(value, 'connection', value)
 
 
+@dataclass
+class _PluginValidationState:
+    """Track conflicts discovered while validating one plugin atomically."""
+
+    capabilityIds: set = field(default_factory=set)
+    protocolIds: set = field(default_factory=set)
+    schemes: set = field(default_factory=set)
+    editorProtocols: set = field(default_factory=set)
+    configurationTypes: list = field(default_factory=list)
+    runtimeTypes: list = field(default_factory=list)
+    trafficStatsRuntimeTypes: list = field(default_factory=list)
+
+
 class PluginRegistry:
     """Own plugin lifecycle and dispatch through capability indexes."""
 
@@ -115,8 +151,8 @@ class PluginRegistry:
 
         return identifier
 
-    def _validatePlugin(self, plugin):
-        """Validate *plugin* and return normalized registration data."""
+    def _validatePluginMetadata(self, plugin):
+        """Validate one plugin and return its normalized identity metadata."""
         if isinstance(plugin, type) and issubclass(plugin, FuriousPlugin):
             plugin = plugin()
 
@@ -149,191 +185,198 @@ class PluginRegistry:
         if pluginId in self._plugins:
             raise ValueError(f'plugin {pluginMetadata.id!r} is already registered')
 
-        capabilities = tuple(plugin.declaredCapabilities())
-        localCapabilityIds = set()
-        localProtocolIds = set()
-        localSchemes = set()
-        localEditorProtocols = set()
-        localConfigurationTypes = []
-        localRuntimeTypes = []
-        localTrafficStatsRuntimeTypes = []
-        entries = []
+        return plugin, pluginId, pluginMetadata
 
-        for capability in capabilities:
-            if not isinstance(capability, PluginCapability):
-                raise TypeError(
-                    'plugin capabilities must contain PluginCapability values'
-                )
+    def _validateProtocolHandler(self, capability, state):
+        """Validate and normalize one protocol handler."""
+        descriptor = capability.descriptor
 
-            kind = self._kind(capability)
-            capabilityId = self._id(capability)
-            key = (kind, capabilityId)
+        if not isinstance(descriptor, ProtocolDescriptor):
+            raise TypeError('protocol handlers must expose a ProtocolDescriptor value')
 
-            if capabilityId in self._capabilities[kind] or key in localCapabilityIds:
+        protocolId = _normalizeIdentifier(descriptor.id)
+
+        if not protocolId:
+            raise ValueError('protocol ID cannot be empty')
+
+        if not isinstance(descriptor.displayName, str):
+            raise TypeError('protocol display name must be a string')
+
+        if not isinstance(descriptor.addActionText, str):
+            raise TypeError('protocol add-action text must be a string')
+
+        if not isinstance(descriptor.configurationSchema, Mapping):
+            raise TypeError('protocol configuration schema must be a mapping')
+
+        if not isinstance(descriptor.translatable, bool):
+            raise TypeError('protocol translatable flag must be a boolean')
+
+        if not isinstance(descriptor.subscriptionImportable, bool):
+            raise TypeError('protocol subscription-importable flag must be a boolean')
+
+        if protocolId in self._protocols or protocolId in state.protocolIds:
+            raise ValueError(f'protocol {descriptor.id!r} is already registered')
+
+        schemes = tuple(_normalizeScheme(scheme) for scheme in capability.schemes)
+
+        if any(not scheme for scheme in schemes):
+            raise ValueError(f'protocol {descriptor.id!r} has an empty URI scheme')
+
+        for scheme in schemes:
+            if scheme in self._schemes or scheme in state.schemes:
+                raise ValueError(f'URI scheme {scheme!r} is already registered')
+
+        state.protocolIds.add(protocolId)
+        state.schemes.update(schemes)
+
+        return protocolId, schemes
+
+    def _validateProtocolEditor(self, capability, state):
+        """Validate and normalize one protocol-editor provider."""
+        protocolIds = tuple(
+            _normalizeIdentifier(value) for value in capability.protocolIds
+        )
+
+        if not protocolIds or any(not value for value in protocolIds):
+            raise ValueError('protocol editor providers must declare protocol IDs')
+
+        for protocolId in protocolIds:
+            if (
+                protocolId in self._protocolEditors
+                or protocolId in state.editorProtocols
+            ):
                 raise ValueError(
-                    f'{kind.value} capability {capability.capabilityId!r} '
-                    f'is already registered'
+                    f'protocol {protocolId!r} already has an editor provider'
                 )
 
-            localCapabilityIds.add(key)
+        state.editorProtocols.update(protocolIds)
 
-            if isinstance(capability, ProtocolHandler):
-                descriptor = capability.descriptor
+        return protocolIds
 
-                if not isinstance(descriptor, ProtocolDescriptor):
-                    raise TypeError(
-                        'protocol handlers must expose a ProtocolDescriptor value'
-                    )
+    @staticmethod
+    def _validateDisjointTypes(values, label, existing, local):
+        """Validate a capability's class types against global and local indexes."""
+        for itemType in values:
+            if not isinstance(itemType, type):
+                raise TypeError(f'core runtime factory {label} types must be classes')
 
-                protocolId = _normalizeIdentifier(descriptor.id)
-
-                if not protocolId:
-                    raise ValueError('protocol ID cannot be empty')
-
-                if not isinstance(descriptor.displayName, str):
-                    raise TypeError('protocol display name must be a string')
-
-                if not isinstance(descriptor.addActionText, str):
-                    raise TypeError('protocol add-action text must be a string')
-
-                if not isinstance(descriptor.configurationSchema, Mapping):
-                    raise TypeError('protocol configuration schema must be a mapping')
-
-                if not isinstance(descriptor.translatable, bool):
-                    raise TypeError('protocol translatable flag must be a boolean')
-
-                if not isinstance(descriptor.subscriptionImportable, bool):
-                    raise TypeError(
-                        'protocol subscription-importable flag must be a boolean'
-                    )
-
-                if protocolId in self._protocols or protocolId in localProtocolIds:
-                    raise ValueError(
-                        f'protocol {descriptor.id!r} is already registered'
-                    )
-
-                schemes = tuple(
-                    _normalizeScheme(scheme) for scheme in capability.schemes
+            if any(
+                issubclass(itemType, registeredType)
+                or issubclass(registeredType, itemType)
+                for registeredType in (*existing, *local)
+            ):
+                raise ValueError(
+                    f'{label} type {itemType.__name__!r} overlaps a registered type'
                 )
 
-                if any(not scheme for scheme in schemes):
-                    raise ValueError(
-                        f'protocol {descriptor.id!r} has an empty URI scheme'
-                    )
+            local.append(itemType)
 
-                for scheme in schemes:
-                    if scheme in self._schemes or scheme in localSchemes:
-                        raise ValueError(f'URI scheme {scheme!r} is already registered')
+    def _validateCoreRuntimeFactory(self, capability, state):
+        """Validate and normalize one core-runtime factory."""
+        configurationTypes = tuple(capability.configurationTypes)
+        runtimeTypes = _runtimeTypes(capability)
 
-                localProtocolIds.add(protocolId)
-                localSchemes.update(schemes)
-                detail = (protocolId, schemes)
-            elif isinstance(capability, ProtocolEditorProvider):
-                protocolIds = tuple(
-                    _normalizeIdentifier(value) for value in capability.protocolIds
+        if not configurationTypes:
+            raise ValueError(
+                f'core runtime factory {capability.factoryId!r} must declare '
+                f'configuration types'
+            )
+
+        self._validateDisjointTypes(
+            configurationTypes,
+            'configuration',
+            tuple(self._configurationFactories),
+            state.configurationTypes,
+        )
+        self._validateDisjointTypes(
+            runtimeTypes,
+            'runtime',
+            tuple(self._runtimeFactories),
+            state.runtimeTypes,
+        )
+
+        return configurationTypes, runtimeTypes
+
+    def _validateTrafficStatsProvider(self, capability, state):
+        """Validate and normalize one runtime traffic-statistics provider."""
+        runtimeTypes = _runtimeTypes(capability)
+
+        if not runtimeTypes:
+            raise ValueError(
+                f'traffic stats provider {capability.providerId!r} must '
+                f'declare runtime types'
+            )
+
+        for runtimeType in runtimeTypes:
+            if not isinstance(runtimeType, type):
+                raise TypeError('traffic stats provider runtime types must be classes')
+
+            if any(
+                issubclass(runtimeType, registeredType)
+                or issubclass(registeredType, runtimeType)
+                for registeredType in (
+                    *self._trafficStatsProviders,
+                    *state.trafficStatsRuntimeTypes,
+                )
+            ):
+                raise ValueError(
+                    f'traffic stats runtime type '
+                    f'{runtimeType.__name__!r} overlaps a registered type'
                 )
 
-                if not protocolIds or any(not value for value in protocolIds):
-                    raise ValueError(
-                        'protocol editor providers must declare protocol IDs'
-                    )
+            state.trafficStatsRuntimeTypes.append(runtimeType)
 
-                for protocolId in protocolIds:
-                    if (
-                        protocolId in self._protocolEditors
-                        or protocolId in localEditorProtocols
-                    ):
-                        raise ValueError(
-                            f'protocol {protocolId!r} already has an editor provider'
-                        )
+        return runtimeTypes
 
-                localEditorProtocols.update(protocolIds)
-                detail = protocolIds
-            elif isinstance(capability, CoreRuntimeFactory):
-                configurationTypes = tuple(capability.configurationTypes)
-                runtimeTypes = _runtimeTypes(capability)
+    @staticmethod
+    def _validateSubscriptionDecoder(capability):
+        """Validate one subscription decoder."""
+        if not isinstance(capability.priority, int):
+            raise TypeError('subscription decoder priority must be an integer')
 
-                if not configurationTypes:
-                    raise ValueError(
-                        f'core runtime factory {capability.factoryId!r} must declare '
-                        f'configuration types'
-                    )
+    def _validateCapability(self, capability, state):
+        """Validate one capability and return normalized registration data."""
+        if not isinstance(capability, PluginCapability):
+            raise TypeError('plugin capabilities must contain PluginCapability values')
 
-                for values, label, existing, local in (
-                    (
-                        configurationTypes,
-                        'configuration',
-                        tuple(self._configurationFactories),
-                        localConfigurationTypes,
-                    ),
-                    (
-                        runtimeTypes,
-                        'runtime',
-                        tuple(self._runtimeFactories),
-                        localRuntimeTypes,
-                    ),
-                ):
-                    for itemType in values:
-                        if not isinstance(itemType, type):
-                            raise TypeError(
-                                f'core runtime factory {label} types must be classes'
-                            )
+        kind = self._kind(capability)
+        capabilityId = self._id(capability)
+        key = (kind, capabilityId)
 
-                        if any(
-                            issubclass(itemType, registeredType)
-                            or issubclass(registeredType, itemType)
-                            for registeredType in (*existing, *local)
-                        ):
-                            raise ValueError(
-                                f'{label} type {itemType.__name__!r} overlaps a '
-                                f'registered type'
-                            )
+        if capabilityId in self._capabilities[kind] or key in state.capabilityIds:
+            raise ValueError(
+                f'{kind.value} capability {capability.capabilityId!r} '
+                f'is already registered'
+            )
 
-                        local.append(itemType)
+        state.capabilityIds.add(key)
 
-                detail = (configurationTypes, runtimeTypes)
-            elif isinstance(capability, TrafficStatsProvider):
-                runtimeTypes = _runtimeTypes(capability)
+        if isinstance(capability, ProtocolHandler):
+            detail = self._validateProtocolHandler(capability, state)
+        elif isinstance(capability, ProtocolEditorProvider):
+            detail = self._validateProtocolEditor(capability, state)
+        elif isinstance(capability, CoreRuntimeFactory):
+            detail = self._validateCoreRuntimeFactory(capability, state)
+        elif isinstance(capability, TrafficStatsProvider):
+            detail = self._validateTrafficStatsProvider(capability, state)
+        elif isinstance(capability, SubscriptionDecoder):
+            self._validateSubscriptionDecoder(capability)
+            detail = None
+        else:
+            detail = None
 
-                if not runtimeTypes:
-                    raise ValueError(
-                        f'traffic stats provider {capability.providerId!r} must '
-                        f'declare runtime types'
-                    )
+        return kind, capabilityId, capability, detail
 
-                for runtimeType in runtimeTypes:
-                    if not isinstance(runtimeType, type):
-                        raise TypeError(
-                            'traffic stats provider runtime types must be classes'
-                        )
+    def _validatePlugin(self, plugin):
+        """Validate *plugin* and return normalized registration data."""
+        plugin, pluginId, pluginMetadata = self._validatePluginMetadata(plugin)
+        capabilities = tuple(plugin.declaredCapabilities())
+        state = _PluginValidationState()
+        entries = tuple(
+            self._validateCapability(capability, state) for capability in capabilities
+        )
 
-                    if any(
-                        issubclass(runtimeType, registeredType)
-                        or issubclass(registeredType, runtimeType)
-                        for registeredType in (
-                            *self._trafficStatsProviders,
-                            *localTrafficStatsRuntimeTypes,
-                        )
-                    ):
-                        raise ValueError(
-                            f'traffic stats runtime type '
-                            f'{runtimeType.__name__!r} overlaps a registered type'
-                        )
-
-                    localTrafficStatsRuntimeTypes.append(runtimeType)
-
-                detail = runtimeTypes
-            elif isinstance(capability, SubscriptionDecoder):
-                if not isinstance(capability.priority, int):
-                    raise TypeError('subscription decoder priority must be an integer')
-
-                detail = None
-            else:
-                detail = None
-
-            entries.append((kind, capabilityId, capability, detail))
-
-        return plugin, pluginId, pluginMetadata, tuple(entries)
+        return plugin, pluginId, pluginMetadata, entries
 
     def register(self, plugin: FuriousPlugin):
         """Register, index, and initialize one plugin atomically."""
@@ -341,16 +384,19 @@ class PluginRegistry:
             raise RuntimeError('plugin registry has already been shut down')
 
         plugin, pluginId, pluginMetadata, entries = self._validatePlugin(plugin)
+
         self._plugins[pluginId] = plugin
         self._metadata[pluginId] = pluginMetadata
 
         for kind, capabilityId, capability, detail in entries:
             entry = (plugin, capability)
+
             self._capabilities[kind][capabilityId] = entry
             self._capabilityEntries.append((kind, entry))
 
             if isinstance(capability, ProtocolHandler):
                 protocolId, schemes = detail
+
                 self._protocols[protocolId] = entry
                 self._protocolEntries.append(entry)
 
@@ -363,6 +409,7 @@ class PluginRegistry:
                     self._protocolEditors[protocolId] = entry
             elif isinstance(capability, CoreRuntimeFactory):
                 configurationTypes, runtimeTypes = detail
+
                 self._factories[capabilityId] = entry
 
                 for configType in configurationTypes:
@@ -388,9 +435,11 @@ class PluginRegistry:
                 logger.error(f'plugin rollback failed for {pluginId!r}: {ex}')
 
             self._removePlugin(pluginId)
+
             raise
 
         self._initializedPlugins.append(plugin)
+
         logger.info(f'registered plugin {pluginMetadata.id!r}')
 
         return plugin
@@ -556,6 +605,7 @@ class PluginRegistry:
 
         if len(matches) > 1:
             names = ', '.join(repr(handler.descriptor.id) for handler in matches)
+
             raise ValueError(f'configuration is claimed by multiple protocols: {names}')
 
         return matches[0] if matches else None
@@ -732,6 +782,7 @@ class PluginRegistry:
                 logger.error(
                     f'failed to recognize {handler.descriptor.id!r} mapping: {ex}'
                 )
+
                 continue
 
             if result is not None:
@@ -744,6 +795,7 @@ class PluginRegistry:
                         f'protocol ownership check failed for '
                         f'{handler.descriptor.id!r}: {ex}'
                     )
+
                     continue
 
                 if not owned:
@@ -751,12 +803,14 @@ class PluginRegistry:
                         f'protocol handler {handler.descriptor.id!r} returned '
                         f'an unowned mapping result'
                     )
+
                     continue
 
                 matches.append((handler, result))
 
         if len(matches) > 1:
             names = ', '.join(repr(item[0].descriptor.id) for item in matches)
+
             raise ValueError(f'configuration mapping is ambiguous: {names}')
 
         if matches:
@@ -771,6 +825,7 @@ class PluginRegistry:
                 # Any non-exit exceptions
 
                 logger.error(f'failed to recognize {factory.factoryId!r} mapping: {ex}')
+
                 continue
 
             if result is not None:
@@ -779,12 +834,14 @@ class PluginRegistry:
                         f'core runtime factory {factory.factoryId!r} returned an '
                         f'unowned mapping result'
                     )
+
                     continue
 
                 factoryMatches.append((factory, result))
 
         if len(factoryMatches) > 1:
             names = ', '.join(repr(item[0].factoryId) for item in factoryMatches)
+
             raise ValueError(
                 f'core runtime configuration mapping is ambiguous: {names}'
             )
@@ -1053,6 +1110,7 @@ class PluginRegistry:
 
             factory = self.factoryForConfig(config)
             factoryId = factory.factoryId if factory is not None else 'unknown'
+
             logger.error(f'core runtime start failed for {factoryId!r}: {ex}')
 
             return None, False
@@ -1091,6 +1149,7 @@ class PluginRegistry:
                 # Any non-exit exceptions
 
                 logger.error(f'subscription decoder {decoder.decoderId!r} failed: {ex}')
+
                 continue
 
             if result is None:
@@ -1101,6 +1160,7 @@ class PluginRegistry:
                     f'subscription decoder {decoder.decoderId!r} returned an '
                     f'invalid result'
                 )
+
                 continue
 
             if _normalizeIdentifier(result.decoderId) != _normalizeIdentifier(
@@ -1110,6 +1170,7 @@ class PluginRegistry:
                     f'subscription decoder {decoder.decoderId!r} returned '
                     f'inconsistent metadata'
                 )
+
                 continue
 
             return result
@@ -1237,6 +1298,7 @@ class PluginRegistry:
                 # Any non-exit exceptions
 
                 pluginMetadata = plugin.pluginMetadata()
+
                 logger.error(f'plugin shutdown failed for {pluginMetadata.id!r}: {ex}')
 
         self._initializedPlugins.clear()
