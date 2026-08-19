@@ -168,7 +168,10 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
         if statusTip is not None:
             self.setStatusTip(statusTip)
 
-        # Handy callback to be able to link with lambda
+        # This is intentionally a strong reference for the QAction's lifetime.
+        # Current actions are scoped to an owning widget/menu.  An application-
+        # lifetime action must never store a transient receiver's bound method
+        # here, or it will retain that receiver and its complete Qt object tree.
         self.callback = callback
 
         if shortcut is not None:
