@@ -360,7 +360,11 @@ class TrafficCounters:
 
 @dataclass(frozen=True)
 class TrafficStatsMonitor:
-    """Describe a background traffic-statistics query operation."""
+    """Describe a bounded background traffic-statistics query operation.
+
+    Providers must apply their own finite I/O timeout. Cancellation cannot stop
+    a Python call that is already blocked inside a plugin or native dependency.
+    """
 
     query: Callable[[Any], Optional[TrafficCounters]]
     target: Any
