@@ -47,6 +47,8 @@ class ConfigFactory(dict):
         :param config: The input configuration. Can be a string or dict
         """
 
+        self._constructionError = ''
+        self._serializationError = ''
         self._init_dispatch(config)
 
     @functools.singledispatchmethod
@@ -54,27 +56,72 @@ class ConfigFactory(dict):
         """Initialize the configuration from a supported input type."""
         super().__init__()
 
+        self._constructionError = (
+            f'unsupported configuration input type: {type(config).__name__}'
+        )
+
     @_init_dispatch.register(str)
     def _(self, config):
         """Handle the registered singledispatch variant."""
         try:
             jsonObject = ujson.loads(config)
-        except Exception:
+        except Exception as jsonError:
             # Any non-exit exceptions
 
             try:
-                self.fromURI(config)
-            except Exception:
+                parsed = self.fromURI(config)
+            except Exception as uriError:
                 # Any non-exit exceptions
 
                 super().__init__()
+
+                self._constructionError = (
+                    f'failed to parse configuration as '
+                    f'JSON ({jsonError}) or URI ({uriError})'
+                )
+            else:
+                if parsed:
+                    self._constructionError = ''
+                else:
+                    super().__init__()
+
+                    self._constructionError = (
+                        f'configuration is not a JSON object'
+                        f' or recognized URI: {jsonError}'
+                    )
         else:
-            super().__init__(**jsonObject)
+            if isinstance(jsonObject, dict) and all(
+                isinstance(key, str) for key in jsonObject
+            ):
+                super().__init__(**jsonObject)
+
+                self._constructionError = ''
+            else:
+                super().__init__()
+
+                self._constructionError = (
+                    'configuration JSON root must be an object with string keys'
+                )
 
     @_init_dispatch.register(dict)
     def _(self, config):
         """Handle the registered singledispatch variant."""
-        super().__init__(**config)
+        if all(isinstance(key, str) for key in config):
+            super().__init__(**config)
+
+            self._constructionError = ''
+        else:
+            super().__init__()
+
+            self._constructionError = 'configuration keys must be strings'
+
+    def constructionError(self) -> str:
+        """Return the most recent non-throwing construction diagnostic."""
+        return self._constructionError
+
+    def serializationError(self) -> str:
+        """Return the most recent JSON serialization diagnostic."""
+        return self._serializationError
 
     def __getitem__(self, item: str):
         """Return an item from the config factory."""
@@ -115,18 +162,24 @@ class ConfigFactory(dict):
             escape_forward_slashes = kwargs.pop('escape_forward_slashes', False)
             indent = kwargs.pop('indent', 4)
 
-            return ujson.dumps(
+            result = ujson.dumps(
                 self,
                 ensure_ascii=ensure_ascii,
                 escape_forward_slashes=escape_forward_slashes,
                 indent=indent,
                 **kwargs,
             )
-        except Exception:
+        except Exception as ex:
             # Any non-exit exceptions
+
+            self._serializationError = str(ex)
 
             # '' is invalid
             return ''
+
+        self._serializationError = ''
+
+        return result
 
     def toURI(self, remark: str = '') -> str:
         """
@@ -165,6 +218,10 @@ class ConfigFactory(dict):
         """
 
         return ''
+
+    def remoteAddress(self) -> str:
+        """Return the remote host that must remain reachable outside TUN."""
+        return str(getattr(self, 'itemAddress', ''))
 
     def setHttpProxy(self, endpoint: str) -> bool:
         """
