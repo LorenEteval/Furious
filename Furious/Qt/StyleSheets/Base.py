@@ -262,13 +262,16 @@ def baseStyleSheet(palette):
                 image: none;
             }}
 
-            QFrame#MetricsSection {{
+            QFrame#MetricsSection,
+            QFrame#TrafficMetricsCard {{
                 border: 1px solid {palette['border']};
                 border-radius: 10px;
                 background-color: {palette['panel']};
             }}
 
-            QLabel#MetricsSectionTitle {{
+            QLabel#MetricsSectionTitle,
+            QLabel#TrafficMetricsCardTitle,
+            QLabel#MetricsDirectionTitle {{
                 color: {palette['text_strong']};
                 font-size: 12pt;
                 font-weight: 600;

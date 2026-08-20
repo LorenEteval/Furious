@@ -70,38 +70,104 @@ class _MetricCard(QFrame):
         self.graph.setMetricLabel(title)
 
 
-class _MetricsSection(QFrame):
-    """Group speed and traffic-usage graphs for one direction."""
+class _TrafficMetricsCard(QFrame):
+    """Group selectors and all traffic graphs in one metrics card."""
 
-    def __init__(self, speedGraph, usageGraph, parent=None):
-        """Initialize a two-card metrics section."""
+    def __init__(
+        self,
+        downloadSpeedGraph,
+        downloadUsageGraph,
+        uploadSpeedGraph,
+        uploadUsageGraph,
+        parent=None,
+    ):
+        """Initialize the combined download and upload metrics card."""
         super().__init__(parent)
 
-        self.setObjectName('MetricsSection')
+        self.setObjectName('TrafficMetricsCard')
 
-        self.titleLabel = AppQLabel(translatable=False, parent=self)
-        self.titleLabel.setObjectName('MetricsSectionTitle')
+        self.titleLabel = AppQLabel(_('Traffic Statistics'), parent=self)
+        self.titleLabel.setObjectName('TrafficMetricsCardTitle')
 
-        self.speedCard = _MetricCard(speedGraph, parent=self)
-        self.usageCard = _MetricCard(usageGraph, parent=self)
+        self.timeRangeLabel, self.granularityLabel = (
+            AppQLabel(_('Time Range'), parent=self),
+            AppQLabel(_('Granularity'), parent=self),
+        )
 
-        graphLayout = QHBoxLayout()
-        graphLayout.setContentsMargins(0, 0, 0, 0)
-        graphLayout.setSpacing(12)
-        graphLayout.addWidget(self.speedCard, 1)
-        graphLayout.addWidget(self.usageCard, 1)
+        self.timeRangeComboBox, self.granularityComboBox = (
+            AppQComboBox(parent=self),
+            AppQComboBox(parent=self),
+        )
+
+        self.timeRangeComboBox.setMinimumWidth(160)
+        self.granularityComboBox.setMinimumWidth(130)
+
+        self.downloadTitleLabel, self.uploadTitleLabel = (
+            AppQLabel(translatable=False, parent=self),
+            AppQLabel(translatable=False, parent=self),
+        )
+
+        for titleLabel in (self.downloadTitleLabel, self.uploadTitleLabel):
+            titleLabel.setObjectName('MetricsDirectionTitle')
+
+        self.downloadSpeedCard, self.downloadUsageCard = (
+            _MetricCard(downloadSpeedGraph, parent=self),
+            _MetricCard(downloadUsageGraph, parent=self),
+        )
+
+        self.uploadSpeedCard, self.uploadUsageCard = (
+            _MetricCard(uploadSpeedGraph, parent=self),
+            _MetricCard(uploadUsageGraph, parent=self),
+        )
+
+        headerLayout = QHBoxLayout()
+        headerLayout.setContentsMargins(0, 0, 0, 0)
+        headerLayout.setSpacing(8)
+        headerLayout.addWidget(self.titleLabel)
+        headerLayout.addStretch(1)
+        headerLayout.addWidget(self.timeRangeLabel)
+        headerLayout.addWidget(self.timeRangeComboBox)
+        headerLayout.addSpacing(8)
+        headerLayout.addWidget(self.granularityLabel)
+        headerLayout.addWidget(self.granularityComboBox)
+
+        downloadLayout = QHBoxLayout()
+        downloadLayout.setContentsMargins(0, 0, 0, 0)
+        downloadLayout.setSpacing(12)
+        downloadLayout.addWidget(self.downloadSpeedCard, 1)
+        downloadLayout.addWidget(self.downloadUsageCard, 1)
+
+        uploadLayout = QHBoxLayout()
+        uploadLayout.setContentsMargins(0, 0, 0, 0)
+        uploadLayout.setSpacing(12)
+        uploadLayout.addWidget(self.uploadSpeedCard, 1)
+        uploadLayout.addWidget(self.uploadUsageCard, 1)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 14, 16, 16)
         layout.setSpacing(10)
-        layout.addWidget(self.titleLabel)
-        layout.addLayout(graphLayout, 1)
+        layout.addLayout(headerLayout)
+        layout.addWidget(self.downloadTitleLabel)
+        layout.addLayout(downloadLayout, 1)
+        layout.addWidget(self.uploadTitleLabel)
+        layout.addLayout(uploadLayout, 1)
 
-    def setTitles(self, sectionTitle, speedTitle, usageTitle):
-        """Set translated section and graph-card titles."""
-        self.titleLabel.setText(sectionTitle)
-        self.speedCard.setTitle(speedTitle)
-        self.usageCard.setTitle(usageTitle)
+    def setTitles(
+        self,
+        downloadTitle,
+        downloadSpeedTitle,
+        downloadUsageTitle,
+        uploadTitle,
+        uploadSpeedTitle,
+        uploadUsageTitle,
+    ):
+        """Set translated direction and graph-card titles."""
+        self.downloadTitleLabel.setText(downloadTitle)
+        self.downloadSpeedCard.setTitle(downloadSpeedTitle)
+        self.downloadUsageCard.setTitle(downloadUsageTitle)
+        self.uploadTitleLabel.setText(uploadTitle)
+        self.uploadSpeedCard.setTitle(uploadSpeedTitle)
+        self.uploadUsageCard.setTitle(uploadUsageTitle)
 
 
 class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
@@ -136,34 +202,8 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self._dirty = True
         self._renderRevision = 0
 
-        (
-            self.pageTitleLabel,
-            self.timeRangeLabel,
-            self.granularityLabel,
-            self.timeRangeComboBox,
-            self.granularityComboBox,
-        ) = (
-            AppQLabel(_('Network Metrics')),
-            AppQLabel(_('Time Range')),
-            AppQLabel(_('Granularity')),
-            AppQComboBox(),
-            AppQComboBox(),
-        )
-
+        self.pageTitleLabel = AppQLabel(_('Network Metrics'))
         self.pageTitleLabel.setObjectName('MetricsPageTitle')
-        self.timeRangeComboBox.setMinimumWidth(160)
-        self.granularityComboBox.setMinimumWidth(130)
-
-        self._populateComboBox(
-            self.timeRangeComboBox,
-            self._timeRangeOptions(),
-            self.DefaultTimeRange,
-        )
-        self._populateComboBox(
-            self.granularityComboBox,
-            self._granularityOptions(),
-            self.DefaultGranularity,
-        )
 
         (
             self.downloadSpeedGraph,
@@ -189,15 +229,35 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             ),
         )
 
-        self.downloadSection, self.uploadSection = (
-            _MetricsSection(
-                self.downloadSpeedGraph,
-                self.downloadUsageGraph,
-            ),
-            _MetricsSection(
-                self.uploadSpeedGraph,
-                self.uploadUsageGraph,
-            ),
+        self.metricsCard = _TrafficMetricsCard(
+            self.downloadSpeedGraph,
+            self.downloadUsageGraph,
+            self.uploadSpeedGraph,
+            self.uploadUsageGraph,
+            parent=self,
+        )
+
+        (
+            self.timeRangeLabel,
+            self.granularityLabel,
+            self.timeRangeComboBox,
+            self.granularityComboBox,
+        ) = (
+            self.metricsCard.timeRangeLabel,
+            self.metricsCard.granularityLabel,
+            self.metricsCard.timeRangeComboBox,
+            self.metricsCard.granularityComboBox,
+        )
+
+        self._populateComboBox(
+            self.timeRangeComboBox,
+            self._timeRangeOptions(),
+            self.DefaultTimeRange,
+        )
+        self._populateComboBox(
+            self.granularityComboBox,
+            self._granularityOptions(),
+            self.DefaultGranularity,
         )
 
         self.endpointInfoWidget = EndpointInfoWidget(
@@ -210,26 +270,14 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             self._endpointInfoEnabledChanged
         )
 
-        controlsLayout = QHBoxLayout()
-        controlsLayout.setContentsMargins(0, 0, 0, 0)
-        controlsLayout.setSpacing(8)
-        controlsLayout.addWidget(self.pageTitleLabel)
-        controlsLayout.addStretch(1)
-        controlsLayout.addWidget(self.timeRangeLabel)
-        controlsLayout.addWidget(self.timeRangeComboBox)
-        controlsLayout.addSpacing(8)
-        controlsLayout.addWidget(self.granularityLabel)
-        controlsLayout.addWidget(self.granularityComboBox)
-
         contentWidget = QWidget()
         contentWidget.setObjectName('MetricsPageContent')
 
         contentLayout = QVBoxLayout(contentWidget)
         contentLayout.setContentsMargins(20, 18, 20, 20)
         contentLayout.setSpacing(14)
-        contentLayout.addLayout(controlsLayout)
-        contentLayout.addWidget(self.downloadSection, 1)
-        contentLayout.addWidget(self.uploadSection, 1)
+        contentLayout.addWidget(self.pageTitleLabel)
+        contentLayout.addWidget(self.metricsCard, 1)
         contentLayout.addWidget(self.endpointInfoWidget)
 
         self.scrollArea = QScrollArea()
@@ -237,6 +285,7 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setFrameShape(QFrame.Shape.NoFrame)
         self.scrollArea.setWidget(contentWidget)
+
         self.setCentralWidget(self.scrollArea)
 
         self._renderTimer = QtCore.QTimer(self)
@@ -401,12 +450,10 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
     def retranslate(self):
         """Refresh composite section, graph, and endpoint presentation text."""
-        self.downloadSection.setTitles(
+        self.metricsCard.setTitles(
             _('Download'),
             _('Download Speed'),
             _('Download Traffic Usage'),
-        )
-        self.uploadSection.setTitles(
             _('Upload'),
             _('Upload Speed'),
             _('Upload Traffic Usage'),

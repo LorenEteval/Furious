@@ -3072,30 +3072,6 @@ TRANSLATION = {
         "ZH": "正在检测...",
         "isReviewed": "True"
     },
-    "Connect to a proxy to view endpoint information.": {
-        "source": [
-            "Furious.Widget.EndpointInfoWidget"
-        ],
-        "RU": "Подключитесь к прокси, чтобы просмотреть информацию о выходном узле.",
-        "ZH": "连接代理后可查看出口信息。",
-        "isReviewed": "True"
-    },
-    "Connecting...": {
-        "source": [
-            "Furious.Widget.EndpointInfoWidget"
-        ],
-        "RU": "Подключение...",
-        "ZH": "正在连接...",
-        "isReviewed": "True"
-    },
-    "Proxy endpoint information is unavailable.": {
-        "source": [
-            "Furious.Widget.EndpointInfoWidget"
-        ],
-        "RU": "Информация о выходном узле прокси недоступна.",
-        "ZH": "代理出口信息不可用。",
-        "isReviewed": "True"
-    },
     "Approximate location unavailable": {
         "source": [
             "Furious.Widget.EndpointInfoWidget"
@@ -3141,7 +3117,7 @@ TRANSLATION = {
             "Furious.Widget.EndpointInfoWidget"
         ],
         "RU": "Местоположение приблизительно определено по публичному IP и может быть неточным.",
-        "ZH": "位置信息根据公网 IP 估算，可能不准确。",
+        "ZH": "位置信息根据公网IP估算，可能不准确。",
         "isReviewed": "True"
     },
     "Not available": {
@@ -3158,14 +3134,6 @@ TRANSLATION = {
         ],
         "RU": "Неизвестно",
         "ZH": "未知",
-        "isReviewed": "True"
-    },
-    "Endpoint inspection is disabled.": {
-        "source": [
-            "Furious.Widget.EndpointInfoWidget"
-        ],
-        "RU": "Проверка конечной точки отключена.",
-        "ZH": "代理端点检测已禁用。",
         "isReviewed": "True"
     },
     "Enable Proxy Endpoint Information": {
@@ -3213,7 +3181,7 @@ TRANSLATION = {
             "Furious.Window.SettingsPage"
         ],
         "RU": "<b>Публичный IP-адрес</b><br>\nПубличные IPv4- и IPv6-адреса прокси проверяются<br>\nчерез активное прокси-соединение с помощью Cloudflare,<br>\nа ipify используется как резервный сервис.<br>\nЭти сервисы могут видеть публичный IP-адрес прокси.",
-        "ZH": "<b>公网 IP</b><br>\n系统通过当前代理连接<br>\n使用 Cloudflare 检查代理的公网 IPv4 和 IPv6 地址，<br>\n并以 ipify 作为备用服务。<br>\n这些服务可以看到代理的公网 IP。",
+        "ZH": "<b>公网 IP</b><br>\n系统通过当前代理连接<br>\n使用Cloudflare检查代理的公网IPv4和IPv6地址，<br>\n并以ipify作为备用服务。<br>\n这些服务可以看到代理的公网IP。",
         "isReviewed": "True"
     },
     "<b>Approximate Location</b><br>\nThe detected public IP is sent to ipapi.co<br>\nto estimate country, city, region, and network organization.<br>\nIP-based location can be inaccurate.": {
@@ -3221,7 +3189,7 @@ TRANSLATION = {
             "Furious.Window.SettingsPage"
         ],
         "RU": "<b>Приблизительное местоположение</b><br>\nОбнаруженный публичный IP-адрес отправляется в ipapi.co<br>\nдля определения страны, города, региона и сетевой организации.<br>\nГеолокация по IP может быть неточной.",
-        "ZH": "<b>大致位置</b><br>\n系统将检测到的公网 IP 发送至 ipapi.co，<br>\n用于估算国家、城市、地区和网络运营组织。<br>\n基于 IP 的位置可能不准确。",
+        "ZH": "<b>大致位置</b><br>\n系统将检测到的公网IP发送至ipapi.co，<br>\n用于估算国家、城市、地区和网络运营组织。<br>\n基于IP的位置可能不准确。",
         "isReviewed": "True"
     },
     "<b>Map</b><br>\nMap styles and tiles for the approximate area are loaded<br>\nfrom OpenFreeMap, using OpenStreetMap data.<br>\nOpenFreeMap receives these map requests.": {
@@ -3229,7 +3197,15 @@ TRANSLATION = {
             "Furious.Window.SettingsPage"
         ],
         "RU": "<b>Карта</b><br>\nСтили и тайлы карты приблизительной области<br>\nзагружаются из OpenFreeMap с использованием данных OpenStreetMap.<br>\nOpenFreeMap получает эти запросы карты.",
-        "ZH": "<b>地图</b><br>\n大致区域的地图样式和图块从 OpenFreeMap 加载，<br>\n并使用 OpenStreetMap 数据。<br>\nOpenFreeMap 会接收这些地图请求。",
+        "ZH": "<b>地图</b><br>\n大致区域的地图样式和图块从OpenFreeMap加载，<br>\n并使用OpenStreetMap数据。<br>\nOpenFreeMap会接收这些地图请求。",
+        "isReviewed": "True"
+    },
+    "Traffic Statistics": {
+        "source": [
+            "Furious.Window.MetricsPage"
+        ],
+        "RU": "Статистика трафика",
+        "ZH": "流量统计",
         "isReviewed": "True"
     }
 }
