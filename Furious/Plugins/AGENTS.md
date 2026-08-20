@@ -1,24 +1,25 @@
 # Plugin architecture guidance
 
-These rules apply to plugin APIs, registries, discovery, and capability dispatch.
+- `Plugins.API` defines stable capability contracts; `Registry` owns registration, selection, materialization,
+  initialization, rollback, and reverse-order shutdown.
+- Use `CoreRuntimeFactory`, `CoreRuntimeRequest`, and `CoreRuntimeLaunch` consistently across capabilities, registry
+  dispatch, statistics providers, and tests.
+- Plugins contribute factories, handlers, descriptors, immutable metadata, and service providers—not live transient
+  widgets, active core instances, or controller state.
+- Protocol parse/export/editor, backend runtime, routing/TUN, statistics, subscription decoding, and navigation behavior
+  belongs behind capabilities. Shared code must not add core-name conditionals when capability dispatch can express the
+  policy.
+- Registration is deterministic and validates every capability family through focused validators before committing
+  any index changes. A plugin failure is isolated, logged with plugin/capability context, and does not corrupt already
+  registered providers.
+- Initialization is transactional: partially initialized plugins are rolled back; shutdown is reverse-order and
+  idempotent.
+- Keep discovery imports literal and side-effect-light for source and Nuitka builds. Avoid circular dependencies from
+  API/model layers into concrete plugins.
+- UI factories create fresh owned widgets. Invalid QObject results are explicitly destroyed; registries never retain
+  rejected objects.
 
-## Capability model
+## Verification
 
-- Plugins declare metadata and stable capability objects. Registries index protocol handlers, editor providers, kernel factories, traffic providers, settings/page providers, and subscription decoders by stable IDs.
-- Register classes/factories/descriptors and immutable metadata, not transient editors, dialogs, menus, or pages. A provider may create UI on demand, with ownership left to the UI caller.
-- Put protocol/core behavior behind the closest capability. Shared UI/services query the registry rather than branching on protocol names or importing official backend internals.
-- Keep headless discovery free of eager Qt editor/window imports. Use literal lazy imports in editor factories so static packagers still see every dependency.
-
-## Registry lifecycle and compatibility
-
-- Validate all IDs, schemes, configuration types, kernel types, and duplicates before committing registration. A failed registration must roll back every index and initialized resource.
-- The registry owns plugin initialization and shuts plugins down once in reverse registration order. Plugin shutdown must tolerate partial initialization.
-- Avoid package-level import cycles: API/model layers stay lower-level; UI-specific imports occur only when a presentation capability is invoked.
-- Subscription decoders return data/configuration, never executable or live UI/runtime objects. Keep untrusted subscription payloads outside executable-core capabilities.
-
-## Code review rules
-
-- Flag live transient `QObject` instances stored in a plugin/capability registry.
-- Flag new global protocol conditionals or direct official-plugin imports from shared services/UI.
-- Flag dynamic string imports that Nuitka cannot discover when literal lazy factories are practical.
-- Flag partially registered plugins after validation/initialization failure or non-idempotent shutdown.
+- Test order, duplicate/invalid registration, dynamic dispatch, rollback, shutdown, compiled discovery, and factories
+  returning invalid objects.

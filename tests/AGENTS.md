@@ -1,25 +1,51 @@
 # Furious test guidance
 
-These rules apply to the isolated `unittest` suite and refine repository guidance.
-
 ## Isolation
 
-- Tests must never affect an already-running Furious instance or production user data. Set `QT_QPA_PLATFORM=offscreen` before importing Qt and use helpers in `tests/support.py`.
-- Route `QSettings` to the temporary INI sandbox. Never read/write the production organization/application namespace.
-- Do not change the real system proxy, routing table, TUN devices, startup registration, tray, or network interfaces. Patch host-mutation APIs and inject fake controllers/managers.
-- Do not discover, signal, terminate, or clean up processes by name. Own exact subprocess handles/PIDs and threads, use bounded waits, and reap only resources the test created.
-- Tests must not require external network access or installed proxy-core executables unless explicitly marked/documented as an optional smoke procedure.
+- Tests must never affect a running Furious instance or production data. Set `QT_QPA_PLATFORM=offscreen` before Qt
+  import and use `tests/support.py` for one small application and temporary INI-backed settings.
+- Never mutate real proxy, DNS, routing, TUN, startup registration, tray, network interfaces, or external services.
+  Patch host/network APIs and inject fake controllers, runtimes, repositories, clocks, and clients.
+- Own exact subprocess handles/PIDs and threads. Use bounded waits and clean up only resources the test created; never
+  discover or terminate by process name.
+- Normal tests require no external network or installed proxy core. Keep packaged/manual smoke procedures explicit and
+  disposable.
 
 ## Test design
 
-- Keep deterministic logic/behavior tests in the normal tier. Put repeated live-object/native-handle/RSS checks in the explicit stress tier.
-- Test persisted input and runtime copies separately for configuration preparation. A helper must not make normal connection and proxy-only behavior accidentally identical.
-- Qt lifetime tests use real close/deferred-delete paths, weak references, and live-object counts. `gc.collect()` is allowed only at diagnostic batch boundaries, never as production behavior or once-per-operation masking.
-- Threshold increases are not a leak fix. Investigate linear object/handle growth and distinguish it from allocator/native high-water caching.
-- Update `tests/README.md` when adding a test module or changing tiers/required environment setup. Commands in documentation use the active `python` environment.
+- Test public behavior and architectural contracts, not implementation trivia. Cover success, validation failure,
+  timeout, cancel, partial/stale result, cleanup, and backward-compatible persisted input.
+- Use canonical `CoreRuntime` vocabulary in runtime factories, registry fixtures, and traffic-statistics providers.
+- Separate persisted configuration from runtime-copy assertions. Normal connection, generated native TUN, preserved user
+  TUN, and proxy-only stripping must not share a helper that erases their differences.
+- Keep deterministic logic/UI behavior in the normal tier. Put repeated live-object, native-handle, thread, subprocess,
+  and RSS trends in explicit stress tiers.
+- Qt lifetime tests use real close/deferred-delete paths, weak references, destroyed signals, and live counts.
+  `gc.collect()` is diagnostic at batch boundaries only; threshold increases or production collection are not leak
+  fixes.
+- Avoid timing-only assertions. Drive events deterministically and assert final ownership/state plus absence of
+  duplicate connections/timers/replies.
+- Update `tests/README.md` when modules, tiers, or environment requirements change. Documentation commands use the
+  active `python` environment.
+
+## Real lifecycle and process-boundary regressions
+
+- Apply the highest-fidelity safe test boundary throughout the suite. Unit tests remain appropriate for deterministic
+  logic, but bugs involving Qt event loops, native callbacks, interpreter finalization, subprocess teardown, or wrapper
+  destruction need a focused integration test that exercises the real boundary that failed.
+- For application-lifecycle regressions, start a clean child Python process, force `QT_QPA_PLATFORM=offscreen` before
+  importing Qt, construct the smallest real `QApplication`/`DesktopApplication` and real Qt window needed, run the real
+  event loop, request shutdown through the public path, and assert the child process exits normally. Repeat the cycle
+  when the defect is intermittent.
+- A lifecycle child must be hermetic: bypass single-instance discovery and IPC, use temporary settings and application
+  identity where relevant, disable tray and startup restoration, mock all host/network integrations, and never attach to,
+  signal, inspect, or change a potentially running Furious instance.
+- Child-process tests own only the windows, threads, handles, and processes they create. Give every wait and child a
+  bounded timeout, capture diagnostics, and terminate only that exact child on timeout. Never use process-name cleanup.
+- Visible diagnostic windows are for an explicit manual smoke procedure only. Automated tests always use the offscreen
+  platform so they cannot flash, steal focus, or interact with the desktop session.
 
 ## Code review rules
 
-- Flag any test that can touch production `QSettings` or host networking.
-- Flag broad process cleanup, unbounded waits, timing-only assertions, or dependence on an existing GUI session.
-- Flag tests that assert only stored configuration when the bug concerns the runtime document submitted to a core.
+- Flag production settings/host mutation, broad process cleanup, unbounded waits, external network dependence, shared
+  mutable fixtures, and tests that only check storage when runtime output is the contract.

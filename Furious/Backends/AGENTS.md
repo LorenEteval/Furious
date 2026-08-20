@@ -1,42 +1,38 @@
-# Backend and core-runtime guidance
+# Backend and core-integration guidance
 
-These rules apply to bundled backend implementations and refine `Furious/AGENTS.md`.
+- A backend owns protocol parsing/export, editor factories, runtime materialization, process integration, statistics,
+  validation, and native-TUN capability for its core. Register these through plugin capabilities instead of adding
+  shared-manager conditionals.
+- The JSON/document submitted to a core is the runtime authority. Build it from a deep/runtime copy; never mutate the
+  persisted profile while preparing connection, routing, logging, testing, or TUN state.
+- Preserve full user-authored core documents and unknown supported fields. Report a lossless-compatibility failure
+  instead of silently compiling or deleting unsupported configuration.
 
-## Configuration ownership
+## Native TUN policy
 
-- The configuration passed to a core is authoritative. Preserve the persisted/original document and apply connection, routing, logging, statistics, and test preparation to a runtime/deep copy.
-- Do not silently repair or delete explicit user core configuration and switch networking modes. Let the core or normal validation surface malformed user configuration.
-- Protocol-specific parsing, editing, export, runtime construction, and compatibility belong to the backend/plugin capability, not shared connection UI or `ConnectionManager` conditionals.
+For a normal connection:
 
-## Native TUN contract
+- If the Furious native-TUN option is enabled, replace any runtime native TUN with the generated TUN; mark TUN handled
+  and do not start application tun2socks.
+- If the option is disabled and the user document contains native TUN, preserve it unchanged; mark TUN handled and do
+  not start tun2socks.
+- If neither exists, do not inject native TUN; global TUN mode may use tun2socks.
+- Proxy-only operations such as speed/latency tests explicitly strip native TUN from their own temporary copy.
 
-`KernelFactory.prepareTUN()` is the normal-connection ownership decision:
+Never remove an explicit user TUN merely because an application toggle is off, and never run native TUN plus application
+tun2socks together.
 
-- Native-TUN option enabled: Furious-generated native TUN is authoritative in the runtime copy. Replace existing runtime native TUN, report handled, and do not start application tun2socks.
-- If requested managed native TUN cannot be prepared safely, fail the connection with a useful error; never silently change to application tun2socks.
-- Native-TUN option disabled with explicit user native TUN: preserve it unchanged, report handled (including malformed explicit values), and do not start application tun2socks.
-- Native-TUN option disabled with no native TUN: do not inject native TUN; application tun2socks may be selected when global TUN mode requests it.
-- Never allow backend native TUN and application tun2socks to run together.
+## Runtime and UI
 
-Proxy-only operations such as download-speed tests must derive a separate configuration and explicitly strip/omit native TUN. Do not weaken normal-connection preservation to satisfy a probe/test workflow. Enabling the managed native-TUN option is the explicit user choice that permits replacement in the runtime copy; toggling it off never removes custom native TUN.
+- Core runtimes expose actionable `startError()`, exact resource ownership, bounded startup/shutdown, and deterministic
+  cleanup. Process-backed runtimes additionally own and reap their exact child process. Keep platform exit codes
+  semantically intact.
+- Keep runtime modules importable without constructing editor widgets. Use literal, discoverable lazy
+  imports/registrations so Nuitka includes every editor family without per-editor command changes.
+- Backend editors follow `Furious/Qt/AGENTS.md`; factories create fresh transient editors and registries retain
+  factories/classes, not editor instances.
 
-## Core lifecycle
+## Verification
 
-- Factories return prepared kernel launches; process objects own only their exact child/process resources and callbacks.
-- Startup failures must expose a useful start error and clean partially created resources. Shutdown must be bounded, reap exact owned children, release readers/queues/timers, and be idempotent.
-- Do not use shell expansion for core commands. Do not log credentials, full arguments, secrets, or environment values.
-- Keep lazy editor imports as literal imports inside factories/providers so Qt initialization stays lazy and Nuitka can discover dependencies.
-
-## Required verification
-
-- Run `tests.test_native_tun_semantics` after changing native-TUN preparation or application tun2socks selection.
-- Test both persisted-document immutability and the exact runtime document submitted to the core.
-- Test normal connection and proxy-only preparation independently; do not share a helper that erases their policy difference.
-- For process changes, run the relevant external/process stress tests and verify failure cleanup.
-
-## Code review rules
-
-- Flag removal of custom native TUN while its backend-managed toggle is disabled.
-- Flag a handled native-TUN path that can still instantiate application tun2socks.
-- Flag test/probe TUN stripping implemented inside the normal connection policy.
-- Flag unbounded process waits, orphaned reader threads/handles, or errors hidden behind a generic fallback.
+- Test URI/mapping round trips, malformed input, runtime document equality, original-document immutability, all
+  native-TUN matrix cases, proxy-only stripping, failed core startup, and cleanup.
