@@ -8,6 +8,17 @@
   let appliedRevision = -1;
   let activeStyle = '';
   let initialReadyReported = false;
+  const loadingOverlay = document.getElementById('endpoint-loading-overlay');
+  const loadingText = document.getElementById('endpoint-loading-text');
+
+  const applyLoadingState = () => {
+    const loading = Boolean(state && state.loading);
+    loadingOverlay.dataset.visible = String(loading);
+    loadingOverlay.setAttribute('aria-hidden', String(!loading));
+    loadingText.textContent = loading && state.loadingText
+      ? state.loadingText
+      : '';
+  };
 
   const reportError = (event) => {
     const message = event && event.error && event.error.message
@@ -46,7 +57,9 @@
   };
 
   const applyState = () => {
-    if (!map || !state) {
+    applyLoadingState();
+
+    if (!state) {
       return;
     }
 
@@ -58,6 +71,19 @@
       '--endpoint-accent',
       state.accentColor
     );
+    document.documentElement.style.setProperty(
+      '--endpoint-font-family',
+      JSON.stringify(state.fontFamily || 'sans-serif')
+    );
+    document.documentElement.style.setProperty(
+      '--endpoint-font-size',
+      `${state.fontPointSize || 11}pt`
+    );
+
+    if (!map) {
+      return;
+    }
+
     const nextStyle = state.darkMode
       ? state.darkStyleUrl
       : state.lightStyleUrl;
@@ -79,7 +105,7 @@
   };
 
   const createMap = () => {
-    if (map || !state) {
+    if (map || !state || !state.markerVisible) {
       return;
     }
 
@@ -105,9 +131,10 @@
     applyState();
   };
 
-  window.furiousEndpointMap = {
+  window.endpointMap = {
     setState(nextState) {
       state = nextState;
+      applyLoadingState();
       createMap();
       applyState();
     },

@@ -285,15 +285,6 @@ def baseStyleSheet(palette):
                 font-weight: 600;
             }}
 
-            QLabel#EndpointStatusLabel {{
-                color: {palette['text_strong']};
-                font-weight: 600;
-            }}
-
-            QWidget#EndpointStatusWidget {{
-                background-color: transparent;
-            }}
-
             QLabel#EndpointFieldName {{
                 color: {palette['muted']};
             }}

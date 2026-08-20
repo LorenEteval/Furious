@@ -20,11 +20,54 @@
     :root {
       --endpoint-attribution-background: rgb(255 255 255 / 92%);
       --endpoint-attribution-foreground: #202020;
+      --endpoint-loading-background: rgb(255 255 255 / 32%);
+      --endpoint-loading-foreground: #202020;
+      --endpoint-font-family: sans-serif;
+      --endpoint-font-size: 11pt;
     }
 
     :root[data-theme="dark"] {
       --endpoint-attribution-background: rgb(24 30 39 / 92%);
       --endpoint-attribution-foreground: #f5f5f5;
+      --endpoint-loading-background: rgb(16 21 28 / 38%);
+      --endpoint-loading-foreground: #f5f5f5;
+    }
+
+    #endpoint-loading-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--endpoint-loading-foreground);
+      background: var(--endpoint-loading-background);
+      cursor: wait;
+      font-family: var(--endpoint-font-family);
+      font-size: var(--endpoint-font-size);
+      font-weight: 400;
+      user-select: none;
+    }
+
+    #endpoint-loading-overlay[data-visible="true"] {
+      display: flex;
+    }
+
+    .endpoint-loading-spinner {
+      width: 16px;
+      height: 16px;
+      box-sizing: border-box;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: endpoint-spinner-rotation 0.8s linear infinite;
+    }
+
+    @keyframes endpoint-spinner-rotation {
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     .endpoint-marker {
@@ -67,6 +110,14 @@
 </head>
 <body>
   <div id="map" aria-label="Approximate location map"></div>
+  <div
+    id="endpoint-loading-overlay"
+    data-visible="true"
+    aria-hidden="false"
+  >
+    <span class="endpoint-loading-spinner" aria-hidden="true"></span>
+    <span id="endpoint-loading-text"></span>
+  </div>
   <script src="EndpointMap.js"></script>
 </body>
 </html>
