@@ -24,8 +24,15 @@ from Furious.Backends.ExternalCore.Configuration import (
     ConfigExternalCore,
 )
 from Furious.Backends.ExternalCore.Editor import ExternalCoreEditor
+from Furious.Backends.Hysteria1.Editor import Hysteria1Editor
+from Furious.Backends.Hysteria2.Editor import Hysteria2Editor
 from Furious.Backends.Xray.AssetListWidget import XrayAssetListWidget
 from Furious.Backends.Xray.RoutingWindow import RoutingRulesDialog
+from Furious.Backends.Xray.ShadowsocksEditor import ShadowsocksEditor
+from Furious.Backends.Xray.SocksEditor import SocksEditor
+from Furious.Backends.Xray.TrojanEditor import TrojanEditor
+from Furious.Backends.Xray.VlessEditor import VlessEditor
+from Furious.Backends.Xray.VmessEditor import VmessEditor
 from Furious.Actions.Connection import ConnectAction
 from Furious.Controllers.ConnectionController import (
     ConnectionController,
@@ -35,9 +42,9 @@ from Furious.Controllers.SettingsController import (
     LOG_AUTO_CLEAR_SETTING,
     LOG_AUTO_SCROLL_DOWN_SETTING,
 )
-from Furious.Frozenlib import AppSettings
+from Furious.Frozenlib import AppSettings, Mixins
 from Furious.Models import ProfileMetadata, ServerProfile
-from Furious.Qt import AppHue, AppQMessageBox, AppQSwitch
+from Furious.Qt import AppHue, AppQMessageBox, AppQSwitch, gettext as _
 from Furious.Service import (
     APPLICATION_LOG_CATEGORY,
     CORE_LOG_CATEGORY,
@@ -143,6 +150,38 @@ class EditorMappingTest(unittest.TestCase):
             )
 
             editor.close()
+
+    def testEveryProtocolEditorRetranslatesItsDedicatedWindowTitle(self):
+        """Retain title source text when switching from Chinese to English."""
+        editorTypes = (
+            (ExternalCoreEditor, 'Add External Core'),
+            (Hysteria1Editor, 'Add Hysteria1 Server'),
+            (Hysteria2Editor, 'Add Hysteria2 Server'),
+            (ShadowsocksEditor, 'Add Shadowsocks Server'),
+            (SocksEditor, 'Add SOCKS Server'),
+            (TrojanEditor, 'Add Trojan Server'),
+            (VlessEditor, 'Add VLESS Server'),
+            (VmessEditor, 'Add VMess Server'),
+        )
+
+        with isolatedSettings():
+            AppSettings.set('Language', 'ZH')
+            editors = []
+
+            for editorType, sourceTitle in editorTypes:
+                editor = editorType(windowTitle=_(sourceTitle))
+                editors.append((editor, sourceTitle))
+
+                self.assertEqual(editor.windowTitle(), _(sourceTitle))
+
+            AppSettings.set('Language', 'EN')
+
+            Mixins.QTranslatable.retranslateAll()
+
+            for editor, sourceTitle in editors:
+                self.assertEqual(editor.windowTitle(), sourceTitle)
+
+                editor.close()
 
     def testSubscriptionEditorNormalizesPresentationValues(self):
         """Return one complete subscription record from its visual controls."""

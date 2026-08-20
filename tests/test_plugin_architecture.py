@@ -72,6 +72,7 @@ class FixtureProtocolHandler(ProtocolHandler):
         'FIXTURE',
         'Fixture',
         'Add Fixture...',
+        'Add Fixture',
         subscriptionImportable=True,
     )
     schemes = ('fixture',)
@@ -245,6 +246,14 @@ class PluginRegistryTest(unittest.TestCase):
             self.plugin.capabilities[0],
         )
         self.assertEqual(
+            self.plugin.capabilities[0].descriptor.addActionText,
+            'Add Fixture...',
+        )
+        self.assertEqual(
+            self.plugin.capabilities[0].descriptor.editorWindowTitle,
+            'Add Fixture',
+        )
+        self.assertEqual(
             self.registry.pluginsWithCapability(CapabilityKind.CoreRuntimeFactory),
             (self.plugin,),
         )
@@ -352,7 +361,12 @@ class PluginRollbackTest(unittest.TestCase):
             class Handler(FixtureProtocolHandler):
                 """Use a distinct protocol ID with the same scheme."""
 
-                descriptor = ProtocolDescriptor('OTHER', 'Other', 'Add Other')
+                descriptor = ProtocolDescriptor(
+                    'OTHER',
+                    'Other',
+                    'Add Other...',
+                    'Add Other',
+                )
 
             capabilities = (Handler(),)
 
