@@ -19,12 +19,13 @@
 
 from __future__ import annotations
 
-from Furious.Service.MetricsDataManager import (
+from Furious.Qt import gettext as _
+from Furious.Service.MetricsHistory import (
     DOWNLOAD_SPEED_METRIC,
     DOWNLOAD_USAGE_METRIC,
     UPLOAD_SPEED_METRIC,
-    MetricPoint,
-    MetricsDataManager,
+    MetricSeriesPoint,
+    MetricsHistory,
 )
 from Furious.Service.TrafficStatsManager import formatTrafficSpeed
 from Furious.Widget.MetricsGraph import MetricsGraphWidget
@@ -44,7 +45,7 @@ class MetricsTimeSeriesBehaviorTest(unittest.TestCase):
 
     def testRawSamplesRemainImmutableAsVisibleWindowMoves(self):
         """Advance now without rewriting timestamps or historical metric values."""
-        manager = MetricsDataManager(maximumHistorySeconds=1000)
+        manager = MetricsHistory(maximumHistorySeconds=1000)
         manager.recordSample({DOWNLOAD_SPEED_METRIC: 10}, sampledAt=100)
         manager.recordSample({DOWNLOAD_SPEED_METRIC: 30}, sampledAt=104)
         manager.recordSample({DOWNLOAD_SPEED_METRIC: 50}, sampledAt=111)
@@ -85,7 +86,7 @@ class MetricsTimeSeriesBehaviorTest(unittest.TestCase):
 
     def testWindowEntryExitAndTimestampAlignedBuckets(self):
         """Drop old points naturally while stable absolute buckets retain values."""
-        manager = MetricsDataManager(maximumHistorySeconds=1000)
+        manager = MetricsHistory(maximumHistorySeconds=1000)
 
         for sampledAt, value in ((1, 10), (9, 30), (10, 50), (19, 70), (20, 90)):
             manager.recordSample(
@@ -130,7 +131,7 @@ class MetricsTimeSeriesBehaviorTest(unittest.TestCase):
 
     def testAutoGranularityAndNonMonotonicInputArePredictable(self):
         """Select documented buckets and normalize backward timestamps safely."""
-        manager = MetricsDataManager(maximumHistorySeconds=24 * 60 * 60)
+        manager = MetricsHistory(maximumHistorySeconds=24 * 60 * 60)
 
         self.assertEqual(manager.effectiveGranularity(5 * 60), 5)
         self.assertEqual(manager.effectiveGranularity(15 * 60), 10)
@@ -160,7 +161,7 @@ class MetricsTimeSeriesBehaviorTest(unittest.TestCase):
 
     def testUsageHistoryCanClearWithoutMutatingSpeedHistory(self):
         """Reset cumulative graphs while retaining immutable speed samples."""
-        manager = MetricsDataManager()
+        manager = MetricsHistory()
         manager.recordSample(
             {
                 DOWNLOAD_SPEED_METRIC: 25,
@@ -189,9 +190,58 @@ class MetricsPageAndGraphTest(unittest.TestCase):
         """Drain deferred widget destruction after every UI case."""
         collectAtBoundary()
 
+    def testTrafficGraphsAndSelectorsShareOneCard(self):
+        """Keep the page title separate while grouping all metrics controls."""
+        manager = MetricsHistory()
+        page = MetricsPage(manager)
+        contentLayout = page.scrollArea.widget().layout()
+        cardLayout = page.metricsCard.layout()
+        headerLayout = cardLayout.itemAt(0).layout()
+
+        self.assertIs(contentLayout.itemAt(0).widget(), page.pageTitleLabel)
+        self.assertIs(contentLayout.itemAt(1).widget(), page.metricsCard)
+        self.assertIs(contentLayout.itemAt(2).widget(), page.endpointInfoWidget)
+        self.assertEqual(page.metricsCard.objectName(), 'TrafficMetricsCard')
+        self.assertIs(headerLayout.itemAt(0).widget(), page.metricsCard.titleLabel)
+        self.assertEqual(page.metricsCard.titleLabel.text(), _('Traffic Statistics'))
+        self.assertEqual(headerLayout.stretch(1), 1)
+        self.assertIs(headerLayout.itemAt(2).widget(), page.timeRangeLabel)
+        self.assertIs(headerLayout.itemAt(3).widget(), page.timeRangeComboBox)
+        self.assertIs(headerLayout.itemAt(5).widget(), page.granularityLabel)
+        self.assertIs(headerLayout.itemAt(6).widget(), page.granularityComboBox)
+
+        for control in (
+            page.timeRangeLabel,
+            page.timeRangeComboBox,
+            page.granularityLabel,
+            page.granularityComboBox,
+        ):
+            self.assertIs(control.parentWidget(), page.metricsCard)
+
+        self.assertIs(
+            page.downloadSpeedGraph.parentWidget(),
+            page.metricsCard.downloadSpeedCard,
+        )
+        self.assertIs(
+            page.downloadUsageGraph.parentWidget(),
+            page.metricsCard.downloadUsageCard,
+        )
+        self.assertIs(
+            page.uploadSpeedGraph.parentWidget(),
+            page.metricsCard.uploadSpeedCard,
+        )
+        self.assertIs(
+            page.uploadUsageGraph.parentWidget(),
+            page.metricsCard.uploadUsageCard,
+        )
+
+        page.close()
+        page.deleteLater()
+        manager.deleteLater()
+
     def testHiddenPageStoresHistoryWithoutRenderingThenCatchesUp(self):
         """Keep collection eager and graph submission strictly visibility-bound."""
-        manager = MetricsDataManager()
+        manager = MetricsHistory()
         page = MetricsPage(manager)
         sampledAt = math.floor((time.monotonic() - 20) / 10) * 10 + 1
         manager.recordSample({DOWNLOAD_SPEED_METRIC: 32}, sampledAt=sampledAt)
@@ -247,7 +297,7 @@ class MetricsPageAndGraphTest(unittest.TestCase):
         )
         graph.resize(640, 360)
         graph.setMetricLabel('Download Speed')
-        point = MetricPoint(95, 2048, 91, 95, 3)
+        point = MetricSeriesPoint(95, 2048, 91, 95, 3)
         graph.setSeries((point,), 20, 100, currentWallTime=1000)
         graph.show()
 

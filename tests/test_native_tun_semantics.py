@@ -26,9 +26,9 @@ import unittest
 
 from Furious.Backends.Configuration import ConfigHysteria2, ConfigXray
 from Furious.Backends.Hysteria2 import Plugin as Hysteria2PluginModule
-from Furious.Backends.Hysteria2.Plugin import Hysteria2KernelFactory
+from Furious.Backends.Hysteria2.Plugin import Hysteria2CoreRuntimeFactory
 from Furious.Backends.Xray import Plugin as XrayPluginModule
-from Furious.Backends.Xray.Plugin import XrayKernelFactory
+from Furious.Backends.Xray.Plugin import XrayCoreRuntimeFactory
 from Furious.Plugins.API import TUNPreparationError
 from Furious.Plugins.Registry import PluginRegistry
 from Furious.Service.ConnectionManager import ConnectionManager
@@ -37,7 +37,7 @@ from Furious.Service.ConnectionManager import ConnectionManager
 class _RecordingConnectionManager(ConnectionManager):
     """Capture the runtime document without starting a core process."""
 
-    def _startKernel(self, config, *_args, **_kwargs):
+    def _startCoreRuntime(self, config, *_args, **_kwargs):
         """Record the prepared runtime configuration as a successful launch."""
         self.runtimeConfiguration = config
 
@@ -60,8 +60,8 @@ class XrayNativeTUNTest(unittest.TestCase):
     httpInbound = {'tag': 'http', 'protocol': 'http'}
 
     def setUp(self):
-        """Create one stateless Xray kernel capability."""
-        self.factory = XrayKernelFactory()
+        """Create one stateless Xray core-runtime capability."""
+        self.factory = XrayCoreRuntimeFactory()
 
     def configuration(self, *, nativeTUN: bool) -> ConfigXray:
         """Return one minimal Xray document with optional custom native TUN."""
@@ -183,7 +183,9 @@ class XrayNativeTUNTest(unittest.TestCase):
 
         registry.usesApplicationTun2socks.assert_not_called()
         tun2socks.assert_not_called()
+
         self.assertEqual(manager.runtimeConfiguration, original)
+
         manager.cleanup()
 
     def testManagedTUNPreparationFailureDoesNotFallBackToTun2socks(self):
@@ -207,15 +209,19 @@ class XrayNativeTUNTest(unittest.TestCase):
             self.assertFalse(manager.start(original, 'Global'))
 
         self.assertEqual(manager.lastStartError, 'managed TUN failed')
+
         registry.usesApplicationTun2socks.assert_not_called()
         tun2socks.assert_not_called()
+
         self.assertFalse(hasattr(manager, 'runtimeConfiguration'))
 
     def testRegistryPropagatesIntentionalTUNPreparationFailure(self):
         """Keep the explicit failure distinct from an unsupported capability."""
         registry = PluginRegistry()
+
         factory = mock.Mock(factoryId='managed-tun-factory')
         factory.prepareTUN.side_effect = TUNPreparationError('managed TUN failed')
+
         registry.factoryForConfig = mock.Mock(return_value=factory)
 
         with self.assertRaisesRegex(TUNPreparationError, 'managed TUN failed'):
@@ -235,8 +241,8 @@ class Hysteria2NativeTUNTest(unittest.TestCase):
     }
 
     def setUp(self):
-        """Create one stateless Hysteria 2 kernel capability."""
-        self.factory = Hysteria2KernelFactory()
+        """Create one stateless Hysteria 2 core-runtime capability."""
+        self.factory = Hysteria2CoreRuntimeFactory()
 
     def configuration(self, *, nativeTUN: bool) -> ConfigHysteria2:
         """Return one minimal Hysteria 2 document with optional custom TUN."""
@@ -406,7 +412,9 @@ class Hysteria2NativeTUNTest(unittest.TestCase):
 
         registry.usesApplicationTun2socks.assert_not_called()
         tun2socks.assert_not_called()
+
         self.assertEqual(manager.runtimeConfiguration, original)
+
         manager.cleanup()
 
 

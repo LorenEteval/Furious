@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Models import ConfigFactory, ServerProfile
+from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Service.SubscriptionSync import SubscriptionSynchronizer
 
 import unittest
@@ -36,7 +36,7 @@ def profile(
 ):
     """Create one core-neutral profile with explicit ownership metadata."""
     return ServerProfile.fromConfiguration(
-        ConfigFactory({'type': 'fixture', 'address': address, 'port': 443}),
+        CoreConfiguration({'type': 'fixture', 'address': address, 'port': 443}),
         {
             'displayName': name,
             'subscriptionSource': source,

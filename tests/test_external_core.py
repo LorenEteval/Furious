@@ -36,6 +36,7 @@ import json
 import time
 import tempfile
 import threading
+import subprocess
 import unittest
 
 from unittest import mock
@@ -73,6 +74,23 @@ class ExternalCoreProcessTest(unittest.TestCase):
                 'socksProxy': '127.0.0.1:10808',
                 'shutdownTimeout': 1,
             }
+        )
+
+    def testWindowsTaskkillHasBoundedWait(self):
+        """Never allow the fully mocked host shutdown command to wait forever."""
+        process = mock.Mock(pid=1234)
+
+        with mock.patch('Furious.Backends.ExternalCore.Process.subprocess.run') as run:
+            ExternalCoreProcess._windowsTaskkill(process, force=True)
+
+        run.assert_called_once_with(
+            ['taskkill', '/PID', '1234', '/T', '/F'],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            shell=False,
+            timeout=ExternalCoreProcess.ForcedShutdownTimeout,
         )
 
     def testStructuredArgumentsCwdEnvironmentAndOutput(self):
@@ -204,10 +222,10 @@ class ExternalCoreProcessTest(unittest.TestCase):
     def testDisabledApplicationTun2socksSkipsTheHostTunRuntime(self):
         """Do not enter ConnectionManager's TUN path for an opted-out profile."""
 
-        class NoKernelConnectionManager(ConnectionManager):
+        class NoCoreRuntimeConnectionManager(ConnectionManager):
             """Pretend the external process started without launching a child."""
 
-            def _startKernel(self, *args, **kwargs):
+            def _startCoreRuntime(self, *args, **kwargs):
                 """Return one successful process-free fixture launch."""
                 return None, True
 
@@ -218,7 +236,7 @@ class ExternalCoreProcessTest(unittest.TestCase):
             registry.prepareTUN.return_value = False
             registry.usesApplicationTun2socks.return_value = False
 
-            manager = NoKernelConnectionManager()
+            manager = NoCoreRuntimeConnectionManager()
 
             with (
                 mock.patch(
@@ -240,10 +258,10 @@ class ExternalCoreProcessTest(unittest.TestCase):
     def testEnabledApplicationTun2socksResolvesOnlyTheRemoteAddress(self):
         """Send the configured network destination, never the executable, to DNS."""
 
-        class NoKernelConnectionManager(ConnectionManager):
+        class NoCoreRuntimeConnectionManager(ConnectionManager):
             """Pretend the external process started without launching a child."""
 
-            def _startKernel(self, *args, **kwargs):
+            def _startCoreRuntime(self, *args, **kwargs):
                 """Return one successful process-free fixture launch."""
                 return None, True
 
@@ -258,7 +276,7 @@ class ExternalCoreProcessTest(unittest.TestCase):
             registry.prepareTUN.return_value = False
             registry.usesApplicationTun2socks.return_value = True
 
-            manager = NoKernelConnectionManager()
+            manager = NoCoreRuntimeConnectionManager()
 
             with (
                 mock.patch(
@@ -469,6 +487,88 @@ class DnsResolverRobustnessTest(unittest.TestCase):
         self.assertTrue(result['error'])
         self.assertEqual(result['depth'], 0)
         self.assertEqual(result['result'], {})
+
+    def testCyclicReferenceIsRejectedWithoutAnotherRequest(self):
+        """Stop a CNAME cycle before it can recurse indefinitely."""
+
+        class ReplyData:
+            """Provide one deterministic CNAME response body."""
+
+            @staticmethod
+            def data():
+                """Return an alias pointing back to the traversal origin."""
+                return b'{"Status":0,"Answer":[{"type":5,"data":"a.example."}]}'
+
+        class Reply:
+            """Return the fixture response body."""
+
+            @staticmethod
+            def readAll():
+                """Return the response data wrapper."""
+                return ReplyData()
+
+        result = {
+            'error': False,
+            'depth': 1,
+            'reference': [],
+            'result': {},
+            'visited': {'a.example', 'b.example'},
+        }
+
+        with mock.patch.object(DnsResolver, 'webGET') as webGet:
+            DnsResolver.successCallback(
+                Reply(),
+                domain='b.example',
+                resultMap=result,
+                referenceDepth=1,
+                ancestry=('a.example', 'b.example'),
+            )
+
+        webGet.assert_not_called()
+
+        self.assertTrue(result['error'])
+        self.assertEqual(result['depth'], 0)
+
+    def testReferenceDepthIsBounded(self):
+        """Reject another CNAME after the documented traversal limit."""
+
+        class ReplyData:
+            """Provide one deterministic CNAME response body."""
+
+            @staticmethod
+            def data():
+                """Return one previously unseen alias."""
+                return b'{"Status":0,"Answer":[{"type":5,"data":"next.example"}]}'
+
+        class Reply:
+            """Return the fixture response body."""
+
+            @staticmethod
+            def readAll():
+                """Return the response data wrapper."""
+                return ReplyData()
+
+        result = {
+            'error': False,
+            'depth': 1,
+            'reference': [],
+            'result': {},
+            'visited': {'current.example'},
+        }
+
+        with mock.patch.object(DnsResolver, 'webGET') as webGet:
+            DnsResolver.successCallback(
+                Reply(),
+                domain='current.example',
+                resultMap=result,
+                referenceDepth=DnsResolver.MAX_REFERENCE_DEPTH,
+                ancestry=('current.example',),
+            )
+
+        webGet.assert_not_called()
+
+        self.assertTrue(result['error'])
+        self.assertEqual(result['depth'], 0)
 
 
 if __name__ == '__main__':

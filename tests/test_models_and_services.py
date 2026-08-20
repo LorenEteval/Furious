@@ -24,7 +24,12 @@ from Furious.Controllers.SettingsController import (
     SettingsController,
 )
 from Furious.Frozenlib import AppBinarySettings, AppSettings, ApplicationTheme
-from Furious.Models import ConfigFactory, ProfileMetadata, ServerProfile
+from Furious.Models import (
+    CoreConfiguration,
+    ProfileMetadata,
+    ServerProfile,
+    profileConnectionFingerprint,
+)
 from Furious.Repository.Servers import UserServer, UserServers
 from Furious.Repository.Subscriptions import SubscriptionGroup, UserSubs
 from Furious.Service.LogManager import (
@@ -33,10 +38,10 @@ from Furious.Service.LogManager import (
     TUN2SOCKS_LOG_CATEGORY,
     LogManager,
 )
-from Furious.Service.MetricsDataManager import (
+from Furious.Service.MetricsHistory import (
     DOWNLOAD_SPEED_METRIC,
     DOWNLOAD_USAGE_METRIC,
-    MetricsDataManager,
+    MetricsHistory,
 )
 
 from PySide6 import QtCore
@@ -49,6 +54,35 @@ from tests.support import isolatedSettings
 
 class ProfileModelTest(unittest.TestCase):
     """Verify metadata separation, compatibility, and copy semantics."""
+
+    def testCoreConfigurationRejectsNonObjectJSONWithoutRaising(self):
+        """Treat valid non-object JSON roots as invalid connection documents."""
+        for value in ('[]', 'null', '42', '"text"'):
+            with self.subTest(value=value):
+                configuration = CoreConfiguration(value)
+
+                self.assertEqual(configuration, {})
+                self.assertTrue(configuration.constructionError())
+
+        configuration = CoreConfiguration({1: 'value'})
+
+        self.assertEqual(configuration, {})
+        self.assertEqual(
+            configuration.constructionError(),
+            'configuration keys must be strings',
+        )
+
+    def testCoreConfigurationReportsSerializationFailure(self):
+        """Keep the empty sentinel while exposing a useful diagnostic."""
+        configuration = CoreConfiguration({'unsupported': object()})
+
+        self.assertEqual(configuration.toJSONString(), '')
+        self.assertTrue(configuration.serializationError())
+
+        configuration['unsupported'] = 'supported'
+
+        self.assertTrue(configuration.toJSONString())
+        self.assertEqual(configuration.serializationError(), '')
 
     def testLegacyMetadataPreservesUnknownFields(self):
         """Promote known legacy fields while retaining forward-only metadata."""
@@ -77,10 +111,33 @@ class ProfileModelTest(unittest.TestCase):
             metadata.toMapping(),
         )
 
+    def testMetadataPromotesKnownExtrasWithoutCollisions(self):
+        """Migrate newly recognized fields out of nested forward metadata."""
+        metadata = ProfileMetadata.fromMapping(
+            {
+                'remark': 'Explicit legacy name',
+                'subsId': 'subscription-id',
+                'extras': {
+                    'displayName': 'Previously unknown name',
+                    'favorite': True,
+                    'subscriptionManaged': True,
+                    'subscriptionProfileKey': 'stale:key',
+                    'futureMetadata': 7,
+                },
+            }
+        )
+
+        self.assertEqual(metadata.displayName, 'Explicit legacy name')
+        self.assertTrue(metadata.favorite)
+        self.assertEqual(metadata.subscriptionSource, 'subscription-id')
+        self.assertTrue(metadata.subscriptionManaged)
+        self.assertEqual(metadata.subscriptionProfileKey, 'stale:key')
+        self.assertEqual(metadata.extras, {'futureMetadata': 7})
+
     def testIndependentCopyGetsNewIdentityAndNoSubscriptionOwner(self):
         """Keep manual copies independent from subscription synchronization."""
         original = ServerProfile.fromConfiguration(
-            ConfigFactory({'type': 'fixture', 'address': 'example.com'}),
+            CoreConfiguration({'type': 'fixture', 'address': 'example.com'}),
             {
                 'displayName': 'Managed',
                 'subscriptionSource': 'source',
@@ -97,10 +154,56 @@ class ProfileModelTest(unittest.TestCase):
         self.assertFalse(copied.metadata.subscriptionManaged)
         self.assertEqual(copied.metadata.subscriptionProfileKey, '')
 
+    def testProfileExportAndRemoteAddressRemainCoreNeutral(self):
+        """Delegate generic profile behavior without protocol-specific options."""
+
+        class Configuration(CoreConfiguration):
+            @property
+            def itemProtocol(self):
+                return 'Shadowsocks'
+
+            @property
+            def itemAddress(self):
+                return 'display.example'
+
+            def remoteAddress(self):
+                return 'routing.example'
+
+            def toURI(self, remark=''):
+                return f'fixture://{remark}'
+
+        profile = ServerProfile.fromConfiguration(
+            Configuration({'type': 'fixture'}),
+            {'displayName': 'Profile'},
+        )
+
+        self.assertEqual(profile.toURI(), 'fixture://Profile')
+        self.assertEqual(profile.itemAddress, 'display.example')
+        self.assertEqual(profile.remoteAddress(), 'routing.example')
+
+    def testConnectionFingerprintIsCanonicalAndRejectsUnsupportedValues(self):
+        """Hash only canonical JSON connection semantics."""
+        first = ServerProfile.fromConfiguration(
+            CoreConfiguration({'address': 'example.com', 'port': 443}),
+            {'displayName': 'First'},
+        )
+        second = ServerProfile.fromConfiguration(
+            CoreConfiguration({'port': 443, 'address': 'example.com'}),
+            {'displayName': 'Second'},
+        )
+
+        self.assertEqual(
+            profileConnectionFingerprint(first),
+            profileConnectionFingerprint(second),
+        )
+
+        with self.assertRaisesRegex(TypeError, 'JSON-compatible'):
+            profileConnectionFingerprint(CoreConfiguration({'value': object()}))
+
     def testUserServerMappingRemainsBackwardCompatible(self):
         """Persist the canonical legacy record shape plus per-profile metadata."""
         profile = ServerProfile.fromConfiguration(
-            ConfigFactory({'type': 'fixture', 'port': 1080}),
+            CoreConfiguration({'type': 'fixture', 'port': 1080}),
             {
                 'displayName': 'Fixture',
                 'group': 'Tests',
@@ -129,7 +232,7 @@ class IsolatedRepositoryTest(unittest.TestCase):
             repository = UserServers()
             repository.data().append(
                 ServerProfile.fromConfiguration(
-                    ConfigFactory({'type': 'fixture', 'value': 9}),
+                    CoreConfiguration({'type': 'fixture', 'value': 9}),
                     {
                         'displayName': 'Temporary profile',
                         'tags': ('one', 'two'),
@@ -348,12 +451,12 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(manager.entryCount(APPLICATION_LOG_CATEGORY), 1)
 
 
-class MetricsDataManagerTest(unittest.TestCase):
+class MetricsHistoryTest(unittest.TestCase):
     """Verify bounded history and metric-specific aggregation semantics."""
 
     def testPruningNormalizationAndAggregation(self):
         """Prune stale values, average speed, and retain latest usage."""
-        manager = MetricsDataManager(maximumHistorySeconds=10)
+        manager = MetricsHistory(maximumHistorySeconds=10)
         changed = []
         manager.historyChanged.connect(lambda: changed.append(True))
 
@@ -409,7 +512,7 @@ class MetricsDataManagerTest(unittest.TestCase):
 
     def testInvalidSamplesDoNotPolluteHistory(self):
         """Ignore unsupported and non-finite values without emitting changes."""
-        manager = MetricsDataManager()
+        manager = MetricsHistory()
         changed = []
         manager.historyChanged.connect(lambda: changed.append(True))
 
@@ -418,6 +521,28 @@ class MetricsDataManagerTest(unittest.TestCase):
 
         self.assertEqual(manager.rawSamples(), tuple())
         self.assertEqual(changed, [])
+
+
+class TranslationExtractorTest(unittest.TestCase):
+    """Verify static translation extraction and constant interpolation."""
+
+    def testApplicationConstantFStringIsExtractedAndResolved(self):
+        """Accept constant-only f-strings while rejecting runtime formatting."""
+        import Translation
+
+        content = """
+_(f'{APPLICATION_NAME} is ready')
+_(f'{runtimeValue} is not static')
+_(f'{APPLICATION_NAME!r} is not supported')
+"""
+
+        keys = tuple(Translation.getTranslationKeys(content))
+
+        self.assertEqual(keys, ('{APPLICATION_NAME} is ready',))
+        self.assertEqual(
+            Translation.resolveAppConstants(keys[0]),
+            f'{Translation.APPLICATION_NAME} is ready',
+        )
 
 
 if __name__ == '__main__':

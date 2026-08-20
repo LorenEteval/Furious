@@ -19,13 +19,13 @@
 
 from __future__ import annotations
 
-from Furious.Models import ConfigFactory
+from Furious.Models import CoreConfiguration
 from Furious.Plugins.API import (
     CapabilityKind,
+    CoreRuntimeFactory,
+    CoreRuntimeLaunch,
+    CoreRuntimeRequest,
     FuriousPlugin,
-    KernelFactory,
-    KernelLaunch,
-    KernelRequest,
     PluginMetadata,
     ProtocolDescriptor,
     ProtocolEditorProvider,
@@ -34,6 +34,9 @@ from Furious.Plugins.API import (
     SubscriptionDecoder,
     SubscriptionItem,
     SubscriptionResult,
+    TrafficCounters,
+    TrafficStatsMonitor,
+    TrafficStatsProvider,
 )
 from Furious.Plugins.Registry import PluginRegistry
 from Furious.Service.SubscriptionImporter import (
@@ -49,7 +52,7 @@ import unittest
 import weakref
 
 
-class FixtureConfiguration(ConfigFactory):
+class FixtureConfiguration(CoreConfiguration):
     """Represent one deterministic plugin-owned connection document."""
 
     @property
@@ -130,8 +133,8 @@ class FixtureEditorProvider(ProtocolEditorProvider):
         return {'protocol': protocolId, 'parent': parent, **kwargs}
 
 
-class FixtureKernel:
-    """Record start calls made through KernelLaunch."""
+class FixtureCoreRuntime:
+    """Record start calls made through CoreRuntimeLaunch."""
 
     def __init__(self):
         """Initialize an empty call history."""
@@ -144,20 +147,20 @@ class FixtureKernel:
         return True
 
 
-class FixtureKernelFactory(KernelFactory):
-    """Create a deterministic in-process runtime kernel."""
+class FixtureCoreRuntimeFactory(CoreRuntimeFactory):
+    """Create a deterministic in-process core runtime."""
 
-    factoryId = 'fixture.kernel'
+    factoryId = 'fixture.runtime'
     configurationTypes = (FixtureConfiguration,)
-    kernelTypes = (FixtureKernel,)
+    runtimeTypes = (FixtureCoreRuntime,)
 
-    def create(self, request: KernelRequest):
+    def create(self, request: CoreRuntimeRequest):
         """Build one prepared launch for a fixture configuration."""
         if not isinstance(request.configuration, FixtureConfiguration):
             return None
 
-        return KernelLaunch(
-            FixtureKernel(),
+        return CoreRuntimeLaunch(
+            FixtureCoreRuntime(),
             request.configuration,
             ('prepared',),
             {'routing': request.routing},
@@ -192,7 +195,7 @@ class FixturePlugin(FuriousPlugin):
     capabilities = (
         FixtureProtocolHandler(),
         FixtureEditorProvider(),
-        FixtureKernelFactory(),
+        FixtureCoreRuntimeFactory(),
         FixtureDecoder(),
     )
 
@@ -242,7 +245,7 @@ class PluginRegistryTest(unittest.TestCase):
             self.plugin.capabilities[0],
         )
         self.assertEqual(
-            self.registry.pluginsWithCapability(CapabilityKind.KernelFactory),
+            self.registry.pluginsWithCapability(CapabilityKind.CoreRuntimeFactory),
             (self.plugin,),
         )
 
@@ -262,16 +265,16 @@ class PluginRegistryTest(unittest.TestCase):
             {'protocol': 'fixture', 'parent': None, 'marker': 7},
         )
 
-    def testConfigurationAndKernelFactories(self):
+    def testConfigurationAndCoreRuntimeFactories(self):
         """Build normalized configurations and start one prepared runtime."""
         config = self.registry.configFromDict({'type': 'fixture', 'value': 'node'})
-        launch = self.registry.createKernel(config, 'direct')
+        launch = self.registry.createCoreRuntime(config, 'direct')
 
         self.assertIsInstance(config, FixtureConfiguration)
-        self.assertIsInstance(launch.kernel, FixtureKernel)
+        self.assertIsInstance(launch.runtime, FixtureCoreRuntime)
         self.assertTrue(launch.start())
         self.assertEqual(
-            launch.kernel.calls,
+            launch.runtime.calls,
             [(config, ('prepared',), {'routing': 'direct'})],
         )
 
@@ -407,15 +410,15 @@ class PluginFailureIsolationTest(unittest.TestCase):
         finally:
             registry.shutdown()
 
-    def testKernelFactoryExceptionReturnsControlledStartFailure(self):
+    def testCoreRuntimeFactoryExceptionReturnsControlledStartFailure(self):
         """Translate construction failure into a false runtime result."""
 
-        class RaisingFactory(KernelFactory):
+        class RaisingFactory(CoreRuntimeFactory):
             factoryId = 'raising-factory'
             configurationTypes = (FixtureConfiguration,)
-            kernelTypes = (FixtureKernel,)
+            runtimeTypes = (FixtureCoreRuntime,)
 
-            def create(self, request: KernelRequest):
+            def create(self, request: CoreRuntimeRequest):
                 raise RuntimeError('factory fixture')
 
         class RaisingPlugin(FuriousPlugin):
@@ -426,12 +429,12 @@ class PluginFailureIsolationTest(unittest.TestCase):
         registry.register(RaisingPlugin())
 
         try:
-            kernel, success = registry.startKernel(
+            runtime, success = registry.startCoreRuntime(
                 FixtureConfiguration({'type': 'fixture'}),
                 'direct',
             )
 
-            self.assertIsNone(kernel)
+            self.assertIsNone(runtime)
             self.assertFalse(success)
         finally:
             registry.shutdown()

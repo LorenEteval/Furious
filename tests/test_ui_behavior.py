@@ -24,6 +24,7 @@ from Furious.Backends.ExternalCore.Configuration import (
     ConfigExternalCore,
 )
 from Furious.Backends.ExternalCore.Editor import ExternalCoreEditor
+from Furious.Backends.Xray.AssetListWidget import XrayAssetListWidget
 from Furious.Backends.Xray.RoutingWindow import RoutingRulesDialog
 from Furious.Actions.Connection import ConnectAction
 from Furious.Controllers.ConnectionController import (
@@ -36,7 +37,7 @@ from Furious.Controllers.SettingsController import (
 )
 from Furious.Frozenlib import AppSettings
 from Furious.Models import ProfileMetadata, ServerProfile
-from Furious.Qt import AppQMessageBox, AppQSwitch
+from Furious.Qt import AppHue, AppQMessageBox, AppQSwitch
 from Furious.Service import (
     APPLICATION_LOG_CATEGORY,
     CORE_LOG_CATEGORY,
@@ -59,6 +60,8 @@ from tests.support import (
 )
 
 import copy
+import pathlib
+import tempfile
 import unittest
 import weakref
 
@@ -677,6 +680,18 @@ class DialogBehaviorTest(unittest.TestCase):
         """Finish every deferred transient deletion between tests."""
         collectAtBoundary()
 
+    def testThemeFallbackWorksBeforeConnectionControllerExists(self):
+        """Allow startup error dialogs to use the disconnected theme safely."""
+        with mock.patch(
+            'Furious.Qt.DynamicTheme.AppConnectionController',
+            return_value=None,
+        ):
+            self.assertEqual(AppHue.currentColor(), AppHue.disconnectedColor())
+            self.assertEqual(
+                AppHue.currentWindowIcon().iconFileName,
+                ':/Icons/bootstrap/rocket-takeoff-window.svg',
+            )
+
     def testRoutingRulesActionsStayEnabledAndNoSelectionIsSafe(self):
         """Keep the compact top actions visible without creating a warning."""
         dialog = RoutingRulesDialog({'rules': []})
@@ -685,7 +700,10 @@ class DialogBehaviorTest(unittest.TestCase):
         self.assertTrue(dialog.deleteButton.isEnabled())
         self.assertTrue(dialog.closeWindowButton.isEnabled())
         self.assertIsNotNone(dialog.layout().itemAt(0).layout())
-        self.assertIs(dialog.layout().itemAt(1).widget(), dialog.listWidget)
+        self.assertIs(dialog.layout().itemAt(1).widget(), dialog.listView)
+        self.assertIs(dialog.listView.model(), dialog.listView.rulesModel)
+        self.assertIs(dialog.listView.rulesModel.parent(), dialog.listView)
+        self.assertEqual(dialog.listView.rulesModel.stringList(), [])
 
         dialog.deleteRule()
         dialog.editRule()
@@ -694,6 +712,38 @@ class DialogBehaviorTest(unittest.TestCase):
         self.assertEqual(dialog.routing['rules'], [])
 
         dialog.closeWindowButton.click()
+
+    def testAssetListViewKeepsRawFilenameInItsOwnedModel(self):
+        """Keep filesystem identity separate from formatted asset row text."""
+        with tempfile.TemporaryDirectory() as directory:
+            assetDirectory = pathlib.Path(directory)
+            filename = 'geo data.dat'
+            (assetDirectory / filename).write_bytes(b'fixture')
+
+            with mock.patch(
+                'Furious.Backends.Xray.AssetListWidget.XRAY_ASSET_DIR',
+                assetDirectory,
+            ):
+                view = XrayAssetListWidget()
+
+                self.assertIs(view.model(), view.assetModel)
+                self.assertIs(view.assetModel.parent(), view)
+                self.assertEqual(view.assetModel.rowCount(), 1)
+
+                view.show()
+
+                processQtEvents()
+
+                self.assertEqual(view.assetModel.rowCount(), 1)
+                self.assertGreaterEqual(
+                    view.sizeHintForRow(0),
+                    view.iconSize().height(),
+                )
+                self.assertEqual(view.filenameAt(0), filename)
+                self.assertIn(filename, view.assetModel.item(0).text())
+
+                view.close()
+                view.deleteLater()
 
     def testMessageBoxButtonPublishesCompatibleResult(self):
         """Emit one clicked button and finish with its standard-button value."""

@@ -26,6 +26,8 @@ from Furious.Backends.ShadowsocksURI import (
     parseShadowsocksURI,
     serializeShadowsocksURI,
 )
+from Furious.Backends.Xray.Plugin import XrayPlugin
+from Furious.Plugins import PluginRegistry, exportConfiguration, profileFromAny
 
 import random
 import string
@@ -81,6 +83,31 @@ class ShadowsocksURITest(unittest.TestCase):
 
                 if ':' in value.host:
                     self.assertIn(f'@[{value.host}]:{value.port}', uri)
+
+    def testPluginProfileExportPreservesShadowsocksMetadata(self):
+        """Keep profile-only plugin arguments in the protocol capability."""
+        value = ShadowsocksURIData(
+            'aes-256-gcm',
+            'secret',
+            'example.com',
+            443,
+            formatPluginArgument(
+                'simple-obfs',
+                (('obfs', 'http'), ('obfs-host', 'cdn.example.com')),
+            ),
+            'Profile',
+        )
+
+        registry = PluginRegistry()
+        registry.register(XrayPlugin())
+
+        try:
+            profile = profileFromAny(serializeShadowsocksURI(value), registry=registry)
+            exported = exportConfiguration(profile, registry=registry)
+        finally:
+            registry.shutdown()
+
+        self.assertEqual(parseShadowsocksURI(exported), value)
 
     def testUnknownQueryParametersAreIgnored(self):
         """Accept future SIP002 query keys without changing known meaning."""

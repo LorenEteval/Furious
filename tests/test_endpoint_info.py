@@ -63,7 +63,7 @@ class _Controller(QtCore.QObject):
     """Expose the connection signals consumed by the endpoint service."""
 
     stateChanged = QtCore.Signal(object)
-    activeConfigurationChanged = QtCore.Signal(object)
+    activeProfileChanged = QtCore.Signal(object)
 
     def __init__(self, state=ConnectionState.Connected):
         """Initialize a deterministic state-only controller."""
@@ -352,6 +352,35 @@ class EndpointInfoServiceTest(unittest.TestCase):
         client.deleteLater()
         service.deleteLater()
 
+    def testRefreshPublishesLoadingBeforeClearingThePreviousResult(self):
+        """Keep observer snapshots internally consistent during refresh startup."""
+        service, controller, client = self._service()
+        previousResult = EndpointInfo(ipv4='192.0.2.1', ipv4Resolved=True)
+        observations = []
+
+        service.state = EndpointInfoState.Ready
+        service.result = previousResult
+        service.stateChanged.connect(
+            lambda state: observations.append(('state', state, service.result))
+        )
+        service.resultChanged.connect(
+            lambda result: observations.append(('result', service.state, result))
+        )
+
+        service.refresh()
+
+        self.assertEqual(
+            observations[:2],
+            [
+                ('state', EndpointInfoState.Loading, previousResult),
+                ('result', EndpointInfoState.Loading, EndpointInfo()),
+            ],
+        )
+
+        controller.deleteLater()
+        client.deleteLater()
+        service.deleteLater()
+
     def testSettingsCardDefaultsOffPersistsAndExposesInAppPrivacyAction(self):
         """Bind one Fluent switch and one local privacy action to the preference."""
         privacyRequests = []
@@ -457,7 +486,7 @@ class EndpointInfoServiceTest(unittest.TestCase):
 
         self.assertEqual(len(client.requests), requestCount)
 
-        controller.activeConfigurationChanged.emit(object())
+        controller.activeProfileChanged.emit(object())
 
         self.assertEqual(service.state, EndpointInfoState.Loading)
         self.assertEqual(service.result, EndpointInfo())
@@ -570,6 +599,7 @@ class EndpointInfoServiceTest(unittest.TestCase):
         for _index in range(5):
             with patch('Furious.Window.SettingsPage._', side_effect=lambda text: text):
                 messageBox = _endpointPrivacyMessageBox(parent)
+
             body = messageBox.informativeText()
             references.append(weakref.ref(messageBox))
 
@@ -602,12 +632,18 @@ class EndpointInfoServiceTest(unittest.TestCase):
     def testFieldAndMapSpinnersTrackPartialCompletionIndependently(self):
         """Keep each unresolved field animated while preserving partial results."""
         service = _PresentationService()
+
         widget = EndpointInfoWidget(service)
-        widget.mapWidget._ensureSourceLoaded = lambda: None
+        widget.mapWidget._sourceLoaded = True
+        widget.mapWidget._documentLoaded = True
+        widget.mapWidget._runJavaScript = lambda _script: None
         widget.show()
+
         processQtEvents()
         service.refresh()
         processQtEvents()
+
+        self.assertFalse(hasattr(widget, 'statusLabel'))
 
         rows = (
             widget.ipv4Row,
@@ -616,18 +652,23 @@ class EndpointInfoServiceTest(unittest.TestCase):
             widget.locationRow,
             widget.organizationRow,
         )
+
         self.assertTrue(all(row.loadingSpinner.is_spinning for row in rows))
-        self.assertTrue(widget.mapWidget.loadingSpinner.is_spinning)
+        self.assertFalse(widget.mapWidget.loadingSpinner.is_spinning)
+        self.assertTrue(widget.mapWidget.statusOverlay.isHidden())
+        self.assertTrue(widget.mapWidget._lastWebState['loading'])
+        self.assertFalse(widget.mapWidget._lastWebState['markerVisible'])
 
         service.result = EndpointInfo(ipv4='192.0.2.1', ipv4Resolved=True)
         service.resultChanged.emit(service.result)
+
         processQtEvents()
 
         self.assertEqual(widget.ipv4Row.valueLabel.text(), '192.0.2.1')
         self.assertFalse(widget.ipv4Row.loadingSpinner.is_spinning)
         self.assertTrue(widget.ipv6Row.loadingSpinner.is_spinning)
         self.assertTrue(widget.countryRow.loadingSpinner.is_spinning)
-        self.assertTrue(widget.mapWidget.loadingSpinner.is_spinning)
+        self.assertFalse(widget.mapWidget.loadingSpinner.is_spinning)
 
         service.result = EndpointInfo(
             ipv4='192.0.2.1',
@@ -635,6 +676,7 @@ class EndpointInfoServiceTest(unittest.TestCase):
             ipv6Resolved=True,
         )
         service.resultChanged.emit(service.result)
+
         processQtEvents()
 
         self.assertEqual(widget.ipv6Row.valueLabel.text(), _('Not available'))
@@ -659,7 +701,9 @@ class EndpointInfoServiceTest(unittest.TestCase):
         )
         service.resultChanged.emit(service.result)
         service.stateChanged.emit(service.state)
+
         widget.mapWidget._mapBecameReady()
+
         processQtEvents()
 
         self.assertTrue(all(not row.loadingSpinner.is_spinning for row in rows))
@@ -672,9 +716,13 @@ class EndpointInfoServiceTest(unittest.TestCase):
     def testPresentationShowsValidatedValuesAndApproximateLocation(self):
         """Render selectable IP data and expose one reusable refresh action."""
         service = _PresentationService()
+
         widget = EndpointInfoWidget(service)
         widget.resize(900, 320)
+
         scripts = []
+
+        widget.mapWidget._sourceLoaded = True
         widget.mapWidget._documentLoaded = True
         widget.mapWidget._runJavaScript = scripts.append
         widget.mapWidget._syncWebState()
@@ -688,8 +736,7 @@ class EndpointInfoServiceTest(unittest.TestCase):
             'Los Angeles, California, United States',
         )
         self.assertFalse(hasattr(widget.countryRow, 'flagLabel'))
-        self.assertFalse(widget.statusWidget.isVisible())
-        self.assertEqual(widget.statusLabel.text(), '')
+        self.assertFalse(hasattr(widget, 'statusLabel'))
         self.assertEqual(widget.bodyLayout.stretch(0), 1)
         self.assertEqual(widget.bodyLayout.stretch(1), 2)
         self.assertGreaterEqual(widget.minimumHeight(), 360)
@@ -697,6 +744,14 @@ class EndpointInfoServiceTest(unittest.TestCase):
         self.assertEqual(widget.mapWidget.webProfile.httpUserAgent(), 'Mozilla/5.0')
         self.assertNotIn('Furious', widget.mapWidget.webProfile.httpUserAgent())
         self.assertTrue(widget.mapWidget._lastWebState['markerVisible'])
+        self.assertEqual(
+            widget.mapWidget._lastWebState['fontFamily'],
+            QtGui.QFontInfo(widget.mapWidget.font()).family(),
+        )
+        self.assertEqual(
+            widget.mapWidget._lastWebState['fontPointSize'],
+            QtGui.QFontInfo(widget.mapWidget.font()).pointSizeF(),
+        )
         self.assertAlmostEqual(widget.mapWidget._lastWebState['markerLatitude'], 34.05)
         self.assertAlmostEqual(
             widget.mapWidget._lastWebState['markerLongitude'], -118.24
@@ -706,13 +761,10 @@ class EndpointInfoServiceTest(unittest.TestCase):
             widget.ipv4Row.valueContainer.objectName(),
             'EndpointFieldValueContainer',
         )
-        self.assertEqual(widget.statusWidget.objectName(), 'EndpointStatusWidget')
+        self.assertFalse(hasattr(widget, 'statusWidget'))
+        self.assertFalse(hasattr(widget, 'spinner'))
         self.assertIn(
             'QWidget#EndpointFieldValueContainer',
-            AppStyleSheet.forTheme(AppStyleSheet.Light),
-        )
-        self.assertIn(
-            'QWidget#EndpointStatusWidget',
             AppStyleSheet.forTheme(AppStyleSheet.Light),
         )
 
@@ -727,15 +779,29 @@ class EndpointInfoServiceTest(unittest.TestCase):
             False,
         )
         QtCore.QCoreApplication.sendEvent(widget.mapWidget.webView, wheelEvent)
+
         self.assertTrue(wheelEvent.isAccepted())
+
         html = widget.mapWidget.HtmlPath.read_text(encoding='utf-8')
         mapScriptPath = widget.mapWidget.HtmlPath.with_name('EndpointMap.js')
         mapScript = mapScriptPath.read_text(encoding='utf-8')
+
         self.assertIn('EndpointMap.js', html)
+        self.assertIn('window.endpointMap', mapScript)
         self.assertIn('map.setStyle(nextStyle)', mapScript)
         self.assertIn("document.documentElement.dataset.theme", mapScript)
         self.assertIn('--endpoint-attribution-background', html)
         self.assertIn('--endpoint-attribution-foreground', html)
+        self.assertIn('endpoint-loading-overlay', html)
+        self.assertIn('endpoint-loading-spinner', html)
+        self.assertIn('width: 16px', html)
+        self.assertIn('height: 16px', html)
+        self.assertIn('0.8s linear infinite', html)
+        self.assertIn('border-right-color: transparent', html)
+        self.assertIn('--endpoint-font-family', html)
+        self.assertIn("JSON.stringify(state.fontFamily", mapScript)
+        self.assertIn('applyLoadingState()', mapScript)
+        self.assertIn('!state.markerVisible', mapScript)
         self.assertIn('.maplibregl-canvas:focus', html)
         self.assertIn('outline: none', html)
         self.assertNotIn('color-mix(', html)
@@ -770,53 +836,97 @@ class EndpointInfoServiceTest(unittest.TestCase):
         self.assertTrue((widget.mapWidget.HtmlPath.parent / 'LICENSE').is_file())
 
         widget.mapWidget.setActive(True)
+
         self.assertFalse(widget.mapWidget.webView.isHidden())
-        self.assertFalse(widget.mapWidget.placeholderWidget.isHidden())
+        self.assertTrue(widget.mapWidget.statusOverlay.isHidden())
+        self.assertFalse(widget.mapWidget.loadingSpinner.is_spinning)
+        self.assertTrue(widget.mapWidget._lastWebState['loading'])
 
         hideRecorder = _EventRecorder(QtCore.QEvent.Type.Hide, widget)
+
         widget.mapWidget.webView.installEventFilter(hideRecorder)
         widget.mapWidget._mapBecameReady()
+
         processQtEvents()
 
         self.assertEqual(hideRecorder.events, [])
-        self.assertIs(widget.mapWidget._presentedWidget, widget.mapWidget.webView)
         self.assertFalse(widget.mapWidget.webView.isHidden())
-        self.assertFalse(widget.mapWidget.placeholderWidget.isHidden())
+        self.assertTrue(widget.mapWidget.statusOverlay.isHidden())
+        self.assertFalse(widget.mapWidget._lastWebState['loading'])
 
         service.state = EndpointInfoState.Loading
         service.stateChanged.emit(service.state)
-        self.assertIs(
-            widget.mapWidget._presentedWidget,
-            widget.mapWidget.placeholderWidget,
-        )
-        self.assertEqual(widget.mapWidget.placeholderLabel.text(), _('Detecting...'))
+
+        self.assertEqual(widget.mapWidget.statusLabel.text(), _('Detecting...'))
         self.assertFalse(widget.mapWidget.webView.isHidden())
-        self.assertFalse(widget.mapWidget.placeholderWidget.isHidden())
-        self.assertTrue(widget.mapWidget.loadingSpinner.is_spinning)
+        self.assertTrue(widget.mapWidget.statusOverlay.isHidden())
+        self.assertFalse(widget.mapWidget.loadingSpinner.is_spinning)
+        self.assertTrue(widget.mapWidget._lastWebState['loading'])
 
         service.state = EndpointInfoState.Ready
         service.stateChanged.emit(service.state)
-        self.assertIs(widget.mapWidget._presentedWidget, widget.mapWidget.webView)
+
         self.assertFalse(widget.mapWidget.webView.isHidden())
-        self.assertFalse(widget.mapWidget.placeholderWidget.isHidden())
+        self.assertTrue(widget.mapWidget.statusOverlay.isHidden())
 
         widget.refreshButton.click()
+
         self.assertEqual(service.refreshCount, 1)
-        self.assertIs(
-            widget.mapWidget._presentedWidget,
-            widget.mapWidget.placeholderWidget,
+        self.assertEqual(widget.mapWidget.statusLabel.text(), _('Detecting...'))
+        self.assertTrue(widget.mapWidget.statusOverlay.isHidden())
+        self.assertFalse(widget.mapWidget.loadingSpinner.is_spinning)
+        self.assertTrue(widget.mapWidget._lastWebState['loading'])
+        self.assertEqual(
+            widget.mapWidget._lastWebState['loadingText'],
+            _('Detecting...'),
         )
-        self.assertEqual(widget.mapWidget.placeholderLabel.text(), _('Detecting...'))
 
         previousRevision = widget.mapWidget._viewRevision
         service.completeRefresh()
+
         processQtEvents()
 
         self.assertGreater(widget.mapWidget._viewRevision, previousRevision)
+        self.assertTrue(widget.mapWidget.statusOverlay.isHidden())
+        self.assertFalse(widget.mapWidget._lastWebState['loading'])
         self.assertAlmostEqual(widget.mapWidget._lastWebState['markerLatitude'], 34.05)
         self.assertAlmostEqual(
             widget.mapWidget._lastWebState['markerLongitude'], -118.24
         )
+
+        widget.close()
+        widget.deleteLater()
+        service.deleteLater()
+
+    def testUnavailableLocationReplacesHtmlLoadingWithSingleLineFallback(self):
+        """Hide web loading before presenting the terminal map fallback."""
+        service = _PresentationService()
+        service.state = EndpointInfoState.Ready
+        service.result = EndpointInfo(
+            ipv4='192.0.2.1',
+            ipv4Resolved=True,
+            ipv6Resolved=True,
+            locationResolved=True,
+        )
+
+        widget = EndpointInfoWidget(service)
+        widget.mapWidget._sourceLoaded = True
+        widget.mapWidget._documentLoaded = True
+        widget.mapWidget._runJavaScript = lambda _script: None
+        widget.show()
+
+        processQtEvents()
+        widget._updatePresentation()
+
+        self.assertFalse(widget.mapWidget._lastWebState['loading'])
+        self.assertFalse(widget.mapWidget._lastWebState['markerVisible'])
+        self.assertFalse(widget.mapWidget.statusOverlay.isHidden())
+        self.assertFalse(widget.mapWidget.statusLabel.wordWrap())
+        self.assertEqual(
+            widget.mapWidget.statusLabel.text(),
+            _('Approximate location unavailable'),
+        )
+        self.assertFalse(widget.mapWidget.loadingSpinner.is_spinning)
 
         widget.close()
         widget.deleteLater()
@@ -831,6 +941,7 @@ class EndpointInfoServiceTest(unittest.TestCase):
             widget = EndpointInfoWidget(service)
 
         scripts = []
+
         widget.mapWidget._documentLoaded = True
         widget.mapWidget._runJavaScript = scripts.append
         widget.mapWidget._syncWebState()
@@ -847,10 +958,12 @@ class EndpointInfoServiceTest(unittest.TestCase):
         widget.deleteLater()
         service.deleteLater()
 
-    def testMapReadyAndRefreshDoNotToggleWidgetVisibility(self):
-        """Raise persistent map layers without recreating the native surface."""
+    def testMapReadyAndRefreshDoNotToggleWebViewVisibility(self):
+        """Overlay map status without recreating the native Chromium surface."""
         service = _PresentationService()
+
         widget = EndpointInfoWidget(service)
+        widget.mapWidget._sourceLoaded = True
         widget.mapWidget._documentLoaded = True
 
         with patch.object(widget.mapWidget, '_ensureSourceLoaded'):
@@ -860,21 +973,51 @@ class EndpointInfoServiceTest(unittest.TestCase):
         windowHideRecorder = _EventRecorder(QtCore.QEvent.Type.Hide, widget)
         mapHideRecorder = _EventRecorder(QtCore.QEvent.Type.Hide, widget)
         mapShowRecorder = _EventRecorder(QtCore.QEvent.Type.Show, widget)
+
         widget.installEventFilter(windowHideRecorder)
         widget.mapWidget.webView.installEventFilter(mapHideRecorder)
         widget.mapWidget.webView.installEventFilter(mapShowRecorder)
 
         widget.mapWidget._mapBecameReady()
         processQtEvents()
-        service.refresh()
-        processQtEvents()
+
+        persistentObjects = (
+            widget.mapWidget.webView,
+            widget.mapWidget.webView.page(),
+            widget.mapWidget.webProfile,
+            widget.mapWidget.webChannel,
+            widget.mapWidget.webBridge,
+            widget.mapWidget.statusOverlay,
+            widget.mapWidget.loadingSpinner,
+        )
+
+        for _index in range(40):
+            widget.refreshButton.click()
+            processQtEvents()
+
+            self.assertTrue(widget.mapWidget.statusOverlay.isHidden())
+            self.assertTrue(widget.mapWidget._lastWebState['loading'])
+
+            service.completeRefresh()
+            processQtEvents()
+
+            self.assertTrue(widget.mapWidget.statusOverlay.isHidden())
+            self.assertFalse(widget.mapWidget._lastWebState['loading'])
 
         self.assertEqual(windowHideRecorder.events, [])
         self.assertEqual(mapHideRecorder.events, [])
         self.assertEqual(mapShowRecorder.events, [])
-        self.assertIs(
-            widget.mapWidget._presentedWidget,
-            widget.mapWidget.placeholderWidget,
+        self.assertEqual(
+            persistentObjects,
+            (
+                widget.mapWidget.webView,
+                widget.mapWidget.webView.page(),
+                widget.mapWidget.webProfile,
+                widget.mapWidget.webChannel,
+                widget.mapWidget.webBridge,
+                widget.mapWidget.statusOverlay,
+                widget.mapWidget.loadingSpinner,
+            ),
         )
 
         widget.close()
@@ -884,8 +1027,9 @@ class EndpointInfoServiceTest(unittest.TestCase):
     def testMapThemeSwitchPreservesViewMarkerAndPersistentScene(self):
         """Switch real map styles without recreating the persistent renderer."""
         service = _PresentationService()
-        widget = EndpointInfoWidget(service)
         scripts = []
+
+        widget = EndpointInfoWidget(service)
         widget.mapWidget._documentLoaded = True
         widget.mapWidget._runJavaScript = scripts.append
         widget.mapWidget._syncWebState()
@@ -903,6 +1047,7 @@ class EndpointInfoServiceTest(unittest.TestCase):
         for index in range(40):
             theme = AppStyleSheet.Dark if index % 2 == 0 else AppStyleSheet.Light
             widget.themeChangedCallback(theme)
+
             processQtEvents()
 
             self.assertIs(widget.mapWidget.webView, webView)
@@ -930,15 +1075,19 @@ class EndpointInfoServiceTest(unittest.TestCase):
         webPageReference = weakref.ref(webPage)
         webProfileReference = weakref.ref(webProfile)
         webBridgeReference = weakref.ref(webBridge)
+
         widget.close()
         widget.deleteLater()
         service.deleteLater()
+
         del webBridge
         del webProfile
         del webPage
         del webView
         del widget
+
         collectAtBoundary()
+
         self.assertIsNone(widgetReference())
 
         for reference in (
