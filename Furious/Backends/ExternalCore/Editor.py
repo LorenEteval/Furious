@@ -365,7 +365,7 @@ class ExternalCoreConfigurationGroup(GuiEditorWidgetQGroupBox):
         self._applicationTun2socksInput = applicationTun2socksInput
         self._tunRemoteAddressInput = tunRemoteAddressInput
 
-        super().__init__(_('External Core'))
+        super().__init__(_('Basic Configuration'))
 
     def containerSequence(self):
         """Return related profile, process, and endpoint fields in order."""
