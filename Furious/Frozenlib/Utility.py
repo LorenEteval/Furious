@@ -182,10 +182,11 @@ def parseHostPort(address: str) -> Tuple[AnyStr | None, str | None]:
 
 
 def runExternalCommand(*args, **kwargs):
-    """Run a blocking external command with a bounded default wait.
+    """Run a blocking external command using caller-supplied subprocess options.
 
-    Callers remain responsible for keeping potentially slow host
-    operations off the GUI thread.
+    This low-level wrapper intentionally does not impose a timeout. Callers
+    decide whether their command may wait indefinitely and remain responsible
+    for keeping potentially slow host operations off the GUI thread.
     """
     if PLATFORM == 'Windows':
         creationflags = kwargs.pop('creationflags', subprocess.CREATE_NO_WINDOW)

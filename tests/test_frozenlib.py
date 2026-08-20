@@ -166,8 +166,8 @@ class FrozenlibUtilityTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             UtilityModule.callRateLimited(-1)
 
-    def testExternalCommandsHaveAnOverridableBoundedTimeout(self):
-        """Apply the shared timeout without invoking a real child process."""
+    def testExternalCommandsPreserveCallerTimeoutPolicy(self):
+        """Forward caller options without imposing a shared command timeout."""
         completed = subprocess.CompletedProcess(['fixture'], 0)
 
         with (
@@ -190,7 +190,7 @@ class FrozenlibUtilityTest(unittest.TestCase):
         self.assertEqual(
             run.call_args_list,
             [
-                mock.call(['fixture'], timeout=30.0),
+                mock.call(['fixture']),
                 mock.call(['fixture'], timeout=1.5),
             ],
         )
