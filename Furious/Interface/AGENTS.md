@@ -8,8 +8,8 @@
   callback order, serialization behavior, and bounded stop expectations.
 - Do not introduce mechanism-specific aliases for `CoreRuntime` or mistake the semantic runtime contract for an
   operating-system process.
-- Serialization uses the shared `Furious.Models` encoders. Preserve supported dict subclasses such as `CoreConfiguration`;
-  return/raise behavior must be documented and failures must retain useful diagnostics.
+- Serialization uses the shared `Furious.Models` encoders. Preserve supported dict subclasses such as
+  `CoreConfiguration`; return/raise behavior must be documented and failures must retain useful diagnostics.
 - Storage contracts intentionally expose live mutable collections. State that explicitly—do not label them copies—and
   keep persistence/ordering semantics in concrete repositories.
 - Editor bindings translate between widgets and configuration but do not decide process/runtime policy.

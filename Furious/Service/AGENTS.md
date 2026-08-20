@@ -20,10 +20,11 @@
 
 ## Async, network, and background work
 
-- Each asynchronous request has an explicit generation/context. Partial results may publish independently, while
-  stale/aborted replies are ignored and deleted exactly once.
-- Timeouts apply to network, DNS, executor, process, and host work. Executor callbacks must not retain a manager forever
-  after shutdown; GUI updates cross via signals.
+- Each asynchronous workflow defines one explicit ownership and supersession policy: a generation/version where stale
+  completion is possible, or exact reply/future ownership where requests are independent. Partial results may publish
+  independently; terminal reply paths abort or finish once and schedule deletion once.
+- Bound network, DNS, process, host, and worker work where the provider permits it. Executor callbacks use weak or
+  otherwise bounded ownership and must not retain a manager forever after shutdown; GUI updates cross via signals.
 - Logging and metrics collect while pages are hidden but avoid hidden-page rendering. Raw time-series samples are
   immutable; stable timestamp buckets are derived display data.
 - Log retention is owned by `LogManager`, not a text document. Category pruning/reset notifications must keep lazy UI

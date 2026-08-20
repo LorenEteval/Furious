@@ -37,9 +37,10 @@ Use the `manage-qt-pyside6-lifetimes` skill for any Qt ownership or lifecycle ch
 
 ## Network replies and presentation
 
-- Give each reply one manager/context owner, reject stale generations, handle success/error/abort exactly once, and call
-  `deleteLater()` on every terminal path. Do not attach ad-hoc application attributes to third-party Qt objects when a
-  manager mapping suffices.
+- Give each reply one manager/context owner. Where a newer request supersedes an older one, use a generation/version or
+  equivalent identity check; independent requests do not need a synthetic generation. Handle success/error/abort once
+  and call `deleteLater()` on every terminal path. Do not attach ad-hoc application attributes to third-party Qt
+  objects when a manager mapping suffices.
 - Preserve keyboard, focus, shortcuts, accessibility, light/dark theme, layout responsiveness, and translated-text
   growth.
 

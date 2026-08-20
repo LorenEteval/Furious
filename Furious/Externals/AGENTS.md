@@ -4,8 +4,8 @@
   or the translation data and regenerate.
 - Each catalog entry uses this key order: `source`, supported language keys in the generator's canonical order, then
   `isReviewed`.
-- `source` is a sorted, deduplicated list of fully qualified Python module names that contain the extracted source text.
-  Remove stale sources through regeneration, not manual cleanup.
+- `source` is a deduplicated list of fully qualified Python module names discovered by the generator. Preserve generated
+  ordering and remove stale sources through regeneration, not manual cleanup.
 - `_()`/`gettext()` extraction accepts static literals. The only f-string exception consists exclusively of bare names
   defined in `Furious.Frozenlib.Constants`; the extractor substitutes those values before catalog lookup.
 - Do not put runtime values, attribute expressions, calls, format specifications, `.format(...)`, or ordinary brace

@@ -1,7 +1,8 @@
 # Repository guidance
 
-- Repositories are the only persistence authority for profiles, subscriptions, routing, and TUN settings. Keep
-  Qt/UI/workflow concerns out of repository implementations.
+- Repositories are the persistence authority for domain collections and documents such as profiles, subscriptions,
+  routing configurations, and TUN settings. Application preferences and current selections may use `AppSettings` at
+  their owning controller/application boundary. Keep Qt/UI/workflow concerns out of repository implementations.
 - Preserve stable IDs, ordering, unknown compatible fields, legacy migrations, and subscription ownership. Display names
   and row indexes are not identities.
 - Subscription synchronization may update only profiles explicitly managed by that subscription and identified by stable

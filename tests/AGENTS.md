@@ -38,8 +38,8 @@
   event loop, request shutdown through the public path, and assert the child process exits normally. Repeat the cycle
   when the defect is intermittent.
 - A lifecycle child must be hermetic: bypass single-instance discovery and IPC, use temporary settings and application
-  identity where relevant, disable tray and startup restoration, mock all host/network integrations, and never attach to,
-  signal, inspect, or change a potentially running Furious instance.
+  identity where relevant, disable tray and startup restoration, mock all host/network integrations, and never attach
+  to, signal, inspect, or change a potentially running Furious instance.
 - Child-process tests own only the windows, threads, handles, and processes they create. Give every wait and child a
   bounded timeout, capture diagnostics, and terminate only that exact child on timeout. Never use process-name cleanup.
 - Visible diagnostic windows are for an explicit manual smoke procedure only. Automated tests always use the offscreen

@@ -11,7 +11,9 @@
 ## Platform and process safety
 
 - Host mutation (proxy, DNS, startup registration, session, routing) is platform-isolated, returns/logs actionable
-  failure, uses bounded commands/joins, and can be fully mocked. Never test against real host state.
+  failure, and can be fully mocked. `runExternalCommand()` intentionally delegates timeout policy to each caller;
+  callers that require bounded execution must pass a timeout or run in a documented non-GUI context. Never test against
+  real host state.
 - Own exact daemon threads/processes. Clear dead references so restart is possible; cleanup is bounded and idempotent.
   Do not suppress a failed shutdown or leave persisted state claiming success.
 - `parseHostPort` and other externally keyed caches must be bounded. Unbounded caches are limited to finite application
@@ -29,6 +31,7 @@
 
 ## Code review rules
 
-- Flag GUI/high-level imports, unbounded host commands or joins, state persisted after host failure, broad process-name
-  cleanup, sensitive logging, unbounded external-input caches, and globals holding transient objects.
+- Flag GUI/high-level imports, caller paths that can block the GUI or shutdown without an intentional bound, state
+  persisted after host failure, broad process-name cleanup, sensitive logging, unbounded external-input caches, and
+  globals holding transient objects. Do not add a universal timeout to `runExternalCommand()`.
 - Run direct mocked platform/helper tests plus affected controller/service tests.

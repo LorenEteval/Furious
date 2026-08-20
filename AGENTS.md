@@ -15,22 +15,23 @@
 
 - Prefer the simplest design that makes ownership, state transitions, failure, and side effects explicit. Readability
   and one canonical path beat clever indirection or parallel implementations.
-- Keep policy close to the layer that owns it: models describe data, repositories persist it, services perform
-  workflows, controllers own application state/orchestration, plugins/backends own protocol-specific behavior, and UI
-  adapts those APIs.
+- Keep policy close to the layer that owns it: models describe data, repositories persist domain collections,
+  `AppSettings` persists preferences, services perform workflows, controllers own shared runtime state/orchestration,
+  plugins/backends own protocol-specific behavior, and UI adapts those APIs.
 - Make invalid states and boundary failures visible with specific return values, result objects, or exceptions. Catch
   broadly only at a genuine isolation boundary, log actionable context, and do not silently convert explicit user input
   into a different behavior.
-- Bound external work: network requests, subprocess startup/shutdown, thread joins, and host commands need timeouts or a
-  documented non-GUI execution context. Cleanup must be idempotent and own exact resources, never search by process
-  name.
+- Bound external work where the workflow requires responsiveness: network requests, subprocess startup/shutdown,
+  thread joins, and host commands need caller-chosen timeouts or a documented non-GUI execution context. Low-level
+  wrappers such as `runExternalCommand()` intentionally do not invent a universal timeout. Cleanup must be idempotent,
+  own exact resources, and never search by process name.
 - Prefer immutable metadata, pure transformations, dependency injection, and explicit runtime copies. Avoid global
   mutable state, hidden mutation, duplicated caches, and UI-owned business state.
 
 ## Repository invariants
 
-- Treat persisted user configuration as input. Connection, routing, testing, logging, and statistics preparation operate
-  on explicit runtime copies unless an API is documented as mutating storage.
+- Treat persisted user configuration as input. Connection, routing, testing, logging, TUN, and statistics preparation
+  must not mutate it implicitly; use explicit runtime/derived state unless an API is documented as mutating storage.
 - Prefer plugin capabilities/factories over protocol or core conditionals in shared managers. Registries store classes,
   factories, descriptors, and immutable metadata—not transient UI instances.
 - `CoreRuntime` means one managed proxy-core lifecycle regardless of whether its implementation uses a subprocess,

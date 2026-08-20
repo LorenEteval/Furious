@@ -2,9 +2,10 @@
 
 ## Layering and state
 
-- `Models` and `Interface` define core-neutral data and contracts. `Repository` owns persistence, `Service` owns
-  workflows/resources, `Controllers` own shared application state, `Plugins`/`Backends` own protocol behavior, and
-  `Application` composes the runtime. `Qt`, `Widget`, and `Window` present that state.
+- `Models` and `Interface` define core-neutral data and contracts. `Repository` owns persisted domain collections,
+  `AppSettings` owns preferences, `Service` owns workflows/resources, `Controllers` own shared runtime state,
+  `Plugins`/`Backends` own protocol behavior, and `Application` composes them. `Qt`, `Widget`, and `Window` present that
+  state.
 - Existing UI code has compatibility paths that reach repositories or application globals. Do not extend that coupling
   when a controller/service API can be introduced cleanly; migrate incrementally rather than creating a second state
   authority.
