@@ -45,8 +45,9 @@ class XrayAssetWindow(AppQMainWindow):
 
         self.setWindowTitle(_('Xray-core Asset File'))
 
-        self.xrayAssetViewerWidget = XrayAssetListWidget(parent=self)
-        self.setCentralWidget(self.xrayAssetViewerWidget)
+        centralWidget = QWidget(parent=self)
+
+        self.xrayAssetViewerWidget = XrayAssetListWidget(parent=centralWidget)
 
         if versionToValue(PYSIDE6_VERSION) <= versionToValue('6.1.3'):
             openAssetDirectoryActions = []
@@ -55,22 +56,16 @@ class XrayAssetWindow(AppQMainWindow):
             openAssetDirectoryActions = [
                 AppQAction(
                     _('Open Asset Directory'),
+                    icon=bootstrapIcon('folder2-open.svg'),
                     callback=lambda: self.openAssetDirectory(),
-                    shortcut=QtCore.QKeyCombination(
-                        QtCore.Qt.KeyboardModifier.ControlModifier,
-                        QtCore.Qt.Key.Key_O,
-                    ),
                 ),
+                AppQSeparator(),
             ]
 
         self.fileMenu = AppQMenu(
             AppQAction(
                 _('Refresh'),
                 callback=lambda: self.flushItem(),
-                shortcut=QtCore.QKeyCombination(
-                    QtCore.Qt.KeyboardModifier.ControlModifier,
-                    QtCore.Qt.Key.Key_R,
-                ),
             ),
             AppQSeparator(),
             *openAssetDirectoryActions,
@@ -78,24 +73,55 @@ class XrayAssetWindow(AppQMainWindow):
                 _('Import From File...'),
                 callback=lambda: self.appendNewItem(),
             ),
-            AppQSeparator(),
-            AppQAction(
-                _('Exit'),
-                callback=lambda: self.close(),
-            ),
             title=_('File'),
-            parent=self.menuBar(),
+            parent=self,
         )
 
-        self.menuBar().addMenu(self.fileMenu)
+        self.fileButton = AppQMenuPushButton(
+            _('File'),
+            icon=bootstrapIcon('file-earmark.svg'),
+            popupMenu=self.fileMenu,
+        )
+
+        self.deleteButton = AppQPushButton(
+            _('Delete'),
+            icon=bootstrapIcon('trash.svg'),
+        )
+        self.deleteButton.clicked.connect(self.deleteSelectedItem)
+
+        self.closeWindowButton = AppQPushButton(
+            _('Close Window'),
+            icon=bootstrapIcon('window-x.svg'),
+        )
+        self.closeWindowButton.clicked.connect(self.close)
+
+        actionLayout = QHBoxLayout()
+        actionLayout.setContentsMargins(0, 0, 0, 0)
+        actionLayout.setSpacing(8)
+        actionLayout.addWidget(self.fileButton)
+        actionLayout.addWidget(self.deleteButton)
+        actionLayout.addStretch(1)
+        actionLayout.addWidget(self.closeWindowButton)
+
+        contentLayout = QVBoxLayout(centralWidget)
+        contentLayout.setContentsMargins(10, 10, 10, 8)
+        contentLayout.setSpacing(10)
+        contentLayout.addLayout(actionLayout)
+        contentLayout.addWidget(self.xrayAssetViewerWidget, 1)
+
+        self.setCentralWidget(centralWidget)
+        self.menuBar().hide()
 
     def setWidthAndHeight(self):
         """Apply the default size for the Xray asset viewer window."""
-        self.resize(360, 360 * GOLDEN_RATIO)
+        self.resize(380, 380 * GOLDEN_RATIO)
 
     def flushItem(self):
         """Refresh item."""
         self.xrayAssetViewerWidget.flushItem()
+
+    def deleteSelectedItem(self):
+        self.xrayAssetViewerWidget.deleteSelectedItem()
 
     @staticmethod
     def openAssetDirectory():

@@ -85,31 +85,13 @@ class XrayAssetListWidget(Mixins.ThemeAware, AppQListView):
 
         logger.info(f'Xray-core asset dir is \'{XRAY_ASSET_DIR}\'')
 
-        contextMenuActions = [
-            AppQAction(
-                _('Delete'),
-                callback=lambda: self.deleteSelectedItem(),
-            ),
-        ]
-
-        self.contextMenu = AppQMenu(*contextMenuActions)
-
-        # Add actions to self in order to activate shortcuts
-        self.addActions(self.contextMenu.actions())
-
-        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
+        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.NoContextMenu)
 
     def showEvent(self, event):
         """Recalculate item geometry after the view receives its display style."""
         super().showEvent(event)
 
         self.scheduleDelayedItemsLayout()
-
-    @QtCore.Slot(QtCore.QPoint)
-    def handleCustomContextMenuRequested(self, point):
-        """Handle custom context menu requested."""
-        self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def flushItemByTheme(self, theme: str):
         """Refresh item by theme."""
@@ -135,7 +117,7 @@ class XrayAssetListWidget(Mixins.ThemeAware, AppQListView):
                         '%Y-%m-%d %H:%M:%S'
                     )
 
-                item = QStandardItem(f'{filename:{maxlen + 6}}{mdate}')
+                item = QStandardItem(f'{filename:{maxlen + 5}}{mdate}')
                 item.setData(filename, QtCore.Qt.ItemDataRole.UserRole)
                 item.setFont(QFont(AppFontName()))
 
