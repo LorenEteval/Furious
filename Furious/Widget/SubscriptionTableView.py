@@ -89,11 +89,8 @@ class SubscriptionTableHorizontalHeader(AppQHeaderView):
         self.setSectionsMovable(False)
         self.setCascadingSectionResizes(False)
         self.setMinimumSectionSize(80)
-
-        for section in range(self.count()):
-            self.setSectionResizeMode(section, QHeaderView.ResizeMode.Interactive)
-
-        self.setStretchLastSection(True)
+        self.setStretchLastSection(False)
+        self.setCustomSectionResizeMode()
 
     def _applyDefaultSectionSizes(self):
         """Apply balanced widths for the concise subscription table."""
