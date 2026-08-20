@@ -453,6 +453,7 @@ class AppQHeaderView(Mixins.CleanupOnExit, QHeaderView):
             self.columnCount = parent.model().columnCount()
         else:
             self.columnCount = 0
+
         self.sectionSizeTable = {}
 
         self.setSectionsClickable(True)
