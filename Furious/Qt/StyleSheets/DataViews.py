@@ -26,8 +26,7 @@ def dataViewStyleSheet(palette, progressBarStyleSheet, checkIcon):
             QTableView,
             QTableWidget,
             QTreeView,
-            QListView,
-            QListWidget {{
+            QListView {{
                 border: 1px solid {palette['border']};
                 border-radius: 8px;
                 background-color: {palette['panel']};
@@ -41,8 +40,7 @@ def dataViewStyleSheet(palette, progressBarStyleSheet, checkIcon):
             QTableView::item,
             QTableWidget::item,
             QTreeView::item,
-            QListView::item,
-            QListWidget::item {{
+            QListView::item {{
                 min-height: 24px;
                 padding: 4px 7px;
                 border: none;
@@ -51,8 +49,7 @@ def dataViewStyleSheet(palette, progressBarStyleSheet, checkIcon):
             QTableView::item:hover,
             QTableWidget::item:hover,
             QTreeView::item:hover,
-            QListView::item:hover,
-            QListWidget::item:hover {{
+            QListView::item:hover {{
                 background-color: {palette['hover']};
                 color: {palette['text_strong']};
             }}
@@ -60,8 +57,7 @@ def dataViewStyleSheet(palette, progressBarStyleSheet, checkIcon):
             QTableView::item:selected,
             QTableWidget::item:selected,
             QTreeView::item:selected,
-            QListView::item:selected,
-            QListWidget::item:selected {{
+            QListView::item:selected {{
                 background-color: {palette['selection']};
                 color: {palette['selection_text']};
             }}
@@ -69,10 +65,21 @@ def dataViewStyleSheet(palette, progressBarStyleSheet, checkIcon):
             QTableView::item:selected:!active,
             QTableWidget::item:selected:!active,
             QTreeView::item:selected:!active,
-            QListView::item:selected:!active,
-            QListWidget::item:selected:!active {{
+            QListView::item:selected:!active {{
                 background-color: {palette['raised']};
                 color: {palette['text']};
+            }}
+
+            QTableView[selectionShape="rounded"],
+            QListView[selectionShape="rounded"] {{
+                selection-background-color: transparent;
+            }}
+
+            QTableView[selectionShape="rounded"]::item:selected,
+            QTableView[selectionShape="rounded"]::item:selected:!active,
+            QListView[selectionShape="rounded"]::item:selected,
+            QListView[selectionShape="rounded"]::item:selected:!active {{
+                background-color: transparent;
             }}
 
             QHeaderView {{

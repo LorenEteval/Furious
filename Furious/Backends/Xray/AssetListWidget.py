@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Provide widgets for Xray asset viewer Qt list widget."""
+"""Provide widgets for the Xray asset viewer list."""
 
 from __future__ import annotations
 
@@ -59,17 +59,21 @@ class MBoxAssetExists(AppQMessageBox):
         self.moveToCenter()
 
 
-class XrayAssetListWidget(Mixins.ThemeAware, AppQListWidget):
-    """Provide the Xray asset viewer Qt list widget."""
+class XrayAssetListWidget(Mixins.ThemeAware, AppQListView):
+    """Provide the model-based Xray asset viewer list."""
 
     def __init__(self, *args, **kwargs):
-        """Initialize the Xray asset list widget."""
+        """Initialize the Xray asset list view."""
         super().__init__(*args, **kwargs)
+
+        self.assetModel = QStandardItemModel(parent=self)
+        self.setModel(self.assetModel)
 
         self.setAlternatingRowColors(True)
 
-        self.setSelectionBehavior(AppQListWidget.SelectionBehavior.SelectRows)
-        self.setSelectionMode(AppQListWidget.SelectionMode.ExtendedSelection)
+        self.setSelectionBehavior(AppQListView.SelectionBehavior.SelectRows)
+        self.setSelectionMode(AppQListView.SelectionMode.ExtendedSelection)
+        self.setEditTriggers(AppQListView.EditTrigger.NoEditTriggers)
         self.setIconSize(QtCore.QSize(64, 64))
 
         if PLATFORM == 'Linux' and SystemRuntime.ubuntuRelease() == '20.04':
@@ -96,6 +100,12 @@ class XrayAssetListWidget(Mixins.ThemeAware, AppQListWidget):
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
 
+    def showEvent(self, event):
+        """Recalculate item geometry after the view receives its display style."""
+        super().showEvent(event)
+
+        self.scheduleDelayedItemsLayout()
+
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
         """Handle custom context menu requested."""
@@ -103,7 +113,7 @@ class XrayAssetListWidget(Mixins.ThemeAware, AppQListWidget):
 
     def flushItemByTheme(self, theme: str):
         """Refresh item by theme."""
-        self.clear()
+        self.assetModel.clear()
 
         maxlen = max(
             len(filename)
@@ -125,7 +135,8 @@ class XrayAssetListWidget(Mixins.ThemeAware, AppQListWidget):
                         '%Y-%m-%d %H:%M:%S'
                     )
 
-                item = QListWidgetItem(f'{filename:{maxlen + 6}}{mdate}')
+                item = QStandardItem(f'{filename:{maxlen + 6}}{mdate}')
+                item.setData(filename, QtCore.Qt.ItemDataRole.UserRole)
                 item.setFont(QFont(AppFontName()))
 
                 if APP().usesForcedDarkTheme():
@@ -149,7 +160,16 @@ class XrayAssetListWidget(Mixins.ThemeAware, AppQListWidget):
                     else:
                         item.setIcon(bootstrapIcon('file-earmark.svg'))
 
-                self.addItem(item)
+                self.assetModel.appendRow(item)
+
+    def filenameAt(self, row: int) -> str:
+        """Return the filesystem name represented by one model row."""
+        item = self.assetModel.item(row)
+
+        if item is None:
+            return ''
+
+        return str(item.data(QtCore.Qt.ItemDataRole.UserRole) or '')
 
     def flushItem(self):
         """Refresh item."""
@@ -224,13 +244,19 @@ class XrayAssetListWidget(Mixins.ThemeAware, AppQListWidget):
             # Nothing selected
             return
 
-        def handleResultCode(_indexes, code):
+        filenames = [self.filenameAt(index) for index in indexes]
+        filenames = [filename for filename in filenames if filename]
+
+        if not filenames:
+            return
+
+        def handleResultCode(_filenames, code):
             """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
-                for index in _indexes:
-                    os.remove(XRAY_ASSET_DIR / self.item(index).text())
+                for filename in _filenames:
+                    os.remove(XRAY_ASSET_DIR / filename)
 
                 self.flushItem()
             else:
@@ -247,23 +273,23 @@ class XrayAssetListWidget(Mixins.ThemeAware, AppQListWidget):
             )
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        mbox.isMulti = bool(len(indexes) > 1)
-        mbox.possibleRemark = f'{self.item(indexes[0]).text()}'
+        mbox.isMulti = bool(len(filenames) > 1)
+        mbox.possibleRemark = filenames[0]
         mbox.setText(mbox.customText())
-        mbox.finished.connect(functools.partial(handleResultCode, indexes))
+        mbox.finished.connect(functools.partial(handleResultCode, filenames))
 
         # Show the MessageBox asynchronously
         mbox.open()
 
     def keyPressEvent(self, event):
-        """Handle a key press for the Xray asset viewer Qt list widget."""
+        """Handle a key press for the Xray asset viewer list."""
         if event.key() == QtCore.Qt.Key.Key_Delete:
             self.deleteSelectedItem()
         else:
             super().keyPressEvent(event)
 
     def themeChangedCallback(self, theme):
-        """Update the Xray asset viewer Qt list widget for a theme change."""
+        """Update the Xray asset viewer list for a theme change."""
         if PLATFORM == 'Linux' and SystemRuntime.ubuntuRelease() == '20.04':
             # Ubuntu 20.04 system dark theme does not
             # change menu color. Do nothing

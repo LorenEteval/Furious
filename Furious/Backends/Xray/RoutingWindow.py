@@ -667,31 +667,34 @@ class RoutingProfileEditDialog(AppQTransientDialog):
         }
 
 
-class RoutingRulesQListWidget(AppQListWidget):
-    """Provide the routing rules Qt list widget."""
+class RoutingRulesListView(AppQListView):
+    """Provide the model-based routing rules list."""
 
     editRequested = QtCore.Signal()
 
     def __init__(self, routing: dict, parent=None):
-        """Initialize the RoutingRulesQListWidget."""
+        """Initialize the routing rules list view."""
         super().__init__(parent)
 
         self.routing = routing
+        self.rulesModel = QtCore.QStringListModel(parent=self)
+        self.setModel(self.rulesModel)
 
         self.setAlternatingRowColors(True)
-        self.setSelectionBehavior(AppQListWidget.SelectionBehavior.SelectRows)
-        self.setSelectionMode(AppQListWidget.SelectionMode.ExtendedSelection)
-        self.itemDoubleClicked.connect(self._requestEdit)
+        self.setSelectionBehavior(AppQListView.SelectionBehavior.SelectRows)
+        self.setSelectionMode(AppQListView.SelectionMode.ExtendedSelection)
+        self.setEditTriggers(AppQListView.EditTrigger.NoEditTriggers)
+        self.doubleClicked.connect(self._requestEdit)
 
         self.flushAll()
 
-    @QtCore.Slot(QListWidgetItem)
-    def _requestEdit(self, _item):
+    @QtCore.Slot(QtCore.QModelIndex)
+    def _requestEdit(self, _index):
         """Forward a row double-click without retaining a Python closure."""
         self.editRequested.emit()
 
     def rules(self):
-        """Return the rules value used by the routing rules Qt list widget."""
+        """Return the rules represented by the routing list."""
         rules = self.routing.setdefault('rules', list())
 
         if not isinstance(rules, list):
@@ -700,11 +703,11 @@ class RoutingRulesQListWidget(AppQListWidget):
         return rules
 
     def ruleAt(self, index: int):
-        """Return the rule at value used by the routing rules Qt list widget."""
+        """Return the rule represented by one list row."""
         return self.rules()[index]
 
     def ruleText(self, rule: dict) -> str:
-        """Return the rule text value used by the routing rules Qt list widget."""
+        """Return the display text for one routing rule."""
         name, outbound, domains, ips = (
             rule.get('ruleTag', '') or 'Untitled Rule',
             rule.get('outboundTag', 'proxy'),
@@ -742,10 +745,7 @@ class RoutingRulesQListWidget(AppQListWidget):
 
     def flushAll(self):
         """Refresh all."""
-        self.clear()
-
-        for rule in self.rules():
-            self.addItem(self.ruleText(rule))
+        self.rulesModel.setStringList([self.ruleText(rule) for rule in self.rules()])
 
 
 class RoutingRulesDialog(AppQTransientDialog):
@@ -759,8 +759,8 @@ class RoutingRulesDialog(AppQTransientDialog):
         self.setWindowTitle(_('Routing Rules'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        self.listWidget = RoutingRulesQListWidget(self.routing, parent=self)
-        self.listWidget.editRequested.connect(self.editRule)
+        self.listView = RoutingRulesListView(self.routing, parent=self)
+        self.listView.editRequested.connect(self.editRule)
 
         self.addButton = AppQPushButton(
             _('Add'),
@@ -800,7 +800,7 @@ class RoutingRulesDialog(AppQTransientDialog):
         layout.setContentsMargins(20, 18, 20, 20)
         layout.setSpacing(14)
         layout.addLayout(actionLayout)
-        layout.addWidget(self.listWidget)
+        layout.addWidget(self.listView)
 
         self.setLayout(layout)
 
@@ -819,32 +819,32 @@ class RoutingRulesDialog(AppQTransientDialog):
         def handleResultCode(code):
             """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
-                self.listWidget.appendRule(dialog.routingRule())
+                self.listView.appendRule(dialog.routingRule())
 
         dialog.finished.connect(handleResultCode)
         dialog.open()
 
     def editRule(self):
         """Handle edit rule for the routing rules dialog."""
-        indexes = self.listWidget.selectedIndex
+        indexes = self.listView.selectedIndex
 
         if len(indexes) != 1:
             return
 
         index = indexes[0]
-        dialog = RoutingRuleEditDialog(self.listWidget.ruleAt(index), parent=self)
+        dialog = RoutingRuleEditDialog(self.listView.ruleAt(index), parent=self)
 
         def handleResultCode(_index, code):
             """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
-                self.listWidget.setRule(_index, dialog.routingRule())
+                self.listView.setRule(_index, dialog.routingRule())
 
         dialog.finished.connect(functools.partial(handleResultCode, index))
         dialog.open()
 
     def deleteRule(self):
         """Delete rule."""
-        indexes = self.listWidget.selectedIndex
+        indexes = self.listView.selectedIndex
 
         if len(indexes) == 0:
             return
@@ -854,7 +854,7 @@ class RoutingRulesDialog(AppQTransientDialog):
             if code == PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
-                self.listWidget.deleteRules(_indexes)
+                self.listView.deleteRules(_indexes)
             else:
                 # Do not delete
                 pass
@@ -871,7 +871,7 @@ class RoutingRulesDialog(AppQTransientDialog):
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         mbox.isMulti = bool(len(indexes) > 1)
-        mbox.possibleRemark = self.listWidget.selectedRuleText()
+        mbox.possibleRemark = self.listView.selectedRuleText()
         mbox.setText(mbox.customText())
         mbox.finished.connect(functools.partial(handleResultCode, indexes))
 

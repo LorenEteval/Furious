@@ -46,7 +46,7 @@ __all__ = [
     'AppQHeaderView',
     'AppQLabel',
     'AppQLineEdit',
-    'AppQListWidget',
+    'AppQListView',
     'AppQMainWindow',
     'AppQMenu',
     'AppQMenuBar',
@@ -559,12 +559,98 @@ class AppQLineEdit(Mixins.QTranslatable, QLineEdit):
         self.setPlaceholderText(_(self.placeholderText()))
 
 
-class AppQListWidget(QListWidget):
-    """Provide the app Qt list widget."""
+class _AppQItemViewSelectionDelegate(QStyledItemDelegate):
+    """Paint a Fluent-style rounded item selection."""
+
+    HorizontalInset = 4
+    VerticalInset = 2
+    Radius = 5
+
+    def _selectionRect(self, option):
+        """Return the rounded selection rectangle for one list item."""
+        return QtCore.QRectF(option.rect).adjusted(
+            self.HorizontalInset,
+            self.VerticalInset,
+            -self.HorizontalInset,
+            -self.VerticalInset,
+        )
+
+    @staticmethod
+    def _selectionColor(option):
+        """Return the active or inactive theme-aware selection color."""
+        colorName = (
+            'selection' if option.state & QStyle.StateFlag.State_Active else 'raised'
+        )
+
+        try:
+            return QColor(AppStyleSheet.paletteForTheme(APP().theme())[colorName])
+        except (AttributeError, RuntimeError):
+            return option.palette.color(QPalette.ColorRole.Highlight)
+
+    def paint(self, painter, option, index):
+        """Paint the rounded selection before native item contents."""
+        if option.state & QStyle.StateFlag.State_Selected:
+            selectionRect = self._selectionRect(option)
+
+            if not selectionRect.isEmpty():
+                painter.save()
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                painter.setClipRect(option.rect)
+                painter.setPen(QtCore.Qt.PenStyle.NoPen)
+                painter.setBrush(self._selectionColor(option))
+                painter.drawRoundedRect(selectionRect, self.Radius, self.Radius)
+                painter.restore()
+
+        super().paint(painter, option, index)
+
+
+class _AppQTableSelectionDelegate(_AppQItemViewSelectionDelegate):
+    """Paint one rounded background across a selected table row."""
+
+    def _selectionRect(self, option):
+        """Return the full visible-column span for the option's row."""
+        table = self.parent()
+        header = table.horizontalHeader()
+        sections = [
+            logical
+            for logical in range(header.count())
+            if not header.isSectionHidden(logical)
+        ]
+
+        if not sections:
+            return QtCore.QRectF()
+
+        left, right = (
+            min(header.sectionViewportPosition(logical) for logical in sections),
+            max(
+                header.sectionViewportPosition(logical) + header.sectionSize(logical)
+                for logical in sections
+            ),
+        )
+
+        return QtCore.QRectF(
+            left + self.HorizontalInset,
+            option.rect.top() + self.VerticalInset,
+            max(0, right - left - (2 * self.HorizontalInset)),
+            max(0, option.rect.height() - (2 * self.VerticalInset)),
+        )
+
+
+def _installRoundedSelectionDelegate(view, delegateType):
+    """Install one persistent, view-owned rounded selection delegate."""
+    view.setProperty('selectionShape', 'rounded')
+    view.selectionDelegate = delegateType(parent=view)
+    view.setItemDelegate(view.selectionDelegate)
+
+
+class AppQListView(QListView):
+    """Provide a model-based app Qt list view."""
 
     def __init__(self, *args, **kwargs):
-        """Initialize the AppQListWidget."""
+        """Initialize the AppQListView."""
         super().__init__(*args, **kwargs)
+
+        _installRoundedSelectionDelegate(self, _AppQItemViewSelectionDelegate)
 
     @property
     def selectedIndex(self):
@@ -1940,6 +2026,8 @@ class AppQTableView(QTableView):
     def __init__(self, *args, **kwargs):
         """Initialize the AppQTableView."""
         super().__init__(*args, **kwargs)
+
+        _installRoundedSelectionDelegate(self, _AppQTableSelectionDelegate)
 
         self.setWordWrap(False)
         self.setAlternatingRowColors(True)
