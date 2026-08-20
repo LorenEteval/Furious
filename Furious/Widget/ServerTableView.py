@@ -1789,22 +1789,25 @@ class ServerTableView(
         """Show all, manual, or one subscription group's profiles."""
         self.proxyModel.setSubscriptionFilter(unique)
 
-    def addServerViaGui(
-        self,
-        protocol,
-        windowTitle: str = APPLICATION_NAME,
-        **kwargs,
-    ):
+    def addServerViaGui(self, protocol, **kwargs):
         """Add server via GUI."""
         factory = blankProfile(protocol)
 
-        guiEditor = self.getGuiEditorByFactory(factory, **kwargs)
+        windowTitle, translatable = (
+            kwargs.pop('windowTitle', APPLICATION_NAME),
+            kwargs.pop('translatable', True),
+        )
+
+        if translatable is True:
+            windowTitle = _(windowTitle)
+
+        guiEditor = self.getGuiEditorByFactory(
+            factory, windowTitle=windowTitle, translatable=translatable, **kwargs
+        )
 
         if guiEditor is None:
             # Unrecognized. Do nothing
             return
-
-        guiEditor.setWindowTitle(windowTitle)
 
         try:
             guiEditor.factoryToInput(factory)

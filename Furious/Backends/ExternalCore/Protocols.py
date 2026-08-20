@@ -38,24 +38,28 @@ def _placeholder(value):
 
 _ = _placeholder
 
-_TRANSLATABLE = (_('Add External Core...'),)
+_TRANSLATABLE = (
+    _('Add External Core...'),
+    _('Add External Core'),
+)
 
 
 class ExternalCoreProtocolHandler(ProtocolHandler):
     """Own local External Core mappings while declining URI import/export."""
 
     descriptor = ProtocolDescriptor(
-        EXTERNAL_CORE_TYPE,
-        'External Core',
-        'Add External Core...',
-        100,
-        True,
-        {
+        id=EXTERNAL_CORE_TYPE,
+        displayName='External Core',
+        addActionText='Add External Core...',
+        editorWindowTitle='Add External Core',
+        menuOrder=100,
+        separatorBefore=True,
+        configurationSchema={
             'type': 'object',
             'required': ('type', 'executable', 'arguments', 'environment'),
         },
-        True,
-        False,
+        translatable=True,
+        subscriptionImportable=False,
     )
     schemes = tuple()
 

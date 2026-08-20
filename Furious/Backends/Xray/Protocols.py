@@ -172,19 +172,25 @@ _ = _placeholder
 
 _TRANSLATABLE = (
     _('Add VMess Server...'),
+    _('Add VMess Server'),
     _('Add VLESS Server...'),
+    _('Add VLESS Server'),
     _('Add Shadowsocks Server...'),
+    _('Add Shadowsocks Server'),
     _('Add Trojan Server...'),
+    _('Add Trojan Server'),
     _('Add SOCKS Server...'),
+    _('Add SOCKS Server'),
 )
 
 XRAY_PROTOCOL_HANDLERS = (
     XrayProtocolHandler(
         ProtocolDescriptor(
-            'VMess',
-            'VMess',
-            'Add VMess Server...',
-            10,
+            id='VMess',
+            displayName='VMess',
+            addActionText='Add VMess Server...',
+            editorWindowTitle='Add VMess Server',
+            menuOrder=10,
             configurationSchema={
                 'type': 'object',
                 'required': ('outbounds',),
@@ -197,10 +203,11 @@ XRAY_PROTOCOL_HANDLERS = (
     ),
     XrayProtocolHandler(
         ProtocolDescriptor(
-            'VLESS',
-            'VLESS',
-            'Add VLESS Server...',
-            20,
+            id='VLESS',
+            displayName='VLESS',
+            addActionText='Add VLESS Server...',
+            editorWindowTitle='Add VLESS Server',
+            menuOrder=20,
             configurationSchema={
                 'type': 'object',
                 'required': ('outbounds',),
@@ -213,10 +220,11 @@ XRAY_PROTOCOL_HANDLERS = (
     ),
     XrayProtocolHandler(
         ProtocolDescriptor(
-            'Shadowsocks',
-            'Shadowsocks',
-            'Add Shadowsocks Server...',
-            30,
+            id='Shadowsocks',
+            displayName='Shadowsocks',
+            addActionText='Add Shadowsocks Server...',
+            editorWindowTitle='Add Shadowsocks Server',
+            menuOrder=30,
             configurationSchema={
                 'type': 'object',
                 'required': ('outbounds',),
@@ -229,10 +237,11 @@ XRAY_PROTOCOL_HANDLERS = (
     ),
     XrayProtocolHandler(
         ProtocolDescriptor(
-            'Trojan',
-            'Trojan',
-            'Add Trojan Server...',
-            40,
+            id='Trojan',
+            displayName='Trojan',
+            addActionText='Add Trojan Server...',
+            editorWindowTitle='Add Trojan Server',
+            menuOrder=40,
             configurationSchema={
                 'type': 'object',
                 'required': ('outbounds',),
@@ -245,17 +254,18 @@ XRAY_PROTOCOL_HANDLERS = (
     ),
     SocksProtocolHandler(
         ProtocolDescriptor(
-            'SOCKS',
-            'SOCKS',
-            'Add SOCKS Server...',
-            70,
-            True,
-            {
+            id='SOCKS',
+            displayName='SOCKS',
+            addActionText='Add SOCKS Server...',
+            editorWindowTitle='Add SOCKS Server',
+            menuOrder=70,
+            separatorBefore=True,
+            configurationSchema={
                 'type': 'object',
                 'required': ('outbounds',),
                 'proxyProtocol': 'socks',
             },
-            True,
+            translatable=True,
         ),
         SOCKS_URI_SCHEMES,
         'URI2ProxyOutboundObjectSocks',

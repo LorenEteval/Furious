@@ -42,20 +42,24 @@ def _placeholder(x):
 
 _ = _placeholder
 
-_TRANSLATABLE = (_('Add Hysteria1 Server...'),)
+_TRANSLATABLE = (
+    _('Add Hysteria1 Server...'),
+    _('Add Hysteria1 Server'),
+)
 
 
 class Hysteria1ProtocolHandler(ProtocolHandler):
     """Own Hysteria 1 URI, mapping, validation, and export behavior."""
 
     descriptor = ProtocolDescriptor(
-        'hysteria1',
-        'Hysteria1',
-        'Add Hysteria1 Server...',
-        50,
-        True,
-        {'type': 'object', 'required': ('server',)},
-        True,
+        id='hysteria1',
+        displayName='Hysteria1',
+        addActionText='Add Hysteria1 Server...',
+        editorWindowTitle='Add Hysteria1 Server',
+        menuOrder=50,
+        separatorBefore=True,
+        configurationSchema={'type': 'object', 'required': ('server',)},
+        translatable=True,
     )
     schemes = ('hysteria',)
 

@@ -201,6 +201,7 @@ class ProtocolDescriptor:
     id: str
     displayName: str
     addActionText: str
+    editorWindowTitle: str
     menuOrder: int = 0
     separatorBefore: bool = False
     configurationSchema: Mapping[str, Any] = field(default_factory=dict)
@@ -273,7 +274,7 @@ class ProtocolHandler(PluginCapability):
     """Own one protocol's validation and serialization behavior."""
 
     capabilityKind = CapabilityKind.Protocol
-    descriptor = ProtocolDescriptor('', '', '')
+    descriptor = ProtocolDescriptor('', '', '', '')
     schemes = tuple()
 
     @property

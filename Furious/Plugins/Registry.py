@@ -205,6 +205,9 @@ class PluginRegistry:
         if not isinstance(descriptor.addActionText, str):
             raise TypeError('protocol add-action text must be a string')
 
+        if not isinstance(descriptor.editorWindowTitle, str):
+            raise TypeError('protocol editor-window title must be a string')
+
         if not isinstance(descriptor.configurationSchema, Mapping):
             raise TypeError('protocol configuration schema must be a mapping')
 

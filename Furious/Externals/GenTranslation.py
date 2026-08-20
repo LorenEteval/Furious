@@ -1,7 +1,7 @@
 TRANSLATION = {
     "Delete": {
         "source": [
-            "Furious.Backends.Xray.AssetListWidget",
+            "Furious.Backends.Xray.AssetWindow",
             "Furious.Backends.Xray.RoutingWindow",
             "Furious.Qt.QtWidgets",
             "Furious.Widget.ServerTableView",
@@ -285,6 +285,7 @@ TRANSLATION = {
     },
     "Close Window": {
         "source": [
+            "Furious.Backends.Xray.AssetWindow",
             "Furious.Backends.Xray.RoutingWindow",
             "Furious.Window.TextEditorWindow"
         ],
@@ -692,8 +693,7 @@ TRANSLATION = {
     },
     "Exit": {
         "source": [
-            "Furious.Actions.Exit",
-            "Furious.Backends.Xray.AssetWindow"
+            "Furious.Actions.Exit"
         ],
         "RU": "Выход",
         "ZH": "退出",
@@ -3206,6 +3206,70 @@ TRANSLATION = {
         ],
         "RU": "Статистика трафика",
         "ZH": "流量统计",
+        "isReviewed": "True"
+    },
+    "Add External Core": {
+        "source": [
+            "Furious.Backends.ExternalCore.Protocols"
+        ],
+        "RU": "Добавить внешнее ядро",
+        "ZH": "添加外部Core",
+        "isReviewed": "True"
+    },
+    "Add Hysteria1 Server": {
+        "source": [
+            "Furious.Backends.Hysteria1.Protocols"
+        ],
+        "RU": "Добавить сервер Hysteria 1",
+        "ZH": "添加Hysteria1服务器",
+        "isReviewed": "True"
+    },
+    "Add Hysteria2 Server": {
+        "source": [
+            "Furious.Backends.Hysteria2.Protocols"
+        ],
+        "RU": "Добавить сервер Hysteria 2",
+        "ZH": "添加Hysteria2服务器",
+        "isReviewed": "True"
+    },
+    "Add VMess Server": {
+        "source": [
+            "Furious.Backends.Xray.Protocols"
+        ],
+        "RU": "Добавить сервер VMess",
+        "ZH": "添加VMess服务器",
+        "isReviewed": "True"
+    },
+    "Add VLESS Server": {
+        "source": [
+            "Furious.Backends.Xray.Protocols"
+        ],
+        "RU": "Добавить сервер VLESS",
+        "ZH": "添加VLESS服务器",
+        "isReviewed": "True"
+    },
+    "Add Shadowsocks Server": {
+        "source": [
+            "Furious.Backends.Xray.Protocols"
+        ],
+        "RU": "Добавить сервер Shadowsocks",
+        "ZH": "添加Shadowsocks服务器",
+        "isReviewed": "True"
+    },
+    "Add Trojan Server": {
+        "source": [
+            "Furious.Backends.Xray.Protocols"
+        ],
+        "RU": "Добавить сервер Trojan",
+        "ZH": "添加Trojan服务器",
+        "isReviewed": "True"
+    },
+    "Add SOCKS Server": {
+        "source": [
+            "Furious.Backends.Xray.Protocols"
+        ],
+        "RU": "Добавить сервер SOCKS",
+        "ZH": "添加SOCKS服务器",
         "isReviewed": "True"
     }
 }

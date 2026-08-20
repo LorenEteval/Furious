@@ -670,19 +670,21 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             if descriptor.separatorBefore and serverActions:
                 serverActions.append(AppQSeparator())
 
-            actionText = (
-                _(descriptor.addActionText)
-                if descriptor.translatable
-                else descriptor.addActionText
-            )
+            if descriptor.translatable:
+                actionText = _(descriptor.addActionText)
+            else:
+                actionText = descriptor.addActionText
+
             serverActions.append(
                 AppQAction(
                     actionText,
                     callback=functools.partial(
                         self.userServersQTableWidget.addServerViaGui,
                         descriptor.id,
-                        actionText,
+                        # By default, editor window title is translatable
+                        windowTitle=_(descriptor.editorWindowTitle),
                     ),
+                    translatable=descriptor.translatable,
                 )
             )
 
