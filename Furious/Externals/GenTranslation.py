@@ -105,7 +105,7 @@ TRANSLATION = {
     "Import": {
         "source": [
             "Furious.Actions.Import",
-            "Furious.Backends.Xray.AssetListWidget"
+            "Furious.Backends.Xray.AssetListView"
         ],
         "RU": "Импорт",
         "ZH": "导入",
@@ -724,7 +724,7 @@ TRANSLATION = {
     },
     "Asset file already exists. Overwrite?": {
         "source": [
-            "Furious.Backends.Xray.AssetListWidget"
+            "Furious.Backends.Xray.AssetListView"
         ],
         "RU": "Файл ресурсов уже существует. Перезаписать?",
         "ZH": "资源文件已存在。是否覆盖？",
@@ -732,7 +732,7 @@ TRANSLATION = {
     },
     "Error import asset file": {
         "source": [
-            "Furious.Backends.Xray.AssetListWidget"
+            "Furious.Backends.Xray.AssetListView"
         ],
         "RU": "Ошибка при импорте файла ресурсов",
         "ZH": "导入资源文件出错",
@@ -740,7 +740,7 @@ TRANSLATION = {
     },
     "Import asset file success": {
         "source": [
-            "Furious.Backends.Xray.AssetListWidget"
+            "Furious.Backends.Xray.AssetListView"
         ],
         "RU": "Успешно импортирован файл ресурсов",
         "ZH": "导入资源文件成功",

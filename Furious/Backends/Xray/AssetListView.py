@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Provide widgets for the Xray asset viewer list."""
+"""Provide the model-based Xray asset list view."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ import logging
 import datetime
 import functools
 
-__all__ = ['XrayAssetListWidget']
+__all__ = ['XrayAssetListView']
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class MBoxAssetExists(AppQMessageBox):
         self.moveToCenter()
 
 
-class XrayAssetListWidget(Mixins.ThemeAware, AppQListView):
+class XrayAssetListView(Mixins.ThemeAware, AppQListView):
     """Provide the model-based Xray asset viewer list."""
 
     def __init__(self, *args, **kwargs):
@@ -167,7 +167,7 @@ class XrayAssetListWidget(Mixins.ThemeAware, AppQListView):
         """Append new item."""
 
         def append(_filename):
-            """Append the Xray asset viewer Qt list widget."""
+            """Append an item to the Xray asset list view."""
             try:
                 shutil.copy(_filename, XRAY_ASSET_DIR)
             except shutil.SameFileError:

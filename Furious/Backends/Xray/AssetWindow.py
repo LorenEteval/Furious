@@ -22,8 +22,7 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Qt import *
 from Furious.Qt import gettext as _
-
-from .AssetListWidget import *
+from Furious.Backends.Xray.AssetListView import *
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -47,7 +46,7 @@ class XrayAssetWindow(AppQMainWindow):
 
         centralWidget = QWidget(parent=self)
 
-        self.xrayAssetViewerWidget = XrayAssetListWidget(parent=centralWidget)
+        self.xrayAssetListView = XrayAssetListView(parent=centralWidget)
 
         if versionToValue(PYSIDE6_VERSION) <= versionToValue('6.1.3'):
             openAssetDirectoryActions = []
@@ -107,7 +106,7 @@ class XrayAssetWindow(AppQMainWindow):
         contentLayout.setContentsMargins(10, 10, 10, 8)
         contentLayout.setSpacing(10)
         contentLayout.addLayout(actionLayout)
-        contentLayout.addWidget(self.xrayAssetViewerWidget, 1)
+        contentLayout.addWidget(self.xrayAssetListView, 1)
 
         self.setCentralWidget(centralWidget)
         self.menuBar().hide()
@@ -118,10 +117,10 @@ class XrayAssetWindow(AppQMainWindow):
 
     def flushItem(self):
         """Refresh item."""
-        self.xrayAssetViewerWidget.flushItem()
+        self.xrayAssetListView.flushItem()
 
     def deleteSelectedItem(self):
-        self.xrayAssetViewerWidget.deleteSelectedItem()
+        self.xrayAssetListView.deleteSelectedItem()
 
     @staticmethod
     def openAssetDirectory():
@@ -138,4 +137,4 @@ class XrayAssetWindow(AppQMainWindow):
         )
 
         if filename:
-            self.xrayAssetViewerWidget.appendNewItem(filename)
+            self.xrayAssetListView.appendNewItem(filename)

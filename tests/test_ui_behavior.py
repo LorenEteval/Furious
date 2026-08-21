@@ -26,7 +26,7 @@ from Furious.Backends.ExternalCore.Configuration import (
 from Furious.Backends.ExternalCore.Editor import ExternalCoreEditor
 from Furious.Backends.Hysteria1.Editor import Hysteria1Editor
 from Furious.Backends.Hysteria2.Editor import Hysteria2Editor
-from Furious.Backends.Xray.AssetListWidget import XrayAssetListWidget
+from Furious.Backends.Xray.AssetListView import XrayAssetListView
 from Furious.Backends.Xray.RoutingWindow import RoutingRulesDialog
 from Furious.Backends.Xray.ShadowsocksEditor import ShadowsocksEditor
 from Furious.Backends.Xray.SocksEditor import SocksEditor
@@ -770,10 +770,10 @@ class DialogBehaviorTest(unittest.TestCase):
             (assetDirectory / filename).write_bytes(b'fixture')
 
             with mock.patch(
-                'Furious.Backends.Xray.AssetListWidget.XRAY_ASSET_DIR',
+                'Furious.Backends.Xray.AssetListView.XRAY_ASSET_DIR',
                 assetDirectory,
             ):
-                view = XrayAssetListWidget()
+                view = XrayAssetListView()
 
                 self.assertIs(view.model(), view.assetModel)
                 self.assertIs(view.assetModel.parent(), view)
