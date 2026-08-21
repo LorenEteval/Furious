@@ -8,6 +8,18 @@
 - Preserve full user-authored core documents and unknown supported fields. Report a lossless-compatibility failure
   instead of silently compiling or deleting unsupported configuration.
 
+## Structured editor contract
+
+- `factoryToInput()` is normally observational: loading an editor must not add defaults or otherwise mutate the
+  configuration document unless that backend has a documented compatibility normalization, such as Xray transport
+  aliases.
+- `inputToFactory()` writes only fields represented by the editor and returns whether it actually changed the
+  document. Do not materialize an absent effective default merely because the editor displays it.
+- Display unknown future string values exactly and preserve them on an untouched load/save round trip. Editing one
+  known leaf must preserve unknown fields and unknown siblings elsewhere in the same object.
+- A deliberate user switch to a supported tagged variant may replace the incompatible active variant. Keep unrelated
+  extension fields, and do not treat a fallback page used for display as a user selection.
+
 ## Native TUN policy
 
 For a normal connection:
