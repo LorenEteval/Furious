@@ -45,7 +45,6 @@ class MBoxQuestionSave(AppQMessageBox):
         """Initialize the MBoxQuestionSave."""
         super().__init__(*args, **kwargs)
 
-        self.setWindowTitle(_('Save Changes'))
         self.setText(_('The content has been modified. Save changes?'))
 
         self.button0 = self.addButton(_('Save'), AppQMessageBox.ButtonRole.AcceptRole)
@@ -75,7 +74,6 @@ class MBoxJSONDecodeError(AppQMessageBox):
 
     def retranslate(self):
         """Refresh translated text for the m box JSON decode error."""
-        self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
         # Ignore informative text, buttons
@@ -313,7 +311,6 @@ class TextEditorWindow(AppQMainWindow):
 
             mbox = MBoxJSONDecodeError(icon=AppQMessageBox.Icon.Critical, parent=self)
             mbox.error = str(ex)
-            mbox.setWindowTitle(_('Error saving configuration'))
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
             mbox.setText(mbox.customText())
 
@@ -358,7 +355,6 @@ class TextEditorWindow(AppQMainWindow):
                 # Any non-exit exceptions
 
                 mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical, parent=self)
-                mbox.setWindowTitle(_('Error Saving File'))
                 mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
                 mbox.setText(_('Invalid server configuration'))
                 mbox.setInformativeText(str(ex))
@@ -394,7 +390,6 @@ class TextEditorWindow(AppQMainWindow):
 
             mbox = MBoxJSONDecodeError(icon=AppQMessageBox.Icon.Critical, parent=self)
             mbox.error = str(ex)
-            mbox.setWindowTitle(_('Error setting indent'))
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
             mbox.setText(mbox.customText())
 

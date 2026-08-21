@@ -3,7 +3,6 @@ TRANSLATION = {
         "source": [
             "Furious.Backends.Xray.AssetWindow",
             "Furious.Backends.Xray.RoutingWindow",
-            "Furious.Qt.QtWidgets",
             "Furious.Widget.ServerTableView",
             "Furious.Widget.SubscriptionTableView",
             "Furious.Window.SubscriptionPage"
@@ -104,8 +103,7 @@ TRANSLATION = {
     },
     "Import": {
         "source": [
-            "Furious.Actions.Import",
-            "Furious.Backends.Xray.AssetListView"
+            "Furious.Actions.Import"
         ],
         "RU": "Импорт",
         "ZH": "导入",
@@ -160,14 +158,6 @@ TRANSLATION = {
         ],
         "RU": "Текст файлов (*.json);;Остальные файлы (*)",
         "ZH": "文本文件 (*.json);;所有文件 (*)",
-        "isReviewed": "True"
-    },
-    "Error opening file": {
-        "source": [
-            "Furious.Actions.Import"
-        ],
-        "RU": "Ошибка открытия файла",
-        "ZH": "打开文件出错",
         "isReviewed": "True"
     },
     "Invalid configuration file": {
@@ -232,14 +222,6 @@ TRANSLATION = {
         ],
         "RU": "Отмена",
         "ZH": "取消",
-        "isReviewed": "True"
-    },
-    "Save Changes": {
-        "source": [
-            "Furious.Window.TextEditorWindow"
-        ],
-        "RU": "Сохранить изменения",
-        "ZH": "保存更改",
         "isReviewed": "True"
     },
     "The content has been modified. Save changes?": {
@@ -401,14 +383,6 @@ TRANSLATION = {
         "ZH": "显示",
         "isReviewed": "True"
     },
-    "Error saving configuration": {
-        "source": [
-            "Furious.Window.TextEditorWindow"
-        ],
-        "RU": "Ошибка сохранения конфигурации",
-        "ZH": "保存配置出错",
-        "isReviewed": "True"
-    },
     "Save File": {
         "source": [
             "Furious.Window.LogPage",
@@ -418,14 +392,6 @@ TRANSLATION = {
         "ZH": "保存文件",
         "isReviewed": "True"
     },
-    "Error Saving File": {
-        "source": [
-            "Furious.Window.TextEditorWindow"
-        ],
-        "RU": "Ошибка сохранения файла",
-        "ZH": "保存文件出错",
-        "isReviewed": "True"
-    },
     "Invalid server configuration": {
         "source": [
             "Furious.Controllers.ConnectionController",
@@ -433,14 +399,6 @@ TRANSLATION = {
         ],
         "RU": "Неверная конфигурация сервера",
         "ZH": "无效的服务器配置",
-        "isReviewed": "True"
-    },
-    "Error setting indent": {
-        "source": [
-            "Furious.Window.TextEditorWindow"
-        ],
-        "RU": "Ошибка при установке отступов",
-        "ZH": "设置缩进出错",
         "isReviewed": "True"
     },
     "Remark": {
@@ -642,7 +600,6 @@ TRANSLATION = {
     "Connecting": {
         "source": [
             "Furious.Actions.Connection",
-            "Furious.Widget.ServerTableView",
             "Furious.Window.HomePage"
         ],
         "RU": "Подключение",
@@ -712,14 +669,6 @@ TRANSLATION = {
         ],
         "RU": "Текстовые файлы (*.txt);;Все файлы (*)",
         "ZH": "文本文件 (*.txt);;所有文件 (*)",
-        "isReviewed": "True"
-    },
-    "Error saving log": {
-        "source": [
-            "Furious.Window.LogPage"
-        ],
-        "RU": "Ошибка сохранения журнала",
-        "ZH": "保存日志出错",
         "isReviewed": "True"
     },
     "Asset file already exists. Overwrite?": {

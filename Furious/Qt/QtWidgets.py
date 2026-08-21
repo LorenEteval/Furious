@@ -847,7 +847,11 @@ class _AppMessageBoxMask(QFrame):
 
 
 class AppQMessageBox(AppQTransientDialog):
-    """Present a responsive Fluent dialog with QMessageBox-compatible APIs."""
+    """Present a Fluent message box with separate metadata and visible layers.
+
+    ``title``/``windowTitle`` remain native window metadata for compatibility;
+    ``heading``, ``text``, and ``informativeText`` form the visible hierarchy.
+    """
 
     Icon = QMessageBox.Icon
     StandardButton = QMessageBox.StandardButton
@@ -897,11 +901,17 @@ class AppQMessageBox(AppQTransientDialog):
         AppQMessageBox._openMessageBoxes.pop(key, None)
 
     def __init__(self, *args, **kwargs):
-        """Initialize the AppQMessageBox."""
-        icon, parent, title, text, buttons = (
+        """Initialize the message box while preserving QMessageBox arguments."""
+        windowTitle = kwargs.pop('windowTitle', None)
+
+        icon, parent, title, heading, text, buttons = (
             kwargs.pop('icon', self.Icon.NoIcon),
             kwargs.pop('parent', None),
-            kwargs.pop('title', ''),
+            kwargs.pop(
+                'title',
+                APPLICATION_NAME if windowTitle is None else windowTitle,
+            ),
+            kwargs.pop('heading', ''),
             kwargs.pop('text', ''),
             kwargs.pop('buttons', self.StandardButton.NoButton),
         )
@@ -921,6 +931,7 @@ class AppQMessageBox(AppQTransientDialog):
         self._lifetimeKey = object()
         self._windowMask = None
         self._icon = self.Icon.NoIcon
+        self._heading = ''
         self._text = ''
         self._informativeText = ''
         self._minimumContentWidth = 0
@@ -941,13 +952,14 @@ class AppQMessageBox(AppQTransientDialog):
         self.destroyed.connect(release)
 
         self.setObjectName('AppMessageBox')
+
         windowFlags = (
             QtCore.Qt.WindowType.Window
             | QtCore.Qt.WindowType.FramelessWindowHint
             | QtCore.Qt.WindowType.NoDropShadowWindowHint
         )
-
         self.setWindowFlags(windowFlags)
+
         self.setAttribute(
             QtCore.Qt.WidgetAttribute.WA_TranslucentBackground,
             True,
@@ -986,10 +998,18 @@ class AppQMessageBox(AppQTransientDialog):
         self.textWidget = QWidget()
         self.textWidget.setObjectName('AppMessageBoxTextWidget')
 
-        self.titleLabel = QLabel(self.textWidget)
-        self.titleLabel.setObjectName('AppMessageBoxTitle')
-        self.titleLabel.setWordWrap(True)
-        self.titleLabel.setTextInteractionFlags(
+        self.headingLabel = QLabel(self.textWidget)
+        self.headingLabel.setObjectName('AppMessageBoxHeading')
+        self.headingLabel.setWordWrap(False)
+        self.headingLabel.setTextFormat(QtCore.Qt.TextFormat.PlainText)
+        self.headingLabel.setTextInteractionFlags(
+            QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+
+        self.textLabel = QLabel(self.textWidget)
+        self.textLabel.setObjectName('AppMessageBoxText')
+        self.textLabel.setWordWrap(True)
+        self.textLabel.setTextInteractionFlags(
             QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
         )
 
@@ -1003,7 +1023,8 @@ class AppQMessageBox(AppQTransientDialog):
         self.textLayout = QVBoxLayout(self.textWidget)
         self.textLayout.setContentsMargins(0, 0, 0, 0)
         self.textLayout.setSpacing(8)
-        self.textLayout.addWidget(self.titleLabel)
+        self.textLayout.addWidget(self.headingLabel)
+        self.textLayout.addWidget(self.textLabel)
         self.textLayout.addWidget(self.informativeLabel)
 
         self.textViewport.setWidget(self.textWidget)
@@ -1036,6 +1057,7 @@ class AppQMessageBox(AppQTransientDialog):
         self.dialogLayout.addWidget(self.surface)
 
         self.setWindowTitle(title)
+        self.setHeading(heading)
         self.setText(text)
         self.setIcon(icon)
 
@@ -1198,10 +1220,24 @@ class AppQMessageBox(AppQTransientDialog):
         if not self.buttons():
             self.setStandardButtons(self.StandardButton.Ok)
 
+    def setHeading(self, heading):
+        """Set the optional visible semantic heading."""
+        self._heading = str(heading)
+        self.headingLabel.setText(self._heading)
+        self.headingLabel.setVisible(bool(self._heading))
+
+        if self.isVisible():
+            self._updateDialogSize()
+
+    def heading(self):
+        """Return the visible semantic heading."""
+        return self._heading
+
     def setText(self, text):
         """Set the primary message text."""
         self._text = str(text)
-        self.titleLabel.setText(self._text)
+        self.textLabel.setText(self._text)
+        self.textLabel.setVisible(bool(self._text))
 
         if self.isVisible():
             self._updateDialogSize()
@@ -1484,6 +1520,23 @@ class AppQMessageBox(AppQTransientDialog):
 
         return height
 
+    def _textContentHeight(self, width):
+        """Measure visible heading, primary, and supporting text blocks."""
+        blocks = (
+            (self.headingLabel, self._heading),
+            (self.textLabel, self._text),
+            (self.informativeLabel, self._informativeText),
+        )
+        heights = []
+
+        for label, value in blocks:
+            if value:
+                heights.append(self._wrappedHeight(label, width))
+            else:
+                label.setFixedHeight(0)
+
+        return sum(heights) + self.textLayout.spacing() * max(0, len(heights) - 1)
+
     def _updateDialogSize(self):
         """Fit short content compactly and bound translated/long content."""
         # QSS frame widths and button size hints participate in the geometry
@@ -1541,9 +1594,13 @@ class AppQMessageBox(AppQTransientDialog):
         comfortableTextWidth = min(260, maximumTextWidth)
 
         textWidths = [
-            self.titleLabel.fontMetrics().horizontalAdvance(line)
-            for line in self._text.splitlines() or ['']
+            self.headingLabel.fontMetrics().horizontalAdvance(line)
+            for line in self._heading.splitlines()
         ]
+        textWidths.extend(
+            self.textLabel.fontMetrics().horizontalAdvance(line)
+            for line in self._text.splitlines() or ['']
+        )
         textWidths.extend(
             self.informativeLabel.fontMetrics().horizontalAdvance(line)
             for line in self._informativeText.splitlines()
@@ -1556,16 +1613,7 @@ class AppQMessageBox(AppQTransientDialog):
             naturalTextWidth,
         )
         textWidth = min(maximumTextWidth, preferredTextWidth)
-
-        titleHeight = self._wrappedHeight(self.titleLabel, textWidth)
-        bodyHeight = 0
-
-        if self._informativeText:
-            bodyHeight = self._wrappedHeight(self.informativeLabel, textWidth) + 8
-        else:
-            self.informativeLabel.setFixedHeight(0)
-
-        textHeight = titleHeight + bodyHeight
+        textHeight = self._textContentHeight(textWidth)
         maximumTextHeight = max(
             72,
             min(
@@ -1583,13 +1631,7 @@ class AppQMessageBox(AppQTransientDialog):
                 self.textViewport,
             )
             textWidth = max(220, textWidth - scrollBarWidth)
-            titleHeight = self._wrappedHeight(self.titleLabel, textWidth)
-            bodyHeight = 0
-
-            if self._informativeText:
-                bodyHeight = self._wrappedHeight(self.informativeLabel, textWidth) + 8
-
-            textHeight = titleHeight + bodyHeight
+            textHeight = self._textContentHeight(textWidth)
         else:
             scrollBarWidth = 0
 
@@ -1701,6 +1743,13 @@ class AppQMessageBox(AppQTransientDialog):
     def retranslate(self):
         """Refresh translated text for the app q message box."""
         self.setWindowTitle(_(self.windowTitle()))
+
+        try:
+            self.setHeading(_(self.heading()))
+        except KeyError:
+            # Runtime headings may already be localized by their owning layer.
+            pass
+
         self.setText(_(self.text()))
 
         try:
@@ -2114,7 +2163,6 @@ class MBoxQuestionDelete(AppQMessageBox):
         self.isMulti = False
         self.possibleRemark = ''
 
-        self.setWindowTitle(_('Delete'))
         self.setStandardButtons(
             AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.No
         )
@@ -2128,7 +2176,6 @@ class MBoxQuestionDelete(AppQMessageBox):
 
     def retranslate(self):
         """Refresh translated text for the m box question delete."""
-        self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
         # Ignore informative text, buttons
@@ -2210,7 +2257,7 @@ class MBoxDirectRulesNotAllowed(AppQMessageBox):
         """Initialize the MBoxDirectRulesNotAllowed."""
         super().__init__(*args, **kwargs)
 
-        self.setWindowTitle(_('Unable to connect'))
+        self.setHeading(_('Unable to connect'))
         self.setIcon(AppQMessageBox.Icon.Critical)
         self.setStandardButtons(
             AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.No
@@ -2228,7 +2275,7 @@ class MBoxDirectRulesNotAllowed(AppQMessageBox):
 
     def retranslate(self):
         """Refresh translated text for the m box direct rules not allowed."""
-        self.setWindowTitle(_(self.windowTitle()))
+        self.setHeading(_(self.heading()))
         self.setText(self.customText())
 
         # Ignore informative text, buttons

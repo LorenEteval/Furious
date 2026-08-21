@@ -499,13 +499,13 @@ class ExternalCoreEditor(GuiEditorWidgetQDialog):
             )
 
         if validationMessage:
-            messageBox = AppQMessageBox(
+            mbox = AppQMessageBox(
                 icon=AppQMessageBox.Icon.Warning,
                 parent=self,
             )
-            messageBox.setWindowTitle(_('Invalid data'))
-            messageBox.setText(validationMessage)
-            messageBox.open()
+            mbox.setHeading(_('Invalid data'))
+            mbox.setText(validationMessage)
+            mbox.open()
 
             return
 

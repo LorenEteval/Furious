@@ -1575,7 +1575,6 @@ class ServerTableView(
 
         if AppConnectionController().isConnecting():
             mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
-            mbox.setWindowTitle(_('Connecting'))
             mbox.setText(_('Connecting. Please wait...'))
 
             if PLATFORM != 'Darwin':

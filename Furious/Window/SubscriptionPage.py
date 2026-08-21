@@ -191,13 +191,10 @@ class _SubscriptionEditorDialog(AppQTransientDialog):
 
     def _showValidationError(self, message: str):
         """Show one non-blocking validation message owned by this dialog."""
-        messageBox = AppQMessageBox(
-            icon=AppQMessageBox.Icon.Warning,
-            parent=self,
-        )
-        messageBox.setWindowTitle(_('Invalid data'))
-        messageBox.setText(message)
-        messageBox.open()
+        mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Warning, parent=self)
+        mbox.setHeading(_('Invalid data'))
+        mbox.setText(message)
+        mbox.open()
 
     def accept(self):
         """Validate required fields before accepting the definition."""
@@ -381,18 +378,14 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
             return
 
-        messageBox = AppQMessageBox(
-            icon=AppQMessageBox.Icon.Question,
-            parent=self,
-        )
-        messageBox.setWindowTitle(_('Add Subscription'))
-        messageBox.setText(_('Use the subscription URL from the clipboard?'))
-        messageBox.setInformativeText(url)
-        messageBox.setStandardButtons(
+        mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Question, parent=self)
+        mbox.setText(_('Use the subscription URL from the clipboard?'))
+        mbox.setInformativeText(url)
+        mbox.setStandardButtons(
             AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.No
         )
-        messageBox.setDefaultButton(AppQMessageBox.StandardButton.Yes)
-        messageBox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+        mbox.setDefaultButton(AppQMessageBox.StandardButton.Yes)
+        mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         def finished(code):
             """Continue with clipboard assistance or the regular workflow."""
@@ -403,8 +396,8 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             else:
                 self._openEditor()
 
-        messageBox.finished.connect(finished)
-        messageBox.open()
+        mbox.finished.connect(finished)
+        mbox.open()
 
     def addFromClipboard(self, clipboardURL=None):
         """Seed a subscription from an HTTP(S) URL on the clipboard."""

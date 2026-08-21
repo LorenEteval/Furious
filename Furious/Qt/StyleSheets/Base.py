@@ -91,7 +91,15 @@ def baseStyleSheet(palette):
                 background-color: transparent;
             }}
 
-            QLabel#AppMessageBoxTitle {{
+            QLabel#AppMessageBoxHeading {{
+                padding: 0;
+                border: none;
+                background-color: transparent;
+                color: {palette['text_strong']};
+                font-weight: 600;
+            }}
+
+            QLabel#AppMessageBoxText {{
                 padding: 0;
                 border: none;
                 background-color: transparent;

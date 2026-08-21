@@ -8,6 +8,10 @@ Use the `manage-qt-pyside6-lifetimes` skill for any Qt ownership or lifecycle ch
   styling raw Qt controls at call sites.
 - Construction-time source text should be retained by the control for retranslation. Do not duplicate manual
   `retranslate()` code where an `AppQ*` widget/action/menu already supports it.
+- `AppQMessageBox.windowTitle()` is native window-manager/accessibility metadata and is not rendered by the frameless
+  Fluent surface. Put an optional visible semantic title in `heading`, the primary explanation in `text`, and supporting
+  details in `informativeText`. Never rely on `setWindowTitle()` alone for user-visible information, and do not promote a
+  generic application-name title into a visible heading.
 - Preserve public exports and wildcard-import compatibility carefully; keep optional/heavy facilities lazily imported
   where practical.
 - `AppStyleSheet` remains the sole public stylesheet authority. Internal `StyleSheets` modules are data-oriented QSS

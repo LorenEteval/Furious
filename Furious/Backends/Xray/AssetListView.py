@@ -51,7 +51,6 @@ class MBoxAssetExists(AppQMessageBox):
 
     def retranslate(self):
         """Refresh translated text for the m box asset exists."""
-        self.setWindowTitle(_(self.windowTitle()))
         self.setText(_(self.text()))
 
         # Ignore informative text, buttons
@@ -177,7 +176,6 @@ class XrayAssetListView(Mixins.ThemeAware, AppQListView):
                 # Any non-exit exception
 
                 _mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-                _mbox.setWindowTitle(_('Import'))
                 _mbox.setText(_('Error import asset file'))
                 _mbox.setInformativeText(str(ex))
 
@@ -187,7 +185,6 @@ class XrayAssetListView(Mixins.ThemeAware, AppQListView):
                 self.flushItem()
 
                 _mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Information)
-                _mbox.setWindowTitle(_('Import'))
                 _mbox.setText(_('Import asset file success'))
 
                 # Show the MessageBox asynchronously
@@ -208,7 +205,6 @@ class XrayAssetListView(Mixins.ThemeAware, AppQListView):
                     pass
 
             mbox = MBoxAssetExists(icon=AppQMessageBox.Icon.Question)
-            mbox.setWindowTitle(_('Import'))
             mbox.setText(_('Asset file already exists. Overwrite?'))
             mbox.setInformativeText(basename)
             mbox.finished.connect(functools.partial(handleResultCode, filename))

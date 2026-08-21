@@ -89,7 +89,6 @@ class MBoxSaveError(AppQMessageBox):
 
     def retranslate(self):
         """Refresh translated text for the m box save error."""
-        self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
         # Ignore informative text, buttons
@@ -112,7 +111,6 @@ def saveAsFile(content: str):
 
             mbox = MBoxSaveError(icon=AppQMessageBox.Icon.Critical)
             mbox.saveError = str(ex)
-            mbox.setWindowTitle(_('Error saving log'))
             mbox.setText(mbox.customText())
 
             # Show the MessageBox asynchronously

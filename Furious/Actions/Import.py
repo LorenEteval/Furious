@@ -303,11 +303,8 @@ class MBoxImportError(AppQMessageBox):
         """Initialize the MBoxImportError."""
         super().__init__(*args, **kwargs)
 
-        self.setWindowTitle(_('Import'))
-
     def retranslate(self):
         """Refresh translated text for the m box import error."""
-        self.setWindowTitle(_(self.windowTitle()))
         self.setText(_(self.text()))
 
         # Ignore informative text, buttons
@@ -325,7 +322,6 @@ class MBoxImportMultiSuccess(AppQMessageBox):
         self.imported = list()
         self.rowIndex = 0
 
-        self.setWindowTitle(_('Import'))
         self.setIcon(AppQMessageBox.Icon.Information)
 
     def customText(self):
@@ -351,7 +347,6 @@ class MBoxImportMultiSuccess(AppQMessageBox):
 
     def retranslate(self):
         """Refresh translated text for the m box import multi success."""
-        self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
         # Ignore informative text, buttons
@@ -367,7 +362,6 @@ class MBoxImportSuccess(AppQMessageBox):
         super().__init__(*args, **kwargs)
 
         self.remark = ''
-        self.setWindowTitle(_('Import'))
 
     def customText(self):
         """Return the user-facing message text for the m box import success."""
@@ -378,7 +372,6 @@ class MBoxImportSuccess(AppQMessageBox):
 
     def retranslate(self):
         """Refresh translated text for the m box import success."""
-        self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
 
         # Ignore informative text, buttons
@@ -413,7 +406,6 @@ class ImportFromFileAction(AppQAction):
                 # Any non-exit exceptions
 
                 mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-                mbox.setWindowTitle(_('Error opening file'))
                 mbox.setText(_('Invalid configuration file'))
                 mbox.setInformativeText(str(ex))
 

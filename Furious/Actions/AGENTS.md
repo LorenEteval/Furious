@@ -11,6 +11,8 @@
 - Long or batched work must yield safely or use an owned worker/progress dialog. Do not sleep the GUI thread.
 - Asynchronous prompts/editors use managed `open()` lifetime and connect completion before opening. Rebuilt dynamic
   menus must release obsolete `QMenu`/`QAction` objects rather than accumulating them.
+- Preserve structured error semantics in message boxes: error title becomes the visible `heading`, the main message
+  becomes `text`, and diagnostics become `informativeText`; native `windowTitle` remains metadata.
 
 ## Code review rules
 

@@ -35,6 +35,7 @@ from Furious.Backends.Xray.VlessEditor import VlessEditor
 from Furious.Backends.Xray.VmessEditor import VmessEditor
 from Furious.Actions.Connection import ConnectAction
 from Furious.Controllers.ConnectionController import (
+    ConnectionError,
     ConnectionController,
     ConnectionState,
 )
@@ -42,9 +43,15 @@ from Furious.Controllers.SettingsController import (
     LOG_AUTO_CLEAR_SETTING,
     LOG_AUTO_SCROLL_DOWN_SETTING,
 )
-from Furious.Frozenlib import AppSettings, Mixins
+from Furious.Frozenlib import APPLICATION_NAME, AppSettings, Mixins
 from Furious.Models import ProfileMetadata, ServerProfile
-from Furious.Qt import AppHue, AppQMessageBox, AppQSwitch, gettext as _
+from Furious.Qt import (
+    AppHue,
+    AppQMessageBox,
+    AppQSwitch,
+    AppStyleSheet,
+    gettext as _,
+)
 from Furious.Service import (
     APPLICATION_LOG_CATEGORY,
     CORE_LOG_CATEGORY,
@@ -815,6 +822,136 @@ class DialogBehaviorTest(unittest.TestCase):
         self.assertEqual(clicked, [yesButton])
         self.assertEqual(finished, [int(AppQMessageBox.StandardButton.Yes)])
         self.assertIs(messageBox.clickedButton(), yesButton)
+
+    def testMessageBoxSeparatesNativeTitleHeadingAndBody(self):
+        """Keep native metadata independent from visible semantic content."""
+        messageBox = AppQMessageBox(
+            title='Native window metadata',
+            heading='Unable to connect',
+            text='Xray-core: Invalid server configuration',
+        )
+        messageBox.setInformativeText('The outbound server address is missing.')
+        messageBox.show()
+
+        processQtEvents()
+
+        self.assertEqual(messageBox.windowTitle(), 'Native window metadata')
+        self.assertEqual(messageBox.heading(), 'Unable to connect')
+        self.assertEqual(messageBox.text(), 'Xray-core: Invalid server configuration')
+        self.assertEqual(
+            messageBox.informativeText(),
+            'The outbound server address is missing.',
+        )
+        self.assertEqual(messageBox.headingLabel.text(), 'Unable to connect')
+        self.assertEqual(
+            messageBox.textLabel.text(),
+            'Xray-core: Invalid server configuration',
+        )
+        self.assertFalse(messageBox.headingLabel.isHidden())
+
+        messageBox.setWindowTitle('Changed native metadata')
+
+        self.assertEqual(messageBox.heading(), 'Unable to connect')
+
+        messageBox.close()
+
+    def testMessageBoxKeepsGenericApplicationTitleAsMetadataOnly(self):
+        """Do not promote the default application name into visible content."""
+        messageBox = AppQMessageBox(text='Operation completed')
+        messageBox.show()
+
+        processQtEvents()
+
+        self.assertEqual(messageBox.windowTitle(), APPLICATION_NAME)
+        self.assertEqual(messageBox.heading(), '')
+        self.assertTrue(messageBox.headingLabel.isHidden())
+        self.assertEqual(messageBox.textLabel.y(), 0)
+
+        positional = AppQMessageBox(
+            AppQMessageBox.Icon.Information,
+            'Native compatibility title',
+            'Compatibility body',
+            AppQMessageBox.StandardButton.Ok,
+        )
+
+        self.assertEqual(positional.windowTitle(), 'Native compatibility title')
+        self.assertEqual(positional.heading(), '')
+        self.assertEqual(positional.text(), 'Compatibility body')
+
+        messageBox.close()
+        positional.deleteLater()
+
+    def testConnectionErrorPreservesHeadingMessageAndDetails(self):
+        """Map every structured connection-error field to visible dialog content."""
+        error = ConnectionError(
+            'Unable to connect',
+            'Xray-core: Invalid server configuration',
+            'The outbound server address is missing.',
+        )
+        opened = []
+
+        with mock.patch.object(
+            AppQMessageBox,
+            'open',
+            lambda messageBox: opened.append(messageBox),
+        ):
+            ConnectAction.showError(error)
+
+        self.assertEqual(len(opened), 1)
+
+        messageBox = opened[0]
+
+        self.assertEqual(messageBox.windowTitle(), APPLICATION_NAME)
+        self.assertEqual(messageBox.heading(), error.title)
+        self.assertEqual(messageBox.text(), error.message)
+        self.assertEqual(messageBox.informativeText(), error.details)
+
+        messageBox.close()
+        messageBox.deleteLater()
+
+    def testMessageBoxHeadingSupportsLongContentIconsAndThemes(self):
+        """Keep the semantic stack responsive across themes and icon variants."""
+        app = application()
+        originalStyleSheet = app.styleSheet()
+        longMessage = (
+            'Не удалось применить конфигурацию прокси-сервера. '
+            'Проверьте адрес, порт и параметры подключения, затем повторите попытку.'
+        )
+
+        try:
+            for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
+                app.setStyleSheet(AppStyleSheet.forTheme(theme))
+
+                for icon in (
+                    AppQMessageBox.Icon.Information,
+                    AppQMessageBox.Icon.Warning,
+                    AppQMessageBox.Icon.Critical,
+                    AppQMessageBox.Icon.Question,
+                ):
+                    with self.subTest(theme=theme, icon=icon):
+                        messageBox = AppQMessageBox(
+                            icon=icon,
+                            heading='Unable to connect',
+                            text=longMessage,
+                        )
+                        messageBox.show()
+
+                        processQtEvents()
+
+                        self.assertFalse(messageBox.iconPixmap().isNull())
+                        self.assertGreaterEqual(
+                            messageBox.textLabel.height(),
+                            messageBox.textLabel.fontMetrics().height(),
+                        )
+                        self.assertLessEqual(
+                            messageBox.width(),
+                            messageBox.MaximumSurfaceWidth,
+                        )
+
+                        messageBox.close()
+                        messageBox.deleteLater()
+        finally:
+            app.setStyleSheet(originalStyleSheet)
 
     def testMessageBoxButtonsHaveAdaptiveFluentLayoutAndRoles(self):
         """Keep one, two, and three actions slim, separated, and content-driven."""

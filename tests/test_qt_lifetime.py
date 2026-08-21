@@ -227,6 +227,7 @@ class QtLifetimeTest(unittest.TestCase):
             messageBox = AppQMessageBox(
                 icon=AppQMessageBox.Icon.Information,
                 parent=owner,
+                heading='Fixture heading',
                 text='Fixture information',
                 buttons=AppQMessageBox.StandardButton.Ok,
             )

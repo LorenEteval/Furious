@@ -1165,13 +1165,13 @@ class Hysteria2Editor(GuiEditorWidgetQDialog):
         )
 
         if mimicEnabled and ConfigHysteria2({'server': server}).usesPortHopping():
-            messageBox = AppQMessageBox(
+            mbox = AppQMessageBox(
                 icon=AppQMessageBox.Icon.Warning,
-                windowTitle=_('Invalid Configuration'),
+                heading=_('Invalid Configuration'),
                 text=_('Mimic cannot be used with port hopping.'),
                 parent=self,
             )
-            messageBox.open()
+            mbox.open()
 
             return
 

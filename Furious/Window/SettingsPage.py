@@ -76,19 +76,16 @@ def _endpointPrivacyParagraphs():
 
 def _endpointPrivacyMessageBox(parent=None):
     """Build one transient Fluent data-usage disclosure."""
-    title = _('Proxy Endpoint Information & Privacy')
-
-    messageBox = AppQMessageBox(
+    mbox = AppQMessageBox(
         icon=AppQMessageBox.Icon.Information,
         parent=parent,
-        title=title,
-        text=title,
+        text=_('Proxy Endpoint Information & Privacy'),
         buttons=AppQMessageBox.StandardButton.Ok,
     )
-    messageBox.informativeLabel.setTextFormat(QtCore.Qt.TextFormat.RichText)
-    messageBox.setInformativeText('<br><br>\n'.join(_endpointPrivacyParagraphs()))
+    mbox.informativeLabel.setTextFormat(QtCore.Qt.TextFormat.RichText)
+    mbox.setInformativeText('<br><br>\n'.join(_endpointPrivacyParagraphs()))
 
-    return messageBox
+    return mbox
 
 
 def _tunModeTitle() -> str:

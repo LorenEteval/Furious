@@ -128,7 +128,7 @@ class ConnectAction(AppQAction):
             return
 
         mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-        mbox.setWindowTitle(error.title)
+        mbox.setHeading(error.title)
         mbox.setText(error.message)
 
         if error.details:
