@@ -1239,13 +1239,16 @@ class ServerTableView(
 
     def __init__(self, *args, **kwargs):
         """Initialize the server table view."""
-        configurationEditorFactory = kwargs.pop('configurationEditorFactory')
-        self.qrCodeWindowFactory = kwargs.pop('qrCodeWindowFactory')
-        importActionsFactory = kwargs.pop('importActionsFactory')
+        configurationEditorFactory, self.qrCodeWindowFactory, importActionsFactory = (
+            kwargs.pop('configurationEditorFactory'),
+            kwargs.pop('qrCodeWindowFactory'),
+            kwargs.pop('importActionsFactory'),
+        )
 
         super().__init__(*args, **kwargs)
 
         self.sourceModel = UserServersTableModel(self.Headers, parent=self)
+
         self.proxyModel = UserServersSortFilterProxyModel(parent=self)
         self.proxyModel.setSourceModel(self.sourceModel)
         self.setModel(self.proxyModel)
@@ -1416,14 +1419,6 @@ class ServerTableView(
             AppQSeparator(),
             self.advancedActionRef,
             AppQSeparator(),
-            AppQAction(
-                _('New Empty Configuration'),
-                callback=lambda: self.newEmptyItem(),
-                shortcut=QtCore.QKeyCombination(
-                    QtCore.Qt.KeyboardModifier.ControlModifier,
-                    QtCore.Qt.Key.Key_N,
-                ),
-            ),
             *importActionsFactory(),
             AppQSeparator(),
             AppQAction(
