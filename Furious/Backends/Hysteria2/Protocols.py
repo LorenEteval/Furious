@@ -93,12 +93,15 @@ class Hysteria2ProtocolHandler(ProtocolHandler):
             'auth',
             'tls',
             'transport',
+            'realm',
             'quic',
+            'mimic',
             'bandwidth',
             'tcpForwarding',
             'udpForwarding',
             'tcpTProxy',
             'udpTProxy',
+            'tcpRedirect',
             'tun',
             'fastOpen',
             'lazy',
@@ -110,6 +113,40 @@ class Hysteria2ProtocolHandler(ProtocolHandler):
             return ConfigHysteria2(configuration)
 
         return None
+
+    def validate(self, configuration):
+        """Validate Hysteria 2 invariants not expressible in the basic schema."""
+        if not self.supports(configuration):
+            return ('Unsupported protocol',)
+
+        errors = [] if configuration.isValid() else ['Invalid data']
+        realm = configuration.get('realm')
+        mimic = configuration.get('mimic')
+
+        if isinstance(realm, dict) and realm.get('ipMode') not in (
+            None,
+            'dual',
+            'v4',
+            'v6',
+        ):
+            errors.append('Invalid Realm IP mode')
+
+        if isinstance(mimic, dict) and mimic.get('xdpMode') not in (
+            None,
+            '',
+            'native',
+            'skb',
+        ):
+            errors.append('Invalid Mimic XDP mode')
+
+        if (
+            isinstance(mimic, dict)
+            and mimic.get('enabled') is True
+            and configuration.usesPortHopping()
+        ):
+            errors.append('Mimic cannot be used with port hopping')
+
+        return tuple(errors)
 
     def blank(self, **kwargs):
         """Create a blank Hysteria 2 client profile."""

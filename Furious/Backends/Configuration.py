@@ -1966,9 +1966,6 @@ class ConfigHysteria1(CoreConfiguration):
 
 BLANK_CONFIG_HYSTERIA2 = {
     'server': '',
-    'tls': {
-        'insecure': False,
-    },
     'socks5': {
         'listen': '127.0.0.1:10808',
     },
@@ -2025,6 +2022,19 @@ class ConfigHysteria2(CoreConfiguration):
 
         return address
 
+    def usesPortHopping(self) -> bool:
+        """Return whether the configured server uses a multi-port expression."""
+        server = self.get('server', '')
+
+        if not isinstance(server, str) or server.startswith(
+            ('realm://', 'realm+http://')
+        ):
+            return False
+
+        _host, separator, ports = server.rpartition(':')
+
+        return bool(separator and ('-' in ports or ',' in ports))
+
     @property
     def itemPort(self) -> str:
         """Return the item port value."""
@@ -2062,32 +2072,69 @@ class ConfigHysteria2(CoreConfiguration):
 
         return realmItems, hysteria2Items
 
+    @staticmethod
+    def parseHysteria2QueryItems(query: str):
+        """Decode URI query items without treating a literal plus as a space."""
+        items = []
+
+        for item in query.split('&'):
+            if not item:
+                continue
+
+            key, separator, value = item.partition('=')
+            items.append((unquote(key), unquote(value) if separator else ''))
+
+        return items
+
+    @staticmethod
+    def encodeHysteria2QueryItems(items) -> str:
+        """Encode Hysteria 2 query values with URI, not form, semantics."""
+        return urllib.parse.urlencode(
+            [(key, value) for key, value in items if value != '' and value is not None],
+            doseq=True,
+            quote_via=urllib.parse.quote,
+            safe='',
+        )
+
     def toURI(self, remark: str = '') -> str:
         """Export the configuration as a share URI."""
         override = remark
 
         TLSArg, obfsArg = {}, {}
 
-        if self.get('tls'):
-            if self['tls'].get('sni'):
-                TLSArg['sni'] = self['tls']['sni']
+        tls = self.get('tls')
 
-            if self['tls'].get('insecure') is True:
+        if isinstance(tls, dict):
+            if tls.get('sni'):
+                TLSArg['sni'] = tls['sni']
+
+            if tls.get('insecure') is True:
                 TLSArg['insecure'] = '1'
-            else:
-                TLSArg['insecure'] = '0'
 
-            if self['tls'].get('pinSHA256'):
-                TLSArg['pinSHA256'] = self['tls']['pinSHA256']
+            if tls.get('pinSHA256'):
+                TLSArg['pinSHA256'] = tls['pinSHA256']
 
-        if self.get('obfs'):
-            obfsType = self['obfs'].get('type', 'salamander')
+            if tls.get('ech'):
+                TLSArg['ech'] = tls['ech']
 
-            obfsArg['obfs'] = obfsType
-            obfsArg['obfs-password'] = self['obfs'][obfsType]['password']
+        obfs = self.get('obfs')
 
-        if self['server'].startswith(('realm://', 'realm+http://')):
-            result = urlparse(self['server'])
+        if isinstance(obfs, dict):
+            obfsType = obfs.get('type', 'salamander')
+
+            obfsConfig = obfs.get(obfsType)
+
+            if obfsType in ('salamander', 'gecko') and isinstance(obfsConfig, dict):
+                password = obfsConfig.get('password', '')
+
+                if password:
+                    obfsArg['obfs'] = obfsType
+                    obfsArg['obfs-password'] = password
+
+        server = self.get('server', '')
+
+        if server.startswith(('realm://', 'realm+http://')):
+            result = urlparse(server)
 
             if result.scheme == 'realm+http':
                 scheme = 'hysteria2+realm+http'
@@ -2095,9 +2142,9 @@ class ConfigHysteria2(CoreConfiguration):
                 scheme = 'hysteria2+realm'
 
             realmItems, _hysteria2Items = self.splitHysteria2RealmQueryItems(
-                parse_qsl(result.query)
+                self.parseHysteria2QueryItems(result.query)
             )
-            query = queryStringFromItems(
+            query = self.encodeHysteria2QueryItems(
                 [
                     ('auth', self['auth']),
                     *TLSArg.items(),
@@ -2111,8 +2158,8 @@ class ConfigHysteria2(CoreConfiguration):
             )
 
         netloc, query = (
-            self['auth'] + '@' + self['server'],
-            queryStringFromItems([*TLSArg.items(), *obfsArg.items()]),
+            quote(str(self.get('auth', '')), safe='') + '@' + server,
+            self.encodeHysteria2QueryItems([*TLSArg.items(), *obfsArg.items()]),
         )
 
         return urlunparse(['hysteria2', netloc, '', '', query, quote(override)])
@@ -2121,7 +2168,7 @@ class ConfigHysteria2(CoreConfiguration):
         """Populate the configuration from a share URI."""
         try:
             result = urlparse(URI)
-            queryItems = parse_qsl(result.query)
+            queryItems = self.parseHysteria2QueryItems(result.query)
             queryObject = {key: value for key, value in queryItems}
 
             if result.scheme not in [
@@ -2149,12 +2196,13 @@ class ConfigHysteria2(CoreConfiguration):
                         result.netloc,
                         result.path,
                         '',
-                        queryStringFromItems(realmItems),
+                        self.encodeHysteria2QueryItems(realmItems),
                         '',
                     ]
                 )
             else:
-                auth, server = result.netloc.split('@')
+                auth, server = result.netloc.rsplit('@', 1)
+                auth = unquote(auth)
 
             obfs = queryObject.get('obfs', '')
             obfsPassword = queryObject.get('obfs-password', '')
@@ -2170,9 +2218,11 @@ class ConfigHysteria2(CoreConfiguration):
                 insecure = False
 
             pinSHA256 = queryObject.get('pinSHA256', '')
+            ech = queryObject.get('ech', '')
 
             obfsArg = {}
             pinSHA256Arg = {}
+            echArg = {}
 
             if obfs and obfsPassword:
                 obfsArg['obfs'] = {
@@ -2185,17 +2235,23 @@ class ConfigHysteria2(CoreConfiguration):
             if pinSHA256:
                 pinSHA256Arg['pinSHA256'] = pinSHA256
 
+            if ech:
+                echArg['ech'] = ech
+
+            tls = {
+                **({'sni': sni} if sni else {}),
+                **({'insecure': True} if insecure else {}),
+                **pinSHA256Arg,
+                **echArg,
+            }
+
             dict.__init__(
                 self,
                 **{
                     'server': server,
                     'auth': auth,
                     **obfsArg,
-                    'tls': {
-                        'sni': sni,
-                        'insecure': insecure,
-                        **pinSHA256Arg,
-                    },
+                    **({'tls': tls} if tls else {}),
                     'socks5': {
                         'listen': '127.0.0.1:10808',
                     },

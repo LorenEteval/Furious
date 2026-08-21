@@ -609,7 +609,6 @@ TRANSLATION = {
     },
     "New Empty Configuration": {
         "source": [
-            "Furious.Widget.ServerTableView",
             "Furious.Window.HomePage"
         ],
         "RU": "Создать новую пустую конфигурацию",
@@ -1144,6 +1143,7 @@ TRANSLATION = {
     },
     "Basic Configuration": {
         "source": [
+            "Furious.Backends.ExternalCore.Editor",
             "Furious.Backends.Hysteria1.Editor",
             "Furious.Backends.Hysteria2.Editor",
             "Furious.Backends.Xray.ShadowsocksEditor",
@@ -1160,7 +1160,6 @@ TRANSLATION = {
     "Proxy": {
         "source": [
             "Furious.Backends.Hysteria1.Editor",
-            "Furious.Backends.Hysteria2.Editor",
             "Furious.Backends.Xray.ShadowsocksEditor",
             "Furious.Backends.Xray.SocksEditor",
             "Furious.Backends.Xray.TrojanEditor",
@@ -3270,6 +3269,38 @@ TRANSLATION = {
         ],
         "RU": "Добавить сервер SOCKS",
         "ZH": "添加SOCKS服务器",
+        "isReviewed": "True"
+    },
+    "Invalid Configuration": {
+        "source": [
+            "Furious.Backends.Hysteria2.Editor"
+        ],
+        "RU": "Недопустимая конфигурация",
+        "ZH": "无效配置",
+        "isReviewed": "True"
+    },
+    "Mimic cannot be used with port hopping.": {
+        "source": [
+            "Furious.Backends.Hysteria2.Editor"
+        ],
+        "RU": "Mimic нельзя использовать с переключением портов.",
+        "ZH": "Mimic不能与端口跳跃同时使用。",
+        "isReviewed": "True"
+    },
+    "Proxy & Bandwidth": {
+        "source": [
+            "Furious.Backends.Hysteria2.Editor"
+        ],
+        "ZH": "代理 & 带宽",
+        "RU": "Прокси и пропускная способность",
+        "isReviewed": "True"
+    },
+    "Advanced": {
+        "source": [
+            "Furious.Backends.Hysteria2.Editor"
+        ],
+        "ZH": "高级",
+        "RU": "Дополнительно",
         "isReviewed": "True"
     }
 }
