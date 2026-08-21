@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import Furious.Plugins.Registry as PluginRegistryModule
 from Furious.Models import CoreConfiguration
 from Furious.Plugins.API import (
     CapabilityKind,
@@ -49,6 +50,7 @@ from PySide6 import QtCore, QtWidgets
 from tests.support import application, collectAtBoundary, waitFor
 
 import unittest
+from unittest import mock
 import weakref
 
 
@@ -214,6 +216,55 @@ class FixturePlugin(FuriousPlugin):
     def shutdown(self):
         """Record one registry-owned shutdown."""
         self.stopped += 1
+
+
+class PluginRegistryManagerTest(unittest.TestCase):
+    """Verify process-registry creation and host-plugin reconciliation."""
+
+    def setUp(self):
+        """Replace process state with one isolated registry owner."""
+        manager = PluginRegistryModule._PluginRegistryManager()
+        patcher = mock.patch.object(PluginRegistryModule, '_registryManager', manager)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def testInitializationDiscoversOnceAndReusesRegistry(self):
+        """Create one registry and accept the same host type repeatedly."""
+        with mock.patch.object(PluginRegistry, 'discover') as discover:
+            registry = PluginRegistryModule.initializePluginRegistry((FixturePlugin,))
+            self.addCleanup(registry.shutdown)
+            current = PluginRegistryModule.initializePluginRegistry((FixturePlugin,))
+
+            self.assertIs(registry, current)
+
+        discover.assert_called_once_with()
+        self.assertIsInstance(registry.plugin('tests.fixture'), FixturePlugin)
+
+    def testAdditionalHostPluginTypeIsRegistered(self):
+        """Register a newly supplied host plugin in the existing registry."""
+
+        class AdditionalPlugin(FuriousPlugin):
+            metadata = PluginMetadata('tests.additional', 'Additional Plugin')
+
+        with mock.patch.object(PluginRegistry, 'discover'):
+            registry = PluginRegistryModule.initializePluginRegistry()
+            self.addCleanup(registry.shutdown)
+            PluginRegistryModule.initializePluginRegistry((AdditionalPlugin,))
+
+        self.assertIsInstance(registry.plugin('tests.additional'), AdditionalPlugin)
+
+    def testConflictingHostPluginTypeIsRejected(self):
+        """Reject a different host type claiming an existing plugin ID."""
+
+        class ConflictingPlugin(FuriousPlugin):
+            metadata = FixturePlugin.metadata
+
+        with mock.patch.object(PluginRegistry, 'discover'):
+            registry = PluginRegistryModule.initializePluginRegistry((FixturePlugin,))
+            self.addCleanup(registry.shutdown)
+
+            with self.assertRaisesRegex(ValueError, 'already registered'):
+                PluginRegistryModule.initializePluginRegistry((ConflictingPlugin,))
 
 
 class PluginRegistryTest(unittest.TestCase):

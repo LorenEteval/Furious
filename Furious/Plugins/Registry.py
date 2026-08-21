@@ -1307,40 +1307,64 @@ class PluginRegistry:
         self._initializedPlugins.clear()
 
 
-_registry = PluginRegistry()
-_registryLock = threading.RLock()
-_registryInitialized = False
+class _PluginRegistryManager:
+    """Own lazy creation of the process-wide plugin registry."""
+
+    def __init__(self):
+        """Initialize an empty process-registry owner."""
+        self._registry: Optional[PluginRegistry] = None
+        self._lock = threading.RLock()
+
+    def initialize(self, pluginTypes=()) -> PluginRegistry:
+        """Return the registry after discovering and reconciling plugins."""
+        with self._lock:
+            registry = self._registry
+
+            if registry is None:
+                registry = self._createRegistry(pluginTypes)
+
+                self._registry = registry
+            else:
+                self._registerAdditionalPluginTypes(registry, pluginTypes)
+
+            return registry
+
+    @staticmethod
+    def _createRegistry(pluginTypes) -> PluginRegistry:
+        """Build a registry with host plugins taking discovery precedence."""
+        registry = PluginRegistry()
+
+        for pluginType in pluginTypes:
+            registry.register(pluginType())
+
+        registry.discover()
+
+        return registry
+
+    @staticmethod
+    def _registerAdditionalPluginTypes(registry, pluginTypes):
+        """Idempotently add host plugin types supplied after discovery."""
+        for pluginType in pluginTypes:
+            plugin = pluginType()
+            pluginMetadata = plugin.pluginMetadata()
+
+            registered = registry.plugin(pluginMetadata.id)
+
+            if registered is None:
+                registry.register(plugin)
+            elif not isinstance(registered, pluginType):
+                raise ValueError(
+                    f'plugin {pluginMetadata.id!r} is already registered by '
+                    f'{type(registered).__name__}'
+                )
+
+
+_registryManager = _PluginRegistryManager()
 
 
 def initializePluginRegistry(pluginTypes=()) -> PluginRegistry:
     """Discover third-party plugins and register host-provided plugin types."""
-    global _registry, _registryInitialized
-
-    with _registryLock:
-        if not _registryInitialized:
-            registry = PluginRegistry()
-
-            for pluginType in pluginTypes:
-                registry.register(pluginType())
-
-            registry.discover()
-            _registry = registry
-            _registryInitialized = True
-        else:
-            for pluginType in pluginTypes:
-                plugin = pluginType()
-                pluginMetadata = plugin.pluginMetadata()
-                registered = _registry.plugin(pluginMetadata.id)
-
-                if registered is None:
-                    _registry.register(plugin)
-                elif not isinstance(registered, pluginType):
-                    raise ValueError(
-                        f'plugin {pluginMetadata.id!r} is already registered by '
-                        f'{type(registered).__name__}'
-                    )
-
-    return _registry
+    return _registryManager.initialize(pluginTypes)
 
 
 def getPluginRegistry() -> PluginRegistry:
