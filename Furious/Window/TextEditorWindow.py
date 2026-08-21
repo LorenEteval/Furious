@@ -132,15 +132,10 @@ class TextEditorWindow(AppQMainWindow):
                     QtCore.Qt.Key.Key_S,
                 ),
             ),
+            AppQSeparator(),
             AppQAction(
                 _('Save As...'),
                 callback=lambda: self.saveAsFile(),
-            ),
-            AppQSeparator(),
-            AppQAction(
-                _('Close Window'),
-                icon=bootstrapIcon('window-x.svg'),
-                callback=lambda: self.close(),
             ),
             title=_('File'),
             parent=self,
