@@ -241,6 +241,8 @@ class GuiHy2FormBindings(EditorWidgetBinding):
 
     def __init__(self, *bindings: EditorWidgetBinding, **kwargs):
         """Create one persistent form containing the supplied bindings."""
+        topMargin = kwargs.pop('topMargin', 0)
+
         super().__init__(**kwargs)
 
         self.bindings = tuple(bindings)
@@ -252,7 +254,7 @@ class GuiHy2FormBindings(EditorWidgetBinding):
         )
 
         layout = QFormLayout(self._widget)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, topMargin, 0, 0)
         layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
         layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
@@ -859,6 +861,7 @@ class GuiHy2GroupBoxProxyBandwidth(GuiEditorWidgetQGroupBox):
                     path=('bandwidth', 'down'),
                     translatable=False,
                 ),
+                topMargin=20,
             ),
             GuiHy2NestedSwitch(
                 title='bandwidth.disableLossCompensation',
@@ -1042,7 +1045,7 @@ class GuiHy2GroupBoxAdvanced(GuiEditorWidgetQGroupBox):
 
         self.chromeParrotItem, self.mimicEnabledItem = (
             GuiHy2NestedSwitch(
-                title='disableChromeParrot',
+                title='quic.disableChromeParrot',
                 path=('quic', 'disableChromeParrot'),
                 translatable=False,
             ),

@@ -217,7 +217,11 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
         )
         self.assertEqual(
             tuple(binding._title.text() for binding in advanced.toggleRow.bindings),
-            ('disableChromeParrot', 'mimic.enabled'),
+            ('quic.disableChromeParrot', 'mimic.enabled'),
+        )
+        self.assertEqual(
+            proxyBandwidth.bandwidthFields._widget.layout().contentsMargins().top(),
+            20,
         )
 
         editor.show()
@@ -418,7 +422,7 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
                 'bandwidth',
                 'disableLossCompensation',
             ): 'bandwidth.disableLossCompensation',
-            ('quic', 'disableChromeParrot'): 'disableChromeParrot',
+            ('quic', 'disableChromeParrot'): 'quic.disableChromeParrot',
             ('realm', 'ipMode'): 'ipMode',
             ('mimic', 'enabled'): 'mimic.enabled',
         }
@@ -482,8 +486,8 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
 
         editor.close()
 
-    def testUnknownCompactEditorValuesRoundTripUntouched(self):
-        """Display and preserve future enum and tagged-union values verbatim."""
+    def testUnknownCompactEditorValuesNormalizeToKnownDefaults(self):
+        """Normalize unsupported represented values while preserving other data."""
         profile = self.profile(
             {
                 'server': 'example.com:443',
@@ -514,29 +518,40 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
         self.assertEqual(profile.connection, original)
         self.assertEqual(
             self.binding(editor, ('realm', 'ipMode')).text(),
-            'future-mode',
+            'dual',
         )
         self.assertEqual(
             editor.basicGroup._containers[3].bindings[0].text(),
-            'future-congestion',
+            '',
         )
         self.assertEqual(
             editor.basicGroup._containers[3].bindings[1].text(),
-            'future-profile',
+            '',
         )
         self.assertEqual(
             editor.advancedGroup.obfsItem.page(
                 editor.advancedGroup.obfsItem.currentIndex()
             ).obfsTypeText(),
-            'future-obfs',
+            '',
         )
-        self.assertFalse(editor.inputToFactory(profile))
-        self.assertEqual(profile.connection, original)
+        self.assertTrue(editor.inputToFactory(profile))
+        self.assertEqual(
+            profile.connection['realm'],
+            {
+                'ipMode': 'dual',
+                'futureRealmField': {'preserve': True},
+            },
+        )
+        self.assertEqual(
+            profile.connection['congestion'],
+            {'futureCongestionField': 7},
+        )
+        self.assertNotIn('obfs', profile.connection)
 
         editor.close()
 
-    def testClearingCongestionFieldPreservesUnknownSiblings(self):
-        """Remove only the represented congestion leaf when clearing it."""
+    def testSavingCongestionNormalizesUnknownRepresentedSiblings(self):
+        """Clear unsupported represented values while preserving JSON-only data."""
         profile = self.profile(
             {
                 'server': 'example.com:443',
@@ -555,7 +570,7 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
 
         self.assertTrue(editor.inputToFactory(profile))
         self.assertNotIn('type', profile.connection['congestion'])
-        self.assertEqual(profile.connection['congestion']['bbrProfile'], 'fast')
+        self.assertNotIn('bbrProfile', profile.connection['congestion'])
         self.assertEqual(
             profile.connection['congestion']['futureCongestionField'],
             {'preserve': True},
