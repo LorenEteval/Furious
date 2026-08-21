@@ -1,8 +1,8 @@
 # Application composition guidance
 
-- `DesktopApplication` is the composition root. It creates or acquires and durably owns application-lifetime
-  controllers, repository access, services, pages, main window, tray, thread pool, singleton IPC endpoint, and plugin
-  registry integration.
+- `DesktopApplication` is the composition root. It durably owns process-lifetime controllers, logging, the main window,
+  tray, thread pool, singleton IPC endpoint, cleanup stack, and plugin-registry lifecycle. `MainWindow` owns the built-in
+  page/widget tree and page-level managers through normal Qt parentage; do not duplicate those owners in the application.
 - Keep bootstrap order explicit: environment/plugins and storage before consumers, controllers/services before UI, and
   restoration only after all dependencies exist. Accessors must tolerate partial startup and cleanup.
 - Each successful startup stage registers its exact cleanup immediately. Partial startup and final shutdown use the

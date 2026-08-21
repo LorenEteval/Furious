@@ -9,15 +9,17 @@
 - Before Python work, inspect the repository root for `.venv*` or `venv*` and prefer its interpreter when usable. Do not
   create or modify an environment unless required.
 - Keep edits focused. Preserve GPL headers, `from __future__` placement, import grouping, repository naming style, and
-  public compatibility unless a deliberate migration is part of the task.
+  public compatibility unless a deliberate migration is part of the task. Treat curated package `__init__` exports,
+  plugin API dataclasses, persisted keys, and semantic exit codes as compatibility surfaces.
 
 ## Pythonic design
 
 - Prefer the simplest design that makes ownership, state transitions, failure, and side effects explicit. Readability
   and one canonical path beat clever indirection or parallel implementations.
 - Keep policy close to the layer that owns it: models describe data, repositories persist domain collections,
-  `AppSettings` persists preferences, services perform workflows, controllers own shared runtime state/orchestration,
-  plugins/backends own protocol-specific behavior, and UI adapts those APIs.
+  `AppSettings` persists preferences, services own workflows and temporary resources, controllers own shared state
+  machines/orchestration, plugins/backends own protocol-specific behavior, `Application` composes the process, and UI
+  adapts those APIs.
 - Make invalid states and boundary failures visible with specific return values, result objects, or exceptions. Catch
   broadly only at a genuine isolation boundary, log actionable context, and do not silently convert explicit user input
   into a different behavior.
@@ -32,11 +34,12 @@
 
 - Treat persisted user configuration as input. Connection, routing, testing, logging, TUN, and statistics preparation
   must not mutate it implicitly; use explicit runtime/derived state unless an API is documented as mutating storage.
-- Prefer plugin capabilities/factories over protocol or core conditionals in shared managers. Registries store classes,
-  factories, descriptors, and immutable metadata—not transient UI instances.
-- `CoreRuntime` means one managed proxy-core lifecycle regardless of whether its implementation uses a subprocess,
-  multiprocessing, or an in-process binding. Reserve process terminology for actual operating-system processes and
-  handles.
+- Prefer plugin capabilities/factories over protocol or core conditionals in shared managers. Registries may strongly
+  own process-lifetime plugins, capability providers, factories, descriptors, and metadata; they must not retain
+  transient UI or active runtime instances.
+- A `ServerProfile` combines profile metadata with one persisted connection/configuration document. `CoreRuntime` means
+  one managed proxy-core lifecycle regardless of whether its implementation uses a subprocess, multiprocessing, or an
+  in-process binding. Reserve process terminology for actual operating-system processes and handles.
 - Application-wide controllers and repositories may be process-lifetime. Transient UI, network replies, timers,
   callbacks, and temporary processes must not become accidental global state.
 - Keep platform mutation behind `Frozenlib`/runtime abstractions so unsupported platforms remain safe to import and
@@ -54,6 +57,8 @@
   specifications, and `.format(...)` inside `_()` are unsupported.
 - Curly braces in extracted strings are reserved for application-constant substitution, not ordinary runtime
   placeholders.
+- Keep both source execution and the `Deploy.py`/Nuitka build viable. Plugin discovery and optional heavy imports must
+  remain statically discoverable or explicitly included without introducing import-time application/UI construction.
 
 ## Verification and review
 

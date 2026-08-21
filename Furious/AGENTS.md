@@ -2,10 +2,9 @@
 
 ## Layering and state
 
-- `Models` and `Interface` define core-neutral data and contracts. `Repository` owns persisted domain collections,
-  `AppSettings` owns preferences, `Service` owns workflows/resources, `Controllers` own shared runtime state,
-  `Plugins`/`Backends` own protocol behavior, and `Application` composes them. `Qt`, `Widget`, and `Window` present that
-  state.
+- `Application` is the deliberate broad composition layer. Elsewhere, depend on the narrowest lower-level contract and
+  avoid circular imports or reaching through a page/window when a controller, service, repository, or plugin capability
+  owns the operation.
 - Existing UI code has compatibility paths that reach repositories or application globals. Do not extend that coupling
   when a controller/service API can be introduced cleanly; migrate incrementally rather than creating a second state
   authority.

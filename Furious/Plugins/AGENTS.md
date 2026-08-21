@@ -6,6 +6,9 @@
   dispatch, statistics providers, and tests.
 - Plugins contribute factories, handlers, descriptors, immutable metadata, and service providers—not live transient
   widgets, active core instances, or controller state.
+- The registry intentionally keeps registered plugin and capability-provider objects strongly reachable for the
+  registry lifetime. Their initialization/shutdown contract must release any resources they acquire; this ownership is
+  not permission to cache factory-created UI or runtimes.
 - Protocol parse/export/editor, backend runtime, routing/TUN, statistics, subscription decoding, and navigation behavior
   belongs behind capabilities. Shared code must not add core-name conditionals when capability dispatch can express the
   policy.
