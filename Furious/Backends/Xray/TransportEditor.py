@@ -1607,6 +1607,15 @@ class GuiVTransportPageXXX(GuiEditorWidgetQWidget):
         if isinstance(network, GuiEditorItemTextComboBox):
             network.setText(text)
 
+    def networkText(self) -> str:
+        """Return the semantic transport value displayed by this page."""
+        network = self._containers[0]
+
+        if isinstance(network, GuiEditorItemTextComboBox):
+            return network.text()
+
+        return ''
+
     def connectActivated(self, func: Callable):
         """Connect activated."""
         network = self._containers[0]
@@ -1898,6 +1907,18 @@ class GuiVTransportQGroupBox(EditorBinding, AppQGroupBox):
 
     def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Apply the current editor value to the configuration."""
+        streamSettings = ConfigXray.getProxyOutboundStream(config)
+        oldNetwork = streamSettings.get('network', '')
+        newNetwork = self.page(self.currentIndex()).networkText()
+
+        if (
+            isinstance(oldNetwork, str)
+            and oldNetwork == newNetwork
+            and oldNetwork not in STREAM_NETWORK
+            and oldNetwork not in ('http', 'gun', 'mkcp')
+        ):
+            return False
+
         return self.page(self.currentIndex()).inputToFactory(config)
 
     def factoryToInput(self, config: CoreConfiguration):
@@ -1930,8 +1951,12 @@ class GuiVTransportQGroupBox(EditorBinding, AppQGroupBox):
             index = STREAM_NETWORK.index(network)
         except Exception:
             # Any non-exit exceptions
+            index = 0
 
-            pass
+            self.page(index).factoryToInput(config)
+            self.page(index).setNetworkText(network)
+            self.setCurrentIndex(index)
         else:
             self.page(index).factoryToInput(config)
+            self.page(index).setNetworkText(network)
             self.setCurrentIndex(index)

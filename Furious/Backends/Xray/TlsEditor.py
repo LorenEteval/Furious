@@ -796,8 +796,11 @@ class GuiVTLSQGroupBox(EditorBinding, AppQGroupBox):
             index = STREAM_SECURITY.index(security)
         except Exception:
             # Any non-exit exceptions
+            index = 0
 
-            pass
+            self.page(index).factoryToInput(config)
+            self.page(index).setSecurityText(security)
+            self.setCurrentIndex(index)
         else:
             self.page(index).factoryToInput(config)
             self.setCurrentIndex(index)

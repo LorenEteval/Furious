@@ -440,55 +440,9 @@ class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
         newValue = self.text()
 
         if newValue == '':
-            congestion = config.get('congestion')
-
-            if isinstance(congestion, dict):
-                if len(congestion) > 0:
-                    if congestion.get(self.key) is not None:
-                        oldValue = congestion[self.key]
-
-                        congestion.pop(self.key, None)
-
-                        if not isinstance(oldValue, str) or oldValue != '':
-                            modified = True
-                        else:
-                            modified = False
-                    else:
-                        modified = False
-
-                    # TODO: Future extension
-                    anyValid = any(
-                        congestion.get(key, '') for key in self.CONGESTION_KEYS
-                    )
-
-                    if not anyValid:
-                        config.pop('congestion', None)
-
-                        return True
-                    else:
-                        return modified
-                else:
-                    config.pop('congestion', None)
-
-                    # Modified silently
-                    return False
-            else:
-                config.pop('congestion', None)
-
-                # Modified silently
-                return False
+            return _removeNestedValue(config, ('congestion', self.key))
         else:
-            if not isinstance(config.get('congestion'), dict):
-                config['congestion'] = {}
-
-            oldValue = config['congestion'].get(self.key, '')
-
-            if not isinstance(oldValue, str) or newValue != oldValue:
-                config['congestion'][self.key] = newValue
-
-                return True
-            else:
-                return False
+            return _setNestedValue(config, ('congestion', self.key), newValue)
 
     def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
@@ -499,7 +453,7 @@ class GuiHy2ItemBasicCongestionComboBox(GuiEditorItemTextComboBox):
 
             value = ''
 
-        self.setText(value)
+        self.setText(value if isinstance(value, str) else '')
 
 
 class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
@@ -554,10 +508,7 @@ class GuiHy2ItemObfsType(GuiEditorItemTextComboBox):
 
             obfsType = ''
 
-        if isinstance(obfsType, str) and obfsType in HY2_OBFS_TYPES:
-            self.setText(obfsType)
-        else:
-            self.setText('')
+        self.setText(obfsType if isinstance(obfsType, str) else '')
 
 
 class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
@@ -583,31 +534,12 @@ class GuiHy2ItemObfsPassword(GuiEditorItemTextInput):
         if not isinstance(obfsType, str) or obfsType != self.obfsType:
             return False
 
-        modified = False
+        path = ('obfs', obfsType, 'password')
 
-        if not isinstance(config.get('obfs'), dict):
-            config['obfs'] = {}
-
-            modified = True
-
-        if not isinstance(config['obfs'].get(obfsType), dict):
-            config['obfs'][obfsType] = {}
-
-            modified = True
-
-        try:
-            oldObfsPassword = config['obfs'][obfsType]['password']
-        except Exception:
-            # Any non-exit exceptions
-
-            oldObfsPassword = ''
-
-        if not isinstance(oldObfsPassword, str) or newObfsPassword != oldObfsPassword:
-            config['obfs'][obfsType]['password'] = newObfsPassword
-
-            return True
+        if newObfsPassword == '':
+            return _removeNestedValue(config, path)
         else:
-            return modified
+            return _setNestedValue(config, path, newObfsPassword)
 
     def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
@@ -661,21 +593,15 @@ class GuiHy2ItemObfsPacketSize(GuiEditorItemTextSpinBox):
         if not isinstance(obfsType, str) or obfsType != self.obfsType:
             return False
 
-        if not isinstance(config.get('obfs'), dict):
-            config['obfs'] = {}
+        path = ('obfs', obfsType, self.key)
 
-        if not isinstance(config['obfs'].get(obfsType), dict):
-            config['obfs'][obfsType] = {}
-
-        oldValue = config['obfs'][obfsType].get(self.key)
+        oldValue = _nestedValue(config, path, self.default)
         newValue = self.value()
 
-        if not isinstance(oldValue, int) or newValue != oldValue:
-            config['obfs'][obfsType][self.key] = newValue
-
-            return True
-
-        return False
+        if isinstance(oldValue, int) and newValue == oldValue:
+            return False
+        else:
+            return _setNestedValue(config, path, newValue)
 
     def factoryToInput(self, config: CoreConfiguration):
         """Load the configuration value into the editor."""
@@ -717,6 +643,15 @@ class GuiHy2PageObfsXXX(GuiEditorWidgetQWidget):
 
         if isinstance(obfsType, GuiEditorItemTextComboBox):
             obfsType.setText(text)
+
+    def obfsTypeText(self) -> str:
+        """Return the semantic obfuscation value displayed by this page."""
+        obfsType = self._containers[0]
+
+        if isinstance(obfsType, GuiEditorItemTextComboBox):
+            return obfsType.text()
+
+        return ''
 
     def connectActivated(self, func):
         """Connect activated."""
@@ -993,7 +928,10 @@ class GuiHy2ItemObfs(EditorBinding):
         if isinstance(oldObfs, dict):
             oldObfsType = oldObfs.get('type', '')
 
-        newObfsType = HY2_OBFS_TYPES[self.currentIndex()]
+        newObfsType = self.page(self.currentIndex()).obfsTypeText()
+
+        if newObfsType == oldObfsType and newObfsType not in HY2_OBFS_TYPES:
+            return False
 
         if newObfsType == '':
             if isinstance(oldObfs, dict):
@@ -1010,9 +948,15 @@ class GuiHy2ItemObfs(EditorBinding):
             config['obfs'] = {}
 
         modified = oldObfsType != newObfsType
+
         config['obfs']['type'] = newObfsType
 
-        for obfsType in HY2_OBFS_TYPES:
+        obsoleteTypes = set(HY2_OBFS_TYPES)
+
+        if isinstance(oldObfsType, str):
+            obsoleteTypes.add(oldObfsType)
+
+        for obfsType in obsoleteTypes:
             if obfsType and obfsType != newObfsType:
                 config['obfs'].pop(obfsType, None)
 
@@ -1031,10 +975,10 @@ class GuiHy2ItemObfs(EditorBinding):
 
             obfsType = ''
 
-        if not isinstance(obfsType, str) or obfsType not in HY2_OBFS_TYPES:
+        if not isinstance(obfsType, str):
             obfsType = ''
 
-        index = HY2_OBFS_TYPES.index(obfsType)
+        index = HY2_OBFS_TYPES.index(obfsType) if obfsType in HY2_OBFS_TYPES else 0
 
         self.page(index).factoryToInput(config)
         self.page(index).setObfsTypeText(obfsType)
