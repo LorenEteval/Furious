@@ -395,7 +395,7 @@ def controlStyleSheet(
             }}
 
             QComboBox::drop-down {{
-                subcontrol-origin: border;
+                subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 27px;
                 border: none;

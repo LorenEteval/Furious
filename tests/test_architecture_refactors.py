@@ -490,3 +490,13 @@ class StyleSheetCompositionTest(TestCase):
 
                 self.assertEqual(stylesheet.count('QToolTip {'), 1)
                 self.assertEqual(stylesheet.count('QTableView,'), 1)
+
+    def testComboBoxDropDownHoverStaysInsideTheFocusBorder(self):
+        """Keep the arrow hover fill from covering the outer focus outline."""
+        for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
+            with self.subTest(theme=theme):
+                stylesheet = AppStyleSheet.forTheme(theme)
+                dropDownRule = stylesheet.split('QComboBox::drop-down {', 1)[1]
+                dropDownRule = dropDownRule.split('}', 1)[0]
+
+                self.assertIn('subcontrol-origin: padding;', dropDownRule)
