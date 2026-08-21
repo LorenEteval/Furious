@@ -478,10 +478,113 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
         self.assertTrue(editor.inputToFactory(profile))
         self.assertEqual(profile.connection['realm']['ipMode'], 'v6')
         self.assertEqual(profile.connection['obfs']['type'], 'salamander')
-        self.assertEqual(
-            profile.connection['obfs']['future-obfs'],
-            {'token': 'discard'},
+        self.assertNotIn('future-obfs', profile.connection['obfs'])
+
+        editor.close()
+
+    def testUnknownCompactEditorValuesRoundTripUntouched(self):
+        """Display and preserve future enum and tagged-union values verbatim."""
+        profile = self.profile(
+            {
+                'server': 'example.com:443',
+                'auth': 'secret',
+                'realm': {
+                    'ipMode': 'future-mode',
+                    'futureRealmField': {'preserve': True},
+                },
+                'congestion': {
+                    'type': 'future-congestion',
+                    'bbrProfile': 'future-profile',
+                    'futureCongestionField': 7,
+                },
+                'obfs': {
+                    'type': 'future-obfs',
+                    'future-obfs': {
+                        'token': 'preserve',
+                        'futureOption': True,
+                    },
+                },
+            }
         )
+        original = copy.deepcopy(profile.connection)
+        editor = Hysteria2Editor()
+
+        editor.factoryToInput(profile)
+
+        self.assertEqual(profile.connection, original)
+        self.assertEqual(
+            self.binding(editor, ('realm', 'ipMode')).text(),
+            'future-mode',
+        )
+        self.assertEqual(
+            editor.basicGroup._containers[3].bindings[0].text(),
+            'future-congestion',
+        )
+        self.assertEqual(
+            editor.basicGroup._containers[3].bindings[1].text(),
+            'future-profile',
+        )
+        self.assertEqual(
+            editor.advancedGroup.obfsItem.page(
+                editor.advancedGroup.obfsItem.currentIndex()
+            ).obfsTypeText(),
+            'future-obfs',
+        )
+        self.assertFalse(editor.inputToFactory(profile))
+        self.assertEqual(profile.connection, original)
+
+        editor.close()
+
+    def testClearingCongestionFieldPreservesUnknownSiblings(self):
+        """Remove only the represented congestion leaf when clearing it."""
+        profile = self.profile(
+            {
+                'server': 'example.com:443',
+                'auth': 'secret',
+                'congestion': {
+                    'type': 'bbr',
+                    'bbrProfile': 'fast',
+                    'futureCongestionField': {'preserve': True},
+                },
+            }
+        )
+        editor = Hysteria2Editor()
+        editor.factoryToInput(profile)
+
+        editor.basicGroup._containers[3].bindings[0].setText('')
+
+        self.assertTrue(editor.inputToFactory(profile))
+        self.assertNotIn('type', profile.connection['congestion'])
+        self.assertEqual(profile.connection['congestion']['bbrProfile'], 'fast')
+        self.assertEqual(
+            profile.connection['congestion']['futureCongestionField'],
+            {'preserve': True},
+        )
+
+        editor.close()
+
+    def testImplicitGeckoPacketDefaultsRemainAbsent(self):
+        """Do not materialize effective Gecko defaults during an untouched save."""
+        profile = self.profile(
+            {
+                'server': 'example.com:443',
+                'auth': 'secret',
+                'obfs': {
+                    'type': 'gecko',
+                    'gecko': {
+                        'password': 'secret',
+                        'futureGeckoField': {'preserve': True},
+                    },
+                },
+            }
+        )
+        original = copy.deepcopy(profile.connection)
+        editor = Hysteria2Editor()
+
+        editor.factoryToInput(profile)
+
+        self.assertFalse(editor.inputToFactory(profile))
+        self.assertEqual(profile.connection, original)
 
         editor.close()
 

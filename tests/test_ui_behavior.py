@@ -98,6 +98,9 @@ class EditorMappingTest(unittest.TestCase):
                 'environment': {'TOKEN': 'one=two', 'UNICODE': '测试'},
                 'useApplicationTun2socks': True,
                 'tunRemoteAddress': '2001:db8::42',
+                'futureExternalCoreField': {
+                    'nested': ['preserve', 7],
+                },
             }
         )
         profile = ServerProfile.fromConfiguration(
@@ -107,7 +110,10 @@ class EditorMappingTest(unittest.TestCase):
 
         with isolatedSettings():
             editor = ExternalCoreEditor()
+            original = copy.deepcopy(profile.connection)
             editor.factoryToInput(profile)
+
+            self.assertEqual(profile.connection, original)
 
             self.assertEqual(
                 editor._argumentsInput.values(),
@@ -147,6 +153,10 @@ class EditorMappingTest(unittest.TestCase):
             self.assertEqual(
                 profile.connection.tunRemoteAddress(),
                 'server.example.com',
+            )
+            self.assertEqual(
+                profile.connection['futureExternalCoreField'],
+                {'nested': ['preserve', 7]},
             )
 
             editor.close()
