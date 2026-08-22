@@ -978,7 +978,8 @@ class GuiHy2GroupBoxAdvanced(GuiEditorWidgetQGroupBox):
             self.chromeParrotItem,
             self.mimicEnabledItem,
             expandInputs=False,
-            spacing=8,
+            # Specifically tuned for macOS
+            spacing=10 if PLATFORM == 'Darwin' else 8,
         )
 
         return [
