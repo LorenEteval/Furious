@@ -165,7 +165,11 @@ class _EndpointMapWidget(QWidget):
         # are all persistent children of this page-lifetime map widget. This
         # keeps vector-tile caching in memory and gives Chromium one bounded,
         # explicit teardown path with the containing Metrics page.
-        self.webProfile = QWebEngineProfile(self)
+        #
+        # QWebEngineView owns its automatically created page but does not own
+        # the custom profile. Parent the profile to the view only after that
+        # page exists so QObject child destruction releases the page first.
+        self.webProfile = QWebEngineProfile()
         self.webProfile.setHttpCacheType(
             QWebEngineProfile.HttpCacheType.MemoryHttpCache
         )
@@ -175,6 +179,7 @@ class _EndpointMapWidget(QWidget):
         self.webProfile.setHttpUserAgent(self.UserAgent)
 
         self.webView = _EndpointWebView(self.webProfile, self)
+        self.webProfile.setParent(self.webView)
         self.webView.setObjectName('EndpointLocationMap')
         self.webView.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.NoContextMenu)
         self.webView.page().setBackgroundColor(QtCore.Qt.GlobalColor.transparent)

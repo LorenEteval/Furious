@@ -1038,6 +1038,7 @@ class EndpointInfoServiceTest(unittest.TestCase):
         webPage = webView.page()
         webProfile = widget.mapWidget.webProfile
         webBridge = widget.mapWidget.webBridge
+        destructionOrder = []
         initialRevision = widget.mapWidget._viewRevision
         marker = (
             widget.mapWidget._lastWebState['markerLatitude'],
@@ -1069,6 +1070,11 @@ class EndpointInfoServiceTest(unittest.TestCase):
 
         self.assertEqual(len(widget.findChildren(QWebEngineView)), 1)
         self.assertEqual(len(scripts), 41)
+        self.assertIs(webPage.parent(), webView)
+        self.assertIs(webProfile.parent(), webView)
+
+        webPage.destroyed.connect(lambda *_args: destructionOrder.append('page'))
+        webProfile.destroyed.connect(lambda *_args: destructionOrder.append('profile'))
 
         widgetReference = weakref.ref(widget)
         webViewReference = weakref.ref(webView)
@@ -1098,6 +1104,10 @@ class EndpointInfoServiceTest(unittest.TestCase):
         ):
             wrapper = reference()
             self.assertTrue(wrapper is None or not isValid(wrapper))
+
+        self.assertLess(
+            destructionOrder.index('page'), destructionOrder.index('profile')
+        )
 
 
 if __name__ == '__main__':
