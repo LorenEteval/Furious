@@ -280,62 +280,6 @@ class GuiHy2FormBindings(EditorWidgetBinding):
             binding.factoryToInput(config)
 
 
-class GuiHy2ColumnBindings(EditorWidgetBinding):
-    """Arrange independent compact form fields in equal-width columns."""
-
-    def __init__(self, *bindings: EditorWidgetBinding, **kwargs):
-        """Create one persistent row of equal-width one-field forms."""
-        super().__init__(**kwargs)
-
-        self.bindings = tuple(bindings)
-        self._widget = QWidget()
-
-        layout = QHBoxLayout(self._widget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(18)
-
-        columns = []
-
-        for binding in self.bindings:
-            column = QWidget(self._widget)
-
-            columnLayout = QFormLayout(column)
-            columnLayout.setContentsMargins(0, 0, 0, 0)
-            columnLayout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-            columnLayout.setFieldGrowthPolicy(
-                QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
-            )
-            columnLayout.addRow(*binding.widgets())
-
-            layout.addWidget(column, 1)
-            columns.append(column)
-
-        minimumColumnWidth = max(
-            (column.minimumSizeHint().width() for column in columns), default=0
-        )
-
-        for column in columns:
-            column.setMinimumWidth(minimumColumnWidth)
-
-    def widgets(self):
-        """Return the composed full-width column row."""
-        return (self._widget,)
-
-    def inputToFactory(self, config: CoreConfiguration) -> bool:
-        """Apply every binding in the row to the same configuration."""
-        modified = False
-
-        for binding in self.bindings:
-            modified |= binding.inputToFactory(config)
-
-        return modified
-
-    def factoryToInput(self, config: CoreConfiguration):
-        """Load every binding in the row from the same configuration."""
-        for binding in self.bindings:
-            binding.factoryToInput(config)
-
-
 class GuiHy2ItemBasicServer(GuiEditorItemTextInput):
     """Represent GUI hy2 item basic server."""
 
@@ -716,6 +660,12 @@ class GuiHy2PageObfsGecko(GuiHy2PageObfsXXX):
             translatable=False,
         )
 
+        self.packetSizeRow = GuiHy2InlineBindings(
+            self.minPacketSizeItem,
+            self.maxPacketSizeItem,
+            expandInputs=False,
+        )
+
         return [
             GuiHy2ItemObfsType(title='obfs-type', translatable=False),
             GuiHy2ItemObfsPassword(
@@ -723,43 +673,8 @@ class GuiHy2PageObfsGecko(GuiHy2PageObfsXXX):
                 obfsType='gecko',
                 translatable=False,
             ),
-            self.minPacketSizeItem,
-            self.maxPacketSizeItem,
+            self.packetSizeRow,
         ]
-
-    def setupLayout(self):
-        """Align packet sizes with the full-width obfuscation fields."""
-        layout = QGridLayout()
-        layout.setColumnStretch(1, 1)
-        layout.setColumnStretch(3, 1)
-        layout.setHorizontalSpacing(18)
-
-        def addFullRow(index: int, row: int):
-            label, inputWidget = self._containers[index].widgets()
-
-            layout.addWidget(label, row, 0)
-            layout.addWidget(inputWidget, row, 1, 1, 3)
-
-        def addPair(index: int, column: int):
-            label, inputWidget = self._containers[index].widgets()
-
-            layout.addWidget(label, 2, column)
-            layout.addWidget(inputWidget, 2, column + 1)
-
-        packetSizeLabelWidth = max(
-            self.minPacketSizeItem._title.sizeHint().width(),
-            self.maxPacketSizeItem._title.sizeHint().width(),
-        )
-
-        layout.setColumnMinimumWidth(0, packetSizeLabelWidth)
-        layout.setColumnMinimumWidth(2, packetSizeLabelWidth)
-
-        addFullRow(0, 0)
-        addFullRow(1, 1)
-        addPair(2, 0)
-        addPair(3, 2)
-
-        self.setLayout(layout)
 
     def handleMinPacketSizeChanged(self, value: int):
         """Handle min packet size changed."""
@@ -808,7 +723,7 @@ class GuiHy2GroupBoxBasic(GuiEditorWidgetQGroupBox):
             GuiEditorItemBasicRemark(title=_('Remark')),
             GuiHy2ItemBasicServer(title=_('Server')),
             GuiHy2ItemBasicAuth(title='auth', translatable=False),
-            GuiHy2ColumnBindings(
+            GuiHy2InlineBindings(
                 GuiHy2ItemBasicCongestionComboBox(
                     title='congestion-type',
                     key='type',
@@ -819,6 +734,7 @@ class GuiHy2GroupBoxBasic(GuiEditorWidgetQGroupBox):
                     key='bbrProfile',
                     translatable=False,
                 ),
+                expandInputs=False,
             ),
         ]
 
@@ -1056,15 +972,16 @@ class GuiHy2GroupBoxAdvanced(GuiEditorWidgetQGroupBox):
             ),
         )
 
-        self.toggleRow = GuiHy2ColumnBindings(
+        self.optionsRow = GuiHy2InlineBindings(
+            self.ipModeItem,
             self.chromeParrotItem,
             self.mimicEnabledItem,
+            expandInputs=False,
         )
 
         return [
             self.obfsItem,
-            self.ipModeItem,
-            self.toggleRow,
+            self.optionsRow,
         ]
 
     def setupPageLayout(self):

@@ -291,12 +291,12 @@ class QtLifetimeTest(unittest.TestCase):
         factories = (
             ('external-core', ExternalCoreEditor, 35),
             ('socks-protocol', SocksEditor, 35),
-            ('vless-protocol', VlessEditor, 12),
-            ('vmess-protocol', VmessEditor, 12),
+            ('vless-protocol', VlessEditor, 25),
+            ('vmess-protocol', VmessEditor, 25),
             ('trojan-protocol', TrojanEditor, 12),
             ('shadowsocks-protocol', ShadowsocksEditor, 12),
             ('hysteria1-protocol', Hysteria1Editor, 12),
-            ('hysteria2-protocol', Hysteria2Editor, 12),
+            ('hysteria2-protocol', Hysteria2Editor, 25),
             ('xray-tun-settings', XrayTunSettingsDialog, 25),
             ('hysteria2-tun-settings', Hysteria2TunSettingsDialog, 25),
             (

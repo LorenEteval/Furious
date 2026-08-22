@@ -28,6 +28,8 @@ from .DynamicTranslate import (
     gettext,
 )
 from .EditorWidgets import (
+    addEditorGridBinding,
+    addEditorGridFullRow,
     GuiEditorItemBasicRemark,
     GuiEditorItemProxyHttp,
     GuiEditorItemProxySocks,
@@ -99,6 +101,8 @@ from .TextEditorTheme import (
 from .HttpGetManager import HttpGetManager
 
 __all__ = [
+    'addEditorGridBinding',
+    'addEditorGridFullRow',
     'ABBR_TO_LANGUAGE',
     'AppHue',
     'AppQAction',

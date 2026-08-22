@@ -31,6 +31,8 @@ from PySide6.QtWidgets import *
 from typing import Callable, Sequence
 
 __all__ = [
+    'addEditorGridBinding',
+    'addEditorGridFullRow',
     'GuiEditorItemTextInput',
     'GuiEditorItemTextSpinBox',
     'GuiEditorItemTextComboBox',
@@ -42,6 +44,31 @@ __all__ = [
     'GuiEditorWidgetQGroupBox',
     'GuiEditorWidgetQDialog',
 ]
+
+
+def addEditorGridBinding(
+    layout: QGridLayout,
+    binding: EditorWidgetBinding,
+    row: int,
+    column: int,
+):
+    """Add one labeled editor binding to a two-field grid row."""
+    label, inputWidget = binding.widgets()
+
+    layout.addWidget(label, row, column)
+    layout.addWidget(inputWidget, row, column + 1)
+
+
+def addEditorGridFullRow(
+    layout: QGridLayout,
+    binding: EditorWidgetBinding,
+    row: int,
+):
+    """Add one labeled editor binding across both fields of a grid row."""
+    label, inputWidget = binding.widgets()
+
+    layout.addWidget(label, row, 0)
+    layout.addWidget(inputWidget, row, 1, 1, 3)
 
 
 class GuiEditorItemTextInput(EditorWidgetBinding):
@@ -113,6 +140,8 @@ class GuiEditorItemTextComboBox(EditorWidgetBinding):
 
     def __init__(self, *args, **kwargs):
         """Initialize the GuiEditorItemTextComboBox."""
+        self.preserveUnknownValues = kwargs.pop('preserveUnknownValues', False)
+
         title = kwargs.pop('title', '')
         translatable = kwargs.pop('translatable', True)
         parent = kwargs.pop('parent', None)
@@ -127,11 +156,26 @@ class GuiEditorItemTextComboBox(EditorWidgetBinding):
 
     def text(self) -> str:
         """Return the text value."""
+        if self.preserveUnknownValues and self._input.currentIndex() < 0:
+            return self._input.placeholderText()
+
         return self._input.currentText()
 
     def setText(self, text: str):
         """Set text."""
-        self._input.setCurrentText(text)
+        if not self.preserveUnknownValues:
+            self._input.setCurrentText(text)
+
+            return
+
+        index = self._input.findText(text)
+
+        if index >= 0:
+            self._input.setPlaceholderText('')
+            self._input.setCurrentIndex(index)
+        else:
+            self._input.setPlaceholderText(text)
+            self._input.setCurrentIndex(-1)
 
     def addItems(self, texts: Sequence[str]):
         """Add items."""

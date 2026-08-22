@@ -216,8 +216,8 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
             ('bandwidth.up', 'bandwidth.down'),
         )
         self.assertEqual(
-            tuple(binding._title.text() for binding in advanced.toggleRow.bindings),
-            ('quic.disableChromeParrot', 'mimic.enabled'),
+            tuple(binding._title.text() for binding in advanced.optionsRow.bindings),
+            ('ipMode', 'quic.disableChromeParrot', 'mimic.enabled'),
         )
         self.assertEqual(
             proxyBandwidth.bandwidthFields._widget.layout().contentsMargins().top(),
@@ -248,73 +248,27 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
         geckoPage = advanced.obfsItem.page(HY2_OBFS_TYPES.index('gecko'))
         advanced.obfsItem.setCurrentIndex(HY2_OBFS_TYPES.index('gecko'))
         application().processEvents()
-        obfsInputPositions = tuple(
-            binding._input.mapTo(advanced, binding._input.rect().topLeft()).x()
-            for binding in geckoPage._containers[:2]
-        )
-        packetSizePositions = tuple(
-            binding._input.mapTo(advanced, binding._input.rect().topLeft())
-            for binding in (
+        self.assertEqual(
+            geckoPage.packetSizeRow.bindings,
+            (
                 geckoPage.minPacketSizeItem,
                 geckoPage.maxPacketSizeItem,
-            )
+            ),
         )
-        alignedLabelPositions = tuple(
-            label.mapTo(advanced, label.rect().topLeft()).x()
-            for label in (
-                geckoPage._containers[0]._title,
-                advanced.ipModeItem._title,
-                advanced.chromeParrotItem._title,
-            )
-        )
-        togglePositions = tuple(
-            binding._input.mapTo(advanced, binding._input.rect().topLeft())
-            for binding in advanced.toggleRow.bindings
-        )
+        self.assertIs(geckoPage._containers[-1], geckoPage.packetSizeRow)
+        self.assertIs(advanced._containers[-1], advanced.optionsRow)
+        self.assertEqual(len(advanced._containers), 2)
 
-        self.assertEqual(len(set(obfsInputPositions)), 1)
-        self.assertEqual(packetSizePositions[0].y(), packetSizePositions[1].y())
-        self.assertEqual(obfsInputPositions[1], packetSizePositions[0].x())
-        packetPairWidths = tuple(
-            binding._input.mapTo(
-                geckoPage,
-                binding._input.rect().topRight(),
-            ).x()
-            - binding._title.mapTo(
-                geckoPage,
-                binding._title.rect().topLeft(),
-            ).x()
-            + 1
-            for binding in (
-                geckoPage.minPacketSizeItem,
-                geckoPage.maxPacketSizeItem,
+        for row in (
+            basic._containers[-1],
+            geckoPage.packetSizeRow,
+            advanced.optionsRow,
+        ):
+            rowLayout = row._widget.layout()
+
+            self.assertTrue(
+                all(rowLayout.stretch(index) == 0 for index in range(rowLayout.count()))
             )
-        )
-        self.assertLessEqual(abs(packetPairWidths[0] - packetPairWidths[1]), 1)
-        congestionColumns = tuple(
-            basic._containers[-1]._widget.layout().itemAt(index).widget().width()
-            for index in range(2)
-        )
-        self.assertLessEqual(abs(congestionColumns[0] - congestionColumns[1]), 1)
-        self.assertEqual(len(set(alignedLabelPositions)), 1)
-        ipModeInputPosition = advanced.ipModeItem._input.mapTo(
-            advanced,
-            advanced.ipModeItem._input.rect().topLeft(),
-        ).x()
-        self.assertNotEqual(obfsInputPositions[0], ipModeInputPosition)
-        self.assertEqual(togglePositions[0].y(), togglePositions[1].y())
-        packetSizeBottom = geckoPage.maxPacketSizeItem._input.mapTo(
-            advanced,
-            geckoPage.maxPacketSizeItem._input.rect().bottomLeft(),
-        ).y()
-        ipModeTop = advanced.ipModeItem._input.mapTo(
-            advanced,
-            advanced.ipModeItem._input.rect().topLeft(),
-        ).y()
-        self.assertLessEqual(
-            ipModeTop - packetSizeBottom,
-            advanced.fontMetrics().height(),
-        )
 
         editor.close()
 

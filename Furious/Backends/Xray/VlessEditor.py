@@ -238,6 +238,8 @@ class GuiVLESSItemBasicFlow(GuiEditorItemTextComboBox):
 
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVLESSItemBasicFlow."""
+        kwargs.setdefault('preserveUnknownValues', True)
+
         super().__init__(*args, **kwargs)
 
         self.addItems(
@@ -301,32 +303,16 @@ class GuiVLESSGroupBoxBasic(GuiEditorWidgetQGroupBox):
                     widget.sizePolicy().verticalPolicy(),
                 )
 
-        def addPair(index: int, row: int, column: int):
-            """Add pair."""
-            label, inputWidget = self._containers[index].widgets()
+        keepSpinBoxCompact(self._containers[2].widgets()[1])
 
-            keepSpinBoxCompact(inputWidget)
+        addEditorGridFullRow(layout, self._containers[0], 0)
+        addEditorGridBinding(layout, self._containers[1], 1, 0)
+        addEditorGridBinding(layout, self._containers[2], 1, 2)
+        addEditorGridFullRow(layout, self._containers[3], 2)
+        addEditorGridBinding(layout, self._containers[4], 3, 0)
+        addEditorGridBinding(layout, self._containers[5], 3, 2)
 
-            layout.addWidget(label, row, column)
-            layout.addWidget(inputWidget, row, column + 1)
-
-        def addFullRow(index: int, row: int):
-            """Add full row."""
-            label, inputWidget = self._containers[index].widgets()
-
-            keepSpinBoxCompact(inputWidget)
-
-            layout.addWidget(label, row, 0)
-            layout.addWidget(inputWidget, row, 1, 1, 3)
-
-        addFullRow(0, 0)
-        addFullRow(1, 1)
-        addFullRow(2, 2)
-        addFullRow(3, 3)
-        addPair(4, 4, 0)
-        addPair(5, 4, 2)
-
-        layout.setRowStretch(5, 1)
+        layout.setRowStretch(4, 1)
 
         return layout
 

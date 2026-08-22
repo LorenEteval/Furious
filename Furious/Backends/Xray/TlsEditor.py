@@ -44,6 +44,8 @@ class GuiVTLSItemSecurity(GuiEditorItemTextComboBox):
 
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTLSItemSecurity."""
+        kwargs.setdefault('preserveUnknownValues', True)
+
         super().__init__(*args, **kwargs)
 
         self.addItems(STREAM_SECURITY)
@@ -594,20 +596,6 @@ class GuiVTLSPageTLS(GuiVTLSPageXXX):
         basicLayout.setColumnStretch(1, 1)
         basicLayout.setColumnStretch(3, 1)
 
-        def addPair(index: int, row: int, column: int):
-            """Add pair."""
-            label, inputWidget = self._containers[index].widgets()
-
-            basicLayout.addWidget(label, row, column)
-            basicLayout.addWidget(inputWidget, row, column + 1)
-
-        def addBasicFullRow(index: int, row: int):
-            """Add basic full row."""
-            label, inputWidget = self._containers[index].widgets()
-
-            basicLayout.addWidget(label, row, 0)
-            basicLayout.addWidget(inputWidget, row, 1, 1, 3)
-
         def addFullRow(index: int):
             """Add full row."""
             widgets = self._containers[index].widgets()
@@ -619,11 +607,11 @@ class GuiVTLSPageTLS(GuiVTLSPageXXX):
 
                 layout.addRow(label, inputWidget)
 
-        addPair(0, 0, 0)
-        addPair(2, 0, 2)
-        addPair(1, 1, 0)
-        addPair(3, 1, 2)
-        addBasicFullRow(4, 2)
+        addEditorGridBinding(basicLayout, self._containers[0], 0, 0)
+        addEditorGridBinding(basicLayout, self._containers[2], 0, 2)
+        addEditorGridBinding(basicLayout, self._containers[1], 1, 0)
+        addEditorGridBinding(basicLayout, self._containers[3], 1, 2)
+        addEditorGridFullRow(basicLayout, self._containers[4], 2)
 
         layout.addRow(basicLayout)
 
@@ -673,27 +661,13 @@ class GuiVTLSPageReality(GuiVTLSPageXXX):
         layout.setColumnStretch(3, 1)
         layout.setHorizontalSpacing(12)
 
-        def addPair(index: int, row: int, column: int):
-            """Add pair."""
-            label, inputWidget = self._containers[index].widgets()
-
-            layout.addWidget(label, row, column)
-            layout.addWidget(inputWidget, row, column + 1)
-
-        def addFullRow(index: int, row: int):
-            """Add full row."""
-            label, inputWidget = self._containers[index].widgets()
-
-            layout.addWidget(label, row, 0)
-            layout.addWidget(inputWidget, row, 1, 1, 3)
-
-        addPair(0, 0, 0)
-        addPair(2, 0, 2)
-        addPair(1, 1, 0)
-        addPair(4, 1, 2)
-        addFullRow(3, 2)
-        addFullRow(5, 3)
-        addFullRow(6, 4)
+        addEditorGridBinding(layout, self._containers[0], 0, 0)
+        addEditorGridBinding(layout, self._containers[2], 0, 2)
+        addEditorGridBinding(layout, self._containers[1], 1, 0)
+        addEditorGridBinding(layout, self._containers[4], 1, 2)
+        addEditorGridFullRow(layout, self._containers[3], 2)
+        addEditorGridFullRow(layout, self._containers[5], 3)
+        addEditorGridFullRow(layout, self._containers[6], 4)
 
         self.setLayout(layout)
 

@@ -83,6 +83,8 @@ class GuiHy1ItemBasicProtocol(GuiEditorItemTextComboBox):
 
     def __init__(self, *args, **kwargs):
         """Initialize the GuiHy1ItemBasicProtocol."""
+        kwargs.setdefault('preserveUnknownValues', True)
+
         super().__init__(*args, **kwargs)
 
         self.addItems(['', 'udp', 'wechat-video', 'faketcp'])

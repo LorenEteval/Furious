@@ -19,6 +19,10 @@
 
 from __future__ import annotations
 
+from Furious.Backends.Configuration import (
+    ConfigXray,
+    configXrayEmptyProxyOutboundObject,
+)
 from Furious.Backends.ExternalCore.Configuration import (
     BLANK_CONFIG_EXTERNAL_CORE,
     ConfigExternalCore,
@@ -31,8 +35,19 @@ from Furious.Backends.Xray.RoutingWindow import RoutingRulesDialog
 from Furious.Backends.Xray.ShadowsocksEditor import ShadowsocksEditor
 from Furious.Backends.Xray.SocksEditor import SocksEditor
 from Furious.Backends.Xray.TrojanEditor import TrojanEditor
-from Furious.Backends.Xray.VlessEditor import VlessEditor
-from Furious.Backends.Xray.VmessEditor import VmessEditor
+from Furious.Backends.Xray.TransportEditor import (
+    GuiVTransportPageXHttp,
+    GuiVTransportQGroupBox,
+    STREAM_NETWORK,
+)
+from Furious.Backends.Xray.VlessEditor import (
+    GuiVLESSGroupBoxBasic,
+    VlessEditor,
+)
+from Furious.Backends.Xray.VmessEditor import (
+    GuiVMessGroupBoxBasic,
+    VmessEditor,
+)
 from Furious.Actions.Connection import ConnectAction
 from Furious.Controllers.ConnectionController import (
     ConnectionError,
@@ -44,9 +59,11 @@ from Furious.Controllers.SettingsController import (
     LOG_AUTO_SCROLL_DOWN_SETTING,
 )
 from Furious.Frozenlib import APPLICATION_NAME, AppSettings, Mixins
-from Furious.Models import ProfileMetadata, ServerProfile
+from Furious.Models import ProfileMetadata, Protocol, ServerProfile
+from Furious.Plugins.API import RoutingOption
 from Furious.Qt import (
     AppHue,
+    AppQComboBox,
     AppQMessageBox,
     AppQSwitch,
     AppStyleSheet,
@@ -61,9 +78,11 @@ from Furious.Service import (
 from Furious.Window.LogPage import LogPage
 from Furious.Window.SubscriptionPage import _SubscriptionEditorDialog
 from Furious.Widget.ConnectionButton import ConnectionButton
+from Furious.Widget.RoutingSelector import RoutingSelector
 
 from PySide6 import QtCore
 from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QHBoxLayout, QWidget
 
 from tests.support import (
     application,
@@ -93,6 +112,168 @@ class EditorMappingTest(unittest.TestCase):
     def tearDown(self):
         """Finish every deferred transient deletion between tests."""
         collectAtBoundary()
+
+    @staticmethod
+    def xrayProfile(protocol: Protocol, user: dict) -> ServerProfile:
+        """Return one minimal Xray profile for a basic-editor round trip."""
+        outbound = configXrayEmptyProxyOutboundObject(protocol)
+        server = outbound['settings']['vnext'][0]
+
+        server['address'] = 'server.example.com'
+        server['port'] = 443
+        server['users'][0].update(user)
+
+        return ServerProfile.fromConfiguration(
+            ConfigXray({'outbounds': [outbound]}),
+            ProfileMetadata(displayName='Fixture profile'),
+        )
+
+    def assertBindingPosition(
+        self,
+        layout,
+        binding,
+        row: int,
+        labelColumn: int,
+        inputColumn: int,
+        inputColumnSpan: int = 1,
+    ):
+        """Assert one binding's logical grid placement without pixel geometry."""
+        label, inputWidget = binding.widgets()
+
+        self.assertEqual(
+            layout.getItemPosition(layout.indexOf(label)),
+            (row, labelColumn, 1, 1),
+        )
+        self.assertEqual(
+            layout.getItemPosition(layout.indexOf(inputWidget)),
+            (row, inputColumn, 1, inputColumnSpan),
+        )
+
+    def testVlessBasicUsesTlsGridRowsWithoutChangingMapping(self):
+        """Pair address/port and encryption/flow around full-width fields."""
+        profile = self.xrayProfile(
+            Protocol.VLESS,
+            {
+                'id': 'fixture-vless-id',
+                'encryption': 'none',
+                'flow': 'future-vless-flow',
+            },
+        )
+        original = copy.deepcopy(profile.connection)
+        group = GuiVLESSGroupBoxBasic()
+        layout = group._widget.currentWidget().layout()
+
+        group.factoryToInput(profile)
+
+        self.assertFalse(group.inputToFactory(profile))
+        self.assertEqual(profile.connection, original)
+        self.assertBindingPosition(layout, group._containers[0], 0, 0, 1, 3)
+        self.assertBindingPosition(layout, group._containers[1], 1, 0, 1)
+        self.assertBindingPosition(layout, group._containers[2], 1, 2, 3)
+        self.assertBindingPosition(layout, group._containers[3], 2, 0, 1, 3)
+        self.assertBindingPosition(layout, group._containers[4], 3, 0, 1)
+        self.assertBindingPosition(layout, group._containers[5], 3, 2, 3)
+        self.assertEqual(group._containers[4].text(), 'none')
+        self.assertEqual(group._containers[5].text(), 'future-vless-flow')
+
+        group.deleteLater()
+
+    def testVmessBasicUsesTlsGridRowsWithoutChangingMapping(self):
+        """Pair address/port and security/alterId around the UUID row."""
+        profile = self.xrayProfile(
+            Protocol.VMess,
+            {
+                'id': 'fixture-vmess-id',
+                'security': 'future-vmess-security',
+                'alterId': 17,
+            },
+        )
+        original = copy.deepcopy(profile.connection)
+        group = GuiVMessGroupBoxBasic()
+        layout = group._widget.currentWidget().layout()
+
+        group.factoryToInput(profile)
+
+        self.assertFalse(group.inputToFactory(profile))
+        self.assertEqual(profile.connection, original)
+        self.assertBindingPosition(layout, group._containers[0], 0, 0, 1, 3)
+        self.assertBindingPosition(layout, group._containers[1], 1, 0, 1)
+        self.assertBindingPosition(layout, group._containers[2], 1, 2, 3)
+        self.assertBindingPosition(layout, group._containers[3], 2, 0, 1, 3)
+        self.assertBindingPosition(layout, group._containers[5], 3, 0, 1)
+        self.assertBindingPosition(layout, group._containers[4], 3, 2, 3)
+        self.assertEqual(group._containers[5].text(), 'future-vmess-security')
+        self.assertEqual(group._containers[4].value(), 17)
+
+        group.deleteLater()
+
+    def testXHttpHostAndPathShareOneRowWithoutChangingMapping(self):
+        """Pair xhttp Host/Path while preserving switching and configuration."""
+        profile = self.xrayProfile(
+            Protocol.VLESS,
+            {
+                'id': 'fixture-xhttp-id',
+                'encryption': 'none',
+                'flow': '',
+            },
+        )
+        streamSettings = ConfigXray.getProxyOutboundStream(profile.connection)
+        streamSettings.update(
+            {
+                'network': 'xhttp',
+                'xhttpSettings': {
+                    'host': 'cdn.example.com',
+                    'path': '/a/representative/xhttp/path',
+                    'mode': 'auto',
+                    'extra': {'noGRPCHeader': True},
+                },
+            }
+        )
+        original = copy.deepcopy(profile.connection)
+        group = GuiVTransportQGroupBox()
+
+        group.factoryToInput(profile.connection)
+
+        xhttpIndex = STREAM_NETWORK.index('xhttp')
+        wsIndex = STREAM_NETWORK.index('ws')
+        page = group.page(xhttpIndex)
+        self.assertIsInstance(page, GuiVTransportPageXHttp)
+        layout = page.layout()
+        host = page._containers[2]
+        path = page._containers[3]
+        hostInput = host.widgets()[1]
+        pathInput = path.widgets()[1]
+
+        self.assertBindingPosition(layout, page._containers[0], 0, 0, 1)
+        self.assertBindingPosition(layout, page._containers[1], 1, 0, 1, 3)
+        self.assertBindingPosition(layout, page._containers[4], 3, 0, 1)
+        self.assertBindingPosition(layout, page._containers[5], 4, 0, 1, 3)
+        self.assertBindingPosition(layout, host, 2, 0, 1)
+        self.assertBindingPosition(layout, path, 2, 2, 3)
+        self.assertEqual(host.text(), 'cdn.example.com')
+        self.assertEqual(path.text(), '/a/representative/xhttp/path')
+        self.assertEqual(profile.connection, original)
+
+        group.handleActivated(wsIndex)
+        group.handleActivated(xhttpIndex)
+
+        self.assertIs(group.page(xhttpIndex), page)
+        self.assertIs(host.widgets()[1], hostInput)
+        self.assertIs(path.widgets()[1], pathInput)
+        self.assertFalse(group.inputToFactory(profile.connection))
+        self.assertEqual(profile.connection, original)
+
+        host.setText('edge.example.net')
+        path.setText('/updated/path')
+
+        self.assertTrue(group.inputToFactory(profile.connection))
+        self.assertEqual(
+            streamSettings['xhttpSettings']['host'],
+            'edge.example.net',
+        )
+        self.assertEqual(streamSettings['xhttpSettings']['path'], '/updated/path')
+
+        group.deleteLater()
 
     def testExternalCoreEditorRoundTripsStructuredFields(self):
         """Keep arguments, environment, process paths, and TUN data distinct."""

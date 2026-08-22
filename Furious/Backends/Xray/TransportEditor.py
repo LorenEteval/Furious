@@ -51,6 +51,8 @@ class GuiVTransportItemNetwork(GuiEditorItemTextComboBox):
 
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVTransportItemNetwork."""
+        kwargs.setdefault('preserveUnknownValues', True)
+
         super().__init__(*args, **kwargs)
 
         self.addItems(STREAM_NETWORK)
@@ -1757,6 +1759,21 @@ class GuiVTransportPageXHttp(GuiVTransportPageXXX):
             GuiVTransportItemModeXHttp(title='Mode', translatable=False),
             GuiVTransportItemExtraXHttp(title='Extra', translatable=False),
         ]
+
+    def setupLayout(self):
+        """Place Host and Path together while preserving the remaining rows."""
+        layout = QGridLayout()
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(3, 2)
+
+        addEditorGridBinding(layout, self._containers[0], 0, 0)
+        addEditorGridFullRow(layout, self._containers[1], 1)
+        addEditorGridBinding(layout, self._containers[2], 2, 0)
+        addEditorGridBinding(layout, self._containers[3], 2, 2)
+        addEditorGridBinding(layout, self._containers[4], 3, 0)
+        addEditorGridFullRow(layout, self._containers[5], 4)
+
+        self.setLayout(layout)
 
 
 class GuiVTransportPageH2(GuiVTransportPageXXX):

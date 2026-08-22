@@ -237,6 +237,8 @@ class GuiVMessItemBasicSecurity(GuiEditorItemTextComboBox):
 
     def __init__(self, *args, **kwargs):
         """Initialize the GuiVMessItemBasicSecurity."""
+        kwargs.setdefault('preserveUnknownValues', True)
+
         super().__init__(*args, **kwargs)
 
         self.addItems(
@@ -291,7 +293,8 @@ class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
     def setupPageLayout(self):
         """Set up page layout."""
         layout = QGridLayout()
-        layout.setColumnStretch(4, 1)
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(3, 1)
 
         def keepSpinBoxCompact(widget: QWidget):
             """Handle keep spin box compact for the GUI v mess group box basic."""
@@ -309,33 +312,18 @@ class GuiVMessGroupBoxBasic(GuiEditorWidgetQGroupBox):
                     widget.sizePolicy().verticalPolicy(),
                 )
 
-        def addPair(index: int, row: int, column: int):
-            """Add pair."""
-            label, inputWidget = self._containers[index].widgets()
-
-            keepSpinBoxCompact(inputWidget)
-
-            layout.addWidget(label, row, column)
-            layout.addWidget(inputWidget, row, column + 1)
-
-        def addFullRow(index: int, row: int):
-            """Add full row."""
-            label, inputWidget = self._containers[index].widgets()
-
-            keepSpinBoxCompact(inputWidget)
-
-            layout.addWidget(label, row, 0)
-            layout.addWidget(inputWidget, row, 1, 1, 4)
-
-        addFullRow(0, 0)
-        addFullRow(1, 1)
-        addPair(2, 2, 0)
-        addPair(4, 2, 2)
-        addFullRow(3, 3)
+        keepSpinBoxCompact(self._containers[2].widgets()[1])
+        keepSpinBoxCompact(self._containers[4].widgets()[1])
         keepComboBoxCompact(self._containers[5].widgets()[1])
-        addFullRow(5, 4)
 
-        layout.setRowStretch(5, 1)
+        addEditorGridFullRow(layout, self._containers[0], 0)
+        addEditorGridBinding(layout, self._containers[1], 1, 0)
+        addEditorGridBinding(layout, self._containers[2], 1, 2)
+        addEditorGridFullRow(layout, self._containers[3], 2)
+        addEditorGridBinding(layout, self._containers[5], 3, 0)
+        addEditorGridBinding(layout, self._containers[4], 3, 2)
+
+        layout.setRowStretch(4, 1)
 
         return layout
 
