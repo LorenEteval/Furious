@@ -6,7 +6,7 @@ pyqrcode
 pypng
 icmplib
 mss
-zxing-cpp
+zxing-cpp<3
 pillow
 Xray-core
 hysteria
