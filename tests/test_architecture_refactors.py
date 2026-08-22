@@ -500,3 +500,20 @@ class StyleSheetCompositionTest(TestCase):
                 dropDownRule = dropDownRule.split('}', 1)[0]
 
                 self.assertIn('subcontrol-origin: padding;', dropDownRule)
+
+    def testSpinBoxButtonHoverStaysInsideTheFocusBorder(self):
+        """Keep both spin-button hover fills inside the outer focus outline."""
+        selectors = (
+            'QSpinBox::up-button,',
+            'QSpinBox::down-button,',
+        )
+
+        for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
+            stylesheet = AppStyleSheet.forTheme(theme)
+
+            for selector in selectors:
+                with self.subTest(theme=theme, selector=selector):
+                    buttonRule = stylesheet.split(selector, 1)[1]
+                    buttonRule = buttonRule.split('}', 1)[0]
+
+                    self.assertIn('subcontrol-origin: padding;', buttonRule)

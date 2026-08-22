@@ -16,6 +16,9 @@ Use the `manage-qt-pyside6-lifetimes` skill for any Qt ownership or lifecycle ch
   where practical.
 - `AppStyleSheet` remains the sole public stylesheet authority. Internal `StyleSheets` modules are data-oriented QSS
   fragments that consume the centralized semantic palette; application consumers must not import fragments directly.
+- For composite controls, let the outer widget own its frame, radius, and focus indication. Sub-control hover/pressed
+  fills must remain inside that frame (normally through padding/content origin), and state-order changes should be
+  verified in both application themes.
 
 ## Ownership and destruction
 

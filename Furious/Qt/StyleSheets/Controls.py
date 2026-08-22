@@ -231,15 +231,28 @@ def controlStyleSheet(
                 background-color: {palette['accent_soft_hover']};
             }}
 
-            QPushButton#NavigationPageButton QLabel {{
+            QLabel#NavigationPageButtonText {{
                 border: none;
                 background-color: transparent;
                 color: {palette['text']};
             }}
 
-            QPushButton#NavigationPageButton:checked QLabel {{
+            QLabel#NavigationPageButtonText[selected="true"] {{
                 color: {palette['text_strong']};
                 font-weight: 600;
+            }}
+
+            QPushButton#NavigationToggleButton:disabled,
+            QPushButton#NavigationPageButton:disabled {{
+                color: {palette['disabled']};
+            }}
+
+            QPushButton#NavigationPageButton:checked:disabled {{
+                background-color: {palette['accent_soft']};
+            }}
+
+            QLabel#NavigationPageButtonText:disabled {{
+                color: {palette['disabled']};
             }}
 
             QPushButton#SearchButton {{
@@ -317,6 +330,10 @@ def controlStyleSheet(
             QPushButton:flat {{
                 border-color: transparent;
                 background-color: transparent;
+            }}
+
+            QPushButton:flat:focus {{
+                border-color: {palette['accent']};
             }}
 
             QPushButton:disabled {{
@@ -432,7 +449,7 @@ def controlStyleSheet(
 
             QSpinBox::up-button,
             QDoubleSpinBox::up-button {{
-                subcontrol-origin: border;
+                subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 28px;
                 height: 16px;
@@ -445,7 +462,7 @@ def controlStyleSheet(
 
             QSpinBox::down-button,
             QDoubleSpinBox::down-button {{
-                subcontrol-origin: border;
+                subcontrol-origin: padding;
                 subcontrol-position: bottom right;
                 width: 28px;
                 height: 16px;

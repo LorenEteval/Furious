@@ -57,6 +57,13 @@ class _NavigationButton(IconTextPushButton):
         self.selectionIndicator = None
 
         if hasSelectionIndicator:
+            # Qt does not reliably evaluate a button pseudo-state when that
+            # state appears on the ancestor side of a descendant QSS selector.
+            # Keep the visible label's selected state on the label itself so
+            # checked and disabled colors remain independent.
+            self._textLabel.setObjectName('NavigationPageButtonText')
+            self._textLabel.setProperty('selected', False)
+
             self.selectionIndicator = QFrame(parent=self)
             self.selectionIndicator.setObjectName('NavigationSelectionIndicator')
             self.selectionIndicator.setFixedWidth(self.SelectionIndicatorWidth)
@@ -73,6 +80,14 @@ class _NavigationButton(IconTextPushButton):
     @QtCore.Slot(bool)
     def _selectionChanged(self, selected: bool):
         """Show the independent indicator for a selected page."""
+        self._textLabel.setProperty('selected', selected)
+
+        style = self._textLabel.style()
+        style.unpolish(self._textLabel)
+        style.polish(self._textLabel)
+
+        self._textLabel.update()
+
         self.selectionIndicator.setVisible(selected)
 
         if selected:

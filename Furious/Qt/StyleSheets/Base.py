@@ -244,6 +244,15 @@ def baseStyleSheet(palette):
                 color: {palette['text_strong']};
             }}
 
+            QPushButton#SettingsLinkButton:focus {{
+                border: 1px solid {palette['accent']};
+            }}
+
+            QPushButton#SettingsLinkButton:disabled {{
+                border-color: transparent;
+                color: {palette['disabled']};
+            }}
+
             QCheckBox#SettingsToggle::indicator {{
                 width: 34px;
                 height: 18px;
