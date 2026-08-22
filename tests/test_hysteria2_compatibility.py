@@ -30,8 +30,12 @@ from Furious.Backends.Hysteria2.Editor import (
 )
 from Furious.Backends.Hysteria2.Process import Hysteria2
 from Furious.Backends.Hysteria2.Protocols import Hysteria2ProtocolHandler
+from Furious.Backends.Hysteria2.TunSettingsDialog import (
+    GuiHysteria2TUNSettingsGroupBoxInterface,
+)
 from Furious.Frozenlib import AppSettings, Mixins
 from Furious.Models.Profile import ServerProfile
+from Furious.Qt import AppStyleSheet
 
 from tests.support import (
     application,
@@ -271,6 +275,120 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
             )
 
         editor.close()
+
+    def testOriginalSectionInsetsContainNaturalAdvancedOptionsRow(self):
+        """Restore canonical editor insets while containing compact options."""
+        app = application()
+        previousStyleSheet = app.styleSheet()
+
+        try:
+            for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
+                with self.subTest(theme=theme):
+                    app.setStyleSheet(AppStyleSheet.forTheme(theme))
+                    editor = Hysteria2Editor()
+                    editor.show()
+                    app.processEvents()
+
+                    self.assertGreaterEqual(
+                        editor.width(), editor.minimumSizeHint().width()
+                    )
+                    self.assertGreaterEqual(
+                        editor.height(), editor.minimumSizeHint().height()
+                    )
+
+                    basic, proxyBandwidth, advanced, tls = editor.groupBoxSequence()
+                    referenceGroup = GuiHysteria2TUNSettingsGroupBoxInterface(
+                        parent=editor
+                    )
+                    referenceSectionMargins = referenceGroup.layout().contentsMargins()
+                    referencePageMargins = (
+                        referenceGroup._widget.currentWidget()
+                        .layout()
+                        .contentsMargins()
+                    )
+                    firstWidgets = (
+                        basic._containers[0]._title,
+                        proxyBandwidth.proxyFields.bindings[0]._title,
+                        advanced.obfsItem.page(advanced.obfsItem.currentIndex())
+                        ._containers[0]
+                        ._title,
+                        tls._containers[0]._title,
+                    )
+
+                    for group in editor.groupBoxSequence():
+                        sectionMargins = group.layout().contentsMargins()
+                        pageMargins = (
+                            group._widget.currentWidget().layout().contentsMargins()
+                        )
+
+                        self.assertEqual(sectionMargins, referenceSectionMargins)
+                        self.assertEqual(pageMargins, referencePageMargins)
+                        self.assertGreater(pageMargins.left(), 0)
+                        self.assertEqual(pageMargins.left(), pageMargins.right())
+                        self.assertEqual(pageMargins.top(), pageMargins.bottom())
+
+                    firstPositions = tuple(
+                        widget.mapTo(group, widget.rect().topLeft()).x()
+                        for group, widget in zip(
+                            editor.groupBoxSequence(), firstWidgets
+                        )
+                    )
+                    self.assertEqual(len(set(firstPositions)), 1)
+
+                    row = advanced.optionsRow._widget
+                    rowLayout = row.layout()
+                    widgets = tuple(
+                        widget
+                        for binding in advanced.optionsRow.bindings
+                        for widget in binding.widgets()
+                    )
+
+                    self.assertEqual(rowLayout.contentsMargins().left(), 0)
+                    self.assertEqual(rowLayout.contentsMargins().right(), 0)
+                    self.assertEqual(rowLayout.spacing(), 8)
+                    self.assertIsNotNone(
+                        rowLayout.itemAt(rowLayout.count() - 1).spacerItem()
+                    )
+                    self.assertLessEqual(
+                        row.sizeHint().width() + rowLayout.spacing(),
+                        row.contentsRect().width(),
+                    )
+
+                    previousRight = row.contentsRect().left()
+
+                    for widget in widgets:
+                        topLeft = widget.mapTo(row, widget.rect().topLeft())
+                        right = topLeft.x() + widget.width()
+                        requiredWidth = min(
+                            widget.minimumSizeHint().width(),
+                            widget.maximumWidth(),
+                        )
+
+                        self.assertTrue(widget.isVisible())
+                        self.assertGreaterEqual(widget.width(), requiredWidth)
+                        self.assertGreaterEqual(topLeft.x(), previousRight)
+                        self.assertLessEqual(right, row.contentsRect().right() + 1)
+
+                        previousRight = right
+
+                    self.assertGreaterEqual(
+                        row.contentsRect().right() + 1 - previousRight,
+                        rowLayout.spacing(),
+                    )
+
+                    mimicSwitch = advanced.mimicEnabledItem._input
+                    mimicRight = (
+                        mimicSwitch.mapTo(advanced, mimicSwitch.rect().topLeft()).x()
+                        + mimicSwitch.width()
+                    )
+
+                    self.assertLessEqual(
+                        mimicRight, advanced.contentsRect().right() + 1
+                    )
+
+                    editor.close()
+        finally:
+            app.setStyleSheet(previousStyleSheet)
 
     def testEditorWritesSemanticEnumsAndPositiveChromeToggle(self):
         """Persist upstream values rather than translated display labels."""

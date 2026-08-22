@@ -194,7 +194,10 @@ class GuiHy2InlineBindings(EditorWidgetBinding):
 
     def __init__(self, *bindings: EditorWidgetBinding, **kwargs):
         """Create one persistent row that owns the supplied labeled controls."""
-        expandInputs = kwargs.pop('expandInputs', True)
+        expandInputs, spacing = (
+            kwargs.pop('expandInputs', True),
+            kwargs.pop('spacing', 12),
+        )
 
         super().__init__(**kwargs)
 
@@ -203,13 +206,10 @@ class GuiHy2InlineBindings(EditorWidgetBinding):
 
         layout = QHBoxLayout(self._widget)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(12)
+        layout.setSpacing(spacing)
 
-        for index, binding in enumerate(self.bindings):
+        for binding in self.bindings:
             title, inputWidget = binding.widgets()
-
-            if index:
-                layout.addSpacing(6)
 
             layout.addWidget(title)
             layout.addWidget(inputWidget, 1 if expandInputs else 0)
@@ -978,6 +978,7 @@ class GuiHy2GroupBoxAdvanced(GuiEditorWidgetQGroupBox):
             self.chromeParrotItem,
             self.mimicEnabledItem,
             expandInputs=False,
+            spacing=8,
         )
 
         return [
@@ -1063,6 +1064,35 @@ class Hysteria2Editor(GuiEditorWidgetQDialog):
         super().__init__(*args, **kwargs)
 
         self.setTabText(Protocol.Hysteria2.value)
+
+    def _fitAdvancedOptionsRow(self):
+        """Honor the styled editor and options row's natural widths."""
+        row = self.advancedGroup.optionsRow._widget
+        trailingSpace = max(0, row.layout().spacing())
+        rowWidthDeficit = max(
+            0,
+            row.sizeHint().width() + trailingSpace - row.contentsRect().width(),
+        )
+        requiredWidth = max(
+            self.minimumSizeHint().width(),
+            self.width() + rowWidthDeficit,
+        )
+
+        if requiredWidth <= self.width():
+            return
+
+        # The shared editor starts from a compact golden-ratio size. Font and
+        # style metrics can require more room for the complete form or this
+        # technical row; grow to that measured requirement instead of clipping
+        # a label or introducing a platform-specific width.
+        self.setFixedWidth(requiredWidth)
+        self.tabCentralWidgetLayout.activate()
+
+    def showEvent(self, event):
+        """Resolve the styled section geometry before the first frame is drawn."""
+        super().showEvent(event)
+
+        self._fitAdvancedOptionsRow()
 
     def createGroupBoxSequence(self):
         """Create the configuration group boxes in display order."""
