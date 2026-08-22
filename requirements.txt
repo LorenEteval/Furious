@@ -2,8 +2,7 @@ PySide6-Essentials
 PySide6-Addons
 ujson
 pybase64
-pyqrcode
-pypng
+segno
 icmplib
 mss
 zxing-cpp<3

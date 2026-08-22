@@ -83,6 +83,11 @@ from Furious.Service import (
     LogManager,
 )
 from Furious.Window.LogPage import LogPage
+from Furious.Window.QRCodeWindow import (
+    QRCodeWindow,
+    _QRCodePage,
+    createQRCodeImage,
+)
 from Furious.Window.SettingsPage import (
     _ApplicationThemeSettingsCard,
     _SystemProxySettingsCard,
@@ -92,12 +97,14 @@ from Furious.Widget.ConnectionButton import ConnectionButton
 from Furious.Widget.RoutingSelector import RoutingSelector
 
 from PySide6 import QtCore
+from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QStyle,
     QStyleOptionComboBox,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -116,6 +123,8 @@ import unittest
 import weakref
 
 from unittest import mock
+import segno
+import zxingcpp
 
 
 class RoutingControllerFixture(QtCore.QObject):
@@ -313,6 +322,337 @@ class ComboTranslationLayoutTest(unittest.TestCase):
 
                 parent.close()
                 parent.deleteLater()
+
+
+def _grayscaleBuffer(image: QImage):
+    """Return tightly packed grayscale pixels for zxing-cpp without Pillow."""
+    grayscale = image.convertToFormat(QImage.Format.Format_Grayscale8)
+    width = grayscale.width()
+    height = grayscale.height()
+    stride = grayscale.bytesPerLine()
+    source = grayscale.constBits()
+    pixels = bytearray(width * height)
+
+    for y in range(height):
+        sourceStart = y * stride
+        targetStart = y * width
+        pixels[targetStart : targetStart + width] = source[
+            sourceStart : sourceStart + width
+        ]
+
+    return memoryview(pixels).cast('B', (height, width))
+
+
+def _decodeQRCodeImage(image: QImage):
+    """Decode one generated image through the application's QR decoder."""
+    return zxingcpp.read_barcode(
+        _grayscaleBuffer(image),
+        formats=zxingcpp.BarcodeFormat.QRCode,
+        is_pure=True,
+    )
+
+
+class QRCodeImageGenerationTest(unittest.TestCase):
+    """Verify the pure Segno matrix-to-QImage contract."""
+
+    def testLogicalImageMatchesSegnoMatrixAndQuietZone(self):
+        """Map matrix modules and the standard quiet zone to exact pixels."""
+        payload = 'socks://user:password@example.com:1080#Matrix'
+        qrCode = segno.make_qr(payload, error='H')
+        border = qrCode.default_border_size
+        matrix = tuple(tuple(row) for row in qrCode.matrix)
+        image = createQRCodeImage(payload)
+
+        self.assertFalse(qrCode.is_micro)
+        self.assertEqual(border, 4)
+        self.assertEqual(
+            image.size(),
+            QtCore.QSize(*qrCode.symbol_size(scale=1, border=border)),
+        )
+        self.assertEqual(image.format(), QImage.Format.Format_Grayscale8)
+        self.assertEqual(image.width(), len(matrix) + (2 * border))
+        self.assertTrue(
+            all(image.pixelColor(x, 0).red() == 255 for x in range(image.width()))
+        )
+
+        darkY, darkX = next(
+            (y, x)
+            for y, row in enumerate(matrix)
+            for x, module in enumerate(row)
+            if module
+        )
+        lightY, lightX = next(
+            (y, x)
+            for y, row in enumerate(matrix)
+            for x, module in enumerate(row)
+            if not module
+        )
+
+        self.assertEqual(image.pixelColor(border + darkX, border + darkY).red(), 0)
+        self.assertEqual(image.pixelColor(border + lightX, border + lightY).red(), 255)
+
+    def testRepresentativePayloadsRoundTripWithoutEncodedIntermediate(self):
+        """Decode short, medium, long, special-character, and Unicode payloads."""
+        payloads = (
+            'socks://example.com:1080',
+            (
+                'vless://synthetic@example.com:443?'
+                + 'transport=xhttp&security=reality&' * 8
+                + '#Medium%20Profile'
+            ),
+            'trojan://p%40ss%3Aword@example.com:443?allowInsecure=0#东京-Привет',
+            'vmess://' + ('synthetic-payload-' * 45),
+        )
+
+        widths = []
+
+        for payload in payloads:
+            image = createQRCodeImage(payload)
+            scale = 4
+            scaled = image.scaled(
+                image.width() * scale,
+                image.height() * scale,
+                QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                QtCore.Qt.TransformationMode.FastTransformation,
+            )
+            decoded = _decodeQRCodeImage(scaled)
+
+            self.assertIsNotNone(decoded)
+            self.assertEqual(decoded.text, payload)
+            widths.append(image.width())
+
+        self.assertGreater(len(set(widths)), 1)
+
+    def testIntegerFastScalingKeepsPixelsBinary(self):
+        """Keep modules and quiet zone black or white at integer display scales."""
+        image = createQRCodeImage('socks://scale.example:1080#Scale')
+
+        for scale in (2, 5, 8):
+            scaled = image.scaled(
+                image.width() * scale,
+                image.height() * scale,
+                QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                QtCore.Qt.TransformationMode.FastTransformation,
+            )
+            pixels = _grayscaleBuffer(scaled)
+
+            self.assertEqual(scaled.width(), image.width() * scale)
+            self.assertEqual(set(pixels.tobytes()), {0, 255})
+            self.assertTrue(
+                all(
+                    pixels[y, x] == 255
+                    for y in range(4 * scale)
+                    for x in range(scaled.width())
+                )
+            )
+
+    def testEmptyPayloadIsRejected(self):
+        """Reject an empty payload before asking Segno to encode it."""
+        with self.assertRaises(ValueError):
+            createQRCodeImage('')
+
+
+class QRCodeWindowBehaviorTest(unittest.TestCase):
+    """Verify responsive QR presentation without changing export semantics."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create the process-wide headless QApplication."""
+        application()
+
+    def tearDown(self):
+        """Finish deferred page and window deletion between tests."""
+        collectAtBoundary()
+
+    @staticmethod
+    def buildWindow(*uris):
+        """Create one isolated QR window from deterministic export results."""
+        profiles = [
+            mock.Mock(itemRemark=f'Profile {index + 1}') for index in range(len(uris))
+        ]
+
+        with mock.patch(
+            'Furious.Window.QRCodeWindow.Storage.UserServers',
+            return_value=profiles,
+        ), mock.patch(
+            'Furious.Window.QRCodeWindow.exportConfiguration',
+            side_effect=uris,
+        ):
+            window = QRCodeWindow()
+            window.initTabByIndex(list(range(len(profiles))))
+
+        return window
+
+    def testAllExportFailuresLeaveNoBrokenTabs(self):
+        """Leave an unshown empty window when every canonical export fails."""
+        window = self.buildWindow('', '')
+
+        self.assertEqual(window.tabCount(), 0)
+        self.assertFalse(window.isVisible())
+        window.close()
+
+    def testOversizedPayloadDoesNotPreventOtherTabs(self):
+        """Skip one Segno overflow while preserving later valid profiles."""
+        with self.assertLogs('Furious.Window.QRCodeWindow', level='WARNING'):
+            window = self.buildWindow(
+                'x' * 5000,
+                'socks://valid.example:1080#Valid',
+            )
+
+        self.assertEqual(window.tabCount(), 1)
+        self.assertEqual(window.tabWidget.tabText(0), '2 - Profile 2')
+        window.close()
+
+    def testPageCentersAndDecodesResponsiveSquarePixmap(self):
+        """Center one crisp, square, decodable QR at representative sizes."""
+        uri = (
+            'socks://user:password@example.com:1080'
+            '#A%20representative%20Furious%20profile'
+        )
+        window = self.buildWindow(uri)
+        window.show()
+        processQtEvents()
+
+        page = window.tabWidget.widget(0)
+
+        self.assertIsInstance(page, _QRCodePage)
+        self.assertIsInstance(page.layout(), QVBoxLayout)
+        self.assertTrue(
+            page.layout().itemAt(0).alignment() & QtCore.Qt.AlignmentFlag.AlignHCenter
+        )
+        self.assertTrue(
+            page.layout().itemAt(0).alignment() & QtCore.Qt.AlignmentFlag.AlignVCenter
+        )
+        self.assertTrue(page.qrLabel.alignment() & QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        sourceKey = page.sourceImage().cacheKey()
+        displayedSides = []
+
+        for size in (
+            QRCodeWindow.MINIMUM_WINDOW_SIZE,
+            QRCodeWindow.DEFAULT_WINDOW_SIZE,
+            QtCore.QSize(920, 780),
+        ):
+            window.resize(size)
+            processQtEvents()
+
+            displayed = page.qrLabel.pixmap()
+            available = page.layout().contentsRect().size()
+
+            self.assertFalse(displayed.isNull())
+            self.assertEqual(displayed.width(), displayed.height())
+            self.assertEqual(displayed.width() % page.moduleSpan(), 0)
+            self.assertLessEqual(displayed.width(), available.width())
+            self.assertLessEqual(displayed.height(), available.height())
+            self.assertEqual(displayed.width(), page.moduleSpan() * page.displayScale())
+            self.assertEqual(page.sourceImage().cacheKey(), sourceKey)
+
+            displayedSides.append(displayed.width())
+
+        self.assertEqual(displayedSides, sorted(displayedSides))
+        decoded = _decodeQRCodeImage(page.qrLabel.pixmap().toImage())
+        self.assertIsNotNone(decoded)
+        self.assertEqual(decoded.text, uri)
+
+        window.close()
+
+    def testEveryTabUsesItsSettledLayoutScaleOnFirstVisit(self):
+        """Size hidden QR pages correctly the first time each tab becomes visible."""
+        uris = tuple(
+            f'socks://profile-{index}.example:1080#Profile%20{index}'
+            for index in range(10)
+        )
+        window = self.buildWindow(*uris)
+        window.show()
+        processQtEvents()
+
+        for index in range(window.tabCount()):
+            window.tabWidget.setCurrentIndex(index)
+            processQtEvents()
+
+            page = window.tabWidget.widget(index)
+            displayed = page.qrLabel.pixmap()
+            available = page.layout().contentsRect().size()
+            expectedScale = max(
+                1,
+                min(available.width(), available.height()) // page.moduleSpan(),
+            )
+
+            self.assertFalse(displayed.isNull())
+            self.assertGreater(expectedScale, 1)
+            self.assertEqual(page.displayScale(), expectedScale)
+            self.assertEqual(displayed.width(), page.moduleSpan() * expectedScale)
+
+        window.close()
+
+    def testMultipleTabsSkipFailuresAndDestroyClosedPages(self):
+        """Keep valid order while failed exports and closed pages leave no debris."""
+        window = self.buildWindow(
+            'socks://one.example:1080#One',
+            '',
+            'socks://three.example:1080#Three',
+        )
+        window.show()
+        processQtEvents()
+
+        self.assertEqual(window.tabCount(), 2)
+        self.assertEqual(window.tabWidget.tabText(0), '1 - Profile 1')
+        self.assertEqual(window.tabWidget.tabText(1), '3 - Profile 3')
+
+        self.assertEqual(window.tabWidget.tabToolTip(0), '1 - Profile 1')
+        self.assertEqual(window.tabWidget.tabToolTip(1), '3 - Profile 3')
+        firstPage = window.tabWidget.widget(0)
+        firstPageReference = weakref.ref(firstPage)
+        firstPageDestroyed = []
+        firstPage.destroyed.connect(lambda *_args: firstPageDestroyed.append(True))
+
+        window.handleTabCloseRequested(0)
+        del firstPage
+        collectAtBoundary()
+
+        self.assertEqual(window.tabCount(), 1)
+        self.assertEqual(window.tabWidget.tabText(0), '3 - Profile 3')
+        self.assertTrue(waitFor(lambda: firstPageReference() is None))
+        self.assertEqual(firstPageDestroyed, [True])
+
+        windowReference = weakref.ref(window)
+        windowDestroyed = []
+        window.destroyed.connect(lambda *_args: windowDestroyed.append(True))
+
+        window.handleTabCloseRequested(0)
+        del window
+        collectAtBoundary()
+
+        self.assertTrue(waitFor(lambda: windowReference() is None))
+        self.assertEqual(windowDestroyed, [True])
+
+    def testThemeChangesLeaveTheHighContrastQRSourceUntouched(self):
+        """Restyle the surrounding window without regenerating its QR content."""
+        app = application()
+        originalStyleSheet = app.styleSheet()
+        window = self.buildWindow('socks://theme.example:1080#Theme')
+        window.show()
+        processQtEvents()
+
+        page = window.tabWidget.widget(0)
+        sourceKey = page.sourceImage().cacheKey()
+
+        try:
+            for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
+                app.setStyleSheet(AppStyleSheet.forTheme(theme))
+                processQtEvents()
+
+                image = page.sourceImage()
+                quietZone = image.pixelColor(0, 0)
+
+                self.assertEqual(page.sourceImage().cacheKey(), sourceKey)
+                self.assertEqual(
+                    (quietZone.red(), quietZone.green(), quietZone.blue()),
+                    (255, 255, 255),
+                )
+        finally:
+            app.setStyleSheet(originalStyleSheet)
+            window.close()
 
 
 class EditorMappingTest(unittest.TestCase):

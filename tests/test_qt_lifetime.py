@@ -44,11 +44,12 @@ from Furious.Qt import (
     AppQTransientDialog,
 )
 from Furious.Qt.QtWidgets import _AppMessageBoxMask
-from Furious.Window.QRCodeWindow import QRCodeWindow
+from Furious.Window.QRCodeWindow import QRCodeWindow, _QRCodePage
 from Furious.Window.SubscriptionPage import _SubscriptionEditorDialog
 from Furious.Window.TextEditorWindow import TextEditorWindow
 
 from PySide6 import QtCore
+from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QWidget
 
 from shiboken6 import isValid
@@ -346,24 +347,33 @@ class QtLifetimeTest(unittest.TestCase):
                     )
 
     def testQRCodeTopLevelWindowIsDeletedOnClose(self):
-        """Exercise the dedicated transient AppQMainWindow policy 100 times."""
+        """Destroy each transient QR window together with its page and label."""
         iterations = 100
         references, destroyed = [], []
+        image = QImage(64, 64, QImage.Format.Format_Grayscale8)
+        image.fill(QtCore.Qt.GlobalColor.white)
 
         for _index in range(iterations):
             window = QRCodeWindow()
-            window.destroyed.connect(lambda *_args: destroyed.append(True))
+            page = _QRCodePage(image, parent=window.tabWidget)
+            window.tabWidget.addTab(page, 'Lifetime fixture')
 
-            references.append(weakref.ref(window))
+            for object_ in (window, page, page.qrLabel):
+                object_.destroyed.connect(lambda *_args: destroyed.append(True))
+                references.append(weakref.ref(object_))
 
             window.show()
             window.close()
 
-        del window
+        del object_, page, window
 
         collectAtBoundary()
 
-        self.assertAllDestroyed(references, destroyed, iterations)
+        self.assertAllDestroyed(
+            references,
+            destroyed,
+            iterations * 3,
+        )
 
     def testTextEditorWindowIsIntentionallyReusableThenExplicitlyDestroyed(self):
         """Reuse one persistent editor without duplicating menus or actions."""
