@@ -27,6 +27,7 @@ clients, or real proxy cores.
 | Bounded service work, update validation, plugin UI, and worker lifetime | `test_service_runtime.py` |
 | Frozenlib state helpers and mocked platform-operation boundaries | `test_frozenlib.py` |
 | Settings sandbox and navigation overlay behavior | `test_isolation_and_navigation.py` |
+| AppQMainWindow lifecycle, subclass policies, geometry restoration, and migration | `test_main_window_geometry.py` |
 | Editor mappings, lazy log rendering, routing/message-box/connection UI | `test_ui_behavior.py` |
 | Direct Qt ownership and destruction across independent UI families | `test_qt_lifetime.py` |
 | Batched real/probe Qt object, handle, Python allocation, and RSS trends | `test_qt_stress.py` |
@@ -76,7 +77,7 @@ Then run the desired test tier.
 python -m unittest discover -s tests -v
 
 # Regular logic, persistence, plugin, controller, codec, and UI regressions
-python -m unittest tests.test_interface tests.test_models_and_services tests.test_architecture_refactors tests.test_plugin_architecture tests.test_controllers tests.test_subscription_manager tests.test_subscription_sync tests.test_socks_uri tests.test_shadowsocks_uri tests.test_backend_editor_contract tests.test_native_tun_semantics tests.test_metrics_behavior tests.test_endpoint_info tests.test_service_runtime tests.test_frozenlib tests.test_isolation_and_navigation tests.test_ui_behavior -v
+python -m unittest tests.test_interface tests.test_models_and_services tests.test_architecture_refactors tests.test_plugin_architecture tests.test_controllers tests.test_subscription_manager tests.test_subscription_sync tests.test_socks_uri tests.test_shadowsocks_uri tests.test_backend_editor_contract tests.test_native_tun_semantics tests.test_metrics_behavior tests.test_endpoint_info tests.test_service_runtime tests.test_frozenlib tests.test_isolation_and_navigation tests.test_main_window_geometry tests.test_ui_behavior -v
 
 # Direct Qt/process integration and destruction/lifetime checks
 python -m unittest tests.test_external_core tests.test_qt_lifetime -v
@@ -85,7 +86,7 @@ python -m unittest tests.test_external_core tests.test_qt_lifetime -v
 python -m unittest tests.test_qt_stress tests.test_process_stress -v
 
 # Shared-state order-independence spot check
-python -m unittest tests.test_ui_behavior tests.test_isolation_and_navigation tests.test_frozenlib tests.test_service_runtime tests.test_endpoint_info tests.test_metrics_behavior tests.test_native_tun_semantics tests.test_backend_editor_contract tests.test_shadowsocks_uri tests.test_socks_uri tests.test_subscription_sync tests.test_subscription_manager tests.test_controllers tests.test_plugin_architecture tests.test_architecture_refactors tests.test_models_and_services tests.test_interface -v
+python -m unittest tests.test_ui_behavior tests.test_main_window_geometry tests.test_isolation_and_navigation tests.test_frozenlib tests.test_service_runtime tests.test_endpoint_info tests.test_metrics_behavior tests.test_native_tun_semantics tests.test_backend_editor_contract tests.test_shadowsocks_uri tests.test_socks_uri tests.test_subscription_sync tests.test_subscription_manager tests.test_controllers tests.test_plugin_architecture tests.test_architecture_refactors tests.test_models_and_services tests.test_interface -v
 python -m unittest discover -s tests -v
 ```
 

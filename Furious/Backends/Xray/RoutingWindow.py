@@ -1205,27 +1205,41 @@ class XrayRoutingWindow(AppQMainWindow):
 
         self.setCentralWidget(centralWidget)
 
-    def setWidthAndHeight(self):
-        """Apply the default size for the user routing window."""
-        if AppSettings.get('UserRoutingWindowGeometry') is None:
-            self.resize(XrayRoutingWindow.DEFAULT_WINDOW_SIZE)
+    def prepareInitialGeometry(self):
+        """Restore routing-window geometry and state before its first show."""
+        savedGeometry = AppSettings.get('UserRoutingWindowGeometry')
+
+        if savedGeometry is None:
+            self.resize(self.DEFAULT_WINDOW_SIZE)
         else:
-            if PLATFORM == 'Darwin':
-                self.resize(XrayRoutingWindow.DEFAULT_WINDOW_SIZE)
-            else:
-                try:
-                    self.restoreGeometry(AppSettings.get('UserRoutingWindowGeometry'))
-                except Exception:
-                    # Any non-exit exceptions
+            try:
+                restored = self.restoreInitialGeometry(savedGeometry)
+            except Exception:
+                # Any non-exit exceptions
 
-                    self.resize(XrayRoutingWindow.DEFAULT_WINDOW_SIZE)
+                logger.exception('unexpected routing-window geometry restore failure')
 
-                try:
-                    self.restoreState(AppSettings.get('UserRoutingWindowState'))
-                except Exception:
-                    # Any non-exit exceptions
+                restored = False
 
-                    pass
+            if not restored:
+                self.resize(self.DEFAULT_WINDOW_SIZE)
+
+        savedState = AppSettings.get('UserRoutingWindowState')
+
+        if savedState is None:
+            return
+
+        try:
+            restored = self.restoreState(savedState)
+        except Exception:
+            # Any non-exit exceptions
+
+            logger.exception('unexpected routing-window state restore failure')
+
+            return
+
+        if not restored:
+            logger.warning('saved routing-window state was invalid and was ignored')
 
     def cleanup(self):
         """Release resources owned by the user routing window."""

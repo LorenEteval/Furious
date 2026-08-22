@@ -234,60 +234,83 @@ class MainWindow(AppQMainWindow):
         """Update the home page network state."""
         self.homePage.setNetworkState(success, **kwargs)
 
-    def setWidthAndHeight(self):
-        """Restore the saved application window geometry and state."""
-        if AppSettings.get('AppMainWindowGeometry') is None:
-            try:
-                windowSize = AppSettings.get('ServerWidgetWindowSize').split(',')
-                width, height = tuple(int(size) for size in windowSize)
+    def prepareInitialGeometry(self):
+        """Restore persisted geometry after composition and before first show."""
+        savedGeometry = AppSettings.get('AppMainWindowGeometry')
 
-                # TODO: write better condition
-                # (640, 480) is the size without navigation bar on macOS
-                # (702, 480) is the size with navigation bar on macOS
-                if (width, height) in ((640, 480), (702, 480)):
-                    self.resize(self.DEFAULT_WINDOW_SIZE)
-                else:
-                    self.resize(width, height)
-            except Exception:
-                # Any non-exit exceptions
-
-                self.resize(self.DEFAULT_WINDOW_SIZE)
+        if savedGeometry is None:
+            if not self._restoreLegacyWindowSize():
+                self._applyDefaultWindowSize('no saved main-window geometry')
         else:
             try:
-                self.restoreGeometry(AppSettings.get('AppMainWindowGeometry'))
+                restored = self.restoreInitialGeometry(savedGeometry)
             except Exception:
                 # Any non-exit exceptions
 
-                self.resize(self.DEFAULT_WINDOW_SIZE)
+                logger.exception('unexpected main-window geometry restore failure')
 
-            try:
-                self.restoreState(AppSettings.get('AppMainWindowState'))
-            except Exception:
-                # Any non-exit exceptions
+                restored = False
 
-                pass
+            if restored:
+                logger.info(
+                    f'restored main-window geometry: {self.geometry().getRect()}'
+                )
+            else:
+                self._applyDefaultWindowSize('saved main-window geometry was invalid')
 
-            if PLATFORM == 'Darwin':
-                APP().processEvents()
+        self._restoreMainWindowState()
 
-                size = self.size()
+    def _applyDefaultWindowSize(self, reason: str):
+        """Apply the canonical first-launch/recovery size and center it."""
+        self.resize(self.DEFAULT_WINDOW_SIZE)
 
-                # TODO: write better condition
-                # (640, 480) is the size without navigation bar on macOS
-                # (702, 480) is the size with navigation bar on macOS
-                if size in (QtCore.QSize(640, 480), QtCore.QSize(702, 480)):
-                    logger.error(
-                        f'detected unresolved Qt bug on macOS. '
-                        f'Resizing main window to default '
-                        f'{self.DEFAULT_WINDOW_SIZE.toTuple()}'
-                    )
+        logger.info(
+            f'{reason}; using default main-window size '
+            f'{self.DEFAULT_WINDOW_SIZE.toTuple()}'
+        )
 
-                    self.resize(self.DEFAULT_WINDOW_SIZE)
-                else:
-                    logger.info(
-                        f'restore main window size on macOS success: '
-                        f'{size.toTuple()}'
-                    )
+    def _restoreLegacyWindowSize(self) -> bool:
+        """Restore one valid legacy client size without guessing its origin."""
+        legacySize = AppSettings.get('ServerWidgetWindowSize')
+
+        if legacySize is None:
+            return False
+
+        try:
+            widthText, heightText = legacySize.split(',')
+            width, height = int(widthText), int(heightText)
+
+            if width <= 0 or height <= 0:
+                raise ValueError('window dimensions must be positive')
+        except (AttributeError, TypeError, ValueError):
+            logger.warning(f'ignored invalid legacy main-window size: {legacySize!r}')
+
+            return False
+
+        self.resize(width, height)
+
+        logger.info(f'migrated legacy main-window size: {(width, height)}')
+
+        return True
+
+    def _restoreMainWindowState(self):
+        """Restore QMainWindow layout state independently from its geometry."""
+        savedState = AppSettings.get('AppMainWindowState')
+
+        if savedState is None:
+            return
+
+        try:
+            restored = self.restoreState(savedState)
+        except Exception:
+            # Any non-exit exceptions
+
+            logger.exception('unexpected main-window state restore failure')
+
+            return
+
+        if not restored:
+            logger.warning('saved main-window state was invalid and was ignored')
 
     def showEvent(self, event):
         """Focus the window itself instead of an untouched child control."""

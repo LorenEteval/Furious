@@ -135,6 +135,7 @@ class NavigationBehaviorTest(unittest.TestCase):
     def testExpandedPanelOverlaysWithoutMovingContent(self):
         """Expand only the panel geometry while the page stack remains fixed."""
         collapsedGeometry = QtCore.QRect(self.navigation.pageStack.geometry())
+        collapsedWindowSize = QtCore.QSize(self.navigation.size())
 
         self.navigation.setExpanded(True, animated=False)
 
@@ -150,6 +151,7 @@ class NavigationBehaviorTest(unittest.TestCase):
             self.navigation.navigationRail.width(),
             self.navigation.CollapsedWidth,
         )
+        self.assertEqual(self.navigation.size(), collapsedWindowSize)
 
     def testOutsideClickCollapsesAndStillReachesTarget(self):
         """Dismiss the temporary overlay without consuming the original click."""

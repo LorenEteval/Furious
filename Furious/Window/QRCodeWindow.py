@@ -183,10 +183,6 @@ class QRCodeWindow(AppQMainWindow):
 
         self.setCentralWidget(self.tabWidget)
 
-    def setWidthAndHeight(self):
-        """Apply the practical default size while preserving user resizing."""
-        self.resize(self.DEFAULT_WINDOW_SIZE)
-
     def tabCount(self) -> int:
         """Return the number of successfully generated QR-code tabs."""
         return self.tabWidget.count()

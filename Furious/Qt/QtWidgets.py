@@ -685,6 +685,9 @@ class AppQMainWindow(
 ):
     """Present the app q main window."""
 
+    DEFAULT_WINDOW_SIZE = QtCore.QSize()
+    CENTER_ON_INITIAL_SHOW = True
+
     _openWindows = {}
 
     @staticmethod
@@ -697,7 +700,8 @@ class AppQMainWindow(
         super().__init__(*args, **kwargs)
 
         self._lifetimeKey = object()
-        self._firstShowPending = True
+        self._initialGeometryPrepared = False
+        self._initialPositionAuthoritative = False
 
         release = functools.partial(
             AppQMainWindow._releaseOpenWindow,
@@ -710,15 +714,32 @@ class AppQMainWindow(
         self._menuBar = AppQMenuBar(parent=self)
         self.setMenuBar(self._menuBar)
 
-        if PLATFORM != 'Darwin':
-            self.setWidthAndHeight()
+    def prepareInitialGeometry(self):
+        """Apply declarative default geometry before the first native show."""
+        if self.DEFAULT_WINDOW_SIZE.isValid():
+            self.resize(self.DEFAULT_WINDOW_SIZE)
 
-    def setWidthAndHeight(self):
-        """Apply the default size for the app q main window."""
-        pass
+    def restoreInitialGeometry(self, geometry) -> bool:
+        """Restore saved geometry and mark its position as authoritative."""
+        restored = bool(self.restoreGeometry(geometry))
+
+        if restored:
+            self._initialPositionAuthoritative = True
+
+        return restored
+
+    def shouldCenterOnInitialShow(self) -> bool:
+        """Return whether the first show should center this window."""
+        return self.CENTER_ON_INITIAL_SHOW and not self._initialPositionAuthoritative
 
     def show(self):
         """Show, position, and retain the window until it closes."""
+        firstShow = not self._initialGeometryPrepared
+
+        if firstShow:
+            self.prepareInitialGeometry()
+            self._initialGeometryPrepared = True
+
         key = self._lifetimeKey
         AppQMainWindow._openWindows[key] = self
 
@@ -731,12 +752,11 @@ class AppQMainWindow(
 
             raise
 
-        if PLATFORM == 'Darwin' and self._firstShowPending:
-            self._firstShowPending = False
-            self.setWidthAndHeight()
+        if firstShow and self.shouldCenterOnInitialShow():
+            moveToCenter(self)
 
-        moveToCenter(self)
-
+        # Preserve the established synchronous post-show flush for callers;
+        # initial geometry and centering above do not depend on this event pump.
         APP().processEvents()
 
         if PLATFORM == 'Darwin':

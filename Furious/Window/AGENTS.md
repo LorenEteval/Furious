@@ -15,6 +15,13 @@
   swallowing them or exposing secrets.
 - Use Fluent `AppQ*` controls, normal layouts, translation-aware construction, and theme callbacks. Preserve shortcuts,
   default/escape actions, focus, resizing, navigation overlay behavior, and light/dark presentation.
+- `AppQMainWindow` owns platform-neutral first-show preparation, centering, and shown-wrapper retention. Subclasses
+  declare stable defaults through `DEFAULT_WINDOW_SIZE`; persistent windows override `prepareInitialGeometry()` only
+  for product-owned restoration/migration and call `restoreInitialGeometry()` so a valid saved position suppresses
+  centering. Never call overridable geometry hooks during construction or manipulate private first-show flags.
+- Restore composed top-level window geometry only after its persistent child layout exists. Treat Qt's explicit
+  `restoreGeometry()` result as authoritative; missing or invalid data uses the canonical application default and must
+  not be inferred from magic window dimensions. Repeated show/hide cycles preserve the live window geometry.
 
 ## Code review rules
 

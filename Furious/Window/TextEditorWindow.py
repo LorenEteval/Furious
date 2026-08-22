@@ -84,6 +84,8 @@ class MBoxJSONDecodeError(AppQMessageBox):
 class TextEditorWindow(AppQMainWindow):
     """Present the text editor window."""
 
+    DEFAULT_WINDOW_SIZE = QtCore.QSize(450, int(450 * GOLDEN_RATIO))
+
     def __init__(self, *args, **kwargs):
         """Initialize the TextEditorWindow."""
         super().__init__(*args, **kwargs)
@@ -91,7 +93,7 @@ class TextEditorWindow(AppQMainWindow):
         self.customWindowTitle = ''
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        self.setFixedSize(450, int(450 * GOLDEN_RATIO))
+        self.setFixedSize(self.DEFAULT_WINDOW_SIZE)
 
         # Current editing index
         self.currentIndex = -1

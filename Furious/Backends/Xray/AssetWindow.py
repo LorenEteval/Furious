@@ -38,6 +38,8 @@ logger = logging.getLogger(__name__)
 class XrayAssetWindow(AppQMainWindow):
     """Present the Xray asset viewer window."""
 
+    DEFAULT_WINDOW_SIZE = QtCore.QSize(380, int(380 * GOLDEN_RATIO))
+
     def __init__(self, *args, **kwargs):
         """Initialize the Xray asset window."""
         super().__init__(*args, **kwargs)
@@ -110,10 +112,6 @@ class XrayAssetWindow(AppQMainWindow):
 
         self.setCentralWidget(centralWidget)
         self.menuBar().hide()
-
-    def setWidthAndHeight(self):
-        """Apply the default size for the Xray asset viewer window."""
-        self.resize(380, 380 * GOLDEN_RATIO)
 
     def flushItem(self):
         """Refresh item."""
