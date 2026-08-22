@@ -134,6 +134,8 @@ def routingObjectFromProfile(routingProfile: dict):
 class RoutingPreviewDialog(AppQTransientDialog):
     """Present the routing preview dialog."""
 
+    FIXED_DIALOG_SIZE = QtCore.QSize(400, int(400 * GOLDEN_RATIO))
+
     def __init__(self, routingProfile: dict, parent=None):
         """Initialize the RoutingPreviewDialog."""
         super().__init__(parent)
@@ -153,13 +155,11 @@ class RoutingPreviewDialog(AppQTransientDialog):
 
         self.setLayout(layout)
 
-    def setWidthAndHeight(self):
-        """Apply the default size for the routing preview dialog."""
-        self.setFixedSize(400, int(400 * GOLDEN_RATIO))
-
 
 class RoutingTextEditDialog(AppQTransientDialog):
     """Present the routing text edit dialog."""
+
+    FIXED_DIALOG_SIZE = QtCore.QSize(760, 470)
 
     def __init__(self, text='', parent=None):
         """Initialize the RoutingTextEditDialog."""
@@ -184,10 +184,6 @@ class RoutingTextEditDialog(AppQTransientDialog):
         layout.addWidget(self.dialogBtns)
 
         self.setLayout(layout)
-
-    def setWidthAndHeight(self):
-        """Apply the default size for the routing text edit dialog."""
-        self.setFixedSize(760, 470)
 
     def text(self):
         """Return the text value."""
@@ -350,6 +346,8 @@ class RoutingProfilesModel(QtCore.QAbstractTableModel):
 
 class RoutingRuleEditDialog(AppQTransientDialog):
     """Present the routing rule edit dialog."""
+
+    DEFAULT_DIALOG_SIZE = QtCore.QSize(int(800 * GOLDEN_RATIO), 800)
 
     MatchInputHeight = 72
     ShortInputWidth = 240
@@ -536,10 +534,6 @@ class RoutingRuleEditDialog(AppQTransientDialog):
 
         self.setLayout(layout)
 
-    def setWidthAndHeight(self):
-        """Apply the default size for the routing rule edit dialog."""
-        self.resize(int(800 * GOLDEN_RATIO), 800)
-
     def routingRule(self):
         """Return the routing rule value used by the routing rule edit dialog."""
         rule = {
@@ -580,6 +574,8 @@ class RoutingRuleEditDialog(AppQTransientDialog):
 class RoutingRemarkEditDialog(AppQTransientDialog):
     """Present the routing remark edit dialog."""
 
+    DEFAULT_DIALOG_SIZE = QtCore.QSize(420, 120)
+
     def __init__(self, remark: str, parent=None):
         """Initialize the RoutingRemarkEditDialog."""
         super().__init__(parent)
@@ -604,10 +600,6 @@ class RoutingRemarkEditDialog(AppQTransientDialog):
 
         self.setLayout(layout)
 
-    def setWidthAndHeight(self):
-        """Apply the default size for the routing remark edit dialog."""
-        self.resize(420, 120)
-
     def remark(self):
         """Return the remark value used by the routing remark edit dialog."""
         return self.remarkEdit.text().strip()
@@ -615,6 +607,8 @@ class RoutingRemarkEditDialog(AppQTransientDialog):
 
 class RoutingProfileEditDialog(AppQTransientDialog):
     """Present the routing profile edit dialog."""
+
+    DEFAULT_DIALOG_SIZE = QtCore.QSize(460, 160)
 
     def __init__(self, parent=None):
         """Initialize the RoutingProfileEditDialog."""
@@ -652,10 +646,6 @@ class RoutingProfileEditDialog(AppQTransientDialog):
         layout.addRow(self.dialogBtns)
 
         self.setLayout(layout)
-
-    def setWidthAndHeight(self):
-        """Apply the default size for the routing profile edit dialog."""
-        self.resize(460, 160)
 
     def routing(self):
         """Return the routing value used by the routing profile edit dialog."""
@@ -751,6 +741,8 @@ class RoutingRulesListView(AppQListView):
 class RoutingRulesDialog(AppQTransientDialog):
     """Present the routing rules dialog."""
 
+    FIXED_DIALOG_SIZE = QtCore.QSize(760, 470)
+
     def __init__(self, routing: dict, parent=None):
         """Initialize the RoutingRulesDialog."""
         super().__init__(parent)
@@ -803,10 +795,6 @@ class RoutingRulesDialog(AppQTransientDialog):
         layout.addWidget(self.listView)
 
         self.setLayout(layout)
-
-    def setWidthAndHeight(self):
-        """Apply the default size for the routing rules dialog."""
-        self.setFixedSize(760, 470)
 
     def addRule(self):
         """Add rule."""

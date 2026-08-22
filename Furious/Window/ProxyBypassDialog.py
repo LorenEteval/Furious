@@ -36,6 +36,8 @@ logger = logging.getLogger(__name__)
 class ProxyBypassDialog(AppQDialog):
     """Present the GUI customize proxy bypass dialog."""
 
+    DEFAULT_DIALOG_SIZE = QtCore.QSize(656, 125)
+
     def __init__(self, *args, **kwargs):
         """Initialize the proxy bypass settings dialog."""
         super().__init__(*args, **kwargs)
@@ -79,10 +81,6 @@ class ProxyBypassDialog(AppQDialog):
         self.setLayout(layout)
 
         self.finished.connect(self.handleResultCode)
-
-    def setWidthAndHeight(self):
-        """Apply the default size for the GUI customize proxy bypass dialog."""
-        self.resize(656, 125)
 
     def handleResultCode(self, code):
         """Handle result code."""

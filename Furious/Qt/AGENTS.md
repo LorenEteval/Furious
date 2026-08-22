@@ -22,6 +22,10 @@ Use the `manage-qt-pyside6-lifetimes` skill for any Qt ownership or lifecycle ch
 
 ## Ownership and destruction
 
+- `AppQDialog` owns platform-neutral presentation geometry: simple subclasses declare `DEFAULT_DIALOG_SIZE` or
+  `FIXED_DIALOG_SIZE`; procedural `prepareInitialGeometry()` runs only at first presentation after subclass construction.
+  Do not call subclass geometry hooks from constructors or manipulate private first-show state. Dialogs retain the
+  established center-on-each-presentation behavior unless a specialized class explicitly owns another centering policy.
 - `AppQDialog` provides an asynchronous open-dialog registry. `AppQMessageBox` has an additional registry cleanup layer;
   it is redundant but harmless. Keep both registries balanced if either implementation changes.
 - `AppQTransientDialog` is delete-on-close. Connect completion before `open()` and never access it after destruction.

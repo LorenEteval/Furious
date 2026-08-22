@@ -644,6 +644,8 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
 class DeleteServersProgressDialog(AppQTransientDialog):
     """Present progress and cancellation controls for delete servers."""
 
+    DEFAULT_DIALOG_SIZE = QtCore.QSize(420, 150)
+
     def __init__(self, table, indexes, showTrayMessage=True, parent=None):
         """Initialize the DeleteServersProgressDialog."""
         super().__init__(parent)
@@ -689,10 +691,6 @@ class DeleteServersProgressDialog(AppQTransientDialog):
         self.setLayout(layout)
 
         self.updateStatus()
-
-    def setWidthAndHeight(self):
-        """Apply the default size for the delete servers progress dialog."""
-        self.resize(420, 150)
 
     def open(self):
         """Open the delete servers progress dialog asynchronously."""

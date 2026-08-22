@@ -39,6 +39,8 @@ registerAppSettings('CustomNetworkConnectivityTestURL')
 class NetworkTestDialog(AppQDialog):
     """Present the GUI customize network test dialog."""
 
+    DEFAULT_DIALOG_SIZE = QtCore.QSize(656, 180)
+
     def __init__(self, *args, **kwargs):
         """Initialize the network test settings dialog."""
         super().__init__(*args, **kwargs)
@@ -108,10 +110,6 @@ class NetworkTestDialog(AppQDialog):
     def _resetConnectivityURL(self):
         """Restore the default connectivity-test URL."""
         self.connectivityEdit.setText(NETWORK_CONNECTIVITY_TEST_URL)
-
-    def setWidthAndHeight(self):
-        """Apply the default size for the GUI customize network test dialog."""
-        self.resize(656, 180)
 
     def handleResultCode(self, code):
         """Handle result code."""

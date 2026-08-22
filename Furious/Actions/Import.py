@@ -133,6 +133,8 @@ def importURIs(*uris, failureCallback: Union[Callable[[], None], None] = None):
 class ImportURIsProgressDialog(AppQTransientDialog):
     """Present progress and cancellation controls for import ur is."""
 
+    DEFAULT_DIALOG_SIZE = QtCore.QSize(420, 150)
+
     def __init__(
         self,
         uris: Tuple[str, ...],
@@ -181,10 +183,6 @@ class ImportURIsProgressDialog(AppQTransientDialog):
         self.setLayout(layout)
 
         self.updateStatus()
-
-    def setWidthAndHeight(self):
-        """Apply the default size for the import ur is progress dialog."""
-        self.resize(420, 150)
 
     def open(self):
         """Open the import ur is progress dialog asynchronously."""

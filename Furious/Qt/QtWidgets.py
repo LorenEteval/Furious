@@ -321,6 +321,11 @@ class AppQComboBox(Mixins.QTranslatable, QComboBox):
 class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
     """Present the app Qt dialog."""
 
+    DEFAULT_DIALOG_SIZE, FIXED_DIALOG_SIZE = (
+        QtCore.QSize(),
+        QtCore.QSize(),
+    )
+
     _openDialogs = {}
 
     @staticmethod
@@ -337,7 +342,7 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         # ID reused by a newer dialog must not let the older destroyed signal
         # evict that newer dialog from the asynchronous lifetime registry.
         self._lifetimeKey = object()
-        self._firstShowPending = True
+        self._initialGeometryPrepared = False
 
         # Do not store a nested closure that captures this dialog on the dialog
         # itself.  Such a self-cycle delays wrapper collection and is especially
@@ -350,18 +355,30 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         self.finished.connect(release)
         self.destroyed.connect(release)
 
-        if PLATFORM != 'Darwin':
-            self.setWidthAndHeight()
-
         self.setWindowIcon(AppHue.currentWindowIcon())
 
-    def setWidthAndHeight(self):
-        """Apply the default size for the app Qt dialog."""
-        pass
+    def prepareInitialGeometry(self):
+        """Apply declarative geometry before the first native presentation."""
+        if self.FIXED_DIALOG_SIZE.isValid():
+            self.setFixedSize(self.FIXED_DIALOG_SIZE)
+        elif self.DEFAULT_DIALOG_SIZE.isValid():
+            self.resize(self.DEFAULT_DIALOG_SIZE)
+
+    def _prepareInitialGeometry(self):
+        """Prepare initial geometry exactly once after subclass construction."""
+        if self._initialGeometryPrepared:
+            return
+
+        self.prepareInitialGeometry()
+        self._initialGeometryPrepared = True
+
+    def centerForPresentation(self):
+        """Center this dialog after each native presentation."""
+        moveToCenter(self)
 
     def exec(self):
-        """Show and execute the app Qt dialog modally."""
-        self.show()
+        """Prepare and execute the app Qt dialog modally."""
+        self._prepareInitialGeometry()
 
         return super().exec()
 
@@ -371,7 +388,7 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         AppQDialog._openDialogs[key] = self
 
         try:
-            self.show()
+            self._prepareInitialGeometry()
 
             return super().open()
         except Exception:
@@ -382,14 +399,16 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
             raise
 
     def show(self):
-        """Show and position the app Qt dialog."""
+        """Prepare and show the app Qt dialog."""
+        self._prepareInitialGeometry()
+
         super().show()
 
-        if PLATFORM == 'Darwin' and self._firstShowPending:
-            self._firstShowPending = False
-            self.setWidthAndHeight()
+    def showEvent(self, event):
+        """Center the dialog after each native show on every platform."""
+        super().showEvent(event)
 
-        moveToCenter(self)
+        self.centerForPresentation()
 
     def retranslate(self):
         """Refresh translated text for the app Qt dialog."""
@@ -1740,19 +1759,25 @@ class AppQMessageBox(AppQTransientDialog):
 
         return self
 
-    def show(self):
-        """Show the app q message box."""
+    def centerForPresentation(self):
+        """Center the message box over its owning widget."""
+        self.moveToCenter()
+
+    def _prepareForPresentation(self):
+        """Refresh adaptive content and owner mask before each presentation."""
         self._ensureButtons()
         self._updateDialogSize()
         self._showWindowMask()
 
+    def show(self):
+        """Prepare and show the app q message box."""
+        self._prepareForPresentation()
+
         QDialog.show(self)
 
-        self.moveToCenter()
-
     def exec(self):
-        """Show and execute the app q message box modally."""
-        self.show()
+        """Prepare and execute the app q message box modally."""
+        self._prepareForPresentation()
 
         return QDialog.exec(self)
 
@@ -1762,7 +1787,7 @@ class AppQMessageBox(AppQTransientDialog):
         AppQMessageBox._openMessageBoxes[key] = self
 
         try:
-            self.show()
+            self._prepareForPresentation()
 
             return QDialog.open(self)
         except Exception:
