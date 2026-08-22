@@ -142,14 +142,12 @@ class DialogGeometryTest(unittest.TestCase):
         dialog = LifecycleProbeDialog()
 
         self.assertEqual(dialog.events, [])
-        self.assertFalse(dialog._initialGeometryPrepared)
 
         dialog.show()
         processQtEvents()
 
         self.assertEqual(dialog.events[0], ('prepare', True, False))
         self.assertEqual(dialog.events[1], ('show', dialog.DEFAULT_DIALOG_SIZE))
-        self.assertTrue(dialog._initialGeometryPrepared)
 
         self.dispose(dialog)
 
@@ -230,11 +228,11 @@ class DialogGeometryTest(unittest.TestCase):
         dialog = FailingProbeDialog()
         key = dialog._lifetimeKey
 
-        with self.assertRaisesRegex(RuntimeError, 'fixture geometry failure'):
-            dialog.open()
+        for _attempt in range(2):
+            with self.assertRaisesRegex(RuntimeError, 'fixture geometry failure'):
+                dialog.open()
 
         self.assertFalse(dialog.isVisible())
-        self.assertFalse(dialog._initialGeometryPrepared)
         self.assertNotIn(key, AppQDialog._openDialogs)
 
         self.dispose(dialog)

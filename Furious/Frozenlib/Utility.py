@@ -26,6 +26,7 @@ from typing import AnyStr, Tuple
 
 import os
 import time
+import weakref
 import pathlib
 import operator
 import functools
@@ -120,25 +121,58 @@ def forceToLocalhostIfPossible():
     return decorator
 
 
-def callOnceOnly(func):
-    """
-    Decorator that ensures a function is only called once.
-    Later calls return the cached result from the first invocation.
-    """
-    result = None
-    called = False
+class _CallOnceOnly:
+    """Cache one successful call globally or once for each bound instance."""
 
-    def wrapper(*args, **kwargs):
-        """Invoke the wrapped callable with the enclosing behavior."""
-        nonlocal result, called
+    def __init__(self, func):
+        """Retain callable metadata without retaining any bound instance."""
+        self._func = func
+        self._called = False
+        self._result = None
+        self._ownerReference = None
+        self._instanceResultAttribute = f'_callOnceOnlyResult_{id(self):x}'
 
-        if not called:
-            result = func(*args, **kwargs)
-            called = True
+        functools.update_wrapper(self, func)
+
+    def __set_name__(self, owner, _name):
+        """Remember the declaring type weakly for unbound method calls."""
+        self._ownerReference = weakref.ref(owner)
+
+    def __get__(self, instance, _owner=None):
+        """Bind instance methods while keeping their result on the instance."""
+        if instance is None:
+            return self
+
+        return functools.partial(self._callInstance, instance)
+
+    def _callInstance(self, instance, *args, **kwargs):
+        """Call once for one instance without adding a global strong owner."""
+        if hasattr(instance, self._instanceResultAttribute):
+            return getattr(instance, self._instanceResultAttribute)
+
+        result = self._func(instance, *args, **kwargs)
+
+        setattr(instance, self._instanceResultAttribute, result)
 
         return result
 
-    return wrapper
+    def __call__(self, *args, **kwargs):
+        """Invoke a free function globally or an unbound method per instance."""
+        owner = self._ownerReference() if self._ownerReference is not None else None
+
+        if owner is not None and args and isinstance(args[0], owner):
+            return self._callInstance(args[0], *args[1:], **kwargs)
+
+        if not self._called:
+            self._result = self._func(*args, **kwargs)
+            self._called = True
+
+        return self._result
+
+
+def callOnceOnly(func):
+    """Cache one successful free-function call or one call per bound instance."""
+    return _CallOnceOnly(func)
 
 
 def classname(ob) -> str:

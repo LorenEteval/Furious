@@ -342,7 +342,6 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         # ID reused by a newer dialog must not let the older destroyed signal
         # evict that newer dialog from the asynchronous lifetime registry.
         self._lifetimeKey = object()
-        self._initialGeometryPrepared = False
 
         # Do not store a nested closure that captures this dialog on the dialog
         # itself.  Such a self-cycle delays wrapper collection and is especially
@@ -364,13 +363,10 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         elif self.DEFAULT_DIALOG_SIZE.isValid():
             self.resize(self.DEFAULT_DIALOG_SIZE)
 
+    @callOnceOnly
     def _prepareInitialGeometry(self):
         """Prepare initial geometry exactly once after subclass construction."""
-        if self._initialGeometryPrepared:
-            return
-
         self.prepareInitialGeometry()
-        self._initialGeometryPrepared = True
 
     def centerForPresentation(self):
         """Center this dialog after each native presentation."""
@@ -719,7 +715,6 @@ class AppQMainWindow(
         super().__init__(*args, **kwargs)
 
         self._lifetimeKey = object()
-        self._initialGeometryPrepared = False
         self._initialPositionAuthoritative = False
 
         release = functools.partial(
@@ -751,13 +746,20 @@ class AppQMainWindow(
         """Return whether the first show should center this window."""
         return self.CENTER_ON_INITIAL_SHOW and not self._initialPositionAuthoritative
 
+    @callOnceOnly
+    def _prepareInitialGeometry(self):
+        """Prepare initial geometry once after subclass construction."""
+        self.prepareInitialGeometry()
+
+    @callOnceOnly
+    def _centerOnInitialShow(self):
+        """Apply the initial centering policy once after native presentation."""
+        if self.shouldCenterOnInitialShow():
+            moveToCenter(self)
+
     def show(self):
         """Show, position, and retain the window until it closes."""
-        firstShow = not self._initialGeometryPrepared
-
-        if firstShow:
-            self.prepareInitialGeometry()
-            self._initialGeometryPrepared = True
+        self._prepareInitialGeometry()
 
         key = self._lifetimeKey
         AppQMainWindow._openWindows[key] = self
@@ -771,8 +773,7 @@ class AppQMainWindow(
 
             raise
 
-        if firstShow and self.shouldCenterOnInitialShow():
-            moveToCenter(self)
+        self._centerOnInitialShow()
 
         # Preserve the established synchronous post-show flush for callers;
         # initial geometry and centering above do not depend on this event pump.

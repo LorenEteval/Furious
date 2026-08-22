@@ -264,12 +264,9 @@ class MainWindowGeometryTest(unittest.TestCase):
                 with patch.object(HomePage, 'serverImportActions', return_value=()):
                     window = MainWindow()
 
-                self.assertFalse(window._initialGeometryPrepared)
-
                 with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
                     window.show()
 
-                    self.assertTrue(window._initialGeometryPrepared)
                     self.assertEqual(window.size(), window.DEFAULT_WINDOW_SIZE)
                     moveToCenter.assert_called_once_with(window)
 

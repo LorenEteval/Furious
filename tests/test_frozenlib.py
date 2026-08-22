@@ -36,6 +36,7 @@ import sys
 import threading
 import types
 import unittest
+import weakref
 
 from tests.support import application, isolatedSettings, processQtEvents
 
@@ -157,6 +158,79 @@ class FrozenlibUtilityTest(unittest.TestCase):
         self.assertEqual(calls, ['first', 'second'])
 
         sleep.assert_not_called()
+
+    def testCallOnceOnlyCachesFreeFunctionResult(self):
+        """Preserve one shared result for ordinary decorated functions."""
+        calls = []
+
+        @UtilityModule.callOnceOnly
+        def callback(value):
+            calls.append(value)
+
+            return value
+
+        self.assertEqual(callback('first'), 'first')
+        self.assertEqual(callback('second'), 'first')
+        self.assertEqual(calls, ['first'])
+
+    def testCallOnceOnlyCachesEachInstanceWithoutRetainingIt(self):
+        """Give methods independent state owned only by their live instance."""
+
+        class Fixture:
+            """Expose one decorated method and its invocation count."""
+
+            def __init__(self):
+                """Initialize the fixture invocation count."""
+                self.calls = 0
+
+            @UtilityModule.callOnceOnly
+            def callback(self, value):
+                """Return the first value supplied to this fixture."""
+                self.calls += 1
+
+                return value
+
+        first = Fixture()
+        second = Fixture()
+
+        self.assertEqual(first.callback('first'), 'first')
+        self.assertEqual(first.callback('ignored'), 'first')
+        self.assertEqual(second.callback('second'), 'second')
+        self.assertEqual((first.calls, second.calls), (1, 1))
+
+        reference = weakref.ref(first)
+        del first
+
+        self.assertIsNone(reference())
+
+    def testCallOnceOnlyRetriesAfterFailure(self):
+        """Cache only successful invocations so transient failures can retry."""
+
+        class Fixture:
+            """Fail its first decorated invocation."""
+
+            def __init__(self):
+                """Initialize the fixture invocation count."""
+                self.calls = 0
+
+            @UtilityModule.callOnceOnly
+            def callback(self):
+                """Fail once and then return the successful call count."""
+                self.calls += 1
+
+                if self.calls == 1:
+                    raise RuntimeError('fixture failure')
+
+                return self.calls
+
+        fixture = Fixture()
+
+        with self.assertRaisesRegex(RuntimeError, 'fixture failure'):
+            fixture.callback()
+
+        self.assertEqual(fixture.callback(), 2)
+        self.assertEqual(fixture.callback(), 2)
+        self.assertEqual(fixture.calls, 2)
 
     def testRateLimitRejectsInvalidRates(self):
         """Reject zero and negative rates instead of dividing or sleeping."""
