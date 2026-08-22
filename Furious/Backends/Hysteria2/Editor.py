@@ -777,7 +777,8 @@ class GuiHy2GroupBoxProxyBandwidth(GuiEditorWidgetQGroupBox):
                     path=('bandwidth', 'down'),
                     translatable=False,
                 ),
-                topMargin=20,
+                # Specifically tuned for macOS
+                topMargin=10 if PLATFORM == 'Darwin' else 20,
             ),
             GuiHy2NestedSwitch(
                 title='bandwidth.disableLossCompensation',
