@@ -511,14 +511,12 @@ class ProcessOutputRedirector:
 
                     time.sleep(MsgQueue.MSG_PRODUCE_THRESHOLD / 1000)
 
-        # TODO: try to resolve messages not shown in edge case
-        time.sleep(2)
-
         msgThread = threading.Thread(target=produceMsg, daemon=True)
         msgThread.start()
 
-        # TODO: try to resolve messages not shown in edge case
-        time.sleep(2)
-
+        # The reader starts at the beginning of the temporary file, so output
+        # written before its first scheduling slice is still consumed. Do not
+        # delay the actual core entry point: the parent startup contract already
+        # provides its bounded readiness interval.
         with tmpFileStream:
             entrypoint()

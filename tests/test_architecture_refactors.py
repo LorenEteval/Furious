@@ -30,10 +30,14 @@ from PySide6 import QtCore
 from types import SimpleNamespace
 from unittest import TestCase, mock
 
+import importlib
 import os
 import sys
+import tempfile
 import textwrap
 import subprocess
+
+CoreProcessWorkerModule = importlib.import_module('Furious.Core.CoreProcessWorker')
 
 
 class _Runtime(CoreRuntime):
@@ -222,6 +226,140 @@ class ApplicationLifecycleTransactionTest(TestCase):
         setCallback.assert_called_once_with(shutdownSignal.emit)
         runListener.assert_called_once_with()
         stopListener.assert_called_once_with()
+
+    def testSystemIntegrationSkipsWindowsProxyDaemonOnMacOS(self):
+        """Do not register a nonexistent native proxy-daemon resource on macOS."""
+        cleanupStack = _ApplicationCleanupStack()
+        application = SimpleNamespace(
+            _cleanupStack=cleanupStack,
+            _sessionShutdownRequested=SimpleNamespace(emit=mock.Mock()),
+            setQuitOnLastWindowClosed=mock.Mock(),
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.Win32Session.set',
+                return_value=False,
+            ),
+            mock.patch(
+                'Furious.Application.DesktopApplication.AppSettings.get',
+                return_value='Auto',
+            ),
+            mock.patch(
+                'Furious.Application.DesktopApplication.PLATFORM',
+                'Darwin',
+            ),
+            mock.patch(
+                'Furious.Application.DesktopApplication.SystemProxy.off'
+            ) as proxyOff,
+            mock.patch(
+                'Furious.Application.DesktopApplication.SystemProxy.daemonOn_'
+            ) as daemonOn,
+            mock.patch(
+                'Furious.Application.DesktopApplication.SystemProxy.daemonOff'
+            ) as daemonOff,
+        ):
+            DesktopApplication._initializeSystemIntegration(application)
+            cleanupStack.close()
+
+        proxyOff.assert_called_once_with()
+        daemonOn.assert_not_called()
+        daemonOff.assert_not_called()
+
+    def testSystemIntegrationOwnsOnlyWindowsProxyDaemonCleanup(self):
+        """Keep OS proxy state under the connection controller's ownership."""
+        cleanupStack = _ApplicationCleanupStack()
+        application = SimpleNamespace(
+            _cleanupStack=cleanupStack,
+            _sessionShutdownRequested=SimpleNamespace(emit=mock.Mock()),
+            setQuitOnLastWindowClosed=mock.Mock(),
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.Win32Session.set',
+                return_value=False,
+            ),
+            mock.patch(
+                'Furious.Application.DesktopApplication.AppSettings.get',
+                return_value='Auto',
+            ),
+            mock.patch(
+                'Furious.Application.DesktopApplication.PLATFORM',
+                'Windows',
+            ),
+            mock.patch(
+                'Furious.Application.DesktopApplication.SystemProxy.off'
+            ) as proxyOff,
+            mock.patch(
+                'Furious.Application.DesktopApplication.SystemProxy.daemonOn_'
+            ) as daemonOn,
+            mock.patch(
+                'Furious.Application.DesktopApplication.SystemProxy.daemonOff'
+            ) as daemonOff,
+        ):
+            DesktopApplication._initializeSystemIntegration(application)
+            cleanupStack.close()
+
+        proxyOff.assert_called_once_with()
+        daemonOn.assert_called_once_with()
+        daemonOff.assert_called_once_with()
+
+    def testProcessOutputRedirectorDoesNotDelayCoreEntrypoint(self):
+        """Begin the core immediately while its file reader drains early output."""
+
+        class _Stream:
+            def __init__(self, descriptor):
+                self.descriptor = descriptor
+
+            def fileno(self):
+                return self.descriptor
+
+            def close(self):
+                pass
+
+        class _TemporaryDir:
+            def __init__(self, directory):
+                self.directory = directory
+
+            def isValid(self):
+                return True
+
+            def filePath(self, name):
+                return os.path.join(self.directory, name)
+
+        with tempfile.TemporaryDirectory() as directory:
+            thread = SimpleNamespace(start=mock.Mock())
+            entrypoint = mock.Mock()
+            fakeSys = SimpleNamespace(stdout=_Stream(1), stderr=_Stream(2))
+
+            with (
+                mock.patch.object(
+                    CoreProcessWorkerModule.SystemRuntime,
+                    'isPythonw',
+                    return_value=False,
+                ),
+                mock.patch.object(
+                    CoreProcessWorkerModule.ProcessOutputRedirector,
+                    'TemporaryDir',
+                    _TemporaryDir(directory),
+                ),
+                mock.patch.object(CoreProcessWorkerModule, 'sys', fakeSys),
+                mock.patch.object(CoreProcessWorkerModule.os, 'dup2'),
+                mock.patch.object(
+                    CoreProcessWorkerModule.threading,
+                    'Thread',
+                    return_value=thread,
+                ),
+                mock.patch.object(CoreProcessWorkerModule.time, 'sleep') as sleep,
+            ):
+                CoreProcessWorkerModule.ProcessOutputRedirector.launch(
+                    mock.Mock(), entrypoint, True
+                )
+
+        sleep.assert_not_called()
+        thread.start.assert_called_once_with()
+        entrypoint.assert_called_once_with()
 
     def testFailuresAtMeaningfulStagesRollBackOnlyEarlierStages(self):
         expected = {

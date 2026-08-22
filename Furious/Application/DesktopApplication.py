@@ -484,17 +484,16 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
         if AppSettings.get('SystemProxyMode') == AppBuiltinProxyMode.Auto.value:
             SystemProxy.off()
-            SystemProxy.daemonOn_()
 
-            self._cleanupStack.register(
-                'automatic system proxy', self._cleanupSystemProxy
-            )
+            # sysproxy's change-notification daemon is a Windows-only resource.
+            # ConnectionController owns the configured OS proxy and turns it
+            # off during disconnection/shutdown on every platform.
+            if PLATFORM == 'Windows':
+                SystemProxy.daemonOn_()
 
-    @staticmethod
-    def _cleanupSystemProxy():
-        """Release the exact automatic system-proxy integration."""
-        SystemProxy.off()
-        SystemProxy.daemonOff()
+                self._cleanupStack.register(
+                    'Windows system proxy daemon', SystemProxy.daemonOff
+                )
 
     def _initializeUI(self):
         """Create and bootstrap the application-owned main window and tray."""
