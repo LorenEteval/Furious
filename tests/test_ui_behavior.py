@@ -55,10 +55,17 @@ from Furious.Controllers.ConnectionController import (
     ConnectionState,
 )
 from Furious.Controllers.SettingsController import (
+    APPLICATION_THEME_SETTING,
     LOG_AUTO_CLEAR_SETTING,
     LOG_AUTO_SCROLL_DOWN_SETTING,
 )
-from Furious.Frozenlib import APPLICATION_NAME, AppSettings, Mixins
+from Furious.Frozenlib import (
+    APPLICATION_NAME,
+    AppBuiltinProxyMode,
+    ApplicationTheme,
+    AppSettings,
+    Mixins,
+)
 from Furious.Models import ProfileMetadata, Protocol, ServerProfile
 from Furious.Plugins.API import RoutingOption
 from Furious.Qt import (
@@ -76,13 +83,23 @@ from Furious.Service import (
     LogManager,
 )
 from Furious.Window.LogPage import LogPage
+from Furious.Window.SettingsPage import (
+    _ApplicationThemeSettingsCard,
+    _SystemProxySettingsCard,
+)
 from Furious.Window.SubscriptionPage import _SubscriptionEditorDialog
 from Furious.Widget.ConnectionButton import ConnectionButton
 from Furious.Widget.RoutingSelector import RoutingSelector
 
 from PySide6 import QtCore
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QHBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
+    QStyle,
+    QStyleOptionComboBox,
+    QWidget,
+)
 
 from tests.support import (
     application,
@@ -143,6 +160,22 @@ class ComboTranslationLayoutTest(unittest.TestCase):
     def tearDown(self):
         """Finish deferred widget deletion between tests."""
         collectAtBoundary()
+
+    def assertCurrentComboTextFits(self, comboBox):
+        """Assert the styled combo edit field can display its current text."""
+        option = QStyleOptionComboBox()
+        comboBox.initStyleOption(option)
+        textRect = comboBox.style().subControlRect(
+            QStyle.ComplexControl.CC_ComboBox,
+            option,
+            QStyle.SubControl.SC_ComboBoxEditField,
+            comboBox,
+        )
+
+        self.assertGreaterEqual(
+            textRect.width(),
+            comboBox.fontMetrics().horizontalAdvance(comboBox.currentText()),
+        )
 
     def testContentAwareComboRefreshesHintWithoutChangingSemanticData(self):
         """Grow for longer translated text while retaining item identity."""
@@ -222,6 +255,64 @@ class ComboTranslationLayoutTest(unittest.TestCase):
 
         parent.close()
         parent.deleteLater()
+
+    def testTranslatedSettingsChoicesResizeWithoutChangingSemanticValues(self):
+        """Resize translated Settings choices without applying fake changes."""
+        cases = (
+            (
+                _ApplicationThemeSettingsCard,
+                APPLICATION_THEME_SETTING,
+                ApplicationTheme.System.value,
+                'Follow System Appearance',
+                'setApplicationTheme',
+            ),
+            (
+                _SystemProxySettingsCard,
+                'SystemProxyMode',
+                AppBuiltinProxyMode.Auto.value,
+                'Automatically Configure System Proxy',
+                'setSystemProxyMode',
+            ),
+        )
+
+        with isolatedSettings(), mock.patch(
+            'Furious.Window.SettingsPage.AppSettingsController'
+        ) as controllerFactory:
+            for cardType, settingName, semanticValue, sourceText, callbackName in cases:
+                AppSettings.set('Language', 'EN')
+                AppSettings.set(settingName, semanticValue)
+                parent = QWidget()
+                layout = QHBoxLayout(parent)
+                card = cardType(parent=parent)
+                layout.addWidget(card)
+                parent.resize(1800, 120)
+                parent.show()
+                processQtEvents()
+
+                comboBox = card.comboBox
+                callback = getattr(controllerFactory.return_value, callbackName)
+                indexChanges = []
+                comboBox.currentIndexChanged.connect(indexChanges.append)
+
+                self.assertEqual(
+                    comboBox.sizeAdjustPolicy(),
+                    QComboBox.SizeAdjustPolicy.AdjustToContents,
+                )
+
+                for language in ('EN', 'ZH', 'RU'):
+                    AppSettings.set('Language', language)
+                    comboBox.retranslate()
+                    processQtEvents()
+
+                    self.assertEqual(comboBox.currentData(), semanticValue)
+                    self.assertEqual(comboBox.currentText(), _(sourceText, language))
+                    self.assertCurrentComboTextFits(comboBox)
+
+                callback.assert_not_called()
+                self.assertEqual(indexChanges, [])
+
+                parent.close()
+                parent.deleteLater()
 
 
 class EditorMappingTest(unittest.TestCase):

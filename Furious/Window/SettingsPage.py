@@ -469,6 +469,7 @@ class _ApplicationThemeSettingsCard(_SettingsCard):
         """Initialize the translated application-theme selector."""
         self.comboBox = AppQComboBox()
         self.comboBox.setObjectName('SettingsComboBox')
+        self.comboBox.setContentWidthAdjustable()
         self.comboBox.setMinimumWidth(260)
 
         for label, preference in self.Options:
@@ -522,6 +523,7 @@ class _SystemProxySettingsCard(_SettingsCard):
         """Initialize the translated system-proxy mode selector."""
         self.comboBox = AppQComboBox()
         self.comboBox.setObjectName('SettingsComboBox')
+        self.comboBox.setContentWidthAdjustable()
         self.comboBox.setMinimumWidth(260)
 
         for label, mode in self.Options:

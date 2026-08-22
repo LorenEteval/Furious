@@ -295,6 +295,7 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
         """Publish size constraints for the current responsive presentation."""
         if self._profileDetailsVisible:
             requiredWidth = self.widthWithProfile()
+
             self.setMinimumWidth(requiredWidth)
             self.setMaximumWidth(requiredWidth)
         else:
@@ -751,8 +752,8 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
 
         self.searchButton = SearchButton()
         self.subscriptionFilterComboBox = AppQComboBox()
+        self.subscriptionFilterComboBox.setContentWidthAdjustable()
         self.subscriptionFilterComboBox.setMinimumWidth(190)
-        self.subscriptionFilterComboBox.setMaximumWidth(300)
         self.subscriptionFilterComboBox.setSizePolicy(
             QSizePolicy.Policy.Preferred,
             QSizePolicy.Policy.Fixed,

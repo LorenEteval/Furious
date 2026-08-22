@@ -84,22 +84,32 @@ class _SubscriptionEditorDialog(AppQTransientDialog):
 
         subscription = dict(subscription or {})
 
-        self.remarkEdit = AppQLineEdit(subscription.get('remark', ''))
-        self.urlEdit = AppQLineEdit(subscription.get('webURL', ''))
-        self.enabledSwitch = AppQSwitch()
-        self.enabledSwitch.syncChecked(subscription.get('enabled', True))
-        self.autoUpdateComboBox = AppQComboBox()
-        self.proxyComboBox = AppQComboBox()
-        self.userAgentEdit = AppQLineEdit(subscription.get('userAgent', ''))
-        self.filterEdit = AppQLineEdit(subscription.get('filter', ''))
+        (
+            self.remarkEdit,
+            self.urlEdit,
+            self.enabledSwitch,
+            self.autoUpdateComboBox,
+            self.proxyComboBox,
+            self.userAgentEdit,
+            self.filterEdit,
+        ) = (
+            AppQLineEdit(subscription.get('remark', '')),
+            AppQLineEdit(subscription.get('webURL', '')),
+            AppQSwitch(),
+            AppQComboBox(),
+            AppQComboBox(),
+            AppQLineEdit(subscription.get('userAgent', '')),
+            AppQLineEdit(subscription.get('filter', '')),
+        )
 
         self.remarkEdit.setMinimumWidth(240)
         self.remarkEdit.setMaximumWidth(360)
         self.urlEdit.setMinimumWidth(420)
+        self.enabledSwitch.syncChecked(subscription.get('enabled', True))
         self.autoUpdateComboBox.setMinimumWidth(220)
-        self.autoUpdateComboBox.setMaximumWidth(320)
+        self.autoUpdateComboBox.setContentWidthAdjustable()
         self.proxyComboBox.setMinimumWidth(220)
-        self.proxyComboBox.setMaximumWidth(320)
+        self.proxyComboBox.setContentWidthAdjustable()
         self.userAgentEdit.setMinimumWidth(260)
         self.filterEdit.setMinimumWidth(260)
 
@@ -109,8 +119,10 @@ class _SubscriptionEditorDialog(AppQTransientDialog):
         for value in SubscriptionTableView.ProxyOptions:
             self.proxyComboBox.addItem(_(value), value)
 
-        autoIndex = self.autoUpdateComboBox.findData(subscription.get('autoupdate', ''))
-        proxyIndex = self.proxyComboBox.findData(subscription.get('proxy', ''))
+        autoIndex, proxyIndex = (
+            self.autoUpdateComboBox.findData(subscription.get('autoupdate', '')),
+            self.proxyComboBox.findData(subscription.get('proxy', '')),
+        )
 
         self.autoUpdateComboBox.setCurrentIndex(max(autoIndex, 0))
         self.proxyComboBox.setCurrentIndex(max(proxyIndex, 0))
@@ -236,20 +248,35 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         super().__init__(parent)
 
         self.setObjectName('SubscriptionPage')
+
         self.serverTable = serverTable
+
         self.pageTitleLabel = AppQLabel(_('Subscriptions'))
         self.pageTitleLabel.setObjectName('SubscriptionPageTitle')
+
         self.proxyLabel = AppQLabel(_('Update Using'))
+
         self.proxyComboBox = AppQComboBox()
+        self.proxyComboBox.setContentWidthAdjustable()
         self.proxyComboBox.setMinimumWidth(160)
 
-        self.addButton = AppQPushButton(_('Add'))
-        self.editButton = AppQPushButton(_('Edit'))
-        self.deleteButton = AppQPushButton(_('Delete'))
-        self.copyURLButton = AppQPushButton(_('Copy URL'))
-        self.viewProfilesButton = AppQPushButton(_('View Profiles'))
-        self.updateSelectedButton = AppQPushButton(_('Update Selected'))
-        self.updateAllButton = AppQPushButton(_('Update All'))
+        (
+            self.addButton,
+            self.editButton,
+            self.deleteButton,
+            self.copyURLButton,
+            self.viewProfilesButton,
+            self.updateSelectedButton,
+            self.updateAllButton,
+        ) = (
+            AppQPushButton(_('Add')),
+            AppQPushButton(_('Edit')),
+            AppQPushButton(_('Delete')),
+            AppQPushButton(_('Copy URL')),
+            AppQPushButton(_('View Profiles')),
+            AppQPushButton(_('Update Selected')),
+            AppQPushButton(_('Update All')),
+        )
 
         self.table = SubscriptionTableView(
             deleteUniqueCallback=self._deleteProfilesForSubscription,

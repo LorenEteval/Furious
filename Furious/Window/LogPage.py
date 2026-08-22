@@ -156,6 +156,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         # metadata, so LogPage rebuilds this application-styled selector with
         # the correct per-category translation policy.
         self.filterComboBox = AppQComboBox(translatable=False)
+        self.filterComboBox.setContentWidthAdjustable()
         self.filterComboBox.setMinimumWidth(180)
 
         self.textBrowser = DraculaTextBrowser(

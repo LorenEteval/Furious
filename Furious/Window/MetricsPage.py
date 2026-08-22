@@ -94,12 +94,12 @@ class _TrafficMetricsCard(QFrame):
             AppQLabel(_('Granularity'), parent=self),
         )
 
-        self.timeRangeComboBox, self.granularityComboBox = (
-            AppQComboBox(parent=self),
-            AppQComboBox(parent=self),
-        )
-
+        self.timeRangeComboBox = AppQComboBox(parent=self)
+        self.timeRangeComboBox.setContentWidthAdjustable()
         self.timeRangeComboBox.setMinimumWidth(160)
+
+        self.granularityComboBox = AppQComboBox(parent=self)
+        self.granularityComboBox.setContentWidthAdjustable()
         self.granularityComboBox.setMinimumWidth(130)
 
         self.downloadTitleLabel, self.uploadTitleLabel = (
