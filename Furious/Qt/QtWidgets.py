@@ -284,6 +284,22 @@ class AppQComboBox(Mixins.QTranslatable, QComboBox):
 
         self._themedSeparatorDelegate = None
 
+    def setContentWidthAdjustable(self, adjustable: bool = True):
+        """Opt into content-aware width hints without imposing a fixed width."""
+        policy = (
+            QComboBox.SizeAdjustPolicy.AdjustToContents
+            if adjustable
+            else QComboBox.SizeAdjustPolicy.AdjustToContentsOnFirstShow
+        )
+
+        self.setSizeAdjustPolicy(policy)
+        self.refreshContentGeometry()
+
+    def refreshContentGeometry(self):
+        """Notify the owning layout that changed item text may need more width."""
+        self.updateGeometry()
+        self.view().updateGeometry()
+
     def enableThemedSeparators(self):
         """Theme real insertSeparator() rows while preserving native items."""
         if self._themedSeparatorDelegate is not None:
@@ -298,6 +314,8 @@ class AppQComboBox(Mixins.QTranslatable, QComboBox):
         """Refresh translated text for the app q combo box."""
         for index in range(self.count()):
             self.setItemText(index, _(self.itemText(index)))
+
+        self.refreshContentGeometry()
 
 
 class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):

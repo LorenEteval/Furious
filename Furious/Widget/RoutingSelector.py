@@ -43,8 +43,8 @@ class RoutingSelector(AppQComboBox):
 
         self.setObjectName('HomeRoutingSelector')
         self.enableThemedSeparators()
+        self.setContentWidthAdjustable()
         self.setMinimumWidth(180)
-        self.setMaximumWidth(280)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.setAccessibleName(_('Routing'))
         self.setToolTip(_('Routing'))
@@ -76,6 +76,7 @@ class RoutingSelector(AppQComboBox):
 
             self.setCurrentIndex(index if index >= 0 else 0)
 
+        self.refreshContentGeometry()
         self.setVisible(bool(options))
         self._applyInteractionEnabled(self.controller.interactionEnabled)
 

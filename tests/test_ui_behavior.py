@@ -101,6 +101,129 @@ import weakref
 from unittest import mock
 
 
+class RoutingControllerFixture(QtCore.QObject):
+    """Provide routing state without persistence or connection side effects."""
+
+    stateChanged = QtCore.Signal(object, str)
+    interactionEnabledChanged = QtCore.Signal(bool)
+
+    def __init__(self, options, routing):
+        """Initialize one immutable selector state."""
+        super().__init__()
+
+        self._options = tuple(options)
+        self._routing = routing
+        self.interactionEnabled = True
+        self.selected = []
+
+    def state(self):
+        """Return the current options and semantic selection."""
+        return self._options, self._routing
+
+    def refresh(self, *, force=False):
+        """Return state without consulting plugins or reconnecting."""
+        if force:
+            self.stateChanged.emit(*self.state())
+
+        return self.state()
+
+    def selectRouting(self, routing):
+        """Record explicit user selection attempts."""
+        self.selected.append(routing)
+
+
+class ComboTranslationLayoutTest(unittest.TestCase):
+    """Verify translated content can republish useful combo width hints."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create the process-wide headless QApplication."""
+        application()
+
+    def tearDown(self):
+        """Finish deferred widget deletion between tests."""
+        collectAtBoundary()
+
+    def testContentAwareComboRefreshesHintWithoutChangingSemanticData(self):
+        """Grow for longer translated text while retaining item identity."""
+        parent = QWidget()
+        layout = QHBoxLayout(parent)
+        combo = AppQComboBox(parent=parent)
+        combo.setContentWidthAdjustable()
+        combo.addItem('Short', 'semantic-route')
+        layout.addWidget(combo)
+
+        shortHint = combo.sizeHint().width()
+        translated = 'A significantly longer translated routing option'
+
+        with mock.patch(
+            'Furious.Qt.QtWidgets._',
+            side_effect=lambda text: translated if text == 'Short' else text,
+        ):
+            combo.retranslate()
+
+        parent.resize(combo.sizeHint().width() + 100, 100)
+        parent.show()
+        processQtEvents()
+
+        self.assertEqual(combo.currentData(), 'semantic-route')
+        self.assertEqual(combo.currentText(), translated)
+        self.assertGreater(combo.sizeHint().width(), shortHint)
+        self.assertGreater(
+            combo.sizeHint().width(),
+            combo.fontMetrics().horizontalAdvance(translated),
+        )
+        self.assertGreaterEqual(combo.width(), combo.sizeHint().width())
+
+        parent.close()
+        parent.deleteLater()
+
+    def testRoutingRetranslationKeepsSelectionAndDoesNotReconnect(self):
+        """Rebuild display text without forwarding a synthetic selection."""
+        option = RoutingOption(
+            'bypass-mainland',
+            'Bypass Mainland China',
+            translatable=True,
+        )
+        controller = RoutingControllerFixture((option,), option.id)
+        parent = QWidget()
+        layout = QHBoxLayout(parent)
+
+        with mock.patch(
+            'Furious.Widget.RoutingSelector.AppRoutingController',
+            return_value=controller,
+        ):
+            selector = RoutingSelector(parent=parent)
+
+        layout.addWidget(selector)
+        initialHint = selector.sizeHint().width()
+        translated = 'Обходить подключения к серверам материкового Китая'
+
+        with mock.patch(
+            'Furious.Widget.RoutingSelector._',
+            side_effect=lambda text: (
+                translated if text == option.displayName else text
+            ),
+        ):
+            selector.retranslate()
+
+        parent.resize(selector.sizeHint().width() + 100, 100)
+        parent.show()
+        processQtEvents()
+
+        self.assertEqual(selector.currentData(), option.id)
+        self.assertEqual(selector.currentText(), translated)
+        self.assertGreater(selector.sizeHint().width(), initialHint)
+        self.assertGreater(
+            selector.sizeHint().width(),
+            selector.fontMetrics().horizontalAdvance(translated),
+        )
+        self.assertEqual(controller.selected, [])
+
+        parent.close()
+        parent.deleteLater()
+
+
 class EditorMappingTest(unittest.TestCase):
     """Verify editor fields preserve structured configuration semantics."""
 
