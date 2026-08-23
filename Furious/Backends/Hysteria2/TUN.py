@@ -56,7 +56,12 @@ DEFAULT_HYSTERIA2_TUN_SETTINGS = {
     },
 }
 
-registerAppSettings('useHysteria2TUN', isBinary=True, default=AppBinarySettings.ON_)
+registerAppSettings(
+    'useHysteria2TUN',
+    isBinary=True,
+    # On linux this setting is by default off
+    default=AppBinarySettings.ON_ if PLATFORM != 'Linux' else AppBinarySettings.OFF,
+)
 registerAppSettings('Hysteria2TUNSettings')
 
 
