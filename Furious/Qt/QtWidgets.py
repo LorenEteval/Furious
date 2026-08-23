@@ -1962,7 +1962,7 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
             self.setIcon(icon)
 
     @staticmethod
-    @functools.lru_cache(None)
+    @functools.lru_cache(256)
     def getIconFileName(fileName):
         """Return icon file name."""
         try:

@@ -214,10 +214,10 @@ class SubscriptionManagerTest(TestCase):
         groupBReply = _AbortableReply()
         manager._requestVersions.update({'group-a': 1, 'group-b': 4})
         manager._activeReplies.update(
-            {id(groupAReply): groupAReply, id(groupBReply): groupBReply}
+            {groupAReply: groupAReply, groupBReply: groupBReply}
         )
         manager._replySubscriptions.update(
-            {id(groupAReply): 'group-a', id(groupBReply): 'group-b'}
+            {groupAReply: 'group-a', groupBReply: 'group-b'}
         )
 
         manager.cancelUpdates('group-a')
@@ -263,4 +263,26 @@ class SubscriptionManagerTest(TestCase):
 
         self.assertEqual(manager._autoUpdateTimers, {})
         self.assertFalse(timer.isActive())
+        manager.deleteLater()
+
+    def testDeletedSubscriptionVersionIsPrunedAfterItsReplyFinishes(self):
+        """Release stale-request bookkeeping after the last exact owner ends."""
+        manager = self._manager()
+        reply = _AbortableReply()
+        manager._requestVersions['deleted-group'] = 4
+        manager._activeReplies[reply] = reply
+        manager._replySubscriptions[reply] = 'deleted-group'
+
+        with mock.patch(
+            'Furious.Service.SubscriptionManager.Storage.UserSubs',
+            return_value={},
+        ):
+            manager._pruneRequestVersion('deleted-group')
+            self.assertIn('deleted-group', manager._requestVersions)
+
+            manager._activeReplies.pop(reply)
+            manager._replySubscriptions.pop(reply)
+            manager._pruneRequestVersion('deleted-group')
+
+        self.assertNotIn('deleted-group', manager._requestVersions)
         manager.deleteLater()

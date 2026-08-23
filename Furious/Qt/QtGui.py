@@ -73,13 +73,13 @@ def setIconAsMask(icon):
     return icon
 
 
-@functools.lru_cache(None)
+@functools.lru_cache(256)
 def bootstrapIconMask(name):
     """Return the bootstrap icon mask value used by the application."""
     return setIconAsMask(bootstrapIconWhite(name))
 
 
-@functools.lru_cache(None)
+@functools.lru_cache(256)
 def bootstrapIconWithOpacity(name, opacity, isMask=False):
     """Return the bootstrap icon with opacity value used by the application."""
     sourceIcon = bootstrapIconWhite(name)
@@ -223,7 +223,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
         return self.textEnglish == compare
 
     @staticmethod
-    @functools.lru_cache(None)
+    @functools.lru_cache(256)
     def getIconFileName(fileName):
         """Return icon file name."""
         try:

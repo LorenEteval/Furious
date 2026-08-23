@@ -25,6 +25,15 @@
   independently; terminal reply paths abort or finish once and schedule deletion once.
 - Bound network, DNS, process, host, and worker work where the provider permits it. Executor callbacks use weak or
   otherwise bounded ownership and must not retain a manager forever after shutdown; GUI updates cross via signals.
+- Log storage has independent count, total-character, and per-entry hard bounds even when automatic clearing is
+  disabled. High-rate producers must coalesce GUI notifications; hiding a page may defer rendering but must never defer
+  draining a process pipe or bounded transport queue.
+- Metric history has both a time horizon and a defensive sample-count ceiling. Derive graph buckets on demand rather
+  than retaining a second ever-growing history.
+- Every network reply has a finite transfer timeout unless a documented caller supplies a stricter one. Track replies
+  by exact object identity, remove every context on the terminal path, and schedule the reply for deletion exactly once.
+- Per-subscription versions exist only while the persisted subscription, its timer, or an active reply needs them;
+  repeated create/delete cycles must not grow bookkeeping dictionaries.
 - Logging and metrics collect while pages are hidden but avoid hidden-page rendering. Raw time-series samples are
   immutable; stable timestamp buckets are derived display data.
 - Log retention is owned by `LogManager`, not a text document. Category pruning/reset notifications must keep lazy UI

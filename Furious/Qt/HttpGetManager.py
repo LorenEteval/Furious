@@ -41,6 +41,7 @@ class HttpGetManager(AppQNetworkAccessManager):
         """Initialize the HttpGetManager."""
         super().__init__(parent)
 
+        self.transferTimeout = max(int(kwargs.pop('transferTimeout', 60_000)), 1)
         self.actionMessage = actionMessage
 
         self.completionRunsOnce = kwargs.pop('completionRunsOnce', True)
@@ -94,7 +95,7 @@ class HttpGetManager(AppQNetworkAccessManager):
         if isinstance(networkReply, QNetworkReply):
             self.handleReadyReadByNetworkReply(
                 networkReply,
-                **self._replyContexts.get(id(networkReply), {}),
+                **self._replyContexts.get(networkReply, {}),
             )
 
     @QtCore.Slot()
@@ -105,7 +106,7 @@ class HttpGetManager(AppQNetworkAccessManager):
         if not isinstance(networkReply, QNetworkReply):
             return
 
-        kwargs = self._replyContexts.pop(id(networkReply), {})
+        kwargs = self._replyContexts.pop(networkReply, {})
 
         self.handleFinishedByNetworkReply(networkReply, **kwargs)
 
@@ -159,13 +160,16 @@ class HttpGetManager(AppQNetworkAccessManager):
     def webGET(self, request: Union[QNetworkRequest, str], **kwargs) -> QNetworkReply:
         """Start an HTTP GET request managed by this instance."""
         if isinstance(request, QNetworkRequest):
-            networkReply = self.get(request)
+            request = QNetworkRequest(request)
         else:
-            networkReply = self.get(QNetworkRequest(QtCore.QUrl(request)))
+            request = QNetworkRequest(QtCore.QUrl(request))
 
-        key = id(networkReply)
+        if request.transferTimeout() <= 0:
+            request.setTransferTimeout(self.transferTimeout)
 
-        self._replyContexts[key] = dict(kwargs)
+        networkReply = self.get(request)
+
+        self._replyContexts[networkReply] = dict(kwargs)
 
         networkReply.readyRead.connect(self._handleReadyRead)
         networkReply.finished.connect(self._handleFinished)

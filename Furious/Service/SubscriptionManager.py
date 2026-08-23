@@ -127,6 +127,17 @@ class SubscriptionManager(HttpGetManager):
 
         return version
 
+    def _pruneRequestVersion(self, unique: str):
+        """Forget version state once no subscription resource needs it."""
+        if (
+            unique in Storage.UserSubs()
+            or unique in self._autoUpdateTimers
+            or unique in self._replySubscriptions.values()
+        ):
+            return
+
+        self._requestVersions.pop(unique, None)
+
     def _isCurrentRequest(self, kwargs) -> bool:
         """Return whether one completion still targets the current subscription."""
         version = kwargs.get('requestVersion')
@@ -230,14 +241,18 @@ class SubscriptionManager(HttpGetManager):
             timer.stop()
             timer.deleteLater()
 
+        self._pruneRequestVersion(unique)
+
     @QtCore.Slot()
     def _releaseFinishedReply(self):
         """Forget one exact subscription reply after its completion is dispatched."""
         reply = self.sender()
-        key = id(reply)
+        unique = self._replySubscriptions.pop(reply, '')
 
-        self._activeReplies.pop(key, None)
-        self._replySubscriptions.pop(key, None)
+        self._activeReplies.pop(reply, None)
+
+        if unique:
+            self._pruneRequestVersion(unique)
 
     def cancelUpdates(self, unique: str | None = None):
         """Cancel exact active replies and invalidate their eventual completions."""
@@ -252,8 +267,8 @@ class SubscriptionManager(HttpGetManager):
         for subscriptionId in subscriptions:
             self._nextRequestVersion(subscriptionId)
 
-        for key, reply in tuple(self._activeReplies.items()):
-            if unique is None or self._replySubscriptions.get(key) == unique:
+        for reply in tuple(self._activeReplies):
+            if unique is None or self._replySubscriptions.get(reply) == unique:
                 reply.abort()
 
     def _synchronizeProfiles(self, unique: str, profiles):
@@ -474,10 +489,9 @@ class SubscriptionManager(HttpGetManager):
         )
 
         reply = self.webGET(request, logActionMessage=logActionMessage, **kwargs)
-        key = id(reply)
 
-        self._activeReplies[key] = reply
-        self._replySubscriptions[key] = str(kwargs.get('unique', ''))
+        self._activeReplies[reply] = reply
+        self._replySubscriptions[reply] = str(kwargs.get('unique', ''))
 
         reply.finished.connect(self._releaseFinishedReply)
 

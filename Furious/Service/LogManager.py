@@ -57,10 +57,16 @@ class LogManager(QtCore.QObject):
 
     DefaultMaximumEntries = 10_000
     DefaultAutoClearMaximumEntries = 5_000
+    DefaultMaximumCharacters = 8 * 1024 * 1024
+    DefaultMaximumEntryCharacters = 64 * 1024
+    TruncationMarker = '\n... [log entry truncated]'
 
     categoryRegistered = QtCore.Signal(object)
     entryAdded = QtCore.Signal(object)
     entriesCleared = QtCore.Signal(object)
+    entriesChanged = QtCore.Signal(int)
+
+    _entriesChangedRequested = QtCore.Signal()
 
     def __init__(
         self,
@@ -69,6 +75,8 @@ class LogManager(QtCore.QObject):
         maximumEntries=DefaultMaximumEntries,
         autoClearMaximumEntries=DefaultAutoClearMaximumEntries,
         autoClearEnabled=True,
+        maximumCharacters=DefaultMaximumCharacters,
+        maximumEntryCharacters=DefaultMaximumEntryCharacters,
     ):
         """Initialize the category registry and thread-safe entry collection."""
         super().__init__(parent)
@@ -81,6 +89,23 @@ class LogManager(QtCore.QObject):
             raise ValueError('maximumEntries must be a positive integer')
 
         if (
+            isinstance(maximumCharacters, bool)
+            or not isinstance(maximumCharacters, int)
+            or maximumCharacters <= 0
+        ):
+            raise ValueError('maximumCharacters must be a positive integer')
+
+        if (
+            isinstance(maximumEntryCharacters, bool)
+            or not isinstance(maximumEntryCharacters, int)
+            or maximumEntryCharacters <= 0
+        ):
+            raise ValueError('maximumEntryCharacters must be a positive integer')
+
+        if maximumEntryCharacters > maximumCharacters:
+            raise ValueError('maximumEntryCharacters cannot exceed maximumCharacters')
+
+        if (
             isinstance(autoClearMaximumEntries, bool)
             or not isinstance(autoClearMaximumEntries, int)
             or autoClearMaximumEntries <= 0
@@ -90,11 +115,20 @@ class LogManager(QtCore.QObject):
         self._lock = threading.RLock()
         self._categories: dict[str, LogCategory] = {}
         self._maximumEntries = maximumEntries
+        self._maximumCharacters = maximumCharacters
+        self._maximumEntryCharacters = maximumEntryCharacters
         self._autoClearMaximumEntries = autoClearMaximumEntries
         self._autoClearEnabled = bool(autoClearEnabled)
-        self._entries: deque[LogEntry] = deque(maxlen=maximumEntries)
+        self._entries: deque[LogEntry] = deque()
         self._categoryEntryCounts: dict[str, int] = {}
+        self._retainedCharacters = 0
         self._sequence = 0
+        self._changeNotificationPending = False
+
+        self._entriesChangedRequested.connect(
+            self._publishEntriesChanged,
+            QtCore.Qt.ConnectionType.QueuedConnection,
+        )
 
         self.registerCategory(
             LogCategory(
@@ -125,6 +159,22 @@ class LogManager(QtCore.QObject):
         return self._maximumEntries
 
     @property
+    def maximumCharacters(self) -> int:
+        """Return the hard character budget for retained log messages."""
+        return self._maximumCharacters
+
+    @property
+    def maximumEntryCharacters(self) -> int:
+        """Return the maximum number of characters retained from one entry."""
+        return self._maximumEntryCharacters
+
+    @property
+    def retainedCharacters(self) -> int:
+        """Return the current retained message-character count in constant time."""
+        with self._lock:
+            return self._retainedCharacters
+
+    @property
     def autoClearMaximumEntries(self) -> int:
         """Return the automatic-clear threshold for replaceable runtime logs."""
         return self._autoClearMaximumEntries
@@ -141,13 +191,72 @@ class LogManager(QtCore.QObject):
 
     def _removeCategoriesLocked(self, categoryIds: set[str]):
         """Remove selected categories while the caller owns ``_lock``."""
-        self._entries = deque(
-            (entry for entry in self._entries if entry.categoryId not in categoryIds),
-            maxlen=self._maximumEntries,
-        )
+        retainedEntries = deque()
+        retainedCharacters = 0
+
+        for entry in self._entries:
+            if entry.categoryId in categoryIds:
+                continue
+
+            retainedEntries.append(entry)
+            retainedCharacters += len(entry.message)
+
+        self._entries = retainedEntries
+        self._retainedCharacters = retainedCharacters
 
         for categoryId in categoryIds:
             self._categoryEntryCounts[categoryId] = 0
+
+    def _removeOldestLocked(self):
+        """Remove and account for the oldest entry while holding the lock."""
+        entry = self._entries.popleft()
+
+        self._categoryEntryCounts[entry.categoryId] -= 1
+        self._retainedCharacters -= len(entry.message)
+
+    def _enforceRetentionLimitsLocked(self):
+        """Evict the oldest entries until every hard retention limit is met."""
+        while self._entries and (
+            len(self._entries) > self._maximumEntries
+            or self._retainedCharacters > self._maximumCharacters
+        ):
+            self._removeOldestLocked()
+
+    def _normalizeMessage(self, message) -> str:
+        """Return one newline-trimmed message within the per-entry hard limit."""
+        text = str(message).rstrip('\r\n')
+
+        if len(text) <= self._maximumEntryCharacters:
+            return text
+
+        marker = self.TruncationMarker
+
+        if len(marker) >= self._maximumEntryCharacters:
+            return text[: self._maximumEntryCharacters]
+
+        return text[: self._maximumEntryCharacters - len(marker)] + marker
+
+    def _requestEntriesChanged(self):
+        """Queue at most one cross-thread presentation notification."""
+        shouldNotify = False
+
+        with self._lock:
+            if not self._changeNotificationPending:
+                self._changeNotificationPending = True
+
+                shouldNotify = True
+
+        if shouldNotify:
+            self._entriesChangedRequested.emit()
+
+    @QtCore.Slot()
+    def _publishEntriesChanged(self):
+        """Publish the newest sequence once on the manager's Qt thread."""
+        with self._lock:
+            self._changeNotificationPending = False
+            sequence = self._sequence
+
+        self.entriesChanged.emit(sequence)
 
     def setAutoClearEnabled(self, enabled: bool):
         """Apply Core-triggered clearing without involving presentation state."""
@@ -257,7 +366,7 @@ class LogManager(QtCore.QObject):
             self._sequence += 1
 
             entry = LogEntry(
-                message=str(message).rstrip('\r\n'),
+                message=self._normalizeMessage(message),
                 timestamp=timestamp,
                 categoryId=category.id,
                 categoryLabel=category.displayName,
@@ -280,18 +389,17 @@ class LogManager(QtCore.QObject):
 
                 self._removeCategoriesLocked(clearedCategoryIds)
 
-            if len(self._entries) == self._maximumEntries:
-                evicted = self._entries[0]
-
-                self._categoryEntryCounts[evicted.categoryId] -= 1
-
             self._entries.append(entry)
             self._categoryEntryCounts[entry.categoryId] += 1
+            self._retainedCharacters += len(entry.message)
+            self._enforceRetentionLimitsLocked()
 
         if clearedCategoryIds:
             self.entriesCleared.emit(frozenset(clearedCategoryIds))
 
         self.entryAdded.emit(entry)
+
+        self._requestEntriesChanged()
 
         return entry
 
@@ -368,6 +476,7 @@ class LogManager(QtCore.QObject):
                 changed = bool(self._entries)
 
                 self._entries.clear()
+                self._retainedCharacters = 0
 
                 for registeredCategoryId in self._categoryEntryCounts:
                     self._categoryEntryCounts[registeredCategoryId] = 0

@@ -344,7 +344,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.autoScrollSwitch.toggled.connect(self._autoScrollChanged)
         self.autoClearSwitch.toggled.connect(self._autoClearChanged)
         self.manager.categoryRegistered.connect(self._categoryRegistered)
-        self.manager.entryAdded.connect(self._entryAdded)
+        self.manager.entriesChanged.connect(self._entriesChanged)
         self.manager.entriesCleared.connect(self._entriesCleared)
 
         scrollbar = self.textBrowser.verticalScrollBar()
@@ -782,10 +782,10 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
                 self.filterComboBox.findData(category.id)
             )
 
-    @QtCore.Slot(object)
-    def _entryAdded(self, entry):
+    @QtCore.Slot(int)
+    def _entriesChanged(self, sequence: int):
         """Coalesce newly collected entries into the visible presentation."""
-        if entry.sequence <= self._renderedSequence:
+        if sequence <= self._renderedSequence:
             return
 
         self._requestRefresh()

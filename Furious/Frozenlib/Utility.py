@@ -180,7 +180,7 @@ def classname(ob) -> str:
     return ob.__class__.__name__
 
 
-@functools.lru_cache(None)
+@functools.lru_cache(1024)
 def isValidIPAddress(address) -> bool:
     """Return whether valid ip address."""
     try:
@@ -230,13 +230,13 @@ def runExternalCommand(*args, **kwargs):
         return subprocess.run(*args, **kwargs)
 
 
-@functools.lru_cache(None)
+@functools.lru_cache(256)
 def absolutePath(path) -> pathlib.Path:
     """Return the absolute path value used by the application."""
     return pathlib.Path(path) if os.path.isabs(path) else ROOT_DIR / path
 
 
-@functools.lru_cache(None)
+@functools.lru_cache(128)
 def versionToValue(version: str) -> int:
     """Return the version to value value used by the application."""
 

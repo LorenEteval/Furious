@@ -450,6 +450,34 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 0)
         self.assertEqual(manager.entryCount(APPLICATION_LOG_CATEGORY), 1)
 
+    def testCharacterBudgetsRemainHardWhenAutoClearIsDisabled(self):
+        """Bound both total text and one hostile entry independently of count."""
+        manager = LogManager(
+            maximumEntries=100,
+            maximumCharacters=80,
+            maximumEntryCharacters=32,
+            autoClearEnabled=False,
+        )
+
+        manager.append('a' * 100, CORE_LOG_CATEGORY)
+
+        self.assertEqual(len(manager.entries()[0].message), 32)
+        self.assertIn('truncated', manager.entries()[0].message)
+
+        for index in range(20):
+            manager.append(f'{index:02d}-' + ('x' * 17), CORE_LOG_CATEGORY)
+
+        self.assertLessEqual(manager.retainedCharacters, 80)
+        self.assertLessEqual(manager.entryCount(), 4)
+        self.assertEqual(
+            manager.retainedCharacters,
+            sum(len(entry.message) for entry in manager.entries()),
+        )
+        self.assertEqual(
+            manager.entryCount(CORE_LOG_CATEGORY),
+            manager.entryCount(),
+        )
+
 
 class MetricsHistoryTest(unittest.TestCase):
     """Verify bounded history and metric-specific aggregation semantics."""
@@ -521,6 +549,20 @@ class MetricsHistoryTest(unittest.TestCase):
 
         self.assertEqual(manager.rawSamples(), tuple())
         self.assertEqual(changed, [])
+
+    def testDefensiveSampleCeilingBoundsBurstCadence(self):
+        """Retain only the newest samples even when time does not advance."""
+        manager = MetricsHistory(
+            maximumHistorySeconds=24 * 60 * 60,
+            maximumSampleCount=25,
+        )
+
+        for index in range(1000):
+            manager.recordSample({DOWNLOAD_SPEED_METRIC: index}, sampledAt=1)
+
+        self.assertEqual(manager.sampleCount(), 25)
+        self.assertEqual(manager.rawSamples()[0].values[DOWNLOAD_SPEED_METRIC], 975)
+        self.assertEqual(manager.rawSamples()[-1].values[DOWNLOAD_SPEED_METRIC], 999)
 
 
 class TranslationExtractorTest(unittest.TestCase):

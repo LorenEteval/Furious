@@ -234,6 +234,11 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
         self.mainWindow = None
         self.systemTray = None
+
+        self._loggingHandlers = tuple()
+        self._loggingRootLevel = None
+        self._loggingRaiseExceptions = logging.raiseExceptions
+
         self.connectionController = None
         self.routingController = None
         self.settingsController = None
@@ -332,15 +337,46 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
             fontFamily=self.customFontName,
         )
 
-        logging.basicConfig(
-            format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
-            level=logging.INFO,
-            handlers=(
-                ApplicationLogHandler(self.logManager),
-                logging.StreamHandler(),
-            ),
+        formatter = logging.Formatter(
+            '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s'
         )
+
+        rootLogger = logging.getLogger()
+
+        self._loggingRootLevel = rootLogger.level
+        self._loggingHandlers = (
+            ApplicationLogHandler(self.logManager),
+            logging.StreamHandler(),
+        )
+
+        rootLogger.setLevel(logging.INFO)
+
+        for handler in self._loggingHandlers:
+            handler.setFormatter(formatter)
+
+            rootLogger.addHandler(handler)
+
         logging.raiseExceptions = False
+
+        self._cleanupStack.register('logging', self._cleanupLogging)
+
+    def _cleanupLogging(self):
+        """Remove and close exactly the handlers owned by this application."""
+        rootLogger = logging.getLogger()
+
+        for handler in self._loggingHandlers:
+            rootLogger.removeHandler(handler)
+
+            handler.close()
+
+        self._loggingHandlers = tuple()
+
+        if self._loggingRootLevel is not None:
+            rootLogger.setLevel(self._loggingRootLevel)
+
+            self._loggingRootLevel = None
+
+        logging.raiseExceptions = self._loggingRaiseExceptions
 
     def addCustomFont(self):
         """Add custom font."""
@@ -731,6 +767,9 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
             try:
                 self.addStorage()
             except Exception:
+                # Any non-exit exceptions
+
+                # Roll back resources acquired before storage.
                 Mixins.CleanupOnExit.cleanupAll()
 
                 raise

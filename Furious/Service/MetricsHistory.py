@@ -82,6 +82,7 @@ class MetricsHistory(QtCore.QObject):
 
     MaximumHistorySeconds = 24 * 60 * 60
     AutoBucketTarget = 120
+    MaximumSampleCount = 50_000
     AutoGranularities = (
         1,
         2,
@@ -98,7 +99,13 @@ class MetricsHistory(QtCore.QObject):
         60 * 60,
     )
 
-    def __init__(self, parent=None, *, maximumHistorySeconds=None):
+    def __init__(
+        self,
+        parent=None,
+        *,
+        maximumHistorySeconds=None,
+        maximumSampleCount=None,
+    ):
         """Initialize generic metric definitions and bounded sample storage."""
         super().__init__(parent)
 
@@ -107,6 +114,9 @@ class MetricsHistory(QtCore.QObject):
             1.0,
         )
         self._samples = deque()
+        self._maximumSampleCount = max(
+            int(maximumSampleCount or self.MaximumSampleCount), 1
+        )
         self._aggregations = {}
 
         self.registerMetric(DOWNLOAD_SPEED_METRIC, MEAN_AGGREGATION)
@@ -242,7 +252,10 @@ class MetricsHistory(QtCore.QObject):
         """Remove samples older than the configured in-memory history."""
         oldestAllowed = now - self._maximumHistorySeconds
 
-        while self._samples and self._samples[0].sampledAt < oldestAllowed:
+        while self._samples and (
+            self._samples[0].sampledAt < oldestAllowed
+            or len(self._samples) > self._maximumSampleCount
+        ):
             self._samples.popleft()
 
     def effectiveGranularity(self, rangeSeconds, granularitySeconds=0) -> float:

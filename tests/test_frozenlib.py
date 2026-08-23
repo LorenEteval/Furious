@@ -283,6 +283,24 @@ class FrozenlibUtilityTest(unittest.TestCase):
             ('2001:db8::1', '8443'),
         )
 
+    def testExternallyKeyedUtilityCachesAreBounded(self):
+        """Prevent address, path, and version inputs from growing global caches."""
+        cachedFunctions = (
+            UtilityModule.isValidIPAddress,
+            UtilityModule.absolutePath,
+            UtilityModule.versionToValue,
+        )
+
+        for function in cachedFunctions:
+            function.cache_clear()
+
+            for index in range(function.cache_info().maxsize + 25):
+                function(str(index))
+
+            info = function.cache_info()
+            self.assertIsNotNone(info.maxsize)
+            self.assertLessEqual(info.currsize, info.maxsize)
+
     def testTcpingUsesResolverIPv6AndFallsBackToIPv4(self):
         """Use getaddrinfo candidates rather than IPv4-only gethostbyname."""
         candidates = [

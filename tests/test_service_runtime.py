@@ -26,11 +26,13 @@ from Furious.Plugins import (
     TrafficStatsMonitor,
 )
 from Furious.Service.ConnectivityManager import ConnectivityManager
+from Furious.Qt.HttpGetManager import HttpGetManager
 from Furious.Service.PluginUIManager import PluginNavigationManager
 from Furious.Service.TrafficStatsManager import TrafficStatsManager
 from Furious.Service.UpdateManager import UpdateManager
 
 from PySide6 import QtCore
+from PySide6.QtNetwork import QNetworkReply
 from PySide6.QtWidgets import QWidget
 
 from shiboken6 import isValid
@@ -117,10 +119,62 @@ class UpdateManagerTest(unittest.TestCase):
         parent.deleteLater()
 
 
-class _NavigationProvider:
-    """Return one valid page and one invalid parented QObject."""
+class _ManagedReply(QNetworkReply):
+    """Provide a hermetic reply object with real Qt lifecycle signals."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.open(QtCore.QIODevice.OpenModeFlag.ReadOnly)
+
+    def abort(self):
+        self.setFinished(True)
+
+    def readData(self, maximumLength):
+        return bytes()
+
+
+class _CapturingHttpGetManager(HttpGetManager):
+    """Capture normalized requests without performing network I/O."""
+
+    def __init__(self):
+        super().__init__()
+        self.reply = _ManagedReply(self)
+        self.request = None
+
+    def get(self, request):
+        self.request = request
+        return self.reply
+
+
+class HttpGetManagerLifetimeTest(unittest.TestCase):
+    """Verify every request receives a timeout and releases exact context."""
+
+    @classmethod
+    def setUpClass(cls):
+        application()
+
+    def testRequestHasFiniteTimeoutAndTerminalPathDropsContext(self):
+        manager = _CapturingHttpGetManager()
+
+        reply = manager.webGET('https://invalid.test/resource', marker='fixture')
+
+        self.assertIs(reply, manager.reply)
+        self.assertEqual(manager.request.transferTimeout(), 60_000)
+        self.assertEqual(manager._replyContexts[reply], {'marker': 'fixture'})
+
+        with patch.object(manager, 'handleFinishedByNetworkReply') as finished:
+            reply.finished.emit()
+
+        self.assertEqual(manager._replyContexts, {})
+        finished.assert_called_once_with(reply, marker='fixture')
+
+        manager.deleteLater()
 
     capabilityId = 'fixture.navigation'
+
+
+class _NavigationProvider:
+    """Return one valid page and one invalid parented QObject."""
 
     def __init__(self):
         """Initialize construction counters used by idempotence assertions."""
