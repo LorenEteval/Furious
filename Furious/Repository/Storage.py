@@ -163,7 +163,7 @@ class Storage:
                 )
                 prefix = f'{index + 1} - ' if index >= 0 else ''
 
-                return prefix + configuration.itemRemark
+                return prefix + profile.itemRemark
             except Exception:
                 # Any non-exit exceptions
 

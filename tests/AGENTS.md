@@ -20,6 +20,11 @@
   TUN, and proxy-only stripping must not share a helper that erases their differences.
 - Keep deterministic logic/UI behavior in the normal tier. Put repeated live-object, native-handle, thread, subprocess,
   and RSS trends in explicit stress tiers.
+- Scale cheap fake/model operations into the thousands where useful. Keep real Qt, WebEngine, and subprocess counts
+  proportional to their cost; workloads beyond the normal stress tier require the explicit
+  `FURIOUS_VERY_HEAVY_TESTS=1` opt-in.
+- Warm up allocators before interpreting RSS, sample only at bounded batch boundaries, and prefer exact live-object,
+  registry, thread, handle, and child-process ownership assertions over arbitrary memory thresholds.
 - Qt lifetime tests use real close/deferred-delete paths, weak references, destroyed signals, and live counts.
   `gc.collect()` is diagnostic at batch boundaries only; threshold increases or production collection are not leak
   fixes.

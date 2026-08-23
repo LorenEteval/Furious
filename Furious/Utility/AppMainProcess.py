@@ -53,7 +53,10 @@ class AppMainProcess(ProcessContext.Process):
 
         self.startupTime = str(datetime.datetime.now()).replace(':', '')
         self.logFileName = f'{self.startupTime}.log'
-        self.fileWritten = multiprocessing.Manager().Value('b', False)
+        # One synchronized scalar is sufficient for the parent/child result.
+        # A multiprocessing.Manager would create a second child process whose
+        # lifecycle is unrelated to the exact application process we own.
+        self.fileWritten = ProcessContext.Value('b', False)
 
         self.func = func
         self.application = None
@@ -119,6 +122,9 @@ class AppMainProcess(ProcessContext.Process):
     def handler(self, signum, frame):
         """Handle r."""
         logger.info(f'received signal {signal.Signals(signum).name}. Exit application')
+
+        if self.application is None:
+            sys.exit(ApplicationRunner.ExitCode.ExitSuccess.value)
 
         self.application.exit()
 

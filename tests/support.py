@@ -29,6 +29,9 @@ import uuid
 import atexit
 import ctypes
 import tempfile
+import sys
+import subprocess
+import threading
 import weakref
 
 # Select the headless platform before importing any Qt module.  This process is
@@ -297,6 +300,60 @@ def currentNativeHandleCount() -> int | None:
         return sum(1 for _path in descriptors.iterdir())
 
     return None
+
+
+def childEnvironment(**overrides) -> dict[str, str]:
+    """Return a hermetic child environment with offscreen Qt selected."""
+    environment = os.environ.copy()
+    environment['QT_QPA_PLATFORM'] = 'offscreen'
+    environment.update({key: str(value) for key, value in overrides.items()})
+
+    return environment
+
+
+def runPythonChild(
+    script: str,
+    *,
+    timeout: float = 20,
+    environment: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess:
+    """Run one exact child interpreter with bounded captured output."""
+    return subprocess.run(
+        [sys.executable, '-c', script],
+        capture_output=True,
+        env=environment or childEnvironment(),
+        text=True,
+        timeout=timeout,
+    )
+
+
+def resourceSnapshot() -> dict[str, object]:
+    """Return ownership-oriented process resource counters for stress batches."""
+    return {
+        'handles': currentNativeHandleCount(),
+        'rss': currentRSS(),
+        'threads': tuple(
+            sorted(
+                (thread.ident, thread.name)
+                for thread in threading.enumerate()
+                if thread.ident is not None
+            )
+        ),
+    }
+
+
+def veryHeavyEnabled() -> bool:
+    """Return whether the explicit release-confidence stress tier is enabled."""
+    return os.environ.get('FURIOUS_VERY_HEAVY_TESTS') == '1'
+
+
+def assertChildSucceeded(testCase, result, context: str = 'child process'):
+    """Assert a child exited normally while preserving captured diagnostics."""
+    testCase.assertEqual(
+        result.returncode,
+        0,
+        f'{context}:\n{result.stdout}{result.stderr}',
+    )
 
 
 @contextmanager

@@ -278,6 +278,29 @@ class MainWindowGeometryTest(unittest.TestCase):
                     self.assertEqual(window.pos(), movedPosition)
                     moveToCenter.assert_called_once_with(window)
 
+                expectedPages = {
+                    'home': window.homePage,
+                    'log': window.logPage,
+                    'subscription': window.subscriptionPage,
+                    'metrics': window.metricsPage,
+                    'settings': window.settingsPage,
+                }
+
+                for pageId, page in expectedPages.items():
+                    with self.subTest(pageId=pageId):
+                        window.showPage(pageId)
+                        processQtEvents()
+
+                        self.assertEqual(
+                            window.navigationView.currentPageId(),
+                            pageId,
+                        )
+                        self.assertIs(window.navigationView.page(pageId), page)
+                        self.assertIs(
+                            window.navigationView.pageStack.currentWidget(),
+                            page,
+                        )
+
                 window.close()
                 window.deleteLater()
                 window = None

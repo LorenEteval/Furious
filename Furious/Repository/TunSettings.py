@@ -38,13 +38,18 @@ class UserTUNSettings(Mixins.CleanupOnExit, StorageBackend):
         def restore():
             """Restore the user TUN settings."""
             try:
-                return UJSONEncoder.decode(
+                data = UJSONEncoder.decode(
                     PyBase64Encoder.decode(AppSettings.get('CustomTUNSettings'))
                 )
+
+                if isinstance(data, dict):
+                    return data
             except Exception:
                 # Any non-exit exceptions
 
-                return {}
+                pass
+
+            return {}
 
         self._data = restore()
 
