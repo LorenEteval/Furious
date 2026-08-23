@@ -361,6 +361,69 @@ class ApplicationLifecycleTransactionTest(TestCase):
         thread.start.assert_called_once_with()
         entrypoint.assert_called_once_with()
 
+    def testCoreLogQueueIsBoundedAndTruncatesBeforeTransport(self):
+        """Drop excess burst output instead of retaining an unbounded backlog."""
+        received = []
+        messageQueue = CoreProcessWorkerModule.MsgQueue(
+            msgCallback=received.append,
+            maximumPendingMessages=4,
+        )
+
+        try:
+            oversized = 'x' * (
+                CoreProcessWorkerModule.MsgQueue.MAXIMUM_MESSAGE_CHARACTERS + 100
+            )
+            accepted = [
+                messageQueue.putMessage(oversized if index == 0 else str(index))
+                for index in range(20)
+            ]
+
+            self.assertLessEqual(sum(accepted), 4)
+
+            for _ in range(20):
+                messageQueue.processMsg()
+                if received:
+                    break
+                QtCore.QThread.msleep(5)
+
+            self.assertTrue(received)
+            self.assertLessEqual(
+                len(received[0]),
+                CoreProcessWorkerModule.MsgQueue.MAXIMUM_MESSAGE_CHARACTERS,
+            )
+        finally:
+            messageQueue.dispose()
+
+    def testCoreLogQueueBacksOffWhileIdleAndRecoversOnActivity(self):
+        """Poll rapidly during output and progressively less often while idle."""
+        received = []
+        messageQueue = CoreProcessWorkerModule.MsgQueue(msgCallback=received.append)
+
+        try:
+            messageQueue.getNoWait = mock.Mock(return_value='')
+
+            expectedTimeouts = (32, 64, 128, 256, 256)
+
+            for expectedTimeout in expectedTimeouts:
+                messageQueue.processMsg()
+                self.assertEqual(messageQueue.getTimeout(), expectedTimeout)
+                self.assertEqual(messageQueue.timer.interval(), expectedTimeout)
+
+            messageQueue.getNoWait = mock.Mock(side_effect=('message', ''))
+            messageQueue.processMsg()
+
+            self.assertEqual(received, ['message'])
+            self.assertEqual(
+                messageQueue.getTimeout(),
+                CoreProcessWorkerModule.MsgQueue.ACTIVE_DRAIN_INTERVAL,
+            )
+            self.assertEqual(
+                messageQueue.timer.interval(),
+                CoreProcessWorkerModule.MsgQueue.ACTIVE_DRAIN_INTERVAL,
+            )
+        finally:
+            messageQueue.dispose()
+
     def testFailuresAtMeaningfulStagesRollBackOnlyEarlierStages(self):
         expected = {
             'storage': ['cleanup storage', 'cleanup plugins'],

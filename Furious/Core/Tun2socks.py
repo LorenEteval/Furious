@@ -60,9 +60,7 @@ class Tun2socks(CoreProcessWorker):
 
     def __init__(self, **kwargs):
         """Initialize the Tun2socks."""
-        backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLogPage)
-
-        super().__init__(**kwargs, backgroundOptimizer=backgroundOptimizer)
+        super().__init__(**kwargs)
 
         self.cleanup = None
 

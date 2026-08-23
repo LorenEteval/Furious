@@ -33,6 +33,7 @@ import os
 import sys
 import time
 import uuid
+import queue
 import logging
 import threading
 import multiprocessing
@@ -117,24 +118,34 @@ class CoreLaunchSpec:
 
 
 class MsgQueue(multiprocessing.queues.Queue):
-    """Deliver child-process log messages to Qt callbacks at an adaptive rate."""
+    """Continuously drain a bounded child-process log queue into a callback."""
 
     MSG_PRODUCE_THRESHOLD = 1024
-    OPTIMIZER_MIN_FREQ = 2
-    OPTIMIZER_MAX_FREQ = 256
+    ACTIVE_DRAIN_INTERVAL = 16
+    MAXIMUM_IDLE_DRAIN_INTERVAL = 256
+    DRAIN_INTERVAL = ACTIVE_DRAIN_INTERVAL
+    MAXIMUM_PENDING_MESSAGES = 1024
+    MAXIMUM_MESSAGE_CHARACTERS = 64 * 1024
+    MAXIMUM_MESSAGES_PER_TICK = 512
+    TRUNCATION_MARKER = '\n... [core log message truncated]'
 
     def __init__(self, **kwargs):
         """Initialize the MsgQueue."""
-        msgCallback = kwargs.pop('msgCallback', None)
-        backgroundOptimizer = kwargs.pop('backgroundOptimizer', None)
+        msgCallback, maximumPendingMessages = (
+            kwargs.pop('msgCallback', None),
+            kwargs.pop('maximumPendingMessages', self.MAXIMUM_PENDING_MESSAGES),
+        )
 
-        super().__init__(**kwargs, ctx=multiprocessing.get_context())
+        super().__init__(
+            maxsize=maximumPendingMessages,
+            **kwargs,
+            ctx=multiprocessing.get_context(),
+        )
 
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.processMsg)
-        self.timeout = MsgQueue.MSG_PRODUCE_THRESHOLD
+        self.timeout = self.ACTIVE_DRAIN_INTERVAL
         self.callback = msgCallback
-        self.backgroundOptimizer = backgroundOptimizer
 
     def getNoWait(self) -> str:
         """Return no wait."""
@@ -172,57 +183,60 @@ class MsgQueue(multiprocessing.queues.Queue):
 
         self.timer.deleteLater()
         self.callback = None
-        self.backgroundOptimizer = None
 
         try:
             self.close()
         except (OSError, ValueError):
             pass
 
-    @property
-    def optimizer(self):
-        """Return the optimizer value."""
-        try:
-            return self.backgroundOptimizer()
-        except Exception:
-            # Any non-exit exceptions
+    def putMessage(self, message) -> bool:
+        """Queue one bounded message without ever blocking a core process."""
+        text = str(message)
 
-            return None
+        if len(text) > self.MAXIMUM_MESSAGE_CHARACTERS:
+            mark = self.TRUNCATION_MARKER
+            text = text[: self.MAXIMUM_MESSAGE_CHARACTERS - len(mark)] + mark
+
+        try:
+            self.put_nowait(text)
+        except queue.Full:
+            return False
+        except (OSError, ValueError):
+            return False
+
+        return True
 
     def processMsg(self):
-        """Process msg."""
-        msg = self.getNoWait()
-
+        """Drain one bounded batch and adapt polling to recent queue activity."""
         if not callable(self.callback):
-            # Nothing to do
             return
 
-        if msg and not msg.isspace():
-            # Call message callback
-            self.callback(msg)
+        hasMessages = False
 
-            if self.optimizer is not None and self.optimizer.isVisible():
-                # Log page is visible: maximum loading speed for user
+        for _ in range(self.MAXIMUM_MESSAGES_PER_TICK):
+            msg = self.getNoWait()
 
-                # 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 2, 2, ...
-                # For timeout value 2 Furious can handle at about 500 messages per second
-                self.setTimeout(
-                    max(MsgQueue.OPTIMIZER_MIN_FREQ, self.getTimeout() // 2)
-                )
-                self.startTimer()
-            else:
-                # Log page is unavailable or hidden: low speed in background
-                # to avoid consuming too much CPU resources
+            if not msg:
+                break
 
-                # 1024, 512, 256, 256, 256, ...
-                # For timeout value 256 Furious can handle at about 4 messages per second
-                self.setTimeout(
-                    max(MsgQueue.OPTIMIZER_MAX_FREQ, self.getTimeout() // 2)
-                )
-                self.startTimer()
+            hasMessages = True
+
+            if not msg.isspace():
+                self.callback(msg)
+
+        if hasMessages:
+            nextTimeout = self.ACTIVE_DRAIN_INTERVAL
         else:
-            # Reset timeout value
-            self.setTimeout(MsgQueue.MSG_PRODUCE_THRESHOLD)
+            nextTimeout = min(
+                self.MAXIMUM_IDLE_DRAIN_INTERVAL,
+                max(
+                    self.ACTIVE_DRAIN_INTERVAL,
+                    self.getTimeout() * 2,
+                ),
+            )
+
+        if nextTimeout != self.getTimeout():
+            self.setTimeout(nextTimeout)
             self.startTimer()
 
 
@@ -306,7 +320,9 @@ class CoreProcessMonitor(CoreRuntime, ABC):
             try:
                 self.process.close()
             except Exception:
-                # close() can fail if the process handle is still considered active.
+                # Any non-exit exceptions
+
+                # close() can fail while the handle is active.
                 pass
 
         self.process = None
@@ -331,14 +347,10 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
     def __init__(self, **kwargs):
         """Initialize the CoreProcessWorker."""
         msgCallback = kwargs.pop('msgCallback', None)
-        # Drain output more frequently while the unified log page is visible.
-        backgroundOptimizer = kwargs.pop('backgroundOptimizer', AppLogPage)
 
         super().__init__(**kwargs)
 
-        self.msgQueue = MsgQueue(
-            msgCallback=msgCallback, backgroundOptimizer=backgroundOptimizer
-        )
+        self.msgQueue = MsgQueue(msgCallback=msgCallback)
 
     def handleInternalProcessStopped(self):
         """Handle internal process stopped."""
@@ -408,7 +420,7 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
 
         logger.info(f'{self.name()} {self.version()} started')
 
-        self.msgQueue.setTimeout(MsgQueue.MSG_PRODUCE_THRESHOLD)
+        self.msgQueue.setTimeout(MsgQueue.ACTIVE_DRAIN_INTERVAL)
         self.msgQueue.startTimer()
 
         if launchSpec.waitCore:
@@ -463,9 +475,7 @@ class ProcessOutputRedirector:
     TemporaryDir = QtCore.QTemporaryDir()
 
     @staticmethod
-    def launch(
-        msgQueue: multiprocessing.Queue, entrypoint: Callable[[], None], redirect: bool
-    ):
+    def launch(msgQueue: MsgQueue, entrypoint: Callable[[], None], redirect: bool):
         """Run an entry point while forwarding its output to a message queue."""
         if not callable(entrypoint):
             return
@@ -503,10 +513,8 @@ class ProcessOutputRedirector:
                     for line in iter(file.readline, b''):
                         if line and not line.isspace():
                             try:
-                                msgQueue.put_nowait(line.decode('utf-8', 'replace'))
-                            except Exception:
-                                # Any non-exit exceptions
-
+                                msgQueue.putMessage(line.decode('utf-8', 'replace'))
+                            except (OSError, ValueError):
                                 pass
 
                     time.sleep(MsgQueue.MSG_PRODUCE_THRESHOLD / 1000)

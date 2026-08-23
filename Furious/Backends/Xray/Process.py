@@ -100,10 +100,8 @@ def startXrayCore(jsonString: str, msgQueue: multiprocessing.Queue):
                         for line in iter(file.readline, b''):
                             if line and not line.isspace():
                                 try:
-                                    msgQueue.put_nowait(line.decode('utf-8', 'replace'))
-                                except Exception:
-                                    # Any non-exit exceptions
-
+                                    msgQueue.putMessage(line.decode('utf-8', 'replace'))
+                                except (OSError, ValueError):
                                     pass
 
                     time.sleep(MsgQueue.MSG_PRODUCE_THRESHOLD / 1000)
