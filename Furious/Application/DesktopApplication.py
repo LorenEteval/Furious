@@ -76,9 +76,29 @@ import sys
 import logging
 import platform
 import traceback
+from enum import Enum
+
 import darkdetect
 
 logger = logging.getLogger(__name__)
+
+
+class _ExistingInstanceResult(Enum):
+    """Describe the result of forwarding this launch to a primary instance."""
+
+    Unreachable = 'unreachable'
+    CommandForwarded = 'command-forwarded'
+    CommandDeliveryUncertain = 'command-delivery-uncertain'
+    RunAsHandoffAccepted = 'run-as-handoff-accepted'
+
+
+class _SingletonStartupResult(Enum):
+    """Describe whether this process may continue full application startup."""
+
+    Primary = 'primary'
+    ExistingInstance = 'existing-instance'
+    RecoveryRequired = 'recovery-required'
+    OwnershipUnresolved = 'ownership-unresolved'
 
 
 class _ApplicationCleanupStack:
@@ -115,12 +135,6 @@ class _ApplicationCleanupStack:
         return True
 
 
-class SystemTrayUnavailable(Exception):
-    """Represent system tray unavailable."""
-
-    pass
-
-
 class ApplicationExitHelper(QApplication):
     """Represent application exit helper."""
 
@@ -143,6 +157,12 @@ class ApplicationExitHelper(QApplication):
 class SingletonApplication(ApplicationExitHelper):
     """Represent singleton application."""
 
+    ExistingInstanceConnectTimeout = 1000
+    RunAsHandoffTimeout = 3000
+    ExistingEndpointProbeTimeout = 250
+    SingletonElectionLockTimeout = 3000
+    SingletonElectionLockStaleTime = 30000
+
     def __init__(self, argv):
         """Initialize the SingletonApplication."""
         super().__init__(argv)
@@ -152,53 +172,220 @@ class SingletonApplication(ApplicationExitHelper):
         self.socket = QLocalSocket(self)
         self.server = QLocalServer(self)
 
-    def shouldExitForExistingInstance(self) -> bool:
-        """Claim the single-instance endpoint or notify the running instance."""
+    def _notifyExistingInstance(self) -> _ExistingInstanceResult:
+        """Forward this launch command or report that no primary responded."""
+        self.socket.abort()
         self.socket.connectToServer(self.serverName)
 
-        if self.socket.waitForConnected(1000):
-            if len(sys.argv) == 1:
-                command = AppBuiltinCommand.Empty.value
-            else:
-                command = sys.argv[1]
+        if not self.socket.waitForConnected(self.ExistingInstanceConnectTimeout):
+            return _ExistingInstanceResult.Unreachable
 
-            self.socket.write(command.encode())
-            self.socket.flush()
+        command = AppBuiltinCommand.Empty.value if len(sys.argv) == 1 else sys.argv[1]
 
-            if command == AppBuiltinCommand.Empty.value:
-                # Show tray message in the started instance. Do not start
-                return True
-            elif command == AppBuiltinCommand.RunAs.value:
-                if self.socket.waitForDisconnected(3000):
-                    # The other instance have been exited. Start
-                    return False
-                else:
-                    # Do not start
-                    return True
-            else:
-                # TODO: Not implemented
-                # Do not start
-                return True
-        else:
-            # Remove the old socket file if it exists
-            socket_path = QLocalServer.removeServer(self.serverName)
+        encodedCommand = command.encode()
 
-            if socket_path:
-                logger.info(f'old socket file removed: {self.serverName}')
-            else:
-                logger.info(f'no existing socket file found for: {self.serverName}')
+        if self.socket.write(encodedCommand) == -1:
+            # A successful connection still proves that another process owns
+            # the endpoint.  Do not compete for ownership merely because the
+            # one-command delivery failed while that process was disconnecting.
+            logger.warning(
+                f'unable to forward startup command to existing instance: '
+                f'{self.socket.errorString()}'
+            )
 
-            # New instance
-            self.server.newConnection.connect(self.handleNewConnection)
+            return _ExistingInstanceResult.CommandDeliveryUncertain
 
-            if not self.server.listen(self.serverName):
-                # Do not start
-                logger.error(f'unable to listen on server: {self.serverName}')
+        self.socket.flush()
 
-                return True
+        if command == AppBuiltinCommand.RunAs.value:
+            # A successful disconnect means the old instance accepted the
+            # command and started exiting.  A later listen() still decides
+            # whether this replacement actually owns the endpoint.
+            if self.socket.waitForDisconnected(self.RunAsHandoffTimeout):
+                logger.info('existing instance accepted the RunAs handoff')
 
-            # Start
+                return _ExistingInstanceResult.RunAsHandoffAccepted
+
+            logger.warning(
+                'existing instance did not complete the RunAs handoff before '
+                'the deadline'
+            )
+
+            return _ExistingInstanceResult.CommandForwarded
+
+        # Empty and currently unsupported commands are handled by the running
+        # instance; this process must not create another application window.
+        logger.info('startup command forwarded to the existing instance')
+
+        return _ExistingInstanceResult.CommandForwarded
+
+    def _listenAsPrimaryInstance(self) -> bool:
+        """Listen as primary after the caller has serialized election."""
+        if not self.server.listen(self.serverName):
             return False
+
+        self.server.newConnection.connect(self.handleNewConnection)
+
+        return True
+
+    def _existingEndpointIsReachable(self) -> bool:
+        """Probe endpoint ownership without forwarding this launch command."""
+        self.socket.abort()
+        self.socket.connectToServer(self.serverName)
+
+        if not self.socket.waitForConnected(self.ExistingEndpointProbeTimeout):
+            return False
+
+        self.socket.disconnectFromServer()
+
+        if self.socket.state() != QLocalSocket.LocalSocketState.UnconnectedState:
+            self.socket.waitForDisconnected(self.ExistingEndpointProbeTimeout)
+
+        return True
+
+    def _waitForRunAsEndpointRelease(self) -> bool:
+        """Wait until the primary that accepted RunAs stops owning the endpoint."""
+        deadline = QtCore.QDeadlineTimer(self.RunAsHandoffTimeout)
+
+        while not deadline.hasExpired():
+            if not self._existingEndpointIsReachable():
+                return True
+
+            QtCore.QThread.msleep(50)
+
+        return False
+
+    def _singletonElectionLock(self):
+        """Return the short-lived lock that serializes candidate election."""
+        lock = QtCore.QLockFile(
+            os.path.join(
+                QtCore.QStandardPaths.writableLocation(
+                    QtCore.QStandardPaths.StandardLocation.TempLocation
+                ),
+                f'{self.serverName}.lock',
+            )
+        )
+        # Election is bounded to a few seconds.  The longer stale interval
+        # prevents age-based recovery from stealing a live election transaction,
+        # while QLockFile can still clean up a lock left by a crashed process.
+        lock.setStaleLockTime(self.SingletonElectionLockStaleTime)
+
+        return lock
+
+    @staticmethod
+    def _logElectionLockFailure(electionLock):
+        """Log the specific reason singleton election cannot be serialized."""
+        error = electionLock.error()
+
+        if error == QtCore.QLockFile.LockError.LockFailedError:
+            logger.info('singleton election is already owned by another launcher')
+        elif error == QtCore.QLockFile.LockError.PermissionError:
+            logger.error(
+                f'permission denied creating singleton election lock: '
+                f'{electionLock.fileName()}'
+            )
+        else:
+            logger.error(
+                f'unable to acquire singleton election lock '
+                f'{electionLock.fileName()}: {error}'
+            )
+
+    def _electPrimaryUnderLock(
+        self,
+        initialProbe: _ExistingInstanceResult,
+    ) -> _SingletonStartupResult:
+        """Recheck competitors, then claim or classify the endpoint under lock."""
+        if initialProbe is _ExistingInstanceResult.RunAsHandoffAccepted:
+            if not self._waitForRunAsEndpointRelease():
+                logger.error(
+                    'existing instance accepted RunAs but did not release the '
+                    'singleton endpoint before the handoff deadline'
+                )
+
+                return _SingletonStartupResult.OwnershipUnresolved
+        elif self._existingEndpointIsReachable():
+            # A launcher won while this process was waiting for the election
+            # lock.  A connectivity-only probe avoids forwarding RunAs twice.
+            logger.info('another launcher completed singleton election first')
+
+            return _SingletonStartupResult.ExistingInstance
+
+        # On Unix this is the authoritative ownership claim.  Qt explicitly
+        # permits multiple same-name local servers on Windows, so the election
+        # lock and preceding reachability barrier provide exclusivity there.
+        if self._listenAsPrimaryInstance():
+            logger.info(f'primary instance endpoint claimed: {self.serverName}')
+
+            return _SingletonStartupResult.Primary
+
+        # A non-cooperating process may have appeared despite serialization.
+        # Recheck before treating a failed Unix listen as a stale socket file.
+        if self._existingEndpointIsReachable():
+            logger.info('singleton endpoint became reachable before recovery')
+
+            return _SingletonStartupResult.ExistingInstance
+
+        logger.info(
+            f'primary endpoint claim failed; evaluating stale recovery: '
+            f'{self.server.errorString()}'
+        )
+
+        return _SingletonStartupResult.RecoveryRequired
+
+    def _recoverStaleEndpointAndClaim(self) -> _SingletonStartupResult:
+        """Recover a confirmed stale endpoint while holding the election lock."""
+        logger.info(f'attempting stale endpoint recovery: {self.serverName}')
+
+        if QLocalServer.removeServer(self.serverName):
+            logger.info(f'stale singleton endpoint removed: {self.serverName}')
+        else:
+            logger.warning(
+                f'singleton endpoint could not be removed or was already absent: '
+                f'{self.serverName}'
+            )
+
+        if self._listenAsPrimaryInstance():
+            logger.info(
+                f'primary instance endpoint claimed after recovery: '
+                f'{self.serverName}'
+            )
+
+            return _SingletonStartupResult.Primary
+
+        logger.error(
+            f'unable to claim singleton endpoint {self.serverName} after '
+            f'recovery: {self.server.errorString()}'
+        )
+
+        return _SingletonStartupResult.OwnershipUnresolved
+
+    def shouldExitForExistingInstance(self) -> bool:
+        """Claim the single-instance endpoint or notify the running instance."""
+        initialProbe = self._notifyExistingInstance()
+
+        if initialProbe in (
+            _ExistingInstanceResult.CommandForwarded,
+            _ExistingInstanceResult.CommandDeliveryUncertain,
+        ):
+            return True
+
+        electionLock = self._singletonElectionLock()
+
+        if not electionLock.tryLock(self.SingletonElectionLockTimeout):
+            self._logElectionLockFailure(electionLock)
+
+            return True
+
+        try:
+            result = self._electPrimaryUnderLock(initialProbe)
+
+            if result is _SingletonStartupResult.RecoveryRequired:
+                result = self._recoverStaleEndpointAndClaim()
+
+            # Fail closed whenever endpoint ownership remains uncertain.
+            return result is not _SingletonStartupResult.Primary
+        finally:
+            electionLock.unlock()
 
     @QtCore.Slot()
     def handleNewConnection(self):
@@ -536,7 +723,13 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         try:
             self.applyThemePreference()
             self.mainWindow = MainWindow()
-            self.systemTray = TrayIcon(parent=self)
+
+            if TrayIcon.isSystemTrayAvailable():
+                self.systemTray = TrayIcon(parent=self)
+
+                self.setQuitOnLastWindowClosed(False)
+            else:
+                self.setQuitOnLastWindowClosed(True)
 
             if PLATFORM == 'Darwin':
                 if AppSettings.isStateON_('HideDockIcon'):
@@ -560,9 +753,16 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
                 self.applicationStateChanged.connect(onApplicationStateChange)
 
-            self.systemTray.show()
-            self.systemTray.setCustomToolTip()
-            self.systemTray.bootstrap()
+            if self.systemTray is None:
+                logger.warning(
+                    'system tray unavailable; showing the main window instead'
+                )
+
+                self.mainWindow.show()
+            else:
+                self.systemTray.show()
+                self.systemTray.setCustomToolTip()
+                self.systemTray.bootstrap()
         except Exception:
             # Any non-exit exceptions
 
@@ -755,11 +955,6 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                 # not what we want.
                 return ApplicationRunner.ExitCode.ExitSuccess.value
 
-            if not TrayIcon.isSystemTrayAvailable():
-                raise SystemTrayUnavailable(
-                    'TrayIcon is not available on this platform'
-                )
-
             pluginRegistry = self.addEnviron()
 
             self._cleanupStack.register('plugins', pluginRegistry.shutdown)
@@ -799,8 +994,6 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                 return self._exitCode
 
             return self.exec()
-        except SystemTrayUnavailable:
-            return ApplicationRunner.ExitCode.PlatformNotSupported.value
         except Exception:
             # Any non-exit exceptions
 

@@ -27,6 +27,7 @@ from Furious.Controllers.SettingsController import SettingsController
 from Furious.Frozenlib import AppSettings
 from Furious.Service.LogManager import LogManager
 from Furious.Qt import AppQMainWindow
+from Furious.Widget.NavigationView import NavigationView
 from Furious.Window.HomePage import HomePage
 from Furious.Window.LogPage import LogPage
 from Furious.Window.MainWindow import MainWindow
@@ -267,6 +268,16 @@ class MainWindowGeometryTest(unittest.TestCase):
 
                 with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
                     window.show()
+
+                    self.assertEqual(
+                        sum(
+                            isinstance(widget, MainWindow)
+                            for widget in app.topLevelWidgets()
+                        ),
+                        1,
+                    )
+                    self.assertEqual(len(window.findChildren(NavigationView)), 1)
+                    self.assertIs(window.centralWidget(), window.navigationView)
 
                     self.assertEqual(window.size(), window.DEFAULT_WINDOW_SIZE)
                     moveToCenter.assert_called_once_with(window)

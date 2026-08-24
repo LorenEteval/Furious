@@ -19,13 +19,18 @@
 
 from Furious.Application.DesktopApplication import (
     DesktopApplication,
+    SingletonApplication,
     _ApplicationCleanupStack,
+    _ExistingInstanceResult,
+    _SingletonStartupResult,
 )
+from Furious.Frozenlib import AppBuiltinCommand
 from Furious.Interface import ApplicationRunner, CoreRuntime
 from Furious.Qt.AppStyleSheet import AppStyleSheet
 from Furious.Service.ConnectionManager import ConnectionManager
 
 from PySide6 import QtCore
+from PySide6.QtNetwork import QLocalServer
 
 from types import SimpleNamespace
 from unittest import TestCase, mock
@@ -36,6 +41,8 @@ import sys
 import tempfile
 import textwrap
 import subprocess
+import time
+import uuid
 
 CoreProcessWorkerModule = importlib.import_module('Furious.Core.CoreProcessWorker')
 
@@ -163,6 +170,595 @@ class ApplicationLifecycleTransactionTest(TestCase):
         self.assertEqual(application._exitCode, 23)
 
         finalExit.assert_called_once_with(23)
+
+    def testFirstInstanceClaimsEndpointWithoutRemovingSocket(self):
+        """Serialize election, then continue only after the endpoint is owned."""
+        electionLock = mock.Mock()
+        electionLock.tryLock.return_value = True
+        application = SimpleNamespace(
+            serverName='test-server',
+            _notifyExistingInstance=mock.Mock(
+                return_value=_ExistingInstanceResult.Unreachable
+            ),
+            _singletonElectionLock=mock.Mock(return_value=electionLock),
+            _electPrimaryUnderLock=mock.Mock(
+                return_value=_SingletonStartupResult.Primary
+            ),
+            _recoverStaleEndpointAndClaim=mock.Mock(),
+            SingletonElectionLockTimeout=3000,
+        )
+
+        shouldExit = SingletonApplication.shouldExitForExistingInstance(application)
+
+        self.assertFalse(shouldExit)
+        electionLock.tryLock.assert_called_once_with(3000)
+        electionLock.unlock.assert_called_once_with()
+        application._electPrimaryUnderLock.assert_called_once_with(
+            _ExistingInstanceResult.Unreachable
+        )
+        application._recoverStaleEndpointAndClaim.assert_not_called()
+
+    def testSecondInstanceForwardsCommandWithoutClaimingEndpoint(self):
+        """Exit as secondary after forwarding to a reachable primary."""
+        application = SimpleNamespace(
+            _notifyExistingInstance=mock.Mock(
+                return_value=_ExistingInstanceResult.CommandForwarded
+            ),
+            _singletonElectionLock=mock.Mock(),
+        )
+
+        shouldExit = SingletonApplication.shouldExitForExistingInstance(application)
+
+        self.assertTrue(shouldExit)
+        application._singletonElectionLock.assert_not_called()
+
+    def testConcurrentListenLoserReprobesWinnerWithoutRecovery(self):
+        """Recognize a launcher that wins while this process waits for the lock."""
+        application = SimpleNamespace(
+            _existingEndpointIsReachable=mock.Mock(return_value=True),
+            _listenAsPrimaryInstance=mock.Mock(),
+        )
+
+        result = SingletonApplication._electPrimaryUnderLock(
+            application,
+            _ExistingInstanceResult.Unreachable,
+        )
+
+        self.assertIs(result, _SingletonStartupResult.ExistingInstance)
+        application._listenAsPrimaryInstance.assert_not_called()
+
+    def testElectionRechecksForConcurrentWinner(self):
+        """Never unlink an endpoint that becomes reachable after failed listen."""
+        application = SimpleNamespace(
+            _existingEndpointIsReachable=mock.Mock(side_effect=(False, True)),
+            _listenAsPrimaryInstance=mock.Mock(return_value=False),
+        )
+
+        with mock.patch(
+            'Furious.Application.DesktopApplication.QLocalServer.removeServer'
+        ) as removeServer:
+            result = SingletonApplication._electPrimaryUnderLock(
+                application,
+                _ExistingInstanceResult.Unreachable,
+            )
+
+        self.assertIs(result, _SingletonStartupResult.ExistingInstance)
+        removeServer.assert_not_called()
+        application._listenAsPrimaryInstance.assert_called_once_with()
+
+    def testSingletonRecoveryRemovesOnlyConfirmedStaleEndpoint(self):
+        """Remove a stale socket only inside the serialized recovery section."""
+        application = SimpleNamespace(
+            serverName='test-server',
+            _listenAsPrimaryInstance=mock.Mock(return_value=True),
+        )
+
+        with mock.patch(
+            'Furious.Application.DesktopApplication.QLocalServer.removeServer',
+            return_value=True,
+        ) as removeServer:
+            result = SingletonApplication._recoverStaleEndpointAndClaim(application)
+
+        self.assertIs(result, _SingletonStartupResult.Primary)
+        removeServer.assert_called_once_with('test-server')
+
+    def testRecoveryContinuesWhenStaleEndpointIsAlreadyAbsent(self):
+        """Allow final listen() to decide ownership when removeServer() returns false."""
+        application = SimpleNamespace(
+            serverName='test-server',
+            _listenAsPrimaryInstance=mock.Mock(return_value=True),
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.QLocalServer.removeServer',
+                return_value=False,
+            ) as removeServer,
+            self.assertLogs('Furious.Application.DesktopApplication', level='WARNING'),
+        ):
+            result = SingletonApplication._recoverStaleEndpointAndClaim(application)
+
+        self.assertIs(result, _SingletonStartupResult.Primary)
+        removeServer.assert_called_once_with('test-server')
+
+    def testFinalListenFailureFailsClosed(self):
+        """Never continue full startup when final ownership remains uncertain."""
+        application = SimpleNamespace(
+            serverName='test-server',
+            server=SimpleNamespace(errorString=mock.Mock(return_value='address busy')),
+            _listenAsPrimaryInstance=mock.Mock(return_value=False),
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.QLocalServer.removeServer',
+                return_value=True,
+            ),
+            self.assertLogs('Furious.Application.DesktopApplication', level='ERROR'),
+        ):
+            result = SingletonApplication._recoverStaleEndpointAndClaim(application)
+
+        self.assertIs(result, _SingletonStartupResult.OwnershipUnresolved)
+
+    def testElectionLockFailuresAreDistinguishedAndFailClosed(self):
+        """Differentiate contention, permission, and filesystem election failures."""
+        errorLevels = (
+            (QtCore.QLockFile.LockError.LockFailedError, 'INFO'),
+            (QtCore.QLockFile.LockError.PermissionError, 'ERROR'),
+            (QtCore.QLockFile.LockError.UnknownError, 'ERROR'),
+        )
+
+        for lockError, logLevel in errorLevels:
+            with self.subTest(lockError=lockError):
+                electionLock = SimpleNamespace(
+                    tryLock=mock.Mock(return_value=False),
+                    error=mock.Mock(return_value=lockError),
+                    fileName=mock.Mock(return_value='test.lock'),
+                    unlock=mock.Mock(),
+                )
+                application = SimpleNamespace(
+                    _notifyExistingInstance=mock.Mock(
+                        return_value=_ExistingInstanceResult.Unreachable
+                    ),
+                    _singletonElectionLock=mock.Mock(return_value=electionLock),
+                    _logElectionLockFailure=lambda lock: (
+                        SingletonApplication._logElectionLockFailure(lock)
+                    ),
+                    SingletonElectionLockTimeout=3000,
+                )
+
+                with self.assertLogs(
+                    'Furious.Application.DesktopApplication', level=logLevel
+                ):
+                    shouldExit = SingletonApplication.shouldExitForExistingInstance(
+                        application
+                    )
+
+                self.assertTrue(shouldExit)
+                electionLock.unlock.assert_not_called()
+
+    def testElectionLockUsesExplicitStaleIntervalInTemporaryDirectory(self):
+        """Configure Qt's automatic crashed-lock cleanup for this short transaction."""
+        electionLock = mock.Mock()
+        application = SimpleNamespace(
+            serverName='test-server',
+            SingletonElectionLockStaleTime=30000,
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.QtCore.QStandardPaths.writableLocation',
+                return_value='temporary-root',
+            ),
+            mock.patch(
+                'Furious.Application.DesktopApplication.QtCore.QLockFile',
+                return_value=electionLock,
+            ) as lockFactory,
+        ):
+            result = SingletonApplication._singletonElectionLock(application)
+
+        self.assertIs(result, electionLock)
+        lockFactory.assert_called_once_with(
+            os.path.join('temporary-root', 'test-server.lock')
+        )
+        electionLock.setStaleLockTime.assert_called_once_with(30000)
+
+    def testRunAsWaitsForPrimaryDisconnectBeforeAllowingElection(self):
+        """Treat a completed RunAs disconnect as permission to attempt listen()."""
+        socket = mock.Mock()
+        socket.waitForConnected.return_value = True
+        socket.waitForDisconnected.return_value = True
+        application = SimpleNamespace(
+            serverName='test-server',
+            socket=socket,
+            ExistingInstanceConnectTimeout=1000,
+            RunAsHandoffTimeout=3000,
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.sys.argv',
+                ['furious', AppBuiltinCommand.RunAs.value],
+            ),
+            self.assertLogs('Furious.Application.DesktopApplication', level='INFO'),
+        ):
+            result = SingletonApplication._notifyExistingInstance(application)
+
+        self.assertIs(result, _ExistingInstanceResult.RunAsHandoffAccepted)
+        socket.waitForDisconnected.assert_called_once_with(3000)
+        socket.write.assert_called_once_with(AppBuiltinCommand.RunAs.value.encode())
+
+    def testRunAsTimeoutKeepsReplacementFromStarting(self):
+        """Fail closed while the original primary still owns the endpoint."""
+        socket = mock.Mock()
+        socket.waitForConnected.return_value = True
+        socket.waitForDisconnected.return_value = False
+        application = SimpleNamespace(
+            serverName='test-server',
+            socket=socket,
+            ExistingInstanceConnectTimeout=1000,
+            RunAsHandoffTimeout=3000,
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.sys.argv',
+                ['furious', AppBuiltinCommand.RunAs.value],
+            ),
+            self.assertLogs('Furious.Application.DesktopApplication', level='WARNING'),
+        ):
+            result = SingletonApplication._notifyExistingInstance(application)
+
+        self.assertIs(result, _ExistingInstanceResult.CommandForwarded)
+
+    def testRunAsElectionWaitsForActualEndpointRelease(self):
+        """Do not equate command-channel disconnect with endpoint ownership."""
+        application = SimpleNamespace(
+            serverName='test-server',
+            _waitForRunAsEndpointRelease=mock.Mock(return_value=True),
+            _existingEndpointIsReachable=mock.Mock(),
+            _listenAsPrimaryInstance=mock.Mock(return_value=True),
+        )
+
+        result = SingletonApplication._electPrimaryUnderLock(
+            application,
+            _ExistingInstanceResult.RunAsHandoffAccepted,
+        )
+
+        self.assertIs(result, _SingletonStartupResult.Primary)
+        application._waitForRunAsEndpointRelease.assert_called_once_with()
+        application._existingEndpointIsReachable.assert_not_called()
+
+    def testRunAsElectionFailsClosedWhenEndpointIsNotReleased(self):
+        """Reject overlap when the old process does not finish its handoff."""
+        application = SimpleNamespace(
+            _waitForRunAsEndpointRelease=mock.Mock(return_value=False),
+            _listenAsPrimaryInstance=mock.Mock(),
+        )
+
+        with self.assertLogs('Furious.Application.DesktopApplication', level='ERROR'):
+            result = SingletonApplication._electPrimaryUnderLock(
+                application,
+                _ExistingInstanceResult.RunAsHandoffAccepted,
+            )
+
+        self.assertIs(result, _SingletonStartupResult.OwnershipUnresolved)
+        application._listenAsPrimaryInstance.assert_not_called()
+
+    def testEmptyAndUnsupportedCommandsRemainSecondaryLaunches(self):
+        """Forward empty and future commands without creating another primary."""
+        for arguments, expectedCommand in (
+            (['furious'], AppBuiltinCommand.Empty.value),
+            (['furious', 'future-command'], 'future-command'),
+        ):
+            with self.subTest(arguments=arguments):
+                socket = mock.Mock()
+                socket.waitForConnected.return_value = True
+                application = SimpleNamespace(
+                    serverName='test-server',
+                    socket=socket,
+                    ExistingInstanceConnectTimeout=1000,
+                    RunAsHandoffTimeout=3000,
+                )
+
+                with mock.patch(
+                    'Furious.Application.DesktopApplication.sys.argv', arguments
+                ):
+                    result = SingletonApplication._notifyExistingInstance(application)
+
+                self.assertIs(result, _ExistingInstanceResult.CommandForwarded)
+                socket.write.assert_called_once_with(expectedCommand.encode())
+
+    def testUnreachableEndpointDoesNotWriteACommand(self):
+        """Report no primary when connectToServer cannot establish a channel."""
+        socket = mock.Mock()
+        socket.waitForConnected.return_value = False
+        application = SimpleNamespace(
+            serverName='test-server',
+            socket=socket,
+            ExistingInstanceConnectTimeout=1000,
+        )
+
+        result = SingletonApplication._notifyExistingInstance(application)
+
+        self.assertIs(result, _ExistingInstanceResult.Unreachable)
+        socket.write.assert_not_called()
+
+    def testDisappearingConnectionFailsClosedWithoutStartingRecovery(self):
+        """Treat a failed command write as evidence of an existing owner."""
+        socket = mock.Mock()
+        socket.waitForConnected.return_value = True
+        socket.write.return_value = -1
+        socket.errorString.return_value = 'peer closed'
+        application = SimpleNamespace(
+            serverName='test-server',
+            socket=socket,
+            ExistingInstanceConnectTimeout=1000,
+            RunAsHandoffTimeout=3000,
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.sys.argv',
+                ['furious'],
+            ),
+            self.assertLogs('Furious.Application.DesktopApplication', level='WARNING'),
+        ):
+            probeResult = SingletonApplication._notifyExistingInstance(application)
+
+        self.assertIs(
+            probeResult,
+            _ExistingInstanceResult.CommandDeliveryUncertain,
+        )
+
+        election = SimpleNamespace(
+            _notifyExistingInstance=mock.Mock(return_value=probeResult),
+            _singletonElectionLock=mock.Mock(),
+        )
+
+        self.assertTrue(SingletonApplication.shouldExitForExistingInstance(election))
+        election._singletonElectionLock.assert_not_called()
+
+    def testStartupResultMapsUncertainOwnershipToExit(self):
+        """Return the explicit primary state only after listen succeeds."""
+        application = SimpleNamespace(
+            serverName='test-server',
+            _existingEndpointIsReachable=mock.Mock(return_value=False),
+            _listenAsPrimaryInstance=mock.Mock(return_value=True),
+        )
+
+        result = SingletonApplication._electPrimaryUnderLock(
+            application,
+            _ExistingInstanceResult.Unreachable,
+        )
+
+        self.assertIs(result, _SingletonStartupResult.Primary)
+
+    def testRecoveryResultControlsFinalStartupDecision(self):
+        """Enter recovery only for the explicit stale-endpoint state."""
+        electionLock = mock.Mock()
+        electionLock.tryLock.return_value = True
+        application = SimpleNamespace(
+            _notifyExistingInstance=mock.Mock(
+                return_value=_ExistingInstanceResult.Unreachable
+            ),
+            _singletonElectionLock=mock.Mock(return_value=electionLock),
+            _electPrimaryUnderLock=mock.Mock(
+                return_value=_SingletonStartupResult.RecoveryRequired
+            ),
+            _recoverStaleEndpointAndClaim=mock.Mock(
+                return_value=_SingletonStartupResult.Primary
+            ),
+            SingletonElectionLockTimeout=3000,
+        )
+
+        self.assertFalse(
+            SingletonApplication.shouldExitForExistingInstance(application)
+        )
+        application._recoverStaleEndpointAndClaim.assert_called_once_with()
+        electionLock.unlock.assert_called_once_with()
+
+    def testConcurrentProcessesElectExactlyOnePrimary(self):
+        """Exercise the real Qt local-server race with isolated processes."""
+        serverName = f'furious-singleton-test-{uuid.uuid4()}'
+        script = textwrap.dedent(r"""
+            import os
+            import sys
+            import time
+
+            os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+
+            from PySide6 import QtCore
+
+            from Furious.Application.DesktopApplication import SingletonApplication
+
+
+            class RaceApplication(SingletonApplication):
+                @QtCore.Slot()
+                def handleNewConnection(self):
+                    while self.server.hasPendingConnections():
+                        socket = self.server.nextPendingConnection()
+
+                        if socket is None:
+                            continue
+
+                        socket.waitForReadyRead(1000)
+                        socket.readAll()
+                        socket.disconnectFromServer()
+                        socket.deleteLater()
+                        QtCore.QTimer.singleShot(100, self.quit)
+
+
+            server_name, barrier, participant = sys.argv[1:]
+            application = RaceApplication([sys.argv[0]])
+            application.serverName = server_name
+
+            with open(f'{barrier}.{participant}.ready', 'w', encoding='utf-8'):
+                pass
+
+            deadline = time.monotonic() + 10
+
+            while not os.path.exists(barrier):
+                if time.monotonic() >= deadline:
+                    raise RuntimeError('race barrier was not released')
+
+                time.sleep(0.01)
+
+            should_exit = application.shouldExitForExistingInstance()
+            print(
+                'SINGLETON_RESULT:secondary'
+                if should_exit
+                else 'SINGLETON_RESULT:primary',
+                flush=True,
+            )
+
+            if not should_exit:
+                # Keep the authoritative endpoint alive until the contender
+                # connects.  The longer timer is only a bounded test fallback.
+                QtCore.QTimer.singleShot(8000, application.quit)
+                application.exec()
+                application.server.close()
+            """)
+        environment = os.environ.copy()
+        environment['QT_QPA_PLATFORM'] = 'offscreen'
+        processes = []
+
+        with tempfile.TemporaryDirectory() as temporaryDirectory:
+            barrier = os.path.join(temporaryDirectory, 'start')
+
+            try:
+                participants = ('one', 'two', 'three', 'four')
+
+                for participant in participants:
+                    processes.append(
+                        subprocess.Popen(
+                            [
+                                sys.executable,
+                                '-c',
+                                script,
+                                serverName,
+                                barrier,
+                                participant,
+                            ],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            env=environment,
+                            text=True,
+                        )
+                    )
+
+                deadline = time.monotonic() + 10
+                readyPaths = tuple(
+                    f'{barrier}.{participant}.ready' for participant in participants
+                )
+
+                while not all(os.path.exists(path) for path in readyPaths):
+                    if time.monotonic() >= deadline:
+                        self.fail('singleton race participants did not become ready')
+
+                    time.sleep(0.01)
+
+                with open(barrier, 'w', encoding='utf-8'):
+                    pass
+
+                outputs = []
+
+                for process in processes:
+                    stdout, stderr = process.communicate(timeout=15)
+                    outputs.append(stdout)
+                    self.assertEqual(
+                        process.returncode,
+                        0,
+                        f'child failed:\n{stdout}{stderr}',
+                    )
+            finally:
+                for process in processes:
+                    if process.poll() is None:
+                        process.terminate()
+
+                        try:
+                            process.wait(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            process.kill()
+                            process.wait(timeout=5)
+
+                QLocalServer.removeServer(serverName)
+
+        results = [
+            line
+            for output in outputs
+            for line in output.splitlines()
+            if line.startswith('SINGLETON_RESULT:')
+        ]
+
+        self.assertCountEqual(
+            results,
+            (
+                'SINGLETON_RESULT:primary',
+                'SINGLETON_RESULT:secondary',
+                'SINGLETON_RESULT:secondary',
+                'SINGLETON_RESULT:secondary',
+            ),
+            outputs,
+        )
+
+    def testUnavailableTrayShowsMainWindowAndEnablesWindowQuit(self):
+        """Run normally without a desktop tray instead of rejecting Linux."""
+        mainWindow = mock.Mock()
+        trayFactory = mock.Mock()
+        trayFactory.isSystemTrayAvailable.return_value = False
+        application = SimpleNamespace(
+            applyThemePreference=mock.Mock(),
+            mainWindow=None,
+            systemTray=None,
+            setQuitOnLastWindowClosed=mock.Mock(),
+            _cleanupUI=mock.Mock(),
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.MainWindow',
+                return_value=mainWindow,
+            ),
+            mock.patch('Furious.Application.DesktopApplication.TrayIcon', trayFactory),
+            mock.patch('Furious.Application.DesktopApplication.PLATFORM', 'Linux'),
+        ):
+            DesktopApplication._initializeUI(application)
+
+        application.setQuitOnLastWindowClosed.assert_called_once_with(True)
+        mainWindow.show.assert_called_once_with()
+        self.assertIsNone(application.systemTray)
+        trayFactory.assert_not_called()
+
+    def testAvailableTrayPreservesBackgroundApplicationBehavior(self):
+        """Retain the existing tray-owned startup path when a tray is present."""
+        mainWindow = mock.Mock()
+        tray = mock.Mock()
+        trayFactory = mock.Mock(return_value=tray)
+        trayFactory.isSystemTrayAvailable.return_value = True
+        application = SimpleNamespace(
+            applyThemePreference=mock.Mock(),
+            mainWindow=None,
+            systemTray=None,
+            setQuitOnLastWindowClosed=mock.Mock(),
+            _cleanupUI=mock.Mock(),
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.MainWindow',
+                return_value=mainWindow,
+            ),
+            mock.patch('Furious.Application.DesktopApplication.TrayIcon', trayFactory),
+            mock.patch('Furious.Application.DesktopApplication.PLATFORM', 'Linux'),
+        ):
+            DesktopApplication._initializeUI(application)
+
+        application.setQuitOnLastWindowClosed.assert_called_once_with(False)
+        mainWindow.show.assert_not_called()
+        tray.show.assert_called_once_with()
+        tray.setCustomToolTip.assert_called_once_with()
+        tray.bootstrap.assert_called_once_with()
 
     def testSuccessfulRunAcquiresEveryStageOnceAndCleansUpInReverse(self):
         application, calls = self._application()
