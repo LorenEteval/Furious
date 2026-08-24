@@ -52,6 +52,7 @@ USER_HOME = pathlib.Path.home()
 DEPLOY_DIR_NAME = f'{APPLICATION_NAME}-Deploy'
 
 HYSTERIA_DATA_DIR = DATA_DIR / 'hysteria'
+WINDOWS_7_COMPATIBILITY_DLL_NAME = 'api-ms-win-core-path-l1-1-0.dll'
 
 NUITKA_BINARY_VERSION_OPTION = (
     f'--company-name={APPLICATION_NAME} '
@@ -61,6 +62,21 @@ NUITKA_BINARY_VERSION_OPTION = (
 )
 
 PLATFORM_MACHINE_LOWER = PLATFORM_MACHINE.casefold()
+
+if PLATFORM == 'Windows':
+    windowsArchitectures = {
+        'amd64': ('amd64', 'x64'),
+        'x86_64': ('amd64', 'x64'),
+        'arm64': ('arm64', 'arm64'),
+        'aarch64': ('arm64', 'arm64'),
+    }
+
+    try:
+        WINDOWS_ARTIFACT_ARCHITECTURE, WINDOWS_WIX_ARCHITECTURE = windowsArchitectures[
+            PLATFORM_MACHINE_LOWER
+        ]
+    except KeyError:
+        raise RuntimeError(f'unsupported Windows architecture: {PLATFORM_MACHINE}')
 
 if PLATFORM == 'Windows':
     NUITKA_BINARY_VERSION_OPTION += f'--file-description=\"{APPLICATION_DESCRIPTION}\" '
@@ -75,6 +91,7 @@ if PLATFORM == 'Windows':
         f'--disable-console '
         f'--assume-yes-for-downloads '
         f'--include-package-data=Furious '
+        f'--nofollow-import-to=numpy '
         f'{NUITKA_BINARY_VERSION_OPTION}'
         f'--windows-icon-from-ico=\"Icons/png/rocket-takeoff-window.png\" '
         f'--force-stdout-spec=^%TEMP^%/_Furious_Enable_Stdout '
@@ -92,6 +109,7 @@ elif PLATFORM == 'Darwin':
         f'--disable-console '
         f'--assume-yes-for-downloads '
         f'--include-package-data=Furious '
+        f'--nofollow-import-to=numpy '
         f'{NUITKA_BINARY_VERSION_OPTION}'
         f'--macos-create-app-bundle '
         f'--macos-app-icon=\"Icons/png/rocket-takeoff-window.png\" '
@@ -106,6 +124,7 @@ elif PLATFORM == 'Linux':
         f'--disable-console '
         f'--assume-yes-for-downloads '
         f'--include-package-data=Furious '
+        f'--nofollow-import-to=numpy '
         f'{NUITKA_BINARY_VERSION_OPTION}'
         f'Furious '
         f'--output-dir=\"{ROOT_DIR / DEPLOY_DIR_NAME}\"'
@@ -126,10 +145,10 @@ if PLATFORM == 'Windows':
 
     ARTIFACT_NAME = (
         f'{APPLICATION_NAME}-{APPLICATION_VERSION}-'
-        f'{winVerCompatible}-{PLATFORM_MACHINE_LOWER}'
+        f'{winVerCompatible}-{WINDOWS_ARTIFACT_ARCHITECTURE}'
     )
 
-    WIN_UNZIPPED = f'{APPLICATION_NAME}-{APPLICATION_VERSION}-{winVerCompatible}'
+    WIN_UNZIPPED = ARTIFACT_NAME
 elif PLATFORM == 'Darwin':
     value = versionToValue(PYSIDE6_VERSION)
 
@@ -171,14 +190,34 @@ elif PLATFORM == 'Linux':
     )
 
     LINUX_APPIMAGE_FILENAME = f'{ARTIFACT_NAME}.AppImage'
-    LINUX_CREATE_APPIMAGE_CMD = (
-        f'linuxdeploy-{PLATFORM_MACHINE}.AppImage '
-        f'--appdir AppDir '
-        f'-d \"{LINUX_APP_DIR / LINUX_DESKTOP_FILE}\" '
-        f'-i \"{LINUX_APP_DIR / LINUX_ICON_FILE}\" '
-        f'--plugin qt '
-        f'--output appimage'
-    )
+    LINUX_APPIMAGE_BUILDER = os.environ.get(
+        'LINUX_APPIMAGE_BUILDER', 'appimagetool'
+    ).casefold()
+
+    if LINUX_APPIMAGE_BUILDER == 'linuxdeploy':
+        LINUX_CREATE_APPIMAGE_CMD = [
+            f'linuxdeploy-{PLATFORM_MACHINE}.AppImage',
+            '--appdir',
+            LINUX_APP_DIR,
+            '-d',
+            LINUX_APP_DIR / LINUX_DESKTOP_FILE,
+            '-i',
+            LINUX_APP_DIR / LINUX_ICON_FILE,
+            '--plugin',
+            'qt',
+            '--output',
+            'appimage',
+        ]
+    elif LINUX_APPIMAGE_BUILDER == 'appimagetool':
+        LINUX_CREATE_APPIMAGE_CMD = [
+            f'appimagetool-{PLATFORM_MACHINE}.AppImage',
+            LINUX_APP_DIR,
+            ROOT_DIR / LINUX_APPIMAGE_FILENAME,
+        ]
+    else:
+        raise RuntimeError(
+            f'unsupported Linux AppImage builder: {LINUX_APPIMAGE_BUILDER!r}'
+        )
 
     LINUX_DEBIAN_DIR = ROOT_DIR / 'debian'
     LINUX_DEB_FILENAME = f'{ARTIFACT_NAME}.deb'
@@ -455,6 +494,22 @@ def main():
         printStandardStream(result.stdout, result.stderr)
 
     if PLATFORM == 'Windows':
+        distributionPath = ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist'
+
+        if winVerCompatible.casefold() == 'windows7':
+            compatibilityDll = pathlib.Path(sys.executable).with_name(
+                WINDOWS_7_COMPATIBILITY_DLL_NAME
+            )
+
+            if not compatibilityDll.is_file():
+                raise FileNotFoundError(
+                    f'Windows 7 compatibility DLL not found: {compatibilityDll}'
+                )
+
+            shutil.copy2(compatibilityDll, distributionPath)
+
+            logger.info(f'included Windows 7 compatibility DLL: {compatibilityDll}')
+
         try:
             shutil.rmtree(ROOT_DIR / DEPLOY_DIR_NAME / WIN_UNZIPPED)
         except FileNotFoundError:
@@ -467,14 +522,14 @@ def main():
         # Copy LICENSE to distribution folder
         shutil.copy(
             ROOT_DIR / 'LICENSE',
-            ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
+            distributionPath,
         )
         shutil.copy(
             ROOT_DIR / 'LICENSE.rtf',
             ROOT_DIR / DEPLOY_DIR_NAME,
         )
         shutil.copytree(
-            ROOT_DIR / DEPLOY_DIR_NAME / f'{APPLICATION_NAME}.dist',
+            distributionPath,
             ROOT_DIR / DEPLOY_DIR_NAME / WIN_UNZIPPED,
         )
         shutil.make_archive(
@@ -492,28 +547,6 @@ def main():
         msifolder = ROOT_DIR / DEPLOY_DIR_NAME / 'msi'
 
         os.makedirs(msifolder, exist_ok=True)
-
-        try:
-            # Requires "heat" in PATH
-            result = runExternalCommand(
-                'heat dir'.split()
-                + [ROOT_DIR / DEPLOY_DIR_NAME / 'SourceDir']
-                + '-cg FuriousComponents -dr INSTALLFOLDER -srd -scom -sreg -gg -out'.split()
-                + [msifolder / 'FuriousFiles.wxs'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=True,
-            )
-        except subprocess.CalledProcessError as err:
-            logger.error(f'run heat failed with returncode {err.returncode}')
-
-            printStandardStream(err.stdout, err.stderr)
-
-            sys.exit(EXIT_FAILURE)
-        else:
-            logger.info(f'run heat success')
-
-            printStandardStream(result.stdout, result.stderr)
 
         # Create Product.wxs file
         try:
@@ -547,9 +580,14 @@ def main():
                     f'    <WixVariable Id=\"WixUILicenseRtf\" Value=\"LICENSE.rtf\" />\n'
                     f'\n'
                     f'    <!-- Installation directory -->\n'
-                    f'    <StandardDirectory Id=\"ProgramFiles64Folder\">\n'
+                    f'    <StandardDirectory Id=\"ProgramFiles6432Folder\">\n'
                     f'      <Directory Id=\"INSTALLFOLDER\" Name=\"{WIN_UNZIPPED}\" />\n'
                     f'    </StandardDirectory>\n'
+                    f'\n'
+                    f'    <!-- Files harvested by WiX for the selected architecture -->\n'
+                    f'    <ComponentGroup Id="FuriousComponents" Directory="INSTALLFOLDER">\n'
+                    f'      <Files Include="{xml_escape(str(ROOT_DIR / DEPLOY_DIR_NAME / "SourceDir" / "**"))}" />\n'
+                    f'    </ComponentGroup>\n'
                     f'\n'
                     f'    <!-- Features -->\n'
                     f'    <Feature Id=\"MainFeature\" Title=\"{APPLICATION_NAME}\" Level=\"1\">\n'
@@ -606,8 +644,9 @@ def main():
                 [
                     'wix',
                     'build',
-                    msifolder / 'FuriousFiles.wxs',
                     msifolder / 'Product.wxs',
+                    '-arch',
+                    WINDOWS_WIX_ARCHITECTURE,
                     '-o',
                     ROOT_DIR / f'{ARTIFACT_NAME}.msi',
                     '-ext',
@@ -646,10 +685,32 @@ def main():
 
             raise
 
-        shutil.copytree(
-            ROOT_DIR / DEPLOY_DIR_NAME / 'Furious-GUI.app',
-            MAC_APP_DIR / 'Furious-GUI.app',
-        )
+        sourceApp = ROOT_DIR / DEPLOY_DIR_NAME / 'Furious-GUI.app'
+        stagedApp = MAC_APP_DIR / 'Furious-GUI.app'
+
+        try:
+            result = runExternalCommand(
+                (
+                    'ditto',
+                    '--rsrc',
+                    '--extattr',
+                    str(sourceApp),
+                    str(stagedApp),
+                ),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.error(f'stage macOS app failed with returncode {err.returncode}')
+
+            printStandardStream(err.stdout, err.stderr)
+
+            sys.exit(EXIT_FAILURE)
+        else:
+            logger.info('stage macOS app success')
+
+            printStandardStream(result.stdout, result.stderr)
 
         logger.info('generating dmg')
 
@@ -722,18 +783,32 @@ def main():
 
             raise
 
+        appRun = LINUX_APP_DIR / 'AppRun'
+
+        with open(appRun, 'w', encoding='utf-8') as file:
+            file.write(
+                '#!/bin/sh\n'
+                'APPDIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"\n'
+                f'exec "$APPDIR/usr/bin/{APPLICATION_NAME}.bin" "$@"\n'
+            )
+
+        appRun.chmod(0o755)
+
         logger.info('generating AppImage')
 
-        # https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/blob/master/README.md
-        os.environ['LDAI_OUTPUT'] = LINUX_APPIMAGE_FILENAME
-        os.environ['LINUXDEPLOY_OUTPUT_VERSION'] = APPLICATION_VERSION
+        if LINUX_APPIMAGE_BUILDER == 'linuxdeploy':
+            os.environ['LDAI_OUTPUT'] = LINUX_APPIMAGE_FILENAME
+            os.environ['LINUXDEPLOY_OUTPUT_VERSION'] = APPLICATION_VERSION
+        else:
+            # Nuitka's standalone directory already owns its complete Qt runtime.
+            # appimagetool packages it as-is instead of harvesting Qt a second time.
+            os.environ['ARCH'] = PLATFORM_MACHINE
 
         try:
             result = runExternalCommand(
                 LINUX_CREATE_APPIMAGE_CMD,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                shell=True,
                 check=True,
             )
         except subprocess.CalledProcessError as err:

@@ -5,7 +5,7 @@ pybase64
 segno
 icmplib
 mss
-zxing-cpp<3
+zxing-cpp
 pillow
 Xray-core
 hysteria

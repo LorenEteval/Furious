@@ -68,6 +68,11 @@
 - For backend/process/platform work, verify error cleanup and bounded shutdown. For Qt ownership work, follow
   `Furious/AGENTS.md` and `Furious/Qt/AGENTS.md`, use the `manage-qt-pyside6-lifetimes` skill, and run the relevant
   lifetime tests.
+- Windows 7 release bindings that require newer Go runtimes must use locally built wheels produced with the patched
+  `go-win7` toolchain; an ordinary modern PyPI wheel does not establish Windows 7 compatibility. A binding built with an
+  official Go release that still supports Windows 7 may use a verified prebuilt wheel.
+- Architecture-specific Windows release jobs must verify the active Python, installed native extensions, and packaged
+  executable architecture before publishing uniquely named artifacts.
 - Review for duplicated state authorities, mutation of persisted configuration during runtime preparation, broad
   swallowed errors, unbounded waits/caches, generated-file edits without regeneration, and protocol branches that belong
   in a capability.

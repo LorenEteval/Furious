@@ -78,33 +78,65 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
   deploy-binaries:
-    name: Deploy binaries on ${{ matrix.os }} Python ${{ matrix.python-version }}
+    name: Deploy ${{ matrix.id }} on ${{ matrix.os }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, ubuntu-22.04-arm, windows-2025, macos-15-intel, macos-14 ]
-        python-version: [ "3.11", "3.13" ]
-        exclude:
-          - os: ubuntu-22.04
-            python-version: "3.11"
-          - os: windows-2025
-            python-version: "3.11"
-          - os: macos-15-intel
-            python-version: "3.11"
-          - os: macos-14
-            python-version: "3.11"
-          - os: ubuntu-22.04-arm
-            python-version: "3.13"
         include:
-          - os: windows-2025
-            id: win7
+          - id: linux-amd64
+            os: ubuntu-24.04
+            python-version: "3.13"
+            python-architecture: x64
+            pyside6-version: "6.8.3"
+            windows-compatibility: ""
+            windows-architecture: ""
+          - id: linux-arm64
+            os: ubuntu-24.04-arm
+            python-version: "3.11"
+            python-architecture: arm64
+            pyside6-version: "6.8.3"
+            windows-compatibility: ""
+            windows-architecture: ""
+          - id: windows7-amd64
+            os: windows-2025
+            python-version: "3.13"
+            python-architecture: x64
+            pyside6-version: "6.8.3"
+            windows-compatibility: windows7
+            windows-architecture: amd64
+          - id: windows10-amd64
+            os: windows-2025
+            python-version: "3.13"
+            python-architecture: x64
+            pyside6-version: "6.8.3"
+            windows-compatibility: windows10
+            windows-architecture: amd64
+          - id: windows-arm64
+            os: windows-11-vs2026-arm
+            python-version: "3.13"
+            python-architecture: arm64
+            pyside6-version: "6.11.2"
+            windows-compatibility: ""
+            windows-architecture: arm64
+          - id: macos-intel
+            os: macos-15-intel
+            python-version: "3.13"
+            python-architecture: x64
+            pyside6-version: "6.8.3"
+            windows-compatibility: ""
+            windows-architecture: ""
+          - id: macos-arm64
+            os: macos-14
+            python-version: "3.13"
+            python-architecture: arm64
+            pyside6-version: "6.8.3"
+            windows-compatibility: ""
+            windows-architecture: ""
     env:
-      # Last PySide6 version that supports macOS 10.9 & Python 3.11
-      PYSIDE6_LEGACY_VERSION: "6.4.3"
-      PYSIDE6_TARGET_VERSION: "6.8.3"
-      # PySide6 has Windows ARM64 build since 6.9.0
-      PYSIDE6_LATEST_VERSION: "6.9.1"
+      GO_WIN7_VERSION: "1.26.7"
+      WIX_VERSION: "6.0.2"
+      WIX_INSTALLER_SHA256: "A8A5CC7443353CEF3AB900C60CD7A3A5EE601746319D104AC7B12AD0CED2345C"
     steps:
       - uses: actions/checkout@v7
       - name: Install macOS dependencies
@@ -121,125 +153,497 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt update
-          sudo apt install -y libxcb-cursor0 qt6-base-dev patchelf ccache zlib1g-dev
+
+          if [ "$RUNNER_ARCH" == "ARM64" ]; then
+            if apt-cache show libminizip1t64 >/dev/null 2>&1; then
+              minizip_package='libminizip1t64'
+            else
+              minizip_package='libminizip1'
+            fi
+
+            sudo apt install -y \
+              libevent-2.1-7 \
+              libwebp7 \
+              "$minizip_package"
+          fi
+
+          sudo apt install -y \
+            libxcb-cursor0 \
+            qt6-base-dev \
+            patchelf \
+            ccache \
+            zlib1g-dev
           sudo apt install -y flatpak flatpak-builder elfutils patchelf
           sudo apt install -y rpm
-          echo "QMAKE=$(which qmake6)" >> $GITHUB_ENV
           flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak update
           flatpak install -y flathub org.kde.Platform//6.8 org.kde.Sdk//6.8
 
           if [ "$RUNNER_ARCH" == "X64" ]; then
-            linuxdeploy_arch="x86_64"
+            appimage_arch="x86_64"
           elif [ "$RUNNER_ARCH" == "ARM64" ]; then
-            linuxdeploy_arch="aarch64"
+            appimage_arch="aarch64"
           else
             echo "Unknown runner architecture: $RUNNER_ARCH"
             exit 1
           fi
-          echo "linuxdeploy architecture is $linuxdeploy_arch"
 
-          linuxdeploy_name=".linuxdeploy-bin"
-          mkdir ${linuxdeploy_name}
-          echo "${PWD}/${linuxdeploy_name}" >> $GITHUB_PATH
-          wget -P ${linuxdeploy_name} https://github.com/linuxdeploy/linuxdeploy/releases/latest/download/linuxdeploy-${linuxdeploy_arch}.AppImage
-          wget -P ${linuxdeploy_name} https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/latest/download/linuxdeploy-plugin-qt-${linuxdeploy_arch}.AppImage
-          wget -P ${linuxdeploy_name} https://github.com/AppImage/appimagetool/releases/latest/download/appimagetool-${linuxdeploy_arch}.AppImage
-          chmod +x ${linuxdeploy_name}/*
+          appimage_tools=".appimage-tools"
+          mkdir "$appimage_tools"
+          echo "${PWD}/${appimage_tools}" >> "$GITHUB_PATH"
+
+          wget -P "$appimage_tools" \
+            "https://github.com/AppImage/appimagetool/releases/latest/download/appimagetool-${appimage_arch}.AppImage"
+          chmod +x "$appimage_tools"/*
         if: runner.os == 'Linux'
       - name: Install Windows dependencies
+        shell: pwsh
         run: |
-          if [ "$RUNNER_ARCH" == "X64" ]; then
-            toolset_arch="x64"
-          elif [ "$RUNNER_ARCH" == "ARM64" ]; then
-            toolset_arch="arm64"
-          else
-            echo "Unknown runner architecture: $RUNNER_ARCH"
-            exit 1
-          fi
+          $toolsetArchitecture = switch ($env:RUNNER_ARCH) {
+            'X64' { 'x64' }
+            'ARM64' { 'arm64' }
+            default { throw "Unknown runner architecture: $env:RUNNER_ARCH" }
+          }
 
-          winget install --id WiXToolset.WiXCLI --version 6.0.2.0 -e --source winget --accept-package-agreements --accept-source-agreements
-          echo "C:/Program Files/WiX Toolset v6.0/bin" >> $GITHUB_PATH
-          echo "C:/Program Files/WiX Toolset v6.0/bin/${toolset_arch}" >> $GITHUB_PATH
+          $installer = Join-Path $env:RUNNER_TEMP 'wix-cli-x64.msi'
+          $installerUrl = "https://github.com/wixtoolset/wix/releases/download/v$env:WIX_VERSION/wix-cli-x64.msi"
+          Invoke-WebRequest -Uri $installerUrl -OutFile $installer
+
+          $installerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash
+
+          if ($installerHash -ne $env:WIX_INSTALLER_SHA256) {
+            throw "Unexpected WiX installer SHA-256: $installerHash"
+          }
+
+          $msi = Start-Process msiexec.exe -ArgumentList @(
+            '/i',
+            $installer,
+            '/quiet',
+            '/norestart',
+            '/log',
+            (Join-Path $env:RUNNER_TEMP 'wix-install.log')
+          ) -WindowStyle Hidden -Wait -PassThru
+
+          if ($msi.ExitCode -notin @(0, 3010)) {
+            throw "WiX installation failed with exit code $($msi.ExitCode)"
+          }
+
+          $toolsetRoot = 'C:\Program Files\WiX Toolset v6.0\bin'
+          $toolsetRoot | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          (Join-Path $toolsetRoot $toolsetArchitecture) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         if: runner.os == 'Windows'
       - name: Check Windows dependencies
         run: |
           wix --version
-          wix extension add WixToolset.UI.wixext/6.0.2
+          wix extension add -g "WixToolset.UI.wixext/${WIX_VERSION}"
+          wix extension list -g
         if: runner.os == 'Windows'
       - name: Set up Python for Windows7
         uses: LorenEteval/setup-python-win7@v1
         with:
           python-version: ${{ matrix.python-version }}
           check-latest: true
-        if: matrix.id == 'win7'
+        if: matrix.id == 'windows7-amd64'
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.python-architecture }}
           check-latest: true
-        if: matrix.id != 'win7'
+        if: matrix.id != 'windows7-amd64'
+      - name: Verify runner and Python architecture
+        env:
+          EXPECTED_ARCHITECTURE: ${{ matrix.python-architecture }}
+        run: |
+          python - <<'PY'
+          import os
+          import platform
+          import struct
+          import sys
+
+          aliases = {
+              'x64': {'amd64', 'x86_64'},
+              'arm64': {'arm64', 'aarch64'},
+          }
+          expected = os.environ['EXPECTED_ARCHITECTURE']
+          runner_architecture = os.environ.get('RUNNER_ARCH', '').casefold()
+          machine = platform.machine().casefold()
+          pointer_width = struct.calcsize('P') * 8
+
+          print(f'RUNNER_OS={os.environ.get("RUNNER_OS")}')
+          print(f'RUNNER_ARCH={os.environ.get("RUNNER_ARCH")}')
+          print(f'Python={sys.version}')
+          print(f'platform.machine()={platform.machine()}')
+          print(f'pointer width={pointer_width}')
+
+          if runner_architecture != expected:
+              raise SystemExit(
+                  f'expected {expected} runner, got {runner_architecture or "unknown"}'
+              )
+
+          if machine not in aliases[expected] or pointer_width != 64:
+              raise SystemExit(
+                  f'expected native {expected} Python, got {machine}/{pointer_width}-bit'
+              )
+          PY
       - name: Set up PySide6 for Windows7
         uses: LorenEteval/setup-pyside6-win7@v1
         with:
-          pyside6-version: ${{ env.PYSIDE6_TARGET_VERSION }}
-        if: matrix.id == 'win7'
-      - name: Download Python dependencies & latest asset files
+          pyside6-version: ${{ matrix.pyside6-version }}
+        if: matrix.id == 'windows7-amd64'
+      - name: Install Python build and runtime dependencies
         run: |
           python -c "import sys; print(sys.version)"
           python -m pip install --upgrade pip
           python -m pip install setuptools wheel
+
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          excluded = {
+              'pyside6-addons',
+              'pyside6-essentials',
+              'xray-core',
+              'hysteria',
+              'hysteria2',
+              'tun2socks',
+          }
+
+          requirements = []
+
+          for line in Path('requirements.txt').read_text(encoding='utf-8').splitlines():
+              match = re.match(r'\s*([A-Za-z0-9_.-]+)', line)
+
+              if match and match.group(1).casefold().replace('_', '-') in excluded:
+                  continue
+
+              requirements.append(line)
+
+          Path('.binary-requirements.txt').write_text(
+              '\n'.join(requirements) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+          if [[ "${{ matrix.id }}" != "windows7-amd64" ]]; then
+            if [[ "$RUNNER_OS" == "Windows" ]]; then
+              pyside_binary_policy="--only-binary=PySide6-Essentials,PySide6-Addons"
+            else
+              pyside_binary_policy=""
+            fi
+
+            python -m pip install \
+              ${pyside_binary_policy} \
+              "PySide6-Essentials==${{ matrix.pyside6-version }}" \
+              "PySide6-Addons==${{ matrix.pyside6-version }}"
+          fi
+
           if [ "$RUNNER_OS" == "Linux" ] && [ "$RUNNER_ARCH" == "ARM64" ]; then
             python -m pip install "numpy<2"
-            python -m pip install PySide6-Essentials==6.5.3
-          else
-            python -m pip install PySide6-Essentials==${PYSIDE6_TARGET_VERSION}
           fi
-          python -m pip install -r requirements.txt
+
+          python -m pip install -r .binary-requirements.txt
           python -m pip install nuitka imageio requests
-          python Deploy.py --download
-      - name: Set up go
+          python -c "import importlib.metadata; print('zxing-cpp', importlib.metadata.version('zxing-cpp'))"
+          python -c "from PySide6 import QtCore; print(f'PySide6/Qt {QtCore.__version__}')"
+      - name: Install patched Go for Windows7
+        run: |
+          go_name="go-for-win7-windows-amd64"
+          go_file="${go_name}.zip"
+
+          curl --fail --location --output "${go_file}" \
+            "https://github.com/XTLS/go-win7/releases/download/patched-${GO_WIN7_VERSION}/${go_file}"
+          7z x "${go_file}" "-o${go_name}" -y
+
+          go_root="$(cygpath -w "$PWD/${go_name}")"
+          echo "GOROOT=${go_root}" >> $GITHUB_ENV
+          echo "CGO_ENABLED=1" >> $GITHUB_ENV
+          echo "${go_root}\\bin" >> $GITHUB_PATH
+        if: matrix.id == 'windows7-amd64'
+      - name: Set up Go for Windows10
         uses: actions/setup-go@v7
         with:
           go-version: "1.26"
           check-latest: true
-        if: matrix.id != 'win7'
-      - name: Install go dependencies
+          cache: false
+        if: matrix.id == 'windows10-amd64'
+      - name: Build Windows AMD64 bindings from source
+        shell: pwsh
+        env:
+          CC: gcc
+          CXX: g++
+          CGO_ENABLED: "1"
+          CMAKE_BUILD_PARALLEL_LEVEL: "2"
+          GOPROXY: https://proxy.golang.org,direct
         run: |
-          if [[ "${{ matrix.id }}" == "win7" ]]; then
-            go_name="go-for-win7-windows-amd64"
-            go_file="${go_name}.zip"
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
 
-            curl -L -o ${go_file} https://github.com/XTLS/go-win7/releases/download/patched-1.26.7/${go_file}
-            7z x ${go_file} -o${go_name} -y
+          Write-Output "Go executable: $((Get-Command go -ErrorAction Stop).Source)"
+          go version
+          go env GOROOT GOOS GOARCH CGO_ENABLED
+          Write-Output "GCC executable: $((Get-Command gcc -ErrorAction Stop).Source)"
+          gcc -dumpmachine
 
-            export GOROOT="$PWD/${go_name}"
-            export CGO_ENABLED=1
-            export PATH="${GOROOT}/bin:$PATH"
+          $temporaryDirectory = Join-Path $env:RUNNER_TEMP 'bindings'
+          New-Item -ItemType Directory -Force -Path $temporaryDirectory | Out-Null
+          foreach ($name in 'TMPDIR', 'TEMP', 'TMP') {
+            Set-Item -Path "Env:$name" -Value $temporaryDirectory
+          }
+
+          Write-Output "Configured temporary directory: $temporaryDirectory"
+          python -c "import tempfile; print(f'Python temporary directory: {tempfile.gettempdir()}')"
+
+          python -m pip install `
+            "setuptools>=68" `
+            wheel `
+            "cmake>=3.15" `
+            "pybind11>=3.0.1,<3.1"
+
+          $wheelDirectory = Join-Path $temporaryDirectory 'wheels'
+          New-Item -ItemType Directory -Force -Path $wheelDirectory | Out-Null
+
+          $bindings = @(
+            'Xray-core'
+            'hysteria2'
+            'tun2socks'
+          )
+
+          foreach ($binding in $bindings) {
+            python -m pip wheel `
+              --no-cache-dir `
+              --no-build-isolation `
+              --no-deps `
+              --no-binary=:all: `
+              --wheel-dir $wheelDirectory `
+              $binding
+          }
+
+          $wheels = @(
+            Get-ChildItem -LiteralPath $wheelDirectory -Filter '*.whl' -File |
+              Sort-Object Name
+          )
+          Write-Output 'Locally built wheels:'
+
+          foreach ($wheel in $wheels) {
+            Write-Output "  $($wheel.Name)"
+          }
+
+          $unexpectedWheels = @($wheels | Where-Object Name -NotLike '*win_amd64.whl')
+
+          if ($wheels.Count -ne 3 -or $unexpectedWheels.Count -ne 0) {
+            throw 'Expected exactly three locally built win_amd64 wheels'
+          }
+
+          $wheelPaths = @($wheels.FullName)
+          python -m pip install `
+            --no-index `
+            --force-reinstall `
+            --no-deps `
+            $wheelPaths
+        if: matrix.id == 'windows7-amd64' || matrix.id == 'windows10-amd64'
+      - name: Install pre-built Hysteria1 wheel
+        run: |
+          python -m pip install \
+            --only-binary=hysteria \
+            --no-cache-dir \
+            --no-deps \
+            hysteria
+        if: matrix.id == 'windows7-amd64' || matrix.id == 'windows10-amd64'
+      - name: Install supported binding wheels
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            binary_policy="--only-binary=Xray-core,hysteria,hysteria2,tun2socks"
+          else
+            binary_policy=""
           fi
-          go version
-          python -m pip install "Xray-core >= 1.8.8"
-          python -m pip install "hysteria2 >= 2.0.4"
-          python -m pip install "tun2socks >  2.5.2"
-      - name: Set up go legacy
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.20"
-          check-latest: true
-      - name: Install go legacy dependencies
+
+          python -m pip install \
+            ${binary_policy} \
+            --no-cache-dir \
+            --no-deps \
+            Xray-core \
+            hysteria \
+            hysteria2 \
+            tun2socks
+        if: matrix.id != 'windows7-amd64' && matrix.id != 'windows10-amd64'
+      - name: Verify Windows native and UI imports
         run: |
-          go version
-          python -m pip install "hysteria > 1.3.5"
+          python - <<'PY'
+          import importlib
+
+          for name in ('xray', 'hysteria', 'hysteria2', 'tun2socks'):
+              module = importlib.import_module(name)
+              print(f'{name}: {module.__file__}')
+
+          # Native extension imports fail here if a wheel has the wrong machine type.
+          print('All native bindings imported successfully')
+
+          # Some Windows PySide6 distributions intentionally omit Qt WebEngine.
+          # The application must still import and use its non-WebEngine map fallback.
+          from Furious.Widget.EndpointInfoWidget import EndpointInfoWidget
+
+          print(f'Endpoint UI imported successfully: {EndpointInfoWidget.__name__}')
+          PY
+        if: runner.os == 'Windows'
+      - name: Verify Qt WebEngine imports
+        if: runner.os != 'Windows'
+        run: |
+          python - <<'PY'
+          from PySide6 import QtWebChannel, QtWebEngineCore, QtWebEngineWidgets
+
+          print(f'QtWebChannel imported successfully: {QtWebChannel.__name__}')
+          print(f'QtWebEngineCore imported successfully: {QtWebEngineCore.__name__}')
+          print(f'QtWebEngineWidgets imported successfully: {QtWebEngineWidgets.__name__}')
+          PY
+      - name: Download latest asset files
+        run: |
+          python Deploy.py --download
       - name: Run deploy script
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
         run: |
-          if [[ "${{ matrix.id }}" == "win7" ]]; then
-            export WIN_VER_COMPATIBLE="windows"
+          if [[ -n "${{ matrix.windows-compatibility }}" ]]; then
+            export WIN_VER_COMPATIBLE="${{ matrix.windows-compatibility }}"
           fi
           python Deploy.py
+      - name: Verify macOS application bundle
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          app='app/Furious-GUI.app'
+          source_app='Furious-Deploy/Furious-GUI.app'
+          macos_root="${app}/Contents/MacOS"
+          qt_root="${macos_root}/PySide6/Qt"
+          webengine_framework="${qt_root}/lib/QtWebEngineCore.framework"
+          relocated_qt_root="${app}/Contents/Frameworks/PySide6/Qt"
+          relocated_webengine_framework="${relocated_qt_root}/lib/QtWebEngineCore.framework"
+          webengine_helper="${relocated_webengine_framework}/Helpers/QtWebEngineProcess.app/Contents/MacOS/QtWebEngineProcess"
+          failures=0
+
+          check() {
+            local description="$1"
+            local status
+            shift
+
+            echo "::group::${description}"
+
+            if "$@"; then
+              status=0
+              echo "PASS: ${description} (exit code ${status})"
+            else
+              status=$?
+              echo "::error title=macOS bundle verification::FAIL: ${description} (exit code ${status})"
+              failures=$((failures + 1))
+            fi
+
+            echo '::endgroup::'
+          }
+
+          echo "Application bundle: ${app}"
+          echo "Qt runtime root: ${qt_root}"
+          echo "Relocated Qt root: ${relocated_qt_root}"
+          echo "WebEngine framework link: ${webengine_framework}"
+          echo "Relocated WebEngine framework: ${relocated_webengine_framework}"
+          echo "WebEngine helper: ${webengine_helper}"
+
+          check 'Application bundle exists' test -d "${app}"
+          check 'Nuitka source application bundle exists' test -d "${source_app}"
+          framework_paths=(
+            "${webengine_framework}"
+            "${relocated_webengine_framework}"
+            "${relocated_webengine_framework}/Versions/Current"
+            "${relocated_webengine_framework}/QtWebEngineCore"
+          )
+          check 'Relocated framework paths can be inspected' ls -ld "${framework_paths[@]}"
+          check 'MacOS WebEngine framework entry is a symbolic link' test -L "${webengine_framework}"
+          check 'Framework Current version is a symbolic link' test -L "${relocated_webengine_framework}/Versions/Current"
+          check 'Framework top-level binary is a symbolic link' test -L "${relocated_webengine_framework}/QtWebEngineCore"
+          check 'WebEngine process helper is executable' test -x "${webengine_helper}"
+          resource_paths=(
+            "${macos_root}/icudtl.dat"
+            "${macos_root}/qtwebengine_resources.pak"
+          )
+          check 'WebEngine resource metadata can be inspected' ls -l@ "${resource_paths[@]}"
+          check 'Chromium ICU data exists' test -f "${resource_paths[0]}"
+          check 'Chromium resource pack exists' test -f "${resource_paths[1]}"
+          check 'Nuitka source code signature is valid' codesign --verify --deep --strict --verbose=2 "${source_app}"
+          check 'Staged application code signature is valid' codesign --verify --deep --strict --verbose=2 "${app}"
+          size_paths=(
+            "${app}"
+            "${app}/Contents/Frameworks"
+            "${app}/Contents/MacOS"
+          )
+          check 'Application bundle sizes can be measured' du -sh "${size_paths[@]}"
+
+          if ((failures > 0)); then
+            echo "::error title=macOS bundle verification::${failures} check(s) failed"
+            exit 1
+          fi
+      - name: Verify packaged Windows binaries
+        env:
+          EXPECTED_WINDOWS_ARCHITECTURE: ${{ matrix.windows-architecture }}
+          WINDOWS_COMPATIBILITY: ${{ matrix.windows-compatibility }}
+        run: |
+          python - <<'PY'
+          import os
+          import struct
+          from pathlib import Path
+
+          machineCodes = {
+              'amd64': 0x8664,
+              'arm64': 0xAA64,
+          }
+          expected = os.environ['EXPECTED_WINDOWS_ARCHITECTURE']
+          expectedMachine = machineCodes[expected]
+          root = Path('Furious-Deploy/Furious.dist')
+          compatibilityDll = root / 'api-ms-win-core-path-l1-1-0.dll'
+
+          if (
+              os.environ['WINDOWS_COMPATIBILITY'] == 'windows7'
+              and not compatibilityDll.is_file()
+          ):
+              raise SystemExit(f'Windows 7 compatibility DLL is missing: {compatibilityDll}')
+
+          binaries = sorted(
+              {
+                  *root.rglob('*.exe'),
+                  *root.rglob('*.pyd'),
+                  *([compatibilityDll] if compatibilityDll.is_file() else []),
+              }
+          )
+
+          if not binaries:
+              raise SystemExit(f'no packaged Windows binaries found below {root}')
+
+          for binary in binaries:
+              with binary.open('rb') as stream:
+                  if stream.read(2) != b'MZ':
+                      raise SystemExit(f'{binary} is not a PE binary')
+
+                  stream.seek(0x3C)
+                  peOffset = struct.unpack('<I', stream.read(4))[0]
+                  stream.seek(peOffset)
+
+                  if stream.read(4) != b'PE\0\0':
+                      raise SystemExit(f'{binary} has an invalid PE header')
+
+                  machine = struct.unpack('<H', stream.read(2))[0]
+
+              if machine != expectedMachine:
+                  raise SystemExit(
+                      f'{binary} has PE machine 0x{machine:04x}, expected '
+                      f'{expected} (0x{expectedMachine:04x})'
+                  )
+
+          print(f'Verified {len(binaries)} packaged {expected} PE binaries')
+          PY
+        if: runner.os == 'Windows'
       - name: Store the distribution packages
         uses: actions/upload-artifact@v7
         with:
-          name: binary-distributions-${{ matrix.os }}-Python${{ matrix.python-version }}
+          name: binary-distributions-${{ matrix.id }}-Python${{ matrix.python-version }}
           path: |
             Furious-*.zip
             Furious-*.msi
@@ -294,6 +698,6 @@ jobs:
         with:
           identifier: LorenEteval.Furious
           release-tag: ${{ github.ref_name }}
-          installers-regex: '^Furious-.*\.zip$'
+          installers-regex: '^Furious-.*-(?:windows10-amd64|windows11-arm64)\.zip$'
           max-versions-to-keep: 5
           token: ${{ secrets.WINGET_TOKEN }}
