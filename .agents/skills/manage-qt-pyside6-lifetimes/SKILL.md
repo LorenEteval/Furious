@@ -1,6 +1,6 @@
 ---
 name: manage-qt-pyside6-lifetimes
-description: Audit and implement safe Qt/PySide6 object ownership and destruction in Furious. Use whenever work creates, modifies, reviews, or diagnoses QObject, QWidget, QDialog, QAction, QMenu, QTimer, models, delegates, animations, event filters, signals/slots, UI registries, transient or reusable windows, Qt-related caches, memory growth, premature window disappearance, stale wrappers, or native-versus-packaged lifetime differences.
+description: Audit and implement safe Qt/PySide6 object ownership and destruction in Furious. Use for QObject/UI lifetimes, transient or reusable windows, signals/slots, direct bound-method connections, weak dispatch, delete-on-close dialogs, timers, models, delegates, registries, stale wrappers, memory growth, premature destruction, and native-versus-Nuitka packaged differences.
 ---
 
 # Manage Qt/PySide6 Lifetimes
@@ -23,6 +23,7 @@ For every affected Qt object, record:
 - close/hide/destroy path;
 - timers, event filters, models, delegates, menus, actions, animations, and graphics effects it owns;
 - connections to application-lifetime senders;
+- for each relevant signal: sender/receiver lifetimes and QObject trees, direct bound method versus weak dispatcher versus closure/partial, and its disconnect boundary;
 - caches, registries, closures, partials, lambdas, or callbacks that can retain it.
 
 Do not treat `.show()`, `.open()`, `.close()`, a parent, or a weak reference as proof that the lifetime is correct.
@@ -61,7 +62,43 @@ Search the affected call paths for:
 
 Prefer immutable metadata and classes/factories in caches and registries. Never cache a transient Qt instance or an instance method whose key contains `self`.
 
-### 5. Diagnose before fixing
+### 5. Enforce packaged signal safety
+
+Nuitka's PySide6 integration can retain compiled bound methods passed directly to
+`SignalInstance.connect()` in a process-global protection list. A connection that is
+harmless under native CPython can therefore retain a transient receiver and its Qt
+subtree for the life of the packaged process.
+
+- Do not connect a signal directly to a bound method of a transient or repeatedly
+  created `QObject`.
+- Use `Furious.Qt.connectWeakly(signal, receiver, 'methodName', ...)`.
+- Pass `sender=` when the sender is independently owned or longer-lived so the helper
+  can remove the dormant dispatcher when the receiver is destroyed. Use
+  `forwardSender=True` instead of relying on `QObject.sender()` when the slot needs the
+  sender.
+- Do not substitute a lambda or partial that strongly captures the receiver.
+- Direct bound-method connections are acceptable only for deliberately process-lifetime
+  receivers when the resulting strong retention is intentional and documented.
+
+The weak dispatcher must keep only weak receiver/sender references, check PySide wrapper
+validity, and resolve the method by name at emission time.
+
+### 6. Preserve asynchronous dialog destruction
+
+For non-blocking dialogs, distinguish interaction completion from native destruction:
+
+- reusable dialogs may release an open-dialog registry entry at `finished`;
+- one-shot dialogs using `WA_DeleteOnClose` must remain strongly retained after
+  `finished`, through deferred Qt deletion, until `destroyed` has been dispatched;
+- release the registry entry on the next event-loop turn after `destroyed`;
+- registry callbacks must capture an opaque lifetime token, not the dialog;
+- operation-specific context may be released at `finished` once callbacks no longer
+  need it.
+
+Use the existing `AppQDialog`/`AppQTransientDialog`/`AppQMessageBox` ownership model
+rather than adding a parallel registry.
+
+### 7. Diagnose before fixing
 
 Use targeted evidence as needed:
 
@@ -74,7 +111,7 @@ Use targeted evidence as needed:
 
 Distinguish retained objects from Python allocator high-water marks and Qt/native memory caching. Remove temporary diagnostics after the cause is understood.
 
-### 6. Verify the lifecycle
+### 8. Verify the lifecycle
 
 Run the narrow behavior test first, then the applicable Qt lifetime tier in `tests/README.md`. For shared transient infrastructure, repeat at least 20-50 cycles and verify:
 
@@ -84,6 +121,15 @@ Run the narrow behavior test first, then the applicable Qt lifetime tier in `tes
 - reusable windows remain valid across reopen cycles;
 - asynchronous windows retain a Python owner while visible;
 - native Python remains correct and the packaged build is checked when the issue is packaging-specific.
+
+For transient signal/dialog infrastructure, run both the native lifecycle tests and a
+Nuitka-compiled repeated-open/close probe. Cover `accept`, `reject`, and window-close
+paths plus representative protocol/editor mixes. Assert that destroyed counts match,
+weak wrappers and registries return to zero, operation context is released, no invalid
+wrapper is accessed, and Nuitka's protected callback collection does not grow when that
+internal diagnostic is observable. If it is hidden by the compiled runtime, combine
+zero retained wrappers with inspection of the selected Nuitka package configuration;
+do not report an unobservable counter as measured.
 
 ## Prohibited shortcuts
 
@@ -98,4 +144,6 @@ Before handing off a Qt-related change, be able to explain:
 3. the exact destruction or reuse path;
 4. why signals, timers, filters, caches, and registries cannot retain stale UI;
 5. why the object cannot disappear prematurely;
-6. which repeated lifecycle verification passed.
+6. whether direct signal callbacks or closures create unwanted packaged-build retention;
+7. for delete-on-close dialogs, why the final owner survives until native destruction;
+8. which native and, when relevant, Nuitka-compiled lifecycle verification passed.

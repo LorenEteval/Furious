@@ -34,7 +34,15 @@ Treat memory leaks, stale object retention, dangling Qt wrappers, and premature 
 
 ## 1. Core Lifetime Principle
 
-Every `QObject`-derived object should have an intentional owner, lifetime, and destruction strategy.
+Every `QObject`-derived object should have an intentional owner, lifetime, and destruction strategy. Every signal/callback edge that can extend that lifetime must also have an intentional retention and cleanup strategy.
+
+A packaged PySide6 feature can involve three overlapping lifetime systems:
+
+1. Python wrappers, callables, closures, and reference ownership;
+2. Qt/C++ parent ownership, signal dispatch, deferred deletion, and native destruction;
+3. compiler/runtime compatibility retention, including Nuitka's protection of selected compiled callbacks.
+
+Correct parentage in one system does not prove that the other two match the intended logical lifetime.
 
 For each dynamically created object, determine which category it belongs to.
 
@@ -210,6 +218,68 @@ Use Qt's automatic `QObject` disconnection where sufficient. When it is not suff
 
 Avoid unnecessary manual disconnect boilerplate when Qt already manages the connection safely.
 
+### Nuitka/PySide6 compiled bound-method retention
+
+Native PySide6 and a Nuitka-compiled application do not necessarily have the same
+Python-callable retention graph. In the currently verified toolchain (Nuitka 4.1.3,
+PySide6 6.8.3), Nuitka's standard PySide6 package configuration patches
+`SignalInstance.connect()` and `QTimer.singleShot()`. When the callback is a compiled
+bound method, the generated post-import code protects it in a process-global list named
+`_protected` and may also expose its underlying function on the receiver class. The
+compiled runtime does not necessarily publish that list as a `PySide6` module
+attribute. This protection keeps the bound receiver strongly reachable. Repeated
+transient receivers can therefore grow for the whole packaged-process lifetime even
+when native CPython destroys them.
+
+The same protection pattern exists in current upstream Nuitka source. Related PySide6
+workaround behavior is documented for earlier Nuitka/PySide6 combinations, but do not
+assume an exact introduction version without checking the selected release. Always
+inspect the package configuration installed in the environment being shipped.
+
+The following is prohibited for a transient or repeatedly created receiver:
+
+```python
+sender.signal.connect(transientReceiver.handleSignal)
+QTimer.singleShot(0, transientReceiver.finishWork)
+```
+
+Replacing the slot with a lambda or `partial` is not safe if it strongly captures the
+receiver:
+
+```python
+sender.signal.connect(lambda: transientReceiver.handleSignal())
+```
+
+In Furious, use the canonical weak dispatcher:
+
+```python
+connectWeakly(
+    sender.signal,
+    transientReceiver,
+    'handleSignal',
+    sender=sender,
+)
+```
+
+`connectWeakly()` has this contract:
+
+- the connected dispatcher is a plain function, not the receiver's bound method;
+- receiver and optional sender are stored only through `weakref.ref`;
+- the method is resolved by its string name only when the signal is emitted;
+- `shiboken6.isValid()` is checked before accessing a `QObject` wrapper;
+- `forwardSender=True` explicitly passes the sender instead of depending on
+  `QObject.sender()`;
+- when the sender is independently owned or longer-lived, `sender=` lets receiver
+  destruction disconnect the otherwise dormant dispatcher;
+- the method name is static and must remain valid for the receiver's lifetime.
+
+Pass the sender whenever it is not in the receiver's QObject subtree. Omitting it can
+leave safe no-op dispatchers attached to a long-lived sender even though the weak
+receiver itself is gone. A direct bound-method connection is permitted only when the
+receiver is deliberately process-lifetime, the retention is intentional and
+documented, and the connection is not repeatedly recreated. Prefer weak dispatch for
+dynamic or repeated connections regardless.
+
 ## 9. Timers
 
 Every `QTimer` should have an intentional owner and stop policy.
@@ -257,9 +327,42 @@ For modal dialogs using `exec()`, local ownership may be sufficient because exec
 For non-blocking dialogs using `.show()` or `.open()`:
 
 - retain a strong reference while visible;
-- release it intentionally when destroyed.
+- release it at the lifecycle boundary appropriate to the dialog type.
 
 Never rely on an unreferenced local variable for an asynchronous dialog. Also verify repeated dialog creation does not cause memory growth.
+
+### `finished` is not native destruction
+
+For a one-shot dialog using `WA_DeleteOnClose`, `finished` reports that the interaction
+ended; it does not prove that Qt has destroyed the native object. Native deletion is
+deferred. If an asynchronous registry releases the final Python reference at
+`finished`, the wrapper can disappear before Qt completes deletion, or a stale wrapper
+can survive after the native object is gone.
+
+Use this sequence for transient delete-on-close dialogs:
+
+1. create a unique opaque lifetime token;
+2. insert `token -> dialog` into the open-dialog registry before calling `open()`;
+3. allow `accept`, `reject`, or window close to emit `finished`;
+4. keep the strong registry entry while `WA_DeleteOnClose` schedules native deletion;
+5. observe `destroyed`;
+6. remove the token on the next event-loop turn.
+
+Callbacks that schedule registry cleanup must capture only the opaque token, never the
+dialog. An identifier derived from `id(dialog)` is weaker because object IDs can be
+reused. Operation-specific context may be released at `finished` after its callbacks
+run, provided the lifetime registry still retains the dialog itself through
+destruction.
+
+Reusable dialogs follow a different policy. A reusable dialog is normally hidden at
+`finished`, not deleted, so its temporary open-dialog registry entry may be released at
+`finished` while its deliberate owner continues to retain it. Do not add
+`WA_DeleteOnClose` merely to make cleanup uniform.
+
+Furious implements these policies through `AppQDialog`, `AppQTransientDialog`, and
+`AppQMessageBox`. `AppQMessageBox` currently has an additional registry because its
+QMessageBox-compatible `open()` path bypasses the base implementation; its cleanup must
+remain synchronized with the base dialog policy or be deliberately consolidated.
 
 ## 14. Packaged and Compiled Builds Require Extra Caution
 
@@ -273,6 +376,15 @@ When lifetime issues are suspected, test both where practical:
 Do not assume operating-system task-manager memory alone proves a leak. Distinguish between actual live-object growth, Python allocator high-water marks, Qt/native memory caching, and retained native resources.
 
 The strongest evidence of a real leak is continued growth in live object/resource counts after repeated create/close cycles.
+
+For Nuitka/PySide6 signal-retention work, include a compiled diagnostic that records
+the size of Nuitka's `_protected` callback list before and after repeated cycles when
+the compiled runtime exposes that internal diagnostic. It is not a production API and
+may be hidden even though the post-import protection is active. Combine it with
+`QObject.destroyed`, weak references, open-dialog registry size, operation-context
+counts, and `shiboken6.isValid()` checks. Zero protected-list growth alone is not proof
+of correct destruction, a missing counter is not zero growth, and stable process memory
+alone is not proof of no leak.
 
 ## 15. Required Lifetime Review for UI Changes
 
@@ -316,14 +428,28 @@ Representative procedure:
 
 1. Record baseline live-object counts.
 2. Open the dialog/editor.
-3. Close it.
-4. Repeat 20–50 times.
+3. Exercise `accept`, `reject`, and window-close paths where applicable.
+4. Repeat 20–100 times.
 5. Verify objects intended to die are destroyed.
 6. Verify weak references clear.
 7. Verify relevant pools/registries return to baseline.
 8. Verify memory reaches a stable plateau rather than growing linearly.
 
 For shared editor infrastructure, test multiple editor/dialog types rather than only one.
+
+Run the same representative probe natively and as a standalone Nuitka build when the
+code uses PySide6 signals or asynchronous transient dialogs. Vary protocol/editor order
+so one family cannot hide a shared-registry or cached-callback defect. Required results
+are:
+
+- every expected `destroyed` signal fires;
+- weak wrappers, open-dialog registries, and operation contexts return to zero;
+- no wrapper becomes invalid before the close path completes;
+- the registry still holds each transient dialog when `finished` is dispatched;
+- Nuitka's protected callback collection has zero growth when observable; otherwise,
+  the compiled probe has zero retained wrappers and the selected package configuration
+  confirms that the dispatcher is not an eligible protected bound method;
+- no per-cycle `gc.collect()` is needed to obtain those results.
 
 ## 18. Do Not Mask Lifetime Bugs
 
@@ -355,6 +481,18 @@ When reviewing existing code or implementing a refactor, treat lifetime correctn
 
 If suspicious ownership is encountered while working on an unrelated feature, investigate and correct it when reasonably within scope. At minimum, do not introduce new lifetime ambiguity.
 
+Reject a change when it:
+
+- passes a transient or repeatedly created receiver's bound method directly to a
+  PySide6 signal or `QTimer.singleShot()` in packaged-sensitive code;
+- replaces that connection with a lambda/partial that strongly captures the receiver;
+- omits `sender=` for `connectWeakly()` when an independently owned or longer-lived
+  sender needs destroyed-receiver cleanup;
+- releases a delete-on-close asynchronous dialog's final strong owner at `finished`;
+- captures the transient dialog in a registry-cleanup callback;
+- verifies only native CPython when the defect can be introduced by Nuitka's PySide6
+  integration.
+
 ## Acceptance Criteria
 
 For Qt/PySide6 UI code, a correct implementation should satisfy all applicable conditions:
@@ -370,5 +508,7 @@ For Qt/PySide6 UI code, a correct implementation should satisfy all applicable c
 - No visible window disappears because its wrapper is prematurely garbage-collected.
 - Native Python execution remains correct.
 - Packaged/compiled execution remains correct where testable.
+- Transient/repeated PySide6 connections do not grow Nuitka's protected bound-method retention.
+- Delete-on-close asynchronous dialogs remain retained through `finished` and are released only after `destroyed` dispatch.
 
 **Final rule:** Every Qt object in this repository must have an intentional owner, lifetime, and destruction strategy. When in doubt, investigate the lifetime explicitly rather than relying on implicit Python garbage collection or Qt parent behavior.
