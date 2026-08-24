@@ -805,26 +805,19 @@ class EndpointInfoServiceTest(unittest.TestCase):
         self.assertIn('.maplibregl-canvas:focus', html)
         self.assertIn('outline: none', html)
         self.assertNotIn('color-mix(', html)
-        self.assertEqual(
-            {style.name: style.value for style in widget.mapWidget.Style},
-            {
-                'Bright': 'https://tiles.openfreemap.org/styles/bright',
-                'Liberty': 'https://tiles.openfreemap.org/styles/liberty',
-                'Positron': 'https://tiles.openfreemap.org/styles/positron',
-                'Dark': 'https://tiles.openfreemap.org/styles/dark',
-                'Fiord': 'https://tiles.openfreemap.org/styles/fiord',
-            },
-        )
-        self.assertEqual(
-            widget.mapWidget._lastWebState['lightStyleUrl'],
-            widget.mapWidget.LightStyle.value,
-        )
-        self.assertIs(widget.mapWidget.LightStyle, widget.mapWidget.Style.Liberty)
-        self.assertEqual(
-            widget.mapWidget._lastWebState['darkStyleUrl'],
-            widget.mapWidget.DarkStyle.value,
-        )
-        self.assertIs(widget.mapWidget.DarkStyle, widget.mapWidget.Style.Fiord)
+        self.assertIn('const createStyle = (darkMode)', mapScript)
+        self.assertIn("url: 'https://tiles.openfreemap.org/planet'", mapScript)
+        self.assertIn("glyphs: 'https://tiles.openfreemap.org/fonts/", mapScript)
+        self.assertIn("'source-layer': 'water'", mapScript)
+        self.assertIn("'source-layer': 'building'", mapScript)
+        self.assertIn("'source-layer': 'transportation_name'", mapScript)
+        self.assertIn("'source-layer': 'place'", mapScript)
+        self.assertIn("'source-layer': 'poi'", mapScript)
+        self.assertIn("'text-field': nameField", mapScript)
+        self.assertIn('Number.isFinite(longitude)', mapScript)
+        self.assertNotIn('lightStyleUrl', widget.mapWidget._lastWebState)
+        self.assertNotIn('darkStyleUrl', widget.mapWidget._lastWebState)
+        self.assertNotIn('/styles/fiord', mapScript)
         self.assertNotIn('tile.openstreetmap.org', html)
         self.assertNotIn('opacity: 0.60', html)
         self.assertNotIn('opacity: 0.60', mapScript)
@@ -948,10 +941,6 @@ class EndpointInfoServiceTest(unittest.TestCase):
 
         self.assertEqual(widget.mapWidget._theme, AppStyleSheet.Light)
         self.assertFalse(widget.mapWidget._lastWebState['darkMode'])
-        self.assertEqual(
-            widget.mapWidget._lastWebState['lightStyleUrl'],
-            widget.mapWidget.LightStyle.value,
-        )
         self.assertTrue(scripts)
 
         widget.close()

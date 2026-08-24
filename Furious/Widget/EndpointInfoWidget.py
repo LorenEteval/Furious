@@ -26,16 +26,8 @@ from Furious.Service import EndpointInfo, EndpointInfoState
 from Furious.Widget.WaitingSpinner import WaitingSpinner
 
 from PySide6 import QtCore, QtGui
-from PySide6.QtWebChannel import QWebChannel
-from PySide6.QtWebEngineCore import (
-    QWebEnginePage,
-    QWebEngineProfile,
-    QWebEngineSettings,
-)
-from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import *
 
-import enum
 import json
 import logging
 
@@ -43,8 +35,33 @@ __all__ = ['EndpointInfoWidget']
 
 logger = logging.getLogger(__name__)
 
+try:
+    from PySide6.QtWebChannel import QWebChannel
+    from PySide6.QtWebEngineCore import (
+        QWebEnginePage,
+        QWebEngineProfile,
+        QWebEngineSettings,
+    )
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+except ImportError:
+    (
+        QWebChannel,
+        QWebEnginePage,
+        QWebEngineProfile,
+        QWebEngineSettings,
+        QWebEngineView,
+    ) = (
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
 
-class _EndpointWebView(QWebEngineView):
+_EndpointWebViewBase = QWebEngineView if QWebEngineView is not None else QWidget
+
+
+class _EndpointWebView(_EndpointWebViewBase):
     """Keep map wheel gestures from bubbling into the Metrics scroll area."""
 
     def wheelEvent(self, event):
@@ -82,20 +99,7 @@ class _EndpointMapBridge(QtCore.QObject):
 class _EndpointMapWidget(QWidget):
     """Host one lazily loaded MapLibre vector map for the page lifetime."""
 
-    class Style(enum.StrEnum):
-        """OpenFreeMap styles available to the embedded endpoint map."""
-
-        Bright, Liberty, Positron, Dark, Fiord = (
-            'https://tiles.openfreemap.org/styles/bright',
-            'https://tiles.openfreemap.org/styles/liberty',
-            'https://tiles.openfreemap.org/styles/positron',
-            'https://tiles.openfreemap.org/styles/dark',
-            'https://tiles.openfreemap.org/styles/fiord',
-        )
-
     HtmlPath = DATA_DIR / 'maplibre' / 'EndpointMap.html'
-    LightStyle = Style.Liberty
-    DarkStyle = Style.Fiord
     TrustedAttributionHosts = frozenset(
         {
             'openfreemap.org',
@@ -123,6 +127,7 @@ class _EndpointMapWidget(QWidget):
         self._documentLoaded = False
         self._mapReady = False
         self._mapError = ''
+        self._rendererFailureHandled = False
         self._viewRevision = 0
         self._lastWebState = {}
         self._retainMapDuringRefresh = False
@@ -217,10 +222,7 @@ class _EndpointMapWidget(QWidget):
         layout.addWidget(self.webView, 0, 0)
         layout.addWidget(self.statusOverlay, 0, 0)
 
-        if (
-            PLATFORM == 'Windows'
-            and QApplication.platformName().casefold() != 'offscreen'
-        ):
+        if QApplication.platformName().casefold() != 'offscreen':
             # Qt WebEngine embeds a native surface. When that surface first
             # appears inside the Metrics QScrollArea, Qt otherwise promotes
             # the visible parent chain to native windows, remapping and
@@ -247,6 +249,7 @@ class _EndpointMapWidget(QWidget):
         """Replace the displayed coordinate and status message."""
         refreshCompleted = self._retainMapDuringRefresh and not loading
         previousLocation = self._location
+
         previousCoordinate = (
             (
                 previousLocation.latitude,
@@ -350,10 +353,15 @@ class _EndpointMapWidget(QWidget):
         """Publish local-document failures and send the first map state."""
         self._documentLoaded = bool(successful)
 
-        if not successful:
+        if successful:
+            self._rendererFailureHandled = False
+        else:
             self._mapError = self._unavailableText or 'Endpoint map unavailable'
 
-            logger.error('failed to load the local endpoint map document')
+            # A renderer crash also completes the outstanding load with False.
+            # The termination handler already records that more precise cause.
+            if not self._rendererFailureHandled:
+                logger.error('failed to load the local endpoint map document')
 
         self._syncWebState()
         self._updateOverlay()
@@ -375,9 +383,13 @@ class _EndpointMapWidget(QWidget):
             self._mapError = message or self._unavailableText
             self._updateOverlay()
 
-    @QtCore.Slot(QWebEnginePage.RenderProcessTerminationStatus, int)
     def _renderProcessTerminated(self, status, exitCode):
         """Convert an unexpected Chromium exit into the normal map fallback."""
+        if self._rendererFailureHandled:
+            return
+
+        self._rendererFailureHandled = True
+        self._documentLoaded = False
         self._mapReady = False
         self._mapError = self._unavailableText or 'Endpoint map unavailable'
 
@@ -405,9 +417,12 @@ class _EndpointMapWidget(QWidget):
             return
 
         hasLocation = self._hasLocation()
-        location = self._location if hasLocation else None
-        accentColor = self.palette().color(QtGui.QPalette.ColorRole.Highlight).name()
-        font = QtGui.QFontInfo(self.font())
+
+        location, accentColor, font = (
+            self._location if hasLocation else None,
+            self.palette().color(QtGui.QPalette.ColorRole.Highlight).name(),
+            QtGui.QFontInfo(self.font()),
+        )
 
         state = {
             'markerVisible': hasLocation,
@@ -416,8 +431,6 @@ class _EndpointMapWidget(QWidget):
             'defaultGeographicZoom': self.DefaultGeographicZoom,
             'viewRevision': self._viewRevision,
             'darkMode': self._theme == AppStyleSheet.Dark,
-            'lightStyleUrl': self.LightStyle.value,
-            'darkStyleUrl': self.DarkStyle.value,
             'accentColor': accentColor,
             'loading': self._loading
             or (
@@ -481,6 +494,103 @@ class _EndpointMapWidget(QWidget):
             self.loadingSpinner.start()
         else:
             self.loadingSpinner.stop()
+
+
+class _UnavailableEndpointMapWidget(QWidget):
+    """Present endpoint-map state when Qt WebEngine is unavailable."""
+
+    def __init__(self, parent=None):
+        """Create one persistent, lightweight fallback owned by the map card."""
+        super().__init__(parent)
+
+        self._loading = False
+        self._active = False
+        self._message = ''
+        self._loadingText = ''
+        self._unavailableText = ''
+
+        self.setObjectName('EndpointMapWidget')
+        self.setMinimumHeight(260)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        self.statusLabel = AppQLabel(translatable=False, parent=self)
+        self.statusLabel.setObjectName('EndpointMapPlaceholder')
+        self.statusLabel.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.statusLabel.setWordWrap(False)
+
+        self.loadingSpinner = WaitingSpinner(
+            self,
+            center_on_parent=False,
+            line_length=5,
+            line_width=2,
+            radius=4,
+            lines=12,
+        )
+        self.loadingSpinner.setFixedSize(22, 22)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+        layout.addStretch(1)
+        layout.addWidget(self.loadingSpinner)
+        layout.addWidget(self.statusLabel)
+        layout.addStretch(1)
+
+    def setLocation(self, _location, message='', *, loading=False):
+        """Present the shared endpoint status without attempting map rendering."""
+        self._message = str(message or '')
+        self._loading = bool(loading)
+        self._updatePresentation()
+
+    def beginRefresh(self):
+        """Show refresh progress until the endpoint service publishes a result."""
+        self._loading = True
+        self._message = self._loadingText
+        self._updatePresentation()
+
+    def setActive(self, active):
+        """Animate the fallback only while its containing page is visible."""
+        self._active = bool(active)
+        self._updatePresentation()
+
+    def updateTheme(self, _theme=None):
+        """Refresh palette-derived spinner color after an application theme change."""
+        self._updatePresentation()
+
+    def setUnavailableText(self, text):
+        """Set the translated explanation shown in place of the map."""
+        self._unavailableText = str(text or '')
+        self._updatePresentation()
+
+    def setLoadingText(self, text):
+        """Set the translated refresh message."""
+        self._loadingText = str(text or '')
+        self._updatePresentation()
+
+    def _updatePresentation(self):
+        """Synchronize the persistent label and visibility-gated spinner."""
+        if self._loading:
+            message = self._loadingText or self._message
+        else:
+            message = self._message or self._unavailableText
+
+        self.statusLabel.setText(message)
+        self.loadingSpinner.color = self.palette().color(QtGui.QPalette.ColorRole.Text)
+
+        if self._active and self._loading:
+            self.loadingSpinner.start()
+        else:
+            self.loadingSpinner.stop()
+
+
+def _createEndpointMapWidget(parent):
+    """Create the rich renderer when available, otherwise its safe fallback."""
+    if QWebEngineView is not None:
+        return _EndpointMapWidget(parent)
+    else:
+        logger.warning('Qt WebEngine is unavailable; using the endpoint map fallback')
+
+        return _UnavailableEndpointMapWidget(parent)
 
 
 class _ValueRow(QtCore.QObject):
@@ -688,7 +798,7 @@ class EndpointInfoWidget(Mixins.ThemeAware, Mixins.QTranslatable, QFrame):
         self.mapTitleLabel = AppQLabel(_('Approximate Location'), parent=self.mapCard)
         self.mapTitleLabel.setObjectName('MetricCardTitle')
 
-        self.mapWidget = _EndpointMapWidget(self.mapCard)
+        self.mapWidget = _createEndpointMapWidget(self.mapCard)
 
         mapLayout = QVBoxLayout(self.mapCard)
         mapLayout.setContentsMargins(14, 12, 14, 12)
