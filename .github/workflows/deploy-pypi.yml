@@ -85,17 +85,17 @@ jobs:
       matrix:
         include:
           - id: linux-amd64
-            os: ubuntu-24.04
+            os: ubuntu-22.04
             python-version: "3.13"
             python-architecture: x64
             pyside6-version: "6.8.3"
             windows-compatibility: ""
             windows-architecture: ""
           - id: linux-arm64
-            os: ubuntu-24.04-arm
+            os: ubuntu-22.04-arm
             python-version: "3.11"
             python-architecture: arm64
-            pyside6-version: "6.8.3"
+            pyside6-version: "6.5.3"
             windows-compatibility: ""
             windows-architecture: ""
           - id: windows7-amd64
@@ -112,12 +112,12 @@ jobs:
             pyside6-version: "6.8.3"
             windows-compatibility: windows10
             windows-architecture: amd64
-          - id: windows-arm64
+          - id: windows10-arm64
             os: windows-11-vs2026-arm
             python-version: "3.13"
             python-architecture: arm64
             pyside6-version: "6.11.2"
-            windows-compatibility: ""
+            windows-compatibility: windows10
             windows-architecture: arm64
           - id: macos-intel
             os: macos-15-intel
@@ -155,16 +155,10 @@ jobs:
           sudo apt update
 
           if [ "$RUNNER_ARCH" == "ARM64" ]; then
-            if apt-cache show libminizip1t64 >/dev/null 2>&1; then
-              minizip_package='libminizip1t64'
-            else
-              minizip_package='libminizip1'
-            fi
-
             sudo apt install -y \
               libevent-2.1-7 \
               libwebp7 \
-              "$minizip_package"
+              libminizip1
           fi
 
           sudo apt install -y \
@@ -302,6 +296,7 @@ jobs:
           from pathlib import Path
 
           excluded = {
+              'pyside6',
               'pyside6-addons',
               'pyside6-essentials',
               'xray-core',
@@ -327,16 +322,27 @@ jobs:
           PY
 
           if [[ "${{ matrix.id }}" != "windows7-amd64" ]]; then
+            pyside_packages=(
+              "PySide6-Essentials==${{ matrix.pyside6-version }}"
+            )
+
+            if [[ "$RUNNER_OS" != "Linux" ]]; then
+              pyside_packages+=(
+                "PySide6-Addons==${{ matrix.pyside6-version }}"
+              )
+            fi
+
             if [[ "$RUNNER_OS" == "Windows" ]]; then
-              pyside_binary_policy="--only-binary=PySide6-Essentials,PySide6-Addons"
+              pyside_binary_policy=(
+                "--only-binary=PySide6-Essentials,PySide6-Addons"
+              )
             else
-              pyside_binary_policy=""
+              pyside_binary_policy=()
             fi
 
             python -m pip install \
-              ${pyside_binary_policy} \
-              "PySide6-Essentials==${{ matrix.pyside6-version }}" \
-              "PySide6-Addons==${{ matrix.pyside6-version }}"
+              "${pyside_binary_policy[@]}" \
+              "${pyside_packages[@]}"
           fi
 
           if [ "$RUNNER_OS" == "Linux" ] && [ "$RUNNER_ARCH" == "ARM64" ]; then
@@ -347,6 +353,55 @@ jobs:
           python -m pip install nuitka imageio requests
           python -c "import importlib.metadata; print('zxing-cpp', importlib.metadata.version('zxing-cpp'))"
           python -c "from PySide6 import QtCore; print(f'PySide6/Qt {QtCore.__version__}')"
+      - name: Verify Linux Essentials-only Qt environment
+        if: runner.os == 'Linux'
+        env:
+          EXPECTED_PYSIDE6_VERSION: ${{ matrix.pyside6-version }}
+        run: |
+          python - <<'PY'
+          import importlib.metadata
+          import importlib.util
+          import os
+          import platform
+          import sys
+
+          from PySide6 import QtCore
+
+          expected = os.environ['EXPECTED_PYSIDE6_VERSION']
+          essentials = importlib.metadata.version('PySide6-Essentials')
+
+          try:
+              addons = importlib.metadata.version('PySide6-Addons')
+          except importlib.metadata.PackageNotFoundError:
+              addons = None
+
+          print(f'Python={sys.version}')
+          print(f'platform.machine()={platform.machine()}')
+          print(f'PySide6-Essentials={essentials}')
+          print(f'PySide6-Addons={addons or "absent"}')
+          print(f'Qt={QtCore.qVersion()}')
+
+          if essentials != expected:
+              raise SystemExit(
+                  f'expected PySide6-Essentials {expected}, got {essentials}'
+              )
+
+          if QtCore.__version__ != expected:
+              raise SystemExit(
+                  f'expected PySide6/Qt {expected}, got {QtCore.__version__}'
+              )
+
+          if addons is not None:
+              raise SystemExit(f'PySide6-Addons must be absent, got {addons}')
+
+          for name in (
+              'PySide6.QtWebChannel',
+              'PySide6.QtWebEngineCore',
+              'PySide6.QtWebEngineWidgets',
+          ):
+              if importlib.util.find_spec(name) is not None:
+                  raise SystemExit(f'{name} must be absent from the Linux environment')
+          PY
       - name: Install patched Go for Windows7
         run: |
           go_name="go-for-win7-windows-amd64"
@@ -487,8 +542,50 @@ jobs:
           print(f'Endpoint UI imported successfully: {EndpointInfoWidget.__name__}')
           PY
         if: runner.os == 'Windows'
+      - name: Verify Linux application imports without WebEngine
+        if: runner.os == 'Linux'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python - <<'PY'
+          import importlib
+
+          import Furious
+          import Furious.Application
+          import Furious.Window
+          from PySide6 import QtCore
+          from PySide6.QtWidgets import QApplication
+
+          endpointModule = importlib.import_module(
+              'Furious.Widget.EndpointInfoWidget'
+          )
+
+          if endpointModule.QWebEngineView is not None:
+              raise SystemExit('Qt WebEngine must be unavailable in Linux releases')
+
+          application = QApplication.instance() or QApplication([])
+          mapWidget = endpointModule._createEndpointMapWidget(None)
+
+          if not isinstance(
+              mapWidget,
+              endpointModule._UnavailableEndpointMapWidget,
+          ):
+              raise SystemExit('the endpoint map did not use its no-WebEngine fallback')
+
+          mapWidget.close()
+          mapWidget.deleteLater()
+          application.sendPostedEvents(
+              None,
+              QtCore.QEvent.Type.DeferredDelete,
+          )
+          application.processEvents()
+
+          print(f'Furious imported successfully: {Furious.__name__}')
+          print('Application and window modules imported successfully')
+          print('Endpoint UI created its no-WebEngine fallback successfully')
+          PY
       - name: Verify Qt WebEngine imports
-        if: runner.os != 'Windows'
+        if: runner.os == 'macOS'
         run: |
           python - <<'PY'
           from PySide6 import QtWebChannel, QtWebEngineCore, QtWebEngineWidgets
@@ -508,6 +605,34 @@ jobs:
             export WIN_VER_COMPATIBLE="${{ matrix.windows-compatibility }}"
           fi
           python Deploy.py
+      - name: Verify Linux distribution excludes WebEngine
+        if: runner.os == 'Linux'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('Furious-Deploy/Furious.dist')
+
+          if not root.is_dir():
+              raise SystemExit(f'Nuitka distribution is missing: {root}')
+
+          forbidden = ('qtwebchannel', 'qtwebengine')
+          unexpected = []
+
+          for path in root.rglob('*'):
+              relative = path.relative_to(root).as_posix().casefold()
+
+              if any(name in relative for name in forbidden):
+                  unexpected.append(relative)
+
+          if unexpected:
+              raise SystemExit(
+                  'WebEngine/Addons artifacts found in the Linux distribution:\n'
+                  + '\n'.join(f'  {path}' for path in unexpected)
+              )
+
+          print(f'No Qt WebEngine or Qt WebChannel artifacts found below {root}')
+          PY
       - name: Verify macOS application bundle
         if: runner.os == 'macOS'
         shell: bash
@@ -698,6 +823,6 @@ jobs:
         with:
           identifier: LorenEteval.Furious
           release-tag: ${{ github.ref_name }}
-          installers-regex: '^Furious-.*-(?:windows10-amd64|windows11-arm64)\.zip$'
+          installers-regex: '^Furious-.*-(?:windows7-amd64|windows10-arm64)\.zip$'
           max-versions-to-keep: 5
           token: ${{ secrets.WINGET_TOKEN }}
