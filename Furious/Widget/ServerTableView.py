@@ -30,6 +30,7 @@ from Furious.Plugins import (
     profileFromAny,
 )
 from Furious.Qt import *
+from Furious.Qt.Signals import connectWeakly
 from Furious.Qt import gettext as _
 from Furious.Service import (
     ConnectionManager,
@@ -1601,12 +1602,6 @@ class ServerTableView(
             factory, parent=self, **kwargs
         )
 
-        if editor is not None:
-            # These editors are created for a single add/edit operation. A Qt
-            # parent alone would keep every closed native widget tree alive for
-            # the lifetime of the server table.
-            editor.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
-
         return editor
 
     @QtCore.Slot(QtCore.QModelIndex)
@@ -1639,18 +1634,31 @@ class ServerTableView(
 
             logger.error(f'error while converting factory to input: {ex}')
 
-        # Keep operation metadata on the transient editor and use QObject-bound
-        # slots.  Partials stored by PySide otherwise retain both the complete
-        # editor tree and this application-lifetime table until disconnection.
+        # Keep operation metadata on the transient editor. Weak dispatch avoids
+        # process-lifetime protection of compiled table methods in Nuitka while
+        # forwarding the transient sender explicitly to the operation slot.
         guiEditor._modContext = (index, factory)
-        guiEditor.accepted.connect(self.handleGuiEditorAccepted)
-        guiEditor.rejected.connect(self.handleGuiEditorRejected)
+
+        connectWeakly(
+            guiEditor.accepted,
+            self,
+            'handleGuiEditorAccepted',
+            sender=guiEditor,
+            forwardSender=True,
+        )
+        connectWeakly(
+            guiEditor.rejected,
+            self,
+            'handleGuiEditorRejected',
+            sender=guiEditor,
+            forwardSender=True,
+        )
+
         guiEditor.open()
 
-    @QtCore.Slot()
-    def handleGuiEditorAccepted(self):
+    @QtCore.Slot(object)
+    def handleGuiEditorAccepted(self, editor):
         """Handle GUI editor accepted."""
-        editor = self.sender()
 
         if not isinstance(editor, GuiEditorWidgetQDialog):
             return
@@ -1667,21 +1675,14 @@ class ServerTableView(
         if modified and index == Storage.UserActivatedItemIndex():
             showMBoxNewChangesNextTime()
 
-        editor.accepted.disconnect()
-        editor.rejected.disconnect()
-
         del editor._modContext
 
-    @QtCore.Slot()
-    def handleGuiEditorRejected(self):
+    @QtCore.Slot(object)
+    def handleGuiEditorRejected(self, editor):
         """Handle GUI editor rejected."""
-        editor = self.sender()
 
         if not isinstance(editor, GuiEditorWidgetQDialog):
             return
-
-        editor.accepted.disconnect()
-        editor.rejected.disconnect()
 
         if hasattr(editor, '_modContext'):
             del editor._modContext
@@ -1809,14 +1810,27 @@ class ServerTableView(
             logger.error(f'error while converting factory to input: {ex}')
 
         guiEditor._addContext = factory
-        guiEditor.accepted.connect(self.handleAddServerViaGuiAccepted)
-        guiEditor.rejected.connect(self.handleAddServerViaGuiRejected)
+
+        connectWeakly(
+            guiEditor.accepted,
+            self,
+            'handleAddServerViaGuiAccepted',
+            sender=guiEditor,
+            forwardSender=True,
+        )
+        connectWeakly(
+            guiEditor.rejected,
+            self,
+            'handleAddServerViaGuiRejected',
+            sender=guiEditor,
+            forwardSender=True,
+        )
+
         guiEditor.open()
 
-    @QtCore.Slot()
-    def handleAddServerViaGuiAccepted(self):
+    @QtCore.Slot(object)
+    def handleAddServerViaGuiAccepted(self, editor):
         """Handle add server via GUI accepted."""
-        editor = self.sender()
 
         if not isinstance(editor, GuiEditorWidgetQDialog):
             return
@@ -1827,21 +1841,14 @@ class ServerTableView(
 
         self.appendNewItemByFactory(factory)
 
-        editor.accepted.disconnect()
-        editor.rejected.disconnect()
-
         del editor._addContext
 
-    @QtCore.Slot()
-    def handleAddServerViaGuiRejected(self):
+    @QtCore.Slot(object)
+    def handleAddServerViaGuiRejected(self, editor):
         """Handle add server via GUI rejected."""
-        editor = self.sender()
 
         if not isinstance(editor, GuiEditorWidgetQDialog):
             return
-
-        editor.accepted.disconnect()
-        editor.rejected.disconnect()
 
         if hasattr(editor, '_addContext'):
             del editor._addContext

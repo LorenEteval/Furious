@@ -27,8 +27,6 @@ from Furious.Backends.Configuration import *
 
 from PySide6.QtWidgets import *
 
-from typing import Callable
-
 __all__ = ['GuiVTransportQGroupBox']
 
 STREAM_NETWORK = [
@@ -1618,12 +1616,12 @@ class GuiVTransportPageXXX(GuiEditorWidgetQWidget):
 
         return ''
 
-    def connectActivated(self, func: Callable):
+    def connectActivated(self, receiver, methodName: str):
         """Connect activated."""
         network = self._containers[0]
 
         if isinstance(network, GuiEditorItemTextComboBox):
-            network.connectActivated(func)
+            network.connectActivated(receiver, methodName)
 
 
 class GuiVTransportPageTcp(GuiVTransportPageXXX):
@@ -1879,10 +1877,10 @@ class GuiVTransportPageStackedWidget(QStackedWidget):
         """Return the page value."""
         return self._pages[index]
 
-    def connectActivated(self, func: Callable):
+    def connectActivated(self, receiver, methodName: str):
         """Connect activated."""
         for page in self._pages:
-            page.connectActivated(func)
+            page.connectActivated(receiver, methodName)
 
 
 class GuiVTransportQGroupBox(EditorBinding, AppQGroupBox):
@@ -1895,7 +1893,7 @@ class GuiVTransportQGroupBox(EditorBinding, AppQGroupBox):
         self._config = CoreConfiguration()
 
         self._widget = GuiVTransportPageStackedWidget()
-        self._widget.connectActivated(self.handleActivated)
+        self._widget.connectActivated(self, 'handleActivated')
 
         layout = QFormLayout()
         layout.addRow(self._widget)

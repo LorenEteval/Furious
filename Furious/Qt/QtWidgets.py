@@ -25,6 +25,7 @@ from Furious.Qt.AppStyleSheet import *
 from Furious.Qt.DynamicTheme import *
 from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Qt.QtGui import *
+from Furious.Qt.Signals import connectWeakly
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -112,7 +113,7 @@ class AppQSwitch(Mixins.ThemeAware, QCheckBox):
         self._animation.setDuration(self.AnimationDuration)
         self._animation.setEasingCurve(QtCore.QEasingCurve.Type.OutCubic)
 
-        self.toggled.connect(self._animateToggle)
+        connectWeakly(self.toggled, self, '_animateToggle')
 
     def _getThumbPosition(self) -> float:
         """Return the normalized thumb position used by the animation."""
@@ -327,11 +328,20 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
     )
 
     _openDialogs = {}
+    RETAIN_UNTIL_DESTROYED = False
 
     @staticmethod
     def _releaseOpenDialog(key, *_args):
-        """Release an asynchronously opened dialog after it finishes."""
+        """Release an asynchronously opened dialog after its owned lifetime."""
         AppQDialog._openDialogs.pop(key, None)
+
+    @staticmethod
+    def _scheduleOpenDialogRelease(key, *_args):
+        """Release an async wrapper after the current Qt signal dispatch."""
+        QtCore.QTimer.singleShot(
+            0,
+            functools.partial(AppQDialog._releaseOpenDialog, key),
+        )
 
     def __init__(self, *args, **kwargs):
         """Initialize the AppQDialog."""
@@ -343,16 +353,21 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         # evict that newer dialog from the asynchronous lifetime registry.
         self._lifetimeKey = object()
 
-        # Do not store a nested closure that captures this dialog on the dialog
-        # itself.  Such a self-cycle delays wrapper collection and is especially
-        # costly for widget trees in compiled builds.
-        release = functools.partial(
-            AppQDialog._releaseOpenDialog,
+        # Signal callbacks carry only the lifetime token, never this dialog.
+        # That avoids a Python self-cycle around the complete native widget tree.
+        # A reusable QDialog merely hides when it finishes, so its async owner
+        # can release it after that signal dispatch. A delete-on-close dialog is
+        # different: finished precedes deferred native destruction. Keep that
+        # wrapper strongly owned until destruction has fully returned to Qt.
+        scheduleRelease = functools.partial(
+            AppQDialog._scheduleOpenDialogRelease,
             self._lifetimeKey,
         )
 
-        self.finished.connect(release)
-        self.destroyed.connect(release)
+        if not self.RETAIN_UNTIL_DESTROYED:
+            self.finished.connect(scheduleRelease)
+
+        self.destroyed.connect(scheduleRelease)
 
         self.setWindowIcon(AppHue.currentWindowIcon())
 
@@ -421,6 +436,8 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
 
 class AppQTransientDialog(AppQDialog):
     """Present a one-shot dialog that destroys its Qt object when closed."""
+
+    RETAIN_UNTIL_DESTROYED = True
 
     def __init__(self, *args, **kwargs):
         """Initialize a dialog whose accepted/rejected lifetime is transient."""
@@ -955,8 +972,16 @@ class AppQMessageBox(AppQTransientDialog):
 
     @staticmethod
     def _releaseOpenMessageBox(key, *_args):
-        """Release an asynchronously opened message box after it finishes."""
+        """Release an asynchronously opened message box after destruction."""
         AppQMessageBox._openMessageBoxes.pop(key, None)
+
+    @staticmethod
+    def _scheduleOpenMessageBoxRelease(key, *_args):
+        """Release an async message box after destroyed-signal dispatch."""
+        QtCore.QTimer.singleShot(
+            0,
+            functools.partial(AppQMessageBox._releaseOpenMessageBox, key),
+        )
 
     def __init__(self, *args, **kwargs):
         """Initialize the message box while preserving QMessageBox arguments."""
@@ -1001,13 +1026,14 @@ class AppQMessageBox(AppQTransientDialog):
         self._clickedButton = None
         self._handlingButton = False
 
-        release = functools.partial(
-            AppQMessageBox._releaseOpenMessageBox,
+        scheduleRelease = functools.partial(
+            AppQMessageBox._scheduleOpenMessageBoxRelease,
             self._lifetimeKey,
         )
 
-        self.finished.connect(release)
-        self.destroyed.connect(release)
+        # Message boxes are delete-on-close. Their asynchronous owner releases
+        # them only after native destruction and its signal dispatch complete.
+        self.destroyed.connect(scheduleRelease)
 
         self.setObjectName('AppMessageBox')
 
@@ -1141,7 +1167,14 @@ class AppQMessageBox(AppQTransientDialog):
         button = QPushButton(str(text), self.buttonFrame)
         button.setMinimumHeight(34)
         button.setAttribute(QtCore.Qt.WidgetAttribute.WA_LayoutUsesWidgetRect)
-        button.clicked.connect(self._handleButtonClicked)
+
+        connectWeakly(
+            button.clicked,
+            self,
+            '_handleButtonClicked',
+            sender=button,
+            forwardSender=True,
+        )
 
         self._buttonRoles[button] = role
 
@@ -1399,7 +1432,14 @@ class AppQMessageBox(AppQTransientDialog):
             customButton = button
             customButton.setParent(self.buttonFrame)
             customButton.setAttribute(QtCore.Qt.WidgetAttribute.WA_LayoutUsesWidgetRect)
-            customButton.clicked.connect(self._handleButtonClicked)
+
+            connectWeakly(
+                customButton.clicked,
+                self,
+                '_handleButtonClicked',
+                sender=customButton,
+                forwardSender=True,
+            )
 
             self._buttonRoles[customButton] = role
             self._rebuildButtonLayout()
@@ -1411,11 +1451,9 @@ class AppQMessageBox(AppQTransientDialog):
 
         return self._createButton(button, role)
 
-    @QtCore.Slot(bool)
-    def _handleButtonClicked(self, _checked=False):
+    @QtCore.Slot(object, bool)
+    def _handleButtonClicked(self, button, _checked=False):
         """Dispatch a child button through sender-based QObject ownership."""
-        button = self.sender()
-
         if isinstance(button, QAbstractButton):
             self._buttonWasClicked(button)
 

@@ -23,6 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Models import *
 from Furious.Repository import *
 from Furious.Qt import *
+from Furious.Qt.Signals import connectWeakly
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
@@ -176,8 +177,9 @@ class RoutingTextEditDialog(AppQTransientDialog):
             _('Cancel'),
             AppQDialogButtonBox.ButtonRole.RejectRole,
         )
-        self.dialogBtns.accepted.connect(self.accept)
-        self.dialogBtns.rejected.connect(self.reject)
+
+        connectWeakly(self.dialogBtns.accepted, self, 'accept')
+        connectWeakly(self.dialogBtns.rejected, self, 'reject')
 
         layout = QVBoxLayout()
         layout.addWidget(self.textEdit)
@@ -416,8 +418,9 @@ class RoutingRuleEditDialog(AppQTransientDialog):
             _('Cancel'),
             AppQDialogButtonBox.ButtonRole.RejectRole,
         )
-        self.dialogBtns.accepted.connect(self.accept)
-        self.dialogBtns.rejected.connect(self.reject)
+
+        connectWeakly(self.dialogBtns.accepted, self, 'accept')
+        connectWeakly(self.dialogBtns.rejected, self, 'reject')
 
         generalLayout = QFormLayout()
         generalLayout.addRow(
@@ -591,8 +594,9 @@ class RoutingRemarkEditDialog(AppQTransientDialog):
             _('Cancel'),
             AppQDialogButtonBox.ButtonRole.RejectRole,
         )
-        self.dialogBtns.accepted.connect(self.accept)
-        self.dialogBtns.rejected.connect(self.reject)
+
+        connectWeakly(self.dialogBtns.accepted, self, 'accept')
+        connectWeakly(self.dialogBtns.rejected, self, 'reject')
 
         layout = QFormLayout()
         layout.addRow(AppQLabel(_('Remark')), self.remarkEdit)
@@ -633,8 +637,9 @@ class RoutingProfileEditDialog(AppQTransientDialog):
             _('Cancel'),
             AppQDialogButtonBox.ButtonRole.RejectRole,
         )
-        self.dialogBtns.accepted.connect(self.accept)
-        self.dialogBtns.rejected.connect(self.reject)
+
+        connectWeakly(self.dialogBtns.accepted, self, 'accept')
+        connectWeakly(self.dialogBtns.rejected, self, 'reject')
 
         layout = QFormLayout()
         layout.addRow(AppQLabel(_('Remark')), self.remarkEdit)
@@ -674,7 +679,8 @@ class RoutingRulesListView(AppQListView):
         self.setSelectionBehavior(AppQListView.SelectionBehavior.SelectRows)
         self.setSelectionMode(AppQListView.SelectionMode.ExtendedSelection)
         self.setEditTriggers(AppQListView.EditTrigger.NoEditTriggers)
-        self.doubleClicked.connect(self._requestEdit)
+
+        connectWeakly(self.doubleClicked, self, '_requestEdit')
 
         self.flushAll()
 
@@ -752,25 +758,29 @@ class RoutingRulesDialog(AppQTransientDialog):
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         self.listView = RoutingRulesListView(self.routing, parent=self)
-        self.listView.editRequested.connect(self.editRule)
+
+        connectWeakly(self.listView.editRequested, self, 'editRule')
 
         self.addButton = AppQPushButton(
             _('Add'),
             icon=bootstrapIcon('plus-lg.svg'),
         )
-        self.addButton.clicked.connect(self.addRule)
+
+        connectWeakly(self.addButton.clicked, self, 'addRule')
 
         self.deleteButton = AppQPushButton(
             _('Delete'),
             icon=bootstrapIcon('trash.svg'),
         )
-        self.deleteButton.clicked.connect(self.deleteRule)
+
+        connectWeakly(self.deleteButton.clicked, self, 'deleteRule')
 
         self.closeWindowButton = AppQPushButton(
             _('Close Window'),
             icon=bootstrapIcon('window-x.svg'),
         )
-        self.closeWindowButton.clicked.connect(self.close)
+
+        connectWeakly(self.closeWindowButton.clicked, self, 'close')
 
         for button in (
             self.addButton,

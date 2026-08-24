@@ -23,6 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Models import CoreConfiguration, Protocol
 from Furious.Qt import *
+from Furious.Qt.Signals import connectWeakly
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
@@ -252,7 +253,8 @@ class GuiHy1ProjectWebsiteURL(AppQLabel):
         super().__init__(*args, **kwargs)
 
         self.setWebsiteURL()
-        self.linkActivated.connect(self.handleLinkActivated)
+
+        connectWeakly(self.linkActivated, self, 'handleLinkActivated')
 
     def setWebsiteURL(self):
         """Set website URL."""

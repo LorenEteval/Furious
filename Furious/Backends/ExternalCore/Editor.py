@@ -36,6 +36,7 @@ from Furious.Qt import (
     GuiEditorWidgetQGroupBox,
 )
 from Furious.Qt import gettext as _
+from Furious.Qt.Signals import connectWeakly
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import (
@@ -81,7 +82,8 @@ class ExternalCorePathInput(EditorWidgetBinding):
         self._input = AppQLineEdit()
         self._input.setPlaceholderText(_(placeholder) if placeholder else '')
         self._browse = AppQPushButton(_('Browse...'))
-        self._browse.clicked.connect(self.browse)
+
+        connectWeakly(self._browse.clicked, self, 'browse')
 
         container = QWidget()
 
@@ -297,9 +299,9 @@ class ExternalCoreApplicationTun2socksInput(GuiEditorItemTextSwitch):
         """Initialize the application tun2socks opt-in control."""
         super().__init__(title=_('Use Application Tun2socks'), translatable=True)
 
-    def connectToggled(self, callback):
-        """Connect a same-lifetime field-state callback to this control."""
-        self._input.toggled.connect(callback)
+    def connectToggled(self, receiver, methodName: str):
+        """Connect a field-state callback without retaining its binding."""
+        connectWeakly(self._input.toggled, receiver, methodName)
 
     def inputToFactory(self, config: CoreConfiguration) -> bool:
         """Persist the explicit application tun2socks preference."""
@@ -434,7 +436,8 @@ class ExternalCoreEditor(GuiEditorWidgetQDialog):
         self._applicationTun2socksInput = ExternalCoreApplicationTun2socksInput()
         self._tunRemoteAddressInput = ExternalCoreTunRemoteAddressInput()
         self._applicationTun2socksInput.connectToggled(
-            self._tunRemoteAddressInput.setEnabled
+            self._tunRemoteAddressInput,
+            'setEnabled',
         )
         self._tunRemoteAddressInput.setEnabled(False)
 

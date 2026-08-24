@@ -23,6 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Repository import *
 from Furious.Qt import *
+from Furious.Qt.Signals import connectWeakly
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
@@ -147,7 +148,8 @@ class AppQLabelHelpPage(AppQLabel):
         super().__init__(*args, **kwargs)
 
         self.setWebsiteURL()
-        self.linkActivated.connect(self.handleLinkActivated)
+
+        connectWeakly(self.linkActivated, self, 'handleLinkActivated')
 
     def setWebsiteURL(self):
         """Set website URL."""
@@ -315,8 +317,8 @@ class TunSettingsDialog(GuiEditorWidgetQDialog):
 
             logger.error(f'error while converting factory to input: {ex}')
 
-        self.accepted.connect(self.handleAccepted)
-        self.rejected.connect(self.handleRejected)
+        connectWeakly(self.accepted, self, 'handleAccepted')
+        connectWeakly(self.rejected, self, 'handleRejected')
 
     @QtCore.Slot()
     def handleAccepted(self):

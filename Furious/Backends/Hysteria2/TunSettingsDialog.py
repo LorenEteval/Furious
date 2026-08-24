@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Qt import *
+from Furious.Qt.Signals import connectWeakly
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
@@ -242,7 +243,8 @@ class Hysteria2TUNDocumentationURL(AppQLabel):
         super().__init__(*args, **kwargs)
 
         self.setWebsiteURL()
-        self.linkActivated.connect(self.handleLinkActivated)
+
+        connectWeakly(self.linkActivated, self, 'handleLinkActivated')
 
     def setWebsiteURL(self):
         """Set the translated documentation hyperlink text."""
@@ -279,7 +281,7 @@ class Hysteria2TunSettingsDialog(GuiEditorWidgetQDialog):
 
         self.factoryToInput(self._settings)
 
-        self.accepted.connect(self.handleAccepted)
+        connectWeakly(self.accepted, self, 'handleAccepted')
 
         self.layout().takeRow(self.layout().rowCount() - 1)
 

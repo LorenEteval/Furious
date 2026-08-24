@@ -24,6 +24,7 @@ from Furious.Interface import *
 from Furious.Models import CoreConfiguration, Protocol
 from Furious.Backends.Configuration import ConfigHysteria2
 from Furious.Qt import *
+from Furious.Qt.Signals import connectWeakly
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
@@ -599,12 +600,12 @@ class GuiHy2PageObfsXXX(GuiEditorWidgetQWidget):
 
         return ''
 
-    def connectActivated(self, func):
+    def connectActivated(self, receiver, methodName: str):
         """Connect activated."""
         obfsType = self._containers[0]
 
         if isinstance(obfsType, GuiEditorItemTextComboBox):
-            obfsType.connectActivated(func)
+            obfsType.connectActivated(receiver, methodName)
 
 
 class GuiHy2PageObfsEmpty(GuiHy2PageObfsXXX):
@@ -639,8 +640,10 @@ class GuiHy2PageObfsGecko(GuiHy2PageObfsXXX):
         """Initialize the GuiHy2PageObfsGecko."""
         super().__init__(*args, **kwargs)
 
-        self.minPacketSizeItem._input.valueChanged.connect(
-            self.handleMinPacketSizeChanged
+        connectWeakly(
+            self.minPacketSizeItem._input.valueChanged,
+            self,
+            'handleMinPacketSizeChanged',
         )
 
         self.handleMinPacketSizeChanged(self.minPacketSizeItem.value())
@@ -704,10 +707,10 @@ class GuiHy2ObfsPageStackedWidget(QStackedWidget):
         """Return the page value."""
         return self._pages[index]
 
-    def connectActivated(self, func):
+    def connectActivated(self, receiver, methodName: str):
         """Connect activated."""
         for page in self._pages:
-            page.connectActivated(func)
+            page.connectActivated(receiver, methodName)
 
 
 class GuiHy2GroupBoxBasic(GuiEditorWidgetQGroupBox):
@@ -811,7 +814,7 @@ class GuiHy2ItemObfs(EditorBinding):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Maximum,
         )
-        self._widget.connectActivated(self.handleActivated)
+        self._widget.connectActivated(self, 'handleActivated')
 
     def widgets(self):
         """Return the stacked obfuscation editor as one full-width form row."""
@@ -1009,7 +1012,8 @@ class GuiHy2ProjectWebsiteURL(AppQLabel):
         super().__init__(*args, **kwargs)
 
         self.setWebsiteURL()
-        self.linkActivated.connect(self.handleLinkActivated)
+
+        connectWeakly(self.linkActivated, self, 'handleLinkActivated')
 
     def setWebsiteURL(self):
         """Set website URL."""

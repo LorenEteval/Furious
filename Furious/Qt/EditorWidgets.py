@@ -24,11 +24,12 @@ from Furious.Interface import *
 from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Qt.QtWidgets import *
+from Furious.Qt.Signals import connectWeakly
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import *
 
-from typing import Callable, Sequence
+from typing import Sequence
 
 __all__ = [
     'addEditorGridBinding',
@@ -181,9 +182,9 @@ class GuiEditorItemTextComboBox(EditorWidgetBinding):
         """Add items."""
         self._input.addItems(texts)
 
-    def connectActivated(self, func: Callable):
+    def connectActivated(self, receiver, methodName: str):
         """Connect activated."""
-        self._input.activated.connect(func)
+        connectWeakly(self._input.activated, receiver, methodName)
 
     def widgets(self):
         """Return the widgets owned by this editor item."""
@@ -455,8 +456,9 @@ class GuiEditorWidgetQDialog(EditorBinding, AppQTransientDialog):
         self.dialogBtns.addButton(
             _('Cancel'), AppQDialogButtonBox.ButtonRole.RejectRole
         )
-        self.dialogBtns.accepted.connect(self.accept)
-        self.dialogBtns.rejected.connect(self.reject)
+
+        connectWeakly(self.dialogBtns.accepted, self, 'accept')
+        connectWeakly(self.dialogBtns.rejected, self, 'reject')
 
         layout = QFormLayout()
         layout.addRow(self.tabWidget)
@@ -495,7 +497,7 @@ class GuiEditorWidgetQDialog(EditorBinding, AppQTransientDialog):
     def closeEvent(self, event):
         """Handle closure of the GUI editor widget Qt dialog."""
         # Preserve QDialog's rejection/finished lifecycle for a title-bar close.
-        # Server-editor callbacks disconnect themselves from the rejected signal.
+        # Qt removes the server-table connections with this transient sender.
         super().closeEvent(event)
 
     def inputToFactory(self, config: dict) -> bool:

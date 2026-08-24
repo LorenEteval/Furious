@@ -41,7 +41,9 @@ from Furious.Qt import (
     AppQMainWindow,
     AppQMenu,
     AppQMessageBox,
+    AppQSwitch,
     AppQTransientDialog,
+    connectWeakly,
 )
 from Furious.Qt.QtWidgets import _AppMessageBoxMask
 from Furious.Window.QRCodeWindow import QRCodeWindow, _QRCodePage
@@ -56,9 +58,11 @@ from shiboken6 import isValid
 
 from tests.support import (
     application,
+    assertChildSucceeded,
     collectAtBoundary,
     isolatedSettings,
     processQtEvents,
+    runPythonChild,
     waitFor,
 )
 
@@ -100,7 +104,12 @@ class TransientReceiver(AppQTransientDialog):
 
         self._calls = calls
 
-        emitter.emitted.connect(self.handleEmission)
+        connectWeakly(
+            emitter.emitted,
+            self,
+            'handleEmission',
+            sender=emitter,
+        )
 
     @QtCore.Slot()
     def handleEmission(self):
@@ -169,11 +178,15 @@ class QtLifetimeTest(unittest.TestCase):
         for pool, baseline in poolBaselines.items():
             self.assertEqual(len(pool.ObjectsPool), baseline)
 
-    def testAsyncDialogRegistryRetainsOnlyUntilNormalClose(self):
-        """Prevent premature GC while open and release immediately after finish."""
+    def testAsyncDialogRegistryRetainsUntilNativeDestruction(self):
+        """Keep a delete-on-close wrapper alive through deferred destruction."""
         dialog = ProbeTransientDialog()
         key = dialog._lifetimeKey
         reference = weakref.ref(dialog)
+        heldAtFinished = []
+        dialog.finished.connect(
+            lambda _result: heldAtFinished.append(key in AppQDialog._openDialogs)
+        )
         dialog.open()
 
         del dialog
@@ -183,7 +196,10 @@ class QtLifetimeTest(unittest.TestCase):
         self.assertIsNotNone(reference())
         self.assertIn(key, AppQDialog._openDialogs)
 
-        reference().close()
+        reference().reject()
+
+        self.assertEqual(heldAtFinished, [True])
+        self.assertIn(key, AppQDialog._openDialogs)
 
         collectAtBoundary()
 
@@ -271,9 +287,12 @@ class QtLifetimeTest(unittest.TestCase):
         collectAtBoundary()
 
         self.assertTrue(all(reference() is None for reference in oldReferences))
+        self.assertEqual(emitter.receivers(QtCore.SIGNAL('emitted()')), 0)
 
         current = TransientReceiver(emitter, calls)
         current.show()
+
+        self.assertEqual(emitter.receivers(QtCore.SIGNAL('emitted()')), 1)
 
         emitter.emitted.emit()
 
@@ -285,7 +304,55 @@ class QtLifetimeTest(unittest.TestCase):
 
         del current
 
+        collectAtBoundary()
+
+        self.assertEqual(emitter.receivers(QtCore.SIGNAL('emitted()')), 0)
+
         emitter.deleteLater()
+
+    def testHysteria2SwitchAnimationStopsWithTransientEditor(self):
+        """Destroy owned switch animations even when a toggle just started."""
+        references = []
+        destroyed = []
+
+        for _index in range(30):
+            editor = Hysteria2Editor()
+            switches = editor.findChildren(AppQSwitch)
+
+            self.assertTrue(switches)
+
+            switch = switches[0]
+            switch.setChecked(not switch.isChecked())
+
+            references.extend((weakref.ref(switch), weakref.ref(switch._animation)))
+            editor.destroyed.connect(lambda *_args: destroyed.append(True))
+            editor.show()
+            editor.close()
+
+        del editor, switch, switches
+
+        collectAtBoundary()
+
+        self.assertTrue(all(reference() is None for reference in references))
+        self.assertEqual(len(destroyed), 30)
+
+    def testServerTableEditorSequenceIsTransientAcrossPatternsAndClosePaths(self):
+        """Stress the real table/editor path without per-cycle full collection."""
+        result = runPythonChild(
+            """
+from tests.fixtures.editor_lifetime_probe import runProbe
+
+for pattern in ('hysteria2', 'vless', 'alternating', 'reverse'):
+    runProbe(100, pattern=pattern, closeMethod='reject')
+
+runProbe(40, pattern='alternating', closeMethod='close')
+runProbe(40, pattern='reverse', closeMethod='accept')
+runProbe(35, pattern='representative', closeMethod='close')
+""",
+            timeout=120,
+        )
+
+        assertChildSucceeded(self, result, 'server editor lifetime child')
 
     def testRepresentativePluginEditorsAndDialogsAreTransient(self):
         """Destroy independent editor families after repeated normal closes."""

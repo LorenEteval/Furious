@@ -27,8 +27,6 @@ from Furious.Backends.Configuration import *
 from PySide6 import QtCore
 from PySide6.QtWidgets import *
 
-from typing import Callable
-
 __all__ = ['GuiVTLSQGroupBox']
 
 STREAM_SECURITY = [
@@ -543,12 +541,12 @@ class GuiVTLSPageXXX(GuiEditorWidgetQWidget):
         if isinstance(security, GuiEditorItemTextComboBox):
             security.setText(text)
 
-    def connectActivated(self, func: Callable):
+    def connectActivated(self, receiver, methodName: str):
         """Connect activated."""
         security = self._containers[0]
 
         if isinstance(security, GuiEditorItemTextComboBox):
-            security.connectActivated(func)
+            security.connectActivated(receiver, methodName)
 
 
 class GuiVTLSPageEmpty(GuiVTLSPageXXX):
@@ -706,10 +704,10 @@ class GuiVTLSPageStackedWidget(QStackedWidget):
         """Return the page value."""
         return self._pages[index]
 
-    def connectActivated(self, func: Callable):
+    def connectActivated(self, receiver, methodName: str):
         """Connect activated."""
         for page in self._pages:
-            page.connectActivated(func)
+            page.connectActivated(receiver, methodName)
 
 
 class GuiVTLSQGroupBox(EditorBinding, AppQGroupBox):
@@ -724,7 +722,7 @@ class GuiVTLSQGroupBox(EditorBinding, AppQGroupBox):
         self._config = CoreConfiguration()
 
         self._widget = GuiVTLSPageStackedWidget()
-        self._widget.connectActivated(self.handleActivated)
+        self._widget.connectActivated(self, 'handleActivated')
 
         layout = QFormLayout()
         layout.addRow(self._widget)

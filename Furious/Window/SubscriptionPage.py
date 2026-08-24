@@ -35,6 +35,7 @@ from Furious.Qt import (
     bootstrapIconWhite,
 )
 from Furious.Qt import gettext as _
+from Furious.Qt.Signals import connectWeakly
 from Furious.Repository import Storage
 from Furious.Widget.SubscriptionTableView import SubscriptionTableView
 
@@ -133,8 +134,9 @@ class _SubscriptionEditorDialog(AppQTransientDialog):
             _('Cancel'),
             AppQDialogButtonBox.ButtonRole.RejectRole,
         )
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.reject)
+
+        connectWeakly(self.buttons.accepted, self, 'accept')
+        connectWeakly(self.buttons.rejected, self, 'reject')
 
         formWidget = QFrame()
         formWidget.setObjectName('SubscriptionEditorForm')

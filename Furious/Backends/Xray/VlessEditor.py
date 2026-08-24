@@ -23,6 +23,7 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Models import *
 from Furious.Qt import *
+from Furious.Qt.Signals import connectWeakly
 from Furious.Qt import gettext as _
 from Furious.Backends.Configuration import *
 from Furious.Backends.Xray.TlsEditor import *
@@ -139,7 +140,8 @@ class GuiVLESSItemBasicId(GuiEditorItemTextInput):
         super().__init__(*args, **kwargs)
 
         self.generateButton = AppQPushButton(_('Generate'))
-        self.generateButton.clicked.connect(self.generateUUID)
+
+        connectWeakly(self.generateButton.clicked, self, 'generateUUID')
 
         self._widget = QWidget()
 

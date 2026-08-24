@@ -30,6 +30,9 @@ Use the `manage-qt-pyside6-lifetimes` skill for any Qt ownership or lifecycle ch
   it is redundant but harmless. Keep both registries balanced if either implementation changes.
 - `AppQTransientDialog` is delete-on-close. Connect completion before `open()` and never access it after destruction.
   Reusable dialogs/windows instead need a durable owner and must not be delete-on-close.
+- In Nuitka/PySide6 builds, compiled bound methods passed directly to `SignalInstance.connect()` may be protected for the
+  process lifetime. Connect signals to transient receivers with `connectWeakly(signal, receiver, 'methodName')`; do not
+  replace this with a closure that strongly captures the receiver.
 - `AppQAction.callback` is a deliberate strong reference; owner scope must be no longer than the callback receiver.
   Application-lifetime actions cannot capture transient bound methods.
 - Parent child widgets/models/delegates/timers where their lifetimes match. Explicitly stop/disconnect timers, remove

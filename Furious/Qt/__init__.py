@@ -52,6 +52,7 @@ from .QtGui import (
     bootstrapIconWithOpacity,
 )
 from .QtNetwork import AppQNetworkAccessManager
+from .Signals import connectWeakly
 from .QtWidgets import (
     AppQComboBox,
     AppQComboBoxSeparatorDelegate,
@@ -164,6 +165,7 @@ __all__ = [
     'bootstrapIconWhite',
     'bootstrapIconWithOpacity',
     'configureEditorLogMetadata',
+    'connectWeakly',
     'gettext',
     'moveToCenter',
     'showMBoxDirectRulesNotAllowed',

@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from Furious.Qt import *
+from Furious.Qt.Signals import connectWeakly
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
@@ -48,8 +49,9 @@ class IndentDialog(AppQTransientDialog):
         self.dialogBtns.addButton(
             _('Cancel'), AppQDialogButtonBox.ButtonRole.RejectRole
         )
-        self.dialogBtns.accepted.connect(self.accept)
-        self.dialogBtns.rejected.connect(self.reject)
+
+        connectWeakly(self.dialogBtns.accepted, self, 'accept')
+        connectWeakly(self.dialogBtns.rejected, self, 'reject')
 
         layout = QFormLayout()
         layout.addRow(self.indentText, self.indentSpin)
