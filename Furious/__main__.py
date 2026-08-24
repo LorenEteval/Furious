@@ -29,7 +29,6 @@ from Furious.Application import DesktopApplication
 from PySide6 import QtCore
 from PySide6.QtGui import QDesktopServices
 
-import os
 import sys
 import logging
 import functools
@@ -72,91 +71,49 @@ def runAppMain():
     # For Qt runtime. Not used
     _app = DesktopApplication(sys.argv)
 
-    if exitcode == ApplicationRunner.ExitCode.PlatformNotSupported.value:
-        mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-
-        mbox.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-        mbox.setWindowTitle(_(APPLICATION_NAME))
-        mbox.setText(
-            _(f'{APPLICATION_NAME} is not able to run on this operating system')
+    if exitcode == ApplicationRunner.ExitCode.AssertionError.value:
+        # Assertion error
+        text = _(
+            f'{APPLICATION_NAME} encountered an internal error and needs to be stopped'
         )
-
-        if hasattr(os, 'uname'):
-            # Unix-like OS
-            unameTuple = (
-                'sysname',
-                'nodename',
-                'release',
-                'version',
-                'machine',
-            )
-
-            mbox.setInformativeText(
-                _('Operating system information')
-                + '\n'
-                + '\n'.join(
-                    list(f'{arg}: {val}' for arg, val in zip(unameTuple, os.uname()))
-                )
-            )
-
-        # Show the MessageBox and wait for the user to close it
-        mbox.exec()
     else:
-        if exitcode == ApplicationRunner.ExitCode.AssertionError.value:
-            # Assertion error
-            text = _(
-                f'{APPLICATION_NAME} encountered an internal error and needs to be stopped'
-            )
-        else:
-            # Unknown exception
-            text = _(
-                f'{APPLICATION_NAME} stopped unexpectedly due to an unknown exception'
-            )
+        # Unknown exception
+        text = _(f'{APPLICATION_NAME} stopped unexpectedly due to an unknown exception')
 
-        mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
+    mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
 
-        mbox.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
-        mbox.setWindowTitle(_(APPLICATION_NAME))
-        mbox.setText(text)
+    mbox.setWindowIcon(bootstrapIcon('rocket-takeoff-window.svg'))
+    mbox.setWindowTitle(_(APPLICATION_NAME))
+    mbox.setText(text)
 
-        if process.fileWritten.value:
-            # Crash log saved
-            crashLogFile = str(CRASH_LOG_DIR / process.logFileName)
+    if process.fileWritten.value:
+        # Crash log saved
+        crashLogFile = str(CRASH_LOG_DIR / process.logFileName)
 
-            logger.info(f'crash log has been saved to {crashLogFile}')
+        logger.info(f'crash log has been saved to {crashLogFile}')
 
-            mbox.setInformativeText(
-                _('Crash log has been saved to') + f' {crashLogFile}'
-            )
-            button0 = mbox.addButton(
-                _('Open crash log'), AppQMessageBox.ButtonRole.AcceptRole
-            )
-            button1 = mbox.addButton(_('OK'), AppQMessageBox.ButtonRole.RejectRole)
+        mbox.setInformativeText(_('Crash log has been saved to') + f' {crashLogFile}')
+        openCrashLogButton = mbox.addButton(
+            _('Open crash log'), AppQMessageBox.ButtonRole.AcceptRole
+        )
+        mbox.addButton(_('OK'), AppQMessageBox.ButtonRole.RejectRole)
 
-            def handleButtonClicked(button):
-                """Handle button clicked."""
-                if button == button0:
-                    # Open
-                    if QDesktopServices.openUrl(
-                        QtCore.QUrl.fromLocalFile(crashLogFile)
-                    ):
-                        logger.info(f'open crash log {crashLogFile} success')
-                    else:
-                        logger.error(f'open crash log {crashLogFile} failed')
-                else:
-                    # OK. Do nothing
-                    pass
+        def handleButtonClicked(button):
+            """Open the saved crash log when its action is selected."""
+            if button != openCrashLogButton:
+                return
 
-            mbox.buttonClicked.connect(handleButtonClicked)
+            if QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(crashLogFile)):
+                logger.info(f'open crash log {crashLogFile} success')
+            else:
+                logger.error(f'open crash log {crashLogFile} failed')
 
-            # Show the MessageBox and wait for the user to close it
-            mbox.exec()
-        else:
-            # Crash log wasn't saved
-            logger.info(f'crash log was not saved')
+        mbox.buttonClicked.connect(handleButtonClicked)
+    else:
+        logger.info('crash log was not saved')
 
-            # Show the MessageBox and wait for the user to close it
-            mbox.exec()
+    # Keep the fallback application's local message box alive until dismissal.
+    mbox.exec()
 
     sys.exit(exitcode)
 

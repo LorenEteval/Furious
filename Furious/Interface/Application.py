@@ -32,7 +32,6 @@ class ApplicationRunner:
 
         ExitSuccess = 0
         UnknownException = 61
-        PlatformNotSupported = 62
         AssertionError = 63
 
     def __init__(self, *args, **kwargs):

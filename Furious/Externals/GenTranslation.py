@@ -994,22 +994,6 @@ TRANSLATION = {
         "ZH": "不修改系统代理",
         "isReviewed": "True"
     },
-    "Furious is not able to run on this operating system": {
-        "source": [
-            "Furious.__main__"
-        ],
-        "RU": "Furious не может работать в этой операционной системе",
-        "ZH": "Furious无法在此操作系统上运行",
-        "isReviewed": "True"
-    },
-    "Operating system information": {
-        "source": [
-            "Furious.__main__"
-        ],
-        "RU": "Информация об операционной системе",
-        "ZH": "操作系统信息",
-        "isReviewed": "True"
-    },
     "Furious encountered an internal error and needs to be stopped": {
         "source": [
             "Furious.__main__"

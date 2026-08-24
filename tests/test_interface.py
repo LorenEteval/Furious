@@ -104,6 +104,7 @@ class InterfaceContractTest(unittest.TestCase):
         """Protect process exit values consumed by callers and host runtimes."""
         self.assertEqual(ApplicationRunner.ExitCode.ExitSuccess.value, 0)
         self.assertEqual(ApplicationRunner.ExitCode.UnknownException.value, 61)
+        self.assertEqual(ApplicationRunner.ExitCode.AssertionError.value, 63)
         self.assertEqual(CoreRuntime.ExitCode.ConfigurationError.value, 23)
         self.assertEqual(
             CoreRuntime.ExitCode.ServerStartFailure.value,
