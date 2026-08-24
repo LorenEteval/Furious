@@ -23,7 +23,9 @@ from Furious.Frozenlib import AppSettings
 from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Models.Encoding import PyBase64Encoder, UJSONEncoder
 from Furious.Repository.Routings import UserRoutings
+from Furious.Repository.Servers import UserServers
 from Furious.Repository.Storage import Storage
+from Furious.Repository.Subscriptions import UserSubs
 from Furious.Repository.TunSettings import UserTUNSettings
 
 from tests.support import application, isolatedSettings
@@ -181,6 +183,44 @@ class RepositoryContractTest(unittest.TestCase):
 
             self.assertEqual(Storage.UserActivatedItemIndex(), -1)
             self.assertEqual(settings.value('ActivatedItemIndex'), 'not-an-index')
+
+    def testFailedRestoreIsNotOverwrittenByAutomaticCleanup(self):
+        """Preserve recoverable persisted bytes when decoding fails at startup."""
+        corrupt = b'eA=='
+
+        with isolatedSettings():
+            for setting, repositoryType, emptyValue in (
+                ('Configuration', UserServers, []),
+                ('CustomSubscription', UserSubs, {}),
+                ('CustomRouting', UserRoutings, {}),
+                ('CustomTUNSettings', UserTUNSettings, {}),
+            ):
+                with self.subTest(setting=setting):
+                    AppSettings.set(setting, corrupt)
+                    repository = repositoryType()
+
+                    self.assertEqual(repository.data(), emptyValue)
+
+                    repository.cleanup()
+
+                    self.assertEqual(AppSettings.get(setting), corrupt)
+
+    def testExplicitMutationCanReplaceAFailedRestoreFallback(self):
+        """Allow a deliberate repository change to recover unreadable storage."""
+        corrupt = b'eA=='
+
+        with isolatedSettings():
+            AppSettings.set('CustomTUNSettings', corrupt)
+            repository = UserTUNSettings()
+            repository.data()['interfaceName'] = 'replacement-tun'
+
+            repository.cleanup()
+
+            self.assertNotEqual(AppSettings.get('CustomTUNSettings'), corrupt)
+            self.assertEqual(
+                UserTUNSettings().data(),
+                {'interfaceName': 'replacement-tun'},
+            )
 
 
 if __name__ == '__main__':

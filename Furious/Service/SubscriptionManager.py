@@ -300,15 +300,82 @@ class SubscriptionManager(HttpGetManager):
             -1,
         )
 
-        AppSettings.set('ActivatedItemIndex', str(newActivatedIndex))
+        try:
+            AppSettings.set('ActivatedItemIndex', str(newActivatedIndex))
+        except Exception:
+            # Any non-exit exceptions
 
-        if wasConnected and activeProfileId:
-            if newActivatedIndex < 0 and activeWasManagedByGroup:
-                controller.startDisconnection()
-            elif activeProfileId in result.changedProfileIds:
-                controller.startReconnection()
+            # Profile reconciliation has committed.  The legacy row-index
+            # setting is derived compatibility state, not part of that commit.
+            logger.exception(
+                'failed to persist the active profile index after '
+                f'synchronizing subscription {unique!r}'
+            )
+
+        try:
+            if wasConnected and activeProfileId:
+                if newActivatedIndex < 0 and activeWasManagedByGroup:
+                    controller.startDisconnection()
+                elif activeProfileId in result.changedProfileIds:
+                    controller.startReconnection()
+        except Exception:
+            # Any non-exit exceptions
+
+            # Reconciliation has committed at this point.  A controller-side
+            # follow-up failure is not a failed or rolled-back synchronization.
+            logger.exception(
+                f'failed to apply connection effects after synchronizing '
+                f'subscription {unique!r}'
+            )
 
         return result
+
+    @staticmethod
+    def _recordGroupFailure(param):
+        """Best-effort persist one current request's terminal failure state."""
+        try:
+            group = Storage.SubscriptionGroup(param.get('unique', ''))
+
+            if group is None:
+                return
+
+            group.lastSyncStatus = 'error'
+            group.lastSyncError = str(param.get('error', ''))
+
+            Storage.upsertSubscriptionGroup(group)
+        except Exception:
+            # Any non-exit exceptions
+
+            logger.exception(
+                'failed to record synchronization failure for subscription '
+                f'{param.get("unique", "")!r}'
+            )
+
+    @staticmethod
+    def _recordGroupSuccess(param, result):
+        """Best-effort persist one successfully committed synchronization state."""
+        try:
+            group = Storage.SubscriptionGroup(param.get('unique', ''))
+
+            if group is None:
+                return
+
+            group.lastUpdated = (
+                datetime.datetime.now().astimezone().isoformat(timespec='seconds')
+            )
+            group.lastDecoderId = param.get('decoderId', '')
+            group.lastSyncStatus = 'success'
+            group.lastSyncError = ''
+            group.profileCount = len(result.profileIds)
+
+            Storage.upsertSubscriptionGroup(group)
+        except Exception:
+            # Any non-exit exceptions
+
+            logger.exception(
+                'failed to record synchronization success for subscription '
+                f'{param.get("unique", "")!r}'
+            )
 
     def handleSynchronizationResults(self, **kwargs):
         """Commit successful group-scoped synchronization results."""
@@ -328,24 +395,39 @@ class SubscriptionManager(HttpGetManager):
 
                 continue
 
-            result = self._synchronizeProfiles(param['unique'], param['profiles'])
+            try:
+                result = self._synchronizeProfiles(
+                    param['unique'],
+                    param['profiles'],
+                )
+            except Exception as ex:
+                # Any non-exit exceptions
+
+                error = str(ex) or type(ex).__name__
+
+                logger.exception(
+                    f'failed to synchronize subscription '
+                    f'{param.get("unique", "")!r}'
+                )
+
+                failed = {**param, 'error': error}
+                committedFailure.append(failed)
+
+                self._recordGroupFailure(failed)
+
+                continue
+
             param['syncResult'] = result
 
             committedSuccess.append(param)
 
-            group = Storage.SubscriptionGroup(param['unique'])
-
-            if group is not None:
-                group.lastDecoderId = param.get('decoderId', '')
-                group.lastSyncStatus = 'success'
-                group.lastSyncError = ''
-                group.profileCount = len(result.profileIds)
-
-                Storage.upsertSubscriptionGroup(group)
+            self._recordGroupSuccess(param, result)
 
         for param in failureArgs:
             if self._isCurrentRequest(param):
                 committedFailure.append(param)
+
+                self._recordGroupFailure(param)
             else:
                 logger.info(
                     f'ignore stale subscription failure for '
@@ -415,13 +497,6 @@ class SubscriptionManager(HttpGetManager):
 
         if result is None or not result.profiles:
             failureArgs.append({'error': 'UnsupportedSubscriptionFormat', **kwargs})
-            group = Storage.SubscriptionGroup(kwargs.get('unique', ''))
-
-            if group is not None:
-                group.lastSyncStatus = 'error'
-                group.lastSyncError = 'UnsupportedSubscriptionFormat'
-
-                Storage.upsertSubscriptionGroup(group)
 
             return
 
@@ -434,19 +509,6 @@ class SubscriptionManager(HttpGetManager):
         successArgs.append(
             {**kwargs, 'profiles': result.profiles, 'decoderId': result.decoderId}
         )
-
-        unique = kwargs.get('unique', '')
-
-        if unique in Storage.UserSubs():
-            group = Storage.SubscriptionGroup(unique)
-
-            if group is not None:
-                group.lastUpdated = (
-                    datetime.datetime.now().astimezone().isoformat(timespec='seconds')
-                )
-                group.lastDecoderId = result.decoderId
-
-                Storage.upsertSubscriptionGroup(group)
 
     def failureCallback(self, networkReply, **kwargs):
         """Record one failed subscription response."""
@@ -462,14 +524,6 @@ class SubscriptionManager(HttpGetManager):
         logger.error(f'update subs ({remark}, {webURL}) failed: {error}')
 
         failureArgs.append({'error': error, **kwargs})
-
-        group = Storage.SubscriptionGroup(kwargs.get('unique', ''))
-
-        if group is not None:
-            group.lastSyncStatus = 'error'
-            group.lastSyncError = error
-
-            Storage.upsertSubscriptionGroup(group)
 
     def updateSubsByWebGET(self, **kwargs):
         """Start one configured subscription request."""

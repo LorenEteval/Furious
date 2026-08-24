@@ -23,7 +23,11 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Models.Encoding import *
 
+import logging
+
 __all__ = ['UserTUNSettings']
+
+logger = logging.getLogger(__name__)
 
 registerAppSettings('CustomTUNSettings')
 
@@ -35,19 +39,25 @@ class UserTUNSettings(Mixins.CleanupOnExit, StorageBackend):
         """Initialize the UserTUNSettings."""
         super().__init__(*args, **kwargs)
 
+        self._restoreFailed = False
+
         def restore():
             """Restore the user TUN settings."""
+            raw = AppSettings.get('CustomTUNSettings')
+
+            if raw is None:
+                return {}
+
             try:
-                data = UJSONEncoder.decode(
-                    PyBase64Encoder.decode(AppSettings.get('CustomTUNSettings'))
-                )
+                data = UJSONEncoder.decode(PyBase64Encoder.decode(raw))
 
                 if isinstance(data, dict):
                     return data
-            except Exception:
-                # Any non-exit exceptions
 
-                pass
+                raise TypeError('TUN settings repository root must be an object')
+            except Exception:
+                self._restoreFailed = True
+                logger.exception('failed to restore persisted TUN settings')
 
             return {}
 
@@ -61,6 +71,7 @@ class UserTUNSettings(Mixins.CleanupOnExit, StorageBackend):
                 UJSONEncoder.encode(self._data).encode(),
             ),
         )
+        self._restoreFailed = False
 
     def data(self) -> dict[str, str]:
         """Return the live mutable collection managed by this repository."""
@@ -68,4 +79,11 @@ class UserTUNSettings(Mixins.CleanupOnExit, StorageBackend):
 
     def cleanup(self):
         """Release resources owned by the user TUN settings."""
+        if self._restoreFailed and not self._data:
+            logger.warning(
+                'preserving unreadable persisted TUN settings during cleanup'
+            )
+
+            return
+
         self.sync()

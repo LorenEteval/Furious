@@ -23,6 +23,7 @@ from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Service.SubscriptionSync import SubscriptionSynchronizer
 
 import unittest
+from unittest import mock
 
 
 def profile(
@@ -134,6 +135,37 @@ class SubscriptionSynchronizerTest(unittest.TestCase):
             SubscriptionSynchronizer().reconcile(profiles, [incoming], '')
 
         self.assertEqual(profiles, [existing])
+        self.assertEqual(incoming.itemSubscription, '')
+        self.assertFalse(incoming.itemSubscriptionManaged)
+
+    def testPreparationFailureLeavesExistingAndIncomingProfilesUntouched(self):
+        """Do not expose partial key or metadata changes before the commit point."""
+        retained = profile(
+            'Retained',
+            'old.example',
+            source='group',
+            managed=True,
+        )
+        incoming = profile('Incoming', 'new.example')
+        profiles = [retained]
+        originalMetadata = retained.metadata.toMapping()
+        originalConnection = retained.connection.deepcopy()
+
+        with mock.patch(
+            'Furious.Service.SubscriptionSync.profileConnectionFingerprint',
+            side_effect=('legacy-key', RuntimeError('injected preparation failure')),
+        ):
+            with self.assertRaisesRegex(RuntimeError, 'injected preparation failure'):
+                SubscriptionSynchronizer().reconcile(
+                    profiles,
+                    [incoming],
+                    'group',
+                )
+
+        self.assertEqual(profiles, [retained])
+        self.assertEqual(retained.metadata.toMapping(), originalMetadata)
+        self.assertEqual(retained.connection, originalConnection)
+        self.assertFalse(retained.deleted)
         self.assertEqual(incoming.itemSubscription, '')
         self.assertFalse(incoming.itemSubscriptionManaged)
 

@@ -21,6 +21,8 @@ from __future__ import annotations
 
 from Furious.Models import ServerProfile, profileConnectionFingerprint
 
+import copy
+
 from dataclasses import dataclass
 
 __all__ = ['SubscriptionSyncResult', 'SubscriptionSynchronizer']
@@ -52,9 +54,10 @@ class SubscriptionSynchronizer:
     )
 
     @staticmethod
-    def _ensureKeys(profiles: list[ServerProfile], groupId: str):
-        """Migrate legacy group profiles to deterministic occurrence keys."""
+    def _keyAssignments(profiles: list[ServerProfile], groupId: str):
+        """Plan deterministic keys for legacy profiles without mutating them."""
         occurrences = {}
+        assignments = []
 
         for profile in profiles:
             metadata = profile.metadata
@@ -71,9 +74,19 @@ class SubscriptionSynchronizer:
             baseIdentity = f'config:{profileConnectionFingerprint(profile)}'
             occurrence = occurrences.get(baseIdentity, 0)
             occurrences[baseIdentity] = occurrence + 1
-            metadata.subscriptionProfileKey = (
+            key = (
                 baseIdentity if occurrence == 0 else f'{baseIdentity}#{occurrence + 1}'
             )
+
+            assignments.append((profile, key))
+
+        return assignments
+
+    @classmethod
+    def _ensureKeys(cls, profiles: list[ServerProfile], groupId: str):
+        """Migrate legacy group profiles to deterministic occurrence keys."""
+        for profile, key in cls._keyAssignments(profiles, groupId):
+            profile.metadata.subscriptionProfileKey = key
 
     def reconcile(
         self,
@@ -87,7 +100,8 @@ class SubscriptionSynchronizer:
 
         incoming = list(incomingProfiles)
 
-        self._ensureKeys(profiles, groupId)
+        legacyKeyAssignments = self._keyAssignments(profiles, groupId)
+        legacyKeys = {id(profile): key for profile, key in legacyKeyAssignments}
 
         managedIndexes = [
             index
@@ -96,16 +110,21 @@ class SubscriptionSynchronizer:
         ]
         insertionIndex = min(managedIndexes) if managedIndexes else len(profiles)
         existingByKey = {
-            profiles[index].metadata.subscriptionProfileKey: profiles[index]
+            legacyKeys.get(
+                id(profiles[index]),
+                profiles[index].metadata.subscriptionProfileKey,
+            ): profiles[index]
             for index in managedIndexes
         }
         synchronized = []
+        incomingMetadata = []
+        existingUpdates = []
         updated = 0
         added = 0
         changedProfileIds = []
 
         for profile in incoming:
-            metadata = profile.metadata
+            metadata = copy.deepcopy(profile.metadata)
             metadata.subscriptionSource = groupId
             metadata.subscriptionManaged = True
 
@@ -119,30 +138,26 @@ class SubscriptionSynchronizer:
             if existing is None:
                 added += 1
                 synchronized.append(profile)
+                incomingMetadata.append((profile, metadata))
 
                 continue
 
             oldFingerprint = profileConnectionFingerprint(existing)
+            newFingerprint = profileConnectionFingerprint(profile)
 
             for fieldName in self.LocalMetadataFields:
                 setattr(metadata, fieldName, getattr(existing.metadata, fieldName))
 
             metadata.profileId = existing.metadata.profileId
 
-            existing.connection = profile.connection
-            existing.metadata = metadata
-            existing.deleted = False
-
             synchronized.append(existing)
+            existingUpdates.append((existing, profile.connection, metadata))
             updated += 1
 
-            if oldFingerprint != profileConnectionFingerprint(existing):
+            if oldFingerprint != newFingerprint:
                 changedProfileIds.append(metadata.profileId)
 
         removedProfiles = tuple(existingByKey.values())
-
-        for profile in removedProfiles:
-            profile.deleted = True
 
         unmanagedOrOther = [
             profile
@@ -151,17 +166,13 @@ class SubscriptionSynchronizer:
                 profile.itemSubscription == groupId and profile.itemSubscriptionManaged
             )
         ]
-        profiles[:] = (
+        finalProfiles = (
             unmanagedOrOther[:insertionIndex]
             + synchronized
             + unmanagedOrOther[insertionIndex:]
         )
 
-        for index, profile in enumerate(profiles):
-            profile.index = index
-            profile.deleted = False
-
-        return SubscriptionSyncResult(
+        result = SubscriptionSyncResult(
             groupId=groupId,
             added=added,
             updated=updated,
@@ -172,3 +183,26 @@ class SubscriptionSynchronizer:
             ),
             changedProfileIds=tuple(changedProfileIds),
         )
+
+        # Everything above is preparation and may fail.  The assignments below
+        # are the commit point and preserve existing profile object identities.
+        for profile, key in legacyKeyAssignments:
+            profile.metadata.subscriptionProfileKey = key
+
+        for profile, metadata in incomingMetadata:
+            profile.metadata = metadata
+
+        for profile, connection, metadata in existingUpdates:
+            profile.connection = connection
+            profile.metadata = metadata
+
+        for profile in removedProfiles:
+            profile.deleted = True
+
+        profiles[:] = finalProfiles
+
+        for index, profile in enumerate(finalProfiles):
+            profile.index = index
+            profile.deleted = False
+
+        return result

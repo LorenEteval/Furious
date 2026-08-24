@@ -45,6 +45,10 @@
 - `SubscriptionManager` owns download, decoding, filtering, reconciliation, persistence effects, stale-request
   rejection, and stable-ID auto-update timers. Subscription views invoke commands and render semantic results; they do
   not own this workflow. Remote data is untrusted.
+- Subscription reply callbacks stage decoded results only. Persist group status and reconcile profiles after the final
+  request-version check; one group's failure must not abort other current groups in the same completion batch.
+- Treat reconnect/disconnect after subscription reconciliation as a post-commit effect. Failure there must be logged
+  without reporting the already-committed repository update as rolled back.
 
 ## Code review rules
 

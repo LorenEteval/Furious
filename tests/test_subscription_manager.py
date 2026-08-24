@@ -208,6 +208,172 @@ class SubscriptionManagerTest(TestCase):
         self.assertEqual(completed, [])
         manager.deleteLater()
 
+    def testStaleDecodedResultCannotCommitSubscriptionMetadata(self):
+        """Delay group metadata writes until the final current-request check."""
+        subscriptions = {
+            'group-a': {
+                'webURL': 'https://invalid.test/current',
+                'enabled': True,
+            }
+        }
+        manager = self._manager(subscriptions)
+        manager._requestVersions['group-a'] = 1
+        profile = SimpleNamespace(itemRemark='profile')
+        manager.importer = SimpleNamespace(
+            importPayload=mock.Mock(
+                return_value=SimpleNamespace(
+                    decoderId='decoder',
+                    profiles=(profile,),
+                    rejectedItems=0,
+                )
+            )
+        )
+        successful = []
+        failed = []
+
+        with mock.patch(
+            'Furious.Service.SubscriptionManager.Storage.UserSubs',
+            return_value=subscriptions,
+        ):
+            manager.successCallback(
+                _Reply(b'payload'),
+                unique='group-a',
+                webURL='https://invalid.test/current',
+                requestVersion=1,
+                successArgs=successful,
+                failureArgs=failed,
+            )
+
+        manager._requestVersions['group-a'] = 2
+
+        with (
+            mock.patch(
+                'Furious.Service.SubscriptionManager.Storage.UserSubs',
+                return_value=subscriptions,
+            ),
+            mock.patch(
+                'Furious.Service.SubscriptionManager.Storage.upsertSubscriptionGroup'
+            ) as upsert,
+        ):
+            manager.handleSynchronizationResults(
+                successArgs=successful,
+                failureArgs=failed,
+            )
+
+        upsert.assert_not_called()
+        manager.deleteLater()
+
+    def testOneSynchronizationFailureDoesNotAbortOtherGroups(self):
+        """Isolate one group's preparation failure from the rest of a batch."""
+        manager = self._manager()
+        committed = SimpleNamespace(profileIds=('profile-id',))
+        manager._isCurrentRequest = mock.Mock(return_value=True)
+        manager._synchronizeProfiles = mock.Mock(
+            side_effect=(RuntimeError('injected failure'), committed)
+        )
+        completed = []
+        manager.updateCompleted.connect(completed.append)
+        failed = {'unique': 'group-a', 'profiles': ()}
+        successful = {'unique': 'group-b', 'profiles': ()}
+
+        with mock.patch(
+            'Furious.Service.SubscriptionManager.Storage.SubscriptionGroup',
+            return_value=None,
+        ):
+            manager.handleSynchronizationResults(
+                successArgs=[failed, successful],
+                failureArgs=[],
+            )
+
+        self.assertEqual(manager._synchronizeProfiles.call_count, 2)
+        self.assertEqual(len(completed), 1)
+        self.assertEqual(completed[0].successful[0]['unique'], 'group-b')
+        self.assertEqual(completed[0].failed[0]['unique'], 'group-a')
+        self.assertIn('injected failure', completed[0].failed[0]['error'])
+
+        manager.deleteLater()
+
+    def testCommittedMetadataFailureDoesNotAbortOtherGroups(self):
+        """Treat status metadata as post-commit and keep processing the batch."""
+        manager = self._manager()
+        result = SimpleNamespace(profileIds=('profile-id',))
+        manager._isCurrentRequest = mock.Mock(return_value=True)
+        manager._synchronizeProfiles = mock.Mock(return_value=result)
+        completed = []
+        manager.updateCompleted.connect(completed.append)
+
+        with (
+            mock.patch(
+                'Furious.Service.SubscriptionManager.Storage.SubscriptionGroup',
+                side_effect=(SimpleNamespace(), SimpleNamespace()),
+            ),
+            mock.patch(
+                'Furious.Service.SubscriptionManager.Storage.upsertSubscriptionGroup',
+                side_effect=(RuntimeError('metadata write failed'), None),
+            ) as upsert,
+        ):
+            manager.handleSynchronizationResults(
+                successArgs=[
+                    {'unique': 'group-a', 'profiles': ()},
+                    {'unique': 'group-b', 'profiles': ()},
+                ],
+                failureArgs=[],
+            )
+
+        self.assertEqual(upsert.call_count, 2)
+        self.assertEqual(len(completed), 1)
+        self.assertEqual(
+            [item['unique'] for item in completed[0].successful],
+            ['group-a', 'group-b'],
+        )
+
+        manager.deleteLater()
+
+    def testPostCommitConnectionFailureDoesNotUndoSynchronization(self):
+        """Keep a committed reconciliation successful if reconnect later fails."""
+        manager = self._manager()
+        active = SimpleNamespace(
+            metadata=SimpleNamespace(profileId='active-profile'),
+            itemSubscription='group-a',
+            itemSubscriptionManaged=True,
+        )
+        servers = [active]
+        result = SimpleNamespace(
+            profileIds=('active-profile',),
+            changedProfileIds=('active-profile',),
+        )
+        manager.synchronizer.reconcile = mock.Mock(return_value=result)
+        controller = SimpleNamespace(
+            isConnected=mock.Mock(return_value=True),
+            startDisconnection=mock.Mock(),
+            startReconnection=mock.Mock(side_effect=RuntimeError('reconnect failed')),
+        )
+
+        with (
+            mock.patch(
+                'Furious.Service.SubscriptionManager.Storage.UserServers',
+                return_value=servers,
+            ),
+            mock.patch(
+                'Furious.Service.SubscriptionManager.Storage.UserActivatedItemIndex',
+                return_value=0,
+            ),
+            mock.patch(
+                'Furious.Service.SubscriptionManager.AppConnectionController',
+                return_value=controller,
+            ),
+            mock.patch(
+                'Furious.Service.SubscriptionManager.AppSettings.set',
+                side_effect=RuntimeError('settings write failed'),
+            ),
+        ):
+            committed = manager._synchronizeProfiles('group-a', ())
+
+        self.assertIs(committed, result)
+
+        controller.startReconnection.assert_called_once_with()
+        manager.deleteLater()
+
     def testCancellationInvalidatesAndAbortsOnlyTheSelectedSubscription(self):
         manager = self._manager()
         groupAReply = _AbortableReply()
@@ -225,6 +391,7 @@ class SubscriptionManagerTest(TestCase):
         self.assertTrue(groupAReply.aborted)
         self.assertFalse(groupBReply.aborted)
         self.assertEqual(manager._requestVersions, {'group-a': 2, 'group-b': 4})
+
         manager._activeReplies.clear()
         manager._replySubscriptions.clear()
         manager.deleteLater()
@@ -263,6 +430,7 @@ class SubscriptionManagerTest(TestCase):
 
         self.assertEqual(manager._autoUpdateTimers, {})
         self.assertFalse(timer.isActive())
+
         manager.deleteLater()
 
     def testDeletedSubscriptionVersionIsPrunedAfterItsReplyFinishes(self):
@@ -285,4 +453,5 @@ class SubscriptionManagerTest(TestCase):
             manager._pruneRequestVersion('deleted-group')
 
         self.assertNotIn('deleted-group', manager._requestVersions)
+
         manager.deleteLater()

@@ -12,6 +12,10 @@
   when practical.
 - Load failures retain recoverable data where possible and log actionable context. Never silently replace malformed
   explicit configuration with unrelated defaults when doing so loses user intent.
+- If persisted data cannot be decoded, automatic shutdown cleanup must not overwrite the unreadable value with an empty
+  fallback. A deliberate non-empty repository mutation or explicit sync may replace it as a recovery action.
+- Prepare fallible reconciliation work—identity calculation, metadata normalization, and the final collection—before
+  mutating live repository objects. The commit phase should contain only deterministic assignments.
 - Singleton repository caches are application-lifetime finite objects and must be reset/sandboxed in tests.
 
 ## Verification

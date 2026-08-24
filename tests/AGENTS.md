@@ -15,6 +15,8 @@
 
 - Test public behavior and architectural contracts, not implementation trivia. Cover success, validation failure,
   timeout, cancel, partial/stale result, cleanup, and backward-compatible persisted input.
+- For multi-step mutations, inject a failure immediately before the commit point and assert that live objects and
+  persisted bytes remain unchanged; separately test post-commit side-effect failures without pretending rollback.
 - Use canonical `CoreRuntime` vocabulary in runtime factories, registry fixtures, and traffic-statistics providers.
 - Separate persisted configuration from runtime-copy assertions. Normal connection, generated native TUN, preserved user
   TUN, and proxy-only stripping must not share a helper that erases their differences.

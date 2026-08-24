@@ -23,7 +23,11 @@ from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Models.Encoding import *
 
+import logging
+
 __all__ = ['UserRoutings']
+
+logger = logging.getLogger(__name__)
 
 registerAppSettings('CustomRouting')
 
@@ -35,19 +39,25 @@ class UserRoutings(Mixins.CleanupOnExit, StorageBackend):
         """Initialize the UserRoutings."""
         super().__init__(*args, **kwargs)
 
+        self._restoreFailed = False
+
         def restore():
             """Restore the user routings."""
+            raw = AppSettings.get('CustomRouting')
+
+            if raw is None:
+                return {}
+
             try:
-                data = UJSONEncoder.decode(
-                    PyBase64Encoder.decode(AppSettings.get('CustomRouting'))
-                )
+                data = UJSONEncoder.decode(PyBase64Encoder.decode(raw))
 
                 if isinstance(data, dict):
                     return data
-            except Exception:
-                # Any non-exit exceptions
 
-                pass
+                raise TypeError('routing repository root must be an object')
+            except Exception:
+                self._restoreFailed = True
+                logger.exception('failed to restore persisted routings')
 
             return {}
 
@@ -59,6 +69,7 @@ class UserRoutings(Mixins.CleanupOnExit, StorageBackend):
             'CustomRouting',
             PyBase64Encoder.encode(UJSONEncoder.encode(self._data).encode()),
         )
+        self._restoreFailed = False
 
     def data(self) -> dict[str, dict]:
         """Return the live mutable collection managed by this repository."""
@@ -66,4 +77,9 @@ class UserRoutings(Mixins.CleanupOnExit, StorageBackend):
 
     def cleanup(self):
         """Release resources owned by the user routings."""
+        if self._restoreFailed and not self._data:
+            logger.warning('preserving unreadable persisted routings during cleanup')
+
+            return
+
         self.sync()

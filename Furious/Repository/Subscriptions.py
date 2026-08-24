@@ -27,7 +27,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+import logging
+
 __all__ = ['SubscriptionGroup', 'UserSubs']
+
+logger = logging.getLogger(__name__)
 
 registerAppSettings('CustomSubscription')
 
@@ -143,20 +147,31 @@ class UserSubs(Mixins.CleanupOnExit, StorageBackend):
         """Initialize the UserSubs."""
         super().__init__(*args, **kwargs)
 
+        self._restoreFailed = False
+
         def restore():
             """Restore the user subs."""
+            raw = AppSettings.get('CustomSubscription')
+
+            if raw is None:
+                return {}
+
             try:
-                return UJSONEncoder.decode(
-                    PyBase64Encoder.decode(AppSettings.get('CustomSubscription'))
-                )
+                data = UJSONEncoder.decode(PyBase64Encoder.decode(raw))
+
+                if isinstance(data, dict):
+                    return data
+
+                raise TypeError('subscription repository root must be an object')
             except Exception:
-                # Any non-exit exceptions
+                self._restoreFailed = True
+                logger.exception('failed to restore persisted subscriptions')
 
                 return {}
 
         restored = restore()
 
-        self._data = restored if isinstance(restored, dict) else {}
+        self._data = restored
 
         # Normalize legacy URL-only entries into the current group schema. The
         # dictionary key remains the stable group ID used by existing profiles.
@@ -176,6 +191,7 @@ class UserSubs(Mixins.CleanupOnExit, StorageBackend):
                 UJSONEncoder.encode(self._data).encode(),
             ),
         )
+        self._restoreFailed = False
 
     def data(self) -> dict[str, dict]:
         """Return the live mutable collection managed by this repository."""
@@ -222,4 +238,11 @@ class UserSubs(Mixins.CleanupOnExit, StorageBackend):
 
     def cleanup(self):
         """Release resources owned by the user subs."""
+        if self._restoreFailed and not self._data:
+            logger.warning(
+                'preserving unreadable persisted subscriptions during cleanup'
+            )
+
+            return
+
         self.sync()

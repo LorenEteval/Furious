@@ -29,7 +29,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
 from typing import Any
 
+import logging
+
 __all__ = ['UserServer', 'UserServers']
+
+logger = logging.getLogger(__name__)
 
 registerAppSettings('Configuration')
 
@@ -115,14 +119,25 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
         """Initialize the UserServers."""
         super().__init__(*args, **kwargs)
 
+        self._restoreFailed = False
+
         def restore():
             """Restore the user servers."""
+            raw = AppSettings.get('Configuration')
+
+            if raw is None:
+                return {'model': []}
+
             try:
-                return UJSONEncoder.decode(
-                    PyBase64Encoder.decode(AppSettings.get('Configuration'))
-                )
+                data = UJSONEncoder.decode(PyBase64Encoder.decode(raw))
+
+                if isinstance(data, dict) and isinstance(data.get('model', []), list):
+                    return data
+
+                raise TypeError('server repository root must contain a model list')
             except Exception:
-                # Any non-exit exceptions
+                self._restoreFailed = True
+                logger.exception('failed to restore persisted server configurations')
 
                 return {'model': []}
 
@@ -164,6 +179,7 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
                 ).encode()
             ),
         )
+        self._restoreFailed = False
 
     def data(self) -> list[ServerProfile]:
         """Return the live mutable collection managed by this repository."""
@@ -171,4 +187,11 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
 
     def cleanup(self):
         """Release resources owned by the user servers."""
+        if self._restoreFailed and not self._list:
+            logger.warning(
+                'preserving unreadable persisted server configurations during cleanup'
+            )
+
+            return
+
         self.sync()
