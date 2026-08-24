@@ -65,6 +65,8 @@ class MainWindow(AppQMainWindow):
         QtCore.QSize(1800, 960) if PLATFORM != 'Darwin' else DEFAULT_WINDOW_SIZE_DARWIN
     )
 
+    QT_FALLBACK_WINDOW_SIZE = QtCore.QSize(640, 480)
+
     def __init__(self, *args, **kwargs):
         """Create and register the built-in application pages."""
         super().__init__(*args, **kwargs)
@@ -251,7 +253,15 @@ class MainWindow(AppQMainWindow):
 
                 restored = False
 
-            if restored:
+            if (
+                restored
+                and PLATFORM == 'Darwin'
+                and self.size() == self.QT_FALLBACK_WINDOW_SIZE
+            ):
+                self._applyDefaultWindowSize(
+                    'saved macOS main-window geometry restored to the Qt fallback size'
+                )
+            elif restored:
                 logger.info(
                     f'restored main-window geometry: {self.geometry().getRect()}'
                 )

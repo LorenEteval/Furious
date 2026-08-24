@@ -82,6 +82,7 @@ class _GeometryWindow(AppQMainWindow):
 
     DEFAULT_WINDOW_SIZE = QtCore.QSize(700, 500)
 
+    QT_FALLBACK_WINDOW_SIZE = MainWindow.QT_FALLBACK_WINDOW_SIZE
     _applyDefaultWindowSize = MainWindow._applyDefaultWindowSize
     _restoreLegacyWindowSize = MainWindow._restoreLegacyWindowSize
     _restoreMainWindowState = MainWindow._restoreMainWindowState
@@ -359,8 +360,8 @@ class MainWindowGeometryTest(unittest.TestCase):
                 window.close()
                 window.deleteLater()
 
-    def testValidIntentional640By480GeometryIsPreserved(self):
-        """Never reinterpret a successful small user geometry as Qt fallback."""
+    def testDarwinRestoredQtFallbackSizeUsesCanonicalDefault(self):
+        """Replace macOS Qt fallback dimensions with the product default."""
         with isolatedSettings():
             expected = QtCore.QRect(40, 50, 640, 480)
             AppSettings.set(
@@ -370,7 +371,31 @@ class MainWindowGeometryTest(unittest.TestCase):
 
             window = _GeometryWindow()
 
-            with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
+            with patch('Furious.Window.MainWindow.PLATFORM', 'Darwin'), patch(
+                'Furious.Qt.QtWidgets.moveToCenter'
+            ) as moveToCenter:
+                window.show()
+
+                self.assertEqual(window.size(), window.DEFAULT_WINDOW_SIZE)
+                moveToCenter.assert_not_called()
+
+            window.close()
+            window.deleteLater()
+
+    def testNonDarwinRestored640By480GeometryIsPreserved(self):
+        """Preserve a successful 640 by 480 restoration outside macOS."""
+        with isolatedSettings():
+            expected = QtCore.QRect(40, 50, 640, 480)
+            AppSettings.set(
+                'AppMainWindowGeometry',
+                self._saveGeometry(expected),
+            )
+
+            window = _GeometryWindow()
+
+            with patch('Furious.Window.MainWindow.PLATFORM', 'Windows'), patch(
+                'Furious.Qt.QtWidgets.moveToCenter'
+            ) as moveToCenter:
                 window.show()
 
                 self.assertEqual(window.size(), expected.size())
