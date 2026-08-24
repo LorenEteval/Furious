@@ -35,7 +35,7 @@ __all__ = ['DnsResolver']
 logger = logging.getLogger(__name__)
 
 
-class _DnsResolver(HttpGetManager):
+class DnsResolver(HttpGetManager):
     """Represent DNS resolver."""
 
     MAX_REFERENCE_DEPTH = 32
@@ -258,5 +258,12 @@ class _DnsResolver(HttpGetManager):
                 ):
                     networkReply.abort()
 
+    def dispose(self):
+        """Abort pending replies and schedule this resolver for destruction."""
+        for networkReply in tuple(self._replyContexts):
+            if not networkReply.isFinished():
+                networkReply.abort()
 
-DnsResolver = _DnsResolver()
+        self._replyContexts.clear()
+
+        self.deleteLater()

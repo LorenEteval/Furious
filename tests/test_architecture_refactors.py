@@ -556,6 +556,26 @@ class ApplicationLifecycleTransactionTest(TestCase):
 class ConnectionStartupTransactionTest(TestCase):
     """Verify one failed attempt releases only its own exact runtimes."""
 
+    def testDnsResolverIsAcquiredLazilyAndReleasedByTheManager(self):
+        """Avoid constructing a Qt network manager before QApplication exists."""
+        resolver = mock.Mock()
+        manager = ConnectionManager()
+
+        with mock.patch(
+            'Furious.Service.ConnectionManager.DnsResolver',
+            return_value=resolver,
+        ) as resolverFactory:
+            resolverFactory.assert_not_called()
+            self.assertIs(manager._connectionDnsResolver(), resolver)
+            self.assertIs(manager._connectionDnsResolver(), resolver)
+
+        resolverFactory.assert_called_once_with()
+
+        manager.cleanup()
+
+        resolver.dispose.assert_called_once_with()
+        self.assertIsNone(manager._dnsResolver)
+
     @staticmethod
     def _start(manager, runtime, *, success):
         with (

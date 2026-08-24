@@ -275,8 +275,10 @@ class ExternalCoreProcessTest(unittest.TestCase):
             registry = mock.Mock()
             registry.prepareTUN.return_value = False
             registry.usesApplicationTun2socks.return_value = True
+            dnsResolver = mock.Mock()
+            dnsResolver.resolve.return_value = (True, [])
 
-            manager = NoCoreRuntimeConnectionManager()
+            manager = NoCoreRuntimeConnectionManager(dnsResolver=dnsResolver)
 
             with (
                 mock.patch(
@@ -315,19 +317,12 @@ class ExternalCoreProcessTest(unittest.TestCase):
                     'Furious.Service.ConnectionManager.SystemRoutingTable.delete'
                 ),
                 mock.patch('Furious.Service.ConnectionManager.Tun2socks'),
-                mock.patch(
-                    'Furious.Service.ConnectionManager.DnsResolver.configureHttpProxy'
-                ),
-                mock.patch(
-                    'Furious.Service.ConnectionManager.DnsResolver.resolve',
-                    return_value=(True, []),
-                ) as resolve,
             ):
                 self.assertFalse(manager.start(config, '', deepcopy=False))
 
-            resolve.assert_called_once_with('actual-server.example.com')
+            dnsResolver.resolve.assert_called_once_with('actual-server.example.com')
 
-            self.assertNotEqual(resolve.call_args.args[0], executable)
+            self.assertNotEqual(dnsResolver.resolve.call_args.args[0], executable)
 
             manager.cleanup()
 
@@ -479,6 +474,7 @@ class DnsResolverRobustnessTest(unittest.TestCase):
         }
 
         DnsResolver.successCallback(
+            mock.Mock(),
             Reply(),
             domain='missing.example',
             resultMap=result,
@@ -515,8 +511,11 @@ class DnsResolverRobustnessTest(unittest.TestCase):
             'visited': {'a.example', 'b.example'},
         }
 
-        with mock.patch.object(DnsResolver, 'webGET') as webGet:
+        resolver = mock.Mock()
+
+        with mock.patch.object(resolver, 'webGET') as webGet:
             DnsResolver.successCallback(
+                resolver,
                 Reply(),
                 domain='b.example',
                 resultMap=result,
@@ -556,8 +555,11 @@ class DnsResolverRobustnessTest(unittest.TestCase):
             'visited': {'current.example'},
         }
 
-        with mock.patch.object(DnsResolver, 'webGET') as webGet:
+        resolver = mock.Mock(MAX_REFERENCE_DEPTH=DnsResolver.MAX_REFERENCE_DEPTH)
+
+        with mock.patch.object(resolver, 'webGET') as webGet:
             DnsResolver.successCallback(
+                resolver,
                 Reply(),
                 domain='current.example',
                 resultMap=result,

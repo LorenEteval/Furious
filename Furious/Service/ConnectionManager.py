@@ -130,11 +130,23 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
     def __init__(self, *args, **kwargs):
         """Initialize the connection manager."""
+        self._dnsResolver = kwargs.pop('dnsResolver', None)
+
         super().__init__(*args, **kwargs)
 
         self.uniqueCleanup = False
         self.runtimes = list()
         self._lastStartError = ''
+
+    def _connectionDnsResolver(self) -> DnsResolver:
+        """Return the resolver owned by this connection-manager lifecycle."""
+        if self._dnsResolver is None:
+            # Creating QNetworkAccessManager during module import is invalid:
+            # QApplication does not exist yet.  DNS is needed only for the
+            # application-managed TUN path, so acquire it at that boundary.
+            self._dnsResolver = DnsResolver()
+
+        return self._dnsResolver
 
     @property
     def lastStartError(self) -> str:
@@ -487,9 +499,10 @@ class ConnectionManager(Mixins.CleanupOnExit):
             address = configcopy.remoteAddress()
 
             if not isValidIPAddress(address):
-                DnsResolver.configureHttpProxy(configcopy.httpProxy())
+                dnsResolver = self._connectionDnsResolver()
+                dnsResolver.configureHttpProxy(configcopy.httpProxy())
 
-                error, resolved = DnsResolver.resolve(address)
+                error, resolved = dnsResolver.resolve(address)
 
                 if error:
                     SystemRoutingTable.managedRoutes.clear()
@@ -742,3 +755,11 @@ class ConnectionManager(Mixins.CleanupOnExit):
     def cleanup(self):
         """Release resources owned by the core manager."""
         self.stopAll()
+
+        if self._dnsResolver is not None:
+            dispose = getattr(self._dnsResolver, 'dispose', None)
+
+            if callable(dispose):
+                dispose()
+
+            self._dnsResolver = None

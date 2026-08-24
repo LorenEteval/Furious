@@ -2,6 +2,8 @@
 
 - Services own workflows and temporary resources; controllers own shared application state. Services may use Qt for
   asynchronous I/O/signals but must not own pages or encode presentation policy.
+- Never instantiate `QObject` services such as network-access managers at module import time. Acquire them after the
+  application exists, give them one explicit service/application owner, and release them during that owner's cleanup.
 - Inject repositories, runtimes, clients, clocks, and callbacks where practical. One service owns each worker, reply,
   timer, executor, process, and cache; cleanup is bounded and idempotent.
 
