@@ -14,23 +14,33 @@
       height: 100%;
       margin: 0;
       overflow: hidden;
-      background: transparent;
+      background: var(--endpoint-surface);
     }
 
     :root {
-      --endpoint-attribution-background: rgb(255 255 255 / 92%);
-      --endpoint-attribution-foreground: #202020;
-      --endpoint-loading-background: rgb(255 255 255 / 32%);
-      --endpoint-loading-foreground: #202020;
+      --endpoint-surface: #f8fafd;
+      --endpoint-border: #d9e1ec;
+      --endpoint-text: #172033;
+      --endpoint-text-muted: #5e6b80;
+      --endpoint-marker-halo: rgb(23 32 51 / 24%);
+      --endpoint-attribution-background: rgb(248 250 253 / 92%);
+      --endpoint-loading-background: rgb(248 250 253 / 86%);
       --endpoint-font-family: sans-serif;
       --endpoint-font-size: 11pt;
     }
 
     :root[data-theme="dark"] {
-      --endpoint-attribution-background: rgb(24 30 39 / 92%);
-      --endpoint-attribution-foreground: #f5f5f5;
-      --endpoint-loading-background: rgb(16 21 28 / 38%);
-      --endpoint-loading-foreground: #f5f5f5;
+      --endpoint-surface: #11161d;
+      --endpoint-border: #2a3340;
+      --endpoint-text: #e7ecf4;
+      --endpoint-text-muted: #9aa7b8;
+      --endpoint-marker-halo: rgb(255 255 255 / 24%);
+      --endpoint-attribution-background: rgb(17 22 29 / 92%);
+      --endpoint-loading-background: rgb(17 22 29 / 86%);
+    }
+
+    body, #map, #endpoint-loading-overlay {
+      border-radius: 6px;
     }
 
     #endpoint-loading-overlay {
@@ -41,7 +51,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      color: var(--endpoint-loading-foreground);
+      color: var(--endpoint-text);
       background: var(--endpoint-loading-background);
       cursor: wait;
       font-family: var(--endpoint-font-family);
@@ -71,13 +81,15 @@
     }
 
     .endpoint-marker {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       box-sizing: border-box;
-      border: 3px solid white;
+      border: 2px solid white;
       border-radius: 50%;
       background: var(--endpoint-accent, #0f7bff);
-      box-shadow: 0 1px 5px rgb(0 0 0 / 45%);
+      box-shadow:
+        0 0 0 2px var(--endpoint-marker-halo),
+        0 2px 6px rgb(0 0 0 / 34%);
     }
 
     .maplibregl-canvas:focus,
@@ -87,9 +99,13 @@
 
     .maplibregl-ctrl-attrib.maplibregl-compact {
       max-width: calc(100% - 20px);
-      color: var(--endpoint-attribution-foreground) !important;
+      color: var(--endpoint-text-muted) !important;
       background-color: var(--endpoint-attribution-background) !important;
-      box-shadow: 0 1px 4px rgb(0 0 0 / 24%);
+      border: 1px solid var(--endpoint-border);
+      border-radius: 7px 0 0 0;
+      box-shadow: none;
+      font-family: var(--endpoint-font-family);
+      font-size: 10px;
     }
 
     .maplibregl-ctrl-attrib a {

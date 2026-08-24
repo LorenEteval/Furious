@@ -417,6 +417,7 @@ class _EndpointMapWidget(QWidget):
             return
 
         hasLocation = self._hasLocation()
+        themePalette = AppStyleSheet.paletteForTheme(self._theme)
 
         location, accentColor, font = (
             self._location if hasLocation else None,
@@ -432,6 +433,10 @@ class _EndpointMapWidget(QWidget):
             'viewRevision': self._viewRevision,
             'darkMode': self._theme == AppStyleSheet.Dark,
             'accentColor': accentColor,
+            'surfaceColor': themePalette['panel_alt'],
+            'borderColor': themePalette['border'],
+            'textColor': themePalette['text'],
+            'mutedTextColor': themePalette['muted'],
             'loading': self._loading
             or (
                 self._active

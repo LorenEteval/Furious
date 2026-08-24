@@ -54,6 +54,7 @@ from tests.support import (
 
 import json
 from pathlib import Path
+import re
 import unittest
 from unittest.mock import patch
 import weakref
@@ -752,6 +753,23 @@ class EndpointInfoServiceTest(unittest.TestCase):
             widget.mapWidget._lastWebState['fontPointSize'],
             QtGui.QFontInfo(widget.mapWidget.font()).pointSizeF(),
         )
+        themePalette = AppStyleSheet.paletteForTheme(widget.mapWidget._theme)
+        self.assertEqual(
+            widget.mapWidget._lastWebState['surfaceColor'],
+            themePalette['panel_alt'],
+        )
+        self.assertEqual(
+            widget.mapWidget._lastWebState['borderColor'],
+            themePalette['border'],
+        )
+        self.assertEqual(
+            widget.mapWidget._lastWebState['textColor'],
+            themePalette['text'],
+        )
+        self.assertEqual(
+            widget.mapWidget._lastWebState['mutedTextColor'],
+            themePalette['muted'],
+        )
         self.assertAlmostEqual(widget.mapWidget._lastWebState['markerLatitude'], 34.05)
         self.assertAlmostEqual(
             widget.mapWidget._lastWebState['markerLongitude'], -118.24
@@ -791,7 +809,7 @@ class EndpointInfoServiceTest(unittest.TestCase):
         self.assertIn('map.setStyle(nextStyle)', mapScript)
         self.assertIn("document.documentElement.dataset.theme", mapScript)
         self.assertIn('--endpoint-attribution-background', html)
-        self.assertIn('--endpoint-attribution-foreground', html)
+        self.assertIn('--endpoint-text-muted', html)
         self.assertIn('endpoint-loading-overlay', html)
         self.assertIn('endpoint-loading-spinner', html)
         self.assertIn('width: 16px', html)
@@ -805,7 +823,11 @@ class EndpointInfoServiceTest(unittest.TestCase):
         self.assertIn('.maplibregl-canvas:focus', html)
         self.assertIn('outline: none', html)
         self.assertNotIn('color-mix(', html)
-        self.assertIn('const createStyle = (darkMode)', mapScript)
+        self.assertIn('const MAP_PALETTES = {', mapScript)
+        self.assertIn('const createPalette = (themeState)', mapScript)
+        self.assertIn('const createStyle = (themeState)', mapScript)
+        self.assertIn('style: createStyle(state)', mapScript)
+        self.assertIn('const styleKey = ()', mapScript)
         self.assertIn("url: 'https://tiles.openfreemap.org/planet'", mapScript)
         self.assertIn("glyphs: 'https://tiles.openfreemap.org/fonts/", mapScript)
         self.assertIn("'source-layer': 'water'", mapScript)
@@ -890,6 +912,90 @@ class EndpointInfoServiceTest(unittest.TestCase):
         widget.close()
         widget.deleteLater()
         service.deleteLater()
+
+    def testMapPaletteHasRestrainedThemeContrastAndLayerHierarchy(self):
+        """Keep the local basemap readable without overpowering Fluent cards."""
+        mapScript = (
+            Path(__file__).parents[1]
+            / 'Furious'
+            / 'Data'
+            / 'maplibre'
+            / 'EndpointMap.js'
+        ).read_text(encoding='utf-8')
+
+        def mapPalette(theme):
+            match = re.search(
+                rf"{theme}: \{{(?P<body>.*?)\n    \}}",
+                mapScript,
+                re.DOTALL,
+            )
+
+            self.assertIsNotNone(match)
+
+            return dict(
+                re.findall(
+                    r"(?P<name>[A-Za-z]+): '(?P<color>#[0-9a-f]{6})'",
+                    match.group('body'),
+                )
+            )
+
+        darkMap = mapPalette('dark')
+        lightMap = mapPalette('light')
+        darkApp = AppStyleSheet.paletteForTheme(AppStyleSheet.Dark)
+        lightApp = AppStyleSheet.paletteForTheme(AppStyleSheet.Light)
+
+        for palette in (darkMap, lightMap):
+            self.assertEqual(
+                set(palette),
+                {
+                    'land',
+                    'landcover',
+                    'landuse',
+                    'water',
+                    'roadMinor',
+                    'roadMajor',
+                    'building',
+                    'waterLabel',
+                },
+            )
+            self.assertNotEqual(palette['water'], palette['land'])
+            self.assertNotEqual(palette['roadMinor'], palette['roadMajor'])
+            self.assertGreaterEqual(
+                abs(
+                    QtGui.QColor(palette['water']).lightness()
+                    - QtGui.QColor(palette['land']).lightness()
+                ),
+                8,
+            )
+
+        self.assertGreater(
+            QtGui.QColor(darkApp['text']).lightness(),
+            QtGui.QColor(darkMap['land']).lightness(),
+        )
+        self.assertLess(
+            QtGui.QColor(lightApp['text']).lightness(),
+            QtGui.QColor(lightMap['land']).lightness(),
+        )
+        self.assertGreater(
+            abs(
+                QtGui.QColor(darkApp['accent']).lightness()
+                - QtGui.QColor(darkMap['land']).lightness()
+            ),
+            60,
+        )
+        self.assertGreater(
+            abs(
+                QtGui.QColor(lightApp['accent']).lightness()
+                - QtGui.QColor(lightMap['land']).lightness()
+            ),
+            60,
+        )
+        self.assertGreaterEqual(mapScript.count("'text-opacity': 0."), 5)
+        self.assertIn("id: 'poi-name'", mapScript)
+        self.assertIn("minzoom: 16", mapScript)
+        self.assertIn("id: 'building'", mapScript)
+        self.assertIn("minzoom: 14", mapScript)
+        self.assertEqual(mapScript.count('new maplibregl.Marker'), 1)
 
     def testUnavailableLocationReplacesHtmlLoadingWithSingleLineFallback(self):
         """Hide web loading before presenting the terminal map fallback."""
@@ -1048,6 +1154,15 @@ class EndpointInfoServiceTest(unittest.TestCase):
             self.assertEqual(
                 widget.mapWidget._lastWebState['darkMode'],
                 theme == AppStyleSheet.Dark,
+            )
+            themePalette = AppStyleSheet.paletteForTheme(theme)
+            self.assertEqual(
+                widget.mapWidget._lastWebState['surfaceColor'],
+                themePalette['panel_alt'],
+            )
+            self.assertEqual(
+                widget.mapWidget._lastWebState['borderColor'],
+                themePalette['border'],
             )
             self.assertEqual(
                 (

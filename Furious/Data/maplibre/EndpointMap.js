@@ -6,7 +6,7 @@
   let marker = null;
   let state = null;
   let appliedRevision = -1;
-  let activeDarkMode = null;
+  let activeStyleKey = '';
   let initialReadyReported = false;
   const loadingOverlay = document.getElementById('endpoint-loading-overlay');
   const loadingText = document.getElementById('endpoint-loading-text');
@@ -24,40 +24,46 @@
     ],
   ];
 
-  const createStyle = (darkMode) => {
-    const colors = darkMode
-      ? {
-        background: '#0d1117',
-        land: '#161c25',
-        landcover: '#18271f',
-        landuse: '#1b222c',
-        water: '#19334a',
-        boundary: '#536174',
-        road: '#3e4a59',
-        roadMajor: '#657489',
-        building: '#222c38',
-        label: '#eef4fb',
-        labelMuted: '#b9c5d3',
-        halo: '#111720',
-        waterLabel: '#8fc4e8',
-        poi: '#c6d0dc',
-      }
-      : {
-        background: '#edf1f5',
-        land: '#f7f8fa',
-        landcover: '#e2ebdf',
-        landuse: '#eceff3',
-        water: '#bad9ec',
-        boundary: '#a7b0bd',
-        road: '#ffffff',
-        roadMajor: '#d4aa72',
-        building: '#d9dce1',
-        label: '#202832',
-        labelMuted: '#536170',
-        halo: '#ffffff',
-        waterLabel: '#446f91',
-        poi: '#4e5b68',
-      };
+  const MAP_PALETTES = {
+    dark: {
+      land: '#151a22',
+      landcover: '#19231f',
+      landuse: '#1a2028',
+      water: '#182734',
+      roadMinor: '#303a46',
+      roadMajor: '#465363',
+      building: '#202731',
+      waterLabel: '#8fa6b8',
+    },
+    light: {
+      land: '#f7f9fc',
+      landcover: '#eaf0e9',
+      landuse: '#edf1f5',
+      water: '#e2ebf2',
+      roadMinor: '#dce4ed',
+      roadMajor: '#becad8',
+      building: '#e4e9ef',
+      waterLabel: '#607d94',
+    },
+  };
+
+  const createPalette = (themeState) => {
+    const darkMode = Boolean(themeState.darkMode);
+    const mapPalette = MAP_PALETTES[darkMode ? 'dark' : 'light'];
+
+    return {
+      ...mapPalette,
+      background: themeState.surfaceColor || (darkMode ? '#11161d' : '#f8fafd'),
+      boundary: themeState.borderColor || (darkMode ? '#2a3340' : '#d9e1ec'),
+      label: themeState.textColor || (darkMode ? '#e7ecf4' : '#172033'),
+      labelMuted: themeState.mutedTextColor || (darkMode ? '#9aa7b8' : '#5e6b80'),
+      halo: themeState.surfaceColor || (darkMode ? '#11161d' : '#f8fafd'),
+      poi: themeState.mutedTextColor || (darkMode ? '#9aa7b8' : '#5e6b80'),
+    };
+  };
+
+  const createStyle = (themeState) => {
+    const colors = createPalette(themeState);
 
     return {
       version: 8,
@@ -90,7 +96,7 @@
           'source-layer': 'landcover',
           paint: {
             'fill-color': colors.landcover,
-            'fill-opacity': 0.55,
+            'fill-opacity': 0.3,
           },
         },
         {
@@ -100,7 +106,7 @@
           'source-layer': 'landuse',
           paint: {
             'fill-color': colors.landuse,
-            'fill-opacity': 0.5,
+            'fill-opacity': 0.32,
           },
         },
         {
@@ -118,7 +124,7 @@
           paint: {
             'line-color': colors.boundary,
             'line-width': 0.8,
-            'line-opacity': 0.7,
+            'line-opacity': 0.52,
           },
         },
         {
@@ -128,9 +134,9 @@
           'source-layer': 'transportation',
           minzoom: 5,
           paint: {
-            'line-color': colors.road,
+            'line-color': colors.roadMinor,
             'line-width': 0.8,
-            'line-opacity': 0.65,
+            'line-opacity': 0.46,
           },
         },
         {
@@ -157,7 +163,7 @@
               14,
               2.4,
             ],
-            'line-opacity': 0.85,
+            'line-opacity': 0.72,
           },
         },
         {
@@ -165,10 +171,10 @@
           type: 'fill',
           source: 'openmaptiles',
           'source-layer': 'building',
-          minzoom: 13,
+          minzoom: 14,
           paint: {
             'fill-color': colors.building,
-            'fill-opacity': 0.72,
+            'fill-opacity': 0.42,
           },
         },
         {
@@ -196,6 +202,7 @@
             'text-color': colors.waterLabel,
             'text-halo-color': colors.halo,
             'text-halo-width': 1,
+            'text-opacity': 0.76,
           },
         },
         {
@@ -230,6 +237,7 @@
             'text-color': colors.labelMuted,
             'text-halo-color': colors.halo,
             'text-halo-width': 1,
+            'text-opacity': 0.72,
           },
         },
         {
@@ -237,7 +245,7 @@
           type: 'symbol',
           source: 'openmaptiles',
           'source-layer': 'transportation_name',
-          minzoom: 14,
+          minzoom: 15,
           filter: [
             'match',
             ['get', 'class'],
@@ -256,6 +264,7 @@
             'text-color': colors.labelMuted,
             'text-halo-color': colors.halo,
             'text-halo-width': 1,
+            'text-opacity': 0.58,
           },
         },
         {
@@ -305,6 +314,7 @@
             'text-color': colors.labelMuted,
             'text-halo-color': colors.halo,
             'text-halo-width': 1,
+            'text-opacity': 0.72,
           },
         },
         {
@@ -347,7 +357,7 @@
           type: 'symbol',
           source: 'openmaptiles',
           'source-layer': 'poi',
-          minzoom: 15,
+          minzoom: 16,
           layout: {
             'text-field': nameField,
             'text-font': ['Noto Sans Regular'],
@@ -358,6 +368,7 @@
             'text-color': colors.poi,
             'text-halo-color': colors.halo,
             'text-halo-width': 1,
+            'text-opacity': 0.58,
           },
         },
       ],
@@ -386,6 +397,40 @@
       ? state.loadingText
       : '';
   };
+
+  const applyThemeState = () => {
+    if (!state) {
+      return;
+    }
+
+    document.documentElement.dataset.theme = state.darkMode
+      ? 'dark'
+      : 'light';
+
+    const properties = {
+      '--endpoint-accent': state.accentColor,
+      '--endpoint-surface': state.surfaceColor,
+      '--endpoint-border': state.borderColor,
+      '--endpoint-text': state.textColor,
+      '--endpoint-text-muted': state.mutedTextColor,
+      '--endpoint-font-family': JSON.stringify(state.fontFamily || 'sans-serif'),
+      '--endpoint-font-size': `${state.fontPointSize || 11}pt`,
+    };
+
+    for (const [name, value] of Object.entries(properties)) {
+      if (value) {
+        document.documentElement.style.setProperty(name, value);
+      }
+    }
+  };
+
+  const styleKey = () => JSON.stringify([
+    Boolean(state.darkMode),
+    state.surfaceColor,
+    state.borderColor,
+    state.textColor,
+    state.mutedTextColor,
+  ]);
 
   const reportError = (event) => {
     const message = event && event.error && event.error.message
@@ -426,36 +471,20 @@
 
   const applyState = () => {
     applyLoadingState();
+    applyThemeState();
 
     if (!state) {
       return;
     }
 
-    document.documentElement.dataset.theme = state.darkMode
-      ? 'dark'
-      : 'light';
-
-    document.documentElement.style.setProperty(
-      '--endpoint-accent',
-      state.accentColor
-    );
-    document.documentElement.style.setProperty(
-      '--endpoint-font-family',
-      JSON.stringify(state.fontFamily || 'sans-serif')
-    );
-    document.documentElement.style.setProperty(
-      '--endpoint-font-size',
-      `${state.fontPointSize || 11}pt`
-    );
-
     if (!map) {
       return;
     }
 
-    const nextDarkMode = Boolean(state.darkMode);
-    if (nextDarkMode !== activeDarkMode) {
-      activeDarkMode = nextDarkMode;
-      const nextStyle = createStyle(nextDarkMode);
+    const nextStyleKey = styleKey();
+    if (nextStyleKey !== activeStyleKey) {
+      activeStyleKey = nextStyleKey;
+      const nextStyle = createStyle(state);
       map.setStyle(nextStyle);
     }
 
@@ -478,10 +507,10 @@
       return;
     }
 
-    activeDarkMode = Boolean(state.darkMode);
+    activeStyleKey = styleKey();
     map = new maplibregl.Map({
       container: 'map',
-      style: createStyle(activeDarkMode),
+      style: createStyle(state),
       center: initialCoordinate,
       zoom: state.defaultGeographicZoom,
       minZoom: 2,
@@ -506,6 +535,7 @@
   window.endpointMap = {
     setState(nextState) {
       state = nextState;
+      applyThemeState();
       applyLoadingState();
       createMap();
       applyState();
