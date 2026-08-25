@@ -1114,6 +1114,7 @@ TRANSLATION = {
     },
     "Other": {
         "source": [
+            "Furious.Backends.ExternalCore.Editor",
             "Furious.Backends.Hysteria1.Editor",
             "Furious.Backends.Hysteria2.Editor"
         ],

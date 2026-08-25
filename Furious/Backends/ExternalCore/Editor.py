@@ -19,7 +19,6 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import GOLDEN_RATIO
 from Furious.Interface import EditorWidgetBinding
 from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Qt import (
@@ -34,6 +33,8 @@ from Furious.Qt import (
     GuiEditorItemTextSpinBox,
     GuiEditorWidgetQDialog,
     GuiEditorWidgetQGroupBox,
+    addEditorGridBinding,
+    addEditorGridFullRow,
 )
 from Furious.Qt import gettext as _
 from Furious.Qt.Signals import connectWeakly
@@ -41,11 +42,11 @@ from Furious.Qt.Signals import connectWeakly
 from PySide6 import QtCore
 from PySide6.QtWidgets import (
     QFileDialog,
-    QFormLayout,
+    QGridLayout,
     QHBoxLayout,
     QPlainTextEdit,
     QSizePolicy,
-    QVBoxLayout,
+    QSpinBox,
     QWidget,
 )
 
@@ -211,7 +212,6 @@ class ExternalCoreEnvironmentInput(EditorWidgetBinding):
 
         self._title = AppQLabel(_('Environment Variables'), translatable=True)
         self._input = QPlainTextEdit()
-        self._input.setMaximumWidth(520)
         self._input.setStyleSheet('min-height: 120px; max-height: 136px;')
         self._input.setPlaceholderText(_('KEY=VALUE, one per line'))
 
@@ -315,15 +315,12 @@ class ExternalCoreApplicationTun2socksInput(GuiEditorItemTextSwitch):
 class ExternalCoreTunRemoteAddressInput(EditorWidgetBinding):
     """Bind the remote destination used only by application-managed TUN."""
 
-    MaximumWidth = 420
-
     def __init__(self):
         """Initialize a hostname-or-IP input independent of process paths."""
         super().__init__()
 
         self._title = AppQLabel(_('TUN Remote Address'), translatable=True)
         self._input = AppQLineEdit()
-        self._input.setMaximumWidth(self.MaximumWidth)
         self._input.setPlaceholderText(_('Hostname, IPv4, or IPv6 address'))
 
     def widgets(self):
@@ -349,39 +346,23 @@ class ExternalCoreTunRemoteAddressInput(EditorWidgetBinding):
 
 
 class ExternalCoreConfigurationGroup(GuiEditorWidgetQGroupBox):
-    """Present all External Core settings as one compact form."""
-
-    RemarkWidth = 420
-    ProxyEndpointWidth = 360
+    """Present External Core profile and process settings."""
 
     def __init__(
         self,
         argumentsInput: ExternalCoreArgumentsInput,
         environmentInput: ExternalCoreEnvironmentInput,
-        applicationTun2socksInput: ExternalCoreApplicationTun2socksInput,
-        tunRemoteAddressInput: ExternalCoreTunRemoteAddressInput,
     ):
-        """Initialize the form around its shared validated inputs."""
+        """Initialize the process form around its shared validated inputs."""
         self._argumentsInput = argumentsInput
         self._environmentInput = environmentInput
-        self._applicationTun2socksInput = applicationTun2socksInput
-        self._tunRemoteAddressInput = tunRemoteAddressInput
 
         super().__init__(_('Basic Configuration'))
 
     def containerSequence(self):
-        """Return related profile, process, and endpoint fields in order."""
-        remarkInput = GuiEditorItemBasicRemark(title=_('Remark'))
-        remarkInput.widgets()[1].setMaximumWidth(self.RemarkWidth)
-
-        httpProxyInput = GuiEditorItemProxyHttp(title=_('HTTP Proxy'))
-        httpProxyInput.widgets()[1].setMaximumWidth(self.ProxyEndpointWidth)
-
-        socksProxyInput = GuiEditorItemProxySocks(title=_('SOCKS Proxy'))
-        socksProxyInput.widgets()[1].setMaximumWidth(self.ProxyEndpointWidth)
-
-        self._processContainers = (
-            remarkInput,
+        """Return profile and process fields in display order."""
+        return (
+            GuiEditorItemBasicRemark(title=_('Remark')),
             ExternalCorePathInput(_('Executable'), 'executable'),
             ExternalCorePathInput(
                 _('Working Directory'),
@@ -392,35 +373,64 @@ class ExternalCoreConfigurationGroup(GuiEditorWidgetQGroupBox):
             self._argumentsInput,
             self._environmentInput,
         )
-        self._runtimeContainers = (
+
+    def setupPageLayout(self):
+        """Arrange process fields as full rows like the VLESS remark row."""
+        layout = QGridLayout()
+        layout.setColumnStretch(1, 1)
+
+        for row, container in enumerate(self._containers):
+            addEditorGridFullRow(layout, container, row)
+
+        layout.setRowStretch(len(self._containers), 1)
+
+        return layout
+
+
+class ExternalCoreOtherGroup(GuiEditorWidgetQGroupBox):
+    """Present the remaining External Core process and network settings."""
+
+    def __init__(
+        self,
+        applicationTun2socksInput: ExternalCoreApplicationTun2socksInput,
+        tunRemoteAddressInput: ExternalCoreTunRemoteAddressInput,
+    ):
+        """Initialize the secondary form around its shared validated inputs."""
+        self._applicationTun2socksInput = applicationTun2socksInput
+        self._tunRemoteAddressInput = tunRemoteAddressInput
+
+        super().__init__(_('Other'))
+
+    def containerSequence(self):
+        """Return secondary process, proxy, and TUN fields in display order."""
+        return (
             ExternalCoreShutdownTimeoutInput(),
-            httpProxyInput,
-            socksProxyInput,
+            GuiEditorItemProxyHttp(title=_('HTTP Proxy')),
+            GuiEditorItemProxySocks(title=_('SOCKS Proxy')),
             self._applicationTun2socksInput,
             self._tunRemoteAddressInput,
         )
 
-        return [*self._processContainers, *self._runtimeContainers]
-
-    @staticmethod
-    def _formLayout(containers):
-        """Align one related section independently from the other section."""
-        layout = QFormLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setFormAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
-        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
-
-        for container in containers:
-            layout.addRow(*container.widgets())
-
-        return layout
-
     def setupPageLayout(self):
-        """Keep process fields independent from runtime-network label widths."""
-        layout = QVBoxLayout()
-        layout.setSpacing(18)
-        layout.addLayout(self._formLayout(self._processContainers))
-        layout.addLayout(self._formLayout(self._runtimeContainers))
+        """Arrange secondary fields and keep the timeout compact like VLESS port."""
+        layout = QGridLayout()
+        layout.setColumnStretch(1, 1)
+
+        timeoutInput = self._containers[0].widgets()[1]
+
+        if isinstance(timeoutInput, QSpinBox):
+            timeoutInput.setSizePolicy(
+                QSizePolicy.Policy.Fixed,
+                timeoutInput.sizePolicy().verticalPolicy(),
+            )
+
+        for row, container in enumerate(self._containers):
+            if row in (1, 2, 4):
+                addEditorGridFullRow(layout, container, row)
+            else:
+                addEditorGridBinding(layout, container, row, 0)
+
+        layout.setRowStretch(len(self._containers), 1)
 
         return layout
 
@@ -440,24 +450,22 @@ class ExternalCoreEditor(GuiEditorWidgetQDialog):
         )
         self._tunRemoteAddressInput.setEnabled(False)
 
-        kwargs.setdefault('style', 'portrait')
-
         super().__init__(*args, **kwargs)
 
-        dialogWidth = 540
-
-        self.setFixedSize(dialogWidth, int(dialogWidth * GOLDEN_RATIO))
+        self.setFixedSize(1400, 600)
         self.setTabText(_('External Core'))
 
     def createGroupBoxSequence(self):
-        """Create the editor's single compact configuration form."""
+        """Create separate basic and secondary configuration groups."""
         return [
             ExternalCoreConfigurationGroup(
                 self._argumentsInput,
                 self._environmentInput,
+            ),
+            ExternalCoreOtherGroup(
                 self._applicationTun2socksInput,
                 self._tunRemoteAddressInput,
-            )
+            ),
         ]
 
     def inputToFactory(self, config: CoreConfiguration) -> bool:

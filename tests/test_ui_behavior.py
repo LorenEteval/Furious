@@ -27,7 +27,15 @@ from Furious.Backends.ExternalCore.Configuration import (
     BLANK_CONFIG_EXTERNAL_CORE,
     ConfigExternalCore,
 )
-from Furious.Backends.ExternalCore.Editor import ExternalCoreEditor
+from Furious.Backends.ExternalCore.Editor import (
+    ExternalCoreApplicationTun2socksInput,
+    ExternalCoreArgumentsInput,
+    ExternalCoreConfigurationGroup,
+    ExternalCoreEditor,
+    ExternalCoreEnvironmentInput,
+    ExternalCoreOtherGroup,
+    ExternalCoreTunRemoteAddressInput,
+)
 from Furious.Backends.Hysteria1.Editor import Hysteria1Editor
 from Furious.Backends.Hysteria2.Editor import Hysteria2Editor
 from Furious.Backends.Xray.AssetListView import XrayAssetListView
@@ -104,6 +112,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
+    QSizePolicy,
     QStyle,
     QStyleOptionComboBox,
     QVBoxLayout,
@@ -1007,8 +1016,7 @@ class EditorMappingTest(unittest.TestCase):
             self.assertEqual(tunSwitch.size(), AppQSwitch.CompactControlSize)
             self.assertTrue(editor._tunRemoteAddressInput.widgets()[1].isEnabled())
             self.assertEqual(editor._tunRemoteAddressInput.text(), '2001:db8::42')
-            self.assertEqual(len(editor.groupBoxSequence()), 1)
-            self.assertAlmostEqual(editor.height() / editor.width(), 1.618, places=2)
+            self.assertEqual(len(editor.groupBoxSequence()), 2)
 
             editor._argumentsInput._input.setText(
                 '--mode direct --label "a value with spaces"'
@@ -1037,27 +1045,101 @@ class EditorMappingTest(unittest.TestCase):
             editor.close()
 
     def testExternalCoreSectionUsesCanonicalEditorInset(self):
-        """Let the section page own the same outer inset as Xray editors."""
+        """Use canonical editor grids and insets for both External Core groups."""
         editor = ExternalCoreEditor()
-        externalGroup = editor.groupBoxSequence()[0]
-        externalLayout = externalGroup._widget.currentWidget().layout()
+        externalGroups = editor.groupBoxSequence()
         referenceGroup = GuiVLESSGroupBoxBasic()
         referenceLayout = referenceGroup._widget.currentWidget().layout()
 
+        self.assertEqual(len(externalGroups), 2)
+
+        for group in externalGroups:
+            externalLayout = group._widget.currentWidget().layout()
+
+            self.assertEqual(
+                externalLayout.contentsMargins(),
+                referenceLayout.contentsMargins(),
+            )
+            self.assertFalse(externalLayout.contentsMargins().isNull())
+            self.assertIsInstance(externalLayout, type(referenceLayout))
+            self.assertEqual(externalLayout.columnStretch(1), 1)
+            self.assertEqual(
+                externalLayout.verticalSpacing(),
+                referenceLayout.verticalSpacing(),
+            )
+            self.assertEqual(
+                externalLayout.rowStretch(externalLayout.rowCount() - 1),
+                1,
+            )
+
+        basicGroup, otherGroup = externalGroups
+        basicLayout = basicGroup._widget.currentWidget().layout()
+        otherLayout = otherGroup._widget.currentWidget().layout()
+        timeoutInput = otherGroup._containers[0].widgets()[1]
+
+        for row, container in enumerate(basicGroup._containers):
+            self.assertBindingPosition(basicLayout, container, row, 0, 1, 3)
+
         self.assertEqual(
-            externalLayout.contentsMargins(),
-            referenceLayout.contentsMargins(),
+            timeoutInput.sizePolicy().horizontalPolicy(),
+            QSizePolicy.Policy.Fixed,
         )
-        self.assertFalse(externalLayout.contentsMargins().isNull())
-
-        for index in range(externalLayout.count()):
-            childLayout = externalLayout.itemAt(index).layout()
-
-            self.assertIsNotNone(childLayout)
-            self.assertTrue(childLayout.contentsMargins().isNull())
+        self.assertBindingPosition(otherLayout, otherGroup._containers[0], 0, 0, 1)
+        self.assertBindingPosition(otherLayout, otherGroup._containers[1], 1, 0, 1, 3)
+        self.assertBindingPosition(otherLayout, otherGroup._containers[2], 2, 0, 1, 3)
+        self.assertBindingPosition(otherLayout, otherGroup._containers[4], 4, 0, 1, 3)
+        self.assertGreater(basicGroup._containers[-1].widgets()[1].maximumWidth(), 520)
+        self.assertGreater(otherGroup._containers[1].widgets()[1].maximumWidth(), 360)
+        self.assertGreater(otherGroup._containers[2].widgets()[1].maximumWidth(), 360)
+        self.assertGreater(otherGroup._containers[4].widgets()[1].maximumWidth(), 420)
+        self.assertEqual(editor.size(), QtCore.QSize(1400, 600))
 
         editor.close()
         referenceGroup.deleteLater()
+
+    def testExternalCoreRowsRemainTopAlignedAsSectionGrows(self):
+        """Assign surplus editor height below the compact form rows."""
+        groups = (
+            ExternalCoreConfigurationGroup(
+                ExternalCoreArgumentsInput(),
+                ExternalCoreEnvironmentInput(),
+            ),
+            ExternalCoreOtherGroup(
+                ExternalCoreApplicationTun2socksInput(),
+                ExternalCoreTunRemoteAddressInput(),
+            ),
+        )
+
+        for group in groups:
+            containers = group._containers
+
+            group.resize(760, 900)
+            group.show()
+            processQtEvents()
+
+            initialPositions = tuple(
+                container.widgets()[0].geometry().top() for container in containers
+            )
+            page = group._widget.currentWidget()
+            initialBlankHeight = (
+                page.height() - containers[-1].widgets()[0].geometry().bottom()
+            )
+
+            group.resize(760, 1200)
+            processQtEvents()
+
+            grownPositions = tuple(
+                container.widgets()[0].geometry().top() for container in containers
+            )
+            grownBlankHeight = (
+                page.height() - containers[-1].widgets()[0].geometry().bottom()
+            )
+
+            self.assertEqual(grownPositions, initialPositions)
+            self.assertGreater(grownBlankHeight, initialBlankHeight)
+
+            group.close()
+            group.deleteLater()
 
     def testEveryProtocolEditorRetranslatesItsDedicatedWindowTitle(self):
         """Retain title source text when switching from Chinese to English."""
