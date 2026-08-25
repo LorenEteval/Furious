@@ -45,6 +45,10 @@
 - `SubscriptionManager` owns download, decoding, filtering, reconciliation, persistence effects, stale-request
   rejection, and stable-ID auto-update timers. Subscription views invoke commands and render semantic results; they do
   not own this workflow. Remote data is untrusted.
+- Long-lived service timers are created and connected once, then reconciled idempotently. Reapplying unchanged policy
+  must not restart a periodic countdown, reconnect its timeout, or emit a lifecycle transition log.
+- Page visibility and presentation refreshes must not control application-level background scheduler lifecycles.
+  Reconcile schedules at service startup and when the corresponding persisted scheduling policy changes.
 - Subscription reply callbacks stage decoded results only. Persist group status and reconcile profiles after the final
   request-version check; one group's failure must not abort other current groups in the same completion batch.
 - Treat reconnect/disconnect after subscription reconciliation as a post-commit effect. Failure there must be logged

@@ -719,9 +719,6 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         for index, key in enumerate(Storage.UserSubs()):
             self.flushRow(index, Storage.UserSubs()[key])
 
-        if self.subsManager is not None:
-            self.subsManager.refreshAutoUpdates()
-
     def appendNewItem(self, **kwargs):
         """Append new item."""
         (
@@ -777,7 +774,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             self.flushRow(row, subsob[unique])
 
         if self.subsManager is not None:
-            self.subsManager.refreshAutoUpdates()
+            self.subsManager.configureAutoUpdate(unique)
 
         self.groupsChanged.emit()
 

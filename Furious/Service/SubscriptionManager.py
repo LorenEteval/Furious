@@ -112,6 +112,7 @@ class SubscriptionManager(HttpGetManager):
 
         self.importer = SubscriptionImportService()
         self.synchronizer = SubscriptionSynchronizer()
+
         self._autoUpdateTimers = {}
         self._requestVersions = {}
         self._activeReplies = {}
@@ -202,23 +203,52 @@ class SubscriptionManager(HttpGetManager):
 
             self._autoUpdateTimers[unique] = timer
 
-        if interval is not None and subscription.get('enabled', True):
-            logger.info(
-                f'start auto update job for subscription '
-                f'({subscription.get("remark", "")}, '
-                f'{subscription.get("webURL", "")}). '
-                f'Interval is {interval // (60 * 1000)} mins'
-            )
+        shouldRun = interval is not None and subscription.get('enabled', True)
 
-            timer.start(interval)
-        else:
-            logger.info(
-                f'stop auto update job for subscription '
-                f'({subscription.get("remark", "")}, '
-                f'{subscription.get("webURL", "")})'
-            )
+        if not shouldRun:
+            if not timer.isActive():
+                return
 
             timer.stop()
+
+            logger.info(
+                f'stop auto update job for subscription '
+                f'({subscription.get("remark", "")}, {unique})'
+            )
+
+            return
+
+        if timer.isActive() and timer.interval() == interval:
+            return
+
+        previousInterval = timer.interval() if timer.isActive() else None
+
+        timer.start(interval)
+
+        if previousInterval is None:
+            logger.info(
+                f'start auto update job for subscription '
+                f'({subscription.get("remark", "")}, {unique}). '
+                f'Interval is {interval // (60 * 1000)} mins'
+            )
+        else:
+            logger.info(
+                f'reschedule auto update job for subscription '
+                f'({subscription.get("remark", "")}, {unique}). '
+                f'Interval changed from {previousInterval // (60 * 1000)} '
+                f'to {interval // (60 * 1000)} mins'
+            )
+
+    def configureAutoUpdate(self, unique: str):
+        """Reconcile the schedule for one known subscription mutation."""
+        subscription = Storage.UserSubs().get(unique)
+
+        if subscription is None:
+            self.removeAutoUpdate(unique)
+
+            return
+
+        self._configureAutoUpdate(unique, subscription)
 
     def refreshAutoUpdates(self):
         """Reconcile service-owned timers with the current subscription repository."""

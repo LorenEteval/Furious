@@ -24,10 +24,16 @@ import os
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-from PySide6 import QtCore
+from PySide6 import QtCore, QtTest, QtWidgets
 
+from shiboken6 import isValid
+
+from Furious.Repository import Storage
+from Furious.Repository.Subscriptions import SubscriptionGroup
 from Furious.Service.SubscriptionManager import SubscriptionManager
-from tests.support import application
+from Furious.Window.SubscriptionPage import SubscriptionPage
+from Furious.Widget.SubscriptionTableView import SubscriptionTableView
+from tests.support import application, processQtEvents
 
 
 class _Payload:
@@ -80,6 +86,20 @@ class SubscriptionManagerTest(TestCase):
             return_value=subscriptions,
         ):
             return SubscriptionManager()
+
+    @staticmethod
+    def _subscription(**overrides):
+        """Return one enabled five-minute subscription definition."""
+        subscription = {
+            'remark': 'Group A',
+            'webURL': 'https://invalid.test/a',
+            'autoupdate': 'Every 5 mins',
+            'proxy': '',
+            'enabled': True,
+        }
+        subscription.update(overrides)
+
+        return subscription
 
     def testSuccessfulAndInvalidPayloadsProduceSemanticBatchInputs(self):
         manager = self._manager()
@@ -396,29 +416,293 @@ class SubscriptionManagerTest(TestCase):
         manager._replySubscriptions.clear()
         manager.deleteLater()
 
-    def testAutoUpdateTimersAreReusedAndKeyedByStableSubscriptionId(self):
-        subscriptions = {
-            'group-a': {
-                'remark': 'Group A',
-                'webURL': 'https://invalid.test/a',
-                'autoupdate': 'Every 5 mins',
-                'proxy': '',
-                'enabled': True,
-            },
-        }
+    def testUnchangedAutoUpdateReconciliationPreservesDeadlineAndConnection(self):
+        """Make repeated full reconciliation a true scheduler no-op."""
+        subscriptions = {'group-a': self._subscription()}
         manager = self._manager(subscriptions)
         timer = manager._autoUpdateTimers['group-a']
+        timerId = timer.timerId()
+
+        QtTest.QTest.qWait(40)
+
+        remainingBefore = timer.remainingTime()
+
+        with (
+            mock.patch(
+                'Furious.Service.SubscriptionManager.Storage.UserSubs',
+                return_value=subscriptions,
+            ),
+            mock.patch(
+                'Furious.Service.SubscriptionManager.logger.info'
+            ) as lifecycleLog,
+        ):
+            for _index in range(100):
+                manager.refreshAutoUpdates()
+
+        self.assertIs(manager._autoUpdateTimers['group-a'], timer)
+        self.assertEqual(timer.timerId(), timerId)
+        self.assertEqual(timer.property('subscriptionId'), 'group-a')
+        self.assertEqual(len(manager._autoUpdateTimers), 1)
+        self.assertLessEqual(timer.remainingTime(), remainingBefore + 5)
+        lifecycleLog.assert_not_called()
+
+        manager.configureHttpProxy = mock.Mock()
+        manager.updateSubsByUnique = mock.Mock()
 
         with mock.patch(
             'Furious.Service.SubscriptionManager.Storage.UserSubs',
             return_value=subscriptions,
         ):
-            manager.refreshAutoUpdates()
-            manager.refreshAutoUpdates()
+            timer.timeout.emit()
 
+        manager.updateSubsByUnique.assert_called_once_with(
+            'group-a', showMessageBox=False
+        )
+        manager.deleteLater()
+
+    def testAutoUpdatePolicyTransitionsReuseTimerAndLogOnlyRealChanges(self):
+        """Start, reschedule, and stop exactly when policy state changes."""
+        subscriptions = {
+            'group-a': self._subscription(autoupdate='Never'),
+        }
+        manager = self._manager(subscriptions)
+        timer = manager._autoUpdateTimers['group-a']
+
+        with (
+            mock.patch(
+                'Furious.Service.SubscriptionManager.Storage.UserSubs',
+                return_value=subscriptions,
+            ),
+            mock.patch(
+                'Furious.Service.SubscriptionManager.logger.info'
+            ) as lifecycleLog,
+        ):
+            manager.configureAutoUpdate('group-a')
+            lifecycleLog.assert_not_called()
+
+            subscriptions['group-a']['autoupdate'] = 'Every 5 mins'
+            manager.configureAutoUpdate('group-a')
+            self.assertTrue(timer.isActive())
+            self.assertEqual(timer.interval(), 5 * 60 * 1000)
+            self.assertIn('start auto update job', lifecycleLog.call_args.args[0])
+
+            activeTimerId = timer.timerId()
+            manager.configureAutoUpdate('group-a')
+            self.assertEqual(timer.timerId(), activeTimerId)
+            self.assertEqual(lifecycleLog.call_count, 1)
+
+            subscriptions['group-a']['autoupdate'] = 'Every 10 mins'
+            manager.configureAutoUpdate('group-a')
+            self.assertIs(manager._autoUpdateTimers['group-a'], timer)
+            self.assertEqual(timer.interval(), 10 * 60 * 1000)
+            self.assertIn('reschedule auto update job', lifecycleLog.call_args.args[0])
+
+            subscriptions['group-a']['enabled'] = False
+            manager.configureAutoUpdate('group-a')
+            self.assertFalse(timer.isActive())
+            self.assertIn('stop auto update job', lifecycleLog.call_args.args[0])
+
+            manager.configureAutoUpdate('group-a')
+            self.assertEqual(lifecycleLog.call_count, 3)
+
+            subscriptions['group-a']['enabled'] = True
+            manager.configureAutoUpdate('group-a')
+            self.assertTrue(timer.isActive())
+            self.assertIn('start auto update job', lifecycleLog.call_args.args[0])
+
+        self.assertEqual(lifecycleLog.call_count, 4)
+        manager.deleteLater()
+
+    def testUnrelatedSubscriptionEditDoesNotRestartItsTimer(self):
+        """Keep the real table edit path outside unchanged timer deadlines."""
+        subscriptions = {'group-a': self._subscription()}
+        manager = self._manager(subscriptions)
+        timer = manager._autoUpdateTimers['group-a']
+
+        QtTest.QTest.qWait(40)
+
+        remainingBefore = timer.remainingTime()
+        timerId = timer.timerId()
+
+        def group(unique):
+            """Return the exact in-memory group edited by the table."""
+            value = subscriptions.get(unique)
+
+            return (
+                SubscriptionGroup.fromMapping(unique, value)
+                if value is not None
+                else None
+            )
+
+        def upsert(value):
+            """Persist the edited group into the isolated test repository."""
+            subscriptions[value.id] = value.toMapping()
+
+        with (
+            mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
+            mock.patch.object(Storage, 'SubscriptionGroup', side_effect=group),
+            mock.patch.object(Storage, 'upsertSubscriptionGroup', side_effect=upsert),
+        ):
+            table = SubscriptionTableView(subscriptionManager=manager)
+            table.appendNewItem(
+                unique='group-a',
+                remark='Renamed Group',
+                webURL=subscriptions['group-a']['webURL'],
+                enabled=True,
+                autoupdate='Every 5 mins',
+                proxy='',
+                userAgent='',
+                filter='',
+                lastUpdated='',
+            )
+
+        self.assertEqual(subscriptions['group-a']['remark'], 'Renamed Group')
         self.assertIs(manager._autoUpdateTimers['group-a'], timer)
-        self.assertEqual(timer.property('subscriptionId'), 'group-a')
-        self.assertEqual(len(manager._autoUpdateTimers), 1)
+        self.assertEqual(timer.timerId(), timerId)
+        self.assertLessEqual(timer.remainingTime(), remainingBefore + 5)
+        table.deleteLater()
+        manager.deleteLater()
+
+    def testTargetedPolicyChangeDoesNotDisturbOtherSubscriptions(self):
+        """Reconcile only the edited subscription's schedule."""
+        subscriptions = {
+            'group-a': self._subscription(),
+            'group-b': self._subscription(
+                remark='Group B',
+                webURL='https://invalid.test/b',
+                autoupdate='Every 10 mins',
+            ),
+        }
+        manager = self._manager(subscriptions)
+        groupATimer = manager._autoUpdateTimers['group-a']
+        groupBTimer = manager._autoUpdateTimers['group-b']
+        groupBTimerId = groupBTimer.timerId()
+
+        QtTest.QTest.qWait(40)
+
+        groupBRemainingBefore = groupBTimer.remainingTime()
+        subscriptions['group-a']['autoupdate'] = 'Every 10 mins'
+
+        with mock.patch(
+            'Furious.Service.SubscriptionManager.Storage.UserSubs',
+            return_value=subscriptions,
+        ):
+            manager.configureAutoUpdate('group-a')
+
+        self.assertIs(manager._autoUpdateTimers['group-a'], groupATimer)
+        self.assertEqual(groupATimer.interval(), 10 * 60 * 1000)
+        self.assertIs(manager._autoUpdateTimers['group-b'], groupBTimer)
+        self.assertEqual(groupBTimer.timerId(), groupBTimerId)
+        self.assertLessEqual(groupBTimer.remainingTime(), groupBRemainingBefore + 5)
+        self.assertEqual(len(manager._autoUpdateTimers), 2)
+        manager.deleteLater()
+
+    def testRemovingSubscriptionDestroysOnlyItsTimerAndCancelsItsReply(self):
+        """Release one removed subscription without disturbing its sibling."""
+        subscriptions = {
+            'group-a': self._subscription(),
+            'group-b': self._subscription(
+                remark='Group B',
+                webURL='https://invalid.test/b',
+            ),
+        }
+        manager = self._manager(subscriptions)
+        groupATimer = manager._autoUpdateTimers['group-a']
+        groupBTimer = manager._autoUpdateTimers['group-b']
+        groupBTimerId = groupBTimer.timerId()
+        groupAReply = _AbortableReply()
+        groupBReply = _AbortableReply()
+        destroyed = []
+        groupATimer.destroyed.connect(lambda *_args: destroyed.append(True))
+        manager._activeReplies.update(
+            {groupAReply: groupAReply, groupBReply: groupBReply}
+        )
+        manager._replySubscriptions.update(
+            {groupAReply: 'group-a', groupBReply: 'group-b'}
+        )
+        subscriptions.pop('group-a')
+
+        with mock.patch(
+            'Furious.Service.SubscriptionManager.Storage.UserSubs',
+            return_value=subscriptions,
+        ):
+            manager.removeAutoUpdate('group-a')
+
+        self.assertTrue(groupAReply.aborted)
+        self.assertFalse(groupBReply.aborted)
+        self.assertNotIn('group-a', manager._autoUpdateTimers)
+        self.assertIs(manager._autoUpdateTimers['group-b'], groupBTimer)
+        self.assertEqual(groupBTimer.timerId(), groupBTimerId)
+        self.assertTrue(groupBTimer.isActive())
+
+        processQtEvents()
+
+        self.assertEqual(destroyed, [True])
+        self.assertFalse(isValid(groupATimer))
+
+        manager._activeReplies.clear()
+        manager._replySubscriptions.clear()
+        manager.deleteLater()
+
+    def testPageNavigationIsPresentationOnlyForAutoUpdateScheduler(self):
+        """Keep page show/hide cycles outside scheduler policy ownership."""
+        subscriptions = {'group-a': self._subscription()}
+
+        with mock.patch.object(Storage, 'UserSubs', return_value=subscriptions):
+            manager = SubscriptionManager()
+            timer = manager._autoUpdateTimers['group-a']
+            timerId = timer.timerId()
+            manager.refreshAutoUpdates = mock.Mock(
+                side_effect=AssertionError(
+                    'page presentation must not reconcile background schedules'
+                )
+            )
+            serverTable = SimpleNamespace(subsManager=manager)
+            page = SubscriptionPage(serverTable)
+            placeholder = QtWidgets.QWidget()
+            stack = QtWidgets.QStackedWidget()
+            stack.addWidget(page)
+            stack.addWidget(placeholder)
+            stack.show()
+
+            for _index in range(20):
+                stack.setCurrentWidget(placeholder)
+                processQtEvents(1)
+                stack.setCurrentWidget(page)
+                processQtEvents(1)
+
+            self.assertIs(page.table.subsManager, manager)
+            self.assertIs(manager._autoUpdateTimers['group-a'], timer)
+            self.assertEqual(timer.timerId(), timerId)
+            self.assertEqual(len(manager._autoUpdateTimers), 1)
+            manager.refreshAutoUpdates.assert_not_called()
+
+            stack.deleteLater()
+            manager.deleteLater()
+
+        processQtEvents()
+
+    def testManagerDestructionDestroysItsServiceOwnedTimers(self):
+        """Let QObject parent ownership release all scheduler resources."""
+        subscriptions = {'group-a': self._subscription()}
+        manager = self._manager(subscriptions)
+        timer = manager._autoUpdateTimers['group-a']
+        destroyed = []
+        manager.destroyed.connect(lambda *_args: destroyed.append('manager'))
+        timer.destroyed.connect(lambda *_args: destroyed.append('timer'))
+
+        manager.deleteLater()
+        processQtEvents()
+
+        self.assertFalse(isValid(manager))
+        self.assertFalse(isValid(timer))
+        self.assertCountEqual(destroyed, ('manager', 'timer'))
+
+    def testMissingSubscriptionRemovalPrunesTimerDuringFullReconciliation(self):
+        """Retain removal behavior while unchanged groups remain untouched."""
+        subscriptions = {'group-a': self._subscription()}
+        manager = self._manager(subscriptions)
+        timer = manager._autoUpdateTimers['group-a']
 
         subscriptions.clear()
 
