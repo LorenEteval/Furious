@@ -91,6 +91,7 @@ from Furious.Window.QRCodeWindow import (
 from Furious.Window.SettingsPage import (
     _ApplicationThemeSettingsCard,
     _SystemProxySettingsCard,
+    SettingsPage,
 )
 from Furious.Window.SubscriptionPage import _SubscriptionEditorDialog
 from Furious.Widget.ConnectionButton import ConnectionButton
@@ -322,6 +323,137 @@ class ComboTranslationLayoutTest(unittest.TestCase):
 
                 parent.close()
                 parent.deleteLater()
+
+
+class SettingsPageOrganizationTest(unittest.TestCase):
+    """Protect General/Application membership and existing action delegation."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create the process-wide headless QApplication."""
+        application()
+
+    def tearDown(self):
+        """Finish deferred Settings-page deletion between tests."""
+        collectAtBoundary()
+
+    def buildPage(self, *, platform='Windows', flatpakID=''):
+        """Build one isolated Settings page for the requested platform state."""
+        callbacks = {
+            'checkForUpdates': mock.Mock(),
+            'openAboutPage': mock.Mock(),
+            'restartAsAdmin': mock.Mock(),
+            'openApplicationFolder': mock.Mock(),
+        }
+        proxyBypassDialog = mock.Mock()
+        networkTestDialog = mock.Mock()
+
+        with (
+            isolatedSettings(),
+            mock.patch('Furious.Window.SettingsPage.PLATFORM', platform),
+            mock.patch(
+                'Furious.Window.SettingsPage.SystemRuntime.isAdmin',
+                return_value=False,
+            ),
+            mock.patch(
+                'Furious.Window.SettingsPage.SystemRuntime.flatpakID',
+                return_value=flatpakID,
+            ),
+            mock.patch(
+                'Furious.Window.SettingsPage.SystemRuntime.isAssetsFolderWritable',
+                return_value=False,
+            ),
+            mock.patch(
+                'Furious.Window.SettingsPage.AppSettings.isStateON_',
+                return_value=False,
+            ),
+            mock.patch.object(SettingsPage, '_buildPluginSections'),
+            mock.patch('Furious.Window.SettingsPage.AppSettingsController'),
+        ):
+            page = SettingsPage(
+                tunSettingsDialogFactory=mock.Mock(),
+                proxyBypassDialog=proxyBypassDialog,
+                networkTestDialog=networkTestDialog,
+                **callbacks,
+            )
+
+        return page, callbacks
+
+    def testGeneralEndsWithSystemAndEnvironmentActions(self):
+        """Keep preferences first and Application focused on maintenance/about."""
+        page, _callbacks = self.buildPage()
+
+        expectedGeneralCards = [
+            page.tunModeCard,
+            page.applicationThemeCard,
+            page.languageCard,
+            page.monochromeCard,
+            page.startupCard,
+            page.powerSaveCard,
+            page.restartCard,
+            page.openFolderCard,
+        ]
+
+        self.assertEqual(page.generalSection.cards, expectedGeneralCards)
+        self.assertEqual(
+            page.applicationSection.cards,
+            [page.updateCard, page.aboutCard],
+        )
+        self.assertEqual(
+            [
+                page.generalSection.layout.itemAt(index + 1).widget()
+                for index in range(len(expectedGeneralCards))
+            ],
+            expectedGeneralCards,
+        )
+        self.assertTrue(
+            all(card.parent() is page.generalSection for card in expectedGeneralCards)
+        )
+
+        page.close()
+        page.deleteLater()
+
+    def testMovedCardsKeepTheirInjectedActions(self):
+        """Move presentation without replacing restart or folder behavior."""
+        page, callbacks = self.buildPage()
+
+        page.restartCard.button.click()
+        page.openFolderCard.button.click()
+
+        callbacks['restartAsAdmin'].assert_called_once_with()
+        callbacks['openApplicationFolder'].assert_called_once_with()
+        callbacks['checkForUpdates'].assert_not_called()
+        callbacks['openAboutPage'].assert_not_called()
+
+        page.close()
+        page.deleteLater()
+
+    def testMovedCardsPreservePlatformVisibility(self):
+        """Retain the existing restart, Darwin, and Flatpak visibility gates."""
+        cases = (
+            ('Windows', '', True, True),
+            ('Darwin', '', True, False),
+            ('Linux', '', False, True),
+            ('Linux', 'io.github.LorenEteval.Furious', False, False),
+        )
+
+        for platform, flatpakID, hasRestart, hasOpenFolder in cases:
+            with self.subTest(platform=platform, flatpakID=flatpakID):
+                page, _callbacks = self.buildPage(
+                    platform=platform,
+                    flatpakID=flatpakID,
+                )
+
+                self.assertEqual(page.restartCard is not None, hasRestart)
+                self.assertEqual(page.openFolderCard is not None, hasOpenFolder)
+
+                for card in (page.restartCard, page.openFolderCard):
+                    if card is not None:
+                        self.assertIn(card, page.generalSection.cards)
+                        self.assertNotIn(card, page.applicationSection.cards)
+
+                page.close()
+                page.deleteLater()
 
 
 def _grayscaleBuffer(image: QImage):

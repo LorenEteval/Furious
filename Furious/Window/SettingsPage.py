@@ -854,7 +854,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 _('Restart with privileges required by system-level networking.'),
                 _('Restart'),
             )
-            self.applicationSection.addCard(self.restartCard)
+            self.generalSection.addCard(self.restartCard)
         else:
             self.restartCard = None
 
@@ -866,7 +866,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 _('Open the folder containing the current application.'),
                 _('Open'),
             )
-            self.applicationSection.addCard(self.openFolderCard)
+            self.generalSection.addCard(self.openFolderCard)
         else:
             self.openFolderCard = None
 
