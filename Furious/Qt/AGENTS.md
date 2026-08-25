@@ -9,8 +9,8 @@ Use the `manage-qt-pyside6-lifetimes` skill for Qt ownership or lifecycle work.
 - Pass source text at construction when a control retains it for retranslation. Preserve focus, keyboard, shortcuts,
   accessibility, translated-text growth, high-DPI, responsive layout, and both themes.
 - `AppQMessageBox.windowTitle` is native metadata. Visible hierarchy is `heading`, `text`, then `informativeText`.
-  `AppQMessageBox.open()` bypasses `AppQDialog.open()`, so its separate message-box registry is its actual async owner;
-  keep that registry and the base destroyed cleanup balanced.
+  `AppQMessageBox.open()` delegates asynchronous ownership to `AppQDialog.open()`; do not add a parallel message-box
+  registry or release a transient box before native destruction completes.
 - `AppStyleSheet` is the public style authority. `StyleSheets` contains internal QSS fragments that consume the semantic
   palette; application code does not import fragments directly.
 

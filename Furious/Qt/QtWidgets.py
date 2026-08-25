@@ -943,12 +943,6 @@ class AppQMessageBox(AppQTransientDialog):
     MultipleActionBaseWidth = 520
     MaximumSurfaceWidth = 720
 
-    # AppQDialog already wires a cleanup callback for its asynchronous registry.
-    # This message-box-specific registry repeats that cleanup so open() can bypass
-    # AppQDialog.open() while preserving QMessageBox-compatible show behavior.
-    # The duplicate cleanup is harmless and idempotent, but future changes must
-    # keep both registries synchronized or consolidate them deliberately.
-    _openMessageBoxes = {}
     _standardButtonOrder = (
         StandardButton.Ok,
         StandardButton.Save,
@@ -969,19 +963,6 @@ class AppQMessageBox(AppQTransientDialog):
         StandardButton.Reset,
         StandardButton.RestoreDefaults,
     )
-
-    @staticmethod
-    def _releaseOpenMessageBox(key, *_args):
-        """Release an asynchronously opened message box after destruction."""
-        AppQMessageBox._openMessageBoxes.pop(key, None)
-
-    @staticmethod
-    def _scheduleOpenMessageBoxRelease(key, *_args):
-        """Release an async message box after destroyed-signal dispatch."""
-        QtCore.QTimer.singleShot(
-            0,
-            functools.partial(AppQMessageBox._releaseOpenMessageBox, key),
-        )
 
     def __init__(self, *args, **kwargs):
         """Initialize the message box while preserving QMessageBox arguments."""
@@ -1011,7 +992,6 @@ class AppQMessageBox(AppQTransientDialog):
 
         super().__init__(parent=parent, **kwargs)
 
-        self._lifetimeKey = object()
         self._windowMask = None
         self._icon = self.Icon.NoIcon
         self._heading = ''
@@ -1025,15 +1005,6 @@ class AppQMessageBox(AppQTransientDialog):
         self._escapeButton = None
         self._clickedButton = None
         self._handlingButton = False
-
-        scheduleRelease = functools.partial(
-            AppQMessageBox._scheduleOpenMessageBoxRelease,
-            self._lifetimeKey,
-        )
-
-        # Message boxes are delete-on-close. Their asynchronous owner releases
-        # them only after native destruction and its signal dispatch complete.
-        self.destroyed.connect(scheduleRelease)
 
         self.setObjectName('AppMessageBox')
 
@@ -1821,20 +1792,10 @@ class AppQMessageBox(AppQTransientDialog):
         return QDialog.exec(self)
 
     def open(self):
-        """Open and retain the message box until it finishes or is destroyed."""
-        key = self._lifetimeKey
-        AppQMessageBox._openMessageBoxes[key] = self
+        """Prepare and open using the shared transient-dialog lifetime owner."""
+        self._prepareForPresentation()
 
-        try:
-            self._prepareForPresentation()
-
-            return QDialog.open(self)
-        except Exception:
-            # Any non-exit exceptions
-
-            AppQMessageBox._releaseOpenMessageBox(key)
-
-            raise
+        return super().open()
 
     def done(self, result):
         """Release the dimming mask before completing the transient dialog."""

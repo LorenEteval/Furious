@@ -130,7 +130,6 @@ class QtLifetimeTest(unittest.TestCase):
         collectAtBoundary()
 
         self.assertEqual(AppQDialog._openDialogs, {})
-        self.assertEqual(AppQMessageBox._openMessageBoxes, {})
 
     def assertAllDestroyed(self, references, destroyed, expected):
         """Assert weak wrappers and native destroyed signals agree."""

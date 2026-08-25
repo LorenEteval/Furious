@@ -123,11 +123,10 @@ class DialogGeometryTest(unittest.TestCase):
         application()
 
     def tearDown(self):
-        """Drain deferred deletion and require both async registries to settle."""
+        """Drain deferred deletion and require async ownership to settle."""
         collectAtBoundary()
 
         self.assertEqual(AppQDialog._openDialogs, {})
-        self.assertEqual(AppQMessageBox._openMessageBoxes, {})
 
     def dispose(self, dialog):
         """Destroy a reusable fixture after its assertion scope."""
@@ -309,17 +308,25 @@ class DialogGeometryTest(unittest.TestCase):
             buttons=AppQMessageBox.StandardButton.Ok,
         )
         key = openBox._lifetimeKey
+        heldAtFinished = []
+        openBox.finished.connect(
+            lambda _result: heldAtFinished.append(key in AppQDialog._openDialogs)
+        )
 
         openBox.open()
         processQtEvents()
 
         self.assertEqual(openEvents, [True])
-        self.assertIn(key, AppQMessageBox._openMessageBoxes)
+        self.assertIn(key, AppQDialog._openDialogs)
 
         openBox.accept()
+
+        self.assertEqual(heldAtFinished, [True])
+        self.assertIn(key, AppQDialog._openDialogs)
+
         collectAtBoundary()
 
-        self.assertNotIn(key, AppQMessageBox._openMessageBoxes)
+        self.assertNotIn(key, AppQDialog._openDialogs)
 
         execEvents = []
         execBox = CountingMessageBox(

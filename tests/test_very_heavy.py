@@ -23,7 +23,7 @@ from Furious.Backends.ExternalCore import ConfigExternalCore, ExternalCoreProces
 from Furious.Interface import ApplicationRunner
 from Furious.Models import LogCategory
 from Furious.Plugins import FuriousPlugin, PluginMetadata, PluginRegistry
-from Furious.Qt import AppQMessageBox, AppQTransientDialog
+from Furious.Qt import AppQDialog, AppQMessageBox, AppQTransientDialog
 from Furious.Utility import AppMainProcess
 from Furious.Service import APPLICATION_LOG_CATEGORY, LogManager, MetricsHistory
 from Furious.Widget import NavigationView
@@ -329,7 +329,7 @@ class VeryHeavyContractTest(unittest.TestCase):
         self.assertEqual(resourceSnapshot()['threads'], baseline['threads'])
 
     def testFiveHundredMessageBoxesLeaveNoRegistryEntries(self):
-        """Exercise the specialized asynchronous registry at release scale."""
+        """Exercise shared asynchronous dialog ownership at release scale."""
         references = []
 
         for index in range(500):
@@ -350,7 +350,7 @@ class VeryHeavyContractTest(unittest.TestCase):
         collectAtBoundary()
 
         self.assertTrue(all(reference() is None for reference in references))
-        self.assertFalse(AppQMessageBox._openMessageBoxes)
+        self.assertFalse(AppQDialog._openDialogs)
 
 
 if __name__ == '__main__':

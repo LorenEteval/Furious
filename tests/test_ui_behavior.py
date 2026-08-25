@@ -71,6 +71,7 @@ from Furious.Plugins.API import RoutingOption
 from Furious.Qt import (
     AppHue,
     AppQComboBox,
+    AppQDialog,
     AppQMessageBox,
     AppQSwitch,
     AppStyleSheet,
@@ -1631,7 +1632,7 @@ class DialogBehaviorTest(unittest.TestCase):
         dialog.deleteRule()
         dialog.editRule()
 
-        self.assertEqual(AppQMessageBox._openMessageBoxes, {})
+        self.assertEqual(AppQDialog._openDialogs, {})
         self.assertEqual(dialog.routing['rules'], [])
 
         dialog.closeWindowButton.click()
@@ -1911,7 +1912,7 @@ class DialogBehaviorTest(unittest.TestCase):
             finished,
             [int(AppQMessageBox.StandardButton.Cancel)],
         )
-        self.assertEqual(AppQMessageBox._openMessageBoxes, {})
+        self.assertEqual(AppQDialog._openDialogs, {})
 
 
 class SharedConnectionPresentationTest(unittest.TestCase):

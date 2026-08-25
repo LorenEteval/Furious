@@ -28,7 +28,7 @@ class IsolatedDisplayMatrixTest(unittest.TestCase):
     """Keep navigation and transient dialogs stable across supported scales."""
 
     Script = r"""
-from Furious.Qt import AppQMessageBox, AppStyleSheet
+from Furious.Qt import AppQDialog, AppQMessageBox, AppStyleSheet
 from Furious.Widget import NavigationView
 
 from PySide6 import QtCore
@@ -96,7 +96,7 @@ navigation.close()
 navigation.deleteLater()
 collectAtBoundary()
 
-assert not AppQMessageBox._openMessageBoxes
+assert not AppQDialog._openDialogs
 """
 
     def testScaleAndThemeMatrix(self):

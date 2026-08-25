@@ -360,9 +360,9 @@ Reusable dialogs follow a different policy. A reusable dialog is normally hidden
 `WA_DeleteOnClose` merely to make cleanup uniform.
 
 Furious implements these policies through `AppQDialog`, `AppQTransientDialog`, and
-`AppQMessageBox`. `AppQMessageBox` currently has an additional registry because its
-QMessageBox-compatible `open()` path bypasses the base implementation; its cleanup must
-remain synchronized with the base dialog policy or be deliberately consolidated.
+`AppQMessageBox`. Their asynchronous `open()` paths share the `AppQDialog` lifetime
+registry; message-box presentation behavior must delegate ownership to that base path
+rather than introduce a parallel registry.
 
 ## 14. Packaged and Compiled Builds Require Extra Caution
 
