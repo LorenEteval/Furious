@@ -1,20 +1,13 @@
-# Interface contract guidance
+# Interface guidance
 
-- This package defines small, low-level contracts shared across layers. Keep imports cheap and avoid depending on UI,
-  controllers, services, repositories, or concrete backends.
-- Abstract methods state observable behavior, ownership, mutation, and failure contracts; concrete implementations may
-  add detail but must not weaken them.
-- `CoreRuntime` is the canonical mechanism-neutral lifecycle contract. Preserve its semantic exit codes, `startError()`,
-  callback order, serialization behavior, and bounded stop expectations.
-- Do not introduce mechanism-specific aliases for `CoreRuntime` or mistake the semantic runtime contract for an
-  operating-system process.
-- Serialization uses the shared `Furious.Models` encoders. Preserve supported dict subclasses such as
-  `CoreConfiguration`; return/raise behavior must be documented and failures must retain useful diagnostics.
-- Storage contracts intentionally expose live mutable collections. State that explicitly—do not label them copies—and
-  keep persistence/ordering semantics in concrete repositories.
-- Editor bindings translate between widgets and configuration but do not decide process/runtime policy.
-
-## Verification
-
-- Contract tests cover representative implementations, serialization failures, lifecycle/error behavior, mutable-storage
-  semantics, and import independence.
+- This package defines small contracts shared by lower layers. Keep it cheap to import and independent of UI,
+  controllers, services, repositories, and concrete backends.
+- Contracts state observable lifecycle, ownership, mutation, and failure semantics; implementations may strengthen but
+  not weaken them.
+- `CoreRuntime` is mechanism-neutral. Preserve semantic exit codes, `startError()`, callback order, serialization, and
+  bounded stop expectations; use process terminology only for actual OS processes.
+- Storage contracts intentionally expose live mutable collections. Editor bindings translate widget/configuration
+  values but do not own runtime policy.
+- Shared encoders support `CoreConfiguration` and compatible mappings; serialization failures retain useful context.
+- Verify import independence and representative implementations for lifecycle/error, serialization, and live-storage
+  semantics.

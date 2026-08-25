@@ -1,50 +1,32 @@
-# Backend and core-integration guidance
+# Backend guidance
 
-- A backend owns protocol parsing/export, editor factories, runtime materialization, process integration, statistics,
-  validation, and native-TUN capability for its core. Register these through plugin capabilities instead of adding
-  shared-manager conditionals.
-- The JSON/document submitted to a core is the runtime authority. Build it from a deep/runtime copy; never mutate the
-  persisted profile while preparing connection, routing, logging, testing, or TUN state.
-- Preserve full user-authored core documents and unknown supported fields. Report a lossless-compatibility failure
-  instead of silently compiling or deleting unsupported configuration.
+## Scope and extension
 
-## Structured editor contract
+- A backend owns its protocol parsing/export, structured editors, runtime factory, validation, statistics, routing, and
+  native-TUN behavior. Expose variation through plugin capabilities instead of shared-manager core-name branches.
+- The full document submitted to the core is the runtime authority. Derive it from a copy and preserve the persisted
+  profile plus unknown supported fields; fail visibly when a lossless representation is impossible.
+- Runtime modules remain importable without constructing Qt editors. Registrations/imports must be literal enough for
+  plugin discovery and Nuitka inclusion; factories create fresh widgets/runtimes and registries never retain them.
 
-- `factoryToInput()` is normally observational: loading an editor must not add defaults or otherwise mutate the
-  configuration document unless that backend has a documented compatibility normalization, such as Xray transport
-  aliases.
-- `inputToFactory()` writes only fields represented by the editor and returns whether it actually changed the
-  document. Do not materialize an absent effective default merely because the editor displays it.
-- Display unknown future string values exactly and preserve them on an untouched load/save round trip. Editing one
-  known leaf must preserve unknown fields and unknown siblings elsewhere in the same object.
-- A deliberate user switch to a supported tagged variant may replace the incompatible active variant. Keep unrelated
-  extension fields, and do not treat a fallback page used for display as a user selection.
+## Structured editors
 
-## Native TUN policy
+- Loading is observational except for a documented compatibility normalization. Saving writes only represented fields
+  that changed, preserves unknown siblings, and does not materialize absent effective defaults.
+- Unknown future string values remain visible and survive an untouched round trip. A deliberate switch to a known
+  tagged variant may replace only the incompatible variant data that control owns.
 
-For a normal connection:
+## Native TUN and runtime ownership
 
-- If the Furious native-TUN option is enabled, replace any runtime native TUN with the generated TUN; mark TUN handled
-  and do not start application tun2socks.
-- If the option is disabled and the user document contains native TUN, preserve it unchanged; mark TUN handled and do
-  not start tun2socks.
-- If neither exists, do not inject native TUN; global TUN mode may use tun2socks.
-- Proxy-only operations such as speed/latency tests explicitly strip native TUN from their own temporary copy.
-
-Never remove an explicit user TUN merely because an application toggle is off, and never run native TUN plus application
-tun2socks together.
-
-## Runtime and UI
-
-- Core runtimes expose actionable `startError()`, exact resource ownership, bounded startup/shutdown, and deterministic
-  cleanup. Process-backed runtimes additionally own and reap their exact child process. Keep platform exit codes
-  semantically intact.
-- Keep runtime modules importable without constructing editor widgets. Use literal, discoverable lazy
-  imports/registrations so Nuitka includes every editor family without per-editor command changes.
-- Backend editors follow `Furious/Qt/AGENTS.md`; factories create fresh transient editors and registries retain
-  factories/classes, not editor instances.
+- Normal connection preparation operates on a runtime copy. With the backend native-TUN option enabled, generated TUN
+  replaces runtime native TUN and suppresses application tun2socks. With it disabled, an existing user native TUN is
+  preserved and also suppresses tun2socks. Without either, global TUN mode may use tun2socks.
+- Proxy-only tests explicitly strip native TUN from their own copy. Never run two TUN implementations or silently turn
+  malformed explicit TUN into another networking mode.
+- A `CoreRuntime` owns exact resources, reports an actionable `startError()`, and has bounded, idempotent startup failure
+  and shutdown cleanup. Process-backed implementations additionally reap their exact child.
 
 ## Verification
 
-- Test URI/mapping round trips, malformed input, runtime document equality, original-document immutability, all
-  native-TUN matrix cases, proxy-only stripping, failed core startup, and cleanup.
+- Test mapping/URI round trips, malformed and unknown input, original-document immutability, runtime document equality,
+  TUN matrices/proxy-only stripping, failed startup, and cleanup. Editor changes also require lifetime tests.

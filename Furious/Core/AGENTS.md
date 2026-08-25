@@ -1,22 +1,17 @@
-# Process-backed core-runtime guidance
+# Process-backed runtime guidance
 
-- This package provides low-level process-backed `CoreRuntime`, queue, output-redirection, and tun2socks primitives. It
-  must not own controller, repository, page, or protocol policy.
-- Own exact child `Process`/handle objects. Startup validates launch specs and readiness; shutdown uses bounded
-  terminate/join/kill escalation, reaps the child, stops timers/queues, clears callbacks, and is idempotent.
-- Preserve platform exit codes and expose actionable startup errors. Do not convert serialization/start failures to an
-  unexplained success or “Unknown error” when context exists.
-- Child-output transports are bounded and non-blocking for producers. Drain them in bounded batches regardless of page
-  visibility: use a short interval while messages flow and back off to a finite maximum interval while idle. Truncate
-  oversized messages and drop excess burst output at the documented queue boundary rather than retaining it
-  indefinitely. Presentation may remain lazy after collection.
-- Process targets do not touch GUI objects. Queue/monitor callbacks cross to the owning Qt thread through the
-  established timer/signal boundary.
-- A timer without a QObject parent requires an explicit durable Python owner and `dispose()` path. Never rely on wrapper
-  finalization for process or timer cleanup.
-- Temporary output files/streams close on every success and error path; avoid unbounded queues and blocking reads.
+## Scope and ownership
+
+- This package supplies low-level process-backed `CoreRuntime`, output transport, and tun2socks primitives. It does not
+  own controller, repository, page, or backend protocol policy.
+- Own and reap exact child/handle objects. Startup validates launch/readiness; shutdown performs bounded
+  terminate/join/kill escalation, stops queues/timers, clears callbacks, and is idempotent.
+- Preserve semantic exit codes and actionable startup diagnostics. Child targets never touch GUI objects; callbacks
+  cross through the established Qt timer/signal boundary.
+- Bound producer queues/messages and drain independently of page visibility. Presentation may be lazy; process pipes
+  cannot be. Parentless timers require a durable Python owner and explicit `dispose()` path.
 
 ## Verification
 
-- Test invalid specs, failed spawn, early exit, normal output, bounded stop escalation, repeated dispose, exact-child
-  cleanup, and no residual timers/threads/handles.
+- Test invalid launch, failed spawn, early exit, burst output bounds, normal stop, forced escalation, repeated disposal,
+  and absence of residual children, timers, queues, or handles.

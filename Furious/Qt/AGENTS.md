@@ -1,64 +1,38 @@
 # Qt foundation guidance
 
-Use the `manage-qt-pyside6-lifetimes` skill for any Qt ownership or lifecycle change.
+Use the `manage-qt-pyside6-lifetimes` skill for Qt ownership or lifecycle work.
 
-## Public UI primitives
+## Canonical UI surface
 
-- `Furious.Qt` is the canonical Fluent/theme/translation-aware UI surface. Extend/reuse `AppQ*` controls instead of
-  styling raw Qt controls at call sites.
-- Construction-time source text should be retained by the control for retranslation. Do not duplicate manual
-  `retranslate()` code where an `AppQ*` widget/action/menu already supports it.
-- `AppQMessageBox.windowTitle()` is native window-manager/accessibility metadata and is not rendered by the frameless
-  Fluent surface. Put an optional visible semantic title in `heading`, the primary explanation in `text`, and supporting
-  details in `informativeText`. Never rely on `setWindowTitle()` alone for user-visible information, and do not promote a
-  generic application-name title into a visible heading.
-- Preserve public exports and wildcard-import compatibility carefully; keep optional/heavy facilities lazily imported
-  where practical.
-- `AppStyleSheet` remains the sole public stylesheet authority. Internal `StyleSheets` modules are data-oriented QSS
-  fragments that consume the centralized semantic palette; application consumers must not import fragments directly.
-- For composite controls, let the outer widget own its frame, radius, and focus indication. Sub-control hover/pressed
-  fills must remain inside that frame (normally through padding/content origin), and state-order changes should be
-  verified in both application themes.
+- Extend/reuse `Furious.Qt` `AppQ*` controls for Fluent styling, themes, translation, dialogs, menus/actions, inputs,
+  tables/lists, and top-level windows. Do not create call-site styling or parallel lifetime registries.
+- Pass source text at construction when a control retains it for retranslation. Preserve focus, keyboard, shortcuts,
+  accessibility, translated-text growth, high-DPI, responsive layout, and both themes.
+- `AppQMessageBox.windowTitle` is native metadata. Visible hierarchy is `heading`, `text`, then `informativeText`.
+  `AppQMessageBox.open()` bypasses `AppQDialog.open()`, so its separate message-box registry is its actual async owner;
+  keep that registry and the base destroyed cleanup balanced.
+- `AppStyleSheet` is the public style authority. `StyleSheets` contains internal QSS fragments that consume the semantic
+  palette; application code does not import fragments directly.
 
-## Ownership and destruction
+## Lifetime and threading
 
-- `AppQDialog` owns platform-neutral presentation geometry: simple subclasses declare `DEFAULT_DIALOG_SIZE` or
-  `FIXED_DIALOG_SIZE`; procedural `prepareInitialGeometry()` runs only at first presentation after subclass construction.
-  Do not call subclass geometry hooks from constructors or manipulate private first-show state. Dialogs retain the
-  established center-on-each-presentation behavior unless a specialized class explicitly owns another centering policy.
-- `AppQDialog` provides an asynchronous open-dialog registry. `AppQMessageBox` has an additional registry cleanup layer;
-  it is redundant but harmless. Keep both registries balanced if either implementation changes.
-- `AppQTransientDialog` is delete-on-close. Connect completion before `open()` and never access it after destruction.
-  Reusable dialogs/windows instead need a durable owner and must not be delete-on-close.
-- In Nuitka/PySide6 builds, compiled bound methods passed directly to `SignalInstance.connect()` may be protected for the
-  process lifetime. Connect signals to transient receivers with `connectWeakly(signal, receiver, 'methodName')`; do not
-  replace this with a closure that strongly captures the receiver.
-- `AppQAction.callback` is a deliberate strong reference; owner scope must be no longer than the callback receiver.
-  Application-lifetime actions cannot capture transient bound methods.
-- Parent child widgets/models/delegates/timers where their lifetimes match. Explicitly stop/disconnect timers, remove
-  mismatched event filters, abort/delete network replies, and clear references when wrappers can outlive C++ objects.
-- Do not cache QObject instances or instance-bound methods in global/unbounded caches. Weak callbacks must not close
-  over their target.
+- Application-lifetime Qt objects have one durable owner; reusable windows retain one deliberate owner; transient
+  dialogs use `AppQTransientDialog`/`AppQMessageBox` and remain retained through deferred native destruction.
+- Direct compiled bound-method signal connections can retain transient receivers in Nuitka builds. Use
+  `connectWeakly(signal, receiver, 'methodName', sender=...)` when the sender is independent/longer-lived; never replace
+  it with a closure or partial capturing the receiver.
+- `AppQAction.callback` is a strong reference. Its owner cannot outlive the callback receiver. Parent or explicitly
+  dispose timers, models, delegates, replies, event filters, menus, animations, and effects.
+- Only the GUI thread mutates widgets. Slots do not sleep or perform unbounded host/network/process work. Coalescing
+  timers are created once and do not multiply across show/hide cycles.
+- Each `QNetworkReply` has one manager/context owner, one terminal cleanup, and a freshness rule when superseded.
+  Schedule deletion on every terminal path; do not attach ad-hoc application attributes to third-party Qt objects.
 
-## Threading and event loops
+## Presentation and verification
 
-- Only the GUI thread mutates widgets. Workers return immutable/result data through queued signals or established
-  managers.
-- Never sleep or perform unbounded host/network/process work in a slot. Timers and debounce/coalescing must have one
-  owner and must not multiply across show/hide cycles.
-- `exec()` is reserved for genuinely synchronous control flow; prefer managed `open()` when continuation logic can live
-  in `finished` callbacks.
-
-## Network replies and presentation
-
-- Give each reply one manager/context owner. Where a newer request supersedes an older one, use a generation/version or
-  equivalent identity check; independent requests do not need a synthetic generation. Handle success/error/abort once
-  and call `deleteLater()` on every terminal path. Do not attach ad-hoc application attributes to third-party Qt
-  objects when a manager mapping suffices.
-- Preserve keyboard, focus, shortcuts, accessibility, light/dark theme, layout responsiveness, and translated-text
-  growth.
-
-## Verification
-
-- Run focused UI behavior and lifetime tests. Repeated open/close/show/refresh cycles must stabilize object, signal,
-  timer, reply, handle, and callback counts.
+- Top-level subclasses use the canonical first-show geometry hooks and centering/retention behavior; do not call
+  overridable geometry hooks from constructors or alter private first-show state.
+- Use `exec()` only when synchronous control flow is required; otherwise connect completion before managed `open()`.
+- Run focused behavior tests plus repeated native lifecycle cycles. For compiled-signal or transient-dialog changes,
+  also run the Nuitka probe and verify destroyed signals, weak references, registries, callbacks, timers, replies, and
+  native resources return to baseline.

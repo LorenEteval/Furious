@@ -1,28 +1,20 @@
-# Plugin architecture guidance
+# Plugin guidance
 
-- `Plugins.API` defines stable capability contracts; `Registry` owns registration, selection, materialization,
-  initialization, rollback, and reverse-order shutdown.
-- Use `CoreRuntimeFactory`, `CoreRuntimeRequest`, and `CoreRuntimeLaunch` consistently across capabilities, registry
-  dispatch, statistics providers, and tests.
-- Plugins contribute factories, handlers, descriptors, immutable metadata, and service providers—not live transient
-  widgets, active core instances, or controller state.
-- The registry intentionally keeps registered plugin and capability-provider objects strongly reachable for the
-  registry lifetime. Their initialization/shutdown contract must release any resources they acquire; this ownership is
-  not permission to cache factory-created UI or runtimes.
-- Protocol parse/export/editor, backend runtime, routing/TUN, statistics, subscription decoding, and navigation behavior
-  belongs behind capabilities. Shared code must not add core-name conditionals when capability dispatch can express the
-  policy.
-- Registration is deterministic and validates every capability family through focused validators before committing
-  any index changes. A plugin failure is isolated, logged with plugin/capability context, and does not corrupt already
-  registered providers.
-- Initialization is transactional: partially initialized plugins are rolled back; shutdown is reverse-order and
-  idempotent.
-- Keep discovery imports literal and side-effect-light for source and Nuitka builds. Avoid circular dependencies from
-  API/model layers into concrete plugins.
-- UI factories create fresh owned widgets. Invalid QObject results are explicitly destroyed; registries never retain
-  rejected objects.
+## Registry and extension contract
+
+- `Plugins.API` defines capability contracts; `Registry` owns validation, deterministic registration/selection,
+  initialization rollback, and reverse-order idempotent shutdown.
+- Use current `CoreRuntimeFactory`, `CoreRuntimeRequest`, and `CoreRuntimeLaunch` vocabulary. Add protocol, runtime,
+  routing/TUN, statistics, subscription, or navigation variation through its capability family rather than central
+  conditionals.
+- Registries strongly own process-lifetime plugins, providers, factories, descriptors, and immutable metadata. They do
+  not own factory-created UI, active runtimes, or controller state; rejected QObject results are destroyed explicitly.
+- Registration validates before committing index changes. A failed plugin is isolated with useful plugin/capability
+  context and cannot corrupt existing providers. Partial initialization is rolled back.
+- Discovery imports stay literal, deterministic, and side-effect-light for source and Nuitka builds. API/model layers
+  never import concrete plugins.
 
 ## Verification
 
-- Test order, duplicate/invalid registration, dynamic dispatch, rollback, shutdown, compiled discovery, and factories
-  returning invalid objects.
+- Test discovery/order, duplicates and invalid capabilities, dispatch, rollback/shutdown, compiled inclusion, and
+  factories returning invalid objects.

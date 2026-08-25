@@ -1,21 +1,17 @@
-# Actions guidance
+# Action guidance
 
-- Actions are thin presentation adapters: resolve current controller/service state at trigger time, invoke the owning
-  API, and present the result. Do not make an action a second owner of connection, routing, repository, or import state.
-- Reuse shared `QAction` command logic for menus/buttons. Keep shortcuts, check state, enabled state, translation, and
-  callback semantics synchronized from one source.
-- `AppQAction.callback` is intentionally a strong reference. Scope actions to a suitable QObject owner; an
-  application-lifetime action must not retain a transient bound method or closure.
-- Import through `profileFromAny`/plugin capabilities. Treat clipboard, file, URI, QR, and subscription text as
-  untrusted; report per-item failures without logging credentials or whole secret-bearing payloads.
-- Long or batched work must yield safely or use an owned worker/progress dialog. Do not sleep the GUI thread.
-- Asynchronous prompts/editors use managed `open()` lifetime and connect completion before opening. Rebuilt dynamic
-  menus must release obsolete `QMenu`/`QAction` objects rather than accumulating them.
-- Preserve structured error semantics in message boxes: error title becomes the visible `heading`, the main message
-  becomes `text`, and diagnostics become `informativeText`; native `windowTitle` remains metadata.
+## Scope and contracts
 
-## Code review rules
+- Actions are thin presentation commands. Resolve current state when triggered, call its owning controller/service, and
+  present the result; do not own connection, routing, import, or persistence state.
+- Share one `QAction` command between menus/buttons so callback, enabled/check state, shortcut, and translation cannot
+  diverge. `AppQAction.callback` is a strong reference, so its QObject owner must not outlive a captured receiver.
+- Import through `profileFromAny` and plugin capabilities. Treat clipboard, file, URI, QR, and subscription content as
+  untrusted and avoid logging secret-bearing payloads.
+- Managed asynchronous dialogs connect completion before `open()`. Long or batched work must yield or use one owned
+  worker/progress dialog; never sleep the GUI thread.
 
-- Flag duplicated controller logic, captured transient widgets, unsanitized sensitive logging, and action-local
-  persistence changes.
-- Verify repeated triggering does not multiply dialogs, callbacks, menus, or workers.
+## Verification
+
+- Verify command state and results plus repeated triggering: dialogs, dynamic menus, callbacks, and workers must return
+  to baseline.

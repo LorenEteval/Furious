@@ -1,51 +1,30 @@
 # Furious package guidance
 
-## Layering and state
+## Architecture
 
-- `Application` is the deliberate broad composition layer. Elsewhere, depend on the narrowest lower-level contract and
-  avoid circular imports or reaching through a page/window when a controller, service, repository, or plugin capability
-  owns the operation.
-- Existing UI code has compatibility paths that reach repositories or application globals. Do not extend that coupling
-  when a controller/service API can be introduced cleanly; migrate incrementally rather than creating a second state
-  authority.
-- Long-lived objects may be exposed through `Frozenlib.Globals`, but accessors must tolerate partial startup and
-  shutdown. Never place transient dialogs, replies, workers, or editor instances in application globals.
-- Keep GUI-thread work short. Worker callbacks publish immutable/result data to the GUI thread; they do not mutate
-  widgets directly.
+- `Application` is the broad composition root. Elsewhere, depend on the narrowest owning model, repository, service,
+  controller, or plugin capability. Do not create a second authority merely to avoid an existing boundary.
+- Process-lifetime accessors in `Frozenlib.Globals` must tolerate partial startup and shutdown. They may expose deliberate
+  application authorities, never transient dialogs, replies, workers, editors, or runtimes.
+- Compatibility code still reaches global accessors and live collections. Do not extend that coupling when a narrow
+  API can be added without a competing cache or state path.
+- Keep GUI-thread work short. Workers publish result data through the established Qt boundary and never mutate widgets
+  directly.
 
-## Qt/PySide6 lifetime invariants
+## Qt ownership
 
-Classify every dynamic Qt object before choosing ownership:
+- Classify Qt objects as application-lifetime, reusable, or transient. Give each one a durable Python owner, compatible
+  QObject parent, and explicit reuse or destruction path.
+- Use the canonical `AppQ*` controls. One-shot dialogs use `AppQTransientDialog` or `AppQMessageBox`; managed `open()` is
+  safe for local variables, while `exec()` is reserved for genuinely synchronous flow. Reusable windows retain one
+  explicit owner.
+- Parent or explicitly dispose timers, models, delegates, replies, event filters, menus, and actions. Never cache a
+  transient QObject or an instance method in a global/unbounded cache.
+- For lifetime-sensitive changes, follow `Furious/Qt/AGENTS.md` and the `manage-qt-pyside6-lifetimes` skill, then run the
+  relevant native and packaged lifecycle checks.
 
-- **Application-lifetime:** main window, navigation pages, shared controllers/managers. Give them one durable
-  application owner and idempotent cleanup.
-- **Reusable:** intentionally hidden and shown again. Retain one explicit Python owner and release it deliberately at
-  final shutdown.
-- **Transient:** editors, prompts, progress windows, and one-shot dialogs. Use a suitable parent plus normal
-  close/deferred deletion; do not retain them after completion.
+## Presentation
 
-Use `AppQTransientDialog` for one-shot dialogs. `AppQDialog.open()` and `AppQMessageBox.open()` retain asynchronous
-dialogs until completion, so local variables are safe; connect `finished` before `open()`. Use `exec()` only where
-synchronous control flow is required. Do not add `WA_DeleteOnClose` universally or use `gc.collect()` as a production
-fix.
-
-QObject parent ownership and Python references are separate concerns. Parent timers/models/delegates where appropriate,
-stop/disconnect owned resources on teardown when auto-disconnection is insufficient, remove event filters when lifetimes
-differ, and clear references after `destroyed`. Never cache a transient QObject instance or an instance method with
-unbounded `lru_cache`.
-
-## UI and translation
-
-- Reuse `AppQ*` Fluent/theme/translation-aware primitives. Prefer layout composition over fixed geometry and preserve
-  keyboard, focus, shortcut, accessibility, and theme behavior.
-- Pass source text at construction when an `AppQ*` control already retranslates it; avoid parallel manual
-  `retranslate()` logic.
-- UI shows errors at the interaction boundary, while services/controllers provide structured, testable failures. Do not
-  broadly catch and hide deleted-wrapper or worker failures.
-
-## Verification
-
-- For changed transient/reusable UI, test open/close/show cycles, weak-reference clearing or deliberate retention,
-  signal/timer stability, and asynchronous completion.
-- Use offscreen Qt and the isolated settings helpers documented in `tests/README.md`. Distinguish allocator high-water
-  behavior from linear live-object/resource growth.
+- Reuse translation/theme-aware construction instead of parallel manual retranslation or one-off styling. Preserve
+  focus, keyboard, shortcut, accessibility, resize, high-DPI, and light/dark behavior.
+- UI presents failures at the interaction boundary; owning services/controllers provide structured, testable results.
