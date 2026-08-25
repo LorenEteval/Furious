@@ -45,8 +45,6 @@ logger = logging.getLogger(__name__)
 registerAppSettings('ServerWidgetWindowSize')
 registerAppSettings('AppMainWindowGeometry')
 registerAppSettings('AppMainWindowState')
-registerAppSettings('AppMainWindowSelectedPage', default='home')
-registerAppSettings('AppMainWindowNavigationExpanded', isBinary=True)
 
 _TRANSLATABLE_NAVIGATION_LABELS = (
     _('Home'),
@@ -114,6 +112,8 @@ class MainWindow(AppQMainWindow):
         if not isinstance(self.logPage, LogPage):
             raise TypeError('application log page must be a LogPage')
 
+        # NavigationView selects the first registered page.  Keep Home first
+        # so every new window session starts from the canonical product page.
         self.navigationView.addPage(
             'home',
             self.homePage,
@@ -147,16 +147,6 @@ class MainWindow(AppQMainWindow):
             'gear-wide-connected.svg',
             placement='bottom',
         )
-        self.navigationView.pageChanged.connect(self._pageChanged)
-        self.navigationView.expandedChanged.connect(self._navigationExpandedChanged)
-
-        self.navigationView.setExpanded(
-            AppSettings.isStateON_('AppMainWindowNavigationExpanded'),
-            animated=False,
-        )
-        self.navigationView.setCurrentPage(
-            str(AppSettings.get('AppMainWindowSelectedPage'))
-        )
         self.setCentralWidget(self.navigationView)
 
         # Preserve the established application-facing server-management API.
@@ -168,19 +158,6 @@ class MainWindow(AppQMainWindow):
         self.trafficStatsManager = self.homePage.trafficStatsManager
 
         self.retranslate()
-
-    @QtCore.Slot(str)
-    def _pageChanged(self, pageId: str):
-        """Persist the current page selected through navigation."""
-        AppSettings.set('AppMainWindowSelectedPage', pageId)
-
-    @QtCore.Slot(bool)
-    def _navigationExpandedChanged(self, expanded: bool):
-        """Persist the navigation menu expansion state."""
-        if expanded:
-            AppSettings.turnON_('AppMainWindowNavigationExpanded')
-        else:
-            AppSettings.turnOFF('AppMainWindowNavigationExpanded')
 
     def showPage(self, pageId: str):
         """Navigate to a registered application page."""

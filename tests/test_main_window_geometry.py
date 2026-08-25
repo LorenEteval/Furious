@@ -25,7 +25,7 @@ from Furious.Controllers.ConnectionController import ConnectionController
 from Furious.Controllers.RoutingController import RoutingController
 from Furious.Controllers.SettingsController import SettingsController
 from Furious.Frozenlib import AppSettings
-from Furious.Service.LogManager import LogManager
+from Furious.Service import LogManager, PluginNavigationManager
 from Furious.Qt import AppQMainWindow
 from Furious.Widget.NavigationView import NavigationView
 from Furious.Window.HomePage import HomePage
@@ -43,6 +43,8 @@ from tests.support import (
     isolatedSettings,
     processQtEvents,
 )
+
+from contextlib import contextmanager
 
 import unittest
 from unittest.mock import patch
@@ -95,6 +97,66 @@ class _GeometryWindow(AppQMainWindow):
         super().__init__()
 
         self.setCentralWidget(QWidget(parent=self))
+
+
+class _InertManager:
+    """Expose only the idle runtime collection used by controllers in UI tests."""
+
+    runtimes = ()
+
+
+@contextmanager
+def _realMainWindow():
+    """Own one fully composed MainWindow and its isolated application services."""
+    app = application()
+    oldServices = (
+        app.connectionController,
+        app.routingController,
+        app.settingsController,
+        app.logManager,
+        app.logPage,
+    )
+    connectionController = ConnectionController(
+        parent=app,
+        coreManager=_InertManager(),
+        updatesManager=_InertManager(),
+    )
+    logManager = LogManager(parent=app)
+    routingController = None
+    window = None
+
+    try:
+        app.connectionController = connectionController
+        routingController = RoutingController(parent=app)
+        app.routingController = routingController
+        app.settingsController = SettingsController()
+        app.logManager = logManager
+        app.logPage = LogPage(manager=logManager)
+
+        with patch.object(HomePage, 'serverImportActions', return_value=()):
+            window = MainWindow()
+
+        yield window
+    finally:
+        if window is not None:
+            window.close()
+            window.deleteLater()
+            collectAtBoundary()
+
+        (
+            app.connectionController,
+            app.routingController,
+            app.settingsController,
+            app.logManager,
+            app.logPage,
+        ) = oldServices
+
+        if routingController is not None:
+            routingController.deleteLater()
+
+        connectionController.deleteLater()
+        logManager.deleteLater()
+        collectAtBoundary()
 
 
 class AppQMainWindowLifecycleTest(unittest.TestCase):
@@ -202,6 +264,151 @@ class AppQMainWindowLifecycleTest(unittest.TestCase):
                     collectAtBoundary()
 
 
+class MainWindowNavigationSessionTest(unittest.TestCase):
+    """Keep page and expansion state live in one window, not in settings."""
+
+    FormerPageKey = 'AppMainWindowSelectedPage'
+    FormerExpansionKey = 'AppMainWindowNavigationExpanded'
+
+    @classmethod
+    def setUpClass(cls):
+        """Create the process-wide headless QApplication."""
+        application()
+
+    def tearDown(self):
+        """Destroy windows and drain deferred deletion between tests."""
+        for window in list(AppQMainWindow._openWindows.values()):
+            window.close()
+            window.deleteLater()
+
+        collectAtBoundary()
+
+    def assertCanonicalPage(self, window: MainWindow):
+        """Assert the navigation selection and stack both point to Home."""
+        self.assertEqual(window.navigationView.currentPageId(), 'home')
+        self.assertIs(window.navigationView.page('home'), window.homePage)
+        self.assertIs(
+            window.navigationView.pageStack.currentWidget(),
+            window.homePage,
+        )
+
+    def testNewSessionUsesCanonicalPageAndIgnoresFormerValues(self):
+        """Ignore every representative value stored by the retired setting."""
+        self.assertNotIn(self.FormerPageKey, AppSettings.SettingsPool)
+        self.assertNotIn(self.FormerExpansionKey, AppSettings.SettingsPool)
+
+        formerValues = (
+            None,
+            'settings',
+            'log',
+            'metrics',
+            'plugin:example:status',
+            'removed-page',
+        )
+
+        for formerValue in formerValues:
+            with self.subTest(formerValue=formerValue), isolatedSettings() as settings:
+                if formerValue is not None:
+                    settings.setValue(self.FormerPageKey, formerValue)
+
+                with _realMainWindow() as window:
+                    self.assertCanonicalPage(window)
+                    self.assertFalse(window.navigationView.isExpanded())
+
+    def testNavigationDoesNotCreateOrUpdateFormerSetting(self):
+        """Keep both absent and stale obsolete keys untouched by navigation."""
+        with isolatedSettings() as settings, _realMainWindow() as window:
+            window.showPage('settings')
+            window.navigationView.setExpanded(True, animated=False)
+            window.cleanup()
+
+            self.assertFalse(settings.contains(self.FormerPageKey))
+            self.assertFalse(settings.contains(self.FormerExpansionKey))
+
+        with isolatedSettings() as settings:
+            settings.setValue(self.FormerPageKey, 'log')
+            settings.setValue(self.FormerExpansionKey, '1')
+
+            with _realMainWindow() as window:
+                self.assertCanonicalPage(window)
+                self.assertFalse(window.navigationView.isExpanded())
+                window.showPage('settings')
+                window.navigationView.setExpanded(True, animated=False)
+                window.cleanup()
+
+            self.assertEqual(settings.value(self.FormerPageKey), 'log')
+            self.assertEqual(settings.value(self.FormerExpansionKey), '1')
+
+    def testNewWindowResetsSessionStateButRestoresGeometry(self):
+        """Reset page and expansion while retaining persistent geometry."""
+        expectedSize = QtCore.QSize(760, 600)
+
+        with isolatedSettings() as settings:
+            with _realMainWindow() as firstWindow:
+                firstWindow.show()
+                firstWindow.resize(expectedSize)
+                firstWindow.navigationView.setExpanded(True, animated=False)
+                firstWindow.showPage('settings')
+                firstWindow.cleanup()
+
+                self.assertEqual(
+                    firstWindow.navigationView.currentPageId(),
+                    'settings',
+                )
+                self.assertTrue(firstWindow.navigationView.isExpanded())
+
+            self.assertFalse(settings.contains(self.FormerPageKey))
+            self.assertFalse(settings.contains(self.FormerExpansionKey))
+
+            with _realMainWindow() as secondWindow:
+                secondWindow.show()
+
+                self.assertCanonicalPage(secondWindow)
+                self.assertFalse(secondWindow.navigationView.isExpanded())
+                self.assertEqual(secondWindow.size(), expectedSize)
+
+    def testHideAndShowPreservesLivePage(self):
+        """Do not reset the page while reusing the same MainWindow instance."""
+        with isolatedSettings(), _realMainWindow() as window:
+            window.show()
+            window.showPage('settings')
+            window.hide()
+            window.show()
+            processQtEvents()
+
+            self.assertEqual(window.navigationView.currentPageId(), 'settings')
+            self.assertIs(
+                window.navigationView.pageStack.currentWidget(),
+                window.settingsPage,
+            )
+
+    def testPluginRegistrationCannotReplaceCanonicalPage(self):
+        """Keep Home selected even when a stale plugin page is registered."""
+
+        def registerPluginPage(_manager, navigationView):
+            pluginPage = QWidget(parent=navigationView)
+            navigationView.addPage(
+                'plugin:example:status',
+                pluginPage,
+                'Plugin',
+                'house-door.svg',
+            )
+
+        with isolatedSettings() as settings:
+            settings.setValue(self.FormerPageKey, 'plugin:example:status')
+
+            with patch.object(
+                PluginNavigationManager,
+                'registerPages',
+                autospec=True,
+                side_effect=registerPluginPage,
+            ), _realMainWindow() as window:
+                self.assertCanonicalPage(window)
+                self.assertIsNotNone(
+                    window.navigationView.page('plugin:example:status')
+                )
+
+
 class MainWindowGeometryTest(unittest.TestCase):
     """Keep restoration driven by persisted-state validity, not dimensions."""
 
@@ -232,110 +439,53 @@ class MainWindowGeometryTest(unittest.TestCase):
     def testRealMainWindowUsesSharedLifecycleAfterComposition(self):
         """Construct the complete page hierarchy before first-show preparation."""
         app = application()
-        oldServices = (
-            app.connectionController,
-            app.routingController,
-            app.settingsController,
-            app.logManager,
-            app.logPage,
-        )
+        with isolatedSettings(), _realMainWindow() as window:
+            with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
+                window.show()
 
-        class _InertManager:
-            """Expose only the idle runtime collection used by the controller."""
+                self.assertEqual(
+                    sum(
+                        isinstance(widget, MainWindow)
+                        for widget in app.topLevelWidgets()
+                    ),
+                    1,
+                )
+                self.assertEqual(len(window.findChildren(NavigationView)), 1)
+                self.assertIs(window.centralWidget(), window.navigationView)
 
-            runtimes = ()
+                self.assertEqual(window.size(), window.DEFAULT_WINDOW_SIZE)
+                moveToCenter.assert_called_once_with(window)
 
-        connectionController = ConnectionController(
-            parent=app,
-            coreManager=_InertManager(),
-            updatesManager=_InertManager(),
-        )
-        logManager = LogManager(parent=app)
-        routingController = None
-        window = None
+                window.move(83, 97)
+                movedPosition = QtCore.QPoint(window.pos())
+                window.hide()
+                window.show()
 
-        try:
-            with isolatedSettings():
-                app.connectionController = connectionController
-                routingController = RoutingController(parent=app)
-                app.routingController = routingController
-                app.settingsController = SettingsController()
-                app.logManager = logManager
-                app.logPage = LogPage(manager=logManager)
+                self.assertEqual(window.pos(), movedPosition)
+                moveToCenter.assert_called_once_with(window)
 
-                with patch.object(HomePage, 'serverImportActions', return_value=()):
-                    window = MainWindow()
+            expectedPages = {
+                'home': window.homePage,
+                'log': window.logPage,
+                'subscription': window.subscriptionPage,
+                'metrics': window.metricsPage,
+                'settings': window.settingsPage,
+            }
 
-                with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
-                    window.show()
+            for pageId, page in expectedPages.items():
+                with self.subTest(pageId=pageId):
+                    window.showPage(pageId)
+                    processQtEvents()
 
                     self.assertEqual(
-                        sum(
-                            isinstance(widget, MainWindow)
-                            for widget in app.topLevelWidgets()
-                        ),
-                        1,
+                        window.navigationView.currentPageId(),
+                        pageId,
                     )
-                    self.assertEqual(len(window.findChildren(NavigationView)), 1)
-                    self.assertIs(window.centralWidget(), window.navigationView)
-
-                    self.assertEqual(window.size(), window.DEFAULT_WINDOW_SIZE)
-                    moveToCenter.assert_called_once_with(window)
-
-                    window.move(83, 97)
-                    movedPosition = QtCore.QPoint(window.pos())
-                    window.hide()
-                    window.show()
-
-                    self.assertEqual(window.pos(), movedPosition)
-                    moveToCenter.assert_called_once_with(window)
-
-                expectedPages = {
-                    'home': window.homePage,
-                    'log': window.logPage,
-                    'subscription': window.subscriptionPage,
-                    'metrics': window.metricsPage,
-                    'settings': window.settingsPage,
-                }
-
-                for pageId, page in expectedPages.items():
-                    with self.subTest(pageId=pageId):
-                        window.showPage(pageId)
-                        processQtEvents()
-
-                        self.assertEqual(
-                            window.navigationView.currentPageId(),
-                            pageId,
-                        )
-                        self.assertIs(window.navigationView.page(pageId), page)
-                        self.assertIs(
-                            window.navigationView.pageStack.currentWidget(),
-                            page,
-                        )
-
-                window.close()
-                window.deleteLater()
-                window = None
-                collectAtBoundary()
-        finally:
-            if window is not None:
-                window.close()
-                window.deleteLater()
-
-            (
-                app.connectionController,
-                app.routingController,
-                app.settingsController,
-                app.logManager,
-                app.logPage,
-            ) = oldServices
-
-            if routingController is not None:
-                routingController.deleteLater()
-
-            connectionController.deleteLater()
-            logManager.deleteLater()
-            collectAtBoundary()
+                    self.assertIs(window.navigationView.page(pageId), page)
+                    self.assertIs(
+                        window.navigationView.pageStack.currentWidget(),
+                        page,
+                    )
 
     def testFirstLaunchUsesCanonicalDefault(self):
         """Use the product default when modern and legacy settings are absent."""

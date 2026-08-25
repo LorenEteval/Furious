@@ -215,7 +215,7 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
         translatable: bool = True,
         placement: str = 'top',
     ):
-        """Register a page and create its navigation control."""
+        """Register a page, selecting the first registered page initially."""
         if not isinstance(pageId, str) or not pageId:
             raise ValueError('pageId must be a non-empty string')
 

@@ -2,6 +2,8 @@
 
 - `MainWindow` owns long-lived built-in pages, navigation, page-level managers, and compatibility aliases. Pages remain
   stable for the window lifetime; plugin pages are owned by navigation plus `PluginNavigationManager`.
+- Main-window page selection and navigation expansion are session-local. Register Home first as the canonical initial
+  page and keep new navigation views collapsed; never persist or restore either state from a previous process.
 - Pages and dialogs adapt controllers/services/repositories to user interaction. Do not create a competing state
   authority; prefer controller/service APIs over new cross-page reach-through.
 - Long-lived pages create controls, timers, and signal connections once. Show/hide activates lazy rendering or refresh
