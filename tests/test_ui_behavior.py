@@ -39,7 +39,12 @@ from Furious.Backends.ExternalCore.Editor import (
 from Furious.Backends.Hysteria1.Editor import Hysteria1Editor
 from Furious.Backends.Hysteria2.Editor import Hysteria2Editor
 from Furious.Backends.Xray.AssetListView import XrayAssetListView
-from Furious.Backends.Xray.RoutingWindow import RoutingRulesDialog
+from Furious.Backends.Xray.RoutingWindow import (
+    RoutingRuleEditDialog,
+    RoutingRulesDialog,
+    RoutingTextEdit,
+    RoutingTextEditDialog,
+)
 from Furious.Backends.Xray.ShadowsocksEditor import ShadowsocksEditor
 from Furious.Backends.Xray.SocksEditor import SocksEditor
 from Furious.Backends.Xray.TrojanEditor import TrojanEditor
@@ -112,6 +117,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
+    QLabel,
     QSizePolicy,
     QStyle,
     QStyleOptionComboBox,
@@ -1741,6 +1747,152 @@ class DialogBehaviorTest(unittest.TestCase):
         self.assertEqual(dialog.routing['rules'], [])
 
         dialog.closeWindowButton.click()
+
+    def testRoutingRuleGuidanceUsesPlaceholdersInsteadOfLabels(self):
+        """Keep routing field names compact while retaining input guidance."""
+        dialog = RoutingRuleEditDialog({'type': 'field'})
+
+        self.assertEqual(dialog.ruleTagEdit.text(), '')
+        self.assertEqual(dialog.outboundEdit.text(), '')
+
+        placeholders = (
+            (dialog.ruleTagEdit, 'Optional rule name, e.g. block-ads'),
+            (dialog.outboundEdit, 'Outbound tag, e.g. proxy, direct, block'),
+            (dialog.balancerTagEdit, 'Balancer tag, e.g. balancer'),
+            (
+                dialog.domainEdit,
+                r'e.g. domain:xray.com, geosite:cn, regexp:\.google\.com$',
+            ),
+            (dialog.ipEdit, 'e.g. 10.0.0.0/8, geoip:cn, !geoip:private'),
+            (dialog.portEdit, 'e.g. 53,443,1000-2000'),
+            (dialog.vlessRouteEdit, 'e.g. 53,443,1000-2000'),
+            (dialog.sourceIPEdit, 'e.g. 10.0.0.1, 192.168.1.0/24'),
+            (dialog.sourcePortEdit, 'e.g. 53,443,1000-2000'),
+            (dialog.localIPEdit, 'e.g. 192.168.0.25'),
+            (dialog.localPortEdit, 'e.g. 53,443,1000-2000'),
+            (dialog.userEdit, 'e.g. love@xray.com'),
+            (dialog.inboundTagEdit, 'e.g. tag-vmess'),
+            (dialog.processEdit, 'e.g. curl'),
+            (dialog.protocolEdit, 'e.g. http, tls, quic, bittorrent'),
+        )
+
+        for widget, placeholder in placeholders:
+            self.assertEqual(
+                widget.placeholderText(),
+                _(placeholder),
+            )
+
+        self.assertEqual(dialog.networkCombo.currentText(), '')
+
+        labels = {label.text() for label in dialog.findChildren(QLabel)}
+
+        self.assertIn('OutBound', labels)
+        self.assertIn('Domain', labels)
+        self.assertIn('VLESS Route', labels)
+        self.assertFalse(any('(' in label for label in labels))
+
+        dialog.close()
+
+    def testRoutingRulePlaceholdersRetranslateWithoutChangingValues(self):
+        """Translate guidance while preserving technical syntax and user input."""
+        rule = {
+            'type': 'field',
+            'ruleTag': 'fixture-rule',
+            'outboundTag': 'fixture-outbound',
+            'domain': ['domain:example.test', 'geosite:cn'],
+            'ip': ['10.0.0.0/8'],
+            'port': '53,443,1000-2000',
+        }
+
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            dialog = RoutingRuleEditDialog(rule)
+            expectedRule = dialog.routingRule()
+
+            AppSettings.set('Language', 'ZH')
+            Mixins.QTranslatable.retranslateAll()
+
+            self.assertEqual(dialog.routingRule(), expectedRule)
+            self.assertIn('domain:xray.com', dialog.domainEdit.placeholderText())
+            self.assertIn('geosite:cn', dialog.domainEdit.placeholderText())
+            self.assertIn('!geoip:private', dialog.ipEdit.placeholderText())
+            self.assertIn('53,443,1000-2000', dialog.portEdit.placeholderText())
+            self.assertIn(
+                'http, tls, quic, bittorrent', dialog.protocolEdit.placeholderText()
+            )
+
+            AppSettings.set('Language', 'RU')
+            Mixins.QTranslatable.retranslateAll()
+
+            self.assertEqual(dialog.routingRule(), expectedRule)
+            self.assertIn('block-ads', dialog.ruleTagEdit.placeholderText())
+            self.assertIn('tag-vmess', dialog.inboundTagEdit.placeholderText())
+
+            AppSettings.set('Language', 'EN')
+            Mixins.QTranslatable.retranslateAll()
+
+            dialog.close()
+
+    def testRoutingRuleSerializationStillUsesExistingParsingContract(self):
+        """Keep comma/newline parsing and scalar routing fields unchanged."""
+        dialog = RoutingRuleEditDialog(
+            {
+                'type': 'field',
+                'ruleTag': 'fixture-rule',
+                'outboundTag': 'direct',
+                'balancerTag': 'balancer',
+                'network': 'tcp,udp',
+                'domain': ['domain:xray.com', 'geosite:cn'],
+                'ip': ['10.0.0.0/8', '!geoip:private'],
+                'port': '53,443,1000-2000',
+                'sourceIP': ['10.0.0.1'],
+                'sourcePort': '1024-65535',
+                'localIP': ['192.168.0.25'],
+                'localPort': '10808',
+                'user': ['love@xray.com'],
+                'vlessRoute': '1,14,14514',
+                'inboundTag': ['tag-vmess'],
+                'protocol': ['http', 'tls', 'quic', 'bittorrent'],
+                'process': ['curl'],
+            }
+        )
+
+        self.assertEqual(
+            dialog.routingRule(),
+            {
+                'type': 'field',
+                'outboundTag': 'direct',
+                'ruleTag': 'fixture-rule',
+                'network': 'tcp,udp',
+                'port': '53,443,1000-2000',
+                'sourcePort': '1024-65535',
+                'localPort': '10808',
+                'vlessRoute': '1,14,14514',
+                'balancerTag': 'balancer',
+                'domain': ['domain:xray.com', 'geosite:cn'],
+                'ip': ['10.0.0.0/8', '!geoip:private'],
+                'sourceIP': ['10.0.0.1'],
+                'localIP': ['192.168.0.25'],
+                'user': ['love@xray.com'],
+                'protocol': ['http', 'tls', 'quic', 'bittorrent'],
+                'inboundTag': ['tag-vmess'],
+                'process': ['curl'],
+            },
+        )
+
+        dialog.close()
+
+    def testRoutingTextEditorsPreservePlainTextLineBreaks(self):
+        """Keep multiline routing values intact in the enlarged editor."""
+        text = 'aaa\nbb\ncccc'
+        editor = RoutingTextEdit(text)
+        dialog = RoutingTextEditDialog(text)
+
+        self.assertEqual(editor.toPlainText(), text)
+        self.assertEqual(dialog.text(), text)
+
+        editor.close()
+        dialog.close()
 
     def testAssetListViewKeepsRawFilenameInItsOwnedModel(self):
         """Keep filesystem identity separate from formatted asset row text."""

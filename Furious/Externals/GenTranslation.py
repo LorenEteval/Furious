@@ -1711,102 +1711,6 @@ TRANSLATION = {
         "ZH": "编辑路由规则",
         "isReviewed": "True"
     },
-    "Domain (one per line or comma-separated)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "Domain (по одному в строке или через запятую)",
-        "ZH": "Domain（每行一个或以逗号分隔）",
-        "isReviewed": "True"
-    },
-    "IP (one per line or comma-separated)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "IP (по одному в строке или через запятую)",
-        "ZH": "IP（每行一个或以逗号分隔）",
-        "isReviewed": "True"
-    },
-    "Port (comma/range, e.g. 53,443,1000-2000)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "Port (через запятую/диапазон, например: 53,443,1000-2000)",
-        "ZH": "Port（逗号/范围，例如：53,443,1000-2000）",
-        "isReviewed": "True"
-    },
-    "VLESS Route (comma/range, e.g. 53,443,1000-2000)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "VLESS Route (через запятую/диапазон, например: 53,443,1000-2000)",
-        "ZH": "VLESS Route（逗号/范围，例如：53,443,1000-2000）",
-        "isReviewed": "True"
-    },
-    "Source IP (one per line or comma-separated)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "Source IP (по одному в строке или через запятую)",
-        "ZH": "Source IP（每行一个或以逗号分隔）",
-        "isReviewed": "True"
-    },
-    "Source Port (comma/range, e.g. 53,443,1000-2000)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "Source Port (через запятую/диапазон, например: 53,443,1000-2000)",
-        "ZH": "Source Port（逗号/范围，例如：53,443,1000-2000）",
-        "isReviewed": "True"
-    },
-    "Local IP (one per line or comma-separated)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "Local IP (по одному в строке или через запятую)",
-        "ZH": "Local IP（每行一个或以逗号分隔）",
-        "isReviewed": "True"
-    },
-    "Local Port (comma/range, e.g. 53,443,1000-2000)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "Local Port (через запятую/диапазон, например: 53,443,1000-2000)",
-        "ZH": "Local Port（逗号/范围，例如：53,443,1000-2000）",
-        "isReviewed": "True"
-    },
-    "User (one per line or comma-separated)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "User (по одному в строке или через запятую)",
-        "ZH": "User（每行一个或以逗号分隔）",
-        "isReviewed": "True"
-    },
-    "Inbound Tag (one per line or comma-separated)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "Inbound Tag (по одному в строке или через запятую)",
-        "ZH": "Inbound Tag（每行一个或以逗号分隔）",
-        "isReviewed": "True"
-    },
-    "Process (one per line or comma-separated)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "Process (по одному в строке или через запятую)",
-        "ZH": "Process（每行一个或以逗号分隔）",
-        "isReviewed": "True"
-    },
-    "Protocol (one per line or comma-separated)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "Protocol (по одному в строке или через запятую)",
-        "ZH": "Protocol（每行一个或以逗号分隔）",
-        "isReviewed": "True"
-    },
     "Edit Routing Remark": {
         "source": [
             "Furious.Backends.Xray.RoutingWindow"
@@ -1913,14 +1817,6 @@ TRANSLATION = {
         ],
         "RU": "Предпросмотр маршрутизации",
         "ZH": "预览路由",
-        "isReviewed": "True"
-    },
-    "OutBound (e.g. proxy/direct/block)": {
-        "source": [
-            "Furious.Backends.Xray.RoutingWindow"
-        ],
-        "RU": "OutBound (например: proxy/direct/block)",
-        "ZH": "OutBound（例如：proxy/direct/block）",
         "isReviewed": "True"
     },
     "Preview": {
@@ -3235,6 +3131,102 @@ TRANSLATION = {
         ],
         "ZH": "高级",
         "RU": "Дополнительно",
+        "isReviewed": "True"
+    },
+    "e.g. 53,443,1000-2000": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Например: 53,443,1000-2000",
+        "ZH": "例如：53,443,1000-2000",
+        "isReviewed": "True"
+    },
+    "Optional rule name, e.g. block-ads": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Необязательное имя правила, например: block-ads",
+        "ZH": "可选规则名称，例如：block-ads",
+        "isReviewed": "True"
+    },
+    "Outbound tag, e.g. proxy, direct, block": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Тег исходящего подключения, например: proxy, direct, block",
+        "ZH": "出站标签，例如：proxy, direct, block",
+        "isReviewed": "True"
+    },
+    "Balancer tag, e.g. balancer": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Тег балансировщика, например: balancer",
+        "ZH": "负载均衡器标签，例如：balancer",
+        "isReviewed": "True"
+    },
+    "e.g. domain:xray.com, geosite:cn, regexp:\\.google\\.com$": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Например: domain:xray.com, geosite:cn, regexp:\\.google\\.com$",
+        "ZH": "例如：domain:xray.com, geosite:cn, regexp:\\.google\\.com$",
+        "isReviewed": "True"
+    },
+    "e.g. 10.0.0.0/8, geoip:cn, !geoip:private": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Например: 10.0.0.0/8, geoip:cn, !geoip:private",
+        "ZH": "例如：10.0.0.0/8, geoip:cn, !geoip:private",
+        "isReviewed": "True"
+    },
+    "e.g. 10.0.0.1, 192.168.1.0/24": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Например: 10.0.0.1, 192.168.1.0/24",
+        "ZH": "例如：10.0.0.1, 192.168.1.0/24",
+        "isReviewed": "True"
+    },
+    "e.g. 192.168.0.25": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Например: 192.168.0.25",
+        "ZH": "例如：192.168.0.25",
+        "isReviewed": "True"
+    },
+    "e.g. love@xray.com": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Например: love@xray.com",
+        "ZH": "例如：love@xray.com",
+        "isReviewed": "True"
+    },
+    "e.g. http, tls, quic, bittorrent": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Например: http, tls, quic, bittorrent",
+        "ZH": "例如：http, tls, quic, bittorrent",
+        "isReviewed": "True"
+    },
+    "e.g. tag-vmess": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Например: tag-vmess",
+        "ZH": "例如：tag-vmess",
+        "isReviewed": "True"
+    },
+    "e.g. curl": {
+        "source": [
+            "Furious.Backends.Xray.RoutingWindow"
+        ],
+        "RU": "Например: curl",
+        "ZH": "例如：curl",
         "isReviewed": "True"
     }
 }

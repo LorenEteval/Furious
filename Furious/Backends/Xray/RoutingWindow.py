@@ -169,7 +169,8 @@ class RoutingTextEditDialog(AppQTransientDialog):
         self.setWindowTitle(_('Edit Text'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        self.textEdit = QTextEdit(text)
+        self.textEdit = QTextEdit()
+        self.textEdit.setPlainText(text)
 
         self.dialogBtns = AppQDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
         self.dialogBtns.addButton(_('OK'), AppQDialogButtonBox.ButtonRole.AcceptRole)
@@ -195,10 +196,12 @@ class RoutingTextEditDialog(AppQTransientDialog):
 class RoutingTextEdit(Mixins.QTranslatable, QTextEdit):
     """Represent routing text edit."""
 
-    def __init__(self, text='', parent=None):
+    def __init__(self, plainText='', placeholderText='', parent=None):
         """Initialize the RoutingTextEdit."""
-        super().__init__(text, parent)
+        super().__init__(parent)
 
+        self.setPlainText(plainText)
+        self.setPlaceholderText(placeholderText)
         self.setToolTip(_('Double-click to enlarge'))
 
     def mouseDoubleClickEvent(self, event):
@@ -217,6 +220,7 @@ class RoutingTextEdit(Mixins.QTranslatable, QTextEdit):
 
     def retranslate(self):
         """Refresh translated text for the routing text edit."""
+        self.setPlaceholderText(_(self.placeholderText()))
         self.setToolTip(_(self.toolTip()))
 
 
@@ -351,24 +355,55 @@ class RoutingRuleEditDialog(AppQTransientDialog):
 
     DEFAULT_DIALOG_SIZE = QtCore.QSize(int(800 * GOLDEN_RATIO), 800)
 
-    MatchInputHeight = 72
+    MatchInputHeight = 65
     ShortInputWidth = 240
 
     @staticmethod
-    def textEdit(text=''):
+    def textEdit(text='', placeholderText=''):
         """Return the text edit value used by the routing rule edit dialog."""
-        widget = RoutingTextEdit(text)
+        widget = RoutingTextEdit(text, placeholderText)
         widget.setFixedHeight(RoutingRuleEditDialog.MatchInputHeight)
 
         return widget
 
     @staticmethod
-    def lineEdit(text=''):
+    def lineEdit(text='', placeholderText=''):
         """Return the line edit value used by the routing rule edit dialog."""
         widget = AppQLineEdit(text)
+        widget.setPlaceholderText(placeholderText)
         widget.setFixedHeight(RoutingRuleEditDialog.MatchInputHeight)
 
         return widget
+
+    @staticmethod
+    def _createGroupBox(title: str, rows):
+        """Create one routing section using the protocol-editor grid structure."""
+        page = QWidget()
+
+        pageLayout = QGridLayout()
+        pageLayout.setColumnStretch(1, 1)
+        pageLayout.setColumnStretch(3, 1)
+
+        for row, (labelText, inputWidget) in enumerate(rows):
+            pageLayout.addWidget(
+                AppQLabel(labelText, translatable=False),
+                row,
+                0,
+            )
+            pageLayout.addWidget(inputWidget, row, 1, 1, 3)
+
+        pageLayout.setRowStretch(len(rows), 1)
+        page.setLayout(pageLayout)
+
+        groupBox = AppQGroupBox(title, translatable=False)
+        pageStack = QStackedWidget()
+        pageStack.addWidget(page)
+
+        groupBoxLayout = QVBoxLayout()
+        groupBoxLayout.addWidget(pageStack)
+        groupBox.setLayout(groupBoxLayout)
+
+        return groupBox
 
     def __init__(self, rule: dict, parent=None):
         """Initialize the RoutingRuleEditDialog."""
@@ -379,144 +414,148 @@ class RoutingRuleEditDialog(AppQTransientDialog):
         self.setWindowTitle(_('Edit Routing Rule'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
-        self.ruleTagEdit = self.lineEdit(self.rule.get('ruleTag', ''))
-
-        self.outboundEdit = self.lineEdit(self.rule.get('outboundTag', 'proxy'))
-        self.outboundEdit.setMaximumWidth(360)
-
-        self.balancerTagEdit = self.lineEdit(str(self.rule.get('balancerTag', '')))
+        (
+            self.ruleTagEdit,
+            self.outboundEdit,
+            self.balancerTagEdit,
+        ) = (
+            self.lineEdit(
+                self.rule.get('ruleTag', ''),
+                _('Optional rule name, e.g. block-ads'),
+            ),
+            self.lineEdit(
+                self.rule.get('outboundTag', ''),
+                _('Outbound tag, e.g. proxy, direct, block'),
+            ),
+            self.lineEdit(
+                str(self.rule.get('balancerTag', '')),
+                _('Balancer tag, e.g. balancer'),
+            ),
+        )
 
         self.networkCombo = AppQComboBox(translatable=False)
         self.networkCombo.addItems(['', 'tcp', 'udp', 'tcp,udp'])
         self.networkCombo.setCurrentText(self.rule.get('network', ''))
         self.networkCombo.setMaximumWidth(self.ShortInputWidth)
 
-        self.portEdit = self.textEdit(str(self.rule.get('port', '')))
-        self.portEdit.setMaximumWidth(360)
+        portPlaceholder = _('e.g. 53,443,1000-2000')
 
-        self.sourcePortEdit = self.textEdit(str(self.rule.get('sourcePort', '')))
-        self.sourcePortEdit.setMaximumWidth(360)
-
-        self.localPortEdit = self.textEdit(str(self.rule.get('localPort', '')))
-        self.localPortEdit.setMaximumWidth(360)
-
-        self.vlessRouteEdit = self.textEdit(str(self.rule.get('vlessRoute', '')))
-        self.vlessRouteEdit.setMaximumWidth(360)
-
-        self.domainEdit = self.textEdit(listToText(self.rule.get('domain', [])))
-        self.ipEdit = self.textEdit(listToText(self.rule.get('ip', [])))
-        self.sourceIPEdit = self.textEdit(listToText(self.rule.get('sourceIP', [])))
-        self.localIPEdit = self.textEdit(listToText(self.rule.get('localIP', [])))
-        self.userEdit = self.textEdit(listToText(self.rule.get('user', [])))
-        self.protocolEdit = self.textEdit(listToText(self.rule.get('protocol', [])))
-        self.inboundTagEdit = self.textEdit(listToText(self.rule.get('inboundTag', [])))
-        self.processEdit = self.textEdit(listToText(self.rule.get('process', [])))
+        (
+            self.portEdit,
+            self.sourcePortEdit,
+            self.localPortEdit,
+            self.vlessRouteEdit,
+            self.domainEdit,
+            self.ipEdit,
+            self.sourceIPEdit,
+            self.localIPEdit,
+            self.userEdit,
+            self.protocolEdit,
+            self.inboundTagEdit,
+            self.processEdit,
+        ) = (
+            self.textEdit(
+                str(self.rule.get('port', '')),
+                portPlaceholder,
+            ),
+            self.textEdit(
+                str(self.rule.get('sourcePort', '')),
+                portPlaceholder,
+            ),
+            self.textEdit(
+                str(self.rule.get('localPort', '')),
+                portPlaceholder,
+            ),
+            self.textEdit(
+                str(self.rule.get('vlessRoute', '')),
+                portPlaceholder,
+            ),
+            self.textEdit(
+                listToText(self.rule.get('domain', [])),
+                _(r'e.g. domain:xray.com, geosite:cn, regexp:\.google\.com$'),
+            ),
+            self.textEdit(
+                listToText(self.rule.get('ip', [])),
+                _('e.g. 10.0.0.0/8, geoip:cn, !geoip:private'),
+            ),
+            self.textEdit(
+                listToText(self.rule.get('sourceIP', [])),
+                _('e.g. 10.0.0.1, 192.168.1.0/24'),
+            ),
+            self.textEdit(
+                listToText(self.rule.get('localIP', [])),
+                _('e.g. 192.168.0.25'),
+            ),
+            self.textEdit(
+                listToText(self.rule.get('user', [])),
+                _('e.g. love@xray.com'),
+            ),
+            self.textEdit(
+                listToText(self.rule.get('protocol', [])),
+                _('e.g. http, tls, quic, bittorrent'),
+            ),
+            self.textEdit(
+                listToText(self.rule.get('inboundTag', [])),
+                _('e.g. tag-vmess'),
+            ),
+            self.textEdit(
+                listToText(self.rule.get('process', [])),
+                _('e.g. curl'),
+            ),
+        )
 
         self.dialogBtns = AppQDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
         self.dialogBtns.addButton(_('OK'), AppQDialogButtonBox.ButtonRole.AcceptRole)
         self.dialogBtns.addButton(
-            _('Cancel'),
-            AppQDialogButtonBox.ButtonRole.RejectRole,
+            _('Cancel'), AppQDialogButtonBox.ButtonRole.RejectRole
         )
 
         connectWeakly(self.dialogBtns.accepted, self, 'accept')
         connectWeakly(self.dialogBtns.rejected, self, 'reject')
 
-        generalLayout = QFormLayout()
-        generalLayout.addRow(
-            AppQLabel('Rule Tag', translatable=False),
-            self.ruleTagEdit,
+        (
+            generalGroup,
+            destinationGroup,
+            sourceGroup,
+            identityGroup,
+        ) = (
+            self._createGroupBox(
+                'General',
+                (
+                    ('Rule Tag', self.ruleTagEdit),
+                    ('OutBound', self.outboundEdit),
+                    ('Balancer Tag', self.balancerTagEdit),
+                    ('Network', self.networkCombo),
+                ),
+            ),
+            self._createGroupBox(
+                'Destination Match',
+                (
+                    ('Domain', self.domainEdit),
+                    ('IP', self.ipEdit),
+                    ('Port', self.portEdit),
+                    ('VLESS Route', self.vlessRouteEdit),
+                ),
+            ),
+            self._createGroupBox(
+                'Source / Local Match',
+                (
+                    ('Source IP', self.sourceIPEdit),
+                    ('Source Port', self.sourcePortEdit),
+                    ('Local IP', self.localIPEdit),
+                    ('Local Port', self.localPortEdit),
+                ),
+            ),
+            self._createGroupBox(
+                'Identity / Process / Protocol Match',
+                (
+                    ('User', self.userEdit),
+                    ('Inbound Tag', self.inboundTagEdit),
+                    ('Process', self.processEdit),
+                    ('Protocol', self.protocolEdit),
+                ),
+            ),
         )
-        generalLayout.addRow(
-            AppQLabel(_('OutBound (e.g. proxy/direct/block)')),
-            self.outboundEdit,
-        )
-        generalLayout.addRow(
-            AppQLabel('Balancer Tag', translatable=False),
-            self.balancerTagEdit,
-        )
-        generalLayout.addRow(
-            AppQLabel('Network', translatable=False),
-            self.networkCombo,
-        )
-
-        generalGroup = AppQGroupBox(
-            'General',
-            translatable=False,
-        )
-        generalGroup.setLayout(generalLayout)
-
-        destinationLayout = QFormLayout()
-        destinationLayout.addRow(
-            AppQLabel(_('Domain (one per line or comma-separated)')),
-            self.domainEdit,
-        )
-        destinationLayout.addRow(
-            AppQLabel(_('IP (one per line or comma-separated)')),
-            self.ipEdit,
-        )
-        destinationLayout.addRow(
-            AppQLabel(_('Port (comma/range, e.g. 53,443,1000-2000)')),
-            self.portEdit,
-        )
-        destinationLayout.addRow(
-            AppQLabel(_('VLESS Route (comma/range, e.g. 53,443,1000-2000)')),
-            self.vlessRouteEdit,
-        )
-
-        destinationGroup = AppQGroupBox(
-            'Destination Match',
-            translatable=False,
-        )
-        destinationGroup.setLayout(destinationLayout)
-
-        sourceLayout = QFormLayout()
-        sourceLayout.addRow(
-            AppQLabel(_('Source IP (one per line or comma-separated)')),
-            self.sourceIPEdit,
-        )
-        sourceLayout.addRow(
-            AppQLabel(_('Source Port (comma/range, e.g. 53,443,1000-2000)')),
-            self.sourcePortEdit,
-        )
-        sourceLayout.addRow(
-            AppQLabel(_('Local IP (one per line or comma-separated)')),
-            self.localIPEdit,
-        )
-        sourceLayout.addRow(
-            AppQLabel(_('Local Port (comma/range, e.g. 53,443,1000-2000)')),
-            self.localPortEdit,
-        )
-
-        sourceGroup = AppQGroupBox(
-            'Source / Local Match',
-            translatable=False,
-        )
-        sourceGroup.setLayout(sourceLayout)
-
-        identityLayout = QFormLayout()
-        identityLayout.addRow(
-            AppQLabel(_('User (one per line or comma-separated)')),
-            self.userEdit,
-        )
-        identityLayout.addRow(
-            AppQLabel(_('Inbound Tag (one per line or comma-separated)')),
-            self.inboundTagEdit,
-        )
-        identityLayout.addRow(
-            AppQLabel(_('Process (one per line or comma-separated)')),
-            self.processEdit,
-        )
-        identityLayout.addRow(
-            AppQLabel(_('Protocol (one per line or comma-separated)')),
-            self.protocolEdit,
-        )
-
-        identityGroup = AppQGroupBox(
-            'Identity / Process / Protocol Match',
-            translatable=False,
-        )
-        identityGroup.setLayout(identityLayout)
 
         matchGrid = QGridLayout()
         matchGrid.addWidget(generalGroup, 0, 0)
@@ -526,13 +565,16 @@ class RoutingRuleEditDialog(AppQTransientDialog):
         matchGrid.setColumnStretch(0, 1)
         matchGrid.setColumnStretch(1, 1)
 
+        matchPage = QWidget()
+        matchPage.setLayout(matchGrid)
+
         bottomLayout = QHBoxLayout()
         bottomLayout.addWidget(RoutingDocumentationURL())
         bottomLayout.addStretch(1)
         bottomLayout.addWidget(self.dialogBtns)
 
         layout = QVBoxLayout()
-        layout.addLayout(matchGrid)
+        layout.addWidget(matchPage)
         layout.addLayout(bottomLayout)
 
         self.setLayout(layout)
@@ -808,7 +850,7 @@ class RoutingRulesDialog(AppQTransientDialog):
 
     def addRule(self):
         """Add rule."""
-        rule = {'type': 'field', 'outboundTag': 'proxy', 'ruleTag': 'New Rule'}
+        rule = {'type': 'field'}
         # This editor is subordinate to the transient rules dialog.  Parenting
         # it prevents an asynchronous child from outliving its owner and later
         # invoking a callback on a deleted list widget.
