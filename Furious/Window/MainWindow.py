@@ -253,13 +253,9 @@ class MainWindow(AppQMainWindow):
 
                 restored = False
 
-            if (
-                restored
-                and PLATFORM == 'Darwin'
-                and self.size() == self.QT_FALLBACK_WINDOW_SIZE
-            ):
+            if restored and self.size() == self.QT_FALLBACK_WINDOW_SIZE:
                 self._applyDefaultWindowSize(
-                    'saved macOS main-window geometry restored to the Qt fallback size'
+                    'saved main-window geometry restored to the Qt fallback size'
                 )
             elif restored:
                 logger.info(
