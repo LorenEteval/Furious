@@ -123,6 +123,47 @@ class FrozenlibQtContextTest(unittest.TestCase):
             processQtEvents()
 
 
+class CleanupOnExitTest(unittest.TestCase):
+    """Verify application cleanup isolates independently owned resources."""
+
+    def testCleanupFailureDoesNotSkipLaterOwners(self):
+        """Continue cleanup after one participant raises and reset registry state."""
+        calls = []
+        poolType = type(Mixins.CleanupOnExit.ObjectsPool)
+
+        class Participant(Mixins.CleanupOnExit):
+            def __init__(self, name: str, raises=False):
+                self.name = name
+                self.raises = raises
+
+                super().__init__(uniqueCleanup=False)
+
+            def cleanup(self):
+                calls.append(self.name)
+
+                if self.raises:
+                    raise RuntimeError('cleanup fixture')
+
+        with mock.patch.object(
+            Mixins.CleanupOnExit,
+            'ObjectsPool',
+            poolType(),
+        ), mock.patch.object(Mixins.CleanupOnExit, 'VisitedType', {}):
+            participants = (
+                Participant('first'),
+                Participant('failing', raises=True),
+                Participant('last'),
+            )
+
+            with self.assertLogs('Furious.Frozenlib.Mixins', level='ERROR'):
+                Mixins.CleanupOnExit.cleanupAll()
+
+            self.assertEqual(calls, ['first', 'failing', 'last'])
+            self.assertEqual(len(Mixins.CleanupOnExit.ObjectsPool), 0)
+            self.assertEqual(Mixins.CleanupOnExit.VisitedType, {})
+            self.assertEqual(len(participants), 3)
+
+
 class FrozenlibUtilityTest(unittest.TestCase):
     """Verify bounded caches, commands, throttling, and dual-stack probes."""
 

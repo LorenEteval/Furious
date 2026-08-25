@@ -215,23 +215,30 @@ class Mixins:
             """Handle cleanup all for the cleanup on exit."""
             Mixins.CleanupOnExit.ObjectsPool.prune(Mixins.qObjectIsValid)
 
-            for ob in list(Mixins.CleanupOnExit.ObjectsPool):
-                assert isinstance(ob, Mixins.CleanupOnExit)
+            try:
+                for ob in list(Mixins.CleanupOnExit.ObjectsPool):
+                    assert isinstance(ob, Mixins.CleanupOnExit)
 
-                if ob.uniqueCleanup:
-                    obtype = str(type(ob))
+                    if ob.uniqueCleanup:
+                        obtype = str(type(ob))
 
-                    if not Mixins.CleanupOnExit.VisitedType.get(obtype, False):
-                        ob.cleanup()
+                        if Mixins.CleanupOnExit.VisitedType.get(obtype, False):
+                            continue
 
                         Mixins.CleanupOnExit.VisitedType[obtype] = True
-                    else:
-                        pass
-                else:
-                    ob.cleanup()
 
-            Mixins.CleanupOnExit.ObjectsPool.clear()
-            Mixins.CleanupOnExit.VisitedType.clear()
+                    try:
+                        ob.cleanup()
+                    except Exception:
+                        # Any non-exit exceptions
+
+                        # Cleanup is an isolation boundary. One failed owner
+                        # must not prevent unrelated resources from being
+                        # released during application shutdown.
+                        logger.exception(f'cleanup failed for {type(ob).__name__}')
+            finally:
+                Mixins.CleanupOnExit.ObjectsPool.clear()
+                Mixins.CleanupOnExit.VisitedType.clear()
 
     class QSetDisabledContext:
         """Manage the q set disabled context."""

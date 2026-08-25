@@ -1334,10 +1334,20 @@ class _PluginRegistryManager:
         """Build a registry with host plugins taking discovery precedence."""
         registry = PluginRegistry()
 
-        for pluginType in pluginTypes:
-            registry.register(pluginType())
+        try:
+            for pluginType in pluginTypes:
+                registry.register(pluginType())
 
-        registry.discover()
+            registry.discover()
+        except Exception:
+            # Any non-exit exceptions
+
+            # The manager publishes the registry only after this method
+            # succeeds. Release plugins initialized earlier in this attempt
+            # before abandoning the unpublished registry.
+            registry.shutdown()
+
+            raise
 
         return registry
 

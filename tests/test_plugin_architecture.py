@@ -266,6 +266,41 @@ class PluginRegistryManagerTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'already registered'):
                 PluginRegistryModule.initializePluginRegistry((ConflictingPlugin,))
 
+    def testFailedInitialCreationShutsDownEarlierHostPlugins(self):
+        """Release initialized plugins when a later host plugin fails."""
+        initializedPlugin = FixturePlugin()
+
+        class InitializedPluginType:
+            """Return the observable plugin instance owned by this test."""
+
+            def __new__(cls):
+                return initializedPlugin
+
+        class FailingPluginType:
+            """Fail before the process registry can be published."""
+
+            def __new__(cls):
+                raise RuntimeError('host plugin construction failed')
+
+        with mock.patch.object(PluginRegistry, 'discover') as discover:
+            with self.assertRaisesRegex(
+                RuntimeError,
+                'host plugin construction failed',
+            ):
+                PluginRegistryModule.initializePluginRegistry(
+                    (InitializedPluginType, FailingPluginType)
+                )
+
+        self.assertEqual(initializedPlugin.initialized, 1)
+        self.assertEqual(initializedPlugin.stopped, 1)
+        discover.assert_not_called()
+
+        with mock.patch.object(PluginRegistry, 'discover') as discover:
+            registry = PluginRegistryModule.initializePluginRegistry()
+            self.addCleanup(registry.shutdown)
+
+        discover.assert_called_once_with()
+
 
 class PluginRegistryTest(unittest.TestCase):
     """Exercise capability dispatch without the process-wide registry."""
