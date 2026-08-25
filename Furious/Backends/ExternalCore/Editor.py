@@ -418,7 +418,6 @@ class ExternalCoreConfigurationGroup(GuiEditorWidgetQGroupBox):
     def setupPageLayout(self):
         """Keep process fields independent from runtime-network label widths."""
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(18)
         layout.addLayout(self._formLayout(self._processContainers))
         layout.addLayout(self._formLayout(self._runtimeContainers))

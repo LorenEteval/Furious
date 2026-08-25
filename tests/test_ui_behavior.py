@@ -1036,6 +1036,29 @@ class EditorMappingTest(unittest.TestCase):
 
             editor.close()
 
+    def testExternalCoreSectionUsesCanonicalEditorInset(self):
+        """Let the section page own the same outer inset as Xray editors."""
+        editor = ExternalCoreEditor()
+        externalGroup = editor.groupBoxSequence()[0]
+        externalLayout = externalGroup._widget.currentWidget().layout()
+        referenceGroup = GuiVLESSGroupBoxBasic()
+        referenceLayout = referenceGroup._widget.currentWidget().layout()
+
+        self.assertEqual(
+            externalLayout.contentsMargins(),
+            referenceLayout.contentsMargins(),
+        )
+        self.assertFalse(externalLayout.contentsMargins().isNull())
+
+        for index in range(externalLayout.count()):
+            childLayout = externalLayout.itemAt(index).layout()
+
+            self.assertIsNotNone(childLayout)
+            self.assertTrue(childLayout.contentsMargins().isNull())
+
+        editor.close()
+        referenceGroup.deleteLater()
+
     def testEveryProtocolEditorRetranslatesItsDedicatedWindowTitle(self):
         """Retain title source text when switching from Chinese to English."""
         editorTypes = (
