@@ -586,7 +586,6 @@ class ApplicationLifecycleTransactionTest(TestCase):
                         socket.readAll()
                         socket.disconnectFromServer()
                         socket.deleteLater()
-                        QtCore.QTimer.singleShot(100, self.quit)
 
 
             server_name, barrier, participant = sys.argv[1:]
@@ -613,8 +612,17 @@ class ApplicationLifecycleTransactionTest(TestCase):
             )
 
             if not should_exit:
-                # Keep the authoritative endpoint alive until the contender
-                # connects.  The longer timer is only a bounded test fallback.
+                # Keep the authoritative endpoint alive until the parent has
+                # observed every contender's election result.  Releasing it
+                # after the first IPC connection would let a late contender
+                # legitimately become a replacement primary.
+                release_timer = QtCore.QTimer(application)
+                release_timer.timeout.connect(
+                    lambda: application.quit()
+                    if os.path.exists(f'{barrier}.release')
+                    else None
+                )
+                release_timer.start(20)
                 QtCore.QTimer.singleShot(8000, application.quit)
                 application.exec()
                 application.server.close()
@@ -659,6 +667,17 @@ class ApplicationLifecycleTransactionTest(TestCase):
                     time.sleep(0.01)
 
                 with open(barrier, 'w', encoding='utf-8'):
+                    pass
+
+                deadline = time.monotonic() + 10
+
+                while sum(process.poll() is not None for process in processes) < 3:
+                    if time.monotonic() >= deadline:
+                        break
+
+                    time.sleep(0.01)
+
+                with open(f'{barrier}.release', 'w', encoding='utf-8'):
                     pass
 
                 outputs = []

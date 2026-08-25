@@ -543,8 +543,8 @@ class MainWindowGeometryTest(unittest.TestCase):
             window.close()
             window.deleteLater()
 
-    def testNonDarwinRestored640By480GeometryIsPreserved(self):
-        """Preserve a successful 640 by 480 restoration outside macOS."""
+    def testNonDarwinRestoredQtFallbackSizeUsesCanonicalDefault(self):
+        """Replace the Qt fallback dimensions with the product default."""
         with isolatedSettings():
             expected = QtCore.QRect(40, 50, 640, 480)
             AppSettings.set(
@@ -559,7 +559,7 @@ class MainWindowGeometryTest(unittest.TestCase):
             ) as moveToCenter:
                 window.show()
 
-                self.assertEqual(window.size(), expected.size())
+                self.assertEqual(window.size(), window.DEFAULT_WINDOW_SIZE)
                 moveToCenter.assert_not_called()
 
             window.close()
