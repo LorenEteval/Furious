@@ -130,7 +130,7 @@ class MainWindow(AppQMainWindow):
             'subscription',
             self.subscriptionPage,
             'Subscription',
-            'collection.svg',
+            'star.svg',
         )
         self.pluginNavigationManager = PluginNavigationManager()
         self.pluginNavigationManager.registerPages(self.navigationView)

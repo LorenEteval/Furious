@@ -768,7 +768,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 _('Show connection progress while proxy services are starting.'),
             ),
             _ToggleSettingsCard(
-                'speedometer2.svg',
+                'speedometer.svg',
                 METRICS_COLLECTION_SETTING,
                 AppSettingsController().setMetricsCollectionEnabled,
                 _('Enable Metrics Collection'),
