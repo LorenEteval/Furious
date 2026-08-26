@@ -1050,6 +1050,77 @@ class EditorMappingTest(unittest.TestCase):
 
             editor.close()
 
+    def testExternalCorePlaceholdersRetranslateWithoutChangingValues(self):
+        """Translate field guidance without persisting it as configuration."""
+        configuration = ConfigExternalCore(copy.deepcopy(BLANK_CONFIG_EXTERNAL_CORE))
+        configuration.update(
+            {
+                'arguments': ['--config', 'fixture.json', '--verbose'],
+                'environment': {'TOKEN': 'fixture'},
+                'useApplicationTun2socks': True,
+                'tunRemoteAddress': 'server.example.com',
+            }
+        )
+        profile = ServerProfile.fromConfiguration(
+            configuration,
+            ProfileMetadata(displayName='Fixture core'),
+        )
+
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            editor = ExternalCoreEditor()
+            editor.factoryToInput(profile)
+            original = copy.deepcopy(profile.connection)
+            basicGroup = editor.groupBoxSequence()[0]
+            workingDirectoryInput = basicGroup._containers[2]._input
+            placeholderInputs = (
+                (
+                    workingDirectoryInput,
+                    'Leave empty to use executable directory',
+                ),
+                (
+                    editor._argumentsInput._input,
+                    'e.g. --config config.json --verbose',
+                ),
+                (
+                    editor._environmentInput._input,
+                    'One per line, e.g. KEY=VALUE',
+                ),
+                (
+                    editor._tunRemoteAddressInput._input,
+                    'Remote server hostname or IP address',
+                ),
+            )
+
+            for widget, sourceText in placeholderInputs:
+                self.assertEqual(widget.placeholderText(), sourceText)
+
+            for language in ('ZH', 'RU', 'EN'):
+                AppSettings.set('Language', language)
+                Mixins.QTranslatable.retranslateAll()
+
+                for widget, sourceText in placeholderInputs:
+                    self.assertEqual(widget.placeholderText(), _(sourceText, language))
+
+                self.assertEqual(
+                    editor._argumentsInput.values(),
+                    ['--config', 'fixture.json', '--verbose'],
+                )
+                self.assertEqual(
+                    editor._environmentInput.values(),
+                    {'TOKEN': 'fixture'},
+                )
+                self.assertEqual(
+                    editor._tunRemoteAddressInput.text(),
+                    'server.example.com',
+                )
+
+            self.assertFalse(editor.inputToFactory(profile))
+            self.assertEqual(profile.connection, original)
+            self.assertEqual(workingDirectoryInput.text(), '')
+
+            editor.close()
+
     def testExternalCoreSectionUsesCanonicalEditorInset(self):
         """Use canonical editor grids and insets for both External Core groups."""
         editor = ExternalCoreEditor()

@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import Mixins
 from Furious.Interface import EditorWidgetBinding
 from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Qt import (
@@ -79,7 +80,7 @@ class ExternalCorePathInput(EditorWidgetBinding):
 
         self._key = key
         self._directory = directory
-        self._title = AppQLabel(_(title), translatable=True)
+        self._title = AppQLabel(_(title))
         self._input = AppQLineEdit()
         self._input.setPlaceholderText(_(placeholder) if placeholder else '')
         self._browse = AppQPushButton(_('Browse...'))
@@ -159,9 +160,9 @@ class ExternalCoreArgumentsInput(EditorWidgetBinding):
         """Initialize the single-line command argument editor."""
         super().__init__()
 
-        self._title = AppQLabel(_('Arguments'), translatable=True)
+        self._title = AppQLabel(_('Arguments'))
         self._input = AppQLineEdit()
-        self._input.setPlaceholderText(_('Space-separated arguments'))
+        self._input.setPlaceholderText(_('e.g. --config config.json --verbose'))
 
     def widgets(self):
         """Return the form-row label and line editor."""
@@ -203,6 +204,17 @@ class ExternalCoreArgumentsInput(EditorWidgetBinding):
         )
 
 
+class ExternalCoreEnvironmentTextEdit(Mixins.QTranslatable, QPlainTextEdit):
+    """Provide a runtime-translatable environment placeholder."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def retranslate(self):
+        """Refresh the translated placeholder without changing its contents."""
+        self.setPlaceholderText(_(self.placeholderText()))
+
+
 class ExternalCoreEnvironmentInput(EditorWidgetBinding):
     """Bind KEY=VALUE lines to inherited-environment overrides."""
 
@@ -210,10 +222,10 @@ class ExternalCoreEnvironmentInput(EditorWidgetBinding):
         """Initialize the environment override editor."""
         super().__init__()
 
-        self._title = AppQLabel(_('Environment Variables'), translatable=True)
-        self._input = QPlainTextEdit()
+        self._title = AppQLabel(_('Environment Variables'))
+        self._input = ExternalCoreEnvironmentTextEdit()
         self._input.setStyleSheet('min-height: 120px; max-height: 136px;')
-        self._input.setPlaceholderText(_('KEY=VALUE, one per line'))
+        self._input.setPlaceholderText(_('One per line, e.g. KEY=VALUE'))
 
     def widgets(self):
         """Return the form-row label and environment editor."""
@@ -268,7 +280,7 @@ class ExternalCoreShutdownTimeoutInput(GuiEditorItemTextSpinBox):
 
     def __init__(self):
         """Initialize a one-to-sixty-second timeout input."""
-        super().__init__(title=_('Shutdown Timeout (seconds)'), translatable=True)
+        super().__init__(title=_('Shutdown Timeout (seconds)'))
 
         self.setRange(1, 60)
 
@@ -297,7 +309,7 @@ class ExternalCoreApplicationTun2socksInput(GuiEditorItemTextSwitch):
 
     def __init__(self):
         """Initialize the application tun2socks opt-in control."""
-        super().__init__(title=_('Use Application Tun2socks'), translatable=True)
+        super().__init__(title=_('Use Application Tun2socks'))
 
     def connectToggled(self, receiver, methodName: str):
         """Connect a field-state callback without retaining its binding."""
@@ -319,9 +331,9 @@ class ExternalCoreTunRemoteAddressInput(EditorWidgetBinding):
         """Initialize a hostname-or-IP input independent of process paths."""
         super().__init__()
 
-        self._title = AppQLabel(_('TUN Remote Address'), translatable=True)
+        self._title = AppQLabel(_('TUN Remote Address'))
         self._input = AppQLineEdit()
-        self._input.setPlaceholderText(_('Hostname, IPv4, or IPv6 address'))
+        self._input.setPlaceholderText(_('Remote server hostname or IP address'))
 
     def widgets(self):
         """Return the form-row label and remote-address editor."""
@@ -368,7 +380,7 @@ class ExternalCoreConfigurationGroup(GuiEditorWidgetQGroupBox):
                 _('Working Directory'),
                 'workingDirectory',
                 directory=True,
-                placeholder=_('Defaults to executable folder'),
+                placeholder=_('Leave empty to use executable directory'),
             ),
             self._argumentsInput,
             self._environmentInput,

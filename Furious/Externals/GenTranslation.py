@@ -2797,14 +2797,6 @@ TRANSLATION = {
         "ZH": "TUN远程地址",
         "isReviewed": "True"
     },
-    "Hostname, IPv4, or IPv6 address": {
-        "source": [
-            "Furious.Backends.ExternalCore.Editor"
-        ],
-        "RU": "Имя узла, адрес IPv4 или IPv6",
-        "ZH": "主机名、IPv4或IPv6地址",
-        "isReviewed": "True"
-    },
     "Arguments": {
         "source": [
             "Furious.Backends.ExternalCore.Editor"
@@ -2821,36 +2813,12 @@ TRANSLATION = {
         "ZH": "环境变量",
         "isReviewed": "True"
     },
-    "KEY=VALUE, one per line": {
-        "source": [
-            "Furious.Backends.ExternalCore.Editor"
-        ],
-        "RU": "KEY=VALUE, по одной на строку",
-        "ZH": "KEY=VALUE，每行一个",
-        "isReviewed": "True"
-    },
     "Shutdown Timeout (seconds)": {
         "source": [
             "Furious.Backends.ExternalCore.Editor"
         ],
         "RU": "Тайм-аут завершения (секунды)",
         "ZH": "关闭超时（秒）",
-        "isReviewed": "True"
-    },
-    "Space-separated arguments": {
-        "source": [
-            "Furious.Backends.ExternalCore.Editor"
-        ],
-        "RU": "Аргументы через пробел",
-        "ZH": "参数以空格分隔",
-        "isReviewed": "True"
-    },
-    "Defaults to executable folder": {
-        "source": [
-            "Furious.Backends.ExternalCore.Editor"
-        ],
-        "RU": "Папка исполняемого файла",
-        "ZH": "默认使用可执行文件目录",
         "isReviewed": "True"
     },
     "Arguments contain invalid quoting.": {
@@ -3227,6 +3195,38 @@ TRANSLATION = {
         ],
         "RU": "Например: curl",
         "ZH": "例如：curl",
+        "isReviewed": "True"
+    },
+    "e.g. --config config.json --verbose": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Например: --config config.json --verbose",
+        "ZH": "例如：--config config.json --verbose",
+        "isReviewed": "True"
+    },
+    "One per line, e.g. KEY=VALUE": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "По одной на строку, например KEY=VALUE",
+        "ZH": "每行一个，例如 KEY=VALUE",
+        "isReviewed": "True"
+    },
+    "Remote server hostname or IP address": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Имя узла или IP-адрес удалённого сервера",
+        "ZH": "远程服务器的主机名或IP地址",
+        "isReviewed": "True"
+    },
+    "Leave empty to use executable directory": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Оставьте пустым для каталога исполняемого файла",
+        "ZH": "留空则使用可执行文件目录",
         "isReviewed": "True"
     }
 }
