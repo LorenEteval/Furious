@@ -32,6 +32,8 @@ Use the `manage-qt-pyside6-lifetimes` skill for Qt ownership or lifecycle work.
 
 - Top-level subclasses use the canonical first-show geometry hooks and centering/retention behavior; do not call
   overridable geometry hooks from constructors or alter private first-show state.
+- Persistent top-level subclasses save geometry/state only after `hasPreparedInitialGeometry()` confirms first-show
+  preparation; never replace saved user geometry with a never-shown widget's native default.
 - Use `exec()` only when synchronous control flow is required; otherwise connect completion before managed `open()`.
 - Run focused behavior tests plus repeated native lifecycle cycles. For compiled-signal or transient-dialog changes,
   also run the Nuitka probe and verify destroyed signals, weak references, registries, callbacks, timers, replies, and

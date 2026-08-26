@@ -1262,6 +1262,10 @@ class XrayRoutingWindow(AppQMainWindow):
                 restored = False
 
             if not restored:
+                logger.warning(
+                    'saved routing-window geometry was invalid and was ignored'
+                )
+
                 self.resize(self.DEFAULT_WINDOW_SIZE)
 
         savedState = AppSettings.get('UserRoutingWindowState')
@@ -1283,5 +1287,11 @@ class XrayRoutingWindow(AppQMainWindow):
 
     def cleanup(self):
         """Release resources owned by the user routing window."""
+        # Settings eagerly owns this reusable editor even when Edit Routing was
+        # never opened. Saving then would replace the user's geometry with Qt's
+        # tiny pre-show placeholder, so leave the persisted state untouched.
+        if not self.hasPreparedInitialGeometry():
+            return
+
         AppSettings.set('UserRoutingWindowGeometry', self.saveGeometry())
         AppSettings.set('UserRoutingWindowState', self.saveState())

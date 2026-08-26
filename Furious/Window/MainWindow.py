@@ -310,5 +310,11 @@ class MainWindow(AppQMainWindow):
 
     def cleanup(self):
         """Persist application-level window state."""
+        # Tray startup can construct MainWindow without ever presenting it. In
+        # that case saveGeometry() describes Qt's native pre-show placeholder,
+        # not a user decision, so preserve the last persisted window state.
+        if not self.hasPreparedInitialGeometry():
+            return
+
         AppSettings.set('AppMainWindowGeometry', self.saveGeometry())
         AppSettings.set('AppMainWindowState', self.saveState())

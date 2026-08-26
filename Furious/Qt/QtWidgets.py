@@ -732,6 +732,12 @@ class AppQMainWindow(
         super().__init__(*args, **kwargs)
 
         self._lifetimeKey = object()
+        # Some reusable windows are composed eagerly but may never reach show().
+        # Qt exposes only native placeholder geometry in that state (a parented
+        # Windows top-level can be as small as 100x30). Keep preparation as an
+        # explicit first-show fact so persistence code can preserve existing
+        # user settings instead of serializing that placeholder at shutdown.
+        self._initialGeometryPrepared = False
         self._initialPositionAuthoritative = False
 
         release = functools.partial(
@@ -751,10 +757,26 @@ class AppQMainWindow(
             self.resize(self.DEFAULT_WINDOW_SIZE)
 
     def restoreInitialGeometry(self, geometry) -> bool:
-        """Restore saved geometry and mark its position as authoritative."""
+        """Restore usable saved geometry and mark its position as authoritative."""
         restored = bool(self.restoreGeometry(geometry))
 
         if restored:
+            # restoreGeometry() validates the Qt payload, not whether the restored
+            # size is usable for this fully composed window. Geometry captured
+            # before first show can therefore be structurally valid while still
+            # describing only a native placeholder. Current Qt minimum constraints
+            # reject that state without imposing an arbitrary application size on
+            # intentionally compact, but usable, user geometry.
+            minimumSize = self.minimumSize().expandedTo(self.minimumSizeHint())
+
+            if self.size().expandedTo(minimumSize) == self.size():
+                restored = True
+            else:
+                restored = False
+
+        if restored:
+            # Only usable restored geometry owns the initial position. A rejected
+            # placeholder must remain eligible for normal first-show centering.
             self._initialPositionAuthoritative = True
 
         return restored
@@ -763,10 +785,15 @@ class AppQMainWindow(
         """Return whether the first show should center this window."""
         return self.CENTER_ON_INITIAL_SHOW and not self._initialPositionAuthoritative
 
+    def hasPreparedInitialGeometry(self) -> bool:
+        """Return whether first-show geometry preparation completed."""
+        return self._initialGeometryPrepared
+
     @callOnceOnly
     def _prepareInitialGeometry(self):
         """Prepare initial geometry once after subclass construction."""
         self.prepareInitialGeometry()
+        self._initialGeometryPrepared = True
 
     @callOnceOnly
     def _centerOnInitialShow(self):

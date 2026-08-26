@@ -35,7 +35,7 @@ from Furious.Window.QRCodeWindow import QRCodeWindow
 from Furious.Window.TextEditorWindow import TextEditorWindow
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QMainWindow, QWidget
 
 from tests.support import (
     application,
@@ -180,11 +180,13 @@ class AppQMainWindowLifecycleTest(unittest.TestCase):
         window = _LifecycleWindow()
 
         self.assertEqual(window.prepareCalls, 0)
+        self.assertFalse(window.hasPreparedInitialGeometry())
 
         with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
             window.show()
 
             self.assertEqual(window.prepareCalls, 1)
+            self.assertTrue(window.hasPreparedInitialGeometry())
             self.assertTrue(window.preparedAfterComposition)
             self.assertEqual(window.size(), window.DEFAULT_WINDOW_SIZE)
             moveToCenter.assert_called_once_with(window)
@@ -692,6 +694,148 @@ class MainWindowGeometryTest(unittest.TestCase):
 
             window.close()
             window.deleteLater()
+
+    def testRoutingWindowUsesDefaultForMissingAndInvalidGeometry(self):
+        """Center the routing default only when no valid position was restored."""
+        savedValues = (
+            None,
+            QtCore.QByteArray(),
+            QtCore.QByteArray(b'broken'),
+            self._saveGeometry(QtCore.QRect(1, 22, 100, 30)),
+        )
+
+        for savedGeometry in savedValues:
+            with self.subTest(savedGeometry=savedGeometry), isolatedSettings():
+                if savedGeometry is not None:
+                    AppSettings.set('UserRoutingWindowGeometry', savedGeometry)
+
+                window = XrayRoutingWindow()
+
+                with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
+                    window.show()
+
+                    self.assertEqual(window.size(), window.DEFAULT_WINDOW_SIZE)
+                    moveToCenter.assert_called_once_with(window)
+
+                window.close()
+                window.deleteLater()
+
+    def testRoutingWindowKeepsValidSmallGeometryAndIgnoresInvalidState(self):
+        """Preserve intentional compact geometry independently from layout state."""
+        with isolatedSettings():
+            expected = QtCore.QRect(35, 45, 420, 260)
+            AppSettings.set(
+                'UserRoutingWindowGeometry',
+                self._saveGeometry(expected),
+            )
+            AppSettings.set(
+                'UserRoutingWindowState',
+                QtCore.QByteArray(b'broken'),
+            )
+
+            window = XrayRoutingWindow()
+
+            with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
+                window.show()
+
+                self.assertEqual(window.size(), expected.size())
+                moveToCenter.assert_not_called()
+
+            window.close()
+            window.deleteLater()
+
+    def testRoutingWindowCloseAndReopenPreservesLiveGeometry(self):
+        """Reuse one routing editor without rerunning first-show preparation."""
+        with isolatedSettings():
+            window = XrayRoutingWindow()
+
+            with patch.object(
+                window,
+                'prepareInitialGeometry',
+                wraps=window.prepareInitialGeometry,
+            ) as prepareInitialGeometry:
+                window.show()
+                window.setGeometry(73, 91, 760, 510)
+                expectedGeometry = QtCore.QRect(window.geometry())
+                window.close()
+                window.show()
+
+                self.assertEqual(window.geometry(), expectedGeometry)
+                prepareInitialGeometry.assert_called_once_with()
+
+            window.close()
+            window.deleteLater()
+
+    def testRoutingWindowFallbackSavesAndRestoresOnNextInstance(self):
+        """Replace failed restoration with a stable default for the next launch."""
+        with isolatedSettings():
+            AppSettings.set(
+                'UserRoutingWindowGeometry',
+                QtCore.QByteArray(b'broken'),
+            )
+
+            firstWindow = XrayRoutingWindow()
+            firstWindow.show()
+            firstWindow.cleanup()
+
+            restoredGeometry = AppSettings.get('UserRoutingWindowGeometry')
+            restoreProbe = QMainWindow()
+            self.assertTrue(restoreProbe.restoreGeometry(restoredGeometry))
+            expectedSize = QtCore.QSize(restoreProbe.size())
+
+            secondWindow = XrayRoutingWindow()
+
+            with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
+                secondWindow.show()
+
+                self.assertEqual(secondWindow.size(), expectedSize)
+                moveToCenter.assert_not_called()
+
+            restoreProbe.deleteLater()
+            firstWindow.close()
+            firstWindow.deleteLater()
+            secondWindow.close()
+            secondWindow.deleteLater()
+
+    def testNeverShownPersistentWindowsDoNotOverwriteSavedGeometry(self):
+        """Keep eager hidden windows from persisting native pre-show defaults."""
+        cases = (
+            (
+                _GeometryWindow,
+                'AppMainWindowGeometry',
+                'AppMainWindowState',
+            ),
+            (
+                XrayRoutingWindow,
+                'UserRoutingWindowGeometry',
+                'UserRoutingWindowState',
+            ),
+        )
+
+        for windowType, geometryKey, stateKey in cases:
+            with self.subTest(windowType=windowType.__name__), isolatedSettings():
+                geometry = self._saveGeometry(QtCore.QRect(50, 60, 820, 540))
+                state = QtCore.QByteArray(b'preserve-existing-state')
+                AppSettings.set(geometryKey, geometry)
+                AppSettings.set(stateKey, state)
+
+                parent = QWidget()
+                window = (
+                    windowType(parent=parent)
+                    if windowType is XrayRoutingWindow
+                    else windowType()
+                )
+
+                self.assertFalse(window.hasPreparedInitialGeometry())
+
+                window.cleanup()
+
+                self.assertEqual(AppSettings.get(geometryKey), geometry)
+                self.assertEqual(AppSettings.get(stateKey), state)
+
+                window.close()
+                window.deleteLater()
+                parent.deleteLater()
 
 
 if __name__ == '__main__':
