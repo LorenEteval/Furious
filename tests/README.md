@@ -13,6 +13,7 @@ clients, or real proxy cores.
 | Area | Principal tests |
 | --- | --- |
 | Configuration, profiles, migration, repositories | `test_models_and_services.py`, `test_repository_contracts.py` |
+| Generation log invariants, model fuzzing, concurrency, reclamation, complexity, and opt-in soak/latency probes | `test_log_manager_generation.py` |
 | Low-level application, runtime, editor, and storage contracts | `test_interface.py` |
 | Application composition, startup rollback, connection ownership, entry-point and crash boundaries | `test_architecture_refactors.py`, `test_application_process.py` |
 | Plugin registration, capability dispatch, factories, rollback, and Hysteria1 ownership | `test_plugin_architecture.py`, `test_hysteria1_protocol.py` |
@@ -91,6 +92,9 @@ python -m unittest tests.test_qt_stress tests.test_process_stress -v
 # PowerShell: $env:FURIOUS_VERY_HEAVY_TESTS = '1'
 # POSIX shell: export FURIOUS_VERY_HEAVY_TESTS=1
 python -m unittest tests.test_very_heavy -v
+
+# Generation-specific release-confidence campaign (same opt-in switch)
+python -m unittest tests.test_log_manager_generation.VeryHeavyGenerationLogManagerTest -v
 
 # Shared-state order-independence spot check
 python -m unittest tests.test_public_api tests.test_stylesheet_states tests.test_ui_behavior tests.test_dialog_geometry tests.test_main_window_geometry tests.test_isolation_and_navigation tests.test_frozenlib tests.test_service_runtime tests.test_endpoint_info tests.test_metrics_behavior tests.test_native_tun_semantics tests.test_backend_editor_contract tests.test_shadowsocks_uri tests.test_socks_uri tests.test_subscription_sync tests.test_subscription_manager tests.test_controllers tests.test_hysteria2_compatibility tests.test_hysteria1_protocol tests.test_plugin_architecture tests.test_architecture_refactors tests.test_repository_contracts tests.test_models_and_services tests.test_interface -v

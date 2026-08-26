@@ -344,6 +344,12 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.autoScrollSwitch.toggled.connect(self._autoScrollChanged)
         self.autoClearSwitch.toggled.connect(self._autoClearChanged)
         self.manager.categoryRegistered.connect(self._categoryRegistered)
+        # Do not drive the document directly from entryAdded: cross-thread Qt
+        # delivery can occur after that entry was evicted or its generation was
+        # cleared, and one queued signal per line defeats batching under a burst.
+        # entriesChanged coalesces producers, then one indexed snapshot provides
+        # an atomic truth that _synchronizeDocument applies as prefix removal and
+        # suffix append rather than rebuilding the document in steady state.
         self.manager.entriesChanged.connect(self._entriesChanged)
         self.manager.entriesCleared.connect(self._entriesCleared)
 

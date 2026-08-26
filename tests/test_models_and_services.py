@@ -46,10 +46,61 @@ from Furious.Service.MetricsHistory import (
 
 from PySide6 import QtCore
 
+from collections import OrderedDict
 import threading
 import unittest
+import weakref
 
-from tests.support import isolatedSettings
+from tests.support import application, isolatedSettings, processQtEvents
+
+
+class _ObservedEntryIndex(OrderedDict):
+    """Record global-index traversal and removal requested by one operation."""
+
+    def __init__(self, entries=()):
+        """Copy existing entries before beginning operation instrumentation."""
+        self.iterationRequests = 0
+        self.deletedKeys = []
+        self.oldestRemovals = 0
+
+        super().__init__(entries)
+
+    def __iter__(self):
+        """Count direct traversal of the global chronological index."""
+        self.iterationRequests += 1
+
+        return super().__iter__()
+
+    def items(self):
+        """Count item traversal of the global chronological index."""
+        self.iterationRequests += 1
+
+        return super().items()
+
+    def keys(self):
+        """Count key traversal of the global chronological index."""
+        self.iterationRequests += 1
+
+        return super().keys()
+
+    def values(self):
+        """Count value traversal of the global chronological index."""
+        self.iterationRequests += 1
+
+        return super().values()
+
+    def __delitem__(self, key):
+        """Record direct sequence-key deletion during category clearing."""
+        self.deletedKeys.append(key)
+
+        return super().__delitem__(key)
+
+    def popitem(self, last=True):
+        """Record global oldest-entry eviction without counting it as a scan."""
+        if not last:
+            self.oldestRemovals += 1
+
+        return super().popitem(last=last)
 
 
 class ProfileModelTest(unittest.TestCase):
@@ -329,6 +380,66 @@ class SettingsMigrationTest(unittest.TestCase):
 class LogManagerTest(unittest.TestCase):
     """Verify bounded, categorized, and thread-safe structured logging."""
 
+    def _assertIndexesConsistent(self, manager):
+        """Verify active/retired indexes and aggregate accounting agree."""
+        with manager._lock:
+            liveSequences = []
+            liveCharacters = 0
+
+            for generation in manager._activeGenerationsLocked():
+                generationSequences = tuple(generation.entries)
+                categorySequences = []
+                categoryCharacters = 0
+
+                self.assertEqual(
+                    generationSequences,
+                    tuple(sorted(generationSequences)),
+                )
+
+                for categoryId, categoryEntries in generation.entriesByCategory.items():
+                    self.assertEqual(
+                        categoryEntries.characterCount,
+                        sum(
+                            len(entry.message)
+                            for entry in categoryEntries.entries.values()
+                        ),
+                    )
+
+                    for sequence, entry in categoryEntries.entries.items():
+                        self.assertEqual(entry.categoryId, categoryId)
+                        self.assertIs(generation.entries[sequence], entry)
+                        categorySequences.append(sequence)
+
+                    categoryCharacters += categoryEntries.characterCount
+
+                self.assertEqual(
+                    tuple(sorted(categorySequences)),
+                    generationSequences,
+                )
+                self.assertEqual(generation.characterCount, categoryCharacters)
+                liveSequences.extend(generationSequences)
+                liveCharacters += generation.characterCount
+
+            self.assertEqual(
+                tuple(entry.sequence for entry in manager.entries()),
+                tuple(sorted(liveSequences)),
+            )
+            self.assertEqual(manager.entryCount(), len(liveSequences))
+            self.assertEqual(manager._retainedEntryCount, len(liveSequences))
+            self.assertEqual(
+                manager.retainedCharacters,
+                liveCharacters,
+            )
+            self.assertEqual(manager._retainedCharacters, liveCharacters)
+            self.assertEqual(
+                manager._retiredEntryCount,
+                sum(batch.entryCount for batch in manager._retiredBatches),
+            )
+            self.assertEqual(
+                manager._retiredCharacters,
+                sum(batch.characterCount for batch in manager._retiredBatches),
+            )
+
     def testBoundedBufferCategoriesAndRuntimeClear(self):
         """Retain only the newest entries and clear runtime categories alone."""
         manager = LogManager(maximumEntries=4)
@@ -477,6 +588,630 @@ class LogManagerTest(unittest.TestCase):
             manager.entryCount(CORE_LOG_CATEGORY),
             manager.entryCount(),
         )
+
+        self._assertIndexesConsistent(manager)
+
+    def testCategoryOperationsDoNotTraverseUnrelatedApplicationHistory(self):
+        """Make Core rollover constant regardless of runtime/history skew."""
+        cases = (
+            (1_000, 7_000, 2_000),
+            (9_000, 900, 100),
+        )
+
+        for applicationCount, coreCount, tunCount in cases:
+            with self.subTest(
+                application=applicationCount,
+                core=coreCount,
+                tun2socks=tunCount,
+            ):
+                manager = LogManager(
+                    maximumEntries=20_000,
+                    autoClearMaximumEntries=coreCount,
+                )
+
+                for index in range(applicationCount):
+                    manager.append(
+                        f'application {index}',
+                        APPLICATION_LOG_CATEGORY,
+                    )
+
+                for index in range(coreCount):
+                    manager.append(f'core {index}', CORE_LOG_CATEGORY)
+
+                for index in range(tunCount):
+                    manager.append(f'tun2socks {index}', TUN2SOCKS_LOG_CATEGORY)
+
+                applicationGeneration = manager._applicationGeneration
+                runtimeGeneration = manager._runtimeGeneration
+                observedIndexes = []
+
+                for generation in manager._activeGenerationsLocked():
+                    observedEntries = _ObservedEntryIndex(generation.entries)
+                    generation.entries = observedEntries
+                    observedIndexes.append(observedEntries)
+
+                    for categoryEntries in generation.entriesByCategory.values():
+                        observedCategory = _ObservedEntryIndex(categoryEntries.entries)
+                        categoryEntries.entries = observedCategory
+                        observedIndexes.append(observedCategory)
+
+                sequence, coreEntries = manager.snapshot(CORE_LOG_CATEGORY)
+
+                self.assertEqual(
+                    sequence,
+                    applicationCount + coreCount + tunCount,
+                )
+                self.assertEqual(len(coreEntries), coreCount)
+                self.assertEqual(
+                    sum(index.iterationRequests for index in observedIndexes),
+                    1,
+                )
+
+                for index in observedIndexes:
+                    index.iterationRequests = 0
+
+                manager.append('new core after clear', CORE_LOG_CATEGORY)
+
+                self.assertIs(manager._applicationGeneration, applicationGeneration)
+                self.assertIsNot(manager._runtimeGeneration, runtimeGeneration)
+                self.assertEqual(
+                    sum(index.iterationRequests for index in observedIndexes),
+                    0,
+                )
+                self.assertEqual(
+                    sum(len(index.deletedKeys) for index in observedIndexes),
+                    0,
+                )
+                self.assertEqual(
+                    sum(index.oldestRemovals for index in observedIndexes),
+                    0,
+                )
+                self.assertEqual(
+                    manager.retiredEntryCount,
+                    coreCount + tunCount,
+                )
+                self.assertEqual(
+                    manager.entryCount(APPLICATION_LOG_CATEGORY),
+                    applicationCount,
+                )
+                self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 1)
+                self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 0)
+                self.assertEqual(
+                    tuple(entry.message for entry in manager.entries()),
+                    tuple(f'application {index}' for index in range(applicationCount))
+                    + ('new core after clear',),
+                )
+                self._assertIndexesConsistent(manager)
+
+    def testWholeGenerationClearDoesNoPhysicalEntryWorkOnCaller(self):
+        """Swap every active stream without traversing or destroying its entries."""
+        manager = LogManager(maximumEntries=1_000, autoClearEnabled=False)
+        otherCategory = manager.registerComponent(
+            'component.persistent',
+            'Persistent',
+            runtime=False,
+        )
+
+        for index in range(100):
+            manager.append(f'application {index}', APPLICATION_LOG_CATEGORY)
+            manager.append(f'core {index}', CORE_LOG_CATEGORY)
+            manager.append(f'other {index}', otherCategory.id)
+
+        observedIndexes = []
+
+        for generation in manager._activeGenerationsLocked():
+            observedEntries = _ObservedEntryIndex(generation.entries)
+            generation.entries = observedEntries
+            observedIndexes.append(observedEntries)
+
+            for categoryEntries in generation.entriesByCategory.values():
+                observedCategory = _ObservedEntryIndex(categoryEntries.entries)
+                categoryEntries.entries = observedCategory
+                observedIndexes.append(observedCategory)
+
+        self.assertEqual(manager.entryCount(), 300)
+        self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 100)
+        self.assertGreater(manager.retainedCharacters, 0)
+        self.assertEqual(
+            sum(index.iterationRequests for index in observedIndexes),
+            0,
+        )
+
+        manager.append('application after observation', APPLICATION_LOG_CATEGORY)
+
+        self.assertEqual(
+            sum(index.iterationRequests for index in observedIndexes),
+            0,
+        )
+
+        manager.clear()
+
+        self.assertEqual(manager.entryCount(), 0)
+        self.assertEqual(manager.retainedCharacters, 0)
+        self.assertEqual(manager.retiredEntryCount, 301)
+        self.assertEqual(manager.entries(), tuple())
+        self.assertEqual(
+            sum(index.iterationRequests for index in observedIndexes),
+            0,
+        )
+        self.assertEqual(
+            sum(len(index.deletedKeys) for index in observedIndexes),
+            0,
+        )
+        self.assertEqual(
+            sum(index.oldestRemovals for index in observedIndexes),
+            0,
+        )
+        self._assertIndexesConsistent(manager)
+
+    def testSnapshotsNeverTraverseRetiredGenerations(self):
+        """Materialize only live streams after an immediate runtime rollover."""
+        manager = LogManager(maximumEntries=100, autoClearEnabled=False)
+        manager.append('application', APPLICATION_LOG_CATEGORY)
+        manager.append('core', CORE_LOG_CATEGORY)
+        manager.append('tun2socks', TUN2SOCKS_LOG_CATEGORY)
+        retiredGeneration = manager._runtimeGeneration
+        observedGlobal = _ObservedEntryIndex(retiredGeneration.entries)
+        observedCore = _ObservedEntryIndex(
+            retiredGeneration.entriesByCategory[CORE_LOG_CATEGORY].entries
+        )
+        retiredGeneration.entries = observedGlobal
+        retiredGeneration.entriesByCategory[CORE_LOG_CATEGORY].entries = observedCore
+
+        manager.clear(runtimeOnly=True)
+
+        self.assertEqual(manager.entries(CORE_LOG_CATEGORY), tuple())
+        self.assertEqual(
+            tuple(entry.message for entry in manager.entries()),
+            ('application',),
+        )
+        self.assertEqual(observedGlobal.iterationRequests, 0)
+        self.assertEqual(observedCore.iterationRequests, 0)
+        self.assertEqual(observedGlobal.oldestRemovals, 0)
+        self.assertEqual(manager.retiredEntryCount, 2)
+
+    def testSelectiveCategoryClearUsesDocumentedSharedStreamFallback(self):
+        """Unlink only k selected entries when another category shares a stream."""
+        manager = LogManager(maximumEntries=1_000, autoClearEnabled=False)
+
+        for index in range(100):
+            manager.append(f'core {index}', CORE_LOG_CATEGORY)
+
+        for index in range(10):
+            manager.append(f'tun2socks {index}', TUN2SOCKS_LOG_CATEGORY)
+
+        runtimeGeneration = manager._runtimeGeneration
+        observedGlobal = _ObservedEntryIndex(runtimeGeneration.entries)
+        observedCore = _ObservedEntryIndex(
+            runtimeGeneration.entriesByCategory[CORE_LOG_CATEGORY].entries
+        )
+        runtimeGeneration.entries = observedGlobal
+        runtimeGeneration.entriesByCategory[CORE_LOG_CATEGORY].entries = observedCore
+
+        manager.clear(CORE_LOG_CATEGORY)
+
+        self.assertIs(manager._runtimeGeneration, runtimeGeneration)
+        self.assertEqual(observedCore.iterationRequests, 1)
+        self.assertEqual(len(observedGlobal.deletedKeys), 100)
+        self.assertEqual(observedGlobal.oldestRemovals, 0)
+        self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 0)
+        self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 10)
+        self.assertEqual(manager.retiredEntryCount, 100)
+
+        observedGlobal.iterationRequests = 0
+        observedGlobal.deletedKeys.clear()
+
+        manager.clear(TUN2SOCKS_LOG_CATEGORY)
+
+        self.assertIsNot(manager._runtimeGeneration, runtimeGeneration)
+        self.assertEqual(observedGlobal.iterationRequests, 0)
+        self.assertEqual(observedGlobal.deletedKeys, [])
+        self.assertEqual(observedGlobal.oldestRemovals, 0)
+        self.assertEqual(manager.entryCount(), 0)
+        self.assertEqual(manager.retiredEntryCount, 110)
+        self._assertIndexesConsistent(manager)
+
+    def testRetiredCleanupIsBoundedAndEventuallyReleasesEntries(self):
+        """Release at most the fixed budget from a retired generation per turn."""
+        manager = LogManager(maximumEntries=100, autoClearEnabled=False)
+        manager.RetiredCleanupBudget = 3
+        entryReferences = []
+
+        for index in range(10):
+            entry = manager.append(f'core {index}', CORE_LOG_CATEGORY)
+            entryReferences.append(weakref.ref(entry))
+
+        del entry
+
+        runtimeGeneration = manager._runtimeGeneration
+        observedEntries = _ObservedEntryIndex(runtimeGeneration.entries)
+        runtimeGeneration.entries = observedEntries
+
+        manager.clear(runtimeOnly=True)
+
+        self.assertEqual(manager.retiredEntryCount, 10)
+        self.assertEqual(observedEntries.oldestRemovals, 0)
+        self.assertTrue(all(reference() is not None for reference in entryReferences))
+
+        manager.append('application', APPLICATION_LOG_CATEGORY)
+
+        self.assertEqual(manager.retiredEntryCount, 7)
+        self.assertEqual(observedEntries.oldestRemovals, 3)
+
+        cleanupTurns = 0
+
+        while manager.retiredEntryCount:
+            before = manager.retiredEntryCount
+
+            with manager._lock:
+                cleaned = manager._cleanupRetiredLocked()
+
+            cleanupTurns += 1
+            self.assertLessEqual(cleaned, manager.RetiredCleanupBudget)
+            self.assertEqual(manager.retiredEntryCount, before - cleaned)
+
+        self.assertEqual(cleanupTurns, 3)
+        self.assertEqual(observedEntries.oldestRemovals, 10)
+        self.assertEqual(manager.retiredCharacters, 0)
+        self.assertEqual(len(manager._retiredBatches), 0)
+        self.assertTrue(all(reference() is None for reference in entryReferences))
+        self._assertIndexesConsistent(manager)
+
+    def testQueuedCleanupEventuallyDrainsWithoutFurtherLogging(self):
+        """Finish physical reclamation through bounded queued manager turns."""
+        application()
+        manager = LogManager(maximumEntries=100, autoClearEnabled=False)
+        manager.RetiredCleanupBudget = 2
+        entryReferences = []
+
+        for index in range(9):
+            entry = manager.append(f'core {index}', CORE_LOG_CATEGORY)
+            entryReferences.append(weakref.ref(entry))
+
+        del entry
+
+        manager.clear(runtimeOnly=True)
+
+        self.assertEqual(manager.retiredEntryCount, 9)
+
+        processQtEvents()
+
+        self.assertEqual(manager.retiredEntryCount, 0)
+        self.assertEqual(manager.retiredCharacters, 0)
+        self.assertTrue(all(reference() is None for reference in entryReferences))
+
+    def testQueuedCleanupDoesNotOutliveDestroyedManager(self):
+        """Discard pending self-delivery at the manager's QObject boundary."""
+        application()
+        manager = LogManager(maximumEntries=100, autoClearEnabled=False)
+        manager.RetiredCleanupBudget = 1
+        destroyed = []
+        manager.destroyed.connect(lambda: destroyed.append(True))
+
+        for index in range(20):
+            manager.append(f'core {index}', CORE_LOG_CATEGORY)
+
+        manager.clear(runtimeOnly=True)
+
+        managerReference = weakref.ref(manager)
+        manager.deleteLater()
+        del manager
+
+        processQtEvents()
+
+        self.assertEqual(destroyed, [True])
+        self.assertIsNone(managerReference())
+
+    def testRepeatedFastClearsKeepRetiredEntryBacklogBounded(self):
+        """Prevent retired generations from accumulating beyond live capacity."""
+        manager = LogManager(maximumEntries=128, autoClearEnabled=False)
+        manager.RetiredCleanupBudget = 1
+
+        for index in range(manager.maximumEntries):
+            manager.append(f'initial {index}', CORE_LOG_CATEGORY)
+
+        manager.clear(runtimeOnly=True)
+
+        self.assertEqual(manager.retiredEntryCount, manager.maximumEntries)
+
+        for index in range(500):
+            manager.append(f'replacement {index}', CORE_LOG_CATEGORY)
+            manager.clear(runtimeOnly=True)
+
+            self.assertLessEqual(
+                manager.retiredEntryCount,
+                manager.maximumEntries,
+            )
+            self.assertLessEqual(
+                manager.entryCount() + manager.retiredEntryCount,
+                manager.maximumEntries,
+            )
+            self.assertLessEqual(
+                len(manager._retiredBatches),
+                manager.retiredEntryCount,
+            )
+
+        while manager.retiredEntryCount:
+            with manager._lock:
+                manager._cleanupRetiredLocked()
+
+        self.assertEqual(manager.retiredCharacters, 0)
+        self.assertEqual(len(manager._retiredBatches), 0)
+        self._assertIndexesConsistent(manager)
+
+    def testRepeatedCoreAutoClearKeepsOnlyTheNewestRuntimeEpoch(self):
+        """Roll over repeatedly without exposing or accumulating older Core lines."""
+        manager = LogManager(
+            maximumEntries=100,
+            autoClearMaximumEntries=1,
+        )
+        manager.RetiredCleanupBudget = 1
+        manager.append('application', APPLICATION_LOG_CATEGORY)
+        firstGenerationId = manager._runtimeGeneration.identifier
+
+        for index in range(100):
+            manager.append(f'core {index}', CORE_LOG_CATEGORY)
+
+            self.assertEqual(
+                tuple(entry.message for entry in manager.entries(CORE_LOG_CATEGORY)),
+                (f'core {index}',),
+            )
+            self.assertLessEqual(manager.retiredEntryCount, 1)
+
+        self.assertGreater(manager._runtimeGeneration.identifier, firstGenerationId)
+        self.assertEqual(
+            tuple(entry.message for entry in manager.entries()),
+            ('application', 'core 99'),
+        )
+        self.assertEqual(manager.entryCount(APPLICATION_LOG_CATEGORY), 1)
+        self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 1)
+        self._assertIndexesConsistent(manager)
+
+    def testRetentionEvictsOldestEntriesFromBothIndexes(self):
+        """Keep category indexes synchronized through repeated global eviction."""
+        manager = LogManager(
+            maximumEntries=4,
+            maximumCharacters=20,
+            maximumEntryCharacters=20,
+            autoClearEnabled=False,
+        )
+        categoryIds = (
+            APPLICATION_LOG_CATEGORY,
+            CORE_LOG_CATEGORY,
+            TUN2SOCKS_LOG_CATEGORY,
+        )
+
+        for index in range(3):
+            manager.append(f'{index:04d}', categoryIds[index])
+
+        observedIndexes = []
+
+        for generation in manager._activeGenerationsLocked():
+            observedEntries = _ObservedEntryIndex(generation.entries)
+            generation.entries = observedEntries
+            observedIndexes.append(observedEntries)
+
+        for index in range(3, 20):
+            manager.append(f'{index:04d}', categoryIds[index % len(categoryIds)])
+
+        entries = manager.entries()
+
+        self.assertEqual(
+            tuple(entry.message for entry in entries),
+            ('0016', '0017', '0018', '0019'),
+        )
+        self.assertEqual(
+            sum(index.oldestRemovals for index in observedIndexes),
+            16,
+        )
+        self.assertEqual(manager.retainedCharacters, 16)
+        self._assertIndexesConsistent(manager)
+
+    def testGlobalRetentionIgnoresRetiredGenerations(self):
+        """Evict the oldest live stream head across a runtime rollover."""
+        manager = LogManager(
+            maximumEntries=4,
+            maximumCharacters=100,
+            maximumEntryCharacters=100,
+            autoClearEnabled=False,
+        )
+        manager.RetiredCleanupBudget = 1
+
+        manager.append('application 1', APPLICATION_LOG_CATEGORY)
+        manager.append('old core', CORE_LOG_CATEGORY)
+        manager.append('application 2', APPLICATION_LOG_CATEGORY)
+        manager.append('old tun2socks', TUN2SOCKS_LOG_CATEGORY)
+
+        manager.clear(runtimeOnly=True)
+
+        self.assertEqual(manager.retiredEntryCount, 2)
+        self.assertEqual(
+            tuple(entry.message for entry in manager.entries()),
+            ('application 1', 'application 2'),
+        )
+
+        manager.append('new core', CORE_LOG_CATEGORY)
+        manager.append('application 3', APPLICATION_LOG_CATEGORY)
+        manager.append('new tun2socks', TUN2SOCKS_LOG_CATEGORY)
+
+        self.assertEqual(
+            tuple(entry.message for entry in manager.entries()),
+            (
+                'application 2',
+                'new core',
+                'application 3',
+                'new tun2socks',
+            ),
+        )
+        self.assertEqual(manager.retiredEntryCount, 0)
+        self.assertEqual(manager.entryCount(APPLICATION_LOG_CATEGORY), 2)
+        self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 1)
+        self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 1)
+        self._assertIndexesConsistent(manager)
+
+    def testRegisteredCategoryClearAndClearAllPreserveSignals(self):
+        """Clear one late category and then all entries with compatible signals."""
+        manager = LogManager(maximumEntries=20, autoClearEnabled=False)
+        category = manager.registerComponent(
+            'component.audit',
+            'Audit',
+            runtime=False,
+        )
+        cleared = []
+        manager.entriesCleared.connect(cleared.append)
+
+        manager.append('application', APPLICATION_LOG_CATEGORY)
+        manager.append('audit 1', category.id)
+        manager.append('core', CORE_LOG_CATEGORY)
+        manager.append('audit 2', category.id)
+
+        self.assertEqual(manager.snapshot('unknown.category')[1], tuple())
+        self.assertEqual(manager.entryCount(category.id), 2)
+        self.assertEqual(manager.plainText(category.id), 'audit 1\naudit 2')
+
+        manager.clear(runtimeOnly=True)
+
+        self.assertEqual(
+            tuple(entry.message for entry in manager.entries()),
+            ('application', 'audit 1', 'audit 2'),
+        )
+        self.assertEqual(
+            cleared,
+            [frozenset({CORE_LOG_CATEGORY, TUN2SOCKS_LOG_CATEGORY})],
+        )
+
+        manager.clear(category.id)
+
+        self.assertEqual(
+            tuple(entry.message for entry in manager.entries()),
+            ('application',),
+        )
+        self.assertEqual(
+            cleared,
+            [
+                frozenset({CORE_LOG_CATEGORY, TUN2SOCKS_LOG_CATEGORY}),
+                frozenset({category.id}),
+            ],
+        )
+        self._assertIndexesConsistent(manager)
+
+        manager.clear()
+        manager.clear()
+
+        self.assertEqual(manager.entries(), tuple())
+        self.assertEqual(
+            cleared,
+            [
+                frozenset({CORE_LOG_CATEGORY, TUN2SOCKS_LOG_CATEGORY}),
+                frozenset({category.id}),
+                None,
+            ],
+        )
+        self._assertIndexesConsistent(manager)
+
+    def testConcurrentAppendClearAndSnapshotsKeepIndexesConsistent(self):
+        """Serialize snapshots and category clears racing with log producers."""
+        manager = LogManager(maximumEntries=5_000, autoClearEnabled=False)
+        category = manager.registerComponent('component.concurrent', 'Concurrent')
+        started = threading.Event()
+        finished = threading.Event()
+        failures = []
+        observations = []
+
+        def produce():
+            """Append interleaved categories while the observer reads and clears."""
+            try:
+                started.set()
+
+                categoryIds = (
+                    APPLICATION_LOG_CATEGORY,
+                    CORE_LOG_CATEGORY,
+                    category.id,
+                )
+
+                for index in range(3_000):
+                    manager.append(
+                        f'entry {index}',
+                        categoryIds[index % len(categoryIds)],
+                    )
+            except Exception as error:
+                failures.append(error)
+            finally:
+                finished.set()
+
+        def observeAndClear():
+            """Take filtered snapshots and clear one category during ingestion."""
+            try:
+                started.wait(5)
+
+                while True:
+                    manager.snapshot(CORE_LOG_CATEGORY)
+                    manager.snapshot(category.id)
+                    manager.clear(category.id)
+                    observations.append(True)
+
+                    if finished.wait(0.0001):
+                        break
+            except Exception as error:
+                failures.append(error)
+
+        observer = threading.Thread(target=observeAndClear)
+        producer = threading.Thread(target=produce)
+        observer.start()
+        producer.start()
+        producer.join(10)
+        observer.join(10)
+
+        self.assertFalse(producer.is_alive())
+        self.assertFalse(observer.is_alive())
+        self.assertEqual(failures, [])
+        self.assertTrue(observations)
+
+        sequences = tuple(entry.sequence for entry in manager.entries())
+
+        self.assertEqual(sequences, tuple(sorted(sequences)))
+        self.assertEqual(len(sequences), len(set(sequences)))
+        self._assertIndexesConsistent(manager)
+
+    def testEntrySignalsAndCrossThreadChangeNotificationsRemainCompatible(self):
+        """Emit every entry and coalesce presentation refreshes by producer batch."""
+        application()
+        manager = LogManager(maximumEntries=100, autoClearEnabled=False)
+        added = []
+        changed = []
+        manager.entryAdded.connect(added.append)
+        manager.entriesChanged.connect(changed.append)
+
+        def produce():
+            """Publish one batch without allowing the Qt queue to drain midway."""
+            for index in range(50):
+                manager.append(f'worker {index}', CORE_LOG_CATEGORY)
+
+        worker = threading.Thread(target=produce)
+        worker.start()
+        worker.join(5)
+
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(added, [])
+        self.assertEqual(changed, [])
+
+        processQtEvents()
+
+        self.assertEqual(len(added), 50)
+        self.assertEqual(
+            tuple(entry.message for entry in added),
+            tuple(f'worker {index}' for index in range(50)),
+        )
+        self.assertEqual(changed, [50])
+
+        manager.append('application 1', APPLICATION_LOG_CATEGORY)
+        manager.append('application 2', APPLICATION_LOG_CATEGORY)
+
+        self.assertEqual(len(added), 52)
+
+        processQtEvents()
+
+        self.assertEqual(changed, [50, 52])
 
 
 class MetricsHistoryTest(unittest.TestCase):
