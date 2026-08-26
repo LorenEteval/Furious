@@ -477,6 +477,8 @@ class ConnectionManager(Mixins.CleanupOnExit):
                 return abortStart()
             else:
                 for bypass in bypassSplit:
+                    bypass = bypass.strip()
+
                     if isValidIPAddress(bypass):
                         logger.info(f'processing user TUN bypass IP: {bypass}')
 
