@@ -1312,6 +1312,30 @@ class UnifiedLogPageTest(unittest.TestCase):
         page.close()
         page.deleteLater()
 
+    def testLabelsOwnTheirDynamicTranslation(self):
+        """Let each AppQLabel translate itself without page-level setters."""
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            page = LogPage(manager=LogManager(maximumEntries=5))
+            labels = (
+                (page.pageTitleLabel, 'Log'),
+                (page.filterLabel, 'Log Type'),
+                (page.autoScrollLabel, 'Auto Scroll Down'),
+                (page.autoClearLabel, 'Auto Clear Log'),
+                (page.highlightStatusLabel, 'Processing...'),
+            )
+
+            AppSettings.set('Language', 'ZH')
+
+            for label, sourceText in labels:
+                self.assertTrue(label.translatable)
+
+                label.retranslate()
+
+                self.assertEqual(label.text(), _(sourceText))
+
+            self.disposePage(page)
+
     def testHiddenPageRendersOneOrderedSnapshotWhenShown(self):
         """Do not mutate the document while hidden; catch up exactly once."""
         with isolatedSettings():

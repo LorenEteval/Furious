@@ -192,9 +192,9 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.manager = manager
         self.manager.setAutoClearEnabled(AppSettings.isStateON_(LOG_AUTO_CLEAR_SETTING))
 
-        self.pageTitleLabel = AppQLabel(translatable=False)
+        self.pageTitleLabel = AppQLabel(_('Log'))
         self.pageTitleLabel.setObjectName('LogPageTitle')
-        self.filterLabel = AppQLabel(translatable=False)
+        self.filterLabel = AppQLabel(_('Log Type'))
         # Category names can be either translated built-ins or literal plugin
         # metadata, so LogPage rebuilds this application-styled selector with
         # the correct per-category translation policy.
@@ -225,7 +225,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             line_width=3,
             radius=5,
         )
-        self.highlightStatusLabel = AppQLabel(translatable=False)
+        self.highlightStatusLabel = AppQLabel(_('Processing...'))
 
         highlightLayout = QHBoxLayout(self.highlightOverlay)
         highlightLayout.setContentsMargins(16, 16, 16, 16)
@@ -353,12 +353,12 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             popupMenu=self._viewMenu,
         )
 
-        self.autoScrollLabel = AppQLabel(translatable=False)
+        self.autoScrollLabel = AppQLabel(_('Auto Scroll Down'))
 
         self.autoScrollSwitch = AppQSwitch()
         self.autoScrollSwitch.syncChecked(self._autoScrollDown)
 
-        self.autoClearLabel = AppQLabel(translatable=False)
+        self.autoClearLabel = AppQLabel(_('Auto Clear Log'))
 
         self.autoClearSwitch = AppQSwitch()
         self.autoClearSwitch.syncChecked(self.manager.autoClearEnabled)
@@ -900,15 +900,9 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.manager.clear()
 
     def retranslate(self):
-        """Refresh translated page controls and filter labels."""
+        """Refresh mixed-policy filter labels and rendered log text."""
 
         selectedCategoryId = self.filterComboBox.currentData()
-
-        self.pageTitleLabel.setText(_('Log'))
-        self.filterLabel.setText(_('Log Type'))
-        self.autoScrollLabel.setText(_('Auto Scroll Down'))
-        self.autoClearLabel.setText(_('Auto Clear Log'))
-        self.highlightStatusLabel.setText(_('Processing...'))
 
         self._populateFilters(selectedCategoryId)
         self._requestRefresh(immediate=True)
