@@ -27,7 +27,7 @@ from typing import Any
 
 import weakref
 
-__all__ = ['connectWeakly']
+__all__ = ['connectWeakly', 'singleShotWeakly']
 
 
 def _ownsQObject(owner, object_) -> bool:
@@ -43,17 +43,14 @@ def _ownsQObject(owner, object_) -> bool:
     return False
 
 
-def connectWeakly(
-    signal,
+def _weakMethodInvoker(
     receiver: Any,
     methodName: str,
     *,
     sender=None,
     forwardSender: bool = False,
 ):
-    """Connect without strongly owning a transient receiver or sender."""
-    # A plain dispatcher is intentional. Nuitka's PySide6 compatibility layer
-    # process-globally protects compiled bound methods passed directly to connect().
+    """Return a plain callable that weakly dispatches to one named method."""
     if not isinstance(methodName, str) or not methodName:
         raise ValueError('method name must be a non-empty string')
 
@@ -88,6 +85,26 @@ def connectWeakly(
 
         return method(currentSender, *args, **kwargs)
 
+    return invoke
+
+
+def connectWeakly(
+    signal,
+    receiver: Any,
+    methodName: str,
+    *,
+    sender=None,
+    forwardSender: bool = False,
+):
+    """Connect without strongly owning a transient receiver or sender."""
+    # A plain dispatcher is intentional. Nuitka's PySide6 compatibility layer
+    # process-globally protects compiled bound methods passed directly to connect().
+    invoke = _weakMethodInvoker(
+        receiver,
+        methodName,
+        sender=sender,
+        forwardSender=forwardSender,
+    )
     connection = signal.connect(invoke)
 
     if (
@@ -107,3 +124,13 @@ def connectWeakly(
         receiver.destroyed.connect(disconnect)
 
     return connection
+
+
+def singleShotWeakly(milliseconds: int, receiver: Any, methodName: str):
+    """Schedule one named method without retaining its receiver."""
+    # QTimer.singleShot() is patched by the packaged runtime for compiled bound
+    # methods just like SignalInstance.connect().  Keep the scheduled callable
+    # plain and resolve the receiver only if it still exists when the timer fires.
+    invoke = _weakMethodInvoker(receiver, methodName)
+
+    QtCore.QTimer.singleShot(milliseconds, invoke)

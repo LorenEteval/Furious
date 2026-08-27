@@ -1179,7 +1179,14 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         routing = self.sourceModel.routingByRow(indexes[0])
 
         dialog = RoutingRulesDialog(routing, parent=self)
-        dialog.finished.connect(self._rulesDialogFinished)
+
+        connectWeakly(
+            dialog.finished,
+            self,
+            '_rulesDialogFinished',
+            sender=dialog,
+        )
+
         dialog.open()
 
     @QtCore.Slot(int)

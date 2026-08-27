@@ -26,6 +26,7 @@ from Furious.Frozenlib import (
     registerAppSettings,
 )
 from Furious.Qt.QtNetwork import AppQNetworkAccessManager
+from Furious.Qt.Signals import connectWeakly
 from Furious.Repository import Storage
 
 from PySide6 import QtCore
@@ -50,6 +51,8 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+_MISSING_REQUEST = object()
 
 PROXY_ENDPOINT_INFO_SETTING = 'ProxyEndpointInformationEnabled'
 
@@ -142,19 +145,26 @@ class ProxyEndpointHttpClient(AppQNetworkAccessManager):
 
         self._pendingRequests[reply] = context
 
-        reply.finished.connect(self._replyFinished)
+        connectWeakly(
+            reply.finished,
+            self,
+            '_replyFinished',
+            sender=reply,
+            forwardSender=True,
+        )
 
-    @QtCore.Slot()
-    def _replyFinished(self):
+    @QtCore.Slot(object)
+    def _replyFinished(self, reply):
         """Consume, publish, and release one completed reply."""
-        reply = self.sender()
-
         if not isinstance(reply, QNetworkReply):
             return
 
-        context = self._pendingRequests.pop(reply, None)
+        context = self._pendingRequests.pop(reply, _MISSING_REQUEST)
 
         try:
+            if context is _MISSING_REQUEST:
+                return
+
             if reply.error() == QNetworkReply.NetworkError.NoError:
                 data, error = bytes(reply.readAll()), ''
             else:
@@ -171,11 +181,6 @@ class ProxyEndpointHttpClient(AppQNetworkAccessManager):
         self._pendingRequests.clear()
 
         for reply in pendingReplies:
-            try:
-                reply.finished.disconnect(self._replyFinished)
-            except (RuntimeError, TypeError):
-                pass
-
             reply.abort()
             reply.deleteLater()
 

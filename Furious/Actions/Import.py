@@ -24,6 +24,7 @@ from Furious.Models import *
 from Furious.Plugins import profileFromAny
 from Furious.Repository import *
 from Furious.Qt import *
+from Furious.Qt.Signals import connectWeakly, singleShotWeakly
 from Furious.Qt import gettext as _
 from Furious.Widget.WaitingSpinner import *
 
@@ -169,7 +170,13 @@ class ImportURIsProgressDialog(AppQTransientDialog):
         self.detailLabel = AppQLabel()
         self.detailLabel.setWordWrap(True)
         self.cancelButton = AppQPushButton(_('Cancel'))
-        self.cancelButton.clicked.connect(self.cancel)
+
+        connectWeakly(
+            self.cancelButton.clicked,
+            self,
+            'cancel',
+            sender=self.cancelButton,
+        )
 
         statusLayout = QHBoxLayout()
         statusLayout.addWidget(self.spinner)
@@ -190,7 +197,7 @@ class ImportURIsProgressDialog(AppQTransientDialog):
 
         self.spinner.start()
 
-        QtCore.QTimer.singleShot(0, self.importNext)
+        singleShotWeakly(0, self, 'importNext')
 
         return result
 
@@ -198,7 +205,7 @@ class ImportURIsProgressDialog(AppQTransientDialog):
         """Reject the current import ur is progress dialog values."""
         self.cancel()
 
-    def cancel(self):
+    def cancel(self, *_args):
         """Cancel the import ur is progress dialog operation."""
         self.canceled = True
         self.cancelButton.setEnabled(False)
@@ -254,7 +261,7 @@ class ImportURIsProgressDialog(AppQTransientDialog):
 
         self.updateStatus()
 
-        QtCore.QTimer.singleShot(0, self.importNext)
+        singleShotWeakly(0, self, 'importNext')
 
     def finishImport(self):
         """Handle finish import for the import ur is progress dialog."""

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Qt.QtNetwork import *
+from Furious.Qt.Signals import connectWeakly
 
 from PySide6 import QtCore
 from PySide6.QtNetwork import *
@@ -87,22 +88,18 @@ class HttpGetManager(AppQNetworkAccessManager):
         """Handle ready read by network reply."""
         self.hasDataCallback(networkReply, **kwargs)
 
-    @QtCore.Slot()
-    def _handleReadyRead(self):
+    @QtCore.Slot(object)
+    def _handleReadyRead(self, networkReply):
         """Dispatch ready-read data without a closure retaining the reply."""
-        networkReply = self.sender()
-
         if isinstance(networkReply, QNetworkReply):
             self.handleReadyReadByNetworkReply(
                 networkReply,
                 **self._replyContexts.get(networkReply, {}),
             )
 
-    @QtCore.Slot()
-    def _handleFinished(self):
+    @QtCore.Slot(object)
+    def _handleFinished(self, networkReply):
         """Dispatch and release one completed network reply."""
-        networkReply = self.sender()
-
         if not isinstance(networkReply, QNetworkReply):
             return
 
@@ -171,7 +168,19 @@ class HttpGetManager(AppQNetworkAccessManager):
 
         self._replyContexts[networkReply] = dict(kwargs)
 
-        networkReply.readyRead.connect(self._handleReadyRead)
-        networkReply.finished.connect(self._handleFinished)
+        connectWeakly(
+            networkReply.readyRead,
+            self,
+            '_handleReadyRead',
+            sender=networkReply,
+            forwardSender=True,
+        )
+        connectWeakly(
+            networkReply.finished,
+            self,
+            '_handleFinished',
+            sender=networkReply,
+            forwardSender=True,
+        )
 
         return networkReply

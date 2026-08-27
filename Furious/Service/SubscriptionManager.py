@@ -26,6 +26,7 @@ from Furious.Frozenlib import (
     AppSettings,
 )
 from Furious.Qt.HttpGetManager import HttpGetManager
+from Furious.Qt.Signals import connectWeakly
 from Furious.Repository import Storage
 from Furious.Service.SubscriptionImporter import (
     SubscriptionImportService,
@@ -155,11 +156,9 @@ class SubscriptionManager(HttpGetManager):
             and subscription.get('webURL') == kwargs.get('webURL')
         )
 
-    @QtCore.Slot()
-    def _autoUpdateTimeout(self):
+    @QtCore.Slot(object)
+    def _autoUpdateTimeout(self, timer):
         """Run the subscription associated with the firing service-owned timer."""
-        timer = self.sender()
-
         if not isinstance(timer, QtCore.QTimer):
             return
 
@@ -199,7 +198,14 @@ class SubscriptionManager(HttpGetManager):
         if timer is None:
             timer = QtCore.QTimer(self)
             timer.setProperty('subscriptionId', unique)
-            timer.timeout.connect(self._autoUpdateTimeout)
+
+            connectWeakly(
+                timer.timeout,
+                self,
+                '_autoUpdateTimeout',
+                sender=timer,
+                forwardSender=True,
+            )
 
             self._autoUpdateTimers[unique] = timer
 
@@ -213,7 +219,7 @@ class SubscriptionManager(HttpGetManager):
 
             logger.info(
                 f'stop auto update job for subscription '
-                f'({subscription.get("remark", "")}, {unique})'
+                f'({subscription.get("remark", "")}, {unique!r})'
             )
 
             return
@@ -228,13 +234,13 @@ class SubscriptionManager(HttpGetManager):
         if previousInterval is None:
             logger.info(
                 f'start auto update job for subscription '
-                f'({subscription.get("remark", "")}, {unique}). '
+                f'({subscription.get("remark", "")}, {unique!r}). '
                 f'Interval is {interval // (60 * 1000)} mins'
             )
         else:
             logger.info(
                 f'reschedule auto update job for subscription '
-                f'({subscription.get("remark", "")}, {unique}). '
+                f'({subscription.get("remark", "")}, {unique!r}). '
                 f'Interval changed from {previousInterval // (60 * 1000)} '
                 f'to {interval // (60 * 1000)} mins'
             )
@@ -273,10 +279,9 @@ class SubscriptionManager(HttpGetManager):
 
         self._pruneRequestVersion(unique)
 
-    @QtCore.Slot()
-    def _releaseFinishedReply(self):
+    @QtCore.Slot(object)
+    def _releaseFinishedReply(self, reply):
         """Forget one exact subscription reply after its completion is dispatched."""
-        reply = self.sender()
         unique = self._replySubscriptions.pop(reply, '')
 
         self._activeReplies.pop(reply, None)
@@ -577,7 +582,13 @@ class SubscriptionManager(HttpGetManager):
         self._activeReplies[reply] = reply
         self._replySubscriptions[reply] = str(kwargs.get('unique', ''))
 
-        reply.finished.connect(self._releaseFinishedReply)
+        connectWeakly(
+            reply.finished,
+            self,
+            '_releaseFinishedReply',
+            sender=reply,
+            forwardSender=True,
+        )
 
     def updateSubsByUnique(self, unique: str, **kwargs):
         """Update one enabled subscription group by stable ID."""

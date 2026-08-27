@@ -169,6 +169,47 @@ class SubscriptionManagerTest(TestCase):
         self.assertFalse(hasattr(manager, 'table'))
         manager.deleteLater()
 
+    def testSubscriptionDiagnosticsIncludeConfiguredURL(self):
+        """Identify a request with its configured remark and URL."""
+        manager = self._manager()
+        profile = SimpleNamespace(itemRemark='profile')
+        manager.importer = SimpleNamespace(
+            importPayload=mock.Mock(
+                return_value=SimpleNamespace(
+                    decoderId='decoder',
+                    profiles=(profile,),
+                    rejectedItems=0,
+                )
+            )
+        )
+        configuredURL = 'https://example.invalid/subscription?token=value'
+
+        with mock.patch('Furious.Service.SubscriptionManager.logger.info') as infoLog:
+            manager.successCallback(
+                _Reply(b'payload'),
+                unique='group-a',
+                remark='Group A',
+                webURL=configuredURL,
+                successArgs=[],
+                failureArgs=[],
+            )
+
+        with mock.patch('Furious.Service.SubscriptionManager.logger.error') as errorLog:
+            manager.failureCallback(
+                _Reply(error='offline'),
+                unique='group-a',
+                remark='Group A',
+                webURL=configuredURL,
+                failureArgs=[],
+            )
+
+        self.assertIn('Group A', infoLog.call_args.args[0])
+        self.assertIn('Group A', errorLog.call_args.args[0])
+        self.assertIn(configuredURL, infoLog.call_args.args[0])
+        self.assertIn(configuredURL, errorLog.call_args.args[0])
+
+        manager.deleteLater()
+
     def testStaleRequestCompletionCannotMutateCurrentSubscription(self):
         subscriptions = {
             'group-a': {

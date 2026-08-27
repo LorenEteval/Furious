@@ -52,7 +52,7 @@ from .QtGui import (
     bootstrapIconWithOpacity,
 )
 from .QtNetwork import AppQNetworkAccessManager
-from .Signals import connectWeakly
+from .Signals import connectWeakly, singleShotWeakly
 from .QtWidgets import (
     AppQComboBox,
     AppQComboBoxSeparatorDelegate,
@@ -168,6 +168,7 @@ __all__ = [
     'connectWeakly',
     'gettext',
     'moveToCenter',
+    'singleShotWeakly',
     'showMBoxDirectRulesNotAllowed',
     'showMBoxNewChangesNextTime',
     'showMBoxUnrecognizedConfig',

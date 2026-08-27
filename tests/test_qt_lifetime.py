@@ -34,6 +34,7 @@ from Furious.Backends.Xray.TrojanEditor import TrojanEditor
 from Furious.Backends.Xray.TunSettingsDialog import XrayTunSettingsDialog
 from Furious.Backends.Xray.VlessEditor import VlessEditor
 from Furious.Backends.Xray.VmessEditor import VmessEditor
+from Furious.Actions.Import import ImportURIsProgressDialog
 from Furious.Frozenlib import Mixins
 from Furious.Qt import (
     AppQAction,
@@ -44,11 +45,14 @@ from Furious.Qt import (
     AppQSwitch,
     AppQTransientDialog,
     connectWeakly,
+    singleShotWeakly,
 )
 from Furious.Qt.QtWidgets import _AppMessageBoxMask
 from Furious.Window.QRCodeWindow import QRCodeWindow, _QRCodePage
 from Furious.Window.SubscriptionPage import _SubscriptionEditorDialog
+from Furious.Window.IndentDialog import IndentDialog
 from Furious.Window.TextEditorWindow import TextEditorWindow
+from Furious.Widget.ServerTableView import DeleteServersProgressDialog
 
 from PySide6 import QtCore
 from PySide6.QtGui import QImage
@@ -68,6 +72,7 @@ from tests.support import (
 
 import gc
 import unittest
+from unittest import mock
 import weakref
 
 
@@ -114,6 +119,21 @@ class TransientReceiver(AppQTransientDialog):
     @QtCore.Slot()
     def handleEmission(self):
         """Record one signal delivery."""
+        self._calls.append(1)
+
+
+class DelayedReceiver(QtCore.QObject):
+    """Record weakly scheduled work while this receiver remains alive."""
+
+    def __init__(self, calls):
+        """Retain only the caller-owned result list."""
+        super().__init__()
+
+        self._calls = calls
+
+    @QtCore.Slot()
+    def record(self):
+        """Record one delivered timer callback."""
         self._calls.append(1)
 
 
@@ -308,6 +328,99 @@ class QtLifetimeTest(unittest.TestCase):
         self.assertEqual(emitter.receivers(QtCore.SIGNAL('emitted()')), 0)
 
         emitter.deleteLater()
+
+    def testWeakSingleShotDispatchDoesNotRetainDestroyedReceiver(self):
+        """Run live work once and drop deferred work for a dead receiver."""
+        calls = []
+        liveReceiver = DelayedReceiver(calls)
+
+        singleShotWeakly(0, liveReceiver, 'record')
+        processQtEvents()
+
+        self.assertEqual(calls, [1])
+
+        deadReceiver = DelayedReceiver(calls)
+        deadReference = weakref.ref(deadReceiver)
+
+        singleShotWeakly(0, deadReceiver, 'record')
+
+        del deadReceiver
+
+        self.assertIsNone(deadReference())
+
+        processQtEvents()
+
+        self.assertEqual(calls, [1])
+
+        liveReceiver.deleteLater()
+
+    def testImportProgressWeakSchedulingCompletesAndDestroysEveryDialog(self):
+        """Keep cooperative import callbacks outside packaged bound-method retention."""
+        iterations = 40
+        references = []
+        destroyed = []
+
+        with mock.patch(
+            'Furious.Actions.Import.Storage.UserServers',
+            return_value=[],
+        ):
+            for _index in range(iterations):
+                dialog = ImportURIsProgressDialog(tuple())
+                dialog.destroyed.connect(lambda *_args: destroyed.append(True))
+                references.append(weakref.ref(dialog))
+
+                dialog.open()
+                processQtEvents()
+
+        del dialog
+
+        collectAtBoundary()
+
+        self.assertAllDestroyed(references, destroyed, iterations)
+
+    def testDeleteProgressWeakSchedulingCompletesAndDestroysEveryDialog(self):
+        """Release empty cooperative delete dialogs after their scheduled work."""
+        iterations = 40
+        table = mock.Mock()
+        references = []
+        destroyed = []
+
+        for _index in range(iterations):
+            dialog = DeleteServersProgressDialog(table, tuple())
+            dialog.destroyed.connect(lambda *_args: destroyed.append(True))
+            references.append(weakref.ref(dialog))
+
+            dialog.open()
+            processQtEvents()
+
+        del dialog
+
+        collectAtBoundary()
+
+        self.assertAllDestroyed(references, destroyed, iterations)
+        self.assertEqual(table.sourceModel.refreshIndexes.call_count, iterations)
+        self.assertEqual(table.sourceModel.emitAllChanged.call_count, iterations)
+
+    def testTextEditorIndentCompletionReceivesExactTransientDialog(self):
+        """Apply indentation through explicit weak sender forwarding."""
+        with isolatedSettings():
+            editor = TextEditorWindow()
+            editor.setPlainText('{"value": 1}', False)
+            editor.setIndent()
+
+            dialogs = editor.findChildren(IndentDialog)
+
+            self.assertEqual(len(dialogs), 1)
+
+            dialog = dialogs[0]
+            dialog.indentSpin.setValue(4)
+            dialog.accept()
+
+            processQtEvents()
+
+            self.assertIn('\n    "value": 1\n', editor.jsonEditor.toPlainText())
+
+            editor.deleteLater()
 
     def testHysteria2SwitchAnimationStopsWithTransientEditor(self):
         """Destroy owned switch animations even when a toggle just started."""

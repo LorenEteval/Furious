@@ -23,8 +23,8 @@ Use the `manage-qt-pyside6-lifetimes` skill for Qt ownership or lifecycle work.
 - Native PySide and Nuitka can retain callbacks differently. Never pass a transient/repeated receiver's bound method to
   `Signal.connect()` or `QTimer.singleShot()`, and do not hide that capture in a lambda/partial. Use
   `connectWeakly(signal, receiver, 'methodName', sender=...)` when the sender is independent/longer-lived; use
-  `forwardSender=True` when the slot needs it. Direct bound methods are reserved for deliberately process-lifetime
-  receivers whose retention is intentional and documented.
+  `forwardSender=True` when the slot needs it, and use `singleShotWeakly()` for deferred named-method dispatch. Direct
+  bound methods are reserved for deliberately process-lifetime receivers whose retention is intentional and documented.
 - `AppQAction.callback` is deliberately strong; its owner cannot outlive the receiver it captures. Parent or explicitly
   dispose timers, models, delegates, replies, event filters, menus, actions, shortcuts, watchers, animations, and effects.
 - Only the GUI thread mutates widgets. Slots do not sleep or perform unbounded host/network/process work. Create

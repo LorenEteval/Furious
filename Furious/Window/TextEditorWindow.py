@@ -367,16 +367,21 @@ class TextEditorWindow(AppQMainWindow):
     def setIndent(self):
         """Set indent."""
         indentSpinBox = IndentDialog(parent=self)
-        indentSpinBox.finished.connect(self._indentDialogFinished)
+
+        connectWeakly(
+            indentSpinBox.finished,
+            self,
+            '_indentDialogFinished',
+            sender=indentSpinBox,
+            forwardSender=True,
+        )
 
         # Show the MessageBox asynchronously
         indentSpinBox.open()
 
-    @QtCore.Slot(int)
-    def _indentDialogFinished(self, code):
+    @QtCore.Slot(object, int)
+    def _indentDialogFinished(self, indentSpinBox, code):
         """Apply the selected indentation without retaining the dialog."""
-        indentSpinBox = self.sender()
-
         if not isinstance(indentSpinBox, IndentDialog):
             return
 

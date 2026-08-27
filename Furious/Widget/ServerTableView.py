@@ -30,7 +30,7 @@ from Furious.Plugins import (
     profileFromAny,
 )
 from Furious.Qt import *
-from Furious.Qt.Signals import connectWeakly
+from Furious.Qt.Signals import connectWeakly, singleShotWeakly
 from Furious.Qt import gettext as _
 from Furious.Service import (
     CORE_LOG_CATEGORY,
@@ -279,7 +279,13 @@ class TestDownloadSpeedWorker(HttpGetManager):
 
         self.timeoutTimer = QtCore.QTimer(self)
         self.timeoutTimer.setSingleShot(True)
-        self.timeoutTimer.timeout.connect(self.handleTimeout)
+
+        connectWeakly(
+            self.timeoutTimer.timeout,
+            self,
+            'handleTimeout',
+            sender=self.timeoutTimer,
+        )
 
     def completionCallback(self, **kwargs):
         """Perform the required completion hook."""
@@ -544,7 +550,7 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
 
         self.drainScheduled = True
 
-        QtCore.QTimer.singleShot(0, self.drain)
+        singleShotWeakly(0, self, 'drain')
 
     def drain(self):
         """Handle drain for the download speed test scheduler."""
@@ -619,7 +625,13 @@ class DownloadSpeedTestScheduler(QtCore.QObject):
 
         self.activeJobs[id(worker)] = (worker, job, port)
 
-        worker.finished.connect(self.handleWorkerFinished)
+        connectWeakly(
+            worker.finished,
+            self,
+            'handleWorkerFinished',
+            sender=worker,
+        )
+
         worker.start()
 
     @QtCore.Slot(object)
@@ -678,7 +690,13 @@ class DeleteServersProgressDialog(AppQTransientDialog):
         self.detailLabel = AppQLabel()
         self.detailLabel.setWordWrap(True)
         self.cancelButton = AppQPushButton(_('Cancel'))
-        self.cancelButton.clicked.connect(self.cancel)
+
+        connectWeakly(
+            self.cancelButton.clicked,
+            self,
+            'cancel',
+            sender=self.cancelButton,
+        )
 
         statusLayout = QHBoxLayout()
         statusLayout.addWidget(self.spinner)
@@ -697,7 +715,7 @@ class DeleteServersProgressDialog(AppQTransientDialog):
         """Open the delete servers progress dialog asynchronously."""
         self.spinner.start()
 
-        QtCore.QTimer.singleShot(0, self.deleteNext)
+        singleShotWeakly(0, self, 'deleteNext')
 
         return super().open()
 
@@ -705,7 +723,7 @@ class DeleteServersProgressDialog(AppQTransientDialog):
         """Reject the current delete servers progress dialog values."""
         self.cancel()
 
-    def cancel(self):
+    def cancel(self, *_args):
         """Cancel the delete servers progress dialog operation."""
         self.canceled = True
         self.cancelButton.setEnabled(False)
@@ -750,7 +768,8 @@ class DeleteServersProgressDialog(AppQTransientDialog):
 
         if deleteIndex < 0 or deleteIndex >= len(Storage.UserServers()):
             self.updateStatus()
-            QtCore.QTimer.singleShot(0, self.deleteNext)
+
+            singleShotWeakly(0, self, 'deleteNext')
 
             return
 
@@ -781,7 +800,7 @@ class DeleteServersProgressDialog(AppQTransientDialog):
         self.deletedCount += 1
         self.updateStatus()
 
-        QtCore.QTimer.singleShot(0, self.deleteNext)
+        singleShotWeakly(0, self, 'deleteNext')
 
     def finishDeletion(self):
         """Handle finish deletion for the delete servers progress dialog."""
