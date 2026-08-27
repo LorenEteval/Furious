@@ -353,7 +353,7 @@ class SettingsPageOrganizationTest(unittest.TestCase):
         """Finish deferred Settings-page deletion between tests."""
         collectAtBoundary()
 
-    def buildPage(self, *, platform='Windows', flatpakID=''):
+    def buildPage(self, *, platform='Windows', flatpakID='', isAdmin=False):
         """Build one isolated Settings page for the requested platform state."""
         callbacks = {
             'checkForUpdates': mock.Mock(),
@@ -369,7 +369,7 @@ class SettingsPageOrganizationTest(unittest.TestCase):
             mock.patch('Furious.Window.SettingsPage.PLATFORM', platform),
             mock.patch(
                 'Furious.Window.SettingsPage.SystemRuntime.isAdmin',
-                return_value=False,
+                return_value=isAdmin,
             ),
             mock.patch(
                 'Furious.Window.SettingsPage.SystemRuntime.flatpakID',
@@ -443,6 +443,25 @@ class SettingsPageOrganizationTest(unittest.TestCase):
 
         page.close()
         page.deleteLater()
+
+    def testFlatpakShowsDisabledTunModeCardRegardlessOfPrivileges(self):
+        """Keep the Flatpak TUN mode toggle visible but always disabled."""
+        for isAdmin in (False, True):
+            with self.subTest(isAdmin=isAdmin):
+                page, _callbacks = self.buildPage(
+                    platform='Linux',
+                    flatpakID='io.github.LorenEteval.Furious',
+                    isAdmin=isAdmin,
+                )
+
+                self.assertIn(page.tunModeCard, page.generalSection.cards)
+                self.assertFalse(page.tunModeCard.checkBox.isEnabled())
+
+                page.setConnectionControlsEnabled(True)
+                self.assertFalse(page.tunModeCard.checkBox.isEnabled())
+
+                page.close()
+                page.deleteLater()
 
     def testMovedCardsPreservePlatformVisibility(self):
         """Retain the existing restart, Darwin, and Flatpak visibility gates."""

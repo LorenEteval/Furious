@@ -646,7 +646,11 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.pluginSections = []
         self._pluginActions = []
 
-        self._tunModeAvailable = PLATFORM == 'Linux' or SystemRuntime.isAdmin()
+        if PLATFORM == 'Linux':
+            self._tunModeAvailable = not SystemRuntime.flatpakID()
+        else:
+            self._tunModeAvailable = SystemRuntime.isAdmin()
+
         self.tunModeCard = _ToggleSettingsCard(
             'shield-check.svg',
             'VPNMode',
