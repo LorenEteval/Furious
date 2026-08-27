@@ -7,6 +7,10 @@
 - Keep lower layers importable without application construction. `Interface` and `Models` cannot depend on UI,
   controllers, services, repositories, or concrete backends. Backend imports remain lazy enough that importing
   `Furious` does not initialize Qt resources, plugins, runtimes, or windows.
+- Package `__init__.py` files are curated public/import surfaces, not convenience mirrors of every module. Before adding
+  an export, check import direction, source installation, tests, and Nuitka discovery. Several settings are deliberately
+  registered as modules import, so moving imports can change which `AppSettings` keys exist during partial startup or
+  isolated tests.
 - Process-lifetime accessors in `Frozenlib.Globals` expose compatibility paths to deliberate application owners only.
   They may be unavailable during tests, partial startup, or shutdown; new code should prefer explicit dependencies and
   callers using globals must tolerate that boundary rather than installing fallback owners.
@@ -27,3 +31,7 @@
 - Reuse translation/theme-aware construction and layout behavior rather than parallel registries or call-site styling.
   Preserve focus, keyboard, shortcut, accessibility, resize, high-DPI, and light/dark behavior.
 - UI presents failures at the interaction boundary; owning services/controllers expose structured, testable outcomes.
+- Route a change by authority: domain shape and identity to `Models`; persistence and migration to `Repository`;
+  temporary work and external resources to `Service`; shared transitions to `Controllers`; backend variation to plugin
+  contracts/implementations; host mutation to `Frozenlib`; and presentation to `Qt`, `Widget`, `Window`, or `Actions`.
+  If a change crosses these boundaries, keep one commit point and document which owner coordinates it.

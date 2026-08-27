@@ -9,10 +9,11 @@
   application in an exact child process so the parent can translate crashes and show a fallback report.
   `DesktopApplication` then performs singleton election, composes process-lifetime owners, restores the requested
   connection, runs the event loop, and unwinds acquired stages in reverse order.
-- The main dependency direction is: models describe data; repositories persist domain collections; `AppSettings`
-  registers QSettings-backed preferences/blobs; services own workflows and temporary resources; controllers own shared
-  state machines; plugins/backends own protocol and runtime variation; `Application` composes the process; windows,
-  widgets, and actions adapt those APIs for presentation.
+- Read the package map as cooperating responsibility layers, not a strict linear stack. `Frozenlib`, `Interface`, and
+  `Models` provide foundations and domain values; `Plugins.API` defines extension contracts; bundled backends and
+  extensions implement them; repositories persist domain collections; services own workflows/resources; controllers
+  own shared state transitions; UI packages adapt those owners; and `Application` composes the process. Compatibility
+  wildcard exports and global accessors create some deliberate cross-layer paths, but new work should not widen them.
 - Official backends are Xray, Hysteria 1, Hysteria 2, and a structured external-core process. New backend variation
   belongs behind plugin capabilities, not core-name conditionals in shared orchestration.
 
@@ -57,6 +58,14 @@
   `Furious/Data`; lazy/plugin/optional imports must remain discoverable without constructing application or UI objects
   at import time. The release workflow builds multiple OS/architecture artifacts, so host-local success is not proof of
   packaged correctness.
+- Packaging metadata has overlapping declarations across `pyproject.toml`, `setup.py`, `requirements.txt`, and the
+  release workflow. A dependency, Python/Qt floor, entry point, package-data, version, or artifact change must update
+  every applicable surface and preserve both standards-based and legacy setuptools builds. `Deploy.py --download` and
+  `--cleanup` mutate bundled assets or build trees; run them only when those effects are in scope.
+- The release matrix is part of the product boundary: Linux intentionally proves an Essentials-only/no-WebEngine
+  fallback, macOS verifies its WebEngine bundle, and Windows verifies native-extension and packaged PE architecture.
+  Keep workflow conditions, dependency installation, `Deploy.py` outputs, uploaded patterns, and tag-gated publication
+  consistent. Follow `.github/AGENTS.md` for workflow edits.
 
 ## Verification
 
@@ -78,3 +87,6 @@
 - Let child guides specialize inherited rules instead of repeating them. Remove obsolete constraints, distinguish a
   compatibility path from the preferred direction, and avoid turning incidental implementation details into permanent
   policy. A new rule should help a future agent make a concrete engineering decision.
+- When changing a subsystem, reread the applicable ancestor and child guides as one scope. Amend guidance only for a
+  durable discovery: explain the reason, place it at the narrowest useful level, and remove or relax the old rule when
+  its protected invariant no longer exists.

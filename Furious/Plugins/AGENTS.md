@@ -7,9 +7,11 @@
 - The process-wide manager registers host plugin types before trusted entry-point discovery, publishes a registry only
   after successful construction, and may reconcile additional host types idempotently. Keep discovery literal,
   deterministic, and side-effect-light for source, wheel, and Nuitka builds.
-- Use current `CoreRuntimeFactory`, `CoreRuntimeRequest`, and `CoreRuntimeLaunch` vocabulary. Add protocol, editor,
-  runtime, subscription decoder, routing/TUN, traffic statistics, settings, action, or navigation variation through its
-  capability family rather than central core-name branches.
+- Use current `CoreRuntimeFactory`, `CoreRuntimeRequest`, and `CoreRuntimeLaunch` vocabulary. Protocols, editors,
+  subscription decoders, runtimes, traffic statistics, settings, actions, and navigation are independently indexed
+  capability kinds. Routing, native-TUN/application-tun2socks policy, probes, environment, core versions, log patterns,
+  and exit interpretation are hooks on the owning runtime factory. Extend the correct contract instead of adding
+  central `coreName()` branches or inventing a parallel registry.
 - Registration validates the complete plugin/capability contribution before committing indexes. Duplicate IDs/schemes,
   incompatible API versions, invalid descriptors, and initialization failures cannot corrupt existing providers; log
   plugin and capability identity without leaking configuration secrets.

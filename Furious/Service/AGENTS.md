@@ -27,6 +27,10 @@
   schedules, cancellation, and reconnect/disconnect follow-up. Freshness is checked before commit; one group failure does
   not cancel current peers; post-commit side-effect failure does not roll back reconciliation; unchanged scheduling
   policy does not restart timers or duplicate connections.
+- Keep the subscription stages distinct: decoders emit neutral `SubscriptionItem` values;
+  `SubscriptionImportService` constructs profiles and metadata; `SubscriptionSynchronizer` prepares group-scoped
+  reconciliation; `SubscriptionManager` owns request/schedule generations and commits the prepared result. Do not move
+  repository or UI mutation into a decoder merely to shorten this path.
 - Endpoint inspection uses only the active proxy, neutral request metadata, bounded caches, and connection generations.
   Reject stale results and disclose actual providers without exposing profile credentials or complete destinations.
 

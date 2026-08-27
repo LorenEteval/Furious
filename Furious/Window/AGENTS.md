@@ -8,6 +8,9 @@
   rendering. Those locations may evolve, but a refactor must retain one durable owner, one scheduler, and one signal path.
 - Home is the initial page. Page selection and navigation expansion are session-local and initially collapsed; do not
   persist them without an explicit product decision and migration.
+- `SettingsPage` renders built-in preferences through `SettingsController` and plugin settings from declarative
+  descriptors. Availability and enabled state are capability/platform policy (for example tray, privilege, and
+  Flatpak constraints), not permission to persist an unsupported value or to duplicate host side effects in a card.
 - Long-lived pages create controls, models, timers, services, and signal connections once. Visibility may pause or defer
   rendering, but never application-level collection, log draining, subscription scheduling, or request ownership.
 - One-shot editors/prompts use managed transient dialogs. `TextEditorWindow` is intentionally reusable and needs one

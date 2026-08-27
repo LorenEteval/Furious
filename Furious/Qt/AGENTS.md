@@ -20,6 +20,9 @@ Use the `manage-qt-pyside6-lifetimes` skill for Qt ownership or lifecycle work.
 - `AppQDialog.open()` retains a reusable dialog through `finished`; delete-on-close transients remain retained through
   deferred native destruction and release after `destroyed`. Registry cleanup captures only the opaque lifetime token,
   never the dialog. `exec()` is for genuinely synchronous control flow.
+- `AppQMainWindow._openWindows` is a visibility-lifetime bridge for shown top-level windows, not a second application
+  owner: accepted close or destruction must remove the entry. A reusable window still needs a deliberate owner that can
+  show it again; a transient top-level must not remain in this registry after closing.
 - Native PySide and Nuitka can retain callbacks differently. Never pass a transient/repeated receiver's bound method to
   `Signal.connect()` or `QTimer.singleShot()`, and do not hide that capture in a lambda/partial. Use
   `connectWeakly(signal, receiver, 'methodName', sender=...)` when the sender is independent/longer-lived; use

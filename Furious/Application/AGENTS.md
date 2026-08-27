@@ -10,7 +10,8 @@
   Register cleanup immediately after each acquisition that succeeded.
 - Partial startup, normal exit, and event-loop failure converge on the same reverse-order, failure-isolating, idempotent
   cleanup stack. `exit()` requests termination; `aboutToQuit`/`finally` perform cleanup. Keep graceful cleanup separate
-  from the final Qt exit-code decision.
+  from the final Qt exit-code decision. Window, tray, session, and action handlers request `exit()`; they do not run the
+  cleanup stack themselves.
 - `ConnectionController.shutdown()` preserves the reconnect-on-next-start preference while releasing the live runtime.
   Repository cleanup persists live collections only after successful restoration or explicit replacement.
 

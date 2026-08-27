@@ -11,6 +11,9 @@
 - Preserve unknown metadata and legacy aliases across migrations. A manual independent copy receives a new `profileId`
   and loses subscription ownership; a runtime `deepcopy()` preserves identity metadata because it is not a new domain
   profile.
+- `ensureProfile()` is normalization, not cloning: when given an existing `ServerProfile`, metadata arguments update
+  that same object. Use `independentCopy()` when caller intent is to create a new stored profile, and a
+  deep runtime copy when identity must be preserved without mutating persistence.
 - `profileId`, subscription source, `subscriptionProfileKey`, connection fingerprint, row position, and display text are
   separate identities. Fingerprints are deterministic only for supported JSON-compatible documents and failures remain
   explicit.

@@ -14,6 +14,8 @@
 
 - Test public behavior and architectural contracts, not private widget coordinates or incidental implementation. Cover
   success, invalid input, timeout/cancel, partial/stale completion, cleanup, and compatible persisted input where relevant.
+- Tests that assert localized text set `Language` in an `isolatedSettings()` scope or request an explicit locale. Do not
+  depend on the system-locale default or on whether another test happened to construct the shared `QApplication` first.
 - For staged mutations, fail immediately before commit and assert live plus persisted state is unchanged. Test
   post-commit side-effect failure separately without claiming rollback.
 - Keep persisted profile and runtime-copy assertions distinct. TUN preservation, generated native TUN, application

@@ -20,8 +20,12 @@
   cleanup requires it, or documents a non-GUI build/setup context. Avoid shell strings when an argument vector works.
 - Own exact threads/processes/handles, clear dead daemon references, and make cleanup bounded and repeatable. Externally
   keyed caches are bounded; finite metadata caches never capture QObject instances or bound methods.
-- Context managers restore the previous state when nested. Weak pools/callbacks must not have another strong owner and
-  must prune invalid PySide wrappers.
+- `Mixins.CleanupOnExit` and the translation/theme/connection pools are weak registries, not object owners. A real
+  application/page/service owner must retain each live object. Cleanup's legacy `uniqueCleanup` default de-duplicates by
+  type; resource-owning instances that each need cleanup must opt out or use a clearer explicit owner/cleanup stage.
+  Preserve failure isolation and clear/prune invalid wrappers after a sweep.
+- Context managers restore the previous state when nested. Weak callbacks must not accidentally gain another strong
+  owner, and weak pools must prune invalid PySide wrappers.
 - `AppResources.py` is generated from `Resources.qrc` and its resource files. Update those inputs and regenerate with the
   compatible PySide6 toolchain; do not edit the generated module.
 
