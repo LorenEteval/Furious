@@ -795,25 +795,35 @@ class ApplicationLifecycleTransactionTest(TestCase):
         messageBoxType.StandardButton = AppQMessageBox.StandardButton
         mainWindow = mock.Mock()
         closeEvent = mock.Mock()
+        translatedQuestion = 'Translated exit question'
         application = SimpleNamespace(
             mainWindow=mainWindow,
             systemTray=None,
             exit=mock.Mock(),
         )
 
-        with mock.patch(
-            'Furious.Application.DesktopApplication.AppQMessageBox',
-            messageBoxType,
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.AppQMessageBox',
+                messageBoxType,
+            ),
+            mock.patch(
+                'Furious.Application.DesktopApplication._',
+                return_value=translatedQuestion,
+            ) as translate,
         ):
             filtered = DesktopApplication._handleMainWindowCloseEvent(
                 application,
                 closeEvent,
             )
 
+        translate.assert_called_once_with(
+            'Are you sure you want to exit the application?'
+        )
         messageBoxType.assert_called_once_with(
             icon=AppQMessageBox.Icon.Question,
             parent=mainWindow,
-            text='Are you sure you want to exit the application?',
+            text=translatedQuestion,
             buttons=(
                 AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.No
             ),
