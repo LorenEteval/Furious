@@ -154,12 +154,12 @@ jobs:
         run: |
           sudo apt update
 
-          if [ "$RUNNER_ARCH" == "ARM64" ]; then
-            sudo apt install -y \
-              libevent-2.1-7 \
-              libwebp7 \
-              libminizip1
-          fi
+          # if [ "$RUNNER_ARCH" == "ARM64" ]; then
+          #   sudo apt install -y \
+          #     libevent-2.1-7 \
+          #     libwebp7 \
+          #     libminizip1
+          # fi
 
           sudo apt install -y \
             libxcb-cursor0 \
