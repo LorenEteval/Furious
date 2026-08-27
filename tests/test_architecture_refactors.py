@@ -24,8 +24,9 @@ from Furious.Application.DesktopApplication import (
     _ExistingInstanceResult,
     _SingletonStartupResult,
 )
-from Furious.Frozenlib import AppBuiltinCommand
+from Furious.Frozenlib import AppBuiltinCommand, PySide6Legacy
 from Furious.Interface import ApplicationRunner, CoreRuntime
+from Furious.Qt import AppQMessageBox
 from Furious.Qt.AppStyleSheet import AppStyleSheet
 from Furious.Service.ConnectionManager import ConnectionManager
 
@@ -721,8 +722,8 @@ class ApplicationLifecycleTransactionTest(TestCase):
             outputs,
         )
 
-    def testUnavailableTrayShowsMainWindowAndEnablesWindowQuit(self):
-        """Run normally without a desktop tray instead of rejecting Linux."""
+    def testUnavailableTrayShowsMainWindowWithQtAutoQuitDisabled(self):
+        """Use explicit confirmed exit when the desktop tray is unavailable."""
         mainWindow = mock.Mock()
         trayFactory = mock.Mock()
         trayFactory.isSystemTrayAvailable.return_value = False
@@ -744,9 +745,11 @@ class ApplicationLifecycleTransactionTest(TestCase):
         ):
             DesktopApplication._initializeUI(application)
 
-        application.setQuitOnLastWindowClosed.assert_called_once_with(True)
+        application.setQuitOnLastWindowClosed.assert_called_once_with(False)
+        mainWindow.installEventFilter.assert_called_once_with(application)
         mainWindow.show.assert_called_once_with()
         self.assertIsNone(application.systemTray)
+        trayFactory.isSystemTrayAvailable.assert_called_once_with()
         trayFactory.assert_not_called()
 
     def testAvailableTrayPreservesBackgroundApplicationBehavior(self):
@@ -774,10 +777,128 @@ class ApplicationLifecycleTransactionTest(TestCase):
             DesktopApplication._initializeUI(application)
 
         application.setQuitOnLastWindowClosed.assert_called_once_with(False)
+        mainWindow.installEventFilter.assert_called_once_with(application)
         mainWindow.show.assert_not_called()
         tray.show.assert_called_once_with()
         tray.setCustomToolTip.assert_called_once_with()
         tray.bootstrap.assert_called_once_with()
+        trayFactory.isSystemTrayAvailable.assert_called_once_with()
+
+    def testMainWindowCloseConfirmationRequestsNormalExit(self):
+        """Deliver the close event after the user confirms normal shutdown."""
+        messageBox = mock.Mock()
+        messageBox.exec.return_value = PySide6Legacy.enumValueWrapper(
+            AppQMessageBox.StandardButton.Yes
+        )
+        messageBoxType = mock.Mock(return_value=messageBox)
+        messageBoxType.Icon = AppQMessageBox.Icon
+        messageBoxType.StandardButton = AppQMessageBox.StandardButton
+        mainWindow = mock.Mock()
+        closeEvent = mock.Mock()
+        application = SimpleNamespace(
+            mainWindow=mainWindow,
+            systemTray=None,
+            exit=mock.Mock(),
+        )
+
+        with mock.patch(
+            'Furious.Application.DesktopApplication.AppQMessageBox',
+            messageBoxType,
+        ):
+            filtered = DesktopApplication._handleMainWindowCloseEvent(
+                application,
+                closeEvent,
+            )
+
+        messageBoxType.assert_called_once_with(
+            icon=AppQMessageBox.Icon.Question,
+            parent=mainWindow,
+            text='Are you sure you want to exit the application?',
+            buttons=(
+                AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.No
+            ),
+        )
+        messageBox.setDefaultButton.assert_called_once_with(
+            AppQMessageBox.StandardButton.No
+        )
+        application.exit.assert_called_once_with()
+        closeEvent.ignore.assert_not_called()
+        self.assertFalse(filtered)
+
+    def testMainWindowCloseCancellationConsumesEvent(self):
+        """Reject the pending close before the main window disappears."""
+        messageBox = mock.Mock()
+        messageBox.exec.return_value = PySide6Legacy.enumValueWrapper(
+            AppQMessageBox.StandardButton.No
+        )
+        messageBoxType = mock.Mock(return_value=messageBox)
+        messageBoxType.Icon = AppQMessageBox.Icon
+        messageBoxType.StandardButton = AppQMessageBox.StandardButton
+        mainWindow = mock.Mock()
+        closeEvent = mock.Mock()
+        application = SimpleNamespace(
+            mainWindow=mainWindow,
+            systemTray=None,
+            exit=mock.Mock(),
+        )
+
+        with mock.patch(
+            'Furious.Application.DesktopApplication.AppQMessageBox',
+            messageBoxType,
+        ):
+            filtered = DesktopApplication._handleMainWindowCloseEvent(
+                application,
+                closeEvent,
+            )
+
+        application.exit.assert_not_called()
+        closeEvent.ignore.assert_called_once_with()
+        self.assertTrue(filtered)
+
+    def testMainWindowCloseEventIsFilteredOnlyWithoutSystemTray(self):
+        """Ask for confirmation only when no tray can retain the application."""
+        closeEvent = mock.Mock()
+        closeEvent.type.return_value = QtCore.QEvent.Type.Close
+
+        for systemTray, expectedFiltered in ((None, True), (mock.Mock(), False)):
+            with self.subTest(systemTray=systemTray):
+                application = SimpleNamespace(
+                    systemTray=systemTray,
+                    _handleMainWindowCloseEvent=mock.Mock(return_value=True),
+                )
+
+                with mock.patch(
+                    'Furious.Application.DesktopApplication.PLATFORM',
+                    'Linux',
+                ):
+                    filtered = DesktopApplication._filterMainWindowEvent(
+                        application,
+                        closeEvent,
+                    )
+
+                self.assertIs(filtered, expectedFiltered)
+
+                if systemTray is None:
+                    application._handleMainWindowCloseEvent.assert_called_once_with(
+                        closeEvent
+                    )
+                else:
+                    application._handleMainWindowCloseEvent.assert_not_called()
+
+    def testUICleanupRemovesMainWindowEventFilter(self):
+        """Detach application policy before releasing the persistent window."""
+        mainWindow = mock.Mock()
+        application = SimpleNamespace(
+            mainWindow=mainWindow,
+            systemTray=None,
+        )
+
+        DesktopApplication._cleanupUI(application)
+
+        mainWindow.removeEventFilter.assert_called_once_with(application)
+        mainWindow.hide.assert_called_once_with()
+        mainWindow.deleteLater.assert_called_once_with()
+        self.assertIsNone(application.mainWindow)
 
     def testSuccessfulRunAcquiresEveryStageOnceAndCleansUpInReverse(self):
         application, calls = self._application()

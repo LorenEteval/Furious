@@ -23,7 +23,8 @@
   from the OS name alone.
 - `MainWindow` owns the persistent page tree through Qt parentage. The application owns top-level window/tray wrappers;
   the tray owns its long-lived actions and menus. Dynamic rebuilds dispose obsolete objects, and an unavailable tray
-  falls back to showing the main window and quitting on the last window.
+  falls back to showing the main window and explicitly confirms a main-window exit. Qt automatic last-window quitting
+  remains disabled so every accepted shutdown uses the normal application exit path.
 
 ## Verification
 

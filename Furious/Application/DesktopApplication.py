@@ -40,6 +40,7 @@ from Furious.Frozenlib import (
     AppSettings,
     ApplicationTheme,
     Mixins,
+    PySide6Legacy,
     SystemProxy,
     SystemRuntime,
     Win32Session,
@@ -57,7 +58,7 @@ from Furious.Controllers import (
 )
 from Furious.Extensions import BUNDLED_EXTENSION_TYPES
 from Furious.Plugins import initializePluginRegistry
-from Furious.Qt import AppStyleSheet
+from Furious.Qt import AppQMessageBox, AppStyleSheet
 from Furious.Qt.TextEditorTheme import configureEditorLogMetadata
 from Furious.Qt import gettext as _
 from Furious.Repository import Storage
@@ -697,8 +698,6 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
     def _initializeSystemIntegration(self):
         """Install operating-system session and automatic proxy integration."""
-        self.setQuitOnLastWindowClosed(False)
-
         if Win32Session.set(self._sessionShutdownRequested.emit):
             self._cleanupStack.register('Windows session listener', Win32Session.off)
 
@@ -718,18 +717,44 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
                     'Windows system proxy daemon', SystemProxy.daemonOff
                 )
 
+    def _handleMainWindowCloseEvent(self, event):
+        """Confirm a main-window close before Qt accepts the event."""
+        assert self.systemTray is None
+
+        mbox = AppQMessageBox(
+            icon=AppQMessageBox.Icon.Question,
+            parent=self.mainWindow,
+            text=_('Are you sure you want to exit the application?'),
+            buttons=(
+                AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.No
+            ),
+        )
+        mbox.setDefaultButton(AppQMessageBox.StandardButton.No)
+
+        if mbox.exec() == PySide6Legacy.enumValueWrapper(
+            AppQMessageBox.StandardButton.Yes
+        ):
+            self.exit()
+
+            # Preserve normal close-event delivery so AppQMainWindow can
+            # release its shown-window lifetime entry.
+            return False
+        else:
+            event.ignore()
+
+            return True
+
     def _initializeUI(self):
         """Create and bootstrap the application-owned main window and tray."""
         try:
+            self.setQuitOnLastWindowClosed(False)
             self.applyThemePreference()
+
             self.mainWindow = MainWindow()
+            self.mainWindow.installEventFilter(self)
 
             if TrayIcon.isSystemTrayAvailable():
                 self.systemTray = TrayIcon(parent=self)
-
-                self.setQuitOnLastWindowClosed(False)
-            else:
-                self.setQuitOnLastWindowClosed(True)
 
             if PLATFORM == 'Darwin':
                 if AppSettings.isStateON_('HideDockIcon'):
@@ -778,6 +803,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
             self.systemTray = None
 
         if self.mainWindow is not None:
+            self.mainWindow.removeEventFilter(self)
             self.mainWindow.hide()
             self.mainWindow.deleteLater()
             self.mainWindow = None
@@ -908,29 +934,40 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         policy = 0 if visible else 1
         NSApplication.sharedApplication().setActivationPolicy_(policy)
 
-    def eventFilter(self, watched, event):
-        # Show Dock icon on macOS when window is shown
-        # and hide only when window is closed (not minimized)
-        """Return the event filter value used by the application."""
-        if PLATFORM == 'Darwin' and watched is self.mainWindow:
-            if event.type() == QtCore.QEvent.Type.Show:
+    def _filterMainWindowEvent(self, event) -> bool:
+        """Apply application policy before the main window handles an event."""
+        eventType = event.type()
+
+        if (
+            eventType == QtCore.QEvent.Type.Close
+            and self.systemTray is None
+            and self._handleMainWindowCloseEvent(event)
+        ):
+            return True
+
+        if PLATFORM == 'Darwin' and AppSettings.isStateON_('HideDockIcon'):
+            # Show the Dock icon while the main window is visible and hide it
+            # only when the window closes rather than when minimized.
+            if eventType == QtCore.QEvent.Type.Show:
                 self.setDockIconVisible(True)
-            if event.type() == QtCore.QEvent.Type.Hide:
-                # Hide Dock icon when window is closed (not minimized)
+            elif eventType == QtCore.QEvent.Type.Hide:
                 if not self.mainWindow.isMinimized():
                     self.setDockIconVisible(False)
+
+        return False
+
+    def eventFilter(self, watched, event):
+        """Filter application-owned main-window events."""
+        if watched is self.mainWindow and self._filterMainWindowEvent(event):
+            return True
 
         return super().eventFilter(watched, event)
 
     def installDockIconVisibilityFeature(self, remove=False):
         """Handle install dock icon visibility feature for the application."""
         if remove:
-            self.mainWindow.removeEventFilter(self)
             self.setDockIconVisible(True)
         else:
-            # Install event filter for main window to track show/hide
-            self.mainWindow.installEventFilter(self)
-
             if not self.mainWindow.isVisible() and not self.mainWindow.isMinimized():
                 self.setDockIconVisible(False)
 

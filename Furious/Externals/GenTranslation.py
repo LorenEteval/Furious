@@ -3228,5 +3228,13 @@ TRANSLATION = {
         "RU": "Оставьте пустым для каталога исполняемого файла",
         "ZH": "留空则使用可执行文件目录",
         "isReviewed": "True"
+    },
+    "Are you sure you want to exit the application?": {
+        "source": [
+            "Furious.Application.DesktopApplication"
+        ],
+        "RU": "Вы уверены, что хотите выйти из приложения?",
+        "ZH": "确定要退出应用程序吗？",
+        "isReviewed": "True"
     }
 }
