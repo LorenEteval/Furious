@@ -1,20 +1,32 @@
 # Plugin guidance
 
-## Registry and extension contract
+## API, registry, and discovery
 
-- `Plugins.API` defines capability contracts; `Registry` owns validation, deterministic registration/selection,
-  initialization rollback, and reverse-order idempotent shutdown.
-- Use current `CoreRuntimeFactory`, `CoreRuntimeRequest`, and `CoreRuntimeLaunch` vocabulary. Add protocol, runtime,
-  routing/TUN, statistics, subscription, or navigation variation through its capability family rather than central
-  conditionals.
-- Registries strongly own process-lifetime plugins, providers, factories, descriptors, and immutable metadata. They do
-  not own factory-created UI, active runtimes, or controller state; rejected QObject results are destroyed explicitly.
-- Registration validates before committing index changes. A failed plugin is isolated with useful plugin/capability
-  context and cannot corrupt existing providers. Partial initialization is rolled back.
-- Discovery imports stay literal, deterministic, and side-effect-light for source and Nuitka builds. API/model layers
-  never import concrete plugins.
+- `Plugins.API` defines capability contracts; `Registry` owns normalization, validation, deterministic indexing and
+  selection, initialization rollback, failure isolation, and reverse-order idempotent shutdown.
+- The process-wide manager registers host plugin types before trusted entry-point discovery, publishes a registry only
+  after successful construction, and may reconcile additional host types idempotently. Keep discovery literal,
+  deterministic, and side-effect-light for source, wheel, and Nuitka builds.
+- Use current `CoreRuntimeFactory`, `CoreRuntimeRequest`, and `CoreRuntimeLaunch` vocabulary. Add protocol, editor,
+  runtime, subscription decoder, routing/TUN, traffic statistics, settings, action, or navigation variation through its
+  capability family rather than central core-name branches.
+- Registration validates the complete plugin/capability contribution before committing indexes. Duplicate IDs/schemes,
+  incompatible API versions, invalid descriptors, and initialization failures cannot corrupt existing providers; log
+  plugin and capability identity without leaking configuration secrets.
+
+## Ownership and trust boundaries
+
+- Registries strongly own process-lifetime plugin instances, capabilities/factories, descriptors, and immutable metadata.
+  They do not own factory-created widgets, active runtimes, replies, or controller state. Factories return a fresh object
+  per request; invalid QObject results are explicitly destroyed.
+- External entry points and plugin-returned data are a boundary even when plugins are trusted for execution. Validate
+  types and required fields, isolate optional provider failure where the operation can continue, and keep the primary
+  failure observable when it cannot.
+- API/model layers never import concrete plugins. Bundled backends/extensions implement the same contracts and must not
+  rely on registration-time application or UI objects.
 
 ## Verification
 
-- Test discovery/order, duplicates and invalid capabilities, dispatch, rollback/shutdown, compiled inclusion, and
-  factories returning invalid objects.
+- Test discovery/order, API-version and duplicate rejection, every changed dispatch path, staged rollback, reverse
+  shutdown, provider failure isolation, compiled inclusion, and factories returning invalid or repeatedly created
+  objects without registry retention.

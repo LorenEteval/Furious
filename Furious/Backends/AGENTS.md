@@ -1,32 +1,41 @@
 # Backend guidance
 
-## Scope and extension
+## Responsibility and extension
 
-- A backend owns its protocol parsing/export, structured editors, runtime factory, validation, statistics, routing, and
-  native-TUN behavior. Expose variation through plugin capabilities instead of shared-manager core-name branches.
-- The full document submitted to the core is the runtime authority. Derive it from a copy and preserve the persisted
-  profile plus unknown supported fields; fail visibly when a lossless representation is impossible.
-- Runtime modules remain importable without constructing Qt editors. Registrations/imports must be literal enough for
-  plugin discovery and Nuitka inclusion; factories create fresh widgets/runtimes and registries never retain them.
+- A backend plugin owns the protocol/document types, parsing/export, structured editor factories, runtime factory,
+  validation, and any supported routing, native-TUN, statistics, settings, actions, or assets. Shared orchestration asks
+  capabilities; it does not branch on `coreName()`.
+- `Backends.Configuration` and URI codec modules contain compatibility-era shared document implementations. They may be
+  refactored, but protocol behavior must remain owned and dispatched by capabilities, with model/API layers free of
+  concrete backend imports.
+- The full core document is the runtime authority. Prepare routing, logging, probes, local endpoints, and TUN on an
+  explicit copy and preserve the persisted profile plus unknown supported fields. Fail visibly when a lossless mapping
+  or valid runtime document cannot be produced.
+- Keep runtime/configuration modules importable without constructing Qt editors. Official plugin type imports remain
+  lazy, registrations literal enough for Nuitka discovery, and every editor/runtime factory returns a fresh object that
+  the registry does not retain.
 
-## Structured editors
+## Structured editor contract
 
-- Loading is observational except for a documented compatibility normalization. Saving writes only represented fields
-  that changed, preserves unknown siblings, and does not materialize absent effective defaults.
-- Unknown future string values remain visible and survive an untouched round trip. A deliberate switch to a known
-  tagged variant may replace only the incompatible variant data that control owns.
+- Loading is observational except for a narrowly documented compatibility migration. Saving changes only represented
+  fields the user changed, preserves unknown siblings/top-level data, and does not materialize absent effective defaults.
+- Unknown future enum/tag/string values remain visible and survive an untouched round trip. An explicit switch to a
+  known tagged variant may replace only the incompatible variant data owned by that control.
+- Validation separates malformed external/persisted input from internal invariant failure and retains backend/core
+  context without logging credentials or full configuration documents.
 
-## Native TUN and runtime ownership
+## TUN and runtime ownership
 
-- Normal connection preparation operates on a runtime copy. With the backend native-TUN option enabled, generated TUN
-  replaces runtime native TUN and suppresses application tun2socks. With it disabled, an existing user native TUN is
-  preserved and also suppresses tun2socks. Without either, global TUN mode may use tun2socks.
-- Proxy-only tests explicitly strip native TUN from their own copy. Never run two TUN implementations or silently turn
-  malformed explicit TUN into another networking mode.
-- A `CoreRuntime` owns exact resources, reports an actionable `startError()`, and has bounded, idempotent startup failure
-  and shutdown cleanup. Process-backed implementations additionally reap their exact child.
+- Global TUN mode first asks the selected factory to prepare native TUN on the runtime copy. When managed native TUN is
+  enabled it replaces runtime native-TUN configuration; when disabled, any explicit user native TUN is preserved. Either
+  native case suppresses application tun2socks. Only a configuration with no native TUN may opt into the fallback.
+- Treat presence of malformed explicit native TUN as authoritative so the core reports it; never silently change the
+  networking mode or run two TUN implementations. Proxy/download probes explicitly strip TUN from their own copy.
+- A `CoreRuntime` owns exact resources, publishes an actionable `startError()`, and has bounded idempotent cleanup after
+  success or partial failure. Process-backed implementations additionally terminate/kill/reap only their exact child.
 
 ## Verification
 
-- Test mapping/URI round trips, malformed and unknown input, original-document immutability, runtime document equality,
-  TUN matrices/proxy-only stripping, failed startup, and cleanup. Editor changes also require lifetime tests.
+- Test document/mapping/URI round trips, legacy/malformed/unknown input, untouched editor observation, persisted
+  immutability, exact runtime document, the complete TUN matrix and probe stripping, start failure/rollback/cleanup,
+  import/discovery, and repeated editor/dialog destruction.

@@ -1,14 +1,18 @@
 # Reusable widget guidance
 
 - Widgets are presentation components below pages/windows. Prefer explicit controller/service/repository dependencies;
-  do not add new `AppMainWindow()` reach-through or duplicate application state.
-- Subscription views issue commands to `SubscriptionManager` and render repository-backed results; they do not own
-  download, decode, reconciliation, persistence, or scheduling workflows.
-- Models, delegates, menus, actions, spinners, animations, timers, and network helpers have explicit owners. Persistent
-  widgets are constructed and connected once; refresh/show toggles state rather than accumulating objects.
-- Resolve actions through the current model/proxy mapping after sort/filter. Use stable IDs across persistence/refresh
-  and keep model begin/end notifications synchronized with live repository ordering.
-- Reuse `AppQ*` controls and keep expensive parsing, aggregation, mapping, and synchronization off blocking GUI paths.
-  Reject stale completions where work can be superseded.
-- Verify behavior and repeated refresh/show/open/close lifetime, including sorted/filtered model actions and hidden-page
-  rendering.
+  do not add new `AppMainWindow()` reach-through or duplicate application state. Existing reach-through is compatibility
+  debt that may be migrated without preserving the coupling.
+- Server/subscription views render the same live repositories and share the server table's `SubscriptionManager`.
+  Subscription views issue commands to that service; they do not duplicate download, decode, reconcile, persist, or
+  schedule workflows.
+- Qt models must bracket live-collection mutations with matching begin/end notifications and keep stored row/index flags
+  synchronized. After sort/filter, map an action from the current proxy index to the source object and use stable IDs;
+  display text and row position are not identity.
+- Models, delegates, headers, menus, actions, spinners, animations, timers, test schedulers, workers, network helpers, and
+  reusable editors each need an explicit owner. Persistent widgets construct/connect once; refresh/show changes state
+  instead of accumulating objects.
+- Keep expensive parsing, aggregation, mapping, screen/network/core work off blocking GUI paths or split it into bounded
+  event-loop units. Reject superseded worker/reply results before mutating a live model.
+- Verify behavior plus repeated refresh/show/open/close lifetime, sorted/filtered actions, model notification ranges,
+  cancellation/stale results, hidden-page rendering, and exact cleanup of worker/core/native resources.

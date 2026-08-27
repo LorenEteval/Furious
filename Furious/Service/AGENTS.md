@@ -1,34 +1,37 @@
 # Service guidance
 
-## Scope and ownership
+## Workflow and ownership boundaries
 
-- Services own workflows and temporary resources; controllers own shared application state. A service may use Qt for
-  async I/O/signals but does not own pages or presentation policy.
-- Construct QObject services only after the application exists. Give each worker, reply, timer, executor, runtime,
-  process, and cache one explicit service/application owner with bounded, idempotent cleanup.
-- Inject repositories, providers, clients, clocks, and runtime factories where practical. Services stage results and
-  commit through the owning repository/controller rather than creating a parallel state cache.
+- Services own workflows and temporary resources; controllers own shared application state and UI owns presentation.
+  A service may use Qt for signals/networking, but it does not own pages or create message boxes.
+- Construct QObject services only after a Qt application exists. Give every worker, reply, timer, executor, runtime,
+  process, cache, and callback context one durable service/application owner with bounded, idempotent cleanup.
+- Inject repositories, providers, clocks, clients, and runtime factories where practical. Stage data and commit through
+  the owning repository/controller; do not create a parallel authoritative collection.
 
-## Runtime and asynchronous work
+## Runtime and asynchronous invariants
 
-- `ConnectionManager` consumes runtime copies, coordinates capabilities and exact runtime ownership, and rolls back
-  only resources acquired by the failed staged attempt. It respects the backend TUN decision before any tun2socks
-  fallback.
-- Every async workflow defines supersession: generation/version checks when stale completion is possible, or exact
-  object ownership when requests are independent. Terminal paths remove context, abort/finish once, and schedule Qt
-  replies for deletion once.
-- Bound network/DNS/process/worker operations where their API permits it. Callbacks must not retain a shut-down manager;
-  GUI effects cross through signals.
-- Collection continues independently of page visibility. Log/process transports and metric history remain bounded;
-  hidden pages may defer rendering but never draining. Raw metric samples remain immutable and display buckets derived.
-- `SubscriptionManager` owns download, decode/filter/reconcile/persist, stale-request rejection, and stable-ID schedules.
-  Reconciliation commits current data before optional reconnect effects; one subscription failure does not cancel other
-  current results. Reapplying unchanged schedule policy does not restart timers or duplicate connections.
-- Endpoint inspection enforces the active proxy, rejects stale connection results, uses neutral request metadata, and
-  discloses actual providers without profile secrets.
+- `ConnectionManager` consumes an attempt-scoped copy, asks the selected factory for native-TUN/application-tun2socks
+  policy, and owns exact runtimes only after commit. On failure it rolls back only resources acquired by that attempt and
+  restores host routing/DNS state through those owners.
+- Every async workflow defines supersession: generation/version checks for stale completion or exact-object identity for
+  independent requests. Terminal paths release context, finish/abort once, and schedule each Qt reply for deletion.
+  Callbacks cannot retain a shut-down manager; worker results cross into the manager's Qt thread before mutation.
+- `HttpGetManager` supplies common reply ownership and transfer timeouts. DNS recursion is depth/time bounded; update and
+  connectivity requests own their active reply and cancellation. Never use page visibility as request or scheduler
+  ownership.
+- Log/process transport and metric history stay bounded and continue collecting/draining independently of rendering.
+  Raw traffic samples are immutable; speed/usage baselines and graph buckets are derived state. Generation changes reject
+  stale statistics futures.
+- `SubscriptionManager` owns download, decode/filter, group-scoped reconciliation, persistence metadata, stable-ID
+  schedules, cancellation, and reconnect/disconnect follow-up. Freshness is checked before commit; one group failure does
+  not cancel current peers; post-commit side-effect failure does not roll back reconciliation; unchanged scheduling
+  policy does not restart timers or duplicate connections.
+- Endpoint inspection uses only the active proxy, neutral request metadata, bounded caches, and connection generations.
+  Reject stale results and disclose actual providers without exposing profile credentials or complete destinations.
 
 ## Verification
 
-- Test success plus partial, stale, timeout, cancel, failure, hidden-page, and repeated-cleanup paths with fake
-  providers/host operations. Review retained callbacks, widgets owned by services, unbounded transports, and
-  persistence performed before final freshness checks.
+- Test success plus invalid, partial, stale, timeout, cancel, failure, hidden-page, and repeated-cleanup paths with fake
+  providers/host operations. Review retained callbacks/replies, widgets owned by services, unbounded transports/caches,
+  repository mutation before final freshness checks, and commits incorrectly described as rolled back.

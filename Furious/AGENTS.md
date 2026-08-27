@@ -1,30 +1,29 @@
 # Furious package guidance
 
-## Architecture
+## Package architecture
 
-- `Application` is the broad composition root. Elsewhere, depend on the narrowest owning model, repository, service,
-  controller, or plugin capability. Do not create a second authority merely to avoid an existing boundary.
-- Process-lifetime accessors in `Frozenlib.Globals` must tolerate partial startup and shutdown. They may expose deliberate
-  application authorities, never transient dialogs, replies, workers, editors, or runtimes.
-- Compatibility code still reaches global accessors and live collections. Do not extend that coupling when a narrow
-  API can be added without a competing cache or state path.
+- `Application` is the composition root. Elsewhere depend on the narrowest owning model, repository, service,
+  controller, or plugin capability; do not create a second authority merely to avoid an existing boundary.
+- Keep lower layers importable without application construction. `Interface` and `Models` cannot depend on UI,
+  controllers, services, repositories, or concrete backends. Backend imports remain lazy enough that importing
+  `Furious` does not initialize Qt resources, plugins, runtimes, or windows.
+- Process-lifetime accessors in `Frozenlib.Globals` expose compatibility paths to deliberate application owners only.
+  They may be unavailable during tests, partial startup, or shutdown; new code should prefer explicit dependencies and
+  callers using globals must tolerate that boundary rather than installing fallback owners.
+- The current UI tree deliberately shares a few owners: `MainWindow` owns persistent pages, the server table owns the
+  subscription workflow used by both server and subscription views, and page-owned services live with their page.
+  Refactors may move those owners, but must leave exactly one durable owner and one state path.
 - Keep GUI-thread work short. Workers publish result data through the established Qt boundary and never mutate widgets
-  directly.
+  or live repositories directly from a worker thread.
 
-## Qt ownership
+## Qt ownership and presentation
 
-- Classify Qt objects as application-lifetime, reusable, or transient. Give each one a durable Python owner, compatible
-  QObject parent, and explicit reuse or destruction path.
-- Use the canonical `AppQ*` controls. One-shot dialogs use `AppQTransientDialog` or `AppQMessageBox`; managed `open()` is
-  safe for local variables, while `exec()` is reserved for genuinely synchronous flow. Reusable windows retain one
-  explicit owner.
-- Parent or explicitly dispose timers, models, delegates, replies, event filters, menus, and actions. Never cache a
-  transient QObject or an instance method in a global/unbounded cache.
-- For lifetime-sensitive changes, follow `Furious/Qt/AGENTS.md` and the `manage-qt-pyside6-lifetimes` skill, then run the
-  relevant native and packaged lifecycle checks.
-
-## Presentation
-
-- Reuse translation/theme-aware construction instead of parallel manual retranslation or one-off styling. Preserve
-  focus, keyboard, shortcut, accessibility, resize, high-DPI, and light/dark behavior.
-- UI presents failures at the interaction boundary; owning services/controllers provide structured, testable results.
+- Classify Qt objects as process/application-lifetime, reusable, or transient. Give each a durable Python owner,
+  compatible QObject parent, and explicit reuse or destruction path; audit every signal, timer, filter, cache, action,
+  model, delegate, reply, and callback that can extend that path.
+- Use the canonical `Furious.Qt` `AppQ*` controls. One-shot dialogs use `AppQTransientDialog` or `AppQMessageBox`;
+  reusable windows retain one explicit owner. For lifetime-sensitive changes, follow `Furious/Qt/AGENTS.md` and the
+  `manage-qt-pyside6-lifetimes` skill.
+- Reuse translation/theme-aware construction and layout behavior rather than parallel registries or call-site styling.
+  Preserve focus, keyboard, shortcut, accessibility, resize, high-DPI, and light/dark behavior.
+- UI presents failures at the interaction boundary; owning services/controllers expose structured, testable outcomes.

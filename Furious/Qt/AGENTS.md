@@ -4,37 +4,40 @@ Use the `manage-qt-pyside6-lifetimes` skill for Qt ownership or lifecycle work.
 
 ## Canonical UI surface
 
-- Extend/reuse `Furious.Qt` `AppQ*` controls for Fluent styling, themes, translation, dialogs, menus/actions, inputs,
-  tables/lists, and top-level windows. Do not create call-site styling or parallel lifetime registries.
+- Extend/reuse `Furious.Qt` `AppQ*` controls for Fluent styling, semantic themes, translation, dialogs, menus/actions,
+  inputs, views, and top-level windows. `AppStyleSheet` is the public style authority; application code does not import
+  internal `StyleSheets` fragments or create parallel style/lifetime registries.
 - Pass source text at construction when a control retains it for retranslation. Preserve focus, keyboard, shortcuts,
   accessibility, translated-text growth, high-DPI, responsive layout, and both themes.
-- `AppQMessageBox.windowTitle` is native metadata. Visible hierarchy is `heading`, `text`, then `informativeText`.
-  `AppQMessageBox.open()` delegates asynchronous ownership to `AppQDialog.open()`; do not add a parallel message-box
-  registry or release a transient box before native destruction completes.
-- `AppStyleSheet` is the public style authority. `StyleSheets` contains internal QSS fragments that consume the semantic
-  palette; application code does not import fragments directly.
+- `AppQMessageBox.windowTitle` is native metadata; its visible hierarchy is heading, text, then informative text. Keep
+  message-box presentation on the shared `AppQDialog` lifecycle instead of adding a second async owner.
 
-## Lifetime and threading
+## Ownership, destruction, and signals
 
-- Application-lifetime Qt objects have one durable owner; reusable windows retain one deliberate owner; transient
-  dialogs use `AppQTransientDialog`/`AppQMessageBox` and remain retained through deferred native destruction.
-- Direct compiled bound-method signal connections can retain transient receivers in Nuitka builds. Use
-  `connectWeakly(signal, receiver, 'methodName', sender=...)` when the sender is independent/longer-lived; never replace
-  it with a closure or partial capturing the receiver.
-- `AppQAction.callback` is a strong reference. Its owner cannot outlive the callback receiver. Parent or explicitly
-  dispose timers, models, delegates, replies, event filters, menus, animations, and effects.
-- Only the GUI thread mutates widgets. Slots do not sleep or perform unbounded host/network/process work. Coalescing
-  timers are created once and do not multiply across show/hide cycles.
-- Each `QNetworkReply` has one manager/context owner, one terminal cleanup, and a freshness rule when superseded.
-  Schedule deletion on every terminal path; do not attach ad-hoc application attributes to third-party Qt objects.
+- Classify every object as application-lifetime, reusable, or transient. Application owners construct long-lived objects
+  once; reusable windows retain one explicit strong owner; transient dialogs use `AppQTransientDialog`/`AppQMessageBox`
+  and are deleted after the interaction.
+- `AppQDialog.open()` retains a reusable dialog through `finished`; delete-on-close transients remain retained through
+  deferred native destruction and release after `destroyed`. Registry cleanup captures only the opaque lifetime token,
+  never the dialog. `exec()` is for genuinely synchronous control flow.
+- Native PySide and Nuitka can retain callbacks differently. Never pass a transient/repeated receiver's bound method to
+  `Signal.connect()` or `QTimer.singleShot()`, and do not hide that capture in a lambda/partial. Use
+  `connectWeakly(signal, receiver, 'methodName', sender=...)` when the sender is independent/longer-lived; use
+  `forwardSender=True` when the slot needs it. Direct bound methods are reserved for deliberately process-lifetime
+  receivers whose retention is intentional and documented.
+- `AppQAction.callback` is deliberately strong; its owner cannot outlive the receiver it captures. Parent or explicitly
+  dispose timers, models, delegates, replies, event filters, menus, actions, shortcuts, watchers, animations, and effects.
+- Only the GUI thread mutates widgets. Slots do not sleep or perform unbounded host/network/process work. Create
+  coalescing/render timers once and do not multiply them across show/hide cycles.
+- Each `QNetworkReply` has one manager/context owner, one freshness rule, and one terminal deletion path. Shared slots use
+  `sender()`/stored context rather than per-reply closures; do not attach ad-hoc attributes to third-party Qt objects.
 
-## Presentation and verification
+## Geometry and verification
 
-- Top-level subclasses use the canonical first-show geometry hooks and centering/retention behavior; do not call
-  overridable geometry hooks from constructors or alter private first-show state.
-- Persistent top-level subclasses save geometry/state only after `hasPreparedInitialGeometry()` confirms first-show
-  preparation; never replace saved user geometry with a never-shown widget's native default.
-- Use `exec()` only when synchronous control flow is required; otherwise connect completion before managed `open()`.
-- Run focused behavior tests plus repeated native lifecycle cycles. For compiled-signal or transient-dialog changes,
-  also run the Nuitka probe and verify destroyed signals, weak references, registries, callbacks, timers, replies, and
-  native resources return to baseline.
+- Top-level subclasses use the canonical first-show preparation and centering/retention hooks. Do not call overridable
+  geometry hooks from constructors or modify private first-show state.
+- Persistent windows save geometry/state only after `hasPreparedInitialGeometry()` proves a native presentation occurred;
+  never overwrite saved user geometry with Qt's never-shown fallback. A valid `restoreGeometry()` is authoritative.
+- Run focused behavior tests plus repeated native lifetime cycles. For transient signal/dialog infrastructure or a
+  packaged-only failure, run the Nuitka probe and verify destroyed counts, weak wrappers, dialog/context registries,
+  callbacks, timers, replies, and native resources return to baseline without per-cycle garbage collection.

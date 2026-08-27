@@ -1,17 +1,23 @@
 # Controller guidance
 
-## Scope and ownership
+## State authorities
 
-- Controllers are process-lifetime authorities for shared state and transitions. They orchestrate repositories/services
-  and publish results; they do not own transient widgets or duplicate service resources.
-- `ConnectionController` owns connection state, interaction gating, active profile, failure/exit transitions, and signal
-  ordering. `RoutingController` distinguishes repository selection from routing applied to a live connection.
-- `SettingsController` validates, persists, and applies preferences. A setting whose host side effect fails must not be
-  persisted as successful; UI pages do not reimplement that policy.
-- Protocol-specific behavior goes through capabilities. Long work belongs in an owned service/worker, not an unbounded
-  GUI-thread controller call. Global dependencies may be absent during partial startup and shutdown.
+- Controllers are process-lifetime authorities for shared application state and transitions. They orchestrate
+  repositories/services and publish structured signals; they do not own transient widgets or duplicate service
+  resources.
+- `ConnectionController` is the sole connection state machine. Preserve atomic state/signal ordering, interaction gating,
+  the exact active `ServerProfile`, runtime snapshots, persisted reconnect preference, and cleanup after validation,
+  start, system-proxy, or unexpected-core-exit failure. Worker/core callbacks queue work back to its Qt thread.
+- `RoutingController` owns displayed/persisted selection and capability-provided options. Distinguish the selected
+  repository profile from the profile already owned by a live connection; changing routing may require a controlled
+  reconnect rather than mutating the running document.
+- `SettingsController` validates preferences and applies host/UI effects. When a host effect such as startup registration
+  fails, do not persist the requested state as successful. Keep UI pages declarative and do not duplicate this policy.
+- Protocol/core-specific behavior goes through plugin capabilities. Long work belongs in an owned service/worker, and
+  global compatibility dependencies may be absent during partial startup, teardown, or isolated tests.
 
 ## Verification
 
-- Test transitions and signal counts for success, validation/start failure, cancellation, unexpected exit, restoration,
-  failed settings effects, and repeatable shutdown.
+- Test exact transitions and signal counts for success, invalid input, runtime/system-proxy failure, cancellation,
+  unexpected exit, routing refresh/reconnect, startup restoration, failed settings effects, partial dependencies, and
+  repeatable shutdown.

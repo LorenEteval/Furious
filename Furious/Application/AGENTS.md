@@ -1,20 +1,32 @@
 # Application composition guidance
 
-## Ownership and lifecycle
+## Composition and lifecycle
 
-- `DesktopApplication` is the composition root. It owns process-lifetime controllers, plugin-registry lifecycle,
-  storage, singleton IPC, logging, platform integration, the main window/tray, and the cleanup stack. `MainWindow` owns
-  the persistent page tree through Qt parentage.
-- Keep startup order explicit: settings/storage and plugins before consumers; controllers/services before UI;
-  restoration after dependencies exist. Register exact cleanup immediately after each successful acquisition.
-- Partial startup and normal exit use the same reverse-order, failure-isolating, idempotent cleanup path. Keep graceful
-  resource cleanup separate from final Qt event-loop exit.
-- Single-instance election is an atomic host operation: serialize stale-endpoint recovery and do not delete an endpoint
-  that another launch may have claimed.
-- The tray owns its long-lived actions/menus. Dynamic rebuilds release obsolete objects, and absence of a system tray is
-  a supported desktop condition rather than an OS-support verdict.
+- `Furious.__main__` and `AppMainProcess` own the outer process/crash boundary; `DesktopApplication` is the inner Qt
+  composition root. It owns singleton IPC, the plugin-registry lifecycle, repository owners, controllers, logging,
+  theme/system integration, the main window/tray, the thread pool, and the cleanup stack.
+- Keep startup dependencies explicit: win singleton election; configure plugins/environment; restore repository owners;
+  construct controllers; configure logging/theme/system integration; build UI; then restore the requested connection.
+  Register cleanup immediately after each acquisition that succeeded.
+- Partial startup, normal exit, and event-loop failure converge on the same reverse-order, failure-isolating, idempotent
+  cleanup stack. `exit()` requests termination; `aboutToQuit`/`finally` perform cleanup. Keep graceful cleanup separate
+  from the final Qt exit-code decision.
+- `ConnectionController.shutdown()` preserves the reconnect-on-next-start preference while releasing the live runtime.
+  Repository cleanup persists live collections only after successful restoration or explicit replacement.
+
+## Desktop integration and UI ownership
+
+- Single-instance election is an atomic host operation. Serialize candidates, re-probe after waiting, recover only a
+  confirmed stale endpoint, and fail closed when ownership remains uncertain—especially during `RunAs` handoff.
+- Native Windows session callbacks are not Qt-thread callbacks; queue shutdown into the GUI thread. System proxy daemon,
+  dock visibility, tray availability, and Flatpak/AppImage behavior are platform capabilities, not assumptions inferred
+  from the OS name alone.
+- `MainWindow` owns the persistent page tree through Qt parentage. The application owns top-level window/tray wrappers;
+  the tray owns its long-lived actions and menus. Dynamic rebuilds dispose obsolete objects, and an unavailable tray
+  falls back to showing the main window and quitting on the last window.
 
 ## Verification
 
-- Test partial initialization, singleton commands/races, tray rebuilding, restoration, and repeated cleanup with host
-  integration mocked.
+- Test success and failure at every acquisition boundary, reverse cleanup, repeated cleanup/exit, singleton races and
+  commands, queued session shutdown, tray-present/absent behavior, startup restoration, and worker-pool bounds with all
+  host integration mocked. Process-wrapper behavior belongs to `tests/test_application_process.py`.

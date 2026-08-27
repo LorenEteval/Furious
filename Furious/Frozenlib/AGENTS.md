@@ -2,25 +2,31 @@
 
 ## Foundation and compatibility
 
-- `Frozenlib` is the low-level platform/compatibility foundation and a broad import surface. Keep imports cheap,
-  cross-platform, and free of application/UI construction. Preserve exports unless all wildcard consumers migrate.
+- `Frozenlib` is the low-level platform/compatibility foundation and a broad wildcard import surface. Keep imports cheap,
+  cross-platform, and free of application/UI construction. Preserve curated exports until all consumers migrate.
 - `Constants`, enums, and pure helpers remain dependency-light. `Globals` exposes only deliberate application-lifetime
-  owners and returns safely during partial startup/shutdown.
-- `AppSettings` is the preference boundary. Preserve key/value/default/migration compatibility and write a requested
-  state only after any required host side effect succeeds.
+  owners; its accessors are compatibility shims and may yield `None` or raise attribute/runtime errors during isolated
+  tests, partial startup, and teardown. Callers at those boundaries must tolerate absence without inventing new globals.
+- `AppSettings` registers QSettings keys at import time and validates values. Keys back both preferences and encoded
+  repository blobs, so preserve names, string/binary encodings, defaults, migrations, and registration order where it
+  affects imports. Perform a requested host side effect before persisting its successful preference state.
 
 ## Host and resource ownership
 
-- Isolate proxy, DNS, routing, TUN, startup, session, and process mutation here so callers can mock it completely.
-  Return/log actionable failure and never test against real host state.
-- `runExternalCommand()` deliberately has no universal timeout; each caller supplies one when responsiveness requires
-  it or documents a non-GUI execution context.
+- Isolate proxy, DNS, routing, TUN, startup registration, session callbacks, external commands, and process mutation
+  here or behind the runtime boundary so tests can mock them completely. Preserve the OS-specific Windows/macOS/Linux
+  and Flatpak/AppImage semantics instead of forcing one platform path onto another.
+- `runExternalCommand()` deliberately has no universal timeout; each caller supplies a bound when responsiveness or
+  cleanup requires it, or documents a non-GUI build/setup context. Avoid shell strings when an argument vector works.
 - Own exact threads/processes/handles, clear dead daemon references, and make cleanup bounded and repeatable. Externally
   keyed caches are bounded; finite metadata caches never capture QObject instances or bound methods.
-- Context managers restore prior state when nested. Weak pools/callbacks must not have a parallel strong owner.
-- `AppResources.py` is generated from resource inputs; update inputs and regenerate.
+- Context managers restore the previous state when nested. Weak pools/callbacks must not have another strong owner and
+  must prune invalid PySide wrappers.
+- `AppResources.py` is generated from `Resources.qrc` and its resource files. Update those inputs and regenerate with the
+  compatible PySide6 toolchain; do not edit the generated module.
 
 ## Verification
 
-- Use direct mocked helper tests plus affected controller/service tests. Review GUI blocking, persisted success after
-  host failure, process-name cleanup, sensitive logs, stale daemon references, and unbounded external-input caches.
+- Use direct mocked helper tests plus affected controller/service tests. Cover every supported platform branch where
+  practical and review GUI blocking, persisted success after host failure, process-name cleanup, sensitive logs, stale
+  daemon references, import-time construction, and unbounded external-input caches.

@@ -2,7 +2,10 @@
 
 - Reuse an existing semantic icon before adding another. Source SVGs remain compact vectors without scripts, remote
   resources, embedded rasters, editor metadata, or hard-coded backgrounds.
-- Follow the established monochrome/tint convention; add theme variants only when tinting cannot express the design.
-- Preserve resource paths and licensing. A rename/add/remove updates every consumer and regenerates
-  `Furious/Frozenlib/AppResources.py`; never hand-edit that generated module.
-- Verify both themes, high-DPI rendering, and icon size/alignment in the actual Fluent control.
+- Follow the established monochrome/tint convention; add a theme-specific variant only when semantic tinting cannot
+  express the design. Preserve accessible meaning rather than relying on color alone.
+- Preserve upstream licensing and the `Resources.qrc` alias contract. Add/remove/rename updates the manifest and every
+  consumer, then regenerates `Furious/Frozenlib/AppResources.py` with the compatible PySide6 resource compiler; never
+  edit generated resource code.
+- Verify manifest uniqueness, both themes, high-DPI rendering, and size/alignment in the actual `AppQ*` control and, when
+  relevant, tray/platform packaging.
