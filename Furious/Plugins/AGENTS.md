@@ -19,6 +19,9 @@
 - Registries strongly own process-lifetime plugin instances, capabilities/factories, descriptors, and immutable metadata.
   They do not own factory-created widgets, active runtimes, replies, or controller state. Factories return a fresh object
   per request; invalid QObject results are explicitly destroyed.
+- Once a runtime factory returns a valid launch, startup transfers that exact runtime to the calling connection attempt
+  even when `start()` raises, so the attempt can stop and dispose partial resources. A controlled failure returns `None`
+  only when no valid runtime was acquired.
 - External entry points and plugin-returned data are a boundary even when plugins are trusted for execution. Validate
   types and required fields, isolate optional provider failure where the operation can continue, and keep the primary
   failure observable when it cannot.

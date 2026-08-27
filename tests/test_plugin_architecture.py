@@ -539,6 +539,44 @@ class PluginFailureIsolationTest(unittest.TestCase):
         finally:
             registry.shutdown()
 
+    def testCoreRuntimeStartExceptionReturnsRuntimeForCallerRollback(self):
+        """Transfer a partially started runtime to the connection transaction."""
+
+        class RaisingStartRuntime(FixtureCoreRuntime):
+            def start(self, configuration, *args, **kwargs):
+                raise RuntimeError('start fixture')
+
+        runtime = RaisingStartRuntime()
+
+        class RaisingStartFactory(CoreRuntimeFactory):
+            factoryId = 'raising-start-factory'
+            configurationTypes = (FixtureConfiguration,)
+            runtimeTypes = (RaisingStartRuntime,)
+
+            def create(self, request: CoreRuntimeRequest):
+                return CoreRuntimeLaunch(runtime, request.configuration)
+
+        class RaisingStartPlugin(FuriousPlugin):
+            metadata = PluginMetadata(
+                'tests.raising-start-factory',
+                'Raising start factory',
+            )
+            capabilities = (RaisingStartFactory(),)
+
+        registry = PluginRegistry()
+        registry.register(RaisingStartPlugin())
+
+        try:
+            returnedRuntime, success = registry.startCoreRuntime(
+                FixtureConfiguration({'type': 'fixture'}),
+                'direct',
+            )
+
+            self.assertIs(returnedRuntime, runtime)
+            self.assertFalse(success)
+        finally:
+            registry.shutdown()
+
     def testShutdownExceptionDoesNotBlockOtherPlugins(self):
         """Run every shutdown hook once even when one hook raises."""
         stopped = []

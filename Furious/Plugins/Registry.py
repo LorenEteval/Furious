@@ -1100,6 +1100,8 @@ class PluginRegistry:
 
     def startCoreRuntime(self, config, routing, **kwargs):
         """Create and start the core runtime selected for *config*."""
+        launch = None
+
         try:
             launch = self.createCoreRuntime(config, routing, **kwargs)
 
@@ -1116,7 +1118,10 @@ class PluginRegistry:
 
             logger.error(f'core runtime start failed for {factoryId!r}: {ex}')
 
-            return None, False
+            # Once construction succeeds, ownership must still cross to the
+            # connection transaction even if start() raises.  Returning None
+            # here would abandon a partially acquired process/thread/runtime.
+            return (launch.runtime if launch is not None else None), False
 
     def prepareDownloadTest(self, config, port: int):
         """Create a proxy-only test configuration through its runtime factory."""
