@@ -140,6 +140,40 @@ class ExternalCoreProcessTest(unittest.TestCase):
             self.assertFalse(runtime.isAlive())
             self.assertFalse(runtime._readerThreads)
 
+    def testReaderBatchesCompleteLinesAndPreservesTrailingPartialLine(self):
+        """Use one callback per read chunk without buffering complete lines."""
+
+        class BatchCallback:
+            """Record batch and compatibility callback traffic separately."""
+
+            def __init__(self):
+                self.single = []
+                self.batches = []
+
+            def __call__(self, message):
+                self.single.append(message)
+
+            def appendMany(self, messages):
+                self.batches.append(tuple(messages))
+
+        callback = BatchCallback()
+        runtime = ExternalCoreProcess(msgCallback=callback)
+        stream = mock.Mock()
+        stream.fileno.return_value = 123
+
+        with mock.patch(
+            'Furious.Backends.ExternalCore.Process.os.read',
+            side_effect=(b'first\nsecond\r\npar', b'tial', b''),
+        ):
+            runtime._readStream(stream, 'stderr')
+
+        self.assertEqual(
+            callback.batches,
+            [('[stderr] first', '[stderr] second')],
+        )
+        self.assertEqual(callback.single, ['[stderr] partial'])
+        stream.close.assert_called_once_with()
+
     def testMissingExecutableAndImmediateExitFailStartup(self):
         """Report authoritative path and early non-zero-exit failures."""
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as directory:

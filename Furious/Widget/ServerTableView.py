@@ -33,10 +33,10 @@ from Furious.Qt import *
 from Furious.Qt.Signals import connectWeakly
 from Furious.Qt import gettext as _
 from Furious.Service import (
+    CORE_LOG_CATEGORY,
     ConnectionManager,
     SubscriptionManager,
     SubscriptionUpdateBatch,
-    coreLogCallback,
 )
 from Furious.Widget.WaitingSpinner import WaitingSpinner
 
@@ -346,7 +346,7 @@ class TestDownloadSpeedWorker(HttpGetManager):
             configcopy,
             AppBuiltinRouting.Global.value,
             self.coreExitCallback,
-            msgCallbackCore=coreLogCallback(AppLogManager()),
+            msgCallbackCore=AppLogManager().callback(CORE_LOG_CATEGORY),
             deepcopy=False,
             proxyModeOnly=True,
             log=False,

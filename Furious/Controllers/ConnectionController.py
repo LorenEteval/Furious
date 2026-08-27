@@ -26,10 +26,10 @@ from Furious.Plugins import getPluginRegistry
 from Furious.Qt.DynamicTranslate import gettext as _
 from Furious.Repository import Storage
 from Furious.Service import (
+    CORE_LOG_CATEGORY,
     TUN2SOCKS_LOG_CATEGORY,
     ConnectionManager,
     UpdateManager,
-    coreLogCallback,
 )
 
 from PySide6 import QtCore
@@ -282,7 +282,7 @@ class ConnectionController(QtCore.QObject):
                 configuration,
                 routing=AppSettings.get('Routing'),
                 exitCallback=self.coreExitCallback,
-                msgCallbackCore=coreLogCallback(logManager),
+                msgCallbackCore=logManager.callback(CORE_LOG_CATEGORY),
                 msgCallbackTUN_=logManager.callback(
                     TUN2SOCKS_LOG_CATEGORY,
                     source='Tun2socks',

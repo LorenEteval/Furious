@@ -36,8 +36,9 @@ from .LogManager import (
     CORE_LOG_CATEGORY,
     TUN2SOCKS_LOG_CATEGORY,
     ApplicationLogHandler,
+    LogCursor,
+    LogEntryBatch,
     LogManager,
-    coreLogCallback,
     formatLogEntry,
 )
 from .MetricsHistory import (
@@ -86,6 +87,8 @@ __all__ = [
     'CORE_LOG_CATEGORY',
     'TUN2SOCKS_LOG_CATEGORY',
     'ApplicationLogHandler',
+    'LogCursor',
+    'LogEntryBatch',
     'LogManager',
     'DOWNLOAD_SPEED_METRIC',
     'DOWNLOAD_USAGE_METRIC',
@@ -95,7 +98,6 @@ __all__ = [
     'MetricSample',
     'MetricsHistory',
     'PluginNavigationManager',
-    'coreLogCallback',
     'SubscriptionImportResult',
     'SubscriptionImportService',
     'SubscriptionSource',

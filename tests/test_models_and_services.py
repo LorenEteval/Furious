@@ -815,6 +815,7 @@ class LogManagerTest(unittest.TestCase):
         """Release at most the fixed budget from a retired generation per turn."""
         manager = LogManager(maximumEntries=100, autoClearEnabled=False)
         manager.RetiredCleanupBudget = 3
+        manager.AppendRetiredCleanupBudget = 1
         entryReferences = []
 
         for index in range(10):
@@ -835,8 +836,8 @@ class LogManagerTest(unittest.TestCase):
 
         manager.append('application', APPLICATION_LOG_CATEGORY)
 
-        self.assertEqual(manager.retiredEntryCount, 7)
-        self.assertEqual(observedEntries.oldestRemovals, 3)
+        self.assertEqual(manager.retiredEntryCount, 9)
+        self.assertEqual(observedEntries.oldestRemovals, 1)
 
         cleanupTurns = 0
 

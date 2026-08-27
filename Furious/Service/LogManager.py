@@ -24,6 +24,7 @@ from Furious.Models.Logging import LogCategory, LogEntry
 from PySide6 import QtCore
 
 from collections import OrderedDict, deque
+from dataclasses import dataclass
 from datetime import datetime
 from heapq import merge
 from typing import Optional
@@ -37,8 +38,9 @@ __all__ = [
     'CORE_LOG_CATEGORY',
     'TUN2SOCKS_LOG_CATEGORY',
     'ApplicationLogHandler',
+    'LogCursor',
+    'LogEntryBatch',
     'LogManager',
-    'coreLogCallback',
     'formatLogEntry',
 ]
 
@@ -48,9 +50,76 @@ CORE_LOG_CATEGORY = 'core'
 TUN2SOCKS_LOG_CATEGORY = 'component.tun2socks'
 
 
+@dataclass(frozen=True)
+class LogCursor:
+    """Opaque synchronization position for one filtered live-log view.
+
+    Instances are issued by :meth:`LogManager.entriesSince`. Callers should
+    retain and pass them back unchanged rather than construct them or interpret
+    their fields. In particular, ``generationStates`` encodes private generation
+    identities and revisions whose representation may change independently of
+    this API.
+    """
+
+    sequence: int
+    categoryId: str
+    generationStates: tuple[tuple[int, int], ...]
+
+
+@dataclass(frozen=True)
+class LogEntryBatch:
+    """Describe one incremental suffix or a required full resynchronization."""
+
+    cursor: LogCursor
+    entries: tuple[LogEntry, ...]
+    firstRetainedSequence: Optional[int]
+    resetRequired: bool = False
+
+
 def formatLogEntry(entry: LogEntry) -> str:
     """Return the producer-formatted text stored by one structured entry."""
     return entry.message
+
+
+class _LogCallback:
+    """Adapt one fixed log route to single-line and batch producers."""
+
+    __slots__ = ('manager', 'categoryId', 'source', 'severity')
+
+    def __init__(self, manager, categoryId: str, source: str, severity: str):
+        """Capture one application-lifetime manager route."""
+        self.manager = manager
+        self.categoryId = categoryId
+        self.source = source
+        self.severity = severity
+
+    def __call__(self, line):
+        """Append one line safely and return its entry, or ``None`` on failure."""
+        try:
+            return self.manager.append(
+                line,
+                self.categoryId,
+                source=self.source,
+                severity=self.severity,
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            return None
+
+    def appendMany(self, lines):
+        """Append one natural producer batch under the same safe contract."""
+        try:
+            return self.manager.appendMany(
+                lines,
+                self.categoryId,
+                source=self.source,
+                severity=self.severity,
+            )
+        except Exception:
+            # Any non-exit exceptions
+
+            return tuple()
 
 
 class _CategoryEntries:
@@ -98,6 +167,7 @@ class _EntryGeneration:
         'entries',
         'entriesByCategory',
         'characterCount',
+        'revision',
     )
 
     def __init__(self, identifier: int, scope: str):
@@ -107,6 +177,7 @@ class _EntryGeneration:
         self.entries: OrderedDict[int, LogEntry] = OrderedDict()
         self.entriesByCategory: dict[str, _CategoryEntries] = {}
         self.characterCount = 0
+        self.revision = 0
 
     @property
     def entryCount(self) -> int:
@@ -123,16 +194,20 @@ class _EntryGeneration:
 
         if categoryEntries is None:
             categoryEntries = _CategoryEntries()
+
             self.entriesByCategory[entry.categoryId] = categoryEntries
 
         self.entries[entry.sequence] = entry
+
         categoryEntries.append(entry, characterCount)
+
         self.characterCount += characterCount
 
     def removeOldest(self) -> LogEntry:
         """Remove the oldest entry from both live indexes in constant time."""
         sequence, entry = self.entries.popitem(last=False)
         categoryEntries = self.entriesByCategory[entry.categoryId]
+
         indexedEntry = categoryEntries.remove(sequence)
 
         if indexedEntry is not entry:
@@ -161,6 +236,7 @@ class _EntryGeneration:
             del self.entries[sequence]
 
         self.characterCount -= categoryEntries.characterCount
+        self.revision += 1
 
         return categoryEntries
 
@@ -184,11 +260,12 @@ class LogManager(QtCore.QObject):
     DefaultAutoClearMaximumEntries = 5_000
     DefaultMaximumCharacters = 8 * 1024 * 1024
     DefaultMaximumEntryCharacters = 64 * 1024
-    # At least one stale entry is reclaimed before every new entry is retained.
-    # A larger fixed budget lets normal traffic drain old generations quickly;
-    # because a clear cannot retire more live entries than maximumEntries, this
-    # also bounds the live-plus-retired entry backlog under repeated fast clears.
+    # Append-side cleanup charges one small unit per accepted input to keep
+    # producer latency stable. Queued Qt cleanup uses a larger bounded turn to
+    # drain idle backlogs. Together they bound live-plus-retired entries under
+    # repeated fast clears without making a rollover release its own generation.
     RetiredCleanupBudget = 64
+    AppendRetiredCleanupBudget = 1
     TruncationMarker = '\n... [log entry truncated]'
 
     categoryRegistered = QtCore.Signal(object)
@@ -404,11 +481,13 @@ class LogManager(QtCore.QObject):
         generation = getattr(self, attributeName)
         entryCount = generation.entryCount
         characterCount = generation.characterCount
+
         setattr(
             self,
             attributeName,
             self._newGenerationLocked(generation.scope),
         )
+
         self._retainedEntryCount -= entryCount
         self._retainedCharacters -= characterCount
         self._retireBatchLocked(generation)
@@ -423,7 +502,11 @@ class LogManager(QtCore.QObject):
         return bool(removedEntries)
 
     def _cleanupRetiredLocked(self, budget: Optional[int] = None) -> int:
-        """Physically release at most one fixed batch of logically dead entries."""
+        """Release a bounded number of retired entries in global FIFO order.
+
+        The bound counts entries, not retired batches, and may therefore cross
+        batch boundaries. ``RetiredCleanupBudget`` supplies the default bound.
+        """
         remaining = (
             max(1, int(self.RetiredCleanupBudget))
             if budget is None
@@ -434,8 +517,10 @@ class LogManager(QtCore.QObject):
         while remaining and self._retiredBatches:
             batch = self._retiredBatches[0]
             characterCount = batch.discardOldestPhysical()
+
             self._retiredEntryCount -= 1
             self._retiredCharacters -= characterCount
+
             cleaned += 1
             remaining -= 1
 
@@ -454,6 +539,7 @@ class LogManager(QtCore.QObject):
         with self._lock:
             if self._retiredBatches and not self._retiredCleanupPending:
                 self._retiredCleanupPending = True
+
                 shouldNotify = True
 
         if shouldNotify:
@@ -465,6 +551,7 @@ class LogManager(QtCore.QObject):
         with self._lock:
             self._retiredCleanupPending = False
             self._cleanupRetiredLocked()
+
             shouldContinue = bool(self._retiredBatches)
 
         if shouldContinue:
@@ -486,6 +573,7 @@ class LogManager(QtCore.QObject):
             key=lambda generation: next(iter(generation.entries)),
         )
         entry = oldestGeneration.removeOldest()
+
         self._retainedEntryCount -= 1
         self._retainedCharacters -= len(entry.message)
 
@@ -510,6 +598,128 @@ class LogManager(QtCore.QObject):
             return text[: self._maximumEntryCharacters]
 
         return text[: self._maximumEntryCharacters - len(marker)] + marker
+
+    @staticmethod
+    def _normalizedCategoryId(categoryId: Optional[str]) -> str:
+        """Return the canonical filter identifier used by incremental cursors."""
+        return ALL_LOGS_FILTER if categoryId in (None, ALL_LOGS_FILTER) else categoryId
+
+    def _generationStatesLocked(
+        self,
+        categoryId: str,
+    ) -> tuple[tuple[int, int], ...]:
+        """Return the active structural state relevant to one filtered view."""
+        if categoryId == ALL_LOGS_FILTER:
+            return tuple(
+                (generation.identifier, generation.revision)
+                for generation in self._activeGenerationsLocked()
+            )
+
+        category = self._categories.get(categoryId)
+
+        if category is None:
+            return tuple()
+
+        generation = self._generationForCategoryLocked(category)
+
+        return ((generation.identifier, generation.revision),)
+
+    def _entriesLocked(self, categoryId: str) -> tuple[LogEntry, ...]:
+        """Return the complete active entries for one canonical filter."""
+        if categoryId == ALL_LOGS_FILTER:
+            return tuple(
+                merge(
+                    *(
+                        generation.entries.values()
+                        for generation in self._activeGenerationsLocked()
+                    ),
+                    key=lambda entry: entry.sequence,
+                )
+            )
+
+        category = self._categories.get(categoryId)
+
+        if category is None:
+            return tuple()
+
+        generation = self._generationForCategoryLocked(category)
+        categoryEntries = generation.categoryEntries(categoryId)
+
+        return (
+            tuple(categoryEntries.entries.values())
+            if categoryEntries is not None
+            else tuple()
+        )
+
+    @staticmethod
+    def _orderedEntriesAfter(entries, sequence: int) -> tuple[LogEntry, ...]:
+        """Read only the suffix newer than *sequence* from one ordered index."""
+        suffix = []
+
+        for entry in reversed(entries.values()):
+            if entry.sequence <= sequence:
+                break
+
+            suffix.append(entry)
+
+        suffix.reverse()
+
+        return tuple(suffix)
+
+    def _entriesAfterLocked(
+        self,
+        sequence: int,
+        categoryId: str,
+    ) -> tuple[LogEntry, ...]:
+        """Return only active entries newer than one valid cursor sequence."""
+        if categoryId == ALL_LOGS_FILTER:
+            return tuple(
+                merge(
+                    *(
+                        self._orderedEntriesAfter(generation.entries, sequence)
+                        for generation in self._activeGenerationsLocked()
+                    ),
+                    key=lambda entry: entry.sequence,
+                )
+            )
+
+        category = self._categories.get(categoryId)
+
+        if category is None:
+            return tuple()
+
+        generation = self._generationForCategoryLocked(category)
+        categoryEntries = generation.categoryEntries(categoryId)
+
+        return (
+            self._orderedEntriesAfter(categoryEntries.entries, sequence)
+            if categoryEntries is not None
+            else tuple()
+        )
+
+    def _firstRetainedSequenceLocked(self, categoryId: str) -> Optional[int]:
+        """Return the oldest sequence still visible through one filter."""
+        if categoryId == ALL_LOGS_FILTER:
+            heads = (
+                next(iter(generation.entries))
+                for generation in self._activeGenerationsLocked()
+                if generation.entryCount
+            )
+
+            return min(heads, default=None)
+
+        category = self._categories.get(categoryId)
+
+        if category is None:
+            return None
+
+        generation = self._generationForCategoryLocked(category)
+        categoryEntries = generation.categoryEntries(categoryId)
+
+        if categoryEntries is None:
+            return None
+
+        return next(iter(categoryEntries.entries))
 
     def _markEntriesChangedLocked(self) -> bool:
         """Mark one coalesced presentation notification while already locked."""
@@ -635,8 +845,39 @@ class LogManager(QtCore.QObject):
         source: str = '',
         severity: str = '',
     ) -> LogEntry:
-        """Append with fixed cleanup work and notify interested presenters."""
-        clearedCategoryIds = frozenset()
+        """Append one entry while preserving the compatibility signal contract."""
+        return self.appendMany(
+            (message,),
+            categoryId,
+            timestamp=timestamp,
+            source=source,
+            severity=severity,
+        )[0]
+
+    def appendMany(
+        self,
+        messages,
+        categoryId: str = APPLICATION_LOG_CATEGORY,
+        *,
+        timestamp: Optional[datetime] = None,
+        source: str = '',
+        severity: str = '',
+    ) -> tuple[LogEntry, ...]:
+        """Atomically append a batch, then emit compatibility events in order.
+
+        ``entryAdded`` observers see the fully committed batch, never an
+        intermediate collection state. Presenters should use ``entriesChanged``
+        and ``entriesSince`` instead of treating ``entryAdded`` as UI state.
+        """
+        messages = tuple(messages)
+
+        if not messages:
+            return tuple()
+
+        if timestamp is not None and not isinstance(timestamp, datetime):
+            raise TypeError('log timestamp must be a datetime')
+
+        events = []
         shouldNotifyEntriesChanged = False
         retiredCleanupNeeded = False
 
@@ -646,56 +887,70 @@ class LogManager(QtCore.QObject):
             if category is None:
                 raise KeyError(f'unknown log category {categoryId!r}')
 
-            # Reclamation is deliberately entry-budgeted rather than generation-
-            # budgeted. Even if a previous clear retired thousands of objects,
-            # this append performs at most RetiredCleanupBudget physical releases.
-            if self._retiredBatches:
-                self._cleanupRetiredLocked()
-
-            if timestamp is None:
-                timestamp = datetime.now()
-            elif not isinstance(timestamp, datetime):
-                raise TypeError('log timestamp must be a datetime')
-
-            self._sequence += 1
-
-            entry = LogEntry(
-                message=self._normalizeMessage(message),
-                timestamp=timestamp,
-                categoryId=category.id,
-                categoryLabel=category.displayName,
-                categoryTranslatable=category.translatable,
-                source=str(source) if source else '',
-                severity=str(severity) if severity else '',
-                sequence=self._sequence,
+            # Validate every caller-controlled conversion before changing the
+            # collection so a malformed item cannot leave a silent partial batch.
+            normalizedMessages = tuple(
+                self._normalizeMessage(message) for message in messages
             )
+            normalizedSource = str(source) if source else ''
+            normalizedSeverity = str(severity) if severity else ''
 
-            if (
-                category.id == CORE_LOG_CATEGORY
-                and self._autoClearEnabled
-                and self._categoryEntryCountLocked(CORE_LOG_CATEGORY)
-                >= self._autoClearMaximumEntries
-            ):
-                # When the next Core line would exceed its threshold, retain
-                # only Application diagnostics. All other categories belong
-                # to two replaceable streams that roll over without touching
-                # their entries or performing synchronous object destruction.
-                clearedCategoryIds = self._nonApplicationCategoryIds
-                self._clearNonApplicationLocked()
+            for normalizedMessage in normalizedMessages:
+                # Reclaim before accepting the next input so a Core-triggering
+                # append itself retains O(1) generation-rollover latency. A
+                # tiny per-input charge still bounds backlog across large batches.
+                if self._retiredBatches:
+                    self._cleanupRetiredLocked(
+                        max(1, int(self.AppendRetiredCleanupBudget))
+                    )
 
-            characterCount = len(entry.message)
-            generation = self._generationForCategoryLocked(category)
-            generation.append(entry, characterCount)
-            self._retainedEntryCount += 1
-            self._retainedCharacters += characterCount
-            self._enforceRetentionLimitsLocked()
+                entryTimestamp = datetime.now() if timestamp is None else timestamp
+                self._sequence += 1
+
+                entry = LogEntry(
+                    message=normalizedMessage,
+                    timestamp=entryTimestamp,
+                    categoryId=category.id,
+                    categoryLabel=category.displayName,
+                    categoryTranslatable=category.translatable,
+                    source=normalizedSource,
+                    severity=normalizedSeverity,
+                    sequence=self._sequence,
+                )
+                clearedCategoryIds = frozenset()
+
+                if (
+                    category.id == CORE_LOG_CATEGORY
+                    and self._autoClearEnabled
+                    and self._categoryEntryCountLocked(CORE_LOG_CATEGORY)
+                    >= self._autoClearMaximumEntries
+                ):
+                    # Preserve repeated-append Core rollover semantics within
+                    # the batch, including the clear-before-entry signal order.
+                    clearedCategoryIds = self._nonApplicationCategoryIds
+
+                    self._clearNonApplicationLocked()
+
+                characterCount = len(entry.message)
+                generation = self._generationForCategoryLocked(category)
+                generation.append(entry, characterCount)
+
+                self._retainedEntryCount += 1
+                self._retainedCharacters += characterCount
+                self._enforceRetentionLimitsLocked()
+
+                events.append((clearedCategoryIds, entry))
+
             shouldNotifyEntriesChanged = self._markEntriesChangedLocked()
             retiredCleanupNeeded = bool(self._retiredBatches)
 
-        if clearedCategoryIds:
-            self.entriesCleared.emit(clearedCategoryIds)
+        for clearedCategoryIds, entry in events:
+            if clearedCategoryIds:
+                self.entriesCleared.emit(clearedCategoryIds)
 
-        self.entryAdded.emit(entry)
+            # Kept for compatibility and non-presentation observers. LogPage
+            # deliberately pulls a coalesced batch through entriesSince().
+            self.entryAdded.emit(entry)
 
         if shouldNotifyEntriesChanged:
             self._entriesChangedRequested.emit()
@@ -703,7 +958,7 @@ class LogManager(QtCore.QObject):
         if retiredCleanupNeeded:
             self._requestRetiredCleanup()
 
-        return entry
+        return tuple(entry for _clearedCategoryIds, entry in events)
 
     def callback(
         self,
@@ -712,23 +967,8 @@ class LogManager(QtCore.QObject):
         source: str = '',
         severity: str = '',
     ):
-        """Return a safe line callback for a process or another log producer."""
-
-        def appendLine(line):
-            """Append one externally produced line without affecting its producer."""
-            try:
-                self.append(
-                    line,
-                    categoryId,
-                    source=source,
-                    severity=severity,
-                )
-            except Exception:
-                # Any non-exit exceptions
-
-                pass
-
-        return appendLine
+        """Return a safe callable supporting single lines and natural batches."""
+        return _LogCallback(self, categoryId, source, severity)
 
     def entries(self, categoryId: Optional[str] = None) -> tuple[LogEntry, ...]:
         """Return an immutable snapshot, optionally filtered by category."""
@@ -740,34 +980,58 @@ class LogManager(QtCore.QObject):
     ) -> tuple[int, tuple[LogEntry, ...]]:
         """Return an O(n) global or O(k) category-specific immutable snapshot."""
         with self._lock:
-            if categoryId in (None, ALL_LOGS_FILTER):
-                # Exactly three sorted active streams make heap merge O(n) with
-                # a constant fan-in. Retired generations are never visited, so
-                # logically cleared entries cannot tax or leak into snapshots.
-                entries = tuple(
-                    merge(
-                        *(
-                            generation.entries.values()
-                            for generation in self._activeGenerationsLocked()
-                        ),
-                        key=lambda entry: entry.sequence,
-                    )
-                )
-            else:
-                category = self._categories.get(categoryId)
+            return (
+                self._sequence,
+                self._entriesLocked(self._normalizedCategoryId(categoryId)),
+            )
 
-                if category is None:
-                    entries = tuple()
-                else:
-                    generation = self._generationForCategoryLocked(category)
-                    categoryEntries = generation.categoryEntries(categoryId)
-                    entries = (
-                        tuple(categoryEntries.entries.values())
-                        if categoryEntries is not None
-                        else tuple()
-                    )
+    def entriesSince(
+        self,
+        cursor: Optional[LogCursor] = None,
+        categoryId: Optional[str] = None,
+    ) -> LogEntryBatch:
+        """Return one atomic filtered suffix and its next synchronization cursor.
 
-            return self._sequence, entries
+        Treat ``LogEntryBatch.cursor`` as opaque and pass it back unchanged with
+        the same filter on the next call.
+
+        A missing or structurally invalid cursor returns the complete retained
+        view with ``resetRequired`` set. Retention-only prefix eviction keeps the
+        cursor valid; ``firstRetainedSequence`` lets a presenter prune exactly
+        that obsolete prefix without rebuilding or copying retained history.
+        """
+        if cursor is not None and not isinstance(cursor, LogCursor):
+            raise TypeError('cursor must be a LogCursor or None')
+
+        normalizedCategoryId = self._normalizedCategoryId(categoryId)
+
+        with self._lock:
+            generationStates = self._generationStatesLocked(normalizedCategoryId)
+            resetRequired = (
+                cursor is None
+                or cursor.categoryId != normalizedCategoryId
+                or cursor.generationStates != generationStates
+                or cursor.sequence > self._sequence
+            )
+            entries = (
+                self._entriesLocked(normalizedCategoryId)
+                if resetRequired
+                else self._entriesAfterLocked(cursor.sequence, normalizedCategoryId)
+            )
+            nextCursor = LogCursor(
+                sequence=self._sequence,
+                categoryId=normalizedCategoryId,
+                generationStates=generationStates,
+            )
+
+            return LogEntryBatch(
+                cursor=nextCursor,
+                entries=entries,
+                firstRetainedSequence=self._firstRetainedSequenceLocked(
+                    normalizedCategoryId
+                ),
+                resetRequired=resetRequired,
+            )
 
     def clear(
         self,
@@ -863,8 +1127,3 @@ class ApplicationLogHandler(logging.Handler):
             # Any non-exit exceptions
 
             self.handleError(record)
-
-
-def coreLogCallback(manager: LogManager):
-    """Create a callback for output from the currently selected proxy core."""
-    return manager.callback(CORE_LOG_CATEGORY)

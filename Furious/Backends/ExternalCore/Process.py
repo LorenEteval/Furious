@@ -105,6 +105,28 @@ class ExternalCoreProcess(CoreRuntime):
 
             logger.exception('external core output callback failed')
 
+    def _emitOutputs(self, messages):
+        """Forward one decoded OS-read batch through an optional batch route."""
+        messages = tuple(message for message in messages if message)
+
+        if not messages or not callable(self._messageCallback):
+            return
+
+        appendMany = getattr(self._messageCallback, 'appendMany', None)
+
+        if not callable(appendMany):
+            for message in messages:
+                self._emitOutput(message)
+
+            return
+
+        try:
+            appendMany(messages)
+        except Exception:
+            # Any non-exit exceptions
+
+            logger.exception('external core output callback failed')
+
     def _readStream(self, stream: BinaryIO, label: str):
         """Drain one child pipe until EOF without retaining process output."""
         pending = b''
@@ -119,6 +141,7 @@ class ExternalCoreProcess(CoreRuntime):
                 pending += chunk
                 lines = pending.split(b'\n')
                 pending = lines.pop()
+                messages = []
 
                 for line in lines:
                     message = line.decode('utf-8', 'replace').rstrip('\r')
@@ -126,9 +149,11 @@ class ExternalCoreProcess(CoreRuntime):
                     if not message:
                         continue
 
-                    self._emitOutput(
+                    messages.append(
                         message if label == 'stdout' else f'[stderr] {message}'
                     )
+
+                self._emitOutputs(messages)
 
                 if len(pending) >= self.MaximumPendingOutput:
                     message = pending.decode('utf-8', 'replace')

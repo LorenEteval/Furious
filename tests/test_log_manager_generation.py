@@ -30,8 +30,11 @@ from Furious.Service.LogManager import (
     CORE_LOG_CATEGORY,
     TUN2SOCKS_LOG_CATEGORY,
     LogManager,
+    formatLogEntry,
 )
-from Furious.Window.LogPage import LogPage
+from Furious.Window.LogPage import LogPage, _documentBlockCount
+
+from PySide6 import QtGui
 
 from collections import OrderedDict
 from datetime import datetime
@@ -320,6 +323,35 @@ class GenerationLogManagerContractTest(unittest.TestCase):
         _assertManagerInvariants(self, manager, model)
         return entry
 
+    def assertPageMatchesManager(self, page, manager, categoryId=None):
+        """Prove text, paragraph count, and per-entry ownership agree."""
+        entries = manager.entries(categoryId)
+        reference = QtGui.QTextDocument()
+        reference.setPlainText('\n'.join(formatLogEntry(entry) for entry in entries))
+
+        self.assertEqual(page.plainText(), reference.toPlainText())
+        self.assertEqual(
+            page.textBrowser.document().blockCount(),
+            reference.blockCount(),
+        )
+        self.assertEqual(
+            tuple(
+                (metadata.sequence, metadata.blockCount)
+                for metadata in page._renderedEntries
+            ),
+            tuple(
+                (entry.sequence, _documentBlockCount(formatLogEntry(entry)))
+                for entry in entries
+            ),
+        )
+        self.assertEqual(
+            reference.blockCount(),
+            max(
+                1,
+                sum(metadata.blockCount for metadata in page._renderedEntries),
+            ),
+        )
+
     def testDeterministicStateTransitionMatrix(self):
         """Mix every clear kind, rollover, retention mode, and stream."""
         manager = self.makeManager(
@@ -516,6 +548,394 @@ class GenerationLogManagerContractTest(unittest.TestCase):
         self.assertEqual(sum(index.oldestRemovals for index in globalIndexes), 1)
         _assertManagerInvariants(self, manager)
 
+    def testIncrementalBatchesReturnOnlyOrderedMissingEntries(self):
+        """Advance independent global and category cursors over sparse appends."""
+        manager = self.makeManager(autoClearEnabled=False)
+        manager.appendMany(
+            ('application 1', 'application 2'),
+            APPLICATION_LOG_CATEGORY,
+        )
+        initial = manager.entriesSince()
+        coreInitial = manager.entriesSince(None, CORE_LOG_CATEGORY)
+
+        self.assertTrue(initial.resetRequired)
+        self.assertEqual(
+            tuple(entry.message for entry in initial.entries),
+            ('application 1', 'application 2'),
+        )
+
+        manager.append('core 1', CORE_LOG_CATEGORY)
+        manager.append('application 3', APPLICATION_LOG_CATEGORY)
+        manager.append('core 2', CORE_LOG_CATEGORY)
+
+        globalBatch = manager.entriesSince(initial.cursor)
+        coreBatch = manager.entriesSince(coreInitial.cursor, CORE_LOG_CATEGORY)
+
+        self.assertFalse(globalBatch.resetRequired)
+        self.assertEqual(
+            tuple(entry.message for entry in globalBatch.entries),
+            ('core 1', 'application 3', 'core 2'),
+        )
+        self.assertEqual(
+            tuple(entry.message for entry in coreBatch.entries),
+            ('core 1', 'core 2'),
+        )
+        self.assertEqual(
+            tuple(entry.sequence for entry in globalBatch.entries),
+            tuple(sorted(entry.sequence for entry in globalBatch.entries)),
+        )
+
+    def testIncrementalBatchReportsRetentionPrefixWithoutFullReset(self):
+        """Keep a valid cursor while exposing the exact retained prefix boundary."""
+        manager = self.makeManager(
+            maximumEntries=3,
+            maximumCharacters=1_000,
+            autoClearEnabled=False,
+        )
+        manager.appendMany(('one', 'two', 'three'))
+        initial = manager.entriesSince()
+
+        manager.appendMany(('four', 'five'))
+        batch = manager.entriesSince(initial.cursor)
+
+        self.assertFalse(batch.resetRequired)
+        self.assertEqual(
+            tuple(entry.message for entry in batch.entries),
+            ('four', 'five'),
+        )
+        self.assertEqual(batch.firstRetainedSequence, 3)
+        self.assertEqual(
+            tuple(entry.message for entry in manager.entries()),
+            ('three', 'four', 'five'),
+        )
+
+    def testIncrementalCursorsDetectScopedAndSelectiveClears(self):
+        """Invalidate only views whose structural generation state changed."""
+        manager = self.makeManager(autoClearEnabled=False)
+        manager.registerComponent('other.second', 'Other second', runtime=False)
+        manager.append('application', APPLICATION_LOG_CATEGORY)
+        manager.append('core old', CORE_LOG_CATEGORY)
+        manager.append('other old', 'other.extra')
+        manager.append('second retained', 'other.second')
+
+        globalCursor = manager.entriesSince().cursor
+        applicationCursor = manager.entriesSince(None, APPLICATION_LOG_CATEGORY).cursor
+        coreCursor = manager.entriesSince(None, CORE_LOG_CATEGORY).cursor
+
+        manager.clear(runtimeOnly=True)
+        manager.append('core new', CORE_LOG_CATEGORY)
+
+        globalBatch = manager.entriesSince(globalCursor)
+        applicationBatch = manager.entriesSince(
+            applicationCursor,
+            APPLICATION_LOG_CATEGORY,
+        )
+        coreBatch = manager.entriesSince(coreCursor, CORE_LOG_CATEGORY)
+
+        self.assertTrue(globalBatch.resetRequired)
+        self.assertTrue(coreBatch.resetRequired)
+        self.assertFalse(applicationBatch.resetRequired)
+        self.assertEqual(applicationBatch.entries, tuple())
+        self.assertNotIn(
+            'core old', tuple(entry.message for entry in globalBatch.entries)
+        )
+
+        globalCursor = globalBatch.cursor
+        secondCursor = manager.entriesSince(None, 'other.second').cursor
+        manager.clear('other.extra')
+        manager.append('second new', 'other.second')
+
+        self.assertTrue(manager.entriesSince(globalCursor).resetRequired)
+        secondBatch = manager.entriesSince(secondCursor, 'other.second')
+        self.assertTrue(secondBatch.resetRequired)
+        self.assertEqual(
+            tuple(entry.message for entry in secondBatch.entries),
+            ('second retained', 'second new'),
+        )
+
+    def testAppendManyMatchesRepeatedAppendAndCompatibilitySignals(self):
+        """Preserve normalization, rollover, retention, and signal ordering."""
+        timestamp = datetime(2026, 8, 27, 12, 0, 0)
+        options = {
+            'maximumEntries': 7,
+            'maximumCharacters': 38,
+            'maximumEntryCharacters': 12,
+            'autoClearMaximumEntries': 3,
+        }
+        batched = self.makeManager(**options)
+        repeated = self.makeManager(**options)
+        messages = tuple(f'core-{index}-payload' for index in range(11))
+        added = []
+        cleared = []
+        changed = []
+        observedSnapshots = []
+        batched.entryAdded.connect(added.append)
+        batched.entryAdded.connect(
+            lambda _entry: observedSnapshots.append(batched.entries())
+        )
+        batched.entriesCleared.connect(cleared.append)
+        batched.entriesChanged.connect(changed.append)
+
+        batchEntries = batched.appendMany(
+            messages,
+            CORE_LOG_CATEGORY,
+            timestamp=timestamp,
+            source='batch',
+            severity='info',
+        )
+        repeatedEntries = tuple(
+            repeated.append(
+                message,
+                CORE_LOG_CATEGORY,
+                timestamp=timestamp,
+                source='batch',
+                severity='info',
+            )
+            for message in messages
+        )
+
+        self.assertEqual(batchEntries, repeatedEntries)
+        self.assertEqual(batched.entries(), repeated.entries())
+        self.assertEqual(batched.retainedCharacters, repeated.retainedCharacters)
+        self.assertEqual(added, list(batchEntries))
+        self.assertTrue(observedSnapshots)
+        self.assertTrue(
+            all(snapshot == batched.entries() for snapshot in observedSnapshots)
+        )
+        self.assertEqual(len(cleared), 3)
+        processQtEvents()
+        self.assertEqual(changed, [batchEntries[-1].sequence])
+        self.assertLessEqual(batched.entryCount(), batched.maximumEntries)
+        self.assertLessEqual(batched.retainedCharacters, batched.maximumCharacters)
+        _assertManagerInvariants(self, batched)
+        _assertManagerInvariants(self, repeated)
+
+    def testProducerCallbackSupportsSingleAndAtomicBatchDelivery(self):
+        """Return stored entries through both safe producer callback paths."""
+        manager = self.makeManager(autoClearEnabled=False)
+        callback = manager.callback(
+            CORE_LOG_CATEGORY,
+            source='producer',
+            severity='info',
+        )
+
+        batched = callback.appendMany(('one', 'two', 'three'))
+        single = callback('four')
+
+        self.assertEqual(
+            tuple(entry.message for entry in manager.entries(CORE_LOG_CATEGORY)),
+            ('one', 'two', 'three', 'four'),
+        )
+        self.assertEqual(
+            tuple(entry.message for entry in batched), ('one', 'two', 'three')
+        )
+        self.assertIs(single, manager.entries(CORE_LOG_CATEGORY)[-1])
+        self.assertTrue(
+            all(
+                entry.source == 'producer' and entry.severity == 'info'
+                for entry in manager.entries(CORE_LOG_CATEGORY)
+            )
+        )
+
+    def testMultilineEntryEvictionRemovesItsExactDocumentBlocks(self):
+        """Never let paragraph retention silently retain a fragment of an entry."""
+        with isolatedSettings():
+            manager = self.makeManager(
+                maximumEntries=2,
+                maximumCharacters=10_000,
+                maximumEntryCharacters=1_000,
+                autoClearEnabled=False,
+            )
+            page = LogPage(manager=manager)
+            manager.append('a\nb\nc\nd\ne')
+            page.show()
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertPageMatchesManager(page, manager)
+
+            renderedText = page.plainText()
+            renderedMetadata = tuple(page._renderedEntries)
+
+            with self.assertRaises(RuntimeError):
+                page._removeLeadingDocumentBlocks(
+                    page.textBrowser.document().blockCount() + 1
+                )
+
+            self.assertEqual(page.plainText(), renderedText)
+            self.assertEqual(tuple(page._renderedEntries), renderedMetadata)
+
+            manager.append('x')
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertPageMatchesManager(page, manager)
+
+            firstMetadata = page._renderedEntries[0]
+            page._renderedEntries[0] = type(firstMetadata)(
+                sequence=firstMetadata.sequence,
+                blockCount=page.textBrowser.document().blockCount() + 1,
+            )
+
+            with self.assertLogs('Furious.Window.LogPage', level='ERROR') as logs:
+                manager.append('y')
+                self.assertTrue(waitFor(lambda: not page._entriesDirty))
+
+            self.assertTrue(
+                any('rebuilding document' in message for message in logs.output)
+            )
+            self.assertPageMatchesManager(page, manager)
+
+            self.assertEqual(page.plainText(), 'x\ny')
+            self.assertEqual(page.textBrowser.document().blockCount(), 2)
+
+            page.close()
+            page.deleteLater()
+            collectAtBoundary()
+
+    def testMixedMultilineRetentionFilterAndClearStaySynchronized(self):
+        """Keep exact ownership through mixed separators, truncation, and resets."""
+        with isolatedSettings():
+            manager = self.makeManager(
+                maximumEntries=5,
+                maximumCharacters=10_000,
+                maximumEntryCharacters=48,
+                autoClearEnabled=False,
+            )
+            page = LogPage(manager=manager)
+            page.show()
+
+            messages = (
+                ('alpha\r\nbeta', APPLICATION_LOG_CATEGORY),
+                ('gamma\rdelta', CORE_LOG_CATEGORY),
+                ('epsilon\u2029zeta', APPLICATION_LOG_CATEGORY),
+                ('eta\u2028theta', CORE_LOG_CATEGORY),
+                ('iota\n\nkappa', APPLICATION_LOG_CATEGORY),
+                ('x' * 80, CORE_LOG_CATEGORY),
+                ('', APPLICATION_LOG_CATEGORY),
+                ('lambda\r\nmu\rnu\u2029xi', CORE_LOG_CATEGORY),
+            )
+
+            for message, categoryId in messages:
+                manager.append(message, categoryId)
+                self.assertTrue(waitFor(lambda: not page._entriesDirty))
+                self.assertPageMatchesManager(page, manager)
+
+            coreIndex = page.filterComboBox.findData(CORE_LOG_CATEGORY)
+            page.filterComboBox.setCurrentIndex(coreIndex)
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertPageMatchesManager(page, manager, CORE_LOG_CATEGORY)
+
+            manager.clear(CORE_LOG_CATEGORY)
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertPageMatchesManager(page, manager, CORE_LOG_CATEGORY)
+
+            manager.append('runtime\ncore', CORE_LOG_CATEGORY)
+            manager.append('runtime\rcomponent', TUN2SOCKS_LOG_CATEGORY)
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertPageMatchesManager(page, manager, CORE_LOG_CATEGORY)
+
+            manager.clear(runtimeOnly=True)
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertPageMatchesManager(page, manager, CORE_LOG_CATEGORY)
+
+            allIndex = page.filterComboBox.findData('all')
+            page.filterComboBox.setCurrentIndex(allIndex)
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertPageMatchesManager(page, manager)
+
+            manager.append('before\nfull clear')
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            manager.clear()
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertPageMatchesManager(page, manager)
+
+            page.close()
+            page.deleteLater()
+            collectAtBoundary()
+
+    def testMultilineRetentionKeepsProgressiveHighlightingAligned(self):
+        """Shift pending highlighting by removed blocks rather than entries."""
+        with isolatedSettings():
+            manager = self.makeManager(
+                maximumEntries=3,
+                maximumCharacters=20_000,
+                maximumEntryCharacters=4_000,
+                autoClearEnabled=False,
+            )
+            page = LogPage(manager=manager)
+
+            def message(index):
+                return '\n'.join(
+                    '2026/08/27 18:45:'
+                    f'{second:02d}.000000 from 127.0.0.1:'
+                    f'{5000 + index * 10 + second} accepted '
+                    '//example.com:443 [http >> proxy]'
+                    for second in range(3)
+                )
+
+            manager.appendMany(tuple(message(index) for index in range(3)))
+            page.show()
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertTrue(waitFor(lambda: page._highlightNextBlock is None))
+
+            manager.appendMany((message(3), message(4)))
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertTrue(waitFor(lambda: page._highlightNextBlock is None))
+            self.assertPageMatchesManager(page, manager)
+
+            document = page.textBrowser.document()
+            missingFormats = tuple(
+                blockNumber
+                for blockNumber in range(document.blockCount())
+                if not document.findBlockByNumber(blockNumber).layout().formats()
+            )
+            self.assertEqual(missingFormats, tuple())
+
+            page.close()
+            page.deleteLater()
+            collectAtBoundary()
+
+    def testLogPagePullsOneSuffixInsteadOfRepeatedFullSnapshots(self):
+        """Keep a visible page on the cursor path during a high-frequency burst."""
+        with isolatedSettings():
+            manager = self.makeManager(
+                maximumEntries=500,
+                maximumCharacters=20_000,
+                autoClearEnabled=False,
+            )
+            manager.appendMany(tuple(f'initial {index}' for index in range(200)))
+            fullReads = []
+            suffixReads = []
+            originalFullRead = manager._entriesLocked
+            originalSuffixRead = manager._entriesAfterLocked
+
+            def fullRead(categoryId):
+                fullReads.append(categoryId)
+                return originalFullRead(categoryId)
+
+            def suffixRead(sequence, categoryId):
+                suffixReads.append((sequence, categoryId))
+                return originalSuffixRead(sequence, categoryId)
+
+            manager._entriesLocked = fullRead
+            manager._entriesAfterLocked = suffixRead
+            page = LogPage(manager=manager)
+            page.resize(900, 420)
+            page.show()
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertEqual(len(fullReads), 1)
+
+            for index in range(250):
+                manager.append(f'burst {index}', APPLICATION_LOG_CATEGORY)
+
+            self.assertTrue(waitFor(lambda: not page._entriesDirty))
+            self.assertEqual(len(fullReads), 1)
+            self.assertEqual(len(suffixReads), 1)
+            self.assertEqual(
+                page.plainText().splitlines(),
+                [entry.message for entry in manager.entries()],
+            )
+            page.close()
+            page.deleteLater()
+            collectAtBoundary()
+
     def testCleanupBudgetIsGlobalFifoAndHandlesBoundaries(self):
         """Limit one invocation across all batches, resuming the FIFO head."""
         for backlog, budget in ((1, 64), (63, 64), (64, 64), (65, 64), (130, 64)):
@@ -704,6 +1124,8 @@ class GenerationLogManagerContractTest(unittest.TestCase):
         before = manager.entries()
         with self.assertRaises(RuntimeError):
             manager.append(RaisingString())
+        with self.assertRaises(RuntimeError):
+            manager.appendMany(('must not commit', RaisingString(), 'unreached'))
         with self.assertRaises(TypeError):
             manager.append('bad timestamp', timestamp='not a datetime')
         with self.assertRaises(KeyError):
@@ -835,12 +1257,28 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                 def reader():
                     try:
                         start.wait(5)
+                        cursor = None
                         for _index in range(500):
                             entries = manager.entries()
                             self.assertEqual(
                                 tuple(item.sequence for item in entries),
                                 tuple(sorted(item.sequence for item in entries)),
                             )
+                            batch = manager.entriesSince(cursor, CORE_LOG_CATEGORY)
+                            self.assertEqual(
+                                tuple(item.sequence for item in batch.entries),
+                                tuple(sorted(item.sequence for item in batch.entries)),
+                            )
+
+                            if cursor is not None and not batch.resetRequired:
+                                self.assertTrue(
+                                    all(
+                                        item.sequence > cursor.sequence
+                                        for item in batch.entries
+                                    )
+                                )
+
+                            cursor = batch.cursor
                             manager.entryCount(CORE_LOG_CATEGORY)
                     except Exception as error:
                         errors.append(error)
@@ -1169,7 +1607,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
         )
 
     def testCleanupLatencyDoesNotScaleWithBacklog(self):
-        """Keep append cleanup capped at 64 for geometrically larger queues."""
+        """Keep append cleanup capped at one for geometrically larger queues."""
         results = []
         for backlog in (64, 1_000, 10_000):
             samples = []
@@ -1181,6 +1619,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                     autoClearEnabled=False,
                 )
                 manager.RetiredCleanupBudget = 64
+                manager.AppendRetiredCleanupBudget = 1
                 for index in range(backlog):
                     manager.append(str(index), CORE_LOG_CATEGORY)
                 manager.clear(runtimeOnly=True)
@@ -1188,7 +1627,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                 started = time.perf_counter_ns()
                 manager.append('new')
                 samples.append(time.perf_counter_ns() - started)
-                self.assertEqual(manager.retiredEntryCount, max(0, before - 64))
+                self.assertEqual(manager.retiredEntryCount, max(0, before - 1))
             results.append({'backlog': backlog, 'median_us': median(samples) / 1_000})
         ratio = results[-1]['median_us'] / max(results[0]['median_us'], 0.001)
         self.assertLess(ratio, 20)

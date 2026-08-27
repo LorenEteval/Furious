@@ -1039,6 +1039,40 @@ class ApplicationLifecycleTransactionTest(TestCase):
         finally:
             messageQueue.dispose()
 
+    def testCoreLogQueueUsesOneNaturalBatchWhenCallbackSupportsIt(self):
+        """Drain one queue turn through one batch-capable callback invocation."""
+
+        class BatchCallback:
+            """Record whether the queue chooses the batch contract."""
+
+            def __init__(self):
+                self.single = []
+                self.batches = []
+
+            def __call__(self, message):
+                self.single.append(message)
+
+            def appendMany(self, messages):
+                self.batches.append(tuple(messages))
+
+        callback = BatchCallback()
+        messageQueue = CoreProcessWorkerModule.MsgQueue(msgCallback=callback)
+
+        try:
+            messageQueue.getNoWait = mock.Mock(
+                side_effect=('first', '   ', 'second', 'third', '')
+            )
+            messageQueue.processMsg()
+
+            self.assertEqual(callback.single, [])
+            self.assertEqual(callback.batches, [('first', 'second', 'third')])
+            self.assertEqual(
+                messageQueue.getTimeout(),
+                CoreProcessWorkerModule.MsgQueue.ACTIVE_DRAIN_INTERVAL,
+            )
+        finally:
+            messageQueue.dispose()
+
     def testFailuresAtMeaningfulStagesRollBackOnlyEarlierStages(self):
         expected = {
             'storage': ['cleanup storage', 'cleanup plugins'],

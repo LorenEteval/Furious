@@ -212,6 +212,8 @@ class MsgQueue(multiprocessing.queues.Queue):
             return
 
         hasMessages = False
+        appendMany = getattr(self.callback, 'appendMany', None)
+        messages = [] if callable(appendMany) else None
 
         for _ in range(self.MAXIMUM_MESSAGES_PER_TICK):
             msg = self.getNoWait()
@@ -222,7 +224,13 @@ class MsgQueue(multiprocessing.queues.Queue):
             hasMessages = True
 
             if not msg.isspace():
-                self.callback(msg)
+                if messages is None:
+                    self.callback(msg)
+                else:
+                    messages.append(msg)
+
+        if messages:
+            appendMany(messages)
 
         if hasMessages:
             nextTimeout = self.ACTIVE_DRAIN_INTERVAL

@@ -40,9 +40,14 @@ from PySide6 import QtCore, QtGui
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import *
 
-from bisect import bisect_left
+from collections import deque
+from dataclasses import dataclass
+
+import logging
 
 __all__ = ['LogPage']
+
+logger = logging.getLogger(__name__)
 
 registerAppSettings('LogViewerWidgetPointSize')
 registerAppSettings('LogViewerSelectedCategory', default=ALL_LOGS_FILTER)
@@ -52,6 +57,44 @@ _LEGACY_POINT_SIZE_SETTINGS = (
     'LogViewerWidgetPointSizeCore',
     'LogViewerWidgetPointSizeTun_',
 )
+
+
+@dataclass(frozen=True)
+class _RenderedEntryMetadata:
+    """Track one normalized entry's sequence and owned document paragraphs.
+
+    LogManager strips terminal CR/LF before entries are joined by one newline.
+    The first entry's base block owns the document's initial block; each later
+    entry's base block owns its preceding inter-entry separator. Any additional
+    blocks counted in ``blockCount`` belong to paragraph breaks inside that
+    entry, so the per-entry counts remain additive for prefix removal.
+    """
+
+    sequence: int
+    blockCount: int
+
+
+class _DocumentBlockAccountingError(RuntimeError):
+    """Report a recoverable mismatch between rendered metadata and Qt blocks."""
+
+
+def _documentBlockCount(text: str) -> int:
+    """Return the QTextDocument block count produced by plain *text*."""
+    blockCount = 1 + text.count('\n') + text.count('\u2029')
+
+    for index, character in enumerate(text):
+        if character == '\r' and (index + 1 == len(text) or text[index + 1] != '\n'):
+            blockCount += 1
+
+    return blockCount
+
+
+def _renderedEntryMetadata(entry) -> _RenderedEntryMetadata:
+    """Return immutable block ownership for one normalized log entry."""
+    return _RenderedEntryMetadata(
+        sequence=entry.sequence,
+        blockCount=_documentBlockCount(formatLogEntry(entry)),
+    )
 
 
 def _migratePointSizeSettings():
@@ -165,7 +208,6 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         )
         self.textBrowser.setLineWrapMode(DraculaTextBrowser.LineWrapMode.NoWrap)
         self.textBrowser.setUndoRedoEnabled(False)
-        self.textBrowser.document().setMaximumBlockCount(manager.maximumEntries)
 
         self.highlightOverlay = QFrame(self.textBrowser.viewport())
         self.highlightOverlay.setObjectName('LogHighlightOverlay')
@@ -198,8 +240,9 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self._entriesDirty = True
         self._representationInvalid = True
         self._renderedSequence = 0
+        self._entryCursor = None
         self._renderedCategoryId = None
-        self._renderedEntrySequences = tuple()
+        self._renderedEntries = deque()
         self._followTail = self._autoScrollDown
         self._documentMutation = False
         self._highlightNextBlock = None
@@ -347,9 +390,8 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         # Do not drive the document directly from entryAdded: cross-thread Qt
         # delivery can occur after that entry was evicted or its generation was
         # cleared, and one queued signal per line defeats batching under a burst.
-        # entriesChanged coalesces producers, then one indexed snapshot provides
-        # an atomic truth that _synchronizeDocument applies as prefix removal and
-        # suffix append rather than rebuilding the document in steady state.
+        # entriesChanged coalesces producers, then one cursor query returns only
+        # the missing suffix plus an eviction boundary for prefix pruning.
         self.manager.entriesChanged.connect(self._entriesChanged)
         self.manager.entriesCleared.connect(self._entriesCleared)
 
@@ -450,31 +492,6 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             self.highlightSpinner.stop()
             self.highlightOverlay.hide()
 
-    @staticmethod
-    def _incrementalPlan(oldSequences, currentSequences):
-        """Return leading removals and the first new snapshot entry.
-
-        Retention pruning can only remove a prefix, while ordinary collection
-        can only append a suffix.  Any other relationship requires one clean
-        rebuild because a clear/filter change invalidated the representation.
-        """
-        if not oldSequences:
-            return 0, 0
-
-        if not currentSequences:
-            return len(oldSequences), 0
-
-        oldStart = bisect_left(oldSequences, currentSequences[0])
-        survivors = oldSequences[oldStart:]
-
-        if len(currentSequences) < len(survivors):
-            return None
-
-        if tuple(currentSequences[: len(survivors)]) != survivors:
-            return None
-
-        return oldStart, len(survivors)
-
     def _scrollRatio(self) -> float:
         """Return the current vertical position as a bounded range ratio."""
         scrollbar = self.textBrowser.verticalScrollBar()
@@ -484,23 +501,23 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         return min(1.0, max(0.0, scrollbar.value() / scrollbar.maximum()))
 
-    def _removeLeadingBlocks(self, count: int):
-        """Remove *count* rendered entries in one document edit."""
-        if count <= 0:
+    def _removeLeadingDocumentBlocks(self, blockCount: int, *, removeAll=False):
+        """Remove an exact owned paragraph prefix in one document edit."""
+        if blockCount <= 0:
             return
 
-        if count >= len(self._renderedEntrySequences):
+        if removeAll:
             self.textBrowser.clear()
 
             return
 
         document = self.textBrowser.document()
-        firstRetainedBlock = document.findBlockByNumber(count)
+        firstRetainedBlock = document.findBlockByNumber(blockCount)
 
         if not firstRetainedBlock.isValid():
-            self.textBrowser.clear()
-
-            return
+            raise _DocumentBlockAccountingError(
+                'rendered log block accounting diverged'
+            )
 
         cursor = QTextCursor(document)
         cursor.setPosition(0)
@@ -547,20 +564,13 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         return 0 if entries else None
 
-    def _synchronizeDocument(self, entries, categoryId: str):
-        """Apply one snapshot with the smallest safe document mutation."""
-        currentSequences = tuple(entry.sequence for entry in entries)
+    def _synchronizeDocument(self, batch, categoryId: str):
+        """Apply one incremental manager batch with the smallest safe mutation."""
         fullRebuild = (
-            self._representationInvalid or self._renderedCategoryId != categoryId
+            self._representationInvalid
+            or self._renderedCategoryId != categoryId
+            or batch.resetRequired
         )
-        plan = None
-
-        if not fullRebuild:
-            plan = self._incrementalPlan(
-                self._renderedEntrySequences,
-                currentSequences,
-            )
-            fullRebuild = plan is None
 
         oldRatio = self._scrollRatio()
         firstHighlightBlock = None
@@ -573,26 +583,57 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         try:
             if fullRebuild:
-                firstHighlightBlock = self._replaceEntries(entries)
-            else:
-                dropCount, firstNewEntry = plan
+                firstHighlightBlock = self._replaceEntries(batch.entries)
 
-                if self._highlightNextBlock is not None and dropCount:
+                self._renderedEntries = deque(
+                    _renderedEntryMetadata(entry) for entry in batch.entries
+                )
+            else:
+                firstRetainedSequence = batch.firstRetainedSequence
+
+                if firstRetainedSequence is None:
+                    dropEntryCount = len(self._renderedEntries)
+                    droppedBlockCount = sum(
+                        metadata.blockCount for metadata in self._renderedEntries
+                    )
+                else:
+                    dropEntryCount = 0
+                    droppedBlockCount = 0
+
+                    for metadata in self._renderedEntries:
+                        if metadata.sequence >= firstRetainedSequence:
+                            break
+
+                        dropEntryCount += 1
+                        droppedBlockCount += metadata.blockCount
+
+                self._removeLeadingDocumentBlocks(
+                    droppedBlockCount,
+                    removeAll=bool(dropEntryCount)
+                    and dropEntryCount == len(self._renderedEntries),
+                )
+
+                for _index in range(dropEntryCount):
+                    self._renderedEntries.popleft()
+
+                if self._highlightNextBlock is not None and droppedBlockCount:
                     self._highlightNextBlock = max(
                         0,
-                        self._highlightNextBlock - dropCount,
+                        self._highlightNextBlock - droppedBlockCount,
                     )
 
-                self._removeLeadingBlocks(dropCount)
+                leadingBoundaryChanged = bool(dropEntryCount)
 
-                leadingBoundaryChanged = bool(dropCount)
-
-                newEntries = entries[firstNewEntry:]
                 firstHighlightBlock = self._appendEntries(
-                    newEntries,
-                    hasExistingEntries=bool(currentSequences[:firstNewEntry]),
+                    batch.entries,
+                    hasExistingEntries=bool(self._renderedEntries),
                 )
-                restoreManualPosition = bool(dropCount)
+
+                self._renderedEntries.extend(
+                    _renderedEntryMetadata(entry) for entry in batch.entries
+                )
+
+                restoreManualPosition = bool(dropEntryCount)
         finally:
             self.textBrowser.setSyntaxHighlightingEnabled(True)
 
@@ -609,7 +650,6 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         self.textBrowser.viewport().update()
         self._renderedCategoryId = categoryId
-        self._renderedEntrySequences = currentSequences
         self._representationInvalid = False
 
         if firstHighlightBlock is not None:
@@ -633,10 +673,28 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         if not isinstance(selectedCategoryId, str):
             selectedCategoryId = ALL_LOGS_FILTER
 
-        sequence, entries = self.manager.snapshot(selectedCategoryId)
+        cursor = (
+            None
+            if self._representationInvalid
+            or self._renderedCategoryId != selectedCategoryId
+            else self._entryCursor
+        )
+        batch = self.manager.entriesSince(cursor, selectedCategoryId)
 
-        self._synchronizeDocument(entries, selectedCategoryId)
-        self._renderedSequence = sequence
+        try:
+            self._synchronizeDocument(batch, selectedCategoryId)
+        except _DocumentBlockAccountingError:
+            logger.exception(
+                'rendered log block accounting diverged; rebuilding document'
+            )
+
+            self._entryCursor = None
+            self._requestRefresh(invalidate=True, immediate=True)
+
+            return
+
+        self._entryCursor = batch.cursor
+        self._renderedSequence = batch.cursor.sequence
         self._entriesDirty = False
 
     def _scheduleHighlight(self, firstBlock: int):
@@ -799,7 +857,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
     @QtCore.Slot(object)
     def _entriesCleared(self, _categoryIds):
         """Refresh the presentation after the underlying collection changes."""
-        self._requestRefresh(invalidate=True, immediate=True)
+        self._requestRefresh(immediate=True)
 
     def showEvent(self, event):
         """Render entries accumulated while the page was hidden."""
