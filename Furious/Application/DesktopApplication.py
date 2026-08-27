@@ -988,6 +988,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
             self._initializeUI()
             self._cleanupStack.register('application UI', self._cleanupUI)
+
             self.connectionController.restoreStartupState()
 
             if self._exitRequested:
