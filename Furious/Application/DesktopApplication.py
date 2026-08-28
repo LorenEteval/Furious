@@ -839,7 +839,9 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         logger.info(f'python version: {PLATFORM_PYTHON_VERSION}')
         logger.info(f'system version: {sys.version}')
         logger.info(f'sys.executable: {sys.executable}')
-        logger.info(f'sys.argv: {sys.argv}')
+        # Arguments may contain imported share links, subscription URLs, or
+        # plugin-defined commands.  Their contents are not diagnostic metadata.
+        logger.info(f'command-line arguments: {max(len(sys.argv) - 1, 0)} provided')
         logger.info(f'appFilePath: {self.applicationFilePath()}')
         logger.info(f'isPythonw: {SystemRuntime.isPythonw()}')
         logger.info(f'system language is {SYSTEM_LANGUAGE}')

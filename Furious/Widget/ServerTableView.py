@@ -2403,8 +2403,6 @@ class ServerTableView(
             'config': kwargs.pop('config', ''),
             'subsId': kwargs.pop('subsId', ''),
         }
-        tostr = f'{model}'
-
         factory = profileFromAny(model.pop('config', ''), **model)
 
         if factory.isValid():
@@ -2413,7 +2411,9 @@ class ServerTableView(
             if acceptInvalid:
                 self.appendNewItemByFactory(factory)
             else:
-                logger.error(f'invalid item: {tostr}')
+                # The rejected input may be a complete JSON configuration or
+                # share URI containing credentials.
+                logger.error('invalid server profile input')
 
     def exportSelectedItemURI(self):
         """Export selected item URI."""

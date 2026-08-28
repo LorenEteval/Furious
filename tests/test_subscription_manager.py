@@ -169,8 +169,8 @@ class SubscriptionManagerTest(TestCase):
         self.assertFalse(hasattr(manager, 'table'))
         manager.deleteLater()
 
-    def testSubscriptionDiagnosticsIncludeConfiguredURL(self):
-        """Identify a request with its configured remark and URL."""
+    def testSubscriptionDiagnosticsExcludeConfiguredURL(self):
+        """Identify a request without logging its credential-bearing URL."""
         manager = self._manager()
         profile = SimpleNamespace(itemRemark='profile')
         manager.importer = SimpleNamespace(
@@ -205,8 +205,12 @@ class SubscriptionManagerTest(TestCase):
 
         self.assertIn('Group A', infoLog.call_args.args[0])
         self.assertIn('Group A', errorLog.call_args.args[0])
-        self.assertIn(configuredURL, infoLog.call_args.args[0])
-        self.assertIn(configuredURL, errorLog.call_args.args[0])
+        self.assertIn('group-a', infoLog.call_args.args[0])
+        self.assertIn('group-a', errorLog.call_args.args[0])
+        self.assertNotIn(configuredURL, infoLog.call_args.args[0])
+        self.assertNotIn(configuredURL, errorLog.call_args.args[0])
+        self.assertNotIn('token=value', infoLog.call_args.args[0])
+        self.assertNotIn('token=value', errorLog.call_args.args[0])
 
         manager.deleteLater()
 

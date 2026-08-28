@@ -494,6 +494,7 @@ class SubscriptionManager(HttpGetManager):
         if not self._isCurrentRequest(kwargs):
             return
 
+        unique = kwargs.get('unique', '')
         remark = kwargs.get('remark', '')
         webURL = kwargs.get('webURL', '')
         successArgs = kwargs.get('successArgs', list())
@@ -536,7 +537,7 @@ class SubscriptionManager(HttpGetManager):
             return
 
         logger.info(
-            f'update subs ({remark}, {webURL}) success. '
+            f'update subscription ({remark}, {unique!r}) success. '
             f'Got {len(result.profiles)} profiles from {result.decoderId!r}; '
             f'rejected {result.rejectedItems}'
         )
@@ -550,13 +551,13 @@ class SubscriptionManager(HttpGetManager):
         if not self._isCurrentRequest(kwargs):
             return
 
+        unique = kwargs.get('unique', '')
         remark = kwargs.get('remark', '')
-        webURL = kwargs.get('webURL', '')
         failureArgs = kwargs.get('failureArgs', list())
 
         error = networkReply.errorString()
 
-        logger.error(f'update subs ({remark}, {webURL}) failed: {error}')
+        logger.error(f'update subscription ({remark}, {unique!r}) failed: {error}')
 
         failureArgs.append({'error': error, **kwargs})
 

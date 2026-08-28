@@ -172,6 +172,91 @@ class ApplicationLifecycleTransactionTest(TestCase):
 
         finalExit.assert_called_once_with(23)
 
+    def testRuntimeInformationDoesNotLogCommandLinePayloads(self):
+        """Report argument count without retaining imported secrets in logs."""
+        secret = 'token=do-not-log-this'
+        application = SimpleNamespace(
+            applicationFilePath=mock.Mock(return_value='Furious'),
+            customFontLoadMsg='custom font unavailable',
+            theme=mock.Mock(return_value='Light'),
+        )
+
+        with (
+            mock.patch(
+                'Furious.Application.DesktopApplication.sys.argv',
+                ['Furious', f'https://example.invalid/sub?{secret}', '--flag'],
+            ),
+            self.assertLogs(
+                'Furious.Application.DesktopApplication', level='INFO'
+            ) as logs,
+        ):
+            DesktopApplication._logRuntimeInformation(application)
+
+        output = '\n'.join(logs.output)
+
+        self.assertIn('command-line arguments: 2 provided', output)
+        self.assertNotIn(secret, output)
+
+    def testInvalidCoreLaunchDiagnosticsDoNotRenderPayloads(self):
+        """Describe invalid launch types without rendering secret arguments."""
+        secret = 'password=do-not-log-this'
+        runtime = SimpleNamespace(
+            name=mock.Mock(return_value='Probe'),
+            setState=mock.Mock(),
+        )
+
+        class SecretLaunch:
+            def __repr__(self):
+                return secret
+
+        with self.assertLogs('Furious.Core.CoreProcessWorker', level='ERROR') as logs:
+            self.assertFalse(
+                CoreProcessWorkerModule.CoreProcessWorker.startWithSpec(
+                    runtime,
+                    SecretLaunch(),
+                )
+            )
+            self.assertFalse(
+                CoreProcessWorkerModule.CoreProcessWorker.startWithSpec(
+                    runtime,
+                    CoreProcessWorkerModule.CoreLaunchSpec(
+                        target=secret,
+                        args=(secret,),
+                    ),
+                )
+            )
+
+        output = '\n'.join(logs.output)
+
+        self.assertIn('SecretLaunch', output)
+        self.assertIn('str', output)
+        self.assertNotIn(secret, output)
+
+    def testRejectedServerProfileDiagnosticsDoNotRenderInput(self):
+        """Reject an invalid profile without logging its complete configuration."""
+        from Furious.Widget.ServerTableView import ServerTableView
+
+        secret = 'password=do-not-log-this'
+        invalidProfile = SimpleNamespace(isValid=mock.Mock(return_value=False))
+
+        with (
+            mock.patch(
+                'Furious.Widget.ServerTableView.profileFromAny',
+                return_value=invalidProfile,
+            ),
+            self.assertLogs('Furious.Widget.ServerTableView', level='ERROR') as logs,
+        ):
+            ServerTableView.appendNewItem(
+                SimpleNamespace(),
+                config=f'{{"password": "{secret}"}}',
+                remark='Rejected profile',
+            )
+
+        output = '\n'.join(logs.output)
+
+        self.assertIn('invalid server profile input', output)
+        self.assertNotIn(secret, output)
+
     def testFirstInstanceClaimsEndpointWithoutRemovingSocket(self):
         """Serialize election, then continue only after the endpoint is owned."""
         electionLock = mock.Mock()

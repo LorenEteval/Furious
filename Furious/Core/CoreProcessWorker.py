@@ -389,7 +389,10 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
     def startWithSpec(self, launchSpec: CoreLaunchSpec) -> bool:
         """Start and validate a child process from a launch specification."""
         if not isinstance(launchSpec, CoreLaunchSpec):
-            logger.error(f'invalid launch spec for {self.name()}: {launchSpec}')
+            logger.error(
+                f'invalid launch spec type for {self.name()}: '
+                f'{type(launchSpec).__name__}'
+            )
 
             self.setState(CoreProcessState.Failed)
 
@@ -397,7 +400,8 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
 
         if not callable(launchSpec.target):
             logger.error(
-                f'invalid launch target for {self.name()}: {launchSpec.target}'
+                f'invalid launch target type for {self.name()}: '
+                f'{type(launchSpec.target).__name__}'
             )
 
             self.setState(CoreProcessState.Failed)
