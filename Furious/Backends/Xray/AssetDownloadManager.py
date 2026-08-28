@@ -27,6 +27,7 @@ from PySide6 import QtCore
 from typing import AnyStr, Union, Callable
 
 import os
+import re
 import logging
 import hashlib
 import functools
@@ -74,25 +75,37 @@ class XrayAssetSHA256DownloadManager(HttpGetManager):
 
             return b''
 
+    @staticmethod
+    def parseDigest(data) -> str:
+        """Return one normalized SHA-256 token or an empty string."""
+        if isinstance(data, bytes):
+            text = data.decode('ascii', 'replace')
+        else:
+            text = str(data)
+
+        fields = text.split()
+
+        if not fields or re.fullmatch(r'[0-9a-fA-F]{64}', fields[0]) is None:
+            return ''
+
+        return fields[0].lower()
+
     def successCallback(self, networkReply, **kwargs):
         """Handle a successful network operation."""
         filepath = kwargs.pop('filepath', '')
         downloadCallback = kwargs.pop('downloadCallback', None)
 
-        data = networkReply.readAll().data()
-
-        if isinstance(data, bytes):
-            datastr = data.decode('utf-8', 'replace')
-        else:
-            datastr = str(data)
-
-        logger.debug(f'data: {data}')
-
         # 6068a73edfa08b63080b8d362bd4c5b069689a3548f413f43cfa58227a201571  geosite.dat
         # 3a12beaa33c81b6751b45833a0a942b9462420d91182e7fa1d768b418e604049  geoip.dat
-        value = datastr.split()[0]
-
         basename = os.path.basename(filepath)
+        value = self.parseDigest(networkReply.readAll().data())
+
+        if not value:
+            logger.error(
+                f'invalid SHA-256 metadata for {basename}; asset update skipped'
+            )
+
+            return
 
         def handleFinished(_digest, _value=''):
             """Handle finished."""
@@ -104,7 +117,7 @@ class XrayAssetSHA256DownloadManager(HttpGetManager):
                 logger.info(f'digest not equal for {basename}. Start downloading asset')
 
                 if callable(downloadCallback):
-                    downloadCallback()
+                    downloadCallback(_value)
             else:
                 logger.info(f'digest equal for {basename}. Nothing to do')
 
@@ -115,7 +128,7 @@ class XrayAssetSHA256DownloadManager(HttpGetManager):
 
         AppThreadPool().start(worker)
 
-    def download(self, url, filepath, downloadCallback: Callable[[], None]):
+    def download(self, url, filepath, downloadCallback: Callable[[str], None]):
         """Download the Xray asset SHA-256 download manager."""
         self.webGET(
             url,
@@ -136,17 +149,38 @@ class XrayAssetAssetsDownloadManager(HttpGetManager):
     def successCallback(self, networkReply, **kwargs):
         """Handle a successful network operation."""
         filepath = kwargs.pop('filepath', '')
+        expectedDigest = str(kwargs.pop('expectedDigest', '')).lower()
+
+        data = bytes(networkReply.readAll().data())
+        actualDigest = hashlib.sha256(data).hexdigest()
+        basename = os.path.basename(filepath)
+
+        if not expectedDigest or actualDigest != expectedDigest:
+            logger.error(
+                f'downloaded asset digest mismatch for {basename}; '
+                f'existing file preserved'
+            )
+
+            return
 
         saveFile = QtCore.QSaveFile(filepath)
-
-        data = networkReply.readAll().data()
 
         if not saveFile.open(QtCore.QSaveFile.OpenModeFlag.WriteOnly):
             logger.error(
                 f'failed to open \'{filepath}\' for writing. {saveFile.errorString()}'
             )
         else:
-            saveFile.write(data)
+            written = saveFile.write(data)
+
+            if written != len(data):
+                saveFile.cancelWriting()
+
+                logger.error(
+                    f'write asset to \'{filepath}\' failed. '
+                    f'{saveFile.errorString()}'
+                )
+
+                return
 
             if not saveFile.commit():
                 logger.error(
@@ -155,9 +189,13 @@ class XrayAssetAssetsDownloadManager(HttpGetManager):
             else:
                 logger.info(f'save file to \'{filepath}\' success')
 
-    def download(self, url, filepath):
+    def download(self, url, filepath, expectedDigest: str):
         """Download the Xray asset assets download manager."""
-        self.webGET(url, filepath=str(filepath))
+        self.webGET(
+            url,
+            filepath=str(filepath),
+            expectedDigest=expectedDigest,
+        )
 
 
 class XrayAssetPairDownloadHelper:
