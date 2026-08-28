@@ -34,6 +34,7 @@ from Furious.Backends.ExternalCore.Editor import (
     ExternalCoreEditor,
     ExternalCoreEnvironmentInput,
     ExternalCoreOtherGroup,
+    ExternalCoreShutdownTimeoutInput,
     ExternalCoreTunRemoteAddressInput,
 )
 from Furious.Backends.Hysteria1.Editor import Hysteria1Editor
@@ -1171,7 +1172,11 @@ class EditorMappingTest(unittest.TestCase):
         basicGroup, otherGroup = externalGroups
         basicLayout = basicGroup._widget.currentWidget().layout()
         otherLayout = otherGroup._widget.currentWidget().layout()
-        timeoutInput = otherGroup._containers[0].widgets()[1]
+        timeoutInput = otherGroup._containers[2].widgets()[1]
+
+        self.assertIsInstance(
+            otherGroup._containers[2], ExternalCoreShutdownTimeoutInput
+        )
 
         for row, container in enumerate(basicGroup._containers):
             self.assertBindingPosition(basicLayout, container, row, 0, 1, 3)
@@ -1180,18 +1185,90 @@ class EditorMappingTest(unittest.TestCase):
             timeoutInput.sizePolicy().horizontalPolicy(),
             QSizePolicy.Policy.Fixed,
         )
-        self.assertBindingPosition(otherLayout, otherGroup._containers[0], 0, 0, 1)
+        self.assertBindingPosition(otherLayout, otherGroup._containers[0], 0, 0, 1, 3)
         self.assertBindingPosition(otherLayout, otherGroup._containers[1], 1, 0, 1, 3)
-        self.assertBindingPosition(otherLayout, otherGroup._containers[2], 2, 0, 1, 3)
+        self.assertBindingPosition(otherLayout, otherGroup._containers[2], 2, 0, 1)
         self.assertBindingPosition(otherLayout, otherGroup._containers[4], 4, 0, 1, 3)
         self.assertGreater(basicGroup._containers[-1].widgets()[1].maximumWidth(), 520)
+        self.assertGreater(otherGroup._containers[0].widgets()[1].maximumWidth(), 360)
         self.assertGreater(otherGroup._containers[1].widgets()[1].maximumWidth(), 360)
-        self.assertGreater(otherGroup._containers[2].widgets()[1].maximumWidth(), 360)
         self.assertGreater(otherGroup._containers[4].widgets()[1].maximumWidth(), 420)
         self.assertEqual(editor.size(), QtCore.QSize(1400, 600))
 
         editor.close()
         referenceGroup.deleteLater()
+
+    def testExternalCoreCompactRowsRemainUniformAndSeparated(self):
+        """Keep compact controls uniform without collapsing adjacent grid rows."""
+        app = application()
+        originalStyleSheet = app.styleSheet()
+
+        try:
+            for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
+                app.setStyleSheet(AppStyleSheet.forTheme(theme))
+                editor = ExternalCoreEditor()
+
+                try:
+                    editor.show()
+                    processQtEvents()
+
+                    otherGroup = editor.groupBoxSequence()[1]
+                    layout = otherGroup._widget.currentWidget().layout()
+                    compactInputs = tuple(
+                        otherGroup._containers[index].widgets()[1] for index in range(3)
+                    )
+                    naturalRowMinimum = max(
+                        inputWidget.minimumSizeHint().height()
+                        for inputWidget in compactInputs
+                    )
+                    timeoutPolicy = compactInputs[2].sizePolicy()
+
+                    self.assertNotEqual(
+                        timeoutPolicy.verticalPolicy(), QSizePolicy.Policy.Ignored
+                    )
+                    self.assertEqual(
+                        timeoutPolicy.controlType(), QSizePolicy.ControlType.SpinBox
+                    )
+                    self.assertEqual(
+                        tuple(layout.rowMinimumHeight(row) for row in range(3)),
+                        (naturalRowMinimum,) * 3,
+                    )
+
+                    for size in (
+                        QtCore.QSize(1200, 520),
+                        QtCore.QSize(1400, 600),
+                        QtCore.QSize(1600, 700),
+                    ):
+                        editor.setFixedSize(size)
+                        processQtEvents()
+
+                        self.assertEqual(
+                            tuple(
+                                inputWidget.height() for inputWidget in compactInputs
+                            ),
+                            (compactInputs[0].height(),) * 3,
+                        )
+
+                        rowRectangles = []
+
+                        for container in otherGroup._containers:
+                            label, inputWidget = container.widgets()
+                            rowRectangles.append(
+                                label.geometry().united(inputWidget.geometry())
+                            )
+
+                        for currentRow, nextRow in zip(
+                            rowRectangles, rowRectangles[1:]
+                        ):
+                            self.assertFalse(currentRow.intersects(nextRow))
+                            self.assertEqual(
+                                nextRow.top() - currentRow.bottom() - 1,
+                                layout.verticalSpacing(),
+                            )
+                finally:
+                    editor.close()
+        finally:
+            app.setStyleSheet(originalStyleSheet)
 
     def testExternalCoreRowsRemainTopAlignedAsSectionGrows(self):
         """Assign surplus editor height below the compact form rows."""

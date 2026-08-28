@@ -416,31 +416,50 @@ class ExternalCoreOtherGroup(GuiEditorWidgetQGroupBox):
     def containerSequence(self):
         """Return secondary process, proxy, and TUN fields in display order."""
         return (
-            ExternalCoreShutdownTimeoutInput(),
             GuiEditorItemProxyHttp(title=_('HTTP Proxy')),
             GuiEditorItemProxySocks(title=_('SOCKS Proxy')),
+            ExternalCoreShutdownTimeoutInput(),
             self._applicationTun2socksInput,
             self._tunRemoteAddressInput,
         )
 
     def setupPageLayout(self):
-        """Arrange secondary fields and keep the timeout compact like VLESS port."""
+        """Arrange secondary fields with uniform compact control rows."""
         layout = QGridLayout()
         layout.setColumnStretch(1, 1)
 
-        timeoutInput = self._containers[0].widgets()[1]
+        compactInputs = tuple(
+            container.widgets()[1] for container in self._containers[:3]
+        )
+
+        for inputWidget in compactInputs:
+            sizePolicy = inputWidget.sizePolicy()
+            sizePolicy.setVerticalPolicy(QSizePolicy.Policy.Minimum)
+
+            inputWidget.setSizePolicy(sizePolicy)
+
+        timeoutInput = compactInputs[2]
 
         if isinstance(timeoutInput, QSpinBox):
-            timeoutInput.setSizePolicy(
-                QSizePolicy.Policy.Fixed,
-                timeoutInput.sizePolicy().verticalPolicy(),
-            )
+            sizePolicy = timeoutInput.sizePolicy()
+            sizePolicy.setHorizontalPolicy(QSizePolicy.Policy.Fixed)
+
+            timeoutInput.setSizePolicy(sizePolicy)
 
         for row, container in enumerate(self._containers):
-            if row in (1, 2, 4):
+            if row in (0, 1, 4):
                 addEditorGridFullRow(layout, container, row)
             else:
                 addEditorGridBinding(layout, container, row, 0)
+
+        # QSpinBox has a larger style-derived minimum than QLineEdit, so let
+        # all three related rows adopt the largest legal child minimum.
+        uniformRowMinimum = max(
+            inputWidget.minimumSizeHint().height() for inputWidget in compactInputs
+        )
+
+        for row in range(len(compactInputs)):
+            layout.setRowMinimumHeight(row, uniformRowMinimum)
 
         layout.setRowStretch(len(self._containers), 1)
 
