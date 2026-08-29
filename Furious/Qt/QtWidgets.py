@@ -148,6 +148,10 @@ class AppQSwitch(Mixins.ThemeAware, QCheckBox):
 
         del blocker
 
+    def hitButton(self, position: QtCore.QPoint) -> bool:
+        """Make the complete custom-painted switch track interactive."""
+        return self.rect().contains(position)
+
     @staticmethod
     def _blendColor(start, end, progress: float) -> QColor:
         """Interpolate two theme colors for a smooth track transition."""

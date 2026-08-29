@@ -1061,6 +1061,15 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
             activatedServerId = None
 
         header = self.headers[column]
+        persistentIndexes = tuple(
+            (
+                QtCore.QModelIndex(index),
+                Storage.UserServers()[index.row()],
+                index.column(),
+            )
+            for index in self.persistentIndexList()
+            if index.isValid() and 0 <= index.row() < len(Storage.UserServers())
+        )
 
         def keyFn(factory: ServerProfile):
             """Return the key fn value used by the user servers table model."""
@@ -1082,6 +1091,18 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
         )
         self.refreshIndexes()
 
+        rowsByIdentity = {
+            id(profile): row for row, profile in enumerate(Storage.UserServers())
+        }
+
+        self.changePersistentIndexList(
+            [index for index, _profile, _column in persistentIndexes],
+            [
+                self.index(rowsByIdentity[id(profile)], persistentColumn)
+                for _index, profile, persistentColumn in persistentIndexes
+            ],
+        )
+
         if activatedServerId is not None:
             for index, server in enumerate(Storage.UserServers()):
                 if id(server) == activatedServerId:
@@ -1094,6 +1115,9 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
 
 class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
     """Filter and sort user servers sort filter data."""
+
+    sortAboutToStart = QtCore.Signal()
+    sortCompleted = QtCore.Signal()
 
     def __init__(self, parent=None):
         """Initialize the UserServersSortFilterProxyModel."""
@@ -1128,8 +1152,14 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
         model = self.sourceModel()
 
         if model is not None:
-            model.sort(column, order)
-            self.invalidate()
+            self.sortAboutToStart.emit()
+
+            try:
+                model.sort(column, order)
+
+                self.invalidate()
+            finally:
+                self.sortCompleted.emit()
 
     def setSearchPattern(
         self,
@@ -1270,6 +1300,9 @@ class ServerTableView(
         self.proxyModel = UserServersSortFilterProxyModel(parent=self)
         self.proxyModel.setSourceModel(self.sourceModel)
         self.setModel(self.proxyModel)
+        self._sortSelectionSnapshot = None
+        self.proxyModel.sortAboutToStart.connect(self._captureSortSelection)
+        self.proxyModel.sortCompleted.connect(self._restoreSortSelection)
 
         self.subsManager = SubscriptionManager(parent=self)
         self.subsManager.subscriptionsChanged.connect(self._handleSubscriptionsChanged)
@@ -1496,9 +1529,7 @@ class ServerTableView(
         self.contextMenu = AppQMenu(*contextMenuActions, parent=self)
         self.contextMenu.aboutToShow.connect(self._rebuildSubscriptionMenu)
 
-        # Add actions to self in order to activate shortcuts
-        self.addActions(self.contextMenu.actions())
-        self.addActions(self.moveMenu.actions())
+        self._registerMenuShortcuts(self.contextMenu)
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
 
@@ -1945,8 +1976,45 @@ class ServerTableView(
         """Return stable identities for the current row selection."""
         return self._profileIdsForSourceRows(self.selectedIndex)
 
-    def _restoreProfileSelection(self, profileIds):
-        """Restore visible selected rows after a repository mutation."""
+    def _currentProfileId(self) -> str | None:
+        """Return the stable identity represented by the current proxy index."""
+        row = self.sourceRowFromProxyIndex(self.currentIndex())
+        profileIds = self._profileIdsForSourceRows((row,))
+
+        return profileIds[0] if profileIds else None
+
+    @QtCore.Slot()
+    def _captureSortSelection(self):
+        """Remember semantic view state before the proxy rebuilds its mapping."""
+        self._sortSelectionSnapshot = (
+            self._selectedProfileIds(),
+            self._currentProfileId(),
+            self.hasFocus(),
+        )
+
+    @QtCore.Slot()
+    def _restoreSortSelection(self):
+        """Restore semantic view state after a source-backed header sort."""
+        snapshot = self._sortSelectionSnapshot
+        self._sortSelectionSnapshot = None
+
+        if snapshot is not None:
+            profileIds, currentProfileId, restoreFocus = snapshot
+
+            self._restoreProfileSelection(
+                profileIds,
+                currentProfileId,
+                restoreFocus=restoreFocus,
+            )
+
+    def _restoreProfileSelection(
+        self,
+        profileIds,
+        currentProfileId=None,
+        *,
+        restoreFocus=True,
+    ):
+        """Restore visible selected rows and their current identity."""
         selected = set(profileIds)
         rows = [
             index
@@ -1958,7 +2026,16 @@ class ServerTableView(
             self.selectMultipleRows(rows, True)
 
             if rows:
-                current = self.proxyIndexFromSourceRow(rows[0])
+                currentRow = next(
+                    (
+                        row
+                        for row in rows
+                        if Storage.UserServers()[row].metadata.profileId
+                        == currentProfileId
+                    ),
+                    rows[0],
+                )
+                current = self.proxyIndexFromSourceRow(currentRow)
 
                 if current.isValid():
                     self.selectionModel().setCurrentIndex(
@@ -1966,11 +2043,13 @@ class ServerTableView(
                         QtCore.QItemSelectionModel.SelectionFlag.NoUpdate,
                     )
 
-        self.setFocus(QtCore.Qt.FocusReason.ShortcutFocusReason)
+        if restoreFocus:
+            self.setFocus(QtCore.Qt.FocusReason.ShortcutFocusReason)
 
     def _applyRepositoryLayoutMutation(self, callback) -> bool:
         """Apply one repository reorder and preserve active and selected identities."""
         selectedProfileIds = self._selectedProfileIds()
+        currentProfileId = self._currentProfileId()
         activatedIndex = Storage.UserActivatedItemIndex()
         profiles = Storage.UserServers()
         activatedProfileId = (
@@ -2004,7 +2083,7 @@ class ServerTableView(
             self.activeServerChanged.emit()
 
         self.proxyModel.invalidate()
-        self._restoreProfileSelection(selectedProfileIds)
+        self._restoreProfileSelection(selectedProfileIds, currentProfileId)
 
         return True
 
@@ -2029,6 +2108,22 @@ class ServerTableView(
                 position,
             )
         )
+
+    def _registerMenuShortcuts(self, menu):
+        """Activate every nested table action only while this view has focus."""
+        for action in menu.actions():
+            if action.isSeparator():
+                continue
+
+            if not action.shortcut().isEmpty():
+                action.setShortcutContext(QtCore.Qt.ShortcutContext.WidgetShortcut)
+
+            self.addAction(action)
+
+            submenu = action.menu() if hasattr(action, 'menu') else None
+
+            if submenu is not None:
+                self._registerMenuShortcuts(submenu)
 
     def _clearSubscriptionActions(self):
         """Release callbacks and wrappers owned by the dynamic group submenu."""
@@ -2086,7 +2181,10 @@ class ServerTableView(
 
     def moveSelectedItemsToSubscription(self, unique: str):
         """Move selected profiles to one group without transferring sync ownership."""
-        selectedProfileIds = self._selectedProfileIds()
+        selectedProfileIds, currentProfileId = (
+            self._selectedProfileIds(),
+            self._currentProfileId(),
+        )
 
         if not selectedProfileIds:
             return
@@ -2094,7 +2192,7 @@ class ServerTableView(
         if Storage.moveUserServersToSubscription(selectedProfileIds, unique):
             self.sourceModel.emitAllChanged()
             self.proxyModel.invalidateFilter()
-            self._restoreProfileSelection(selectedProfileIds)
+            self._restoreProfileSelection(selectedProfileIds, currentProfileId)
 
     def duplicateSelectedItem(self):
         """Handle duplicate selected item for the user servers Qt table view."""

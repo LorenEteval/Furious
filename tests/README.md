@@ -8,6 +8,31 @@ a harmless stand-in for a core. Tests do not initialize Furious's singleton IPC
 server, production repositories, system proxy, TUN, routing, update network
 clients, or real proxy cores.
 
+## Testing philosophy
+
+Choose the smallest layer that can prove the contract under test. Do not replace
+Qt behavior with direct slot calls when focus, selection, model mapping, shortcut
+scope, event delivery, or destruction is part of that contract.
+
+1. **Pure logic tests** exercise models, repositories, codecs, controllers, and
+   services without constructing widgets. Inject only the runtime, network, or
+   host-operation boundary that would otherwise cause an external side effect.
+2. **Qt integration tests** construct the real widget/model/proxy composition and
+   use `QTest` keyboard or mouse input plus the real event loop. Assertions target
+   semantic state such as profile identity, current selection, focus owner,
+   signal count, and wrapper destruction—not incidental row numbers or pixels.
+3. **Small workflow tests** compose a few real UI surfaces around one shared
+   controller or repository. They keep Qt signals and widgets real while mocking
+   only unavailable platform privileges, network/process launch, plugin discovery,
+   or user-facing host dialogs.
+
+`tests.support` is the canonical Qt harness: `application()` owns the one
+process-wide test application, `isolatedSettings()` contains persistence,
+`processQtEvents()` drains deferred deletion, and `waitFor()` handles bounded
+event-loop convergence. Add a helper there only when multiple modules need the
+same lifecycle primitive; do not create a second application or event-pumping
+strategy in an individual test.
+
 ## Coverage map
 
 | Area | Principal tests |
@@ -32,6 +57,7 @@ clients, or real proxy cores.
 | AppQMainWindow lifecycle, subclass policies, geometry restoration, and migration | `test_main_window_geometry.py` |
 | AppQDialog first-presentation geometry, native show paths, centering, and async lifetime | `test_dialog_geometry.py` |
 | Editor mappings, lazy log rendering, routing/message-box/connection UI | `test_ui_behavior.py` |
+| Real keyboard/mouse/focus, proxy mapping, shared Home/Settings state, and transient editor input | `test_qt_interactions.py` |
 | Direct Qt ownership and destruction across independent UI families | `test_qt_lifetime.py` |
 | Batched real/probe Qt object, handle, Python allocation, and RSS trends | `test_qt_stress.py` |
 | Repeated harmless subprocess, pipe, thread, handle, and RSS trends | `test_process_stress.py` |
@@ -81,7 +107,7 @@ Then run the desired test tier.
 python -m unittest discover -s tests -v
 
 # Regular logic, persistence, plugin, controller, codec, and UI regressions
-python -m unittest tests.test_interface tests.test_models_and_services tests.test_repository_contracts tests.test_architecture_refactors tests.test_plugin_architecture tests.test_hysteria1_protocol tests.test_hysteria2_compatibility tests.test_controllers tests.test_subscription_manager tests.test_subscription_sync tests.test_socks_uri tests.test_shadowsocks_uri tests.test_backend_editor_contract tests.test_xray_asset_download tests.test_native_tun_semantics tests.test_metrics_behavior tests.test_endpoint_info tests.test_service_runtime tests.test_frozenlib tests.test_isolation_and_navigation tests.test_main_window_geometry tests.test_dialog_geometry tests.test_ui_behavior tests.test_stylesheet_states tests.test_public_api -v
+python -m unittest tests.test_interface tests.test_models_and_services tests.test_repository_contracts tests.test_architecture_refactors tests.test_plugin_architecture tests.test_hysteria1_protocol tests.test_hysteria2_compatibility tests.test_controllers tests.test_subscription_manager tests.test_subscription_sync tests.test_socks_uri tests.test_shadowsocks_uri tests.test_backend_editor_contract tests.test_xray_asset_download tests.test_native_tun_semantics tests.test_metrics_behavior tests.test_endpoint_info tests.test_service_runtime tests.test_frozenlib tests.test_isolation_and_navigation tests.test_main_window_geometry tests.test_dialog_geometry tests.test_ui_behavior tests.test_qt_interactions tests.test_stylesheet_states tests.test_public_api -v
 
 # Direct Qt/process integration and destruction/lifetime checks
 python -m unittest tests.test_application_process tests.test_external_core tests.test_layout_matrix tests.test_qt_lifetime -v
@@ -98,7 +124,7 @@ python -m unittest tests.test_very_heavy -v
 python -m unittest tests.test_log_manager_generation.VeryHeavyGenerationLogManagerTest -v
 
 # Shared-state order-independence spot check
-python -m unittest tests.test_public_api tests.test_stylesheet_states tests.test_ui_behavior tests.test_dialog_geometry tests.test_main_window_geometry tests.test_isolation_and_navigation tests.test_frozenlib tests.test_service_runtime tests.test_endpoint_info tests.test_metrics_behavior tests.test_native_tun_semantics tests.test_xray_asset_download tests.test_backend_editor_contract tests.test_shadowsocks_uri tests.test_socks_uri tests.test_subscription_sync tests.test_subscription_manager tests.test_controllers tests.test_hysteria2_compatibility tests.test_hysteria1_protocol tests.test_plugin_architecture tests.test_architecture_refactors tests.test_repository_contracts tests.test_models_and_services tests.test_interface -v
+python -m unittest tests.test_public_api tests.test_stylesheet_states tests.test_qt_interactions tests.test_ui_behavior tests.test_dialog_geometry tests.test_main_window_geometry tests.test_isolation_and_navigation tests.test_frozenlib tests.test_service_runtime tests.test_endpoint_info tests.test_metrics_behavior tests.test_native_tun_semantics tests.test_xray_asset_download tests.test_backend_editor_contract tests.test_shadowsocks_uri tests.test_socks_uri tests.test_subscription_sync tests.test_subscription_manager tests.test_controllers tests.test_hysteria2_compatibility tests.test_hysteria1_protocol tests.test_plugin_architecture tests.test_architecture_refactors tests.test_repository_contracts tests.test_models_and_services tests.test_interface -v
 python -m unittest discover -s tests -v
 ```
 
