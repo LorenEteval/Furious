@@ -35,7 +35,7 @@ from Furious.Window.SettingsPage import (
 )
 from Furious.Window.SubscriptionPage import _SubscriptionEditorDialog
 
-from PySide6 import QtCore
+from PySide6 import QtCore, QtGui
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QLineEdit, QVBoxLayout, QWidget
 
@@ -360,6 +360,48 @@ class ServerTableQtInteractionTest(unittest.TestCase):
                 self._destroyTable(table)
                 window.close()
                 window.deleteLater()
+
+    def testContextMenuUsesOnlyMultithreadedDownloadSpeedAction(self):
+        """Expose one download command backed by the multithreaded scheduler."""
+        with isolatedSettings():
+            table = self._table(('one',))
+
+            try:
+                actions = tuple(
+                    action
+                    for action in table.contextMenu.actions()
+                    if not action.isSeparator()
+                    and action.textEnglish == 'Test Download Speed'
+                )
+
+                self.assertEqual(len(actions), 1)
+                self.assertEqual(
+                    actions[0].shortcut(),
+                    QtGui.QKeySequence(
+                        QtCore.QKeyCombination(
+                            QtCore.Qt.KeyboardModifier.ControlModifier,
+                            QtCore.Qt.Key.Key_M,
+                        )
+                    ),
+                )
+
+                with (
+                    mock.patch.object(
+                        table,
+                        'testSelectedItemDownloadSpeedMulti',
+                    ) as multithreaded,
+                    mock.patch.object(
+                        table,
+                        'testSelectedItemDownloadSpeed',
+                    ) as singleThreaded,
+                ):
+                    actions[0].trigger()
+                    processQtEvents()
+
+                multithreaded.assert_called_once_with()
+                singleThreaded.assert_not_called()
+            finally:
+                self._destroyTable(table)
 
     def testHeaderSortPreservesSelectionCurrentAndActiveIdentity(self):
         """Remap Qt persistent indexes when a real header click sorts rows."""

@@ -1472,20 +1472,15 @@ class ServerTableView(
                     QtCore.Qt.Key.Key_O,
                 ),
             ),
+            # The context menu intentionally exposes only the multithreaded test.
+            # Keep the single-threaded methods as a programmatic API for callers
+            # that need that scheduler explicitly.
             AppQAction(
-                _('Test Download Speed (Multithreaded)'),
+                _('Test Download Speed'),
                 callback=lambda: self.testSelectedItemDownloadSpeedMulti(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier,
                     QtCore.Qt.Key.Key_M,
-                ),
-            ),
-            AppQAction(
-                _('Test Download Speed'),
-                callback=lambda: self.testSelectedItemDownloadSpeed(),
-                shortcut=QtCore.QKeyCombination(
-                    QtCore.Qt.KeyboardModifier.ControlModifier,
-                    QtCore.Qt.Key.Key_T,
                 ),
             ),
             AppQAction(
@@ -2511,7 +2506,11 @@ class ServerTableView(
         )
 
     def testSelectedItemDownloadSpeed(self):
-        """Handle test selected item download speed for the user servers Qt table view."""
+        """Run the retained single-threaded download-test API for selected rows.
+
+        The Home context menu uses the multithreaded variant; this method remains
+        available for programmatic callers that explicitly need serial scheduling.
+        """
         self.testSelectedItemDownloadSpeedWithTimeout(5000)
 
     def testSelectedItemDownloadSpeedMulti(self):

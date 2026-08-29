@@ -549,14 +549,6 @@ TRANSLATION = {
         "ZH": "测试下行速度",
         "isReviewed": "True"
     },
-    "Test Download Speed (Multithreaded)": {
-        "source": [
-            "Furious.Widget.ServerTableView"
-        ],
-        "RU": "Измерить скорость загрузки (многопоточная)",
-        "ZH": "测试下行速度（多线程）",
-        "isReviewed": "True"
-    },
     "Clear Test Results": {
         "source": [
             "Furious.Widget.ServerTableView"
