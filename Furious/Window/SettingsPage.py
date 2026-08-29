@@ -19,7 +19,10 @@
 
 from __future__ import annotations
 
-from Furious.Controllers import APPLICATION_THEME_SETTING
+from Furious.Controllers import (
+    APPLICATION_THEME_SETTING,
+    SYSTEM_PROXY_MODE_OPTIONS,
+)
 from Furious.Frozenlib import *
 from Furious.Plugins import (
     CapabilityKind,
@@ -509,10 +512,7 @@ class _ApplicationThemeSettingsCard(_SettingsCard):
 class _SystemProxySettingsCard(_SettingsCard):
     """Select how Furious manages the operating-system proxy."""
 
-    Options = (
-        ('Automatically Configure System Proxy', AppBuiltinProxyMode.Auto.value),
-        ('Do Not Change System Proxy', AppBuiltinProxyMode.NoChanges.value),
-    )
+    Options = SYSTEM_PROXY_MODE_OPTIONS
 
     _TranslatableOptions = (
         _('Automatically Configure System Proxy'),
@@ -540,10 +540,13 @@ class _SystemProxySettingsCard(_SettingsCard):
             parent=parent,
         )
 
-    def sync(self):
+    def sync(self, mode=None):
         """Select the persisted proxy mode without writing it again."""
         blocker = QtCore.QSignalBlocker(self.comboBox)
-        index = self.comboBox.findData(AppSettings.get('SystemProxyMode'))
+        selectedMode = (
+            mode if isinstance(mode, str) else AppSettings.get('SystemProxyMode')
+        )
+        index = self.comboBox.findData(selectedMode)
 
         self.comboBox.setCurrentIndex(max(index, 0))
 
@@ -646,10 +649,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.pluginSections = []
         self._pluginActions = []
 
-        if PLATFORM == 'Linux':
-            self._tunModeAvailable = not SystemRuntime.flatpakID()
-        else:
-            self._tunModeAvailable = SystemRuntime.isAdmin()
+        self._tunModeAvailable = AppSettingsController().tunModeAvailable()
 
         self.tunModeCard = _ToggleSettingsCard(
             'shield-check.svg',
@@ -659,6 +659,10 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             _('Route system traffic through the active proxy connection.'),
         )
         self.tunModeCard.checkBox.setEnabled(self._tunModeAvailable)
+
+        AppSettingsController().tunModeChanged.connect(
+            self.tunModeCard.checkBox.syncChecked
+        )
 
         (
             self.applicationThemeCard,
@@ -798,6 +802,10 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
                 _('Show Tab And Spaces In Editor'),
                 _('Display whitespace markers in configuration editors.'),
             ),
+        )
+
+        AppSettingsController().systemProxyModeChanged.connect(
+            self.systemProxyCard.sync
         )
 
         if not SystemRuntime.flatpakID():

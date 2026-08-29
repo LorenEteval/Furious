@@ -23,7 +23,12 @@ from Furious.Controllers.SettingsController import (
     APPLICATION_THEME_SETTING,
     SettingsController,
 )
-from Furious.Frozenlib import AppBinarySettings, AppSettings, ApplicationTheme
+from Furious.Frozenlib import (
+    AppBinarySettings,
+    AppBuiltinProxyMode,
+    AppSettings,
+    ApplicationTheme,
+)
 from Furious.Models import (
     CoreConfiguration,
     ProfileMetadata,
@@ -50,6 +55,7 @@ from collections import OrderedDict
 import threading
 import unittest
 import weakref
+from unittest import mock
 
 from tests.support import application, isolatedSettings, processQtEvents
 
@@ -374,6 +380,48 @@ class SettingsMigrationTest(unittest.TestCase):
             self.assertEqual(
                 settings.value(APPLICATION_THEME_SETTING),
                 ApplicationTheme.Light.value,
+            )
+
+    def testSharedNetworkPreferencesEmitOnlyRealChanges(self):
+        """Synchronize multiple views without publishing duplicate mutations."""
+        application()
+
+        with (
+            isolatedSettings(),
+            mock.patch(
+                'Furious.Controllers.SettingsController.PLATFORM',
+                'Linux',
+            ),
+            mock.patch(
+                'Furious.Controllers.SettingsController.showMBoxNewChangesNextTime'
+            ),
+        ):
+            AppSettings.turnOFF('VPNMode')
+            AppSettings.set(
+                'SystemProxyMode',
+                AppBuiltinProxyMode.Auto.value,
+            )
+            controller = SettingsController()
+            tunStates = []
+            proxyModes = []
+
+            controller.tunModeChanged.connect(tunStates.append)
+            controller.systemProxyModeChanged.connect(proxyModes.append)
+
+            controller.setTUNMode(True)
+            controller.setTUNMode(True)
+            controller.setSystemProxyMode(AppBuiltinProxyMode.NoChanges.value)
+            controller.setSystemProxyMode(AppBuiltinProxyMode.NoChanges.value)
+
+            self.assertEqual(tunStates, [True])
+            self.assertEqual(
+                proxyModes,
+                [AppBuiltinProxyMode.NoChanges.value],
+            )
+            self.assertTrue(AppSettings.isStateON_('VPNMode'))
+            self.assertEqual(
+                AppSettings.get('SystemProxyMode'),
+                AppBuiltinProxyMode.NoChanges.value,
             )
 
 

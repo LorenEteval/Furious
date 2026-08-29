@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+from Furious.Controllers import SYSTEM_PROXY_MODE_OPTIONS
 from Furious.Frozenlib import *
 from Furious.Interface import *
 from Furious.Models import *
@@ -737,6 +738,21 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         )
         self.routingSelector = RoutingSelector(parent=self)
 
+        self.systemProxyComboBox = AppQComboBox(parent=self)
+        self.systemProxyComboBox.setContentWidthAdjustable()
+        self.systemProxyComboBox.setMinimumWidth(220)
+        self.systemProxyComboBox.setToolTip(_('System Proxy'))
+
+        for label, mode in SYSTEM_PROXY_MODE_OPTIONS:
+            self.systemProxyComboBox.addItem(_(label), mode)
+
+        self.tunModeLabel = AppQLabel(_('TUN Mode'), parent=self)
+        self.tunModeSwitch = AppQSwitch(parent=self)
+        self._tunModeAvailable = AppSettingsController().tunModeAvailable()
+
+        self._syncSystemProxyMode(AppSettings.get('SystemProxyMode'))
+        self.tunModeSwitch.syncChecked(AppSettings.isStateON_('VPNMode'))
+
         self.searchLineEdit = AppQLineEdit()
         self.searchLineEdit.setPlaceholderText(
             _(
@@ -767,16 +783,25 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.headerLayout.addWidget(self.searchLineEdit, 4)
         self.headerLayout.addWidget(self.searchButton)
 
+        self.connectionLayout = QHBoxLayout()
+        self.connectionLayout.setContentsMargins(0, 0, 0, 0)
+        self.connectionLayout.setSpacing(8)
+        self.connectionLayout.addWidget(self.connectButton)
+        self.connectionLayout.addWidget(self.routingSelector)
+        self.connectionLayout.addWidget(self.systemProxyComboBox)
+        self.connectionLayout.addWidget(self.tunModeLabel)
+        self.connectionLayout.addWidget(self.tunModeSwitch)
+        self.connectionLayout.addStretch(1)
+
         self.actionLayout = QHBoxLayout()
         self.actionLayout.setContentsMargins(0, 0, 0, 0)
         self.actionLayout.setSpacing(8)
-        self.actionLayout.addWidget(self.connectButton)
-        self.actionLayout.addWidget(self.routingSelector)
         self.actionLayout.addWidget(self.serverButton)
         self.actionLayout.addStretch(1)
         self.actionLayout.addWidget(self.subscriptionFilterComboBox)
 
         self._layout.addLayout(self.headerLayout)
+        self._layout.addLayout(self.connectionLayout)
         self._layout.addLayout(self.actionLayout)
         self._layout.addWidget(self.userServersQTableWidget, 1)
 
@@ -792,6 +817,19 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.subscriptionFilterComboBox.currentIndexChanged.connect(
             self.handleSubscriptionFilterChanged
         )
+        self.systemProxyComboBox.currentIndexChanged.connect(
+            self.handleSystemProxyModeChanged
+        )
+        self.tunModeSwitch.toggled.connect(self.handleTUNModeChanged)
+
+        AppSettingsController().systemProxyModeChanged.connect(
+            self._syncSystemProxyMode
+        )
+        AppSettingsController().tunModeChanged.connect(self.tunModeSwitch.syncChecked)
+
+        AppConnectionController().interactionEnabledChanged.connect(
+            self.setConnectionControlsEnabled
+        )
 
         self.userServersQTableWidget.subsManager.subscriptionsChanged.connect(
             self.refreshSubscriptionFilter
@@ -805,8 +843,36 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
 
         self.refreshSubscriptionFilter()
         self.handleServerSelectionChanged()
+        self.setConnectionControlsEnabled(AppConnectionController().interactionEnabled)
 
         self.setCentralWidget(self._widget)
+
+    @QtCore.Slot(str)
+    def _syncSystemProxyMode(self, mode: str):
+        """Select the shared system-proxy preference without writing it again."""
+        with Mixins.QBlockSignalContext(self.systemProxyComboBox):
+            index = self.systemProxyComboBox.findData(mode)
+
+            self.systemProxyComboBox.setCurrentIndex(max(0, index))
+
+    @QtCore.Slot()
+    def handleSystemProxyModeChanged(self):
+        """Persist a system-proxy selection through the shared settings authority."""
+        mode = self.systemProxyComboBox.currentData()
+
+        if isinstance(mode, str):
+            AppSettingsController().setSystemProxyMode(mode)
+
+    @QtCore.Slot(bool)
+    def handleTUNModeChanged(self, enabled: bool):
+        """Persist a TUN request through the shared settings authority."""
+        AppSettingsController().setTUNMode(enabled)
+
+    @QtCore.Slot(bool)
+    def setConnectionControlsEnabled(self, enabled: bool):
+        """Gate connection-sensitive Home controls during lifecycle transitions."""
+        self.systemProxyComboBox.setEnabled(bool(enabled))
+        self.tunModeSwitch.setEnabled(bool(enabled) and self._tunModeAvailable)
 
     @QtCore.Slot()
     def handleServerSelectionChanged(self, *_args):

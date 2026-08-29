@@ -633,7 +633,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
             ) = (
                 ConnectionController(parent=self),
                 RoutingController(parent=self),
-                SettingsController(),
+                SettingsController(parent=self),
             )
 
             self.connectionController.interactionEnabledChanged.connect(
@@ -656,15 +656,17 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
                 logger.exception('connection controller shutdown failed')
 
-        for controllerName in ('routingController', 'connectionController'):
+        for controllerName in (
+            'settingsController',
+            'routingController',
+            'connectionController',
+        ):
             controller = getattr(self, controllerName)
 
             if isinstance(controller, QtCore.QObject):
                 controller.deleteLater()
 
             setattr(self, controllerName, None)
-
-        self.settingsController = None
 
     def _initializeThemeDetection(self):
         """Start the one application-owned theme observer."""

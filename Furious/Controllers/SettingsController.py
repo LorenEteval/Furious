@@ -35,6 +35,7 @@ __all__ = [
     'LOG_AUTO_SCROLL_DOWN_SETTING',
     'LOG_AUTO_CLEAR_SETTING',
     'PROXY_ENDPOINT_INFO_SETTING',
+    'SYSTEM_PROXY_MODE_OPTIONS',
     'SettingsController',
 ]
 
@@ -43,6 +44,10 @@ APPLICATION_THEME_SETTING = 'ApplicationTheme'
 _LEGACY_DARK_MODE_SETTING = 'DarkMode'
 LOG_AUTO_SCROLL_DOWN_SETTING = 'LogAutoScrollDown'
 LOG_AUTO_CLEAR_SETTING = 'LogAutoClear'
+SYSTEM_PROXY_MODE_OPTIONS = (
+    ('Automatically Configure System Proxy', AppBuiltinProxyMode.Auto.value),
+    ('Do Not Change System Proxy', AppBuiltinProxyMode.NoChanges.value),
+)
 
 registerAppSettings('VPNMode', isBinary=True)
 registerAppSettings(
@@ -136,11 +141,16 @@ def _synchronizeLegacyDarkModeSetting():
     )
 
 
-class SettingsController:
+class SettingsController(QtCore.QObject):
     """Apply application settings independently from their presentation."""
 
-    def __init__(self):
+    tunModeChanged = QtCore.Signal(bool)
+    systemProxyModeChanged = QtCore.Signal(str)
+
+    def __init__(self, parent=None):
         """Synchronize theme persistence after Qt application metadata is ready."""
+        super().__init__(parent)
+
         _synchronizeLegacyDarkModeSetting()
 
     @staticmethod
@@ -151,13 +161,26 @@ class SettingsController:
         else:
             AppSettings.turnOFF(settingName)
 
-    @classmethod
-    def setTUNMode(cls, enabled: bool):
+    @staticmethod
+    def tunModeAvailable() -> bool:
+        """Return whether this process can enable application-managed TUN."""
+        if PLATFORM == 'Linux':
+            return not SystemRuntime.flatpakID()
+
+        return SystemRuntime.isAdmin()
+
+    def setTUNMode(self, enabled: bool):
         """Persist the global TUN mode and notify active workflows."""
         if PLATFORM != 'Linux':
             assert SystemRuntime.isAdmin()
 
-        cls._setBinary('VPNMode', enabled)
+        enabled = bool(enabled)
+
+        if AppSettings.isStateON_('VPNMode') == enabled:
+            return
+
+        self._setBinary('VPNMode', enabled)
+        self.tunModeChanged.emit(enabled)
 
         showMBoxNewChangesNextTime()
 
@@ -245,13 +268,16 @@ class SettingsController:
 
         showMBoxNewChangesNextTime()
 
-    @staticmethod
-    def setSystemProxyMode(mode: str):
+    def setSystemProxyMode(self, mode: str):
         """Persist how Furious manages the operating-system proxy."""
         validModes = tuple(item.value for item in AppBuiltinProxyMode)
 
-        if mode in validModes:
-            AppSettings.set('SystemProxyMode', mode)
+        if mode not in validModes or AppSettings.get('SystemProxyMode') == mode:
+            return
+
+        AppSettings.set('SystemProxyMode', mode)
+
+        self.systemProxyModeChanged.emit(mode)
 
     @classmethod
     def setAutoUpdateAssets(cls, enabled: bool):
