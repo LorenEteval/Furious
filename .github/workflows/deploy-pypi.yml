@@ -662,6 +662,13 @@ jobs:
             application_root=/app/lib/Furious
             dependency_report=/tmp/furious-flatpak-missing-dependencies
             failures=0
+            unsupported_qt_plugins=(
+              "$application_root/PySide6/qt-plugins/imageformats/libqpdf.so"
+              "$application_root/PySide6/qt-plugins/imageformats/libqtiff.so"
+              "$application_root/PySide6/qt-plugins/imageformats/libqwebp.so"
+              "$application_root/PySide6/qt-plugins/platforms/libqeglfs.so"
+              "$application_root/PySide6/qt-plugins/egldeviceintegrations"
+            )
 
             : > "$dependency_report"
 
@@ -683,6 +690,14 @@ jobs:
             else
               printf "Bundled double-conversion library: %s\n" "$double_conversion"
             fi
+
+            for plugin in "${unsupported_qt_plugins[@]}"; do
+              if [[ -e "$plugin" ]]; then
+                printf "Unsupported Qt plugin was packaged: %s\n" "$plugin" \
+                  >> "$dependency_report"
+                failures=1
+              fi
+            done
 
             if ! command -v ldd >/dev/null; then
               printf "The Flatpak runtime does not provide ldd\n" \

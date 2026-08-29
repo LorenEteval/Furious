@@ -125,6 +125,15 @@ elif PLATFORM == 'Linux':
         f'--assume-yes-for-downloads '
         f'--include-package-data=Furious:Data/** '
         f'--nofollow-import-to=numpy '
+        # The Essentials-only Linux build does not ship QtPdf, and Furious does
+        # not use the optional TIFF/WebP codecs or the embedded EGLFS backend.
+        # Excluding them at collection time prevents unusable plugins from
+        # acquiring host-specific dependencies in the portable artifacts.
+        f'--noinclude-qt-plugins=egldeviceintegrations '
+        f'--noinclude-dlls=*/libqeglfs*.so '
+        f'--noinclude-dlls=*/libqpdf.so '
+        f'--noinclude-dlls=*/libqtiff.so '
+        f'--noinclude-dlls=*/libqwebp.so '
         f'{NUITKA_BINARY_VERSION_OPTION}'
         f'Furious '
         f'--output-dir=\"{ROOT_DIR / DEPLOY_DIR_NAME}\"'
