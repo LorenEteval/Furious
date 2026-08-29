@@ -32,6 +32,10 @@ Use the `manage-qt-pyside6-lifetimes` skill for Qt ownership or lifecycle work.
   dispose timers, models, delegates, replies, event filters, menus, actions, shortcuts, watchers, animations, and effects.
 - Only the GUI thread mutates widgets. Slots do not sleep or perform unbounded host/network/process work. Create
   coalescing/render timers once and do not multiply them across show/hide cycles.
+- Theme changes commit the destination QSS and `ThemeAware` state immediately through the application-owned
+  `ThemeTransition`; its non-interactive, per-window snapshots are presentation-only and must be interrupted or
+  disposed on replacement, geometry change, window teardown, and application cleanup. Do not add competing per-widget
+  theme animations.
 - Each `QNetworkReply` has one manager/context owner, one freshness rule, and one terminal deletion path. Shared slots use
   `sender()`/stored context rather than per-reply closures; do not attach ad-hoc attributes to third-party Qt objects.
 

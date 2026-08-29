@@ -53,6 +53,7 @@ from .QtGui import (
 )
 from .QtNetwork import AppQNetworkAccessManager
 from .Signals import connectWeakly, singleShotWeakly
+from .ThemeTransition import ThemeTransition
 from .QtWidgets import (
     AppQComboBox,
     AppQComboBoxSeparatorDelegate,
@@ -159,6 +160,7 @@ __all__ = [
     'MBoxQuestionDelete',
     'MBoxUnrecognizedConfig',
     'SUPPORTED_LANGUAGE',
+    'ThemeTransition',
     'HttpGetManager',
     'bootstrapIcon',
     'bootstrapIconMask',

@@ -197,6 +197,53 @@ class ApplicationLifecycleTransactionTest(TestCase):
         self.assertIn('command-line arguments: 2 provided', output)
         self.assertNotIn(secret, output)
 
+    def testResolvedThemeSkipsStartupAnimationAndTransitionsLaterChanges(self):
+        """Commit both paths immediately but animate only a changed live theme."""
+        transitionCalls = []
+
+        class ImmediateTransition:
+            """Record transition policy while invoking the real commit callback."""
+
+            @staticmethod
+            def apply(callback, *, animate):
+                transitionCalls.append(animate)
+                callback()
+
+        application = SimpleNamespace(
+            _appliedTheme=None,
+            themeTransition=ImmediateTransition(),
+            applyStyleSheetForTheme=mock.Mock(),
+        )
+        notifyThemeAware = mock.Mock()
+
+        DesktopApplication._applyResolvedTheme(
+            application,
+            AppStyleSheet.Light,
+            notifyThemeAware,
+        )
+        DesktopApplication._applyResolvedTheme(
+            application,
+            AppStyleSheet.Dark,
+            notifyThemeAware,
+        )
+
+        self.assertEqual(transitionCalls, [False, True])
+        self.assertEqual(application._appliedTheme, AppStyleSheet.Dark)
+        self.assertEqual(
+            application.applyStyleSheetForTheme.call_args_list,
+            [
+                mock.call(AppStyleSheet.Light),
+                mock.call(AppStyleSheet.Dark),
+            ],
+        )
+        self.assertEqual(
+            notifyThemeAware.call_args_list,
+            [
+                mock.call(AppStyleSheet.Light),
+                mock.call(AppStyleSheet.Dark),
+            ],
+        )
+
     def testInvalidCoreLaunchDiagnosticsDoNotRenderPayloads(self):
         """Describe invalid launch types without rendering secret arguments."""
         secret = 'password=do-not-log-this'
@@ -983,13 +1030,16 @@ class ApplicationLifecycleTransactionTest(TestCase):
     def testUICleanupRemovesMainWindowEventFilter(self):
         """Detach application policy before releasing the persistent window."""
         mainWindow = mock.Mock()
+        themeTransition = mock.Mock()
         application = SimpleNamespace(
             mainWindow=mainWindow,
             systemTray=None,
+            themeTransition=themeTransition,
         )
 
         DesktopApplication._cleanupUI(application)
 
+        themeTransition.stop.assert_called_once_with()
         mainWindow.removeEventFilter.assert_called_once_with(application)
         mainWindow.hide.assert_called_once_with()
         mainWindow.deleteLater.assert_called_once_with()

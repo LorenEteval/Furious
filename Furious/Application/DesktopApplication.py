@@ -58,7 +58,7 @@ from Furious.Controllers import (
 )
 from Furious.Extensions import BUNDLED_EXTENSION_TYPES
 from Furious.Plugins import initializePluginRegistry
-from Furious.Qt import AppQMessageBox, AppStyleSheet
+from Furious.Qt import AppQMessageBox, AppStyleSheet, ThemeTransition
 from Furious.Qt.TextEditorTheme import configureEditorLogMetadata
 from Furious.Qt import gettext as _
 from Furious.Repository import Storage
@@ -419,6 +419,8 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         # Theme Detect
         self.currentTheme = None
         self.themeDetectTimer = None
+        self._appliedTheme = None
+        self.themeTransition = ThemeTransition(parent=self)
 
         self.mainWindow = None
         self.systemTray = None
@@ -799,6 +801,8 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
     def _cleanupUI(self):
         """Hide and release application-owned top-level UI objects."""
+        self.themeTransition.stop()
+
         if self.systemTray is not None:
             self.systemTray.hide()
             self.systemTray.deleteLater()
@@ -895,13 +899,27 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         """Handle apply style sheet for theme for the application."""
         self.setStyleSheet(AppStyleSheet.forTheme(theme))
 
+    def _applyResolvedTheme(self, theme, notifyThemeAware):
+        """Apply one effective theme through the centralized transition path."""
+        theme = AppStyleSheet.normalizeTheme(theme)
+        animate = self._appliedTheme is not None and self._appliedTheme != theme
+
+        def applyTheme():
+            """Commit the destination style and refresh all derived visuals."""
+            self.applyStyleSheetForTheme(theme)
+            self._appliedTheme = theme
+            notifyThemeAware(theme)
+
+        self.themeTransition.apply(applyTheme, animate=animate)
+
     def applyThemePreference(self):
         """Apply the resolved preference and refresh every theme-aware object."""
         theme = self.theme()
 
-        self.applyStyleSheetForTheme(theme)
-
-        Mixins.ThemeAware.callThemeChangedCallbackUnchecked(theme)
+        self._applyResolvedTheme(
+            theme,
+            Mixins.ThemeAware.callThemeChangedCallbackUnchecked,
+        )
 
     @QtCore.Slot(str)
     def handleSystemThemeChanged(self, theme):
@@ -917,9 +935,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         if theme not in [AppStyleSheet.Dark, AppStyleSheet.Light]:
             theme = self.systemTheme()
 
-        self.applyStyleSheetForTheme(theme)
-
-        Mixins.ThemeAware.callThemeChangedCallback(theme)
+        self._applyResolvedTheme(theme, Mixins.ThemeAware.callThemeChangedCallback)
 
     @QtCore.Slot()
     def cleanup(self):
