@@ -899,6 +899,7 @@ TRANSLATION = {
     },
     "TUN Mode": {
         "source": [
+            "Furious.Window.HomePage",
             "Furious.Window.SettingsPage"
         ],
         "RU": "TUN режим",
@@ -972,6 +973,7 @@ TRANSLATION = {
     },
     "System Proxy": {
         "source": [
+            "Furious.Window.HomePage",
             "Furious.Window.SettingsPage"
         ],
         "RU": "Системный прокси",
@@ -3235,6 +3237,62 @@ TRANSLATION = {
         ],
         "RU": "Вы уверены, что хотите выйти из приложения?",
         "ZH": "确定要退出应用程序吗？",
+        "isReviewed": "True"
+    },
+    "Move...": {
+        "source": [
+            "Furious.Widget.ServerTableView"
+        ],
+        "RU": "Переместить...",
+        "ZH": "移动...",
+        "isReviewed": "True"
+    },
+    "Move to Top": {
+        "source": [
+            "Furious.Widget.ServerTableView"
+        ],
+        "RU": "Переместить в начало",
+        "ZH": "移到顶部",
+        "isReviewed": "True"
+    },
+    "Move to Bottom": {
+        "source": [
+            "Furious.Widget.ServerTableView"
+        ],
+        "RU": "Переместить в конец",
+        "ZH": "移到底部",
+        "isReviewed": "True"
+    },
+    "Search logs with text or regular expressions": {
+        "source": [
+            "Furious.Window.LogPage"
+        ],
+        "RU": "Поиск в журналах по тексту или регулярному выражению",
+        "ZH": "使用文本或正则表达式搜索日志",
+        "isReviewed": "True"
+    },
+    "Invalid regular expression; using literal text.": {
+        "source": [
+            "Furious.Window.LogPage"
+        ],
+        "RU": "Недопустимое регулярное выражение; используется буквальный текст.",
+        "ZH": "正则表达式无效；将按原文本搜索。",
+        "isReviewed": "True"
+    },
+    "Move To Subscription...": {
+        "source": [
+            "Furious.Widget.ServerTableView"
+        ],
+        "RU": "Переместить в подписку...",
+        "ZH": "移动到订阅...",
+        "isReviewed": "True"
+    },
+    "No subscription": {
+        "source": [
+            "Furious.Widget.ServerTableView"
+        ],
+        "RU": "Без подписки",
+        "ZH": "无订阅",
         "isReviewed": "True"
     }
 }

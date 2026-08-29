@@ -80,8 +80,14 @@ from Furious.Frozenlib import (
     AppSettings,
     Mixins,
 )
-from Furious.Models import ProfileMetadata, Protocol, ServerProfile
+from Furious.Models import (
+    CoreConfiguration,
+    ProfileMetadata,
+    Protocol,
+    ServerProfile,
+)
 from Furious.Plugins.API import RoutingOption
+from Furious.Repository import Storage
 from Furious.Qt import (
     AppHue,
     AppQComboBox,
@@ -111,6 +117,7 @@ from Furious.Window.SettingsPage import (
 from Furious.Window.SubscriptionPage import _SubscriptionEditorDialog
 from Furious.Widget.ConnectionButton import ConnectionButton
 from Furious.Widget.RoutingSelector import RoutingSelector
+from Furious.Widget.ServerTableView import ServerTableView
 
 from PySide6 import QtCore
 from PySide6.QtGui import QImage
@@ -211,14 +218,19 @@ class ComboTranslationLayoutTest(unittest.TestCase):
         combo = AppQComboBox(parent=parent)
         combo.setContentWidthAdjustable()
         combo.addItem('Short', 'semantic-route')
+        combo.setToolTip('Combo tooltip')
         layout.addWidget(combo)
 
         shortHint = combo.sizeHint().width()
         translated = 'A significantly longer translated routing option'
+        translatedTooltip = 'Translated combo tooltip'
 
         with mock.patch(
             'Furious.Qt.QtWidgets._',
-            side_effect=lambda text: translated if text == 'Short' else text,
+            side_effect=lambda text: {
+                'Short': translated,
+                'Combo tooltip': translatedTooltip,
+            }.get(text, text),
         ):
             combo.retranslate()
 
@@ -228,6 +240,7 @@ class ComboTranslationLayoutTest(unittest.TestCase):
 
         self.assertEqual(combo.currentData(), 'semantic-route')
         self.assertEqual(combo.currentText(), translated)
+        self.assertEqual(combo.toolTip(), translatedTooltip)
         self.assertGreater(combo.sizeHint().width(), shortHint)
         self.assertGreater(
             combo.sizeHint().width(),
@@ -245,7 +258,8 @@ class ComboTranslationLayoutTest(unittest.TestCase):
             'Bypass Mainland China',
             translatable=True,
         )
-        controller = RoutingControllerFixture((option,), option.id)
+        literalOption = RoutingOption('user-defined', 'Global')
+        controller = RoutingControllerFixture((option, literalOption), option.id)
         parent = QWidget()
         layout = QHBoxLayout(parent)
 
@@ -258,13 +272,15 @@ class ComboTranslationLayoutTest(unittest.TestCase):
         layout.addWidget(selector)
         initialHint = selector.sizeHint().width()
         translated = 'Обходить подключения к серверам материкового Китая'
+        translatedTooltip = 'Маршрутизация'
 
         with mock.patch(
             'Furious.Widget.RoutingSelector._',
-            side_effect=lambda text: (
-                translated if text == option.displayName else text
-            ),
-        ):
+            side_effect=lambda text: {
+                option.displayName: translated,
+                'Routing': translatedTooltip,
+            }.get(text, text),
+        ) as translate:
             selector.retranslate()
 
         parent.resize(selector.sizeHint().width() + 100, 100)
@@ -273,6 +289,15 @@ class ComboTranslationLayoutTest(unittest.TestCase):
 
         self.assertEqual(selector.currentData(), option.id)
         self.assertEqual(selector.currentText(), translated)
+        self.assertEqual(
+            selector.itemText(selector.findData(literalOption.id)),
+            literalOption.displayName,
+        )
+        self.assertNotIn(
+            mock.call(literalOption.displayName),
+            translate.call_args_list,
+        )
+        self.assertEqual(selector.toolTip(), translatedTooltip)
         self.assertGreater(selector.sizeHint().width(), initialHint)
         self.assertGreater(
             selector.sizeHint().width(),
@@ -385,8 +410,13 @@ class SettingsPageOrganizationTest(unittest.TestCase):
                 return_value=False,
             ),
             mock.patch.object(SettingsPage, '_buildPluginSections'),
-            mock.patch('Furious.Window.SettingsPage.AppSettingsController'),
+            mock.patch(
+                'Furious.Window.SettingsPage.AppSettingsController'
+            ) as controllerFactory,
         ):
+            controllerFactory.return_value.tunModeAvailable.return_value = (
+                not flatpakID if platform == 'Linux' else isAdmin
+            )
             page = SettingsPage(
                 tunSettingsDialogFactory=mock.Mock(),
                 proxyBypassDialog=proxyBypassDialog,
@@ -490,6 +520,108 @@ class SettingsPageOrganizationTest(unittest.TestCase):
 
                 page.close()
                 page.deleteLater()
+
+
+class ServerTableBehaviorTest(unittest.TestCase):
+    """Protect filtered persistent movement and active-profile identity."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create the process-wide headless QApplication."""
+        application()
+
+    def tearDown(self):
+        """Release the cached repository and deferred table widgets."""
+        Storage._UserServersStorage.cache_clear()
+        collectAtBoundary()
+
+    @staticmethod
+    def _profile(name: str):
+        """Build one deterministic profile for table behavior checks."""
+        return ServerProfile.fromConfiguration(
+            CoreConfiguration({'type': 'fixture'}),
+            {
+                'displayName': name,
+            },
+        )
+
+    def testKeyboardMovesPreserveSelectionFocusAndActiveProfile(self):
+        """Keep repeated single- and multi-row shortcuts ready for reuse."""
+        cases = (
+            (
+                ('visible first', 'hidden', 'visible second', 'visible third'),
+                [3],
+                QtCore.Qt.Key.Key_Up,
+                ['visible third', 'hidden', 'visible first', 'visible second'],
+                [0],
+                2,
+            ),
+            (
+                (
+                    'visible first',
+                    'hidden',
+                    'visible second',
+                    'visible third',
+                    'visible fourth',
+                    'visible fifth',
+                ),
+                [2, 3],
+                QtCore.Qt.Key.Key_Down,
+                [
+                    'visible first',
+                    'hidden',
+                    'visible fourth',
+                    'visible fifth',
+                    'visible second',
+                    'visible third',
+                ],
+                [4, 5],
+                0,
+            ),
+        )
+
+        for names, selected, key, expected, expectedSelected, activated in cases:
+            with self.subTest(selected=selected, key=key), isolatedSettings():
+                Storage._UserServersStorage.cache_clear()
+                Storage.UserServers().extend(self._profile(name) for name in names)
+                AppSettings.set('ActivatedItemIndex', '0')
+                table = ServerTableView(
+                    configurationEditorFactory=QWidget,
+                    qrCodeWindowFactory=QWidget,
+                    importActionsFactory=tuple,
+                )
+
+                table.search('^visible')
+                table.show()
+                table.activateWindow()
+                table.selectMultipleRows(selected, True)
+                table.selectionModel().setCurrentIndex(
+                    table.proxyIndexFromSourceRow(selected[0]),
+                    QtCore.QItemSelectionModel.SelectionFlag.NoUpdate,
+                )
+                table.setFocus()
+                processQtEvents()
+
+                for _iteration in range(2):
+                    QTest.keyClick(
+                        table,
+                        key,
+                        QtCore.Qt.KeyboardModifier.ControlModifier,
+                    )
+                    processQtEvents()
+
+                    self.assertTrue(table.hasFocus())
+
+                self.assertEqual(
+                    [profile.itemRemark for profile in Storage.UserServers()],
+                    expected,
+                )
+                self.assertEqual(Storage.UserActivatedItemIndex(), activated)
+                self.assertEqual(table.selectedIndex, expectedSelected)
+
+                table.cleanup()
+                table.close()
+                table.deleteLater()
 
 
 def _grayscaleBuffer(image: QImage):
@@ -1480,6 +1612,77 @@ class UnifiedLogPageTest(unittest.TestCase):
                 page.textBrowser.toPlainText().splitlines(),
                 ['core one', 'core two'],
             )
+
+            self.disposePage(page)
+
+    def testSearchComposesWithCategoryAndHandlesInvalidRegexLiterally(self):
+        """Filter retained and live entries without weakening category selection."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=8)
+            page = LogPage(manager=manager)
+
+            manager.append('application alpha', APPLICATION_LOG_CATEGORY)
+            manager.append('core alpha', CORE_LOG_CATEGORY)
+            manager.append('application beta [literal]', APPLICATION_LOG_CATEGORY)
+
+            page.show()
+            self.assertRendered(page)
+
+            page.searchLineEdit.setText('alpha|beta')
+            self.assertRendered(page)
+            self.assertEqual(
+                page.plainText().splitlines(),
+                [
+                    'application alpha',
+                    'core alpha',
+                    'application beta [literal]',
+                ],
+            )
+
+            applicationIndex = page.filterComboBox.findData(APPLICATION_LOG_CATEGORY)
+            page.filterComboBox.setCurrentIndex(applicationIndex)
+            self.assertRendered(page)
+            self.assertEqual(
+                page.plainText().splitlines(),
+                ['application alpha', 'application beta [literal]'],
+            )
+
+            page.searchLineEdit.setText('[literal')
+            self.assertRendered(page)
+            self.assertEqual(page.plainText(), 'application beta [literal]')
+            self.assertTrue(page.searchLineEdit.toolTip())
+
+            manager.append('application [literal] live', APPLICATION_LOG_CATEGORY)
+            manager.append('application ignored', APPLICATION_LOG_CATEGORY)
+            self.assertRendered(page)
+            self.assertEqual(
+                page.plainText().splitlines(),
+                ['application beta [literal]', 'application [literal] live'],
+            )
+
+            self.disposePage(page)
+
+    def testSearchPrunesEvictedMatchingEntriesIncrementally(self):
+        """Remove a matching rendered prefix when manager retention evicts it."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=3)
+            page = LogPage(manager=manager)
+
+            manager.append('match first')
+            manager.append('other')
+            manager.append('match second')
+
+            page.searchLineEdit.setText('match')
+            page.show()
+            self.assertRendered(page)
+            self.assertEqual(
+                page.plainText().splitlines(),
+                ['match first', 'match second'],
+            )
+
+            manager.append('other replacement')
+            self.assertRendered(page)
+            self.assertEqual(page.plainText(), 'match second')
 
             self.disposePage(page)
 

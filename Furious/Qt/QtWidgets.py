@@ -316,6 +316,7 @@ class AppQComboBox(Mixins.QTranslatable, QComboBox):
         for index in range(self.count()):
             self.setItemText(index, _(self.itemText(index)))
 
+        self.setToolTip(_(self.toolTip()))
         self.refreshContentGeometry()
 
 

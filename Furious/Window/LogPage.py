@@ -41,9 +41,10 @@ from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import *
 
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import logging
+import re
 
 __all__ = ['LogPage']
 
@@ -194,6 +195,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         self.pageTitleLabel = AppQLabel(_('Log'))
         self.pageTitleLabel.setObjectName('LogPageTitle')
+
         self.filterLabel = AppQLabel(_('Log Type'))
         # Category names can be either translated built-ins or literal plugin
         # metadata, so LogPage rebuilds this application-styled selector with
@@ -201,6 +203,18 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.filterComboBox = AppQComboBox(translatable=False)
         self.filterComboBox.setContentWidthAdjustable()
         self.filterComboBox.setMinimumWidth(180)
+
+        self.searchLineEdit = AppQLineEdit()
+        self.searchLineEdit.setPlaceholderText(
+            _('Search logs with text or regular expressions')
+        )
+        self.searchLineEdit.setMinimumWidth(260)
+        self.searchLineEdit.setMaximumWidth(600)
+        self.searchLineEdit.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        self._searchRegex = None
 
         self.textBrowser = DraculaTextBrowser(
             fontFamily=fontFamily,
@@ -269,6 +283,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         filterLayout.setSpacing(8)
         filterLayout.addWidget(self.pageTitleLabel)
         filterLayout.addStretch(1)
+        filterLayout.addWidget(self.searchLineEdit, 3)
         filterLayout.addWidget(self.filterLabel)
         filterLayout.addWidget(self.filterComboBox)
 
@@ -384,6 +399,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self._populateFilters(self._preferredFilter)
 
         self.filterComboBox.currentIndexChanged.connect(self._filterChanged)
+        self.searchLineEdit.textChanged.connect(self._searchChanged)
         self.autoScrollSwitch.toggled.connect(self._autoScrollChanged)
         self.autoClearSwitch.toggled.connect(self._autoClearChanged)
         self.manager.categoryRegistered.connect(self._categoryRegistered)
@@ -681,6 +697,16 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         )
         batch = self.manager.entriesSince(cursor, selectedCategoryId)
 
+        if self._searchRegex is not None:
+            batch = replace(
+                batch,
+                entries=tuple(
+                    entry
+                    for entry in batch.entries
+                    if self._searchRegex.search(formatLogEntry(entry)) is not None
+                ),
+            )
+
         try:
             self._synchronizeDocument(batch, selectedCategoryId)
         except _DocumentBlockAccountingError:
@@ -833,6 +859,25 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         AppSettings.set('LogViewerSelectedCategory', categoryId)
 
+        self._requestRefresh(invalidate=True, immediate=True)
+
+    @QtCore.Slot(str)
+    def _searchChanged(self, pattern: str):
+        """Apply case-insensitive regex search with a literal invalid fallback."""
+        self._searchRegex = None
+        self.searchLineEdit.setToolTip('')
+
+        if pattern:
+            try:
+                self._searchRegex = re.compile(pattern, re.IGNORECASE)
+            except re.error:
+                self._searchRegex = re.compile(re.escape(pattern), re.IGNORECASE)
+                self.searchLineEdit.setToolTip(
+                    _('Invalid regular expression; using literal text.')
+                )
+
+        self._entryCursor = None
+        self._followTail = self._autoScrollDown
         self._requestRefresh(invalidate=True, immediate=True)
 
     @QtCore.Slot(object)
