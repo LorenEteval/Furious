@@ -1052,6 +1052,7 @@ def main():
                     f'    config-opts:\n'
                     f'      - -DBUILD_SHARED_LIBS=ON\n'
                     f'      - -DBUILD_TESTING=OFF\n'
+                    f'      - -DCMAKE_INSTALL_LIBDIR=lib\n'
                     f'    sources:\n'
                     f'      - type: archive\n'
                     f'        url: https://github.com/google/double-conversion/archive/refs/tags/v3.3.1.tar.gz\n'

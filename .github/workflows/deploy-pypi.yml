@@ -656,33 +656,60 @@ jobs:
 
           trap cleanup EXIT
 
-          flatpak run --user --command=sh com.Furious.Furious -c '
-            set -eu
+          flatpak run --user --command=bash com.Furious.Furious -c '
+            set -uo pipefail
 
             application_root=/app/lib/Furious
             dependency_report=/tmp/furious-flatpak-missing-dependencies
+            failures=0
 
-            test -x "$application_root/Furious.bin"
-            test -f /app/lib/libdouble-conversion.so.3
             : > "$dependency_report"
 
-            find "$application_root" \
-              -type f \
-              \( -name "*.bin" -o -name "*.so" -o -name "*.so.*" \) \
-              -print |
+            if [[ ! -x "$application_root/Furious.bin" ]]; then
+              printf "Packaged application is missing or not executable: %s\n" \
+                "$application_root/Furious.bin" >> "$dependency_report"
+              failures=1
+            fi
+
+            double_conversion="$(
+              find /app/lib -type f -name "libdouble-conversion.so.*" \
+                -print -quit 2>> "$dependency_report"
+            )"
+
+            if [[ -z "$double_conversion" ]]; then
+              printf "Bundled libdouble-conversion.so.3 was not found below /app/lib\n" \
+                >> "$dependency_report"
+              failures=1
+            else
+              printf "Bundled double-conversion library: %s\n" "$double_conversion"
+            fi
+
+            if ! command -v ldd >/dev/null; then
+              printf "The Flatpak runtime does not provide ldd\n" \
+                >> "$dependency_report"
+              failures=1
+            else
               while IFS= read -r binary; do
                 if ! dependencies="$(ldd "$binary" 2>&1)"; then
                   printf "%s\n%s\n\n" \
                     "Failed to inspect $binary:" \
                     "$dependencies" >> "$dependency_report"
+                  failures=1
                 elif printf "%s\n" "$dependencies" | grep -Fq "not found"; then
                   printf "%s\n%s\n\n" \
                     "Missing dependencies for $binary:" \
                     "$dependencies" >> "$dependency_report"
+                  failures=1
                 fi
-              done
+              done < <(
+                find "$application_root" \
+                  -type f \
+                  \( -name "*.bin" -o -name "*.so" -o -name "*.so.*" \) \
+                  -print
+              )
+            fi
 
-            if test -s "$dependency_report"; then
+            if ((failures)); then
               cat "$dependency_report"
               exit 1
             fi
