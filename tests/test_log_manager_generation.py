@@ -45,6 +45,7 @@ import json
 import os
 import random
 import subprocess
+import sys
 import threading
 import time
 import types
@@ -1809,9 +1810,19 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
             text=True,
         ).stdout
         baselineModule = types.ModuleType('tests._baseline_log_manager')
-        exec(
-            compile(source, f'<LogManager:{revision}>', 'exec'), baselineModule.__dict__
-        )
+        previousModule = sys.modules.get(baselineModule.__name__)
+        sys.modules[baselineModule.__name__] = baselineModule
+
+        try:
+            exec(
+                compile(source, f'<LogManager:{revision}>', 'exec'),
+                baselineModule.__dict__,
+            )
+        finally:
+            if previousModule is None:
+                sys.modules.pop(baselineModule.__name__, None)
+            else:
+                sys.modules[baselineModule.__name__] = previousModule
 
         def benchmark(managerClass):
             results = {}
