@@ -85,6 +85,25 @@ class Storage:
         return Storage._UserServersStorage().data()
 
     @staticmethod
+    def moveUserServers(profileIds, visibleProfileIds, position: str) -> bool:
+        """Move selected servers within the caller's visible repository scope."""
+        return Storage._UserServersStorage().moveProfiles(
+            profileIds,
+            visibleProfileIds,
+            position,
+        )
+
+    @staticmethod
+    def moveUserServersToSubscription(profileIds, unique: str) -> bool:
+        """Move servers to a subscription group as locally managed entries."""
+        if unique and Storage.SubscriptionGroup(unique) is None:
+            return False
+
+        return Storage._UserServersStorage().moveProfilesToSubscription(
+            profileIds, unique
+        )
+
+    @staticmethod
     def UserSubs() -> dict[str, dict]:
         """Return the user subs value."""
         return Storage._UserSubsStorage().data()

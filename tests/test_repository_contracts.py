@@ -25,7 +25,7 @@ from Furious.Models.Encoding import PyBase64Encoder, UJSONEncoder
 from Furious.Repository.Routings import UserRoutings
 from Furious.Repository.Servers import UserServers
 from Furious.Repository.Storage import Storage
-from Furious.Repository.Subscriptions import UserSubs
+from Furious.Repository.Subscriptions import SubscriptionGroup, UserSubs
 from Furious.Repository.TunSettings import UserTUNSettings
 
 from tests.support import application, isolatedSettings
@@ -61,6 +61,25 @@ class RepositoryContractTest(unittest.TestCase):
             '_UserRoutingsStorage',
         ):
             getattr(Storage, name).cache_clear()
+
+    @staticmethod
+    def _profile(
+        name: str,
+        *,
+        source='',
+        managed=False,
+        profileKey='',
+    ):
+        """Build one profile with deterministic metadata for repository tests."""
+        return ServerProfile.fromConfiguration(
+            CoreConfiguration({'type': 'fixture'}),
+            {
+                'displayName': name,
+                'subscriptionSource': source,
+                'subscriptionManaged': managed,
+                'subscriptionProfileKey': profileKey,
+            },
+        )
 
     def testRoutingRepositoryRoundTripPreservesUnknownDocuments(self):
         """Persist arbitrary core-owned routing fields without normalization."""
@@ -123,6 +142,98 @@ class RepositoryContractTest(unittest.TestCase):
                 Storage.UserTUNSettings()['interfaceName'],
                 'fixture-tun',
             )
+
+    def testVisibleMovesPreserveHiddenSlotsAndSelectedOrder(self):
+        """Reorder a filtered scope without moving hidden repository entries."""
+        with isolatedSettings():
+            repository = UserServers()
+            profiles = [self._profile(name) for name in ('A', 'Hidden', 'B', 'C', 'D')]
+            repository.data().extend(profiles)
+            visibleIds = [
+                profile.metadata.profileId
+                for profile in profiles
+                if profile.metadata.displayName != 'Hidden'
+            ]
+            selectedIds = [
+                profiles[2].metadata.profileId,
+                profiles[3].metadata.profileId,
+            ]
+
+            self.assertTrue(repository.moveProfiles(selectedIds, visibleIds, 'top'))
+            self.assertEqual(
+                [profile.metadata.displayName for profile in repository.data()],
+                ['B', 'Hidden', 'C', 'A', 'D'],
+            )
+            self.assertEqual(
+                [profile.index for profile in repository.data()],
+                list(range(5)),
+            )
+
+            self.assertTrue(repository.moveProfiles(selectedIds, visibleIds, 'down'))
+            self.assertEqual(
+                [profile.metadata.displayName for profile in repository.data()],
+                ['A', 'Hidden', 'B', 'C', 'D'],
+            )
+
+    def testMovingBetweenSubscriptionGroupsDetachesSyncOwnership(self):
+        """Keep no-op ownership but make cross-group moves locally managed."""
+        with isolatedSettings():
+            repository = UserServers()
+            unchanged = self._profile(
+                'Same source',
+                source='source-a',
+                managed=True,
+                profileKey='owned-a',
+            )
+            moved = self._profile(
+                'Moved',
+                source='source-a',
+                managed=True,
+                profileKey='owned-b',
+            )
+            repository.data().extend((unchanged, moved))
+
+            self.assertFalse(
+                repository.moveProfilesToSubscription(
+                    [unchanged.metadata.profileId],
+                    'source-a',
+                )
+            )
+            self.assertTrue(unchanged.metadata.subscriptionManaged)
+            self.assertEqual(
+                unchanged.metadata.subscriptionProfileKey,
+                'owned-a',
+            )
+
+            self.assertTrue(
+                repository.moveProfilesToSubscription(
+                    [moved.metadata.profileId],
+                    'source-b',
+                )
+            )
+            self.assertEqual(moved.metadata.subscriptionSource, 'source-b')
+            self.assertFalse(moved.metadata.subscriptionManaged)
+            self.assertEqual(moved.metadata.subscriptionProfileKey, '')
+
+    def testStorageRejectsUnknownSubscriptionDestination(self):
+        """Do not write a dangling group identity through the public facade."""
+        profile = self._profile('Manual')
+
+        with (
+            mock.patch.object(Storage, 'SubscriptionGroup', return_value=None),
+            mock.patch.object(
+                Storage,
+                '_UserServersStorage',
+                return_value=SimpleNamespace(moveProfilesToSubscription=mock.Mock()),
+            ) as repositoryFactory,
+        ):
+            self.assertFalse(
+                Storage.moveUserServersToSubscription(
+                    [profile.metadata.profileId],
+                    'missing',
+                )
+            )
+            repositoryFactory.return_value.moveProfilesToSubscription.assert_not_called()
 
     def testActiveServerRemarkUsesTheExactControllerProfile(self):
         """Render the selected live profile instead of swallowing a name error."""

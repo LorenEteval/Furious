@@ -45,7 +45,7 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from PySide6.QtNetwork import *
 
-from typing import Callable, Union, MutableSequence
+from typing import Callable, Union
 
 import re
 import logging
@@ -877,7 +877,7 @@ class ServerTableColumn:
 
 def _subscriptionRemark(item: ServerProfile) -> str:
     """Resolve a persisted subscription ID to its user-visible remark."""
-    if not item.itemSubscriptionManaged:
+    if not item.itemSubscription:
         return ''
 
     subscription = Storage.UserSubs().get(item.itemSubscription, {})
@@ -1346,10 +1346,14 @@ class ServerTableView(
             ),
         )
 
-        contextMenuActions = [
+        self.moveMenu = AppQMenu(
+            AppQAction(
+                _('Move to Top'),
+                callback=lambda: self.moveSelectedItems('top'),
+            ),
             AppQAction(
                 _('Move Up'),
-                callback=lambda: self.moveUpSelectedItem(),
+                callback=lambda: self.moveSelectedItems('up'),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier,
                     QtCore.Qt.Key.Key_Up,
@@ -1357,12 +1361,37 @@ class ServerTableView(
             ),
             AppQAction(
                 _('Move Down'),
-                callback=lambda: self.moveDownSelectedItem(),
+                callback=lambda: self.moveSelectedItems('down'),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier,
                     QtCore.Qt.Key.Key_Down,
                 ),
             ),
+            AppQAction(
+                _('Move to Bottom'),
+                callback=lambda: self.moveSelectedItems('bottom'),
+            ),
+            parent=self,
+        )
+
+        self.moveActionRef = AppQAction(
+            _('Move...'),
+            menu=self.moveMenu,
+            useActionGroup=False,
+            checkable=False,
+        )
+
+        self.moveToSubscriptionMenu = AppQMenu(parent=self)
+        self.moveToSubscriptionActionRef = AppQAction(
+            _('Move To Subscription...'),
+            menu=self.moveToSubscriptionMenu,
+            useActionGroup=False,
+            checkable=False,
+        )
+        self._subscriptionActions = []
+
+        contextMenuActions = [
+            self.moveActionRef,
             AppQAction(
                 _('Duplicate'),
                 callback=lambda: self.duplicateSelectedItem(),
@@ -1435,6 +1464,8 @@ class ServerTableView(
                 ),
             ),
             AppQSeparator(),
+            self.moveToSubscriptionActionRef,
+            AppQSeparator(),
             self.advancedActionRef,
             AppQSeparator(),
             *importActionsFactory(),
@@ -1462,10 +1493,12 @@ class ServerTableView(
             ),
         ]
 
-        self.contextMenu = AppQMenu(*contextMenuActions)
+        self.contextMenu = AppQMenu(*contextMenuActions, parent=self)
+        self.contextMenu.aboutToShow.connect(self._rebuildSubscriptionMenu)
 
         # Add actions to self in order to activate shortcuts
         self.addActions(self.contextMenu.actions())
+        self.addActions(self.moveMenu.actions())
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
 
@@ -1894,85 +1927,174 @@ class ServerTableView(
         self.sourceModel.refreshIndexes()
         self.sourceModel.emitAllChanged()
 
-    def swapItem(self, index0: int, index1: int):
-        """Handle swap item for the user servers Qt table view."""
+    def _profileIdsForSourceRows(self, rows) -> list[str]:
+        """Return stable identities for valid source rows."""
+        profiles = Storage.UserServers()
 
-        def swapSequenceItem(sequence: MutableSequence, param0: int, param1: int):
-            """Handle swap sequence item for the user servers Qt table view."""
-            swap = sequence[param0]
+        return [
+            profiles[row].metadata.profileId for row in rows if 0 <= row < len(profiles)
+        ]
 
-            sequence[param0] = sequence[param1]
-            sequence[param1] = swap
+    def _visibleProfileIds(self) -> list[str]:
+        """Return stable identities in the current filtered display scope."""
+        return self._profileIdsForSourceRows(
+            self.sourceRowFromProxyRow(row) for row in range(self.proxyModel.rowCount())
+        )
 
+    def _selectedProfileIds(self) -> list[str]:
+        """Return stable identities for the current row selection."""
+        return self._profileIdsForSourceRows(self.selectedIndex)
+
+    def _restoreProfileSelection(self, profileIds):
+        """Restore visible selected rows after a repository mutation."""
+        selected = set(profileIds)
+        rows = [
+            index
+            for index, profile in enumerate(Storage.UserServers())
+            if profile.metadata.profileId in selected
+        ]
+
+        with Mixins.QBlockSignalContext(self):
+            self.selectMultipleRows(rows, True)
+
+            if rows:
+                current = self.proxyIndexFromSourceRow(rows[0])
+
+                if current.isValid():
+                    self.selectionModel().setCurrentIndex(
+                        current,
+                        QtCore.QItemSelectionModel.SelectionFlag.NoUpdate,
+                    )
+
+        self.setFocus(QtCore.Qt.FocusReason.ShortcutFocusReason)
+
+    def _applyRepositoryLayoutMutation(self, callback) -> bool:
+        """Apply one repository reorder and preserve active and selected identities."""
+        selectedProfileIds = self._selectedProfileIds()
         activatedIndex = Storage.UserActivatedItemIndex()
+        profiles = Storage.UserServers()
+        activatedProfileId = (
+            profiles[activatedIndex].metadata.profileId
+            if 0 <= activatedIndex < len(profiles)
+            else None
+        )
 
         self.sourceModel.layoutAboutToBeChanged.emit()
 
-        swapSequenceItem(Storage.UserServers(), index0, index1)
+        try:
+            changed = bool(callback())
 
-        # Refresh index
-        self.sourceModel.refreshIndexes()
+            if changed and activatedProfileId is not None:
+                for index, profile in enumerate(Storage.UserServers()):
+                    if profile.metadata.profileId == activatedProfileId:
+                        if index != activatedIndex:
+                            AppSettings.set('ActivatedItemIndex', str(index))
 
-        self.sourceModel.layoutChanged.emit()
+                        break
+        finally:
+            self.sourceModel.layoutChanged.emit()
 
-        if index0 == activatedIndex:
-            # Activate
-            self.activateItemByIndex(index1, True)
-        elif index1 == activatedIndex:
-            # Activate
-            self.activateItemByIndex(index0, True)
+        if not changed:
+            return False
+
+        if (
+            activatedProfileId is not None
+            and Storage.UserActivatedItemIndex() != activatedIndex
+        ):
+            self.activeServerChanged.emit()
+
+        self.proxyModel.invalidate()
+        self._restoreProfileSelection(selectedProfileIds)
+
+        return True
 
     def newEmptyItem(self):
         """Handle new empty item for the user servers Qt table view."""
         self.appendNewItem(remark=_('Untitled'), acceptInvalid=True)
 
-    def moveUpItemByIndex(self, index):
-        """Move up item by index."""
-        if index <= 0 or index >= len(Storage.UserServers()):
-            # The top item, or does not exist. Do nothing
+    def moveSelectedItems(self, position: str):
+        """Move selected profiles inside the current filtered display scope."""
+        selectedProfileIds, visibleProfileIds = (
+            self._selectedProfileIds(),
+            self._visibleProfileIds(),
+        )
+
+        if not selectedProfileIds:
             return
 
-        self.swapItem(index, index - 1)
+        self._applyRepositoryLayoutMutation(
+            lambda: Storage.moveUserServers(
+                selectedProfileIds,
+                visibleProfileIds,
+                position,
+            )
+        )
 
-    def moveUpSelectedItem(self):
-        """Move up selected item."""
-        indexes = self.selectedIndex
+    def _clearSubscriptionActions(self):
+        """Release callbacks and wrappers owned by the dynamic group submenu."""
+        for action in self._subscriptionActions:
+            self.moveToSubscriptionMenu.removeAction(action)
 
-        if len(indexes) == 0:
-            # Nothing selected. Do nothing
+            action.callback = None
+            action.deleteLater()
+
+        self._subscriptionActions.clear()
+        self.moveToSubscriptionMenu._actions.clear()
+
+    @QtCore.Slot()
+    def _rebuildSubscriptionMenu(self):
+        """Rebuild subscription destinations from the live group repository."""
+        self._clearSubscriptionActions()
+
+        selectedProfileIds = self._selectedProfileIds()
+        selected = set(selectedProfileIds)
+        selectedSources = {
+            profile.metadata.subscriptionSource
+            for profile in Storage.UserServers()
+            if profile.metadata.profileId in selected
+        }
+        destinations = [(_('No subscription'), '')]
+        destinations.extend(
+            (
+                group.remark or group.webURL or group.id,
+                group.id,
+            )
+            for group in Storage.SubscriptionGroups()
+        )
+
+        for label, unique in destinations:
+            action = AppQAction(
+                label,
+                callback=functools.partial(
+                    self.moveSelectedItemsToSubscription,
+                    unique,
+                ),
+                checkable=True,
+                checked=bool(selectedProfileIds) and selectedSources == {unique},
+                translatable=not unique,
+                parent=self.moveToSubscriptionMenu,
+            )
+
+            self._subscriptionActions.append(action)
+            self.moveToSubscriptionMenu._actions.append(action)
+            self.moveToSubscriptionMenu.addAction(action)
+
+        self.moveToSubscriptionActionRef.setEnabled(
+            bool(selectedProfileIds)
+            and any(selectedSources != {unique} for _label, unique in destinations)
+        )
+
+    def moveSelectedItemsToSubscription(self, unique: str):
+        """Move selected profiles to one group without transferring sync ownership."""
+        selectedProfileIds = self._selectedProfileIds()
+
+        if not selectedProfileIds:
             return
 
-        for index in indexes:
-            self.moveUpItemByIndex(index)
-
-        with Mixins.QBlockSignalContext(self):
-            self.setCurrentIndex(self.proxyIndexFromSourceRow(indexes[-1] - 1))
-
-        self.selectMultipleRows(list(index - 1 for index in indexes), True)
-
-    def moveDownItemByIndex(self, index):
-        """Move down item by index."""
-        if index < 0 or index >= len(Storage.UserServers()) - 1:
-            # The bottom item, or does not exist. Do nothing
-            return
-
-        self.swapItem(index, index + 1)
-
-    def moveDownSelectedItem(self):
-        """Move down selected item."""
-        indexes = self.selectedIndex
-
-        if len(indexes) == 0:
-            # Nothing selected. Do nothing
-            return
-
-        for index in indexes[::-1]:
-            self.moveDownItemByIndex(index)
-
-        with Mixins.QBlockSignalContext(self):
-            self.setCurrentIndex(self.proxyIndexFromSourceRow(indexes[0] + 1))
-
-        self.selectMultipleRows(list(index + 1 for index in indexes), True)
+        if Storage.moveUserServersToSubscription(selectedProfileIds, unique):
+            self.sourceModel.emitAllChanged()
+            self.proxyModel.invalidateFilter()
+            self._restoreProfileSelection(selectedProfileIds)
 
     def duplicateSelectedItem(self):
         """Handle duplicate selected item for the user servers Qt table view."""
@@ -2318,6 +2440,7 @@ class ServerTableView(
         """Release resources owned by the user servers Qt table view."""
         self.downloadSpeedScheduler.cancelAll()
         self.downloadSpeedMultiScheduler.cancelAll()
+        self._clearSubscriptionActions()
 
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
         """Update subs by unique."""
@@ -2494,3 +2617,4 @@ class ServerTableView(
             0,
             len(self.Headers) - 1,
         )
+        self._rebuildSubscriptionMenu()

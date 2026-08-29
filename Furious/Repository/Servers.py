@@ -185,6 +185,107 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
         """Return the live mutable collection managed by this repository."""
         return self._list
 
+    @staticmethod
+    def _profileId(profile: ServerProfile) -> str:
+        """Return one profile's stable repository identity."""
+        return profile.metadata.profileId
+
+    def _replaceVisibleOrder(
+        self,
+        visibleProfileIds: set[str],
+        orderedProfiles: list[ServerProfile],
+    ):
+        """Replace only visible slots while leaving filtered-out rows fixed."""
+        iterator = iter(orderedProfiles)
+
+        for index, profile in enumerate(self._list):
+            if self._profileId(profile) in visibleProfileIds:
+                self._list[index] = next(iterator)
+
+        for index, profile in enumerate(self._list):
+            profile.index = index
+
+    def moveProfiles(
+        self,
+        profileIds,
+        visibleProfileIds,
+        position: str,
+    ) -> bool:
+        """Move selected profiles within the caller's current visible scope."""
+        selected = set(profileIds)
+        visible = set(visibleProfileIds)
+        visibleOrder = [
+            profile for profile in self._list if self._profileId(profile) in visible
+        ]
+        selected.intersection_update(
+            self._profileId(profile) for profile in visibleOrder
+        )
+
+        if not selected or position not in ('top', 'up', 'down', 'bottom'):
+            return False
+
+        originalOrder = list(visibleOrder)
+
+        def isSelected(profile):
+            """Return whether the profile belongs to the selected identity set."""
+            return self._profileId(profile) in selected
+
+        if position == 'top':
+            visibleOrder = [
+                profile for profile in visibleOrder if isSelected(profile)
+            ] + [profile for profile in visibleOrder if not isSelected(profile)]
+        elif position == 'bottom':
+            visibleOrder = [
+                profile for profile in visibleOrder if not isSelected(profile)
+            ] + [profile for profile in visibleOrder if isSelected(profile)]
+        elif position == 'up':
+            for index in range(1, len(visibleOrder)):
+                if isSelected(visibleOrder[index]) and not isSelected(
+                    visibleOrder[index - 1]
+                ):
+                    visibleOrder[index - 1], visibleOrder[index] = (
+                        visibleOrder[index],
+                        visibleOrder[index - 1],
+                    )
+        else:
+            for index in range(len(visibleOrder) - 2, -1, -1):
+                if isSelected(visibleOrder[index]) and not isSelected(
+                    visibleOrder[index + 1]
+                ):
+                    visibleOrder[index], visibleOrder[index + 1] = (
+                        visibleOrder[index + 1],
+                        visibleOrder[index],
+                    )
+
+        if visibleOrder == originalOrder:
+            return False
+
+        self._replaceVisibleOrder(visible, visibleOrder)
+
+        return True
+
+    def moveProfilesToSubscription(self, profileIds, unique: str) -> bool:
+        """Assign profiles to a group as local entries, preserving sync ownership."""
+        selected = set(profileIds)
+        changed = False
+
+        for profile in self._list:
+            if self._profileId(profile) not in selected:
+                continue
+
+            metadata = profile.metadata
+
+            if metadata.subscriptionSource == unique:
+                continue
+
+            metadata.subscriptionSource = unique
+            metadata.subscriptionManaged = False
+            metadata.subscriptionProfileKey = ''
+
+            changed = True
+
+        return changed
+
     def cleanup(self):
         """Release resources owned by the user servers."""
         if self._restoreFailed and not self._list:
