@@ -633,6 +633,62 @@ jobs:
 
           print(f'No Qt WebEngine or Qt WebChannel artifacts found below {root}')
           PY
+      - name: Verify Flatpak native dependencies
+        if: runner.os == 'Linux'
+        run: |
+          bundle="$(find . -maxdepth 1 -name 'Furious-*.flatpak' -print -quit)"
+
+          if [[ -z "$bundle" ]]; then
+            echo 'Flatpak bundle was not generated'
+            exit 1
+          fi
+
+          flatpak install --user --noninteractive --reinstall -y "$bundle"
+
+          cleanup() {
+            flatpak uninstall \
+              --user \
+              --noninteractive \
+              --delete-data \
+              -y \
+              com.Furious.Furious || true
+          }
+
+          trap cleanup EXIT
+
+          flatpak run --user --command=sh com.Furious.Furious -c '
+            set -eu
+
+            application_root=/app/lib/Furious
+            dependency_report=/tmp/furious-flatpak-missing-dependencies
+
+            test -x "$application_root/Furious.bin"
+            test -f /app/lib/libdouble-conversion.so.3
+            : > "$dependency_report"
+
+            find "$application_root" \
+              -type f \
+              \( -name "*.bin" -o -name "*.so" -o -name "*.so.*" \) \
+              -print |
+              while IFS= read -r binary; do
+                if ! dependencies="$(ldd "$binary" 2>&1)"; then
+                  printf "%s\n%s\n\n" \
+                    "Failed to inspect $binary:" \
+                    "$dependencies" >> "$dependency_report"
+                elif printf "%s\n" "$dependencies" | grep -Fq "not found"; then
+                  printf "%s\n%s\n\n" \
+                    "Missing dependencies for $binary:" \
+                    "$dependencies" >> "$dependency_report"
+                fi
+              done
+
+            if test -s "$dependency_report"; then
+              cat "$dependency_report"
+              exit 1
+            fi
+
+            echo "Flatpak native dependency check passed"
+          '
       - name: Verify macOS application bundle
         if: runner.os == 'macOS'
         shell: bash
