@@ -45,6 +45,8 @@ SOFTWARE.
 
 from __future__ import annotations
 
+from Furious.Qt.Signals import connectWeakly
+
 from PySide6.QtCore import QRect, Qt, QTimer
 from PySide6.QtGui import QColor, QPainter, QPaintEvent
 from PySide6.QtWidgets import QWidget
@@ -92,7 +94,9 @@ class WaitingSpinner(QWidget):
         self._is_spinning: bool = False
 
         self._timer: QTimer = QTimer(self)
-        self._timer.timeout.connect(self._rotate)
+
+        connectWeakly(self._timer.timeout, self, '_rotate')
+
         self._update_size()
         self._update_timer()
         self.hide()

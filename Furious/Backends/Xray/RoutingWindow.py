@@ -1227,10 +1227,18 @@ class XrayRoutingWindow(AppQMainWindow):
             ),
         )
 
-        self.addButton.clicked.connect(self.tableView.appendNewItem)
-        self.previewButton.clicked.connect(self.tableView.previewSelectedItem)
-        self.renameButton.clicked.connect(self.tableView.renameSelectedItem)
-        self.deleteButton.clicked.connect(self.tableView.deleteSelectedItem)
+        for button, methodName in (
+            (self.addButton, 'appendNewItem'),
+            (self.previewButton, 'previewSelectedItem'),
+            (self.renameButton, 'renameSelectedItem'),
+            (self.deleteButton, 'deleteSelectedItem'),
+        ):
+            connectWeakly(
+                button.clicked,
+                self.tableView,
+                methodName,
+                sender=button,
+            )
 
         actionLayout = QHBoxLayout()
         actionLayout.setContentsMargins(0, 0, 0, 0)

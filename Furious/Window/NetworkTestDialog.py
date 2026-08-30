@@ -73,13 +73,25 @@ class NetworkTestDialog(AppQDialog):
         self.dialogBtns.addButton(
             _('Cancel'), AppQDialogButtonBox.ButtonRole.RejectRole
         )
-        self.dialogBtns.accepted.connect(self.accept)
-        self.dialogBtns.rejected.connect(self.reject)
+
+        connectWeakly(self.dialogBtns.accepted, self, 'accept')
+        connectWeakly(self.dialogBtns.rejected, self, 'reject')
 
         self.speedTestURLResetBtn = AppQPushButton(_('Reset'))
-        self.speedTestURLResetBtn.clicked.connect(self._resetSpeedTestURL)
+
+        connectWeakly(
+            self.speedTestURLResetBtn.clicked,
+            self,
+            '_resetSpeedTestURL',
+        )
+
         self.connectivityResetBtn = AppQPushButton(_('Reset'))
-        self.connectivityResetBtn.clicked.connect(self._resetConnectivityURL)
+
+        connectWeakly(
+            self.connectivityResetBtn.clicked,
+            self,
+            '_resetConnectivityURL',
+        )
 
         self.speedTestURLHboxLayout = QHBoxLayout()
         self.speedTestURLHboxLayout.addWidget(self.speedTestURLEdit)
@@ -99,7 +111,7 @@ class NetworkTestDialog(AppQDialog):
 
         self.setLayout(layout)
 
-        self.finished.connect(self.handleResultCode)
+        connectWeakly(self.finished, self, 'handleResultCode')
 
     @QtCore.Slot()
     def _resetSpeedTestURL(self):

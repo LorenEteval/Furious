@@ -42,7 +42,8 @@ class ConnectionProgressBar(Mixins.ConnectionAware, QProgressBar):
         # to a normal method avoids a parentless timer/closure cycle surviving
         # after the widget's Qt lifetime ends.
         self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self._advance)
+
+        connectWeakly(self.timer.timeout, self, '_advance')
 
         self._setConnectionState('disconnected')
 

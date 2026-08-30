@@ -43,26 +43,39 @@ def _ownsQObject(owner, object_) -> bool:
     return False
 
 
-def _weakMethodInvoker(
-    receiver: Any,
-    methodName: str,
-    *,
-    sender=None,
-    forwardSender: bool = False,
-):
-    """Return a plain callable that weakly dispatches to one named method."""
-    if not isinstance(methodName, str) or not methodName:
-        raise ValueError('method name must be a non-empty string')
+class _WeakMethodInvoker:
+    """Weakly resolve one named method without a closure or bound callback."""
 
-    if forwardSender and sender is None:
-        raise ValueError('forwarding requires an explicit sender')
+    __slots__ = (
+        '_receiverReference',
+        '_methodName',
+        '_senderReference',
+        '_forwardSender',
+    )
 
-    receiverReference = weakref.ref(receiver)
-    senderReference = weakref.ref(sender) if sender is not None else None
+    def __init__(
+        self,
+        receiver: Any,
+        methodName: str,
+        *,
+        sender=None,
+        forwardSender: bool = False,
+    ):
+        """Retain only weak QObject owners and immutable dispatch metadata."""
+        if not isinstance(methodName, str) or not methodName:
+            raise ValueError('method name must be a non-empty string')
 
-    def invoke(*args, **kwargs):
+        if forwardSender and sender is None:
+            raise ValueError('forwarding requires an explicit sender')
+
+        self._receiverReference = weakref.ref(receiver)
+        self._methodName = methodName
+        self._senderReference = weakref.ref(sender) if sender is not None else None
+        self._forwardSender = forwardSender
+
+    def __call__(self, *args, **kwargs):
         """Invoke the named method while its Python and Qt owners remain valid."""
-        currentReceiver = receiverReference()
+        currentReceiver = self._receiverReference()
 
         if currentReceiver is None:
             return None
@@ -70,12 +83,12 @@ def _weakMethodInvoker(
         if isinstance(currentReceiver, QtCore.QObject) and not isValid(currentReceiver):
             return None
 
-        method = getattr(currentReceiver, methodName)
+        method = getattr(currentReceiver, self._methodName)
 
-        if not forwardSender:
+        if not self._forwardSender:
             return method(*args, **kwargs)
 
-        currentSender = senderReference()
+        currentSender = self._senderReference()
 
         if currentSender is None:
             return None
@@ -85,7 +98,21 @@ def _weakMethodInvoker(
 
         return method(currentSender, *args, **kwargs)
 
-    return invoke
+
+def _weakMethodInvoker(
+    receiver: Any,
+    methodName: str,
+    *,
+    sender=None,
+    forwardSender: bool = False,
+):
+    """Return a plain callable object that weakly dispatches one named method."""
+    return _WeakMethodInvoker(
+        receiver,
+        methodName,
+        sender=sender,
+        forwardSender=forwardSender,
+    )
 
 
 def connectWeakly(

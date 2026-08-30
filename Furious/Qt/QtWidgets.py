@@ -2075,7 +2075,8 @@ class AppQMenuPushButton(AppQPushButton):
 
         self._popupMenu = None
         self.setPopupMenu(popupMenu)
-        self.clicked.connect(self.showPopupMenu)
+
+        connectWeakly(self.clicked, self, 'showPopupMenu')
 
     def popupMenu(self):
         """Return the menu presented by this button."""

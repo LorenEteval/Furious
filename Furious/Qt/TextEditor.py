@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
+from Furious.Qt.Signals import connectWeakly
 from Furious.Qt.TextEditorTheme import *
 
 from PySide6 import QtCore
@@ -306,11 +307,19 @@ class DraculaTextEditor(Mixins.ThemeAware, AppQPlainTextEdit):
             )
         )
 
-        # QObject-bound slots are important here.  Nested closures connected to
-        # the editor's own signals retain the complete editor widget tree in
-        # PySide even after its window has been destroyed.
-        self.modificationChanged.connect(self._handleModificationChanged)
-        self.cursorPositionChanged.connect(self._handleCursorPositionChanged)
+        # Nuitka protects compiled bound methods passed directly to connect().
+        # Resolve these callbacks weakly so closed transient editors can release
+        # their Python wrappers as well as their native widget trees.
+        connectWeakly(
+            self.modificationChanged,
+            self,
+            '_handleModificationChanged',
+        )
+        connectWeakly(
+            self.cursorPositionChanged,
+            self,
+            '_handleCursorPositionChanged',
+        )
 
     @QtCore.Slot(bool)
     def _handleModificationChanged(self, changed):

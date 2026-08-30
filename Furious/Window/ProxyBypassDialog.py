@@ -62,11 +62,17 @@ class ProxyBypassDialog(AppQDialog):
         self.dialogBtns.addButton(
             _('Cancel'), AppQDialogButtonBox.ButtonRole.RejectRole
         )
-        self.dialogBtns.accepted.connect(self.accept)
-        self.dialogBtns.rejected.connect(self.reject)
+
+        connectWeakly(self.dialogBtns.accepted, self, 'accept')
+        connectWeakly(self.dialogBtns.rejected, self, 'reject')
 
         self.resetBtn = AppQPushButton(_('Reset'))
-        self.resetBtn.clicked.connect(self.handleResetButtonClicked)
+
+        connectWeakly(
+            self.resetBtn.clicked,
+            self,
+            'handleResetButtonClicked',
+        )
 
         self.hboxLayout = QHBoxLayout()
         self.hboxLayout.addWidget(self.resetBtn)
@@ -80,7 +86,7 @@ class ProxyBypassDialog(AppQDialog):
 
         self.setLayout(layout)
 
-        self.finished.connect(self.handleResultCode)
+        connectWeakly(self.finished, self, 'handleResultCode')
 
     def handleResultCode(self, code):
         """Handle result code."""

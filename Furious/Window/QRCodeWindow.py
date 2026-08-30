@@ -22,7 +22,7 @@ from __future__ import annotations
 from Furious.Frozenlib import APPLICATION_NAME
 from Furious.Plugins import exportConfiguration
 from Furious.Repository import Storage
-from Furious.Qt import AppQMainWindow, AppQTabWidget
+from Furious.Qt import AppQMainWindow, AppQTabWidget, connectWeakly
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
@@ -179,7 +179,12 @@ class QRCodeWindow(AppQMainWindow):
         self.tabWidget = AppQTabWidget(parent=self, translatable=False)
         self.tabWidget.setTabsClosable(True)
         self.tabWidget.setElideMode(QtCore.Qt.TextElideMode.ElideRight)
-        self.tabWidget.tabCloseRequested.connect(self.handleTabCloseRequested)
+
+        connectWeakly(
+            self.tabWidget.tabCloseRequested,
+            self,
+            'handleTabCloseRequested',
+        )
 
         self.setCentralWidget(self.tabWidget)
 

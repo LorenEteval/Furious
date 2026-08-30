@@ -197,6 +197,49 @@ class QtLifetimeTest(unittest.TestCase):
         for pool, baseline in poolBaselines.items():
             self.assertEqual(len(pool.ObjectsPool), baseline)
 
+    def testCompiledBoundMethodProtectionDoesNotRetainTransientActions(self):
+        """Keep Nuitka-like protected callbacks without retaining deleted actions."""
+        originalConnect = QtCore.SignalInstance.connect
+        protectedCallbacks = []
+        triggered = []
+
+        def protectingConnect(signal, callback, *args, **kwargs):
+            """Emulate the packaged runtime's global bound-method protection."""
+            if getattr(callback, '__self__', None) is not None:
+                protectedCallbacks.append(callback)
+
+            return originalConnect(signal, callback, *args, **kwargs)
+
+        references = []
+
+        with mock.patch.object(
+            QtCore.SignalInstance,
+            'connect',
+            protectingConnect,
+        ):
+            for index in range(100):
+                action = AppQAction(
+                    'Fixture action',
+                    callback=lambda value=index: triggered.append(value),
+                )
+                references.append(weakref.ref(action))
+
+                action.trigger()
+                action.deleteLater()
+
+        del action
+
+        collectAtBoundary()
+
+        self.assertEqual(triggered, list(range(100)))
+        self.assertTrue(all(reference() is None for reference in references))
+        self.assertFalse(
+            any(
+                isinstance(getattr(callback, '__self__', None), AppQAction)
+                for callback in protectedCallbacks
+            )
+        )
+
     def testAsyncDialogRegistryRetainsUntilNativeDestruction(self):
         """Keep a delete-on-close wrapper alive through deferred destruction."""
         dialog = ProbeTransientDialog()

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Qt.DynamicTranslate import gettext as _
+from Furious.Qt.Signals import connectWeakly
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -177,15 +178,20 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
         if shortcut is not None:
             self.setShortcut(shortcut)
 
-        # Connect to a real QObject method rather than a nested closure that
-        # captures this action.  PySide stores Python callables connected to a
-        # signal outside the normal Python object graph; a closure here leaves
-        # an otherwise unowned QAction alive indefinitely.
-        self.triggered.connect(self._handleTriggered)
+        # Keep the compiled callback outside Nuitka's process-global bound-method
+        # protection. The weak dispatcher resolves this action only while its
+        # Python wrapper and native QAction are still alive.
+        connectWeakly(self.triggered, self, '_handleTriggered')
 
     @QtCore.Slot(bool)
-    def _handleTriggered(self, paramChecked):
+    def _handleTriggered(self, paramChecked=None):
         """Dispatch activation without creating a signal/self reference cycle."""
+        # QAction.triggered(bool) exposes its argument as optional to Python, so
+        # PySide may select the zero-argument form for a variadic dispatcher.
+        # Recover the authoritative state from the action in that case.
+        if paramChecked is None:
+            paramChecked = self.isChecked()
+
         logger.info(f'action is \'{self.textEnglish}\'. Checked is {paramChecked}')
 
         if callable(self.callback):

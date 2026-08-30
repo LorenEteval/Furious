@@ -88,13 +88,15 @@ class XrayAssetWindow(AppQMainWindow):
             _('Delete'),
             icon=bootstrapIcon('trash.svg'),
         )
-        self.deleteButton.clicked.connect(self.deleteSelectedItem)
+
+        connectWeakly(self.deleteButton.clicked, self, 'deleteSelectedItem')
 
         self.closeWindowButton = AppQPushButton(
             _('Close Window'),
             icon=bootstrapIcon('window-x.svg'),
         )
-        self.closeWindowButton.clicked.connect(self.close)
+
+        connectWeakly(self.closeWindowButton.clicked, self, 'close')
 
         actionLayout = QHBoxLayout()
         actionLayout.setContentsMargins(0, 0, 0, 0)

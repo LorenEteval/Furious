@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Interface import *
+from Furious.Qt.Signals import connectWeakly
 
 from PySide6 import QtCore
 
@@ -150,7 +151,11 @@ class MsgQueue(multiprocessing.queues.Queue):
         )
 
         self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.processMsg)
+        self._timerConnection = connectWeakly(
+            self.timer.timeout,
+            self,
+            'processMsg',
+        )
         self.timeout = self.ACTIVE_DRAIN_INTERVAL
         self.callback = msgCallback
 
@@ -183,10 +188,13 @@ class MsgQueue(multiprocessing.queues.Queue):
         """Release Qt and multiprocessing resources after final process use."""
         self.stopTimer()
 
-        try:
-            self.timer.timeout.disconnect(self.processMsg)
-        except (RuntimeError, TypeError):
-            pass
+        if self._timerConnection is not None:
+            try:
+                QtCore.QObject.disconnect(self._timerConnection)
+            except (RuntimeError, TypeError):
+                pass
+
+            self._timerConnection = None
 
         self.timer.deleteLater()
         self.callback = None
@@ -271,7 +279,11 @@ class CoreProcessMonitor(CoreRuntime, ABC):
         self._lastExitCode = None
 
         self._daemon = QtCore.QTimer()
-        self._daemon.timeout.connect(self.queryIsAlive)
+        self._daemonConnection = connectWeakly(
+            self._daemon.timeout,
+            self,
+            'queryIsAlive',
+        )
 
     @property
     def process(self) -> Union[multiprocessing.Process, None]:
@@ -346,10 +358,13 @@ class CoreProcessMonitor(CoreRuntime, ABC):
         """Release the monitor timer after this runtime leaves its owner pool."""
         self.daemon.stop()
 
-        try:
-            self.daemon.timeout.disconnect(self.queryIsAlive)
-        except (RuntimeError, TypeError):
-            pass
+        if self._daemonConnection is not None:
+            try:
+                QtCore.QObject.disconnect(self._daemonConnection)
+            except (RuntimeError, TypeError):
+                pass
+
+            self._daemonConnection = None
 
         self.daemon.deleteLater()
         self.closeProcess()
