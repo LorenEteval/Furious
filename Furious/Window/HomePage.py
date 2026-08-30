@@ -825,7 +825,9 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         AppSettingsController().systemProxyModeChanged.connect(
             self._syncSystemProxyMode
         )
-        AppSettingsController().tunModeChanged.connect(self.tunModeSwitch.syncChecked)
+        AppSettingsController().tunModeChanged.connect(
+            self.tunModeSwitch.syncCheckedAnimated
+        )
 
         AppConnectionController().interactionEnabledChanged.connect(
             self.setConnectionControlsEnabled

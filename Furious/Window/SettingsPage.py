@@ -661,7 +661,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.tunModeCard.checkBox.setEnabled(self._tunModeAvailable)
 
         AppSettingsController().tunModeChanged.connect(
-            self.tunModeCard.checkBox.syncChecked
+            self.tunModeCard.checkBox.syncCheckedAnimated
         )
 
         (

@@ -148,6 +148,23 @@ class AppQSwitch(Mixins.ThemeAware, QCheckBox):
 
         del blocker
 
+    def syncCheckedAnimated(self, checked: bool):
+        """Animate changed external state without emitting another request."""
+        checked = bool(checked)
+
+        if self.isChecked() == checked:
+            # A user toggle already started the canonical animation before its
+            # committed state was broadcast back through the shared authority.
+            return
+
+        blocker = QtCore.QSignalBlocker(self)
+
+        self.setChecked(checked)
+
+        del blocker
+
+        self._animateToggle(checked)
+
     def hitButton(self, position: QtCore.QPoint) -> bool:
         """Make the complete custom-painted switch track interactive."""
         return self.rect().contains(position)

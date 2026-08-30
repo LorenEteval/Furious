@@ -25,7 +25,7 @@ from Furious.Frozenlib import AppBuiltinProxyMode, AppSettings
 from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Plugins.API import RoutingOption
 from Furious.Repository import Storage, SubscriptionGroup
-from Furious.Qt import AppQDialog
+from Furious.Qt import AppQDialog, AppQSwitch
 from Furious.Widget.RoutingSelector import RoutingSelector
 from Furious.Widget.ServerTableView import ServerTableView
 from Furious.Window.HomePage import HomePage
@@ -690,7 +690,9 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                 )
 
                 settingsController.systemProxyModeChanged.connect(proxyCard.sync)
-                settingsController.tunModeChanged.connect(tunCard.checkBox.syncChecked)
+                settingsController.tunModeChanged.connect(
+                    tunCard.checkBox.syncCheckedAnimated
+                )
                 settingsLayout.addWidget(proxyCard)
                 settingsLayout.addWidget(tunCard)
 
@@ -740,10 +742,20 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     QtCore.Qt.MouseButton.LeftButton,
                     pos=home.tunModeSwitch.rect().center(),
                 )
+
+                QTest.qWait(40)
+
+                for switch in (home.tunModeSwitch, tunCard.checkBox):
+                    self.assertGreater(switch.thumbPosition, 0.0)
+                    self.assertLess(switch.thumbPosition, 1.0)
+
+                QTest.qWait(AppQSwitch.AnimationDuration)
                 processQtEvents()
 
                 self.assertTrue(home.tunModeSwitch.isChecked())
                 self.assertTrue(tunCard.checkBox.isChecked())
+                self.assertEqual(home.tunModeSwitch.thumbPosition, 1.0)
+                self.assertEqual(tunCard.checkBox.thumbPosition, 1.0)
                 self.assertEqual(tunStates, [True])
 
                 QTest.mouseClick(
@@ -751,11 +763,41 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     QtCore.Qt.MouseButton.LeftButton,
                     pos=tunCard.checkBox.rect().center(),
                 )
+
+                QTest.qWait(40)
+
+                for switch in (home.tunModeSwitch, tunCard.checkBox):
+                    self.assertGreater(switch.thumbPosition, 0.0)
+                    self.assertLess(switch.thumbPosition, 1.0)
+
+                QTest.qWait(AppQSwitch.AnimationDuration)
                 processQtEvents()
 
                 self.assertFalse(home.tunModeSwitch.isChecked())
                 self.assertFalse(tunCard.checkBox.isChecked())
+                self.assertEqual(home.tunModeSwitch.thumbPosition, 0.0)
+                self.assertEqual(tunCard.checkBox.thumbPosition, 0.0)
                 self.assertEqual(tunStates, [True, False])
+
+                QTest.mouseClick(
+                    home.tunModeSwitch,
+                    QtCore.Qt.MouseButton.LeftButton,
+                    pos=home.tunModeSwitch.rect().center(),
+                )
+                QTest.qWait(20)
+                QTest.mouseClick(
+                    home.tunModeSwitch,
+                    QtCore.Qt.MouseButton.LeftButton,
+                    pos=home.tunModeSwitch.rect().center(),
+                )
+                QTest.qWait(AppQSwitch.AnimationDuration + 40)
+                processQtEvents()
+
+                self.assertFalse(home.tunModeSwitch.isChecked())
+                self.assertFalse(tunCard.checkBox.isChecked())
+                self.assertEqual(home.tunModeSwitch.thumbPosition, 0.0)
+                self.assertEqual(tunCard.checkBox.thumbPosition, 0.0)
+                self.assertEqual(tunStates, [True, False, True, False])
 
                 connectionController.setInteractionEnabled(False)
                 processQtEvents()
