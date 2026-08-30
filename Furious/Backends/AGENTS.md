@@ -25,22 +25,13 @@
 - A runtime owns its exact process/thread/readers/monitors and publishes an actionable start error. Stop/dispose is
   bounded, idempotent, and correct after partial acquisition.
 
-## Backend-specific invariants
+## Backend scopes
 
-- **Xray:** preserve the full JSON document, including unrelated inbounds/outbounds, routing, logging, extensions, and
-  unknown transport/security data. Tagged protocol/transport/TLS editors and URI codecs alter only their projection.
-  Compatibility transport-alias migration must be explicit. Xray also owns routing/assets/API statistics and its asset
-  environment contract; asset replacement is digest-verified and atomic.
-- **Hysteria 1:** retain its legacy flat schema/share-link semantics and tolerated upstream values. Do not import
-  Hysteria 2 nested documents, obfuscation, statistics, or native-TUN policy. It uses application tun2socks when needed
-  and owns the MMDB/ACL assets consumed by its runtime.
-- **Hysteria 2:** preserve the native nested client document, unknown future values, optional-group absence, and tagged
-  obfuscation siblings. Its runtime factory owns native-TUN privilege/address/route-exclusion policy and statistics
-  capabilities; registries retain descriptors/providers, not request-lifetime monitors/dialogs.
-- **External Core:** model a user-selected executable, not a protocol binding. Validate absolute executable/working
-  directory, argument/environment types and NULs, endpoints, bounded shutdown timeout, and optional application-TUN
-  metadata before spawn. Execute an argument vector with `shell=False`; never log environment/arguments or search by
-  process name. The runtime owns one exact `Popen`, readers, watcher, buffering, termination escalation, and reaping.
+- Read the selected backend's nested guide before changing its configuration, editor, protocol codec, runtime, TUN,
+  routing, asset, statistics, or process behavior. Those child guides own backend-specific compatibility details; keep
+  this parent focused on rules that every backend must satisfy.
+- A shared backend-contract change must be checked against Xray, Hysteria 1, Hysteria 2, and External Core rather than
+  making the most feature-rich backend the implicit default for the others.
 
 ## Verification
 
