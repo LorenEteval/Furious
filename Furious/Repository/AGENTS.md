@@ -1,17 +1,18 @@
 # Repository guidance
 
-- Repositories restore and persist server profiles, subscription definitions, routings, and TUN settings. They currently
-  encode collections into registered `AppSettings`/QSettings values and synchronize at application cleanup; they do not
-  own network workflows, controller state, or presentation.
-- `Storage` caches exactly one application-lifetime repository owner per collection and publicly exposes its live mutable
-  data for compatibility. Never create a competing cached copy. Prefer named repository mutations for new behavior so
-  validation and commit boundaries can move behind the repository over time.
-- Preserve stable profile/subscription IDs, ordering, unknown fields, legacy schemas, and explicit subscription
-  ownership. Display names and active row indexes are derived/compatibility state, not domain identity.
-- Restore failure is observable and an empty fallback must not overwrite unreadable persisted bytes during automatic
-  cleanup. An explicit successful mutation may intentionally replace that fallback. Prepare every fallible decode,
-  migration, or reconciliation before deterministic assignments to the live collection.
-- Subscription reconciliation may change only profiles explicitly owned by that group and stable profile key. Preserve
-  local metadata and object/profile identity for matched profiles; mark removed profiles and reindex only at commit.
-- Verify old/current/unknown-field round trips, ordering/identity, subscription isolation, malformed persisted roots,
-  failed pre-commit transforms, explicit replacement after restore failure, and temporary QSettings isolation.
+- Repositories restore, migrate, order, and persist profiles, subscriptions, routings, and TUN settings. They do not own
+  network workflows, controller state, test schedulers, or presentation.
+- `Storage` owns one application-lifetime backend per collection and exposes live mutable collections for compatibility.
+  Do not add a second cache/snapshot authority. Prefer named repository mutations so validation and commit boundaries
+  can move behind the repository over time.
+- Preserve stable profile/subscription IDs, subscription ownership/key, ordering, unknown fields, and legacy schemas.
+  Active row/index and display text are compatibility/presentation state, not identity.
+- A restore failure remains observable. Automatic cleanup must not replace unreadable persisted bytes with an empty
+  fallback; only an explicit successful replacement may do so.
+- Stage fallible decode, migration, or reconciliation before deterministic mutation of the live collection. A
+  subscription commit changes only that group: matched managed profiles retain stable object/profile identity and local
+  metadata, removed profiles are marked stale, and indexes/order update atomically.
+- Moving a profile between subscription displays does not automatically make it remotely managed; preserve the explicit
+  distinction between local membership and synchronization ownership.
+- Verify legacy/current/unknown-field round trips, malformed roots, restore-failure preservation, ordering/stable
+  identity, group isolation, reconciliation commit behavior, and persistence in temporary QSettings namespaces.

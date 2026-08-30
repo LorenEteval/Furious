@@ -1,41 +1,49 @@
 # Backend guidance
 
-## Responsibility and extension
+## Common backend contract
 
-- A backend plugin owns the protocol/document types, parsing/export, structured editor factories, runtime factory,
-  validation, and any supported routing, native-TUN, statistics, settings, actions, or assets. Shared orchestration asks
-  capabilities; it does not branch on `coreName()`.
-- `Backends.Configuration` and URI codec modules contain compatibility-era shared document implementations. They may be
-  refactored, but protocol behavior must remain owned and dispatched by capabilities, with model/API layers free of
-  concrete backend imports.
-- The full core document is the runtime authority. Prepare routing, logging, probes, local endpoints, and TUN on an
-  explicit copy and preserve the persisted profile plus unknown supported fields. Fail visibly when a lossless mapping
-  or valid runtime document cannot be produced.
-- Keep runtime/configuration modules importable without constructing Qt editors. Official plugin type imports remain
-  lazy, registrations literal enough for Nuitka discovery, and every editor/runtime factory returns a fresh object that
-  the registry does not retain.
+- A backend plugin owns its configuration/document types, parsing/export, validation, editor factories, runtime factory,
+  and supported routing, TUN, statistics, settings, actions, or assets. Shared code asks capabilities and never branches
+  on core names.
+- The complete persisted core document is authoritative. Prepare logging, routing, endpoints, probes, and TUN on an
+  independent runtime copy; failed preparation must not mutate the stored profile.
+- Structured editors are partial projections. Loading is observational except for a narrow documented migration;
+  untouched save preserves unknown fields/values and absent defaults. Editing one represented leaf preserves unknown
+  siblings and unrelated branches.
+- Malformed external input returns controlled validation with backend context. Do not create a plausible but different
+  profile, and do not log credentials, complete URIs, or documents.
+- Configuration/runtime modules stay importable without constructing Qt editors. Plugin registration remains literal
+  enough for compiled discovery; editor/runtime factories return fresh objects that the registry does not retain.
 
-## Structured editor contract
+## TUN and runtime policy
 
-- Loading is observational except for a narrowly documented compatibility migration. Saving changes only represented
-  fields the user changed, preserves unknown siblings/top-level data, and does not materialize absent effective defaults.
-- Unknown future enum/tag/string values remain visible and survive an untouched round trip. An explicit switch to a
-  known tagged variant may replace only the incompatible variant data owned by that control.
-- Validation separates malformed external/persisted input from internal invariant failure and retains backend/core
-  context without logging credentials or full configuration documents.
+- Global TUN first asks the selected runtime factory to prepare native TUN on the copy. Managed native TUN replaces the
+  backend's runtime TUN; disabled management preserves any explicit user TUN—even malformed, so the core can reject it.
+  Either native case suppresses application tun2socks; only absence may permit the fallback.
+- Proxy/download-test copies explicitly remove native TUN. A managed-native-TUN preparation failure is terminal rather
+  than permission to silently switch implementations.
+- A runtime owns its exact process/thread/readers/monitors and publishes an actionable start error. Stop/dispose is
+  bounded, idempotent, and correct after partial acquisition.
 
-## TUN and runtime ownership
+## Backend-specific invariants
 
-- Global TUN mode first asks the selected factory to prepare native TUN on the runtime copy. When managed native TUN is
-  enabled it replaces runtime native-TUN configuration; when disabled, any explicit user native TUN is preserved. Either
-  native case suppresses application tun2socks. Only a configuration with no native TUN may opt into the fallback.
-- Treat presence of malformed explicit native TUN as authoritative so the core reports it; never silently change the
-  networking mode or run two TUN implementations. Proxy/download probes explicitly strip TUN from their own copy.
-- A `CoreRuntime` owns exact resources, publishes an actionable `startError()`, and has bounded idempotent cleanup after
-  success or partial failure. Process-backed implementations additionally terminate/kill/reap only their exact child.
+- **Xray:** preserve the full JSON document, including unrelated inbounds/outbounds, routing, logging, extensions, and
+  unknown transport/security data. Tagged protocol/transport/TLS editors and URI codecs alter only their projection.
+  Compatibility transport-alias migration must be explicit. Xray also owns routing/assets/API statistics and its asset
+  environment contract; asset replacement is digest-verified and atomic.
+- **Hysteria 1:** retain its legacy flat schema/share-link semantics and tolerated upstream values. Do not import
+  Hysteria 2 nested documents, obfuscation, statistics, or native-TUN policy. It uses application tun2socks when needed
+  and owns the MMDB/ACL assets consumed by its runtime.
+- **Hysteria 2:** preserve the native nested client document, unknown future values, optional-group absence, and tagged
+  obfuscation siblings. Its runtime factory owns native-TUN privilege/address/route-exclusion policy and statistics
+  capabilities; registries retain descriptors/providers, not request-lifetime monitors/dialogs.
+- **External Core:** model a user-selected executable, not a protocol binding. Validate absolute executable/working
+  directory, argument/environment types and NULs, endpoints, bounded shutdown timeout, and optional application-TUN
+  metadata before spawn. Execute an argument vector with `shell=False`; never log environment/arguments or search by
+  process name. The runtime owns one exact `Popen`, readers, watcher, buffering, termination escalation, and reaping.
 
 ## Verification
 
-- Test document/mapping/URI round trips, legacy/malformed/unknown input, untouched editor observation, persisted
-  immutability, exact runtime document, the complete TUN matrix and probe stripping, start failure/rollback/cleanup,
-  import/discovery, and repeated editor/dialog destruction.
+- Test mapping/document/URI round trips; malformed, legacy, and unknown input; untouched-editor preservation; persisted
+  immutability; exact runtime/probe documents; every native/application-TUN case; startup/rollback/cleanup; assets and
+  statistics where applicable; plugin discovery; and repeated editor/dialog destruction.

@@ -1,58 +1,47 @@
 # Service guidance
 
-## Workflow and ownership boundaries
+## Workflow ownership
 
-- Services own workflows and temporary resources; controllers own shared application state and UI owns presentation.
-  A service may use Qt for signals/networking, but it does not own pages or create message boxes.
-- Construct QObject services only after a Qt application exists. Give every worker, reply, timer, executor, runtime,
-  process, cache, and callback context one durable service/application owner with bounded, idempotent cleanup.
-- Inject repositories, providers, clocks, clients, and runtime factories where practical. Stage data and commit through
-  the owning repository/controller; do not create a parallel authoritative collection.
+- Services own workflows and temporary resources; controllers own shared state, repositories own durable collections,
+  and UI owns presentation. Services may use Qt signals/networking but do not create pages or message boxes.
+- Give each QObject service, worker, reply, timer, pool, thread, runtime, process, cache, and callback context one durable
+  owner and bounded idempotent cleanup. Construct Qt services only after an application exists.
+- Inject repositories/providers/clients/runtime factories where practical. Stage results, prove freshness, and commit
+  through the owning repository/controller rather than creating a parallel authoritative collection.
+- Every async workflow defines supersession and one terminal path. Generation/version or exact target identity rejects
+  stale completion; terminal cleanup aborts/finishes once, deletes replies/Qt objects in their owning thread, and cannot
+  retain a shut-down manager.
 
-## Runtime and asynchronous invariants
+## Connection and network workflows
 
-- `ConnectionManager` consumes an attempt-scoped copy, asks the selected factory for native-TUN/application-tun2socks
-  policy, and owns exact runtimes only after commit. Normal built-in GUI startup belongs to one generation-checked
-  `ConnectionStartOperation`: launch, local-endpoint readiness, asynchronous DNS, TUN-device observation, host mutation,
-  rollback, and commit advance through owned Qt timers/signals without a nested event loop. The synchronous `start()`
-  path is a compatibility boundary for legacy plugins/non-interactive callers, not the preferred GUI path. On failure
-  or cancellation, roll back only resources acquired by that attempt and restore host routing/DNS through those owners.
-- Every async workflow defines supersession: generation/version checks for stale completion or exact-object identity for
-  independent requests. Terminal paths release context, finish/abort once, and schedule each Qt reply for deletion.
-  Callbacks cannot retain a shut-down manager; worker results cross into the manager's Qt thread before mutation.
-- `HttpGetManager` supplies common reply ownership and transfer timeouts. DNS recursion is depth/time bounded; update and
-  connectivity requests own their active reply and cancellation. Never use page visibility as request or scheduler
-  ownership.
-- Log/process transport and metric history stay bounded and continue collecting/draining independently of rendering.
-  Raw traffic samples are immutable; speed/usage baselines and graph buckets are derived state. Generation changes reject
-  stale statistics futures.
-- `SubscriptionManager` owns download, decode/filter, group-scoped reconciliation, persistence metadata, stable-ID
-  schedules, cancellation, and reconnect/disconnect follow-up. Freshness is checked before commit; one group failure does
-  not cancel current peers; post-commit side-effect failure does not roll back reconciliation; unchanged scheduling
-  policy does not restart timers or duplicate connections.
-- Keep the subscription stages distinct: decoders emit neutral `SubscriptionItem` values;
-  `SubscriptionImportService` constructs profiles and metadata; `SubscriptionSynchronizer` prepares group-scoped
-  reconciliation; `SubscriptionManager` owns request/schedule generations and commits the prepared result. Do not move
-  repository or UI mutation into a decoder merely to shorten this path.
-- Endpoint inspection uses only the active proxy, neutral request metadata, bounded caches, and connection generations.
-  Reject stale results and disclose actual providers without exposing profile credentials or complete destinations.
-- Tcping execution owns sockets and deadlines in one lazily started Qt networking thread. Accept only endpoint-level
-  requests, keep the adaptive concurrency window bounded, return results through thread-safe events, and synchronously
-  destroy the engine in its own thread after cancellation and event-loop shutdown.
-- `ProfileTestManager` is the sole profile-test write-back boundary. Jobs combine a stable ID/fingerprint/snapshot with
-  explicit latency or download options; workers return results without mutating profiles, and the manager resolves the
-  current identity before changing metadata or notifying presentation. Repository mutation refreshes its identity map;
-  subscription commit invalidates only that group's work and clears only that group's current results.
-- Keep Ping, Tcping, and download execution specialized beneath that owner: blocking Ping uses a private bounded pool
-  and event-based completion; Tcping deduplicates endpoints and fans out results in bounded GUI batches; serial and
-  concurrent downloads share one scheduler implementation with separate concurrency/port ranges. Concurrent download
-  admission launches temporary cores without a synchronous readiness wait; each worker owns the readiness timer before
-  starting HTTP. Cancellation during core launch, readiness, or network startup must defer terminal publication and
-  deletion until an active startup frame unwinds, and shutdown must stop each exact pool, thread, reply, timer, and
-  temporary runtime.
+- GUI connection startup is a generation-checked transaction over a runtime copy: prepare TUN policy, launch and observe
+  the primary runtime, resolve DNS, acquire optional tun2socks, mutate host networking in platform order, then commit.
+  Failure/cancellation rolls back only attempt-owned runtimes and host changes. The synchronous start path is a
+  compatibility boundary, not the default GUI mechanism.
+- `HttpGetManager` owns reply/error/timeout cleanup. DNS recursion and external-input caches are bounded. Update,
+  connectivity, endpoint, subscription, and asset requests own their exact reply and reject stale generations.
+- Subscription stages remain separate: decoders return neutral items; import constructs profiles/metadata;
+  synchronization prepares one group reconciliation; the manager owns request/schedule generations and commits it.
+  Post-commit reconnect/test invalidation failure is reported without undoing the committed profiles.
+- Log transport, traffic collection, and metric history remain bounded and independent of page visibility. Rendering may
+  be lazy; collection/draining ownership is not.
+
+## Profile testing
+
+- `ProfileTestManager` is the sole result write-back boundary. A job captures stable profile ID, connection fingerprint,
+  snapshot, ownership, and explicit options; workers return values and the manager resolves the current target before
+  mutating latency/speed.
+- Repository changes reconcile queued/running jobs. A successful subscription commit cancels that group's pending and
+  active tests, stale-marks non-cancellable calls, clears only that group's current results, and leaves manual/other-group
+  work untouched.
+- Blocking Ping uses a private bounded pool. TCPing owns sockets/deadlines in one dedicated Qt networking thread,
+  deduplicates equal endpoint/policy requests, adapts within a fixed bound, and fans results into bounded GUI batches.
+- Download jobs own a temporary proxy-only runtime, readiness timer, port, network reply, and cancellation path. Serial
+  and concurrent admission share scheduler semantics; startup never blocks admission on a grace wait. Reentrant
+  cancellation defers terminal deletion until the active start frame unwinds.
 
 ## Verification
 
-- Test success plus invalid, partial, stale, timeout, cancel, failure, hidden-page, and repeated-cleanup paths with fake
-  providers/host operations. Review retained callbacks/replies, widgets owned by services, unbounded transports/caches,
-  repository mutation before final freshness checks, and commits incorrectly described as rolled back.
+- Cover success plus invalid, stale, superseded, timeout, cancellation, partial acquisition, hidden-page, reentrant, and
+  repeated-shutdown paths. Assert current identity at write-back and exact cleanup of pools, threads, sockets, replies,
+  timers, ports, runtimes, callbacks, and host mutations.

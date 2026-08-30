@@ -1,37 +1,52 @@
 # Furious package guidance
 
-## Package architecture
+## Responsibility boundaries
 
-- `Application` is the composition root. Elsewhere depend on the narrowest owning model, repository, service,
-  controller, or plugin capability; do not create a second authority merely to avoid an existing boundary.
-- Keep lower layers importable without application construction. `Interface` and `Models` cannot depend on UI,
-  controllers, services, repositories, or concrete backends. Backend imports remain lazy enough that importing
-  `Furious` does not initialize Qt resources, plugins, runtimes, or windows.
-- Package `__init__.py` files are curated public/import surfaces, not convenience mirrors of every module. Before adding
-  an export, check import direction, source installation, tests, and Nuitka discovery. Several settings are deliberately
-  registered as modules import, so moving imports can change which `AppSettings` keys exist during partial startup or
-  isolated tests.
-- Process-lifetime accessors in `Frozenlib.Globals` expose compatibility paths to deliberate application owners only.
-  They may be unavailable during tests, partial startup, or shutdown; new code should prefer explicit dependencies and
-  callers using globals must tolerate that boundary rather than installing fallback owners.
-- The current UI tree deliberately shares a few owners: `MainWindow` owns persistent pages, the server table owns the
-  subscription workflow used by both server and subscription views, and page-owned services live with their page.
-  Refactors may move those owners, but must leave exactly one durable owner and one state path.
-- Keep GUI-thread work short. Workers publish result data through the established Qt boundary and never mutate widgets
-  or live repositories directly from a worker thread.
+- `Application` is the composition root. Elsewhere depend on the narrowest model, repository, service, controller, or
+  plugin capability that owns the decision; do not add a second cache or state path to avoid an existing boundary.
+- Domain shape, identity, and core-neutral transformations belong in `Models`; restoration, migration, ordering, and
+  durable mutation in `Repository`; temporary work/external resources in `Service`; shared transitions in
+  `Controllers`; backend variation in plugin contracts/implementations; host mutation in `Frozenlib` or a runtime;
+  presentation in `Qt`, `Widget`, `Window`, or `Actions`.
+- `Interface` and `Models` stay dependency-light and must not import UI, controllers, services, repositories, or concrete
+  backends. Backend/runtime modules remain importable without constructing editors or the application.
+- Package `__init__.py` files are curated compatibility surfaces, not mirrors. Import order can register settings or
+  affect lazy plugin/Nuitka discovery; search public-import and packaging tests before changing exports.
 
-## Qt ownership and presentation
+## State, data, and ownership
 
-- Classify Qt objects as process/application-lifetime, reusable, or transient. Give each a durable Python owner,
-  compatible QObject parent, and explicit reuse or destruction path; audit every signal, timer, filter, cache, action,
-  model, delegate, reply, and callback that can extend that path.
-- Use the canonical `Furious.Qt` `AppQ*` controls. One-shot dialogs use `AppQTransientDialog` or `AppQMessageBox`;
-  reusable windows retain one explicit owner. For lifetime-sensitive changes, follow `Furious/Qt/AGENTS.md` and the
-  `manage-qt-pyside6-lifetimes` skill.
-- Reuse translation/theme-aware construction and layout behavior rather than parallel registries or call-site styling.
-  Preserve focus, keyboard, shortcut, accessibility, resize, high-DPI, and light/dark behavior.
-- UI presents failures at the interaction boundary; owning services/controllers expose structured, testable outcomes.
-- Route a change by authority: domain shape and identity to `Models`; persistence and migration to `Repository`;
-  temporary work and external resources to `Service`; shared transitions to `Controllers`; backend variation to plugin
-  contracts/implementations; host mutation to `Frozenlib`; and presentation to `Qt`, `Widget`, `Window`, or `Actions`.
-  If a change crosses these boundaries, keep one commit point and document which owner coordinates it.
+- A `ServerProfile` keeps connection data separate from metadata such as display name, stable profile ID, subscription
+  ownership, latency, and speed. Independent stored copies get new identity; runtime copies preserve identity while
+  isolating mutable connection preparation.
+- Profile ID, subscription source/key, connection fingerprint, display text, object identity, and row position are
+  distinct. Pick the identity required by the operation and reject stale async work before write-back.
+- Repository collections are live compatibility views owned once by `Storage`; do not wrap them in a competing
+  authoritative collection. Prefer named repository mutations for new behavior so validation and commit points remain
+  explicit.
+- Process-lifetime global accessors expose deliberate application owners and can be unavailable during partial startup,
+  isolated tests, or teardown. New code prefers explicit dependencies; compatibility callers tolerate absence rather
+  than inventing fallback globals.
+- Classify every Qt object as application-lifetime, reusable, or transient. Give it a durable Python owner, compatible
+  QObject parent, and explicit reuse/destruction path. UI/lifetime work follows `Furious/Qt/AGENTS.md` even when the
+  caller lives under `Widget`, `Window`, `Actions`, or a backend.
+
+## Change routing
+
+- Controllers publish shared state and coordinate owners; they do not own transient UI or long-running worker
+  resources. Services do not create pages/message boxes. Widgets issue commands and present outcomes rather than
+  absorbing workflow orchestration.
+- Plugin registries own process-lifetime plugins, descriptors, and factories—not factory-created widgets, active
+  runtimes, replies, or controller state. Bundled backends/extensions obey the same contracts as entry-point plugins.
+- Keep GUI work bounded, cross worker results through the owning Qt thread, and define cancellation/supersession for
+  every asynchronous workflow. Page visibility may control rendering, never ownership of collection or draining.
+- Preserve unknown/forward-compatible fields through model, repository, backend editor, and serialization changes.
+  Compatibility normalization must be narrow, intentional, and tested separately from observational loading.
+- Import, clipboard, share-link, file, and QR paths reuse the owning plugin codecs and validation. QR is a presentation
+  transport, not a second protocol parser; construct a complete neutral result before repository mutation and never log
+  the secret-bearing payload.
+
+## Local guides
+
+- Read the applicable specialized guide for application composition, embedded core processes, platform helpers,
+  repositories, plugins, services, backends, Qt ownership, translations, or bundled data. A missing child guide means
+  this file and the root guide are sufficient; do not recreate one merely to restate them.
