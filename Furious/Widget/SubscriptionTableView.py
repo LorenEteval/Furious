@@ -71,8 +71,15 @@ registerAppSettings(SUBSCRIPTION_HEADER_STATE_SETTING)
 class SubscriptionTableHorizontalHeader(AppQHeaderView):
     """Provide the user subs Qt table view horizontal table header."""
 
-    ColumnKeys = ('remark', 'webURL', 'enabled', 'lastUpdated', 'profiles')
-    DefaultSectionSizes = (260, 520, 120, 220, 140)
+    ColumnKeys = (
+        'remark',
+        'webURL',
+        'enabled',
+        'lastSyncStatus',
+        'lastUpdated',
+        'profiles',
+    )
+    DefaultSectionSizes = (260, 520, 120, 150, 220, 140)
     LegacyColumnKeys = ('remark', 'webURL', 'autoupdate', 'proxy')
 
     # Format discriminator for the semantic JSON stored under
@@ -281,6 +288,15 @@ class SubscriptionTableColumn:
         return self.name
 
 
+def subscriptionSyncStatusText(item: dict) -> str:
+    """Return one concise, localized subscription synchronization state."""
+    return {
+        'syncing': _('Updating...'),
+        'success': _('Updated'),
+        'error': _('Update Failed'),
+    }.get(str(item.get('lastSyncStatus', '')), _('Never'))
+
+
 class UserSubsTableModel(QtCore.QAbstractTableModel):
     """Expose user subs table data through a Qt item model."""
 
@@ -321,6 +337,7 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
             'autoupdate',
             'proxy',
             'enabled',
+            'lastSyncStatus',
             'lastUpdated',
             'profiles',
         ]:
@@ -391,6 +408,7 @@ class UserSubsTableModel(QtCore.QAbstractTableModel):
             'autoupdate',
             'proxy',
             'enabled',
+            'lastSyncStatus',
             'lastUpdated',
             'profiles',
         ]:
@@ -479,6 +497,10 @@ _TRANSLATABLE_HEADERS = [
     _('Auto Update Use Proxy'),
     _('Enabled'),
     _('Disabled'),
+    _('Sync Status'),
+    _('Updating...'),
+    _('Updated'),
+    _('Update Failed'),
     _('Last Updated'),
     _('Profiles'),
 ]
@@ -503,6 +525,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             'Enabled',
             lambda item: 'Enabled' if item.get('enabled', True) else 'Disabled',
         ),
+        SubscriptionTableColumn('Sync Status', subscriptionSyncStatusText),
         SubscriptionTableColumn(
             'Last Updated',
             lambda item: item.get('lastUpdated', ''),
@@ -515,6 +538,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         'remark',
         'webURL',
         'enabled',
+        'lastSyncStatus',
         'lastUpdated',
         'profiles',
     ]
@@ -713,6 +737,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             item.setdefault('userAgent', '')
             item.setdefault('filter', '')
             item.setdefault('lastUpdated', '')
+            item.setdefault('lastSyncStatus', '')
 
         self.sourceModel.emitAllChanged()
 

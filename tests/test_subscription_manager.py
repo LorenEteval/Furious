@@ -23,6 +23,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from Furious.Repository import Storage
 from Furious.Repository.Subscriptions import SubscriptionGroup
+from Furious.Qt import gettext
 from Furious.Service.SubscriptionManager import SubscriptionManager
 from Furious.Window.SubscriptionPage import SubscriptionPage
 from Furious.Widget.SubscriptionTableView import SubscriptionTableView
@@ -611,6 +612,53 @@ class SubscriptionManagerTest(TestCase):
         self.assertLessEqual(timer.remainingTime(), remainingBefore + 5)
         table.deleteLater()
         manager.deleteLater()
+
+    def testSubscriptionTableExposesPersistedSynchronizationStatus(self):
+        """Present the existing sync state without inventing a UI-owned copy."""
+        subscriptions = {
+            'group-a': self._subscription(lastSyncStatus=''),
+        }
+
+        with (
+            mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
+            mock.patch(
+                'Furious.Widget.SubscriptionTableView._',
+                side_effect=lambda text: text,
+            ),
+        ):
+            table = SubscriptionTableView()
+            model = table.sourceModel
+            statusColumn = table.ItemKey.index('lastSyncStatus')
+            statusIndex = model.index(0, statusColumn)
+
+            for persisted, expected in (
+                ('', 'Never'),
+                ('syncing', 'Updating...'),
+                ('success', 'Updated'),
+                ('error', 'Update Failed'),
+                ('future-value', 'Never'),
+            ):
+                with self.subTest(persisted=persisted):
+                    subscriptions['group-a']['lastSyncStatus'] = persisted
+
+                    self.assertEqual(
+                        model.data(statusIndex, QtCore.Qt.ItemDataRole.DisplayRole),
+                        expected,
+                    )
+
+            self.assertFalse(
+                model.flags(statusIndex) & QtCore.Qt.ItemFlag.ItemIsEditable
+            )
+
+            table.deleteLater()
+
+        self.assertEqual(
+            gettext('Sync Status', 'RU'),
+            'Статус синхронизации',
+        )
+        self.assertEqual(gettext('Updating...', 'RU'), 'Обновление...')
+        self.assertEqual(gettext('Updated', 'ZH'), '已更新')
+        self.assertEqual(gettext('Update Failed', 'ZH'), '更新失败')
 
     def testTargetedPolicyChangeDoesNotDisturbOtherSubscriptions(self):
         """Reconcile only the edited subscription's schedule."""

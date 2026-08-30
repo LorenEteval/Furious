@@ -3286,5 +3286,37 @@ TRANSLATION = {
         "RU": "Без подписки",
         "ZH": "无订阅",
         "isReviewed": "True"
+    },
+    "Sync Status": {
+        "source": [
+            "Furious.Widget.SubscriptionTableView"
+        ],
+        "RU": "Статус синхронизации",
+        "ZH": "同步状态",
+        "isReviewed": "True"
+    },
+    "Updating...": {
+        "source": [
+            "Furious.Widget.SubscriptionTableView"
+        ],
+        "RU": "Обновление...",
+        "ZH": "正在更新...",
+        "isReviewed": "True"
+    },
+    "Updated": {
+        "source": [
+            "Furious.Widget.SubscriptionTableView"
+        ],
+        "RU": "Обновлено",
+        "ZH": "已更新",
+        "isReviewed": "True"
+    },
+    "Update Failed": {
+        "source": [
+            "Furious.Widget.SubscriptionTableView"
+        ],
+        "RU": "Ошибка обновления",
+        "ZH": "更新失败",
+        "isReviewed": "True"
     }
 }
