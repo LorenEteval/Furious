@@ -7,8 +7,11 @@
 - Run `Translation.py --target <language>` with the repository interpreter after changing translatable source or curated
   wording. It rebuilds source membership, drops stale keys, preserves reviewed target text, initializes unresolved text,
   detects target collisions, and writes deterministic key order.
-- Inspect the full diff. Preserve deliberate translations/review flags, HTML/newline semantics, and natural RU/ZH meaning;
-  mark an entry reviewed only after a human has verified it. Do not hand-maintain the generated `source` module list.
+- Entry key order is `source`, language keys retained by the generator, then `isReviewed`. `source` contains
+  deduplicated fully qualified modules; do not curate that list manually because extraction rebuilds it.
+- Inspect the full diff. Preserve deliberate translations/review flags, HTML/newline semantics, and natural RU/ZH
+  meaning; mark an entry reviewed only after a human has verified it. Do not hand-maintain the generated `source` module
+  list.
 
 ## Extractable source text
 
