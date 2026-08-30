@@ -327,7 +327,12 @@ class XrayCoreRuntimeFactory(CoreRuntimeFactory):
         )
         runtime.xrayStatsTarget = statsTarget
 
-        return CoreRuntimeLaunch(runtime, config, options=request.options)
+        return CoreRuntimeLaunch(
+            runtime,
+            config,
+            options=request.options,
+            startup=CoreRuntimeStartup(endpoint=config.httpProxy()),
+        )
 
     def prepareDownloadTest(self, config, port: int):
         """Create an Xray configuration with one local HTTP test inbound."""

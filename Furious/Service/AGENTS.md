@@ -12,8 +12,11 @@
 ## Runtime and asynchronous invariants
 
 - `ConnectionManager` consumes an attempt-scoped copy, asks the selected factory for native-TUN/application-tun2socks
-  policy, and owns exact runtimes only after commit. On failure it rolls back only resources acquired by that attempt and
-  restores host routing/DNS state through those owners.
+  policy, and owns exact runtimes only after commit. Normal built-in GUI startup belongs to one generation-checked
+  `ConnectionStartOperation`: launch, local-endpoint readiness, asynchronous DNS, TUN-device observation, host mutation,
+  rollback, and commit advance through owned Qt timers/signals without a nested event loop. The synchronous `start()`
+  path is a compatibility boundary for legacy plugins/non-interactive callers, not the preferred GUI path. On failure
+  or cancellation, roll back only resources acquired by that attempt and restore host routing/DNS through those owners.
 - Every async workflow defines supersession: generation/version checks for stale completion or exact-object identity for
   independent requests. Terminal paths release context, finish/abort once, and schedule each Qt reply for deletion.
   Callbacks cannot retain a shut-down manager; worker results cross into the manager's Qt thread before mutation.

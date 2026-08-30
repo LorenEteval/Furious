@@ -211,6 +211,7 @@ class Hysteria2CoreRuntimeFactory(CoreRuntimeFactory):
             runtime,
             request.configuration,
             options=request.options,
+            startup=CoreRuntimeStartup(endpoint=request.configuration.httpProxy()),
         )
 
     def prepareDownloadTest(self, config, port: int):

@@ -24,6 +24,7 @@ from Furious.Interface import *
 from Furious.Models import ServerProfile
 from Furious.Plugins import getPluginRegistry
 from Furious.Qt.DynamicTranslate import gettext as _
+from Furious.Qt.Signals import connectWeakly
 from Furious.Repository import Storage
 from Furious.Service import (
     CORE_LOG_CATEGORY,
@@ -102,6 +103,8 @@ class ConnectionController(QtCore.QObject):
         self._state = ConnectionState.Disconnected
         self._activeProfile = None
         self._lastError = None
+        self._startOperation = None
+        self._pendingHttpProxy = ''
 
         self._actionTimer = QtCore.QTimer(self)
         self._actionTimer.timeout.connect(self._callActionFromQueue)
@@ -187,6 +190,8 @@ class ConnectionController(QtCore.QObject):
 
     def _reset(self):
         """Restore disconnected state after all runtime resources stop."""
+        self._startOperation = None
+        self._pendingHttpProxy = ''
         self.progressFinished.emit(True)
         self._setActiveProfile(None)
 
@@ -269,11 +274,56 @@ class ConnectionController(QtCore.QObject):
 
         self._lastError = None
         self._setActiveProfile(configuration)
+        self._pendingHttpProxy = httpProxy
         self._startConnecting()
 
         logManager = AppLogManager()
         # Retain application diagnostics while starting a fresh runtime log.
         logManager.clear(runtimeOnly=True)
+
+        startAsync = getattr(self._coreManager, 'startAsync', None)
+
+        if callable(startAsync):
+            try:
+                operation = startAsync(
+                    configuration,
+                    routing=AppSettings.get('Routing'),
+                    exitCallback=self.coreExitCallback,
+                    msgCallbackCore=logManager.callback(CORE_LOG_CATEGORY),
+                    msgCallbackTUN_=logManager.callback(
+                        TUN2SOCKS_LOG_CATEGORY,
+                        source='Tun2socks',
+                    ),
+                )
+            except Exception as ex:
+                logger.error(f'failed to schedule core manager startup: {ex}')
+
+                return self._failConnection(
+                    f'{configuration.coreName()}: ' + _('Unknown error'),
+                    str(ex),
+                )
+
+            self._startOperation = operation
+            connectWeakly(
+                operation.succeeded,
+                self,
+                '_connectionStartSucceeded',
+                sender=operation,
+            )
+            connectWeakly(
+                operation.failed,
+                self,
+                '_connectionStartFailed',
+                sender=operation,
+            )
+            connectWeakly(
+                operation.cancelled,
+                self,
+                '_connectionStartCancelled',
+                sender=operation,
+            )
+
+            return True
 
         startExceptionDetails = ''
 
@@ -315,6 +365,10 @@ class ConnectionController(QtCore.QObject):
                 startExceptionDetails,
             )
 
+        return self._finishConnection(configuration, httpProxy)
+
+    def _finishConnection(self, configuration, httpProxy) -> bool:
+        """Commit system integration after manager runtime ownership commits."""
         settings = AppSettings.get('CustomProxyBypass')
 
         proxyServerBypass = (
@@ -352,13 +406,79 @@ class ConnectionController(QtCore.QObject):
 
         return True
 
+    @QtCore.Slot(object)
+    def _connectionStartSucceeded(self, operation):
+        """Finish the exact manager generation that committed successfully."""
+        if operation is not self._startOperation or not self.isConnecting():
+            return
+
+        self._startOperation = None
+        self._emitRuntimesChanged()
+
+        while not self._actionQueue.empty():
+            self._callActionFromQueue()
+
+        if not self.isConnecting():
+            return
+
+        configuration = self.activeProfile
+
+        if configuration is None:
+            self._failConnection(_('Unknown error'))
+
+            return
+
+        self._finishConnection(configuration, self._pendingHttpProxy)
+
+    @QtCore.Slot(object, str, str)
+    def _connectionStartFailed(self, operation, message, details):
+        """Return one failed manager generation to stable disconnected state."""
+        if operation is not self._startOperation:
+            return
+
+        self._startOperation = None
+        self._emitRuntimesChanged()
+
+        configuration = self.activeProfile
+        coreName = configuration.coreName() if configuration is not None else ''
+        startError = message or getattr(self._coreManager, 'lastStartError', '')
+        displayMessage = (f'{coreName}: ' if coreName else '') + (
+            _(startError) if startError else _('Unknown error')
+        )
+
+        self._failConnection(displayMessage, details)
+
+    @QtCore.Slot(object)
+    def _connectionStartCancelled(self, operation):
+        """Ignore stale cancellation or reset an externally cancelled start."""
+        if operation is not self._startOperation:
+            return
+
+        self._startOperation = None
+        self._emitRuntimesChanged()
+        self._reset()
+
     def startDisconnection(self, notification: str = '') -> bool:
         """Stop the active runtime and optionally request a notification."""
         if self.state is ConnectionState.Disconnected:
             return False
 
+        operation = self._startOperation
+
+        self._startOperation = None
         self._setState(ConnectionState.Disconnecting)
         self._actionTimer.stop()
+
+        if operation is not None:
+            cancelStart = getattr(self._coreManager, 'cancelStart', None)
+
+            if callable(cancelStart):
+                try:
+                    cancelStart(operation)
+                except Exception as ex:
+                    # Any non-exit exceptions
+
+                    logger.error(f'failed to cancel connection startup: {ex}')
 
         try:
             SystemProxy.off()
@@ -390,13 +510,10 @@ class ConnectionController(QtCore.QObject):
 
     def startReconnection(self, notification: str = '') -> bool:
         """Restart the active repository profile when lifecycle state permits."""
-        if self.state in (
-            ConnectionState.Connecting,
-            ConnectionState.Disconnecting,
-        ):
+        if self.state is ConnectionState.Disconnecting:
             return False
 
-        if self.isConnected():
+        if self.isConnected() or self.isConnecting():
             self.startDisconnection(notification)
 
         return self.startConnection()

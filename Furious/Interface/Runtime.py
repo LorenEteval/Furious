@@ -69,6 +69,14 @@ class CoreRuntime(ABC):
         if callable(self._exitCallback):
             self._exitCallback(self, exitcode)
 
+    def setExitCallback(self, callback):
+        """Transfer termination reporting to the runtime's current owner."""
+        self._exitCallback = callback
+
+    def confirmStartup(self) -> bool:
+        """Confirm readiness after an external startup observer succeeds."""
+        return True
+
     def startError(self) -> str:
         """Return the most recent concise startup failure, if any."""
         return self._startError

@@ -30,6 +30,7 @@ __all__ = [
     'CoreRuntimeFactory',
     'CoreRuntimeLaunch',
     'CoreRuntimeRequest',
+    'CoreRuntimeStartup',
     'FuriousPlugin',
     'NavigationPageDescriptor',
     'NavigationPageProvider',
@@ -402,6 +403,15 @@ class CoreRuntimeRequest:
 
 
 @dataclass(frozen=True)
+class CoreRuntimeStartup:
+    """Describe an optional event-driven readiness contract for one runtime."""
+
+    endpoint: str = ''
+    timeout: int = 2500
+    retryInterval: int = 50
+
+
+@dataclass(frozen=True)
 class CoreRuntimeLaunch:
     """Bind a constructed core runtime to its prepared start arguments."""
 
@@ -409,14 +419,18 @@ class CoreRuntimeLaunch:
     configuration: Any
     arguments: Tuple[Any, ...] = tuple()
     options: Mapping[str, Any] = field(default_factory=dict)
+    startup: Optional[CoreRuntimeStartup] = None
 
-    def start(self) -> bool:
+    def start(self, **optionOverrides) -> bool:
         """Start the prepared core runtime."""
+        options = dict(self.options)
+        options.update(optionOverrides)
+
         return bool(
             self.runtime.start(
                 self.configuration,
                 *self.arguments,
-                **dict(self.options),
+                **options,
             )
         )
 

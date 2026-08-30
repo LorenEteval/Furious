@@ -22,6 +22,7 @@ from __future__ import annotations
 from Furious.Frozenlib import *
 from Furious.Models import *
 from Furious.Qt.HttpGetManager import *
+from Furious.Qt.Signals import connectWeakly
 
 from PySide6 import QtCore
 from PySide6.QtNetwork import *
@@ -30,9 +31,102 @@ from typing import Tuple
 
 import logging
 
-__all__ = ['DnsResolver']
+__all__ = ['DnsResolutionOperation', 'DnsResolver']
 
 logger = logging.getLogger(__name__)
+
+
+class DnsResolutionOperation(QtCore.QObject):
+    """Observe one recursive DNS request without nesting the Qt event loop."""
+
+    finished = QtCore.Signal(bool, object)
+
+    def __init__(self, resolver, domain, timeout=30000, parent=None):
+        """Initialize an idle resolution operation."""
+        super().__init__(parent)
+
+        self._resolver = resolver
+        self._domain = domain
+        self._timeout = max(int(timeout), 1)
+        self._resultMap = resolver._newResultMap(domain)
+        self._terminal = False
+
+        self._elapsed = QtCore.QElapsedTimer()
+        self._timer = QtCore.QTimer(self)
+        self._timer.setInterval(20)
+
+        connectWeakly(self._timer.timeout, self, '_poll')
+
+    def start(self):
+        """Start the DNS request and its event-driven completion observer."""
+        if self._terminal or self._timer.isActive():
+            return
+
+        try:
+            self._resolver._beginResolve(self._resultMap)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(f'failed to start DNS resolution for {self._domain!r}: {ex}')
+
+            self._resultMap['error'] = True
+            self._finish()
+
+            return
+
+        self._elapsed.start()
+        self._timer.start()
+        self._poll()
+
+    def _poll(self):
+        """Finish when recursion drains, or abort this request at its deadline."""
+        if self._terminal:
+            return
+
+        if self._resultMap['depth'] == 0:
+            self._finish()
+
+            return
+
+        if self._elapsed.isValid() and self._elapsed.elapsed() >= self._timeout:
+            logger.error(
+                f'DNS resolution for {self._domain!r} reached timeout '
+                f'{self._timeout // 1000}s'
+            )
+
+            self._resultMap['error'] = True
+            self._abortReplies()
+            self._finish()
+
+    def _abortReplies(self):
+        """Abort only network replies acquired by this resolution."""
+        for networkReply in self._resultMap['reference']:
+            if (
+                isinstance(networkReply, QNetworkReply)
+                and not networkReply.isFinished()
+            ):
+                networkReply.abort()
+
+    def _finish(self):
+        """Publish exactly one terminal result."""
+        if self._terminal:
+            return
+
+        self._terminal = True
+        self._timer.stop()
+        self.finished.emit(
+            bool(self._resultMap['error']),
+            list(self._resultMap['result'].keys()),
+        )
+
+    def cancel(self):
+        """Cancel without publishing a stale result."""
+        if self._terminal:
+            return
+
+        self._terminal = True
+        self._timer.stop()
+        self._abortReplies()
 
 
 class DnsResolver(HttpGetManager):
@@ -199,16 +293,24 @@ class DnsResolver(HttpGetManager):
         resultMap['error'] = True
         resultMap['depth'] -= 1
 
-    def resolve(self, domain, timeout=30000) -> Tuple[bool, list[str]]:
-        """Resolve the DNS resolver."""
-        resultMap = {
+    @staticmethod
+    def _newResultMap(domain):
+        """Return mutable state for one recursive DNS resolution."""
+        normalizedDomain = str(domain).rstrip('.').strip().casefold()
+
+        return {
             'domain': domain,
             'depth': 0,
             'error': False,
             'reference': [],
             'result': {},
-            'visited': {str(domain).rstrip('.').strip().casefold()},
+            'visited': {normalizedDomain},
         }
+
+    def _beginResolve(self, resultMap):
+        """Start the root request for one prepared resolution state."""
+        domain = resultMap['domain']
+        normalizedDomain = str(domain).rstrip('.').strip().casefold()
 
         resultMap['depth'] += 1
 
@@ -218,14 +320,28 @@ class DnsResolver(HttpGetManager):
             domain=domain,
             resultMap=resultMap,
             referenceDepth=0,
-            ancestry=(str(domain).rstrip('.').strip().casefold(),),
+            ancestry=(normalizedDomain,),
         )
 
         resultMap['reference'].append(networkReply)
 
+    def resolve(self, domain, timeout=30000) -> Tuple[bool, list[str]]:
+        """Resolve the DNS resolver."""
+        resultMap = self._newResultMap(domain)
+
+        self._beginResolve(resultMap)
         self.wait(resultMap, timeout=timeout)
 
         return resultMap['error'], list(resultMap['result'].keys())
+
+    def resolveAsync(self, domain, timeout=30000, parent=None):
+        """Return an event-driven DNS operation; the caller starts and owns it."""
+        return DnsResolutionOperation(
+            self,
+            domain,
+            timeout=timeout,
+            parent=parent,
+        )
 
     @staticmethod
     def wait(resultMap, startCounter=0, timeout=30000, step=100):

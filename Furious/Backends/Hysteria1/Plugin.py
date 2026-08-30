@@ -94,6 +94,7 @@ class Hysteria1CoreRuntimeFactory(CoreRuntimeFactory):
                 Hysteria1.mmdb(routingObject.get('mmdb', '')),
             ),
             options=request.options,
+            startup=CoreRuntimeStartup(endpoint=config.httpProxy()),
         )
 
     def prepareDownloadTest(self, config, port: int):

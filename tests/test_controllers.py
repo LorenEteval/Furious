@@ -29,6 +29,8 @@ from Furious.Frozenlib import AppBinarySettings, AppSettings
 from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Service.LogManager import LogManager
 
+from PySide6 import QtCore
+
 from tests.support import application, isolatedSettings, processQtEvents
 
 import unittest
@@ -85,6 +87,53 @@ class FixtureCoreManager:
 
         if self.stopException is not None:
             raise self.stopException
+
+
+class FixtureStartOperation(QtCore.QObject):
+    """Publish controllable asynchronous startup outcomes."""
+
+    succeeded = QtCore.Signal(object)
+    failed = QtCore.Signal(object, str, str)
+    cancelled = QtCore.Signal(object)
+
+    def succeed(self):
+        """Publish one successful manager commit."""
+        self.succeeded.emit(self)
+
+    def fail(self, message='fixture failure', details=''):
+        """Publish one failed manager transaction."""
+        self.failed.emit(self, message, details)
+
+
+class FixtureAsyncCoreManager:
+    """Record controller use of the asynchronous manager boundary."""
+
+    def __init__(self):
+        """Initialize empty operation and runtime history."""
+        self.lastStartError = ''
+        self.runtimes = []
+        self.operations = []
+        self.cancelCalls = []
+        self.stopCalls = 0
+
+    def startAsync(self, configuration, **kwargs):
+        """Return one idle operation for the controller to observe."""
+        operation = FixtureStartOperation()
+        self.operations.append((operation, configuration, kwargs))
+
+        return operation
+
+    def cancelStart(self, operation):
+        """Cancel one exact operation."""
+        self.cancelCalls.append(operation)
+        operation.cancelled.emit(operation)
+
+        return True
+
+    def stopAll(self):
+        """Record stable-runtime cleanup."""
+        self.stopCalls += 1
+        self.runtimes.clear()
 
 
 class FixtureUpdatesManager:
@@ -310,6 +359,103 @@ class ConnectionControllerTest(unittest.TestCase):
                 self.assertFalse(controller.startConnection(self.profile))
                 self.assertEqual(len(core.startCalls), 1)
                 self.assertTrue(controller.startDisconnection())
+
+            controller.deleteLater()
+
+    def testAsyncManagerCommitsSystemProxyOnlyAfterSuccess(self):
+        """Remain Connecting until the manager transaction commits."""
+        with isolatedSettings():
+            core = FixtureAsyncCoreManager()
+            controller = ConnectionController(
+                coreManager=core,
+                updatesManager=FixtureUpdatesManager(),
+            )
+
+            with (
+                mock.patch(
+                    'Furious.Controllers.ConnectionController.SystemProxy.set'
+                ) as proxySet,
+                mock.patch('Furious.Controllers.ConnectionController.SystemProxy.off'),
+                mock.patch.object(controller, '_runPostConnectTasksOnce'),
+            ):
+                self.assertTrue(controller.startConnection(self.profile))
+                self.assertTrue(controller.isConnecting())
+                proxySet.assert_not_called()
+
+                operation = core.operations[0][0]
+                core.runtimes.append(object())
+                operation.succeed()
+
+                self.assertTrue(controller.isConnected())
+                proxySet.assert_called_once()
+                self.assertTrue(controller.startDisconnection())
+
+            controller.deleteLater()
+
+    def testDisconnectCancelsAnInFlightStartupGeneration(self):
+        """Cancel partial startup without ever enabling the system proxy."""
+        with isolatedSettings():
+            core = FixtureAsyncCoreManager()
+            controller = ConnectionController(
+                coreManager=core,
+                updatesManager=FixtureUpdatesManager(),
+            )
+
+            with (
+                mock.patch(
+                    'Furious.Controllers.ConnectionController.SystemProxy.set'
+                ) as proxySet,
+                mock.patch('Furious.Controllers.ConnectionController.SystemProxy.off'),
+            ):
+                self.assertTrue(controller.startConnection(self.profile))
+                operation = core.operations[0][0]
+                self.assertTrue(controller.startDisconnection())
+
+            self.assertEqual(core.cancelCalls, [operation])
+            self.assertTrue(controller.state is ConnectionState.Disconnected)
+            proxySet.assert_not_called()
+
+            controller.deleteLater()
+
+    def testReconnectCancelsConnectingGenerationBeforeReplacement(self):
+        """Replace a Connecting attempt without accepting stale completion."""
+        with isolatedSettings():
+            core = FixtureAsyncCoreManager()
+            controller = ConnectionController(
+                coreManager=core,
+                updatesManager=FixtureUpdatesManager(),
+            )
+
+            with (
+                mock.patch(
+                    'Furious.Controllers.ConnectionController.Storage.UserServers',
+                    return_value=[self.profile],
+                ),
+                mock.patch(
+                    'Furious.Controllers.ConnectionController.Storage.UserActivatedItemIndex',
+                    return_value=0,
+                ),
+                mock.patch(
+                    'Furious.Controllers.ConnectionController.SystemProxy.set'
+                ) as proxySet,
+                mock.patch('Furious.Controllers.ConnectionController.SystemProxy.off'),
+            ):
+                self.assertTrue(controller.startConnection(self.profile))
+                first = core.operations[0][0]
+                self.assertTrue(controller.startReconnection())
+                second = core.operations[1][0]
+
+                first.succeed()
+                self.assertTrue(controller.isConnecting())
+                proxySet.assert_not_called()
+
+                core.runtimes.append(object())
+                second.succeed()
+                self.assertTrue(controller.isConnected())
+                proxySet.assert_called_once()
+                controller.startDisconnection()
+
+            self.assertEqual(core.cancelCalls, [first])
 
             controller.deleteLater()
 

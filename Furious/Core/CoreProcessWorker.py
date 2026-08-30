@@ -64,7 +64,12 @@ class CoreProcessState(Enum):
 
 @dataclass
 class CoreLaunchSpec:
-    """Describe the parameters required by a core launch operation."""
+    """Describe the parameters required by a core launch operation.
+
+    'waitCore' preserves the synchronous plugin compatibility path. Normal GUI
+    connections launch with it disabled and confirm readiness through the
+    connection manager's event-driven startup transaction.
+    """
 
     DefaultWaitTime: ClassVar[int] = 2500
 
@@ -437,19 +442,34 @@ class CoreProcessWorker(CoreProcessMonitor, ABC):
         self.msgQueue.setTimeout(MsgQueue.ACTIVE_DRAIN_INTERVAL)
         self.msgQueue.startTimer()
 
+        # Monitor the process during asynchronous startup as well. A child that
+        # exits before readiness must fail the owning transaction instead of
+        # waiting for a later connected-state health check.
+        self.daemon.start(CORE_CHECK_ALIVE_INTERVAL)
+
         if launchSpec.waitCore:
             # Wait for the core to start up completely
             PySide6Legacy.eventLoopWait(launchSpec.waitTime)
 
         if self.queryIsAlive():
+            # Preserve the low-level compatibility contract: a successfully
+            # spawned process is Running even when its caller disables the
+            # historical grace wait. The connection transaction separately
+            # owns semantic readiness and final commit.
             self.setState(CoreProcessState.Running)
-
-            # Start core daemon
-            self.daemon.start(CORE_CHECK_ALIVE_INTERVAL)
 
             return True
         else:
             return False
+
+    def confirmStartup(self) -> bool:
+        """Move a live externally observed process into the running state."""
+        if not self.isAlive():
+            return False
+
+        self.setState(CoreProcessState.Running)
+
+        return True
 
     def stop(self):
         """Stop the core process worker."""

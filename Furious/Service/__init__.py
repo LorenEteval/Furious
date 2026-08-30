@@ -19,7 +19,11 @@
 
 from __future__ import annotations
 
-from .ConnectionManager import ConnectionManager
+from .ConnectionManager import (
+    ConnectionManager,
+    ConnectionStartOperation,
+    ConnectionStartStage,
+)
 from .ConnectivityManager import ConnectivityManager
 from .DnsResolver import DnsResolver
 from .EndpointInfoService import (
@@ -84,6 +88,8 @@ from .UpdateManager import UpdateManager
 
 __all__ = [
     'ConnectionManager',
+    'ConnectionStartOperation',
+    'ConnectionStartStage',
     'ConnectivityManager',
     'DnsResolver',
     'EndpointInfo',
