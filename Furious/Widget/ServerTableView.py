@@ -33,8 +33,9 @@ from Furious.Qt import *
 from Furious.Qt.Signals import connectWeakly, singleShotWeakly
 from Furious.Qt import gettext as _
 from Furious.Service import (
-    CORE_LOG_CATEGORY,
-    ConnectionManager,
+    ProfileTestField,
+    ProfileTestManager,
+    ProfileTestResult,
     SubscriptionManager,
     SubscriptionUpdateBatch,
 )
@@ -43,15 +44,12 @@ from Furious.Widget.WaitingSpinner import WaitingSpinner
 from PySide6 import QtCore
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from PySide6.QtNetwork import *
 
 from typing import Callable, Union
 
 import re
 import logging
-import icmplib
 import functools
-import collections
 
 __all__ = ['ServerTableView']
 
@@ -61,21 +59,6 @@ registerAppSettings('ActivatedItemIndex')
 # Migrate legacy settings
 registerAppSettings('ServerWidgetSectionSizeTable')
 registerAppSettings('UserServersHeaderViewState')
-
-
-def appIsExiting() -> bool:
-    """Return the app is exiting value used by the application."""
-    app = APP()
-
-    if app is None:
-        return True
-    else:
-        isExiting = getattr(app, 'isExiting', None)
-
-        if callable(isExiting):
-            return isExiting()
-        else:
-            return True
 
 
 class MBoxUpdateSubsInfo(AppQMessageBox):
@@ -146,512 +129,6 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
         # Ignore informative text, buttons
 
         self.moveToCenter()
-
-
-class TestPingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
-    """Run test ping latency work in the background."""
-
-    finished = QtCore.Signal()
-
-    def __init__(self, factory: ServerProfile):
-        # Explictly called __init__
-        """Initialize the TestPingLatencyWorker."""
-        QtCore.QObject.__init__(self)
-        QtCore.QRunnable.__init__(self)
-
-        self.factory = factory
-
-    def run(self):
-        """Run the test ping latency worker task."""
-        index = self.factory.index
-
-        if self.factory.deleted or index < 0 or index >= len(Storage.UserServers()):
-            # Invalid item. Do nothing
-            return
-
-        assert isinstance(self.factory, ServerProfile)
-
-        try:
-            result = icmplib.ping(
-                self.factory.itemAddress,
-                count=1,
-                timeout=2,
-                interval=1,
-            )
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            self.factory.metadata.latency = classname(ex)
-        else:
-            # Result address should not be empty
-            if result.address and result.is_alive:
-                self.factory.metadata.latency = f'{round(result.avg_rtt)}ms'
-            else:
-                if result.packet_loss == 1:
-                    self.factory.metadata.latency = 'Timeout'
-                else:
-                    self.factory.metadata.latency = 'Error'
-        finally:
-            # Extra guard
-            if not appIsExiting():
-                self.finished.emit()
-
-
-class TestTcpingLatencyWorker(QtCore.QObject, QtCore.QRunnable):
-    """Run test tcping latency work in the background."""
-
-    finished = QtCore.Signal()
-
-    def __init__(self, factory: ServerProfile):
-        # Explictly called __init__
-        """Initialize the TestTcpingLatencyWorker."""
-        QtCore.QObject.__init__(self)
-        QtCore.QRunnable.__init__(self)
-
-        self.factory = factory
-
-    def run(self):
-        """Run the test tcping latency worker task."""
-        index = self.factory.index
-
-        if self.factory.deleted or index < 0 or index >= len(Storage.UserServers()):
-            # Invalid item. Do nothing
-            return
-
-        assert isinstance(self.factory, ServerProfile)
-
-        try:
-            sent, rtts = tcping(
-                self.factory.itemAddress,
-                int(self.factory.itemPort.split(',')[0]),
-                count=1,
-                timeout=2,
-                interval=1,
-            )
-        except Exception as ex:
-            # Any non-exit exceptions
-
-            self.factory.metadata.latency = classname(ex)
-        else:
-            if rtts:
-                self.factory.metadata.latency = f'{round(rtts[0] * 1000)}ms'
-            else:
-                self.factory.metadata.latency = 'Timeout'
-        finally:
-            # Extra guard
-            if not appIsExiting():
-                self.finished.emit()
-
-
-class TestDownloadSpeedWorker(HttpGetManager):
-    """Run test download speed work in the background."""
-
-    progressed = QtCore.Signal()
-    finished = QtCore.Signal(object)
-
-    def __init__(
-        self,
-        factory: ServerProfile,
-        port: int,
-        timeout: int,
-        parent=None,
-        **kwargs,
-    ):
-        """Initialize the TestDownloadSpeedWorker."""
-        actionMessage = kwargs.pop('actionMessage', 'test download speed')
-
-        super().__init__(parent, actionMessage=actionMessage)
-
-        self.factory = factory
-        self.port = port
-        self.timeout = timeout
-        self.kwargs = kwargs
-
-        self.hasSpeedResult = False
-        self.totalBytesRead = 0
-
-        self.hasDataCounter = 0
-
-        self.coreManager = ConnectionManager()
-
-        self.networkReply = None
-        self.elapsedTimer = QtCore.QElapsedTimer()
-
-        self.timeoutTimer = QtCore.QTimer(self)
-        self.timeoutTimer.setSingleShot(True)
-
-        connectWeakly(
-            self.timeoutTimer.timeout,
-            self,
-            'handleTimeout',
-            sender=self.timeoutTimer,
-        )
-
-    def completionCallback(self, **kwargs):
-        """Perform the required completion hook."""
-        self.timeoutTimer.stop()
-        self.finished.emit(self)
-
-    def sync(self):
-        # Extra guard
-        """Persist the current test download speed worker data."""
-        if not appIsExiting():
-            self.progressed.emit()
-
-    def isFinished(self) -> bool:
-        """Return whether finished."""
-        if isinstance(self.networkReply, QNetworkReply):
-            return self.networkReply.isFinished()
-        else:
-            return True
-
-    def abort(self):
-        """Cancel the active test download speed worker operation."""
-        if isinstance(self.networkReply, QNetworkReply):
-            self.networkReply.abort()
-
-    def handleTimeout(self):
-        """Handle timeout."""
-        try:
-            if not self.isFinished():
-                self.abort()
-        finally:
-            self.runCompletionCallback()
-
-    def coreExitCallback(self, config: CoreConfiguration, exitcode: int):
-        """Handle the core exit callback."""
-        try:
-            if exitcode == CoreRuntime.ExitCode.ConfigurationError.value:
-                self.factory.metadata.speed = 'Invalid'
-                self.sync()
-            elif exitcode == CoreRuntime.ExitCode.ServerStartFailure.value:
-                self.factory.metadata.speed = 'Core start failed'
-                self.sync()
-            elif exitcode == CoreRuntime.ExitCode.SystemShuttingDown.value:
-                pass
-            else:
-                self.factory.metadata.speed = f'Core exited {exitcode}'
-                self.sync()
-        finally:
-            self.runCompletionCallback()
-
-    def _startCoreRuntime(self, config) -> bool:
-        """Prepare and start a download test through its runtime factory."""
-        configcopy = getPluginRegistry().prepareDownloadTest(config, self.port)
-
-        if configcopy is None:
-            self.factory.metadata.speed = 'Invalid'
-            self.sync()
-
-            return False
-
-        self.factory.metadata.speed = 'Starting'
-        self.sync()
-
-        return self.coreManager.start(
-            configcopy,
-            AppBuiltinRouting.Global.value,
-            self.coreExitCallback,
-            msgCallbackCore=AppLogManager().callback(CORE_LOG_CATEGORY),
-            deepcopy=False,
-            proxyModeOnly=True,
-            log=False,
-        )
-
-    def start(self):
-        """Start the test download speed worker."""
-        try:
-            if appIsExiting():
-                raise
-
-            index = self.factory.index
-
-            if self.factory.deleted or index < 0 or index >= len(Storage.UserServers()):
-                # Invalid item. Do nothing
-                return
-
-            assert isinstance(self.factory, ServerProfile)
-
-            if not self.factory.isValid():
-                # Configuration is invalid
-                self.factory.metadata.speed = 'Invalid'
-                self.sync()
-            else:
-                if not self._startCoreRuntime(self.factory) or appIsExiting():
-                    return
-
-                self.configureHttpProxy(f'127.0.0.1:{self.port}')
-
-                # Use custom network speed test URL if possible
-                settings = AppSettings.get('CustomNetworkSpeedTestURL')
-
-                if isinstance(settings, str):
-                    url = settings
-                else:
-                    url = NETWORK_SPEED_TEST_URL
-
-                self.networkReply = self.webGET(url, **self.kwargs)
-
-                self.elapsedTimer.start()
-                self.timeoutTimer.start(self.timeout)
-        finally:
-            if self.networkReply is None:
-                self.runCompletionCallback()
-
-    def successCallback(self, networkReply, **kwargs):
-        """Handle a successful network operation."""
-        if self.coreManager.allRunning():
-            self.totalBytesRead += networkReply.readAll().length()
-
-            # Convert to seconds
-            elapsedSecond = self.elapsedTimer.elapsed() / 1000
-            downloadSpeed = self.totalBytesRead / elapsedSecond / 1024 / 1024
-
-            self.factory.metadata.speed = f'{downloadSpeed:.2f} MiB/s'
-        else:
-            self.factory.metadata.speed = 'Core start failed'
-
-        self.coreManager.stopAll()
-        self.sync()
-
-    def hasDataCallback(self, networkReply, **kwargs):
-        """Handle newly available network response data."""
-        self.hasDataCounter += 1
-
-        if self.coreManager.allRunning():
-            self.totalBytesRead += networkReply.readAll().length()
-
-            # Convert to seconds
-            elapsedSecond = self.elapsedTimer.elapsed() / 1000
-            downloadSpeed = self.totalBytesRead / elapsedSecond / 1024 / 1024
-
-            # Has speed test result
-            self.hasSpeedResult = True
-            self.factory.metadata.speed = f'{downloadSpeed:.2f} MiB/s'
-
-            # Limited to save CPU resources
-            if self.hasDataCounter % 25 == 0:
-                self.sync()
-
-    def failureCallback(self, networkReply, **kwargs):
-        """Handle a failed network operation."""
-        if not self.hasSpeedResult:
-            if not self.coreManager.allRunning():
-                # Core ExitCallback has been called
-                return
-
-            if (
-                networkReply.error()
-                == QNetworkReply.NetworkError.OperationCanceledError
-            ):
-                # Canceled by application
-                self.factory.metadata.speed = 'Canceled'
-            else:
-                try:
-                    error = networkReply.error().name
-                except Exception:
-                    # Any non-exit exceptions
-
-                    error = 'UnknownError'
-
-                if isinstance(error, bytes):
-                    # Some old version PySide6 returns it as bytes. Protect it.
-                    error = error.decode('utf-8', 'replace')
-                elif isinstance(error, str):
-                    pass
-                else:
-                    error = 'UnknownError'
-
-                if error != 'UnknownError' and error.endswith('Error'):
-                    self.factory.metadata.speed = error[:-5]
-                else:
-                    self.factory.metadata.speed = error
-
-        self.coreManager.stopAll()
-        self.sync()
-
-
-class DownloadSpeedTestJob:
-    """Represent download speed test job."""
-
-    def __init__(
-        self,
-        index: int,
-        factory: ServerProfile,
-        timeout: int,
-        logActionMessage=False,
-    ):
-        """Initialize the DownloadSpeedTestJob."""
-        super().__init__()
-
-        self.index = index
-        self.factory = factory
-        self.timeout = timeout
-        self.logActionMessage = logActionMessage
-
-
-class DownloadSpeedTestScheduler(QtCore.QObject):
-    """Schedule and coordinate download speed test jobs."""
-
-    SinglePort = 20809
-    MultiPortStart = 30000
-    MultiPortStop = 40000
-
-    def __init__(self, table, isMulti: bool, parent=None):
-        """Initialize the DownloadSpeedTestScheduler."""
-        super().__init__(parent)
-
-        self.table = table
-        self.isMulti = isMulti
-        self.maxConcurrency = max(OS_CPU_COUNT // 2, 1) if isMulti else 1
-
-        self.queue = collections.deque()
-        self.activeJobs = {}
-        self.activePorts = set()
-        self.nextMultiPort = self.MultiPortStart
-        self.drainScheduled = False
-
-    def enqueue(
-        self,
-        index: int,
-        factory: ServerProfile,
-        timeout: int,
-        logActionMessage=False,
-    ):
-        """Handle enqueue for the download speed test scheduler."""
-        self.queue.append(
-            DownloadSpeedTestJob(index, factory, timeout, logActionMessage)
-        )
-        self.scheduleDrain()
-
-    def enqueueMany(self, jobs: list[DownloadSpeedTestJob]):
-        """Handle enqueue many for the download speed test scheduler."""
-        self.queue.extend(jobs)
-
-        self.scheduleDrain()
-
-    def cancelAll(self):
-        """Return whether cel all."""
-        self.queue.clear()
-
-        for worker, _, _ in list(self.activeJobs.values()):
-            assert isinstance(worker, TestDownloadSpeedWorker)
-
-            if not worker.isFinished():
-                worker.abort()
-
-            worker.coreManager.stopAll()
-            worker.runCompletionCallback()
-
-    def scheduleDrain(self):
-        """Handle schedule drain for the download speed test scheduler."""
-        if self.drainScheduled:
-            return
-
-        self.drainScheduled = True
-
-        singleShotWeakly(0, self, 'drain')
-
-    def drain(self):
-        """Handle drain for the download speed test scheduler."""
-        self.drainScheduled = False
-
-        if appIsExiting():
-            self.cancelAll()
-
-            return
-
-        while self.queue and len(self.activeJobs) < self.maxConcurrency:
-            job = self.queue.popleft()
-
-            assert isinstance(job.factory, ServerProfile)
-
-            if job.factory.deleted:
-                continue
-
-            port = self.allocatePort()
-
-            if port is None:
-                self.queue.appendleft(job)
-
-                break
-
-            self.startJob(job, port)
-
-    def allocatePort(self) -> Union[int, None]:
-        """Return whether allocate port."""
-        if not self.isMulti:
-            if self.activeJobs:
-                return None
-
-            return self.SinglePort
-
-        portRange = self.MultiPortStop - self.MultiPortStart
-
-        for _ in range(portRange):
-            port = self.nextMultiPort
-            self.nextMultiPort += 1
-
-            if self.nextMultiPort >= self.MultiPortStop:
-                self.nextMultiPort = self.MultiPortStart
-
-            if port not in self.activePorts:
-                self.activePorts.add(port)
-
-                return port
-
-        return None
-
-    def releasePort(self, port: int):
-        """Handle release port for the download speed test scheduler."""
-        self.activePorts.discard(port)
-
-    def startJob(self, job: DownloadSpeedTestJob, port: int):
-        """Start job."""
-        worker = TestDownloadSpeedWorker(
-            job.factory,
-            port,
-            job.timeout,
-            parent=self,
-            logActionMessage=job.logActionMessage,
-        )
-        worker.progressed.connect(
-            functools.partial(
-                self.table.flushDownloadSpeedItem,
-                job.index,
-                job.factory,
-            )
-        )
-
-        self.activeJobs[id(worker)] = (worker, job, port)
-
-        connectWeakly(
-            worker.finished,
-            self,
-            'handleWorkerFinished',
-            sender=worker,
-        )
-
-        worker.start()
-
-    @QtCore.Slot(object)
-    def handleWorkerFinished(self, worker):
-        """Handle worker finished."""
-        workerId = id(worker)
-
-        try:
-            _, _, port = self.activeJobs.pop(workerId)
-        except KeyError:
-            return
-
-        self.releasePort(port)
-
-        # Completed workers are children of the long-lived scheduler.  Merely
-        # removing the Python dictionary entry would leave every worker (and
-        # its network/timer children) in the scheduler's QObject tree.
-        worker.deleteLater()
-
-        self.scheduleDrain()
 
 
 class DeleteServersProgressDialog(AppQTransientDialog):
@@ -791,6 +268,7 @@ class DeleteServersProgressDialog(AppQTransientDialog):
         Storage.UserServers().pop(deleteIndex)
 
         self.table.sourceModel.endRemoveRows()
+        self.table.reconcileProfileTestJobs()
 
         if not self.deletedActivated and deleteIndex < Storage.UserActivatedItemIndex():
             AppSettings.set(
@@ -1306,19 +784,20 @@ class ServerTableView(
 
         self.subsManager = SubscriptionManager(parent=self)
         self.subsManager.subscriptionsChanged.connect(self._handleSubscriptionsChanged)
+        self.subsManager.subscriptionCommitted.connect(
+            self._handleSubscriptionCommitted
+        )
         self.subsManager.updateCompleted.connect(
             self._handleSubscriptionUpdateCompleted
         )
 
-        self.downloadSpeedScheduler = DownloadSpeedTestScheduler(
+        self.profileTestManager = ProfileTestManager(parent=self)
+
+        connectWeakly(
+            self.profileTestManager.resultApplied,
             self,
-            isMulti=False,
-            parent=self,
-        )
-        self.downloadSpeedMultiScheduler = DownloadSpeedTestScheduler(
-            self,
-            isMulti=True,
-            parent=self,
+            '_handleProfileTestResultApplied',
+            sender=self.profileTestManager,
         )
 
         self.configurationEditor = configurationEditorFactory()
@@ -1933,6 +1412,11 @@ class ServerTableView(
 
     def flushRow(self, row: int, item: ServerProfile):
         """Refresh row."""
+        # flushRow is the established commit notification for both structured
+        # and JSON profile editors. Reconcile before presenting a replacement
+        # or in-place connection mutation.
+        self.reconcileProfileTestJobs()
+
         itemIndex = item.index
 
         if item.deleted or itemIndex < 0 or itemIndex >= len(Storage.UserServers()):
@@ -2254,6 +1738,8 @@ class ServerTableView(
                     'ActivatedItemIndex', str(Storage.UserActivatedItemIndex() - 1)
                 )
 
+        self.reconcileProfileTestJobs()
+
         # Refresh index
         self.sourceModel.refreshIndexes()
         self.sourceModel.emitAllChanged()
@@ -2358,185 +1844,80 @@ class ServerTableView(
             self.setCurrentIndex(activatedItem)
             self.scrollTo(activatedItem)
 
-    def rowFromFactory(self, fallbackIndex: int, factory: ServerProfile) -> int:
-        """Return the row from factory value."""
-        if (
-            0 <= factory.index < len(Storage.UserServers())
-            and Storage.UserServers()[factory.index] is factory
-        ):
-            return factory.index
+    @QtCore.Slot(object, object)
+    def _handleProfileTestResultApplied(
+        self,
+        profile: ServerProfile,
+        result: ProfileTestResult,
+    ):
+        """Repaint the one repository cell committed by the test service."""
+        profiles = Storage.UserServers()
+        row = profile.index
 
-        if (
-            0 <= fallbackIndex < len(Storage.UserServers())
-            and Storage.UserServers()[fallbackIndex] is factory
-        ):
-            return fallbackIndex
-
-        for index, item in enumerate(Storage.UserServers()):
-            if item is factory:
-                return index
-
-        return -1
-
-    def flushDownloadSpeedItem(self, fallbackIndex: int, factory: ServerProfile):
-        """Refresh download speed item."""
-        index = self.rowFromFactory(fallbackIndex, factory)
-
-        if index < 0:
+        if row < 0 or row >= len(profiles) or profiles[row] is not profile:
             return
 
-        self.flushItem(index, self.Headers.index('Speed'), factory)
+        column = 'Latency' if result.field is ProfileTestField.Latency else 'Speed'
+
+        self.flushItem(row, self.Headers.index(column), profile)
+
+    def _selectedProfilesForTesting(self):
+        """Resolve the current row selection into live repository profiles."""
+        profiles = Storage.UserServers()
+
+        return [
+            profiles[index]
+            for index in self.selectedIndex
+            if 0 <= index < len(profiles)
+        ]
+
+    def reconcileProfileTestJobs(self):
+        """Notify the test service after a live profile collection mutation."""
+        self.profileTestManager.reconcileProfiles()
 
     def testSelectedItemPingLatency(self):
-        """Handle test selected item ping latency for the user servers Qt table view."""
-        indexes = self.selectedIndex
-
-        if len(indexes) == 0:
-            # Nothing selected. Do nothing
-            return
-
-        # Real selected factory
-        references = list(Storage.UserServers()[index] for index in indexes)
-
-        for index, reference in zip(indexes, references):
-            if appIsExiting():
-                break
-
-            assert isinstance(reference, ServerProfile)
-
-            if reference.deleted:
-                continue
-
-            worker = TestPingLatencyWorker(reference)
-            worker.setAutoDelete(True)
-            worker.finished.connect(
-                functools.partial(
-                    self.flushItem,
-                    index,
-                    self.Headers.index('Latency'),
-                    reference,
-                )
-            )
-
-            AppThreadPool().start(worker)
+        """Request ICMP latency tests for selected profiles."""
+        self.profileTestManager.testPing(self._selectedProfilesForTesting())
 
     def testSelectedItemTcpingLatency(self):
-        """Handle test selected item tcping latency for the user servers Qt table view."""
-        indexes = self.selectedIndex
-
-        if len(indexes) == 0:
-            # Nothing selected. Do nothing
-            return
-
-        # Real selected factory
-        references = list(Storage.UserServers()[index] for index in indexes)
-
-        for index, reference in zip(indexes, references):
-            if appIsExiting():
-                break
-
-            assert isinstance(reference, ServerProfile)
-
-            if reference.deleted:
-                continue
-
-            worker = TestTcpingLatencyWorker(reference)
-            worker.setAutoDelete(True)
-            worker.finished.connect(
-                functools.partial(
-                    self.flushItem,
-                    index,
-                    self.Headers.index('Latency'),
-                    reference,
-                )
-            )
-
-            AppThreadPool().start(worker)
-
-    def testDownloadSpeedByFactory(
-        self,
-        index: int,
-        factory: ServerProfile,
-        port: int,
-        timeout: int,
-        isMulti: bool,
-        counter=0,
-        step=100,
-        logActionMessage=False,
-    ):
-        """Handle test download speed by factory for the user servers Qt table view."""
-        scheduler = (
-            self.downloadSpeedMultiScheduler if isMulti else self.downloadSpeedScheduler
-        )
-        scheduler.enqueue(index, factory, timeout, logActionMessage)
-
-    def testSelectedItemDownloadSpeedWithTimeoutXXX(
-        self,
-        scheduler: DownloadSpeedTestScheduler,
-        timeout: int,
-    ):
-        """Handle test selected item download speed with timeout xxx for the user servers Qt table view."""
-        indexes = self.selectedIndex
-
-        if len(indexes) == 0:
-            # Nothing selected. Do nothing
-            return
-
-        # Real selected factory
-        references = list(Storage.UserServers()[index] for index in indexes)
-        jobs = list()
-
-        for index, reference in zip(indexes, references):
-            jobs.append(DownloadSpeedTestJob(index, reference, timeout))
-
-        scheduler.enqueueMany(jobs)
+        """Request asynchronous TCP latency tests for selected profiles."""
+        self.profileTestManager.testTcping(self._selectedProfilesForTesting())
 
     def testSelectedItemDownloadSpeedWithTimeout(self, timeout: int):
-        """Handle test selected item download speed with timeout for the user servers Qt table view."""
-        self.testSelectedItemDownloadSpeedWithTimeoutXXX(
-            self.downloadSpeedScheduler,
-            timeout,
+        """Request serial download tests for selected profiles."""
+        self.profileTestManager.testDownloadSpeed(
+            self._selectedProfilesForTesting(),
+            timeoutMilliseconds=timeout,
+            concurrent=False,
         )
 
     def testSelectedItemDownloadSpeedWithTimeoutMulti(self, timeout: int):
-        """Handle test selected item download speed with timeout multi for the user servers Qt table view."""
-        self.testSelectedItemDownloadSpeedWithTimeoutXXX(
-            self.downloadSpeedMultiScheduler,
-            timeout,
+        """Request concurrent download tests for selected profiles."""
+        self.profileTestManager.testDownloadSpeed(
+            self._selectedProfilesForTesting(),
+            timeoutMilliseconds=timeout,
+            concurrent=True,
         )
 
     def testSelectedItemDownloadSpeed(self):
-        """Run the retained single-threaded download-test API for selected rows.
+        """Run the retained serial download-test API for selected rows.
 
-        The Home context menu uses the multithreaded variant; this method remains
+        The Home context menu uses the concurrent variant; this method remains
         available for programmatic callers that explicitly need serial scheduling.
         """
         self.testSelectedItemDownloadSpeedWithTimeout(5000)
 
     def testSelectedItemDownloadSpeedMulti(self):
-        """Handle test selected item download speed multi for the user servers Qt table view."""
+        """Request concurrent download tests for selected profiles."""
         self.testSelectedItemDownloadSpeedWithTimeoutMulti(5000)
 
     def clearSelectedItemTestResult(self):
         """Clear selected item test result."""
-        indexes = self.selectedIndex
-
-        if len(indexes) == 0:
-            # Nothing selected. Do nothing
-            return
-
-        for index in indexes:
-            factory = Storage.UserServers()[index]
-            factory.metadata.latency = ''
-            factory.metadata.speed = ''
-
-            self.flushItem(index, self.Headers.index('Latency'), factory)
-            self.flushItem(index, self.Headers.index('Speed'), factory)
+        self.profileTestManager.clearResults(self._selectedProfilesForTesting())
 
     def cleanup(self):
         """Release resources owned by the user servers Qt table view."""
-        self.downloadSpeedScheduler.cancelAll()
-        self.downloadSpeedMultiScheduler.cancelAll()
+        self.profileTestManager.shutdown()
         self._clearSubscriptionActions()
 
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
@@ -2558,6 +1939,8 @@ class ServerTableView(
     @QtCore.Slot()
     def _handleSubscriptionsChanged(self):
         """Refresh the table after the service commits repository changes."""
+        self.reconcileProfileTestJobs()
+
         self.sourceModel.beginResetModel()
         self.sourceModel.endResetModel()
         self.sourceModel.refreshIndexes()
@@ -2567,6 +1950,14 @@ class ServerTableView(
         self.flushAll()
 
         self.activeServerChanged.emit()
+
+    @QtCore.Slot(str)
+    def _handleSubscriptionCommitted(self, unique: str):
+        """Clear results and invalidate only work owned by one committed group."""
+        self.profileTestManager.invalidateSubscriptions(
+            {unique},
+            clearResults=True,
+        )
 
     @QtCore.Slot(object)
     def _handleSubscriptionUpdateCompleted(self, batch: SubscriptionUpdateBatch):

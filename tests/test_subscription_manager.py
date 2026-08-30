@@ -17,23 +17,24 @@
 
 """Verify subscription workflow ownership outside table widgets."""
 
-from types import SimpleNamespace
-from unittest import TestCase, mock
-
 import os
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-
-from PySide6 import QtCore, QtTest, QtWidgets
-
-from shiboken6 import isValid
 
 from Furious.Repository import Storage
 from Furious.Repository.Subscriptions import SubscriptionGroup
 from Furious.Service.SubscriptionManager import SubscriptionManager
 from Furious.Window.SubscriptionPage import SubscriptionPage
 from Furious.Widget.SubscriptionTableView import SubscriptionTableView
+
 from tests.support import application, processQtEvents
+
+from PySide6 import QtCore, QtTest, QtWidgets
+
+from shiboken6 import isValid
+
+from types import SimpleNamespace
+from unittest import TestCase, mock
 
 
 class _Payload:
@@ -337,7 +338,9 @@ class SubscriptionManagerTest(TestCase):
             side_effect=(RuntimeError('injected failure'), committed)
         )
         completed = []
+        committedSubscriptions = []
         manager.updateCompleted.connect(completed.append)
+        manager.subscriptionCommitted.connect(committedSubscriptions.append)
         failed = {'unique': 'group-a', 'profiles': ()}
         successful = {'unique': 'group-b', 'profiles': ()}
 
@@ -355,6 +358,7 @@ class SubscriptionManagerTest(TestCase):
         self.assertEqual(completed[0].successful[0]['unique'], 'group-b')
         self.assertEqual(completed[0].failed[0]['unique'], 'group-a')
         self.assertIn('injected failure', completed[0].failed[0]['error'])
+        self.assertEqual(committedSubscriptions, ['group-b'])
 
         manager.deleteLater()
 

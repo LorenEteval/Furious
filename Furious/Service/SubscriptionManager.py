@@ -103,6 +103,7 @@ class SubscriptionManager(HttpGetManager):
     """Own subscription networking, decoding, reconciliation, and persistence."""
 
     subscriptionsChanged = QtCore.Signal()
+    subscriptionCommitted = QtCore.Signal(str)
     updateCompleted = QtCore.Signal(object)
 
     def __init__(self, parent=None, **kwargs):
@@ -455,6 +456,11 @@ class SubscriptionManager(HttpGetManager):
             param['syncResult'] = result
 
             committedSuccess.append(param)
+
+            # Reconciliation is the commit boundary. Notify consumers now so
+            # subscription-scoped work is invalidated before the rest of a
+            # multi-subscription batch finishes.
+            self.subscriptionCommitted.emit(param['unique'])
 
             self._recordGroupSuccess(param, result)
 

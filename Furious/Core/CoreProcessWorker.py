@@ -27,7 +27,7 @@ from PySide6 import QtCore
 from abc import ABC
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, Tuple, Union
+from typing import Any, Callable, ClassVar, Dict, Tuple, Union
 
 import os
 import sys
@@ -66,12 +66,14 @@ class CoreProcessState(Enum):
 class CoreLaunchSpec:
     """Describe the parameters required by a core launch operation."""
 
+    DefaultWaitTime: ClassVar[int] = 2500
+
     target: Callable
     args: Tuple[Any, ...] = field(default_factory=tuple)
     processKwargs: Dict[str, Any] = field(default_factory=dict)
     daemon: bool = True
     waitCore: bool = True
-    waitTime: int = 2500
+    waitTime: int = DefaultWaitTime
 
     def __post_init__(self):
         """Normalize the initialized core launch spec values."""
@@ -90,7 +92,7 @@ class CoreLaunchSpec:
         daemon, waitCore, waitTime, target, args = (
             kwargs.pop('daemon', True),
             kwargs.pop('waitCore', True),
-            kwargs.pop('waitTime', 2500),
+            kwargs.pop('waitTime', cls.DefaultWaitTime),
             kwargs.pop('target', None),
             kwargs.pop('args', tuple()),
         )

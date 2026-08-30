@@ -33,6 +33,20 @@
   repository or UI mutation into a decoder merely to shorten this path.
 - Endpoint inspection uses only the active proxy, neutral request metadata, bounded caches, and connection generations.
   Reject stale results and disclose actual providers without exposing profile credentials or complete destinations.
+- Tcping execution owns sockets and deadlines in one lazily started Qt networking thread. Accept only endpoint-level
+  requests, keep the adaptive concurrency window bounded, return results through thread-safe events, and synchronously
+  destroy the engine in its own thread after cancellation and event-loop shutdown.
+- `ProfileTestManager` is the sole profile-test write-back boundary. Jobs combine a stable ID/fingerprint/snapshot with
+  explicit latency or download options; workers return results without mutating profiles, and the manager resolves the
+  current identity before changing metadata or notifying presentation. Repository mutation refreshes its identity map;
+  subscription commit invalidates only that group's work and clears only that group's current results.
+- Keep Ping, Tcping, and download execution specialized beneath that owner: blocking Ping uses a private bounded pool
+  and event-based completion; Tcping deduplicates endpoints and fans out results in bounded GUI batches; serial and
+  concurrent downloads share one scheduler implementation with separate concurrency/port ranges. Concurrent download
+  admission launches temporary cores without a synchronous readiness wait; each worker owns the readiness timer before
+  starting HTTP. Cancellation during core launch, readiness, or network startup must defer terminal publication and
+  deletion until an active startup frame unwinds, and shutdown must stop each exact pool, thread, reply, timer, and
+  temporary runtime.
 
 ## Verification
 

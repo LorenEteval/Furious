@@ -51,6 +51,16 @@ from .MetricsHistory import (
     MetricsHistory,
 )
 from .PluginUIManager import PluginNavigationManager, isCoreActive
+from .ProfileTesting import (
+    DownloadSpeedTestOptions,
+    LatencyTestOptions,
+    LatencyTestType,
+    ProfileTestField,
+    ProfileTestJobState,
+    ProfileTestManager,
+    ProfileTestResult,
+    ProfileTestTarget,
+)
 from .SubscriptionImporter import (
     SubscriptionImportResult,
     SubscriptionImportService,
@@ -98,6 +108,14 @@ __all__ = [
     'MetricSample',
     'MetricsHistory',
     'PluginNavigationManager',
+    'DownloadSpeedTestOptions',
+    'LatencyTestOptions',
+    'LatencyTestType',
+    'ProfileTestField',
+    'ProfileTestJobState',
+    'ProfileTestManager',
+    'ProfileTestResult',
+    'ProfileTestTarget',
     'SubscriptionImportResult',
     'SubscriptionImportService',
     'SubscriptionSource',
