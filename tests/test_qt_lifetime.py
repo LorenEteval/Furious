@@ -329,6 +329,52 @@ class QtLifetimeTest(unittest.TestCase):
 
         emitter.deleteLater()
 
+    def testDeletedSenderSignalWrapperDoesNotCrashReceiverTeardown(self):
+        """Release a shorter-lived sender before its weak receiver safely."""
+        result = runPythonChild(
+            """
+from Furious.Qt import connectWeakly
+from PySide6 import QtCore
+
+
+class Sender(QtCore.QObject):
+    emitted = QtCore.Signal()
+
+
+class Receiver(QtCore.QObject):
+    @QtCore.Slot()
+    def receive(self):
+        pass
+
+
+application = QtCore.QCoreApplication([])
+receiver = Receiver()
+senders = []
+
+for _index in range(1000):
+    sender = Sender()
+    connectWeakly(sender.emitted, receiver, 'receive', sender=sender)
+    sender.emitted.emit()
+    sender.deleteLater()
+    senders.append(sender)
+
+
+def finish():
+    global senders
+
+    senders = []
+    receiver.deleteLater()
+    application.quit()
+
+
+QtCore.QTimer.singleShot(0, finish)
+raise SystemExit(application.exec())
+""",
+            timeout=30,
+        )
+
+        assertChildSucceeded(self, result, 'sender-first weak-signal teardown child')
+
     def testWeakSingleShotDispatchDoesNotRetainDestroyedReceiver(self):
         """Run live work once and drop deferred work for a dead receiver."""
         calls = []

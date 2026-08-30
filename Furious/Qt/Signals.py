@@ -115,11 +115,11 @@ def connectWeakly(
 
         def disconnect(*_args):
             """Remove weak dispatch from an independently owned sender."""
-            try:
-                signal.disconnect(invoke)
-            except (RuntimeError, TypeError):
-                # The signal owner or connection was already destroyed.
-                pass
+            # Retain only Qt's opaque connection handle. Capturing ``signal``
+            # here keeps the sender's SignalInstance wrapper alive until the
+            # receiver dies; when the native sender died first, PySide6 could
+            # then access that stale wrapper during application teardown.
+            QtCore.QObject.disconnect(connection)
 
         receiver.destroyed.connect(disconnect)
 
