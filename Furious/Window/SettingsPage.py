@@ -38,6 +38,7 @@ from Furious.Service.TrafficStatsManager import (
     CLEAR_TRAFFIC_USAGE_ON_RECONNECT_SETTING,
     METRICS_COLLECTION_SETTING,
 )
+from Furious.Window.TunSettingsDialog import tunModeTitle
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import *
@@ -89,17 +90,6 @@ def _endpointPrivacyMessageBox(parent=None):
     mbox.setInformativeText('<br><br>\n'.join(_endpointPrivacyParagraphs()))
 
     return mbox
-
-
-def _tunModeTitle() -> str:
-    """Return the platform-appropriate translated TUN setting title."""
-    if PLATFORM == 'Linux' or SystemRuntime.isAdmin():
-        return _('TUN Mode')
-
-    if ADMINISTRATOR_NAME == 'Administrator':
-        return _('TUN Mode Disabled (Administrator)')
-
-    return _('TUN Mode Disabled (Superuser)')
 
 
 def _restartApplicationTitle() -> str:
@@ -655,7 +645,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             'shield-check.svg',
             'VPNMode',
             AppSettingsController().setTUNMode,
-            _tunModeTitle(),
+            tunModeTitle(),
             _('Route system traffic through the active proxy connection.'),
         )
         self.tunModeCard.checkBox.setEnabled(self._tunModeAvailable)

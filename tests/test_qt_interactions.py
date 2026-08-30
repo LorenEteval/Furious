@@ -25,7 +25,7 @@ from Furious.Frozenlib import AppBuiltinProxyMode, AppSettings
 from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Plugins.API import RoutingOption
 from Furious.Repository import Storage, SubscriptionGroup
-from Furious.Qt import AppQDialog, AppQSwitch
+from Furious.Qt import AppQDialog, AppQSwitch, gettext
 from Furious.Widget.RoutingSelector import RoutingSelector
 from Furious.Widget.ServerTableView import ServerTableView
 from Furious.Window.HomePage import HomePage
@@ -644,6 +644,52 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                 home.userServersQTableWidget.cleanup()
                 home.close()
                 home.deleteLater()
+
+    def testHomeTunModeLabelExplainsMissingAdministratorPrivilege(self):
+        """Use the same privilege-aware TUN presentation as Settings."""
+        with (
+            isolatedSettings(),
+            mock.patch(
+                'Furious.Controllers.SettingsController.PLATFORM',
+                'Windows',
+            ),
+            mock.patch(
+                'Furious.Controllers.SettingsController.SystemRuntime.isAdmin',
+                return_value=False,
+            ),
+            mock.patch(
+                'Furious.Controllers.SettingsController.showMBoxNewChangesNextTime'
+            ),
+            mock.patch(
+                'Furious.Window.TunSettingsDialog.PLATFORM',
+                'Windows',
+            ),
+            mock.patch(
+                'Furious.Window.TunSettingsDialog.ADMINISTRATOR_NAME',
+                'Administrator',
+            ),
+        ):
+            settingsController = SettingsController()
+            connectionController = _ConnectionControllerFixture()
+            routingController = _RoutingControllerFixture(
+                (RoutingOption('default', 'Default'),),
+                'default',
+            )
+
+            with self._home(
+                settingsController,
+                connectionController,
+                routingController,
+            ) as home:
+                self.assertEqual(
+                    gettext(home.tunModeLabel.text(), 'EN'),
+                    'TUN Mode Disabled (Administrator)',
+                )
+                self.assertFalse(home.tunModeSwitch.isEnabled())
+
+            settingsController.deleteLater()
+            connectionController.deleteLater()
+            routingController.deleteLater()
 
     def testHomeAndSettingsControlsSynchronizeWithoutDuplicateSignals(self):
         """Round-trip real proxy/TUN input without stale or recursive updates."""

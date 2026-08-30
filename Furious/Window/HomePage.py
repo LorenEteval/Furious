@@ -746,7 +746,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         for label, mode in SYSTEM_PROXY_MODE_OPTIONS:
             self.systemProxyComboBox.addItem(_(label), mode)
 
-        self.tunModeLabel = AppQLabel(_('TUN Mode'), parent=self)
+        self.tunModeLabel = AppQLabel(tunModeTitle(), parent=self)
         self.tunModeSwitch = AppQSwitch(parent=self)
         self._tunModeAvailable = AppSettingsController().tunModeAvailable()
 

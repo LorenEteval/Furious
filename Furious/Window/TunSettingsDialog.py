@@ -32,9 +32,20 @@ from PySide6.QtWidgets import *
 
 import logging
 
-__all__ = ['TunSettingsDialog']
+__all__ = ['TunSettingsDialog', 'tunModeTitle']
 
 logger = logging.getLogger(__name__)
+
+
+def tunModeTitle() -> str:
+    """Return the platform-appropriate translated TUN control title."""
+    if PLATFORM == 'Linux' or SystemRuntime.isAdmin():
+        return _('TUN Mode')
+
+    if ADMINISTRATOR_NAME == 'Administrator':
+        return _('TUN Mode Disabled (Administrator)')
+
+    return _('TUN Mode Disabled (Superuser)')
 
 
 class GuiTUNSettingsItemXXX(GuiEditorItemTextInput):

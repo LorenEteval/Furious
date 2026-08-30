@@ -891,8 +891,7 @@ TRANSLATION = {
     },
     "TUN Mode": {
         "source": [
-            "Furious.Window.HomePage",
-            "Furious.Window.SettingsPage"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "TUN режим",
         "ZH": "TUN模式",
@@ -900,7 +899,7 @@ TRANSLATION = {
     },
     "TUN Mode Disabled (Administrator)": {
         "source": [
-            "Furious.Window.SettingsPage"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "TUN режим отключен (Administrator)",
         "ZH": "TUN模式已禁用（管理员）",
@@ -908,7 +907,7 @@ TRANSLATION = {
     },
     "TUN Mode Disabled (Superuser)": {
         "source": [
-            "Furious.Window.SettingsPage"
+            "Furious.Window.TunSettingsDialog"
         ],
         "RU": "TUN режим отключен  (Superuser)",
         "ZH": "TUN模式已禁用（Superuser）",
