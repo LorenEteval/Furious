@@ -2060,10 +2060,8 @@ class ServerTableView(
             return
 
         window = self.qrCodeWindowFactory()
-        window.initTabByIndex(indexes)
 
-        if window.tabCount() > 0:
-            window.show()
+        return window.startExportByIndex(indexes)
 
     def exportSelectedItemJSON(self):
         """Export selected item JSON."""

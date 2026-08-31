@@ -59,11 +59,12 @@ strategy in an individual test.
 | AppQMainWindow lifecycle, subclass policies, geometry restoration, and migration | `test_main_window_geometry.py` |
 | AppQDialog first-presentation geometry, native show paths, centering, and async lifetime | `test_dialog_geometry.py` |
 | Editor mappings, lazy log rendering, routing/message-box/connection UI | `test_ui_behavior.py` |
+| Bounded, incremental, cancellable QR export and snapshot/lifetime safety | `test_qr_export_scalability.py` |
 | Real keyboard/mouse/focus, proxy mapping, shared Home/Settings state, and transient editor input | `test_qt_interactions.py` |
 | Direct Qt ownership and destruction across independent UI families | `test_qt_lifetime.py` |
-| Batched real/probe Qt object, handle, Python allocation, and RSS trends | `test_qt_stress.py` |
+| Batched real/probe Qt object, QR rendering/window lifecycle, handle, Python allocation, and RSS trends | `test_qt_stress.py` |
 | Repeated harmless subprocess, pipe, thread, handle, and RSS trends | `test_process_stress.py` |
-| Opt-in release-confidence counts (100 app children, 100 external cores, 100k metrics, 40k logs, 20k navigation, 5k plugins, 1k dialogs) | `test_very_heavy.py` |
+| Opt-in release-confidence counts (100 app children, 100 external cores, 100k metrics, 40k logs, 20k navigation, 5k plugins, 1k dialogs, 1k real QR tabs) | `test_very_heavy.py` |
 
 The lifecycle tests classify `AppQTransientDialog`, protocol/plugin editors,
 routing dialogs, subscription editors, message boxes, QR windows, and TUN
@@ -109,7 +110,7 @@ Then run the desired test tier.
 python -m unittest discover -s tests -v
 
 # Regular logic, persistence, plugin, controller, codec, and UI regressions
-python -m unittest tests.test_interface tests.test_models_and_services tests.test_repository_contracts tests.test_architecture_refactors tests.test_connection_startup_async tests.test_plugin_architecture tests.test_hysteria1_protocol tests.test_hysteria2_compatibility tests.test_controllers tests.test_subscription_manager tests.test_subscription_sync tests.test_subscription_scalability tests.test_profile_test_jobs tests.test_socks_uri tests.test_shadowsocks_uri tests.test_backend_editor_contract tests.test_xray_asset_download tests.test_native_tun_semantics tests.test_metrics_behavior tests.test_endpoint_info tests.test_service_runtime tests.test_frozenlib tests.test_isolation_and_navigation tests.test_main_window_geometry tests.test_dialog_geometry tests.test_ui_behavior tests.test_qt_interactions tests.test_stylesheet_states tests.test_theme_transition tests.test_public_api -v
+python -m unittest tests.test_interface tests.test_models_and_services tests.test_repository_contracts tests.test_architecture_refactors tests.test_connection_startup_async tests.test_plugin_architecture tests.test_hysteria1_protocol tests.test_hysteria2_compatibility tests.test_controllers tests.test_subscription_manager tests.test_subscription_sync tests.test_subscription_scalability tests.test_profile_test_jobs tests.test_socks_uri tests.test_shadowsocks_uri tests.test_backend_editor_contract tests.test_xray_asset_download tests.test_native_tun_semantics tests.test_metrics_behavior tests.test_endpoint_info tests.test_service_runtime tests.test_frozenlib tests.test_isolation_and_navigation tests.test_main_window_geometry tests.test_dialog_geometry tests.test_ui_behavior tests.test_qr_export_scalability tests.test_qt_interactions tests.test_stylesheet_states tests.test_theme_transition tests.test_public_api -v
 
 # Direct Qt/process integration and destruction/lifetime checks
 python -m unittest tests.test_application_process tests.test_external_core tests.test_layout_matrix tests.test_qt_lifetime -v
@@ -126,7 +127,7 @@ python -m unittest tests.test_very_heavy -v
 python -m unittest tests.test_log_manager_generation.VeryHeavyGenerationLogManagerTest -v
 
 # Shared-state order-independence spot check
-python -m unittest tests.test_public_api tests.test_theme_transition tests.test_stylesheet_states tests.test_qt_interactions tests.test_ui_behavior tests.test_dialog_geometry tests.test_main_window_geometry tests.test_isolation_and_navigation tests.test_frozenlib tests.test_service_runtime tests.test_endpoint_info tests.test_metrics_behavior tests.test_native_tun_semantics tests.test_xray_asset_download tests.test_backend_editor_contract tests.test_shadowsocks_uri tests.test_socks_uri tests.test_profile_test_jobs tests.test_subscription_sync tests.test_subscription_manager tests.test_controllers tests.test_hysteria2_compatibility tests.test_hysteria1_protocol tests.test_plugin_architecture tests.test_connection_startup_async tests.test_architecture_refactors tests.test_repository_contracts tests.test_models_and_services tests.test_interface -v
+python -m unittest tests.test_public_api tests.test_theme_transition tests.test_stylesheet_states tests.test_qt_interactions tests.test_qr_export_scalability tests.test_ui_behavior tests.test_dialog_geometry tests.test_main_window_geometry tests.test_isolation_and_navigation tests.test_frozenlib tests.test_service_runtime tests.test_endpoint_info tests.test_metrics_behavior tests.test_native_tun_semantics tests.test_xray_asset_download tests.test_backend_editor_contract tests.test_shadowsocks_uri tests.test_socks_uri tests.test_profile_test_jobs tests.test_subscription_sync tests.test_subscription_manager tests.test_controllers tests.test_hysteria2_compatibility tests.test_hysteria1_protocol tests.test_plugin_architecture tests.test_connection_startup_async tests.test_architecture_refactors tests.test_repository_contracts tests.test_models_and_services tests.test_interface -v
 python -m unittest discover -s tests -v
 ```
 
@@ -154,6 +155,21 @@ final status and exit code as authoritative; expected diagnostic output still en
 `tests/benchmarks/benchmark_subscription_updates.py` is a development-only 1/3/8-group benchmark. It generates 1,500 profiles
 per group by default and reports decode/parse CPU time, reconciliation preparation, worker wall time, and GUI-thread
 commit time. Pass `--url` explicitly to benchmark a live subscription; normal tests never use the network.
+
+`tests/benchmarks/benchmark_qr_export.py` measures the real Segno-to-`QImage` renderer and the complete synchronous or
+incremental QR-window pipeline. The 5,000-item UI workloads are intentionally benchmarks rather than correctness tests;
+run each mode in a fresh process so allocator and Qt-widget state do not affect the next measurement:
+
+```text
+python tests/benchmarks/benchmark_qr_export.py --mode images --count 5000
+python tests/benchmarks/benchmark_qr_export.py --mode synchronous --count 5000
+python tests/benchmarks/benchmark_qr_export.py --mode asynchronous --count 5000
+```
+
+The regular Qt stress tier renders repeated real QR batches at the production cap. The opt-in release-confidence tier
+temporarily raises the cap to 1,000 and verifies real generation, event-loop yielding, result-window presentation,
+exact tab completion, and window-owned timer/state destruction. These tests intentionally assert behavior and cleanup
+rather than machine-dependent elapsed-time thresholds.
 
 ## Packaged-build smoke procedure
 

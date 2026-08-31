@@ -21,24 +21,32 @@ from __future__ import annotations
 
 from Furious.Backends.ExternalCore import ConfigExternalCore, ExternalCoreProcess
 from Furious.Interface import ApplicationRunner
-from Furious.Models import LogCategory
+from Furious.Models import CoreConfiguration, LogCategory, ServerProfile
 from Furious.Plugins import FuriousPlugin, PluginMetadata, PluginRegistry
 from Furious.Qt import AppQDialog, AppQMessageBox, AppQTransientDialog
 from Furious.Utility import AppMainProcess
 from Furious.Service import APPLICATION_LOG_CATEGORY, LogManager, MetricsHistory
 from Furious.Widget import NavigationView
+from Furious.Window.QRCodeWindow import QRCodeWindow
 
+from PySide6 import QtCore
 from PySide6.QtWidgets import QWidget
+
+from shiboken6 import isValid
 
 from tests.support import (
     application,
     collectAtBoundary,
+    isolatedSettings,
     processQtEvents,
     resourceSnapshot,
     veryHeavyEnabled,
+    waitFor,
 )
 
+from importlib import import_module
 from pathlib import Path
+from unittest import mock
 
 import gc
 import multiprocessing
@@ -47,6 +55,8 @@ import tempfile
 import threading
 import unittest
 import weakref
+
+qrCodeModule = import_module('Furious.Window.QRCodeWindow')
 
 
 class _ReleaseApplication:
@@ -351,6 +361,71 @@ class VeryHeavyContractTest(unittest.TestCase):
 
         self.assertTrue(all(reference() is None for reference in references))
         self.assertFalse(AppQDialog._openDialogs)
+
+    def testOneThousandRealQRCodeTabsYieldShowAndReleaseOwners(self):
+        """Render a release-scale QR window without starving or retaining Qt owners."""
+        count = 1_000
+        profiles = [
+            ServerProfile.fromConfiguration(
+                CoreConfiguration(
+                    {'type': 'fixture', 'address': f'node-{index}.example'}
+                ),
+                {'displayName': f'Profile {index + 1}'},
+            )
+            for index in range(count)
+        ]
+        heartbeat = []
+        windowDestroyed = []
+
+        with isolatedSettings(), mock.patch.object(
+            qrCodeModule,
+            'MAXIMUM_QR_EXPORT_PROFILES',
+            count,
+        ), mock.patch.object(
+            qrCodeModule.Storage,
+            'UserServers',
+            return_value=profiles,
+        ), mock.patch.object(
+            qrCodeModule,
+            'exportConfiguration',
+            side_effect=lambda profile: (
+                f'socks://{profile.itemRemark}.example:1080#Release-QR'
+            ),
+        ):
+            window = QRCodeWindow()
+            window.destroyed.connect(lambda *_args: windowDestroyed.append(True))
+            result = window.startExportByIndex(range(count))
+            windowReference = weakref.ref(window)
+
+            QtCore.QTimer.singleShot(
+                0,
+                lambda: heartbeat.append(window.tabCount()),
+            )
+
+            self.assertTrue(waitFor(lambda: bool(heartbeat), timeout=5.0))
+            self.assertLess(heartbeat[0], count)
+            self.assertIs(result, window)
+            self.assertTrue(
+                waitFor(
+                    lambda: window.tabCount() > 0,
+                    timeout=10.0,
+                )
+            )
+            self.assertTrue(window.isVisible())
+            self.assertTrue(
+                waitFor(lambda: not window.isExporting(), timeout=300.0),
+                'release-scale QR export did not complete',
+            )
+            self.assertEqual(window.tabCount(), count)
+
+            window.close()
+            self.assertTrue(waitFor(lambda: not isValid(window)))
+
+        del result, window
+        collectAtBoundary()
+
+        self.assertEqual(windowDestroyed, [True])
+        self.assertIsNone(windowReference())
 
 
 if __name__ == '__main__':

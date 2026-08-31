@@ -20,12 +20,19 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import Mixins
+from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Qt import AppQAction, AppQMenu, AppQTransientDialog
 from Furious.Backends.Hysteria2.Editor import Hysteria2Editor
 from Furious.Backends.Xray.RoutingWindow import RoutingPreviewDialog
 from Furious.Backends.Xray.VlessEditor import VlessEditor
+from Furious.Window.QRCodeWindow import (
+    MAXIMUM_QR_EXPORT_PROFILES,
+    QRCodeWindow,
+)
 
 from PySide6 import QtCore, QtGui
+
+from shiboken6 import isValid
 
 from tests.support import (
     application,
@@ -34,7 +41,10 @@ from tests.support import (
     currentNativeHandleCount,
     isolatedSettings,
     qObjectCount,
+    waitFor,
 )
+
+from unittest import mock
 
 import unittest
 import weakref
@@ -313,6 +323,98 @@ class QtMemoryStressTest(unittest.TestCase):
                             'samples': samples,
                         },
                     )
+
+
+class QRCodeExportStressTest(unittest.TestCase):
+    """Exercise real QR generation, presentation, and cleanup in batches."""
+
+    BatchCount = 3
+    ProfilesPerBatch = MAXIMUM_QR_EXPORT_PROFILES
+
+    @classmethod
+    def setUpClass(cls):
+        """Create the process-wide offscreen QApplication."""
+        application()
+
+    def setUp(self):
+        """Isolate settings used by top-level window presentation."""
+        self.settingsContext = isolatedSettings()
+        self.settingsContext.__enter__()
+
+    def tearDown(self):
+        """Drain deferred deletion before restoring settings."""
+        collectAtBoundary()
+        self.settingsContext.__exit__(None, None, None)
+
+    @staticmethod
+    def profiles(count: int):
+        """Return deterministic profiles for a real QR rendering workload."""
+        return [
+            ServerProfile.fromConfiguration(
+                CoreConfiguration(
+                    {'type': 'fixture', 'address': f'node-{index}.example'}
+                ),
+                {'displayName': f'Profile {index + 1}'},
+            )
+            for index in range(count)
+        ]
+
+    def testRepeatedRealQRCodeBatchesYieldShowAndRelease(self):
+        """Render real QR tabs while keeping events and owners observable."""
+        collectAtBoundary()
+        baselineWindows = qObjectCount(QRCodeWindow)
+        windowReferences = []
+        windowDestroyed = []
+
+        for batch in range(self.BatchCount):
+            profiles = self.profiles(self.ProfilesPerBatch)
+            heartbeat = []
+            window = QRCodeWindow()
+            window.destroyed.connect(lambda *_args: windowDestroyed.append(True))
+
+            with mock.patch(
+                'Furious.Window.QRCodeWindow.Storage.UserServers',
+                return_value=profiles,
+            ), mock.patch(
+                'Furious.Window.QRCodeWindow.exportConfiguration',
+                side_effect=lambda profile, _batch=batch: (
+                    f'socks://node-{_batch}-{profile.itemRemark}.example:1080'
+                    f'#Batch-{_batch}'
+                ),
+            ):
+                result = window.startExportByIndex(range(len(profiles)))
+                QtCore.QTimer.singleShot(
+                    0,
+                    lambda _window=window: heartbeat.append(_window.tabCount()),
+                )
+
+                self.assertTrue(waitFor(lambda: bool(heartbeat), timeout=5.0))
+                self.assertLess(heartbeat[0], len(profiles))
+                self.assertIs(result, window)
+                self.assertTrue(
+                    waitFor(
+                        lambda: window.tabCount() > 0,
+                        timeout=10.0,
+                    )
+                )
+                self.assertTrue(window.isVisible())
+                self.assertTrue(
+                    waitFor(lambda: not window.isExporting(), timeout=30.0),
+                    'real QR batch did not complete',
+                )
+
+            self.assertEqual(window.tabCount(), len(profiles))
+
+            windowReferences.append(weakref.ref(window))
+            window.close()
+            self.assertTrue(waitFor(lambda: not isValid(window)))
+
+        del result, window
+        collectAtBoundary()
+
+        self.assertEqual(windowDestroyed, [True] * self.BatchCount)
+        self.assertTrue(all(reference() is None for reference in windowReferences))
+        self.assertEqual(qObjectCount(QRCodeWindow), baselineWindows)
 
 
 if __name__ == '__main__':
