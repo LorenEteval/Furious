@@ -41,7 +41,6 @@ from Furious.Qt import (
     AppQHeaderView,
     AppQMenu,
     AppQMessageBox,
-    AppQSeparator,
     AppQTableView,
 )
 from Furious.Qt import gettext as _
@@ -580,23 +579,36 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         self.setDropIndicatorShown(False)
         self.setDefaultDropAction(QtCore.Qt.DropAction.IgnoreAction)
 
-        contextMenuActions = [
-            AppQAction(
-                _('Move Up'),
-                callback=lambda: self.moveSelectedGroup(-1),
+        self.moveUpActionRef = AppQAction(
+            _('Move Up'),
+            callback=lambda: self.moveSelectedGroups('up'),
+            shortcut=QtCore.QKeyCombination(
+                QtCore.Qt.KeyboardModifier.ControlModifier,
+                QtCore.Qt.Key.Key_Up,
             ),
-            AppQAction(
-                _('Move Down'),
-                callback=lambda: self.moveSelectedGroup(1),
+            parent=self,
+        )
+        self.moveDownActionRef = AppQAction(
+            _('Move Down'),
+            callback=lambda: self.moveSelectedGroups('down'),
+            shortcut=QtCore.QKeyCombination(
+                QtCore.Qt.KeyboardModifier.ControlModifier,
+                QtCore.Qt.Key.Key_Down,
             ),
-            AppQSeparator(),
-            AppQAction(
-                _('Delete'),
-                callback=lambda: self.deleteSelectedItem(),
-            ),
-        ]
+            parent=self,
+        )
 
-        self.contextMenu = AppQMenu(*contextMenuActions)
+        self.contextMenu = AppQMenu(
+            self.moveUpActionRef,
+            self.moveDownActionRef,
+            parent=self,
+        )
+
+        for action in (self.moveUpActionRef, self.moveDownActionRef):
+            action.setShortcutContext(QtCore.Qt.ShortcutContext.WidgetShortcut)
+
+            self.addAction(action)
+
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
 
         # Signals
@@ -618,6 +630,39 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         keys = tuple(Storage.UserSubs())
 
         return tuple(keys[row] for row in self.selectedIndex if row < len(keys))
+
+    def _currentUnique(self):
+        """Return the stable subscription ID represented by the current row."""
+        row = self.currentIndex().row()
+        keys = tuple(Storage.UserSubs())
+
+        return keys[row] if 0 <= row < len(keys) else None
+
+    def _restoreGroupSelection(self, selectedUniques, currentUnique):
+        """Restore logical selection, current item, and keyboard focus by ID."""
+        rows = {unique: row for row, unique in enumerate(Storage.UserSubs())}
+        selection = self.selectionModel()
+        selection.clearSelection()
+        flags = (
+            QtCore.QItemSelectionModel.SelectionFlag.Select
+            | QtCore.QItemSelectionModel.SelectionFlag.Rows
+        )
+
+        for unique in selectedUniques:
+            row = rows.get(unique)
+
+            if row is not None:
+                selection.select(self.sourceModel.index(row, 0), flags)
+
+        currentRow = rows.get(currentUnique)
+
+        if currentRow is not None:
+            selection.setCurrentIndex(
+                self.sourceModel.index(currentRow, 0),
+                QtCore.QItemSelectionModel.SelectionFlag.NoUpdate,
+            )
+
+        self.setFocus()
 
     @QtCore.Slot(QtCore.QPoint)
     def handleCustomContextMenuRequested(self, point):
@@ -687,36 +732,24 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         # Show the MessageBox asynchronously
         mbox.open()
 
-    def moveSelectedGroup(self, offset: int):
-        """Move one group while preserving its stable ID and timer."""
-        indexes = self.selectedIndex
+    def moveSelectedGroups(self, position: str):
+        """Move selected groups while preserving identity, selection, and timers."""
+        selectedUniques = self.selectedUniques
 
-        if len(indexes) != 1 or offset not in (-1, 1):
+        if not selectedUniques or position not in ('up', 'down'):
             return
 
-        source = indexes[0]
-        target = source + offset
-
-        items = list(Storage.UserSubs().items())
-
-        if target < 0 or target >= len(items):
-            return
+        currentUnique = self._currentUnique()
 
         self.sourceModel.layoutAboutToBeChanged.emit()
 
-        item = items.pop(source)
-
-        items.insert(target, item)
-
-        Storage.UserSubs().clear()
-        Storage.UserSubs().update(items)
-
-        for order, (unique, value) in enumerate(items):
-            value['sortOrder'] = order
+        changed = Storage.moveSubscriptionGroups(selectedUniques, position)
 
         self.sourceModel.layoutChanged.emit()
-        self.selectRow(target)
-        self.groupsChanged.emit()
+        self._restoreGroupSelection(selectedUniques, currentUnique)
+
+        if changed:
+            self.groupsChanged.emit()
 
     @QtCore.Slot(object)
     def refreshSubscriptionState(self, uniques):

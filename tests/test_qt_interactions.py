@@ -28,6 +28,7 @@ from Furious.Repository import Storage, SubscriptionGroup
 from Furious.Qt import AppQDialog, AppQSwitch, gettext
 from Furious.Widget.RoutingSelector import RoutingSelector
 from Furious.Widget.ServerTableView import ServerTableView
+from Furious.Widget.SubscriptionTableView import SubscriptionTableView
 from Furious.Window.HomePage import HomePage
 from Furious.Window.SettingsPage import (
     _SystemProxySettingsCard,
@@ -589,6 +590,188 @@ class ServerTableQtInteractionTest(unittest.TestCase):
             finally:
                 table.contextMenu.hide()
                 self._destroyTable(table)
+
+
+class SubscriptionTableQtInteractionTest(unittest.TestCase):
+    """Protect subscription ordering through real selection and shortcuts."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create the process-wide headless QApplication."""
+        application()
+
+    def tearDown(self):
+        """Release the subscription repository and deferred table objects."""
+        Storage._UserSubsStorage.cache_clear()
+        collectAtBoundary()
+
+    @staticmethod
+    def _table(parent=None):
+        """Build one visible table with deterministic stable subscription IDs."""
+        for order, unique in enumerate(('A', 'B', 'C', 'D', 'E')):
+            Storage.upsertSubscriptionGroup(
+                SubscriptionGroup(
+                    id=unique,
+                    remark=unique,
+                    sortOrder=order,
+                )
+            )
+
+        table = SubscriptionTableView(parent=parent)
+        table.resize(900, 360)
+        table.show()
+        table.activateWindow()
+        processQtEvents()
+
+        return table
+
+    def _clickRow(self, table, row, modifiers=QtCore.Qt.NoModifier):
+        """Select one subscription row through the real viewport mouse path."""
+        index = table.sourceModel.index(row, 0)
+        rectangle = table.visualRect(index)
+
+        self.assertTrue(index.isValid())
+        self.assertFalse(rectangle.isEmpty())
+
+        QTest.mouseClick(
+            table.viewport(),
+            QtCore.Qt.MouseButton.LeftButton,
+            modifiers,
+            rectangle.center(),
+        )
+        processQtEvents()
+
+    @staticmethod
+    def _destroyTable(table):
+        """Release the persistent table, menu, and owned actions through Qt."""
+        table.close()
+        table.deleteLater()
+
+    def testContextMenuHasOnlyWidgetScopedMoveShortcuts(self):
+        """Expose only table-scoped Ctrl+Up and Ctrl+Down move commands."""
+        with isolatedSettings():
+            table = self._table()
+
+            try:
+                actions = tuple(
+                    action
+                    for action in table.contextMenu.actions()
+                    if not action.isSeparator()
+                )
+
+                self.assertEqual(
+                    [action.textEnglish for action in actions],
+                    ['Move Up', 'Move Down'],
+                )
+                self.assertNotIn('Delete', [action.textEnglish for action in actions])
+
+                for action, key in (
+                    (table.moveUpActionRef, QtCore.Qt.Key.Key_Up),
+                    (table.moveDownActionRef, QtCore.Qt.Key.Key_Down),
+                ):
+                    self.assertEqual(
+                        action.shortcut(),
+                        QtGui.QKeySequence(
+                            QtCore.QKeyCombination(
+                                QtCore.Qt.KeyboardModifier.ControlModifier,
+                                key,
+                            )
+                        ),
+                    )
+                    self.assertEqual(
+                        action.shortcutContext(),
+                        QtCore.Qt.ShortcutContext.WidgetShortcut,
+                    )
+                    self.assertIn(action, table.actions())
+                    self.assertIs(action.parent(), table)
+            finally:
+                self._destroyTable(table)
+
+    def testMultiMoveShortcutsPreserveIdentityCurrentItemAndFocus(self):
+        """Keep noncontiguous selection ready across repeated keyboard moves."""
+        with isolatedSettings():
+            table = self._table()
+
+            try:
+                self._clickRow(table, 1)
+                self._clickRow(
+                    table,
+                    3,
+                    QtCore.Qt.KeyboardModifier.ControlModifier,
+                )
+
+                selected = {'B', 'D'}
+                current = 'D'
+
+                for expected in (
+                    ('B', 'A', 'D', 'C', 'E'),
+                    ('B', 'D', 'A', 'C', 'E'),
+                ):
+                    QTest.keyClick(
+                        table,
+                        QtCore.Qt.Key.Key_Up,
+                        QtCore.Qt.KeyboardModifier.ControlModifier,
+                    )
+                    processQtEvents()
+
+                    self.assertEqual(tuple(Storage.UserSubs()), expected)
+                    self.assertEqual(set(table.selectedUniques), selected)
+                    self.assertEqual(table._currentUnique(), current)
+                    self.assertTrue(table.hasFocus())
+
+                QTest.keyClick(
+                    table,
+                    QtCore.Qt.Key.Key_Down,
+                    QtCore.Qt.KeyboardModifier.ControlModifier,
+                )
+                processQtEvents()
+
+                self.assertEqual(
+                    tuple(Storage.UserSubs()),
+                    ('A', 'B', 'D', 'C', 'E'),
+                )
+                self.assertEqual(set(table.selectedUniques), selected)
+                self.assertEqual(table._currentUnique(), current)
+                self.assertTrue(table.hasFocus())
+            finally:
+                self._destroyTable(table)
+
+    def testMoveShortcutDoesNotFireFromSiblingEditor(self):
+        """Keep subscription movement inactive while a sibling editor has focus."""
+        with isolatedSettings():
+            window = QWidget()
+            layout = QVBoxLayout(window)
+            editor = QLineEdit(window)
+            table = self._table(parent=window)
+
+            layout.addWidget(editor)
+            layout.addWidget(table)
+            window.resize(900, 500)
+            window.show()
+            window.activateWindow()
+            processQtEvents()
+
+            try:
+                self._clickRow(table, 1)
+                editor.setFocus()
+
+                self.assertTrue(waitFor(lambda: application().focusWidget() is editor))
+
+                before = tuple(Storage.UserSubs())
+
+                QTest.keyClick(
+                    editor,
+                    QtCore.Qt.Key.Key_Down,
+                    QtCore.Qt.KeyboardModifier.ControlModifier,
+                )
+                processQtEvents()
+
+                self.assertEqual(tuple(Storage.UserSubs()), before)
+                self.assertIs(application().focusWidget(), editor)
+            finally:
+                self._destroyTable(table)
+                window.close()
+                window.deleteLater()
 
 
 class SharedSettingsQtWorkflowTest(unittest.TestCase):

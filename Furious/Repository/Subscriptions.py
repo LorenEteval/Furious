@@ -219,6 +219,41 @@ class UserSubs(Mixins.CleanupOnExit, StorageBackend):
             else None
         )
 
+    def moveGroups(self, groupIds, position: str) -> bool:
+        """Move selected groups one position while preserving relative order."""
+        selected = {str(groupId) for groupId in groupIds}
+        items = list(self._data.items())
+        selected.intersection_update(unique for unique, _value in items)
+
+        if not selected or position not in ('up', 'down'):
+            return False
+
+        originalOrder = list(items)
+
+        def isSelected(item):
+            """Return whether the group belongs to the selected identity set."""
+            return item[0] in selected
+
+        if position == 'up':
+            for index in range(1, len(items)):
+                if isSelected(items[index]) and not isSelected(items[index - 1]):
+                    items[index - 1], items[index] = items[index], items[index - 1]
+        else:
+            for index in range(len(items) - 2, -1, -1):
+                if isSelected(items[index]) and not isSelected(items[index + 1]):
+                    items[index], items[index + 1] = items[index + 1], items[index]
+
+        if items == originalOrder:
+            return False
+
+        self._data.clear()
+        self._data.update(items)
+
+        for order, value in enumerate(self._data.values()):
+            value['sortOrder'] = order
+
+        return True
+
     def upsertGroup(self, group: SubscriptionGroup):
         """Insert or replace one group without changing its identity."""
         self.upsertGroups((group,))

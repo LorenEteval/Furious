@@ -119,6 +119,11 @@ class Storage:
         return Storage._UserSubsStorage().group(unique)
 
     @staticmethod
+    def moveSubscriptionGroups(groupIds, position: str) -> bool:
+        """Move selected subscription groups in their persisted display order."""
+        return Storage._UserSubsStorage().moveGroups(groupIds, position)
+
+    @staticmethod
     def upsertSubscriptionGroup(group: SubscriptionGroup):
         """Persist one subscription group through the shared repository."""
         Storage._UserSubsStorage().upsertGroup(group)

@@ -175,6 +175,31 @@ class RepositoryContractTest(unittest.TestCase):
                 ['A', 'Hidden', 'B', 'C', 'D'],
             )
 
+    def testSubscriptionMultiMovesPreserveSelectedAndUnselectedOrder(self):
+        """Move subscription selections as stable blocks in repository order."""
+        with isolatedSettings():
+            repository = UserSubs()
+
+            for order, unique in enumerate(('A', 'B', 'C', 'D', 'E')):
+                repository.upsertGroup(
+                    SubscriptionGroup(
+                        id=unique,
+                        remark=unique,
+                        sortOrder=order,
+                    )
+                )
+
+            self.assertTrue(repository.moveGroups(('B', 'D'), 'up'))
+            self.assertEqual(tuple(repository.data()), ('B', 'A', 'D', 'C', 'E'))
+            self.assertEqual(
+                [value['sortOrder'] for value in repository.data().values()],
+                list(range(5)),
+            )
+
+            self.assertTrue(repository.moveGroups(('B', 'D'), 'down'))
+            self.assertEqual(tuple(repository.data()), ('A', 'B', 'C', 'D', 'E'))
+            self.assertFalse(repository.moveGroups(('A',), 'up'))
+
     def testMovingBetweenSubscriptionGroupsDetachesSyncOwnership(self):
         """Keep no-op ownership but make cross-group moves locally managed."""
         with isolatedSettings():
