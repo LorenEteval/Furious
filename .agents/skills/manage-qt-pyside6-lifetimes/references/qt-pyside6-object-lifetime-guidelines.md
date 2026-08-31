@@ -44,6 +44,8 @@ A packaged PySide6 feature can involve three overlapping lifetime systems:
 
 Correct parentage in one system does not prove that the other two match the intended logical lifetime.
 
+Reconstruct that model from the checked-out source, tests, packaging configuration, and verified runtime behavior before applying this document. These guidelines are maintained architectural memory, not an authority that can make stale claims true. When evidence contradicts a rule, follow the evidence, correct the narrowest affected guidance, and keep version-sensitive observations explicitly scoped.
+
 For each dynamically created object, determine which category it belongs to.
 
 ### Long-lived objects
@@ -221,8 +223,8 @@ Avoid unnecessary manual disconnect boilerplate when Qt already manages the conn
 ### Nuitka/PySide6 compiled bound-method retention
 
 Native PySide6 and a Nuitka-compiled application do not necessarily have the same
-Python-callable retention graph. In the currently verified toolchain (Nuitka 4.1.3,
-PySide6 6.8.3), Nuitka's standard PySide6 package configuration patches
+Python-callable retention graph. In the locally selected and inspected toolchain
+(Nuitka 4.1.3, PySide6 6.8.3), Nuitka's standard PySide6 package configuration patches
 `SignalInstance.connect()` and `QTimer.singleShot()`. When the callback is a compiled
 bound method, the generated post-import code protects it in a process-global list named
 `_protected` and may also expose its underlying function on the receiver class. The
@@ -261,24 +263,40 @@ connectWeakly(
 )
 ```
 
-`connectWeakly()` has this contract:
+`connectWeakly()` has this current contract:
 
-- the connected dispatcher is a plain function, not the receiver's bound method;
+- the connected dispatcher is a plain callable object, not the receiver's bound method;
 - receiver and optional sender are stored only through `weakref.ref`;
 - the method is resolved by its string name only when the signal is emitted;
 - `shiboken6.isValid()` is checked before accessing a `QObject` wrapper;
 - `forwardSender=True` explicitly passes the sender instead of depending on
   `QObject.sender()`;
-- when the sender is independently owned or longer-lived, `sender=` lets receiver
-  destruction disconnect the otherwise dormant dispatcher;
+- `_ownsQObject(receiver, sender)` walks from the sender through its `parent()` chain;
+- when that walk shows that the sender is not the receiver or its descendant,
+  `sender=` makes receiver destruction disconnect the otherwise dormant dispatcher;
+- that cleanup captures only the opaque connection returned by `signal.connect()` and
+  calls `QtCore.QObject.disconnect(connection)`; it deliberately does not capture the
+  sender's `SignalInstance`, which may wrap an already-deleted sender during teardown;
 - the method name is static and must remain valid for the receiver's lifetime.
 
-Pass the sender whenever it is not in the receiver's QObject subtree. Omitting it can
+Pass the sender whenever it is outside the receiver's QObject subtree. Omitting it can
 leave safe no-op dispatchers attached to a long-lived sender even though the weak
-receiver itself is gone. A direct bound-method connection is permitted only when the
-receiver is deliberately process-lifetime, the retention is intentional and
-documented, and the connection is not repeatedly recreated. Prefer weak dispatch for
-dynamic or repeated connections regardless.
+receiver itself is gone. When the sender is the receiver or a child/descendant, Qt tree
+destruction already removes the connection and the extra destroyed-receiver hook is
+unnecessary. Supplying `sender=` still keeps only a weak sender reference.
+
+`singleShotWeakly(milliseconds, receiver, 'methodName')` uses the same named weak
+dispatcher without a sender. If the receiver wrapper is gone or its native QObject is
+invalid when the timer fires, delivery becomes a no-op.
+
+Direct signal connections are not categorically wrong. They are appropriate when the
+sender and receiver have a bounded, intentionally shared lifetime—for example, a
+persistent page and its child controls/timers, or process-lifetime controllers whose
+connection is created once. A transient or repeatedly created receiver must not be
+passed as a compiled bound method in packaged-sensitive code. Closures and partials
+require inspection of their captures and their sender's lifetime; a plain function
+that captures only immutable operation data is different from one that captures a
+transient widget or bound method.
 
 ## 9. Timers
 
@@ -292,11 +310,22 @@ For transient widgets:
 
 A timer connected to a bound method of a transient object can indirectly contribute to lifetime problems.
 
+Furious uses parented instance timers for persistent/shared-lifetime controls and
+workers. For deferred work on transient or repeated receivers, use
+`singleShotWeakly()` rather than passing the compiled bound method to
+`QTimer.singleShot()`. A parentless timer is acceptable only when a durable non-Qt
+owner retains it and its explicit disposal path stops and deletes it.
+
 ## 10. Event Filters
 
 Whenever calling `installEventFilter(...)`, verify the corresponding lifetime relationship.
 
 A long-lived filtered object can retain or invoke an event filter unexpectedly. Remove event filters explicitly when appropriate.
+
+Current examples include application/main-window policy and temporary theme snapshot
+overlays. The former removes the filter during application cleanup; the latter removes
+it when animation completes, is interrupted, or the watched window changes state.
+Keep both sides' destruction order and `shiboken6.isValid()` checks explicit.
 
 ## 11. Long-lived Controllers Must Not Own Transient UI
 
@@ -305,6 +334,12 @@ Application-wide controllers/services should generally own state, orchestration,
 They should generally not strongly own transient dialogs, temporary editors, page-local widgets, or short-lived message boxes.
 
 UI objects may observe controller state. Controllers should not become accidental lifetime owners of transient UI.
+
+Long-running resources belong to the service that schedules them, not to a transient
+page callback. Furious's current profile-test and subscription services parent their
+manager-side QObjects/pools to durable owners, cross worker results back to the owning
+Qt thread, reject stale generations/identities, and provide bounded idempotent
+shutdown. Preserve that ownership shape when moving work off the GUI thread.
 
 ## 12. Plugin and Registry Design
 
@@ -317,6 +352,12 @@ Plugin registries and capability registries should normally store:
 - descriptors.
 
 Prefer not to store live `QWidget` or `QObject` instances unless the architecture explicitly requires persistent instances. Editor registries should generally register editor classes/factories rather than instantiated editors.
+
+Furious's plugin registry deliberately owns process-lifetime plugin/capability
+instances and descriptors. A separate navigation manager owns successfully created
+persistent plugin pages, which are also parented into the main navigation tree. Failed
+factory results are deleted; the registry itself must not retain created editor or
+dialog instances.
 
 ## 13. Dialog and Message-box Lifetime
 
@@ -364,6 +405,16 @@ Furious implements these policies through `AppQDialog`, `AppQTransientDialog`, a
 registry; message-box presentation behavior must delegate ownership to that base path
 rather than introduce a parallel registry.
 
+`AppQMainWindow` uses a distinct visible-window registry. `show()` inserts an opaque
+token-to-window entry so an otherwise unowned top-level wrapper remains alive;
+accepted close removes it and `destroyed` provides fallback cleanup. This registry is
+not the deliberate owner of a reusable window: `TextEditorWindow`, for example, is
+retained by its application owner across ordinary close/show cycles and explicitly
+destroyed at owner shutdown. A one-shot top-level using `WA_DeleteOnClose` must be
+reviewed against any callbacks or work that must survive the accepted close; do not
+blindly copy the dialog `finished` rule or assume the visible-window registry replaces
+an application owner.
+
 ## 14. Packaged and Compiled Builds Require Extra Caution
 
 Object lifetime behavior that appears acceptable under native Python can expose problems more clearly in packaged or compiled builds.
@@ -386,6 +437,13 @@ counts, and `shiboken6.isValid()` checks. Zero protected-list growth alone is no
 of correct destruction, a missing counter is not zero growth, and stable process memory
 alone is not proof of no leak.
 
+Treat the exact retention workaround as version-sensitive. The repository currently
+ships several PySide6 versions across platform artifacts, while the inspected local
+development combination is PySide6 6.8.3 with Nuitka 4.1.3. Re-inspect the selected
+Nuitka package configuration and run the representative compiled probe when a release
+toolchain changes; do not generalize one combination's private `_protected` visibility
+or behavior to every native or packaged build.
+
 ## 15. Required Lifetime Review for UI Changes
 
 Whenever a change creates or modifies dynamically managed Qt objects, explicitly review:
@@ -402,6 +460,9 @@ Whenever a change creates or modifies dynamically managed Qt objects, explicitly
 10. Does it install event filters?
 11. Does it connect to long-lived signals?
 12. Can it disappear because the final Python reference is lost?
+13. Which Qt thread owns it and performs final deletion?
+14. If it is asynchronous, what are its cancellation, supersession, and stale-result rules?
+15. Do replies, workers, pools, threads, queued callbacks, animations, and effects have one terminal cleanup path?
 
 Do not consider the implementation complete until these questions have clear answers.
 
@@ -493,6 +554,13 @@ Reject a change when it:
 - verifies only native CPython when the defect can be introduced by Nuitka's PySide6
   integration.
 
+Do not reject a direct connection merely because it is direct. First prove that the
+receiver is transient/repeated, that the sender or compiler protection can outlive it,
+or that the connection is recreated without a bounded owner. Persistent controls,
+child timers, shared models/delegates, and process-lifetime controller presentation
+may intentionally use direct connections when their QObject trees and Python owners
+share the same lifetime.
+
 ## Acceptance Criteria
 
 For Qt/PySide6 UI code, a correct implementation should satisfy all applicable conditions:
@@ -503,6 +571,8 @@ For Qt/PySide6 UI code, a correct implementation should satisfy all applicable c
 - Long-lived controllers do not accidentally retain transient widgets.
 - Caches do not retain `QObject` instances unintentionally.
 - Timers and event filters have clear lifecycle behavior.
+- Models, delegates, menus, actions, animations, and effects have bounded owners and replacement cleanup.
+- Network replies, sockets, workers, pools, threads, processes, and queued work terminate through one idempotent owner path in the correct thread.
 - Custom close handlers preserve correct Qt lifecycle semantics.
 - Repeated open/close cycles do not cause unbounded live-object growth.
 - No visible window disappears because its wrapper is prematurely garbage-collected.

@@ -7,6 +7,8 @@ description: Audit and implement safe Qt/PySide6 object ownership and destructio
 
 Treat lifetime correctness as part of the implementation, not as a later cleanup step. Fix the ownership model instead of masking symptoms.
 
+Start from the checked-out implementation, tests, packaging configuration, and verified runtime behavior. Treat this skill and its reference as maintained hypotheses: when evidence contradicts them, follow the evidence, correct the narrowest stale rule, and preserve the newly verified invariant for the next audit.
+
 ## Required reference
 
 Before changing or reviewing lifetime-relevant code, read [references/qt-pyside6-object-lifetime-guidelines.md](references/qt-pyside6-object-lifetime-guidelines.md) completely. Apply its detailed requirements together with the scoped `AGENTS.md` files.
@@ -21,7 +23,7 @@ For every affected Qt object, record:
 - `QObject` parent;
 - intended category: long-lived, reusable, or transient;
 - close/hide/destroy path;
-- timers, event filters, models, delegates, menus, actions, animations, and graphics effects it owns;
+- thread affinity and every timer, event filter, model, delegate, menu, action, animation, graphics effect, network reply, worker, pool, or thread it owns;
 - connections to application-lifetime senders;
 - for each relevant signal: sender/receiver lifetimes and QObject trees, direct bound method versus weak dispatcher versus closure/partial, and its disconnect boundary;
 - caches, registries, closures, partials, lambdas, or callbacks that can retain it.
@@ -58,30 +60,42 @@ Search the affected call paths for:
 - module/application/controller/plugin registries;
 - nested functions, bound methods, lambdas, and `functools.partial`;
 - `QTimer`, `installEventFilter`, `QAction`, `QMenu`, `QActionGroup`, `QShortcut`, models, delegates, and watchers;
+- `QNetworkReply`, `QThread`, `QThreadPool`, `QRunnable`, queued events, and deferred deletion;
 - long-lived signals connected to transient Python callables.
 
 Prefer immutable metadata and classes/factories in caches and registries. Never cache a transient Qt instance or an instance method whose key contains `self`.
 
 ### 5. Enforce packaged signal safety
 
-Nuitka's PySide6 integration can retain compiled bound methods passed directly to
-`SignalInstance.connect()` in a process-global protection list. A connection that is
-harmless under native CPython can therefore retain a transient receiver and its Qt
-subtree for the life of the packaged process.
+The selected Nuitka/PySide6 toolchain can retain compiled bound methods passed directly
+to `SignalInstance.connect()` or `QTimer.singleShot()` in process-global protection.
+A connection that is harmless under native CPython can therefore retain a transient
+receiver and its Qt subtree for the life of the packaged process. Re-check the actual
+package configuration when the selected Nuitka or PySide6 version changes.
 
 - Do not connect a signal directly to a bound method of a transient or repeatedly
   created `QObject`.
 - Use `Furious.Qt.connectWeakly(signal, receiver, 'methodName', ...)`.
-- Pass `sender=` when the sender is independently owned or longer-lived so the helper
-  can remove the dormant dispatcher when the receiver is destroyed. Use
-  `forwardSender=True` instead of relying on `QObject.sender()` when the slot needs the
-  sender.
+- Pass `sender=` when the sender is outside the receiver's `QObject` subtree. On
+  receiver destruction, `connectWeakly()` disconnects that independent sender through
+  Qt's opaque connection handle; it intentionally does not capture the sender's
+  `SignalInstance`. A sender owned in the receiver's subtree dies with that tree and
+  does not need this extra disconnect hook.
+- Use `forwardSender=True` when the named method needs the sender; the helper forwards
+  the weakly resolved sender explicitly rather than depending on `QObject.sender()`.
+- Use `singleShotWeakly()` for deferred named-method delivery to transient or repeated
+  receivers.
 - Do not substitute a lambda or partial that strongly captures the receiver.
-- Direct bound-method connections are acceptable only for deliberately process-lifetime
-  receivers when the resulting strong retention is intentional and documented.
+- Direct connections remain appropriate for bounded, deliberately shared lifetimes,
+  such as persistent page controls, child timers, and application-lifetime
+  controllers. They are not appropriate when a transient/repeated receiver can be
+  retained by a longer-lived sender or by packaged bound-method protection. Audit the
+  actual capture graph of closures and partials instead of banning them by syntax.
 
-The weak dispatcher must keep only weak receiver/sender references, check PySide wrapper
-validity, and resolve the method by name at emission time.
+The current weak dispatcher keeps only weak receiver/sender references, checks
+`shiboken6.isValid()` before accessing a `QObject` wrapper, and resolves the method's
+static string name at emission time. Renaming that method without updating the
+connection is therefore a runtime contract break.
 
 ### 6. Preserve asynchronous dialog destruction
 
@@ -98,7 +112,26 @@ For non-blocking dialogs, distinguish interaction completion from native destruc
 Use the existing `AppQDialog`/`AppQTransientDialog`/`AppQMessageBox` ownership model
 rather than adding a parallel registry.
 
-### 7. Diagnose before fixing
+`AppQMainWindow` has a separate visible-window registry: it prevents an unowned shown
+top-level wrapper from disappearing and releases it after an accepted close, with
+`destroyed` as a fallback. Reusable windows still need their deliberate owner outside
+that registry. Audit delete-on-close top-level windows against their own post-close
+work instead of assuming the dialog registry's `finished` policy applies unchanged.
+
+### 7. Own asynchronous resources through one terminal path
+
+- Parent ordinary timers, models, delegates, menus, actions, and effects to the feature
+  that owns them; stop/remove/replace them explicitly when their logical lifetime can
+  end before the parent.
+- Give each network reply, worker, pool, thread, socket, process, and queued operation
+  one durable owner, one cancellation/supersession rule, and one idempotent terminal
+  cleanup path in the correct Qt thread.
+- Cross thread boundaries with immutable results and queued events/signals. Workers do
+  not mutate widgets or live GUI models.
+- Remove event filters and dispose interrupted animations/effects when either side can
+  outlive the feature.
+
+### 8. Diagnose before fixing
 
 Use targeted evidence as needed:
 
@@ -111,7 +144,7 @@ Use targeted evidence as needed:
 
 Distinguish retained objects from Python allocator high-water marks and Qt/native memory caching. Remove temporary diagnostics after the cause is understood.
 
-### 8. Verify the lifecycle
+### 9. Verify the lifecycle
 
 Run the narrow behavior test first, then the applicable Qt lifetime tier in `tests/README.md`. For shared transient infrastructure, repeat at least 20-50 cycles and verify:
 
@@ -146,4 +179,5 @@ Before handing off a Qt-related change, be able to explain:
 5. why the object cannot disappear prematurely;
 6. whether direct signal callbacks or closures create unwanted packaged-build retention;
 7. for delete-on-close dialogs, why the final owner survives until native destruction;
-8. which native and, when relevant, Nuitka-compiled lifecycle verification passed.
+8. how replies, workers, pools, threads, queued work, and deferred deletion reach one terminal cleanup path;
+9. which native and, when relevant, Nuitka-compiled lifecycle verification passed.
