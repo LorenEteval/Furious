@@ -1922,19 +1922,19 @@ class ServerTableView(
 
     def updateSubsByUnique(self, unique: str, httpProxy: Union[str, None], **kwargs):
         """Update subs by unique."""
+        self.updateSubscriptions((unique,), httpProxy, **kwargs)
+
+    def updateSubscriptions(self, uniques, httpProxy: Union[str, None], **kwargs):
+        """Update stable subscription IDs as one manager-owned batch."""
         kwargs.pop('parent', None)
 
         self.subsManager.configureHttpProxy(httpProxy)
-        self.subsManager.updateSubsByUnique(unique, **kwargs)
+        self.subsManager.updateSubscriptions(uniques, **kwargs)
 
     def updateSubs(self, httpProxy: Union[str, None], **kwargs):
         """Update subs."""
         self.selectionModel().clearSelection()
-
-        kwargs.pop('parent', None)
-
-        self.subsManager.configureHttpProxy(httpProxy)
-        self.subsManager.updateSubs(**kwargs)
+        self.updateSubscriptions(tuple(Storage.UserSubs()), httpProxy, **kwargs)
 
     @QtCore.Slot()
     def _handleSubscriptionsChanged(self):

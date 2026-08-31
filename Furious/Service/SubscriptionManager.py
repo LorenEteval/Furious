@@ -102,6 +102,11 @@ class SubscriptionUpdateBatch:
 class SubscriptionManager(HttpGetManager):
     """Own subscription networking, decoding, reconciliation, and persistence."""
 
+    # Presentation metadata changed for these stable subscription IDs. This
+    # deliberately does not imply that profile topology changed.
+    subscriptionStateChanged = QtCore.Signal(object)
+
+    # Subscription groups or their derived profile topology changed.
     subscriptionsChanged = QtCore.Signal()
     subscriptionCommitted = QtCore.Signal(str)
     updateCompleted = QtCore.Signal(object)
@@ -478,7 +483,20 @@ class SubscriptionManager(HttpGetManager):
         if not committedSuccess and not committedFailure:
             return
 
-        self.subscriptionsChanged.emit()
+        changedSubscriptions = tuple(
+            dict.fromkeys(
+                param.get('unique', '')
+                for param in (*committedSuccess, *committedFailure)
+                if param.get('unique')
+            )
+        )
+
+        if changedSubscriptions:
+            self.subscriptionStateChanged.emit(changedSubscriptions)
+
+        if committedSuccess:
+            self.subscriptionsChanged.emit()
+
         self.updateCompleted.emit(
             SubscriptionUpdateBatch(
                 tuple(committedSuccess),
@@ -597,67 +615,57 @@ class SubscriptionManager(HttpGetManager):
             forwardSender=True,
         )
 
-    def updateSubsByUnique(self, unique: str, **kwargs):
-        """Update one enabled subscription group by stable ID."""
-        subscription = Storage.UserSubs().get(unique)
+    def updateSubscriptions(self, uniques, **kwargs):
+        """Start eligible stable IDs as one status and completion batch."""
+        subscriptions = Storage.UserSubs()
 
-        if (
-            not subscription
-            or not subscription.get('enabled', True)
-            or not subscription.get('webURL')
-        ):
+        batch = tuple(
+            (unique, subscriptions[unique])
+            for unique in dict.fromkeys(uniques)
+            if unique in subscriptions
+            and subscriptions[unique].get('enabled', True)
+            and subscriptions[unique].get('webURL')
+        )
+
+        if not batch:
             return
 
-        group = Storage.SubscriptionGroup(unique)
+        changedSubscriptions = []
 
-        if group is not None:
+        for unique, _subscription in batch:
+            group = Storage.SubscriptionGroup(unique)
+
+            if group is None:
+                continue
+
             group.lastSyncStatus = 'syncing'
             group.lastSyncError = ''
 
             Storage.upsertSubscriptionGroup(group)
+            changedSubscriptions.append(unique)
 
-        depthMap = kwargs.get('depthMap')
-        successArgs = kwargs.get('successArgs')
-        failureArgs = kwargs.get('failureArgs')
+        if changedSubscriptions:
+            self.subscriptionStateChanged.emit(tuple(changedSubscriptions))
 
-        if depthMap is None:
-            depthMap = {'depth': 1}
+        depthMap = {'depth': len(batch)}
+        successArgs = []
+        failureArgs = []
 
-        if successArgs is None:
-            successArgs = list()
-
-        if failureArgs is None:
-            failureArgs = list()
-
-        kwargs.update(
-            depthMap=depthMap,
-            successArgs=successArgs,
-            failureArgs=failureArgs,
-            requestVersion=self._nextRequestVersion(unique),
-        )
-
-        self.updateSubsByWebGET(unique=unique, **subscription, **kwargs)
-
-    def updateSubs(self, **kwargs):
-        """Update every enabled subscription as one completion batch."""
-        enabledKeys = tuple(
-            key
-            for key, subscription in Storage.UserSubs().items()
-            if subscription.get('enabled', True) and subscription.get('webURL')
-        )
-
-        if not enabledKeys:
-            return
-
-        depthMap = {'depth': len(enabledKeys)}
-        successArgs = list()
-        failureArgs = list()
-
-        for key in enabledKeys:
-            self.updateSubsByUnique(
-                key,
+        for unique, subscription in batch:
+            self.updateSubsByWebGET(
+                unique=unique,
+                **subscription,
+                **kwargs,
                 depthMap=depthMap,
                 successArgs=successArgs,
                 failureArgs=failureArgs,
-                **kwargs,
+                requestVersion=self._nextRequestVersion(unique),
             )
+
+    def updateSubsByUnique(self, unique: str, **kwargs):
+        """Update one enabled subscription through the canonical batch path."""
+        self.updateSubscriptions((unique,), **kwargs)
+
+    def updateSubs(self, **kwargs):
+        """Update every eligible subscription through the canonical batch path."""
+        self.updateSubscriptions(tuple(Storage.UserSubs()), **kwargs)

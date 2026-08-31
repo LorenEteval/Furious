@@ -340,8 +340,14 @@ class SubscriptionManagerTest(TestCase):
         )
         completed = []
         committedSubscriptions = []
+        stateChanges = []
+        structuralChanges = []
         manager.updateCompleted.connect(completed.append)
         manager.subscriptionCommitted.connect(committedSubscriptions.append)
+        manager.subscriptionStateChanged.connect(
+            lambda uniques: stateChanges.append(tuple(uniques))
+        )
+        manager.subscriptionsChanged.connect(lambda: structuralChanges.append(True))
         failed = {'unique': 'group-a', 'profiles': ()}
         successful = {'unique': 'group-b', 'profiles': ()}
 
@@ -360,6 +366,37 @@ class SubscriptionManagerTest(TestCase):
         self.assertEqual(completed[0].failed[0]['unique'], 'group-a')
         self.assertIn('injected failure', completed[0].failed[0]['error'])
         self.assertEqual(committedSubscriptions, ['group-b'])
+        self.assertEqual(stateChanges, [('group-b', 'group-a')])
+        self.assertEqual(structuralChanges, [True])
+
+        manager.deleteLater()
+
+    def testFailedBatchPublishesStateWithoutStructuralChange(self):
+        """Present terminal failure metadata without resetting profile consumers."""
+        manager = self._manager()
+        stateChanges = []
+        structuralChanges = []
+        completed = []
+
+        manager.subscriptionStateChanged.connect(
+            lambda uniques: stateChanges.append(tuple(uniques))
+        )
+        manager.subscriptionsChanged.connect(lambda: structuralChanges.append(True))
+        manager.updateCompleted.connect(completed.append)
+
+        with mock.patch(
+            'Furious.Service.SubscriptionManager.Storage.SubscriptionGroup',
+            return_value=None,
+        ):
+            manager.handleSynchronizationResults(
+                successArgs=[],
+                failureArgs=[{'unique': 'group-a', 'error': 'offline'}],
+            )
+
+        self.assertEqual(stateChanges, [('group-a',)])
+        self.assertEqual(structuralChanges, [])
+        self.assertEqual(len(completed), 1)
+        self.assertEqual(completed[0].failed[0]['error'], 'offline')
 
         manager.deleteLater()
 
@@ -660,6 +697,142 @@ class SubscriptionManagerTest(TestCase):
         self.assertEqual(gettext('Updated', 'ZH'), '已更新')
         self.assertEqual(gettext('Update Failed', 'ZH'), '更新失败')
 
+    def testSubscriptionStateNotificationRepaintsOnlyAffectedMetadataRow(self):
+        """Resolve stable IDs at delivery and avoid a whole-table refresh."""
+        subscriptions = {
+            'group-a': self._subscription(),
+            'group-b': self._subscription(
+                remark='Group B',
+                webURL='https://invalid.test/b',
+            ),
+            'group-c': self._subscription(
+                remark='Group C',
+                webURL='https://invalid.test/c',
+            ),
+        }
+
+        with mock.patch.object(Storage, 'UserSubs', return_value=subscriptions):
+            table = SubscriptionTableView()
+            changes = []
+
+            def changed(topLeft, bottomRight, _roles):
+                """Capture one exact model repaint range."""
+                changes.append(
+                    (
+                        (topLeft.row(), topLeft.column()),
+                        (bottomRight.row(), bottomRight.column()),
+                    )
+                )
+
+            table.sourceModel.dataChanged.connect(changed)
+
+            with mock.patch.object(table, 'flushAll') as flushAll:
+                table.refreshSubscriptionState(('group-b',))
+
+            self.assertEqual(
+                changes,
+                [
+                    (
+                        (1, table.ItemKey.index('lastSyncStatus')),
+                        (1, table.ItemKey.index('profiles')),
+                    )
+                ],
+            )
+            flushAll.assert_not_called()
+            table.deleteLater()
+
+    def testUpdateAllPublishesOneImmediateSyncingSnapshot(self):
+        """Expose one metadata batch without publishing structural changes."""
+        subscriptions = {
+            'group-a': self._subscription(),
+            'group-b': self._subscription(
+                remark='Group B',
+                webURL='https://invalid.test/b',
+            ),
+        }
+        manager = self._manager(subscriptions)
+        snapshots = []
+        stateChanges = []
+        structuralChanges = []
+
+        def group(unique):
+            """Return one isolated persisted group."""
+            value = subscriptions.get(unique)
+
+            return (
+                SubscriptionGroup.fromMapping(unique, value)
+                if value is not None
+                else None
+            )
+
+        def upsert(value):
+            """Persist one status transition into the isolated repository."""
+            subscriptions[value.id] = value.toMapping()
+
+        def stateChanged(uniques):
+            """Capture the stable IDs and their state at notification time."""
+            stateChanges.append(tuple(uniques))
+            snapshots.append(
+                tuple(
+                    subscriptions[unique].get('lastSyncStatus', '')
+                    for unique in ('group-a', 'group-b')
+                )
+            )
+
+        manager.subscriptionStateChanged.connect(stateChanged)
+        manager.subscriptionsChanged.connect(lambda: structuralChanges.append(True))
+
+        with (
+            mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
+            mock.patch.object(Storage, 'SubscriptionGroup', side_effect=group),
+            mock.patch.object(Storage, 'upsertSubscriptionGroup', side_effect=upsert),
+            mock.patch.object(manager, 'updateSubsByWebGET') as update,
+        ):
+            manager.updateSubs()
+
+        self.assertEqual(snapshots, [('syncing', 'syncing')])
+        self.assertEqual(stateChanges, [('group-a', 'group-b')])
+        self.assertEqual(structuralChanges, [])
+        self.assertEqual(update.call_count, 2)
+        self.assertEqual(
+            {call.kwargs['unique'] for call in update.call_args_list},
+            {'group-a', 'group-b'},
+        )
+
+        manager.deleteLater()
+
+    def testTargetedUpdatePublishesImmediateSyncingState(self):
+        """Publish one narrow targeted state before network I/O."""
+        subscriptions = {'group-a': self._subscription()}
+        manager = self._manager(subscriptions)
+        group = SubscriptionGroup.fromMapping('group-a', subscriptions['group-a'])
+        snapshots = []
+        stateChanges = []
+        structuralChanges = []
+
+        def stateChanged(uniques):
+            """Capture the target and persisted state before network I/O."""
+            stateChanges.append(tuple(uniques))
+            snapshots.append(group.lastSyncStatus)
+
+        manager.subscriptionStateChanged.connect(stateChanged)
+        manager.subscriptionsChanged.connect(lambda: structuralChanges.append(True))
+
+        with (
+            mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
+            mock.patch.object(Storage, 'SubscriptionGroup', return_value=group),
+            mock.patch.object(Storage, 'upsertSubscriptionGroup'),
+            mock.patch.object(manager, 'updateSubsByWebGET') as update,
+        ):
+            manager.updateSubsByUnique('group-a')
+
+        self.assertEqual(snapshots, ['syncing'])
+        self.assertEqual(stateChanges, [('group-a',)])
+        self.assertEqual(structuralChanges, [])
+        update.assert_called_once()
+
+        manager.deleteLater()
+
     def testTargetedPolicyChangeDoesNotDisturbOtherSubscriptions(self):
         """Reconcile only the edited subscription's schedule."""
         subscriptions = {
@@ -740,6 +913,95 @@ class SubscriptionManagerTest(TestCase):
         manager._activeReplies.clear()
         manager._replySubscriptions.clear()
         manager.deleteLater()
+
+    def testUpdateSelectedUsesOneOrderedCanonicalBatchCall(self):
+        """Keep a real selected-update click narrow and event-loop responsive."""
+        subscriptions = {
+            'group-a': self._subscription(),
+            'group-b': self._subscription(
+                remark='Group B',
+                webURL='https://invalid.test/b',
+            ),
+            'group-c': self._subscription(
+                remark='Group C',
+                webURL='https://invalid.test/c',
+            ),
+        }
+
+        def group(unique):
+            """Return one isolated persisted group."""
+            value = subscriptions.get(unique)
+
+            return (
+                SubscriptionGroup.fromMapping(unique, value)
+                if value is not None
+                else None
+            )
+
+        def upsert(value):
+            """Persist one status transition into the isolated repository."""
+            subscriptions[value.id] = value.toMapping()
+
+        with (
+            mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
+            mock.patch.object(Storage, 'SubscriptionGroup', side_effect=group),
+            mock.patch.object(Storage, 'upsertSubscriptionGroup', side_effect=upsert),
+        ):
+            manager = SubscriptionManager()
+            stateChanges = []
+            structuralChanges = []
+
+            def updateSubscriptions(uniques, _httpProxy, **kwargs):
+                """Cross the production wrapper boundary into the real manager."""
+                kwargs.pop('parent', None)
+                manager.updateSubscriptions(uniques, **kwargs)
+
+            serverTable = SimpleNamespace(subsManager=manager)
+            serverTable.updateSubscriptions = mock.Mock(side_effect=updateSubscriptions)
+            page = SubscriptionPage(serverTable)
+            selection = page.table.selectionModel()
+            flags = (
+                QtCore.QItemSelectionModel.SelectionFlag.Select
+                | QtCore.QItemSelectionModel.SelectionFlag.Rows
+            )
+
+            selection.select(page.table.sourceModel.index(0, 0), flags)
+            selection.select(page.table.sourceModel.index(2, 0), flags)
+
+            manager.subscriptionStateChanged.connect(
+                lambda uniques: stateChanges.append(tuple(uniques))
+            )
+            manager.subscriptionsChanged.connect(lambda: structuralChanges.append(True))
+
+            page.show()
+            processQtEvents(1)
+
+            handled = []
+            QtCore.QTimer.singleShot(0, lambda: handled.append(True))
+
+            with mock.patch.object(manager, 'updateSubsByWebGET') as update:
+                QtTest.QTest.mouseClick(
+                    page.updateSelectedButton,
+                    QtCore.Qt.MouseButton.LeftButton,
+                )
+
+            processQtEvents(1)
+
+            serverTable.updateSubscriptions.assert_called_once_with(
+                ('group-a', 'group-c'),
+                None,
+                showMessageBox=True,
+                parent=page,
+            )
+            self.assertEqual(stateChanges, [('group-a', 'group-c')])
+            self.assertEqual(structuralChanges, [])
+            self.assertEqual(update.call_count, 2)
+            self.assertEqual(handled, [True])
+
+            page.deleteLater()
+            manager.deleteLater()
+
+        processQtEvents()
 
     def testPageNavigationIsPresentationOnlyForAutoUpdateScheduler(self):
         """Keep page show/hide cycles outside scheduler policy ownership."""

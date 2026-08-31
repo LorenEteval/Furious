@@ -290,7 +290,11 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             self.serverTable.subsManager.subscriptionsChanged.emit
         )
 
-        self.serverTable.subsManager.subscriptionsChanged.connect(self.table.flushAll)
+        # The manager and table are persistent main-window children. This direct
+        # connection intentionally shares their process-lifetime ownership.
+        self.serverTable.subsManager.subscriptionStateChanged.connect(
+            self.table.refreshSubscriptionState
+        )
 
         self.addButton.clicked.connect(self.addSubscription)
         self.editButton.clicked.connect(self.editSelected)
@@ -508,21 +512,12 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         if not keys:
             return
 
-        depthMap = {'depth': len(keys)}
-        successArgs = []
-        failureArgs = []
-        httpProxy = self._selectedProxy()
-
-        for key in keys:
-            self.serverTable.updateSubsByUnique(
-                key,
-                httpProxy,
-                depthMap=depthMap,
-                successArgs=successArgs,
-                failureArgs=failureArgs,
-                showMessageBox=True,
-                parent=self,
-            )
+        self.serverTable.updateSubscriptions(
+            keys,
+            self._selectedProxy(),
+            showMessageBox=True,
+            parent=self,
+        )
 
     @QtCore.Slot()
     def updateAll(self):

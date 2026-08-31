@@ -718,6 +718,28 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         self.selectRow(target)
         self.groupsChanged.emit()
 
+    @QtCore.Slot(object)
+    def refreshSubscriptionState(self, uniques):
+        """Repaint metadata cells for stable subscription IDs only."""
+        rows = {unique: row for row, unique in enumerate(Storage.UserSubs())}
+
+        firstColumn, lastColumn = (
+            self.ItemKey.index('lastSyncStatus'),
+            self.ItemKey.index('profiles'),
+        )
+
+        for unique in dict.fromkeys(uniques):
+            row = rows.get(unique)
+
+            if row is None:
+                continue
+
+            self.sourceModel.dataChanged.emit(
+                self.sourceModel.index(row, firstColumn),
+                self.sourceModel.index(row, lastColumn),
+                [],
+            )
+
     def flushItem(self, row, column, item):
         """Refresh item."""
         if row < 0 or row >= self.sourceModel.rowCount():
