@@ -915,6 +915,7 @@ class ServerTableView(
                     QtCore.Qt.Key.Key_Delete,
                 ),
             ),
+            self.moveToSubscriptionActionRef,
             AppQSeparator(),
             AppQAction(
                 _('Select All'),
@@ -970,8 +971,6 @@ class ServerTableView(
                     QtCore.Qt.Key.Key_R,
                 ),
             ),
-            AppQSeparator(),
-            self.moveToSubscriptionActionRef,
             AppQSeparator(),
             self.advancedActionRef,
             AppQSeparator(),
