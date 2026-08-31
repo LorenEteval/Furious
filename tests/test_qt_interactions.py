@@ -21,11 +21,11 @@ from __future__ import annotations
 
 from Furious.Controllers import ConnectionState
 from Furious.Controllers.SettingsController import SettingsController
-from Furious.Frozenlib import AppBuiltinProxyMode, AppSettings
+from Furious.Frozenlib import AppBuiltinProxyMode, AppSettings, Mixins
 from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Plugins.API import RoutingOption
 from Furious.Repository import Storage, SubscriptionGroup
-from Furious.Qt import AppQDialog, AppQSwitch, gettext
+from Furious.Qt import AppHue, AppQDialog, AppQSwitch, gettext
 from Furious.Widget.RoutingSelector import RoutingSelector
 from Furious.Widget.ServerTableView import ServerTableView
 from Furious.Widget.SubscriptionTableView import SubscriptionTableView
@@ -37,7 +37,7 @@ from Furious.Window.SettingsPage import (
 from Furious.Window.SubscriptionPage import _SubscriptionEditorDialog
 
 from PySide6 import QtCore, QtGui
-from PySide6.QtTest import QTest
+from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QLineEdit, QVBoxLayout, QWidget
 
 from shiboken6 import isValid
@@ -90,6 +90,24 @@ class _ConnectionControllerFixture(QtCore.QObject):
         """Publish the same interaction gate as the real controller."""
         self.interactionEnabled = bool(enabled)
         self.interactionEnabledChanged.emit(self.interactionEnabled)
+
+
+class _PaintEventCounter(QtCore.QObject):
+    """Count viewport paints without synthesizing an unrelated mouse event."""
+
+    def __init__(self, target):
+        """Observe paint events delivered to *target*."""
+        super().__init__(target)
+
+        self.target = target
+        self.count = 0
+
+    def eventFilter(self, watched, event):
+        """Count paints while preserving normal viewport event delivery."""
+        if watched is self.target and event.type() == QtCore.QEvent.Type.Paint:
+            self.count += 1
+
+        return super().eventFilter(watched, event)
 
 
 class _RoutingControllerFixture(QtCore.QObject):
@@ -210,6 +228,143 @@ class ServerTableQtInteractionTest(unittest.TestCase):
             return Storage.UserServers()[row].metadata.profileId
 
         return None
+
+    def testConnectionStateRepaintsActiveRowWithoutMouseEvent(self):
+        """Invalidate the active row's color through source and proxy models."""
+        poolType = type(Mixins.ConnectionAware.ObjectsPool)
+        connectionController = _ConnectionControllerFixture()
+
+        with (
+            isolatedSettings(),
+            mock.patch.object(
+                Mixins.ConnectionAware,
+                'ObjectsPool',
+                poolType(),
+            ),
+            mock.patch(
+                'Furious.Qt.DynamicTheme.AppConnectionController',
+                return_value=connectionController,
+            ),
+            mock.patch('Furious.Qt.DynamicTheme.SystemRuntime.isAdmin') as isAdmin,
+        ):
+            table = self._table(('target', 'zulu', 'alpha'))
+            target = Storage.UserServers()[0]
+            target.metadata.subscriptionSource = 'group-a'
+            target.metadata.subscriptionManaged = True
+            paintCounter = _PaintEventCounter(table.viewport())
+            table.viewport().installEventFilter(paintCounter)
+
+            def assertVisualTransition(state, admin, expectedColor, resolvedTheme):
+                """Assert one semantic color invalidation and resulting paint."""
+                connectionController.state = state
+                isAdmin.return_value = admin
+                sourceSpy = QSignalSpy(table.sourceModel.dataChanged)
+                proxySpy = QSignalSpy(table.proxyModel.dataChanged)
+                paintCounter.count = 0
+
+                callback = (
+                    Mixins.ConnectionAware.callConnectedCallback
+                    if state is ConnectionState.Connected
+                    else Mixins.ConnectionAware.callDisconnectedCallback
+                )
+
+                with mock.patch.object(
+                    application(),
+                    'theme',
+                    return_value=resolvedTheme,
+                ):
+                    callback()
+                    processQtEvents()
+
+                activeRow = Storage.UserActivatedItemIndex()
+                sourceIndex = table.sourceModel.index(activeRow, 0)
+                proxyIndex = table.proxyIndexFromSourceRow(activeRow)
+                expectedRoles = (int(QtCore.Qt.ItemDataRole.ForegroundRole),)
+
+                self.assertTrue(sourceIndex.isValid())
+                self.assertTrue(proxyIndex.isValid())
+                self.assertEqual(sourceSpy.count(), 1)
+                self.assertEqual(proxySpy.count(), 1)
+
+                sourceArguments = sourceSpy.at(0)
+                proxyArguments = proxySpy.at(0)
+
+                self.assertEqual(sourceArguments[0].row(), activeRow)
+                self.assertEqual(sourceArguments[0].column(), 0)
+                self.assertEqual(sourceArguments[1].row(), activeRow)
+                self.assertEqual(
+                    sourceArguments[1].column(),
+                    table.sourceModel.columnCount() - 1,
+                )
+                self.assertEqual(
+                    tuple(int(role) for role in sourceArguments[2]),
+                    expectedRoles,
+                )
+                self.assertEqual(proxyArguments[0].row(), proxyIndex.row())
+                self.assertEqual(proxyArguments[1].row(), proxyIndex.row())
+                self.assertEqual(
+                    tuple(int(role) for role in proxyArguments[2]),
+                    expectedRoles,
+                )
+                self.assertEqual(
+                    table.sourceModel.data(
+                        sourceIndex,
+                        QtCore.Qt.ItemDataRole.ForegroundRole,
+                    ),
+                    QtGui.QColor(expectedColor),
+                )
+                self.assertGreater(
+                    paintCounter.count,
+                    0,
+                    'the data change must schedule a paint without mouse movement',
+                )
+
+            try:
+                self.assertIsInstance(table, Mixins.ConnectionAware)
+                self.assertEqual(
+                    table.sourceModel.data(
+                        table.sourceModel.index(0, 0),
+                        QtCore.Qt.ItemDataRole.ForegroundRole,
+                    ),
+                    QtGui.QColor(AppHue.disconnectedColor()),
+                )
+
+                assertVisualTransition(
+                    ConnectionState.Connected,
+                    False,
+                    AppHue.ColorRGB.LIGHT_RED,
+                    'Dark',
+                )
+                assertVisualTransition(
+                    ConnectionState.Disconnected,
+                    False,
+                    AppHue.disconnectedColor(),
+                    'Light',
+                )
+
+                table.search('target')
+                table.proxyModel.setSubscriptionFilter('group-a')
+                table.sortByColumn(0, QtCore.Qt.SortOrder.DescendingOrder)
+                processQtEvents()
+
+                self.assertIs(
+                    Storage.UserServers()[Storage.UserActivatedItemIndex()],
+                    target,
+                )
+                assertVisualTransition(
+                    ConnectionState.Connected,
+                    True,
+                    AppHue.ColorRGB.LIGHT_PURPLE,
+                    'Light',
+                )
+                assertVisualTransition(
+                    ConnectionState.Disconnected,
+                    True,
+                    AppHue.disconnectedColor(),
+                    'Dark',
+                )
+            finally:
+                self._destroyTable(table)
 
     def testMouseMultiSelectionAndRepeatedShortcutPreserveIdentityAndFocus(self):
         """Keep Ctrl-click selection/current identity ready across repeated moves."""

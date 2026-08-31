@@ -491,7 +491,12 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
 
             return abs(hash(text)) + 2**20
 
-    def emitRowChanged(self, row: int, column: Union[int, None] = None):
+    def emitRowChanged(
+        self,
+        row: int,
+        column: Union[int, None] = None,
+        roles: list[QtCore.Qt.ItemDataRole] | None = None,
+    ):
         """Handle emit row changed for the user servers table model."""
         if row < 0 or row >= self.rowCount():
             return
@@ -503,7 +508,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
             left = self.index(row, column)
             right = left
 
-        self.dataChanged.emit(left, right, [])
+        self.dataChanged.emit(left, right, roles or [])
 
     def emitAllChanged(self):
         """Handle emit all changed for the user servers table model."""
@@ -743,6 +748,7 @@ _TRANSLATABLE_HEADERS = [
 class ServerTableView(
     Mixins.QTranslatable,
     Mixins.CleanupOnExit,
+    Mixins.ConnectionAware,
     AppQTableView,
 ):
     """Represent user servers Qt table view."""
@@ -1084,15 +1090,17 @@ class ServerTableView(
 
     def disconnectedCallback(self):
         """Update the user servers Qt table view for a disconnected state."""
-        super().disconnectedCallback()
-
-        self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
+        self.sourceModel.emitRowChanged(
+            Storage.UserActivatedItemIndex(),
+            roles=[QtCore.Qt.ItemDataRole.ForegroundRole],
+        )
 
     def connectedCallback(self):
         """Update the user servers Qt table view for a connected state."""
-        super().connectedCallback()
-
-        self.activateItemByIndex(Storage.UserActivatedItemIndex(), True)
+        self.sourceModel.emitRowChanged(
+            Storage.UserActivatedItemIndex(),
+            roles=[QtCore.Qt.ItemDataRole.ForegroundRole],
+        )
 
     def handleItemSelectionChanged(self, *args):
         """Handle item selection changed."""
