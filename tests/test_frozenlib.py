@@ -431,6 +431,37 @@ class FrozenlibUtilityTest(unittest.TestCase):
 class MockedPlatformHelperTest(unittest.TestCase):
     """Exercise platform helpers without touching host startup or networking."""
 
+    def testPacDiagnosticsDoNotExposeConfiguredUrl(self):
+        """Avoid logging credential-bearing PAC URLs on any outcome."""
+        proxy = SystemProxyModule._SystemProxy()
+        pacUrl = 'https://user:credential-token@invalid.test/proxy.pac'
+
+        with (
+            mock.patch.object(SystemProxyModule, 'PLATFORM', 'Linux'),
+            mock.patch.object(
+                SystemProxyModule,
+                'handleAppSystemProxyMode',
+                return_value=True,
+            ),
+            mock.patch.object(SystemProxyModule, 'linuxProxyConfig') as configure,
+            self.assertLogs(SystemProxyModule.logger, level='INFO') as captured,
+        ):
+            proxy.pac(pacUrl)
+
+        self.assertEqual(
+            configure.call_args_list,
+            [
+                mock.call('proxy', 'autoconfig-url', pacUrl),
+                mock.call('proxy', 'mode', 'auto'),
+            ],
+        )
+
+        diagnostics = '\n'.join(captured.output)
+
+        self.assertIn('set proxy PAC success', diagnostics)
+        self.assertNotIn(pacUrl, diagnostics)
+        self.assertNotIn('credential-token', diagnostics)
+
     def testProxyDaemonClearsIndependentExitAndCanRestart(self):
         """Release an exited daemon reference without retaining a stale owner."""
         proxy = SystemProxyModule._SystemProxy()

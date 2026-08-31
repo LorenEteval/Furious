@@ -162,14 +162,14 @@ class _SystemProxy:
                     return True
 
         if not handleAppSystemProxyMode():
-            logger.info(f'ignore proxy PAC \'{pac_url}\' request')
+            logger.info('ignore proxy PAC request')
 
             return
 
         if _pac():
-            logger.info(f'set proxy PAC \'{pac_url}\' success')
+            logger.info('set proxy PAC success')
         else:
-            logger.error(f'set proxy PAC \'{pac_url}\' failed')
+            logger.error('set proxy PAC failed')
 
     @staticmethod
     def set(server, bypass):

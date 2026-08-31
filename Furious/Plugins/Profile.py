@@ -55,7 +55,7 @@ def configurationFromMapping(
     except Exception as ex:
         # Any non-exit exceptions
 
-        logger.error(f'failed to recognize configuration mapping: {ex}')
+        logger.error(f'failed to recognize configuration mapping ({type(ex).__name__})')
 
         factory = None
 
@@ -110,7 +110,7 @@ def exportConfiguration(config, remark: str = '', registry=None) -> str:
     except Exception as ex:
         # Any non-exit exceptions
 
-        logger.error(f'failed to export configuration: {ex}')
+        logger.error(f'failed to export configuration ({type(ex).__name__})')
 
         return ''
 

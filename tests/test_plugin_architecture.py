@@ -360,6 +360,80 @@ class PluginRegistryTest(unittest.TestCase):
             {'protocol': 'fixture', 'parent': None, 'marker': 7},
         )
 
+    def testInputDispatchDiagnosticsDoNotExposePluginPayloads(self):
+        """Report plugin failures without echoing credential-bearing input."""
+        secret = 'credential-token-value'
+        handler = self.plugin.capabilities[0]
+        decoder = self.plugin.capabilities[3]
+        messages = []
+
+        with (
+            mock.patch.object(
+                handler,
+                'parse',
+                side_effect=RuntimeError(f'cannot parse {secret}'),
+            ),
+            self.assertLogs(PluginRegistryModule.logger, level='ERROR') as captured,
+        ):
+            self.assertIsNone(self.registry.parseURI(f'fixture://user:{secret}@host'))
+
+        messages.extend(captured.output)
+
+        with (
+            mock.patch.object(
+                handler,
+                'fromMapping',
+                side_effect=RuntimeError(f'cannot map {secret}'),
+            ),
+            self.assertLogs(PluginRegistryModule.logger, level='ERROR') as captured,
+        ):
+            self.assertIsNone(self.registry.configFromDict({'password': secret}))
+
+        messages.extend(captured.output)
+
+        with (
+            mock.patch.object(
+                decoder,
+                'decode',
+                side_effect=RuntimeError(f'cannot decode {secret}'),
+            ),
+            self.assertLogs(PluginRegistryModule.logger, level='ERROR') as captured,
+        ):
+            self.assertIsNone(
+                self.registry.decodeSubscription(b'payload', decoder.decoderId)
+            )
+        messages.extend(captured.output)
+
+        config = FixtureConfiguration({'password': secret})
+
+        with (
+            mock.patch.object(
+                handler,
+                'supports',
+                side_effect=RuntimeError(f'cannot inspect {secret}'),
+            ),
+            self.assertLogs(PluginRegistryModule.logger, level='ERROR') as captured,
+        ):
+            self.assertIsNone(self.registry.handlerForConfig(config))
+
+        messages.extend(captured.output)
+
+        with (
+            mock.patch.object(
+                handler,
+                'exportProfile',
+                side_effect=RuntimeError(f'cannot export {secret}'),
+            ),
+            self.assertLogs(PluginRegistryModule.logger, level='ERROR') as captured,
+        ):
+            self.assertEqual(self.registry.exportConfig(config), '')
+
+        diagnostics = '\n'.join((*messages, *captured.output))
+
+        self.assertIn('RuntimeError', diagnostics)
+        self.assertNotIn(secret, diagnostics)
+        self.assertNotIn('fixture://', diagnostics)
+
     def testConfigurationAndCoreRuntimeFactories(self):
         """Build normalized configurations and start one prepared runtime."""
         config = self.registry.configFromDict({'type': 'fixture', 'value': 'node'})

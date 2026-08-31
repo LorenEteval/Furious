@@ -66,6 +66,11 @@ SUPPORTED_PLUGIN_API_VERSIONS = (PLUGIN_API_VERSION,)
 logger = logging.getLogger(__name__)
 
 
+def _safeExceptionType(exception: BaseException) -> str:
+    """Return a diagnostic that cannot echo secret-bearing plugin input."""
+    return type(exception).__name__
+
+
 def _normalizeIdentifier(value) -> str:
     """Return a case-insensitive capability identifier."""
     return str(getattr(value, 'value', value)).strip().casefold()
@@ -603,7 +608,7 @@ class PluginRegistry:
 
                 logger.error(
                     f'protocol ownership check failed for '
-                    f'{handler.descriptor.id!r}: {ex}'
+                    f'{handler.descriptor.id!r} ({_safeExceptionType(ex)})'
                 )
 
         if len(matches) > 1:
@@ -733,8 +738,8 @@ class PluginRegistry:
             # Any non-exit exceptions
 
             logger.error(
-                f'failed to parse {handler.descriptor.id!r} configuration: {ex}. '
-                f'URI: {uri!r}'
+                f'failed to parse {handler.descriptor.id!r} configuration '
+                f'({_safeExceptionType(ex)})'
             )
 
             return None
@@ -757,7 +762,7 @@ class PluginRegistry:
 
             logger.error(
                 f'protocol ownership check failed for '
-                f'{handler.descriptor.id!r}: {ex}'
+                f'{handler.descriptor.id!r} ({_safeExceptionType(ex)})'
             )
 
             return None
@@ -783,7 +788,8 @@ class PluginRegistry:
                 # Any non-exit exceptions
 
                 logger.error(
-                    f'failed to recognize {handler.descriptor.id!r} mapping: {ex}'
+                    f'failed to recognize {handler.descriptor.id!r} mapping '
+                    f'({_safeExceptionType(ex)})'
                 )
 
                 continue
@@ -796,7 +802,7 @@ class PluginRegistry:
 
                     logger.error(
                         f'protocol ownership check failed for '
-                        f'{handler.descriptor.id!r}: {ex}'
+                        f'{handler.descriptor.id!r} ({_safeExceptionType(ex)})'
                     )
 
                     continue
@@ -827,7 +833,10 @@ class PluginRegistry:
             except Exception as ex:
                 # Any non-exit exceptions
 
-                logger.error(f'failed to recognize {factory.factoryId!r} mapping: {ex}')
+                logger.error(
+                    f'failed to recognize {factory.factoryId!r} mapping '
+                    f'({_safeExceptionType(ex)})'
+                )
 
                 continue
 
@@ -901,7 +910,17 @@ class PluginRegistry:
         if not remark:
             remark = str(getattr(config, 'itemRemark', ''))
 
-        return handler.exportProfile(config, remark)
+        try:
+            return handler.exportProfile(config, remark)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error(
+                f'failed to export {handler.descriptor.id!r} configuration '
+                f'({_safeExceptionType(ex)})'
+            )
+
+            return ''
 
     def validateConfig(self, config):
         """Validate a configuration through its protocol capability."""
@@ -1156,7 +1175,10 @@ class PluginRegistry:
             except Exception as ex:
                 # Any non-exit exceptions
 
-                logger.error(f'subscription decoder {decoder.decoderId!r} failed: {ex}')
+                logger.error(
+                    f'subscription decoder {decoder.decoderId!r} failed '
+                    f'({_safeExceptionType(ex)})'
+                )
 
                 continue
 
