@@ -169,6 +169,59 @@ class SubscriptionSynchronizerTest(unittest.TestCase):
         self.assertEqual(incoming.itemSubscription, '')
         self.assertFalse(incoming.itemSubscriptionManaged)
 
+    def testPreparedCommitPreservesLiveIdentityAndNewerLocalMetadata(self):
+        """Apply worker data without replacing live retained profile objects."""
+        retained = profile(
+            'Before',
+            'old.example',
+            source='group',
+            managed=True,
+            key='upstream:one',
+        )
+        unrelated = profile('Manual', 'manual.example')
+        profiles = [retained, unrelated]
+        snapshot = SubscriptionSynchronizer().snapshot(profiles, 'group')
+        incoming = profile('After', 'new.example', key='upstream:one')
+        plan = SubscriptionSynchronizer().prepare(snapshot, (incoming,))
+
+        retained.metadata.annotations = 'edited while preparing'
+        retained.metadata.latency = '41 ms'
+
+        result = SubscriptionSynchronizer().commit(profiles, plan)
+
+        self.assertIs(profiles[0], retained)
+        self.assertIs(profiles[1], unrelated)
+        self.assertEqual(retained.connection['address'], 'new.example')
+        self.assertEqual(retained.itemRemark, 'After')
+        self.assertEqual(retained.metadata.annotations, 'edited while preparing')
+        self.assertEqual(retained.metadata.latency, '41 ms')
+        self.assertEqual(result.changedProfileIds, (retained.metadata.profileId,))
+
+    def testPreparedCommitRejectsChangedGroupSource(self):
+        """Never apply a plan after relevant live profile state diverges."""
+        retained = profile(
+            'Before',
+            'old.example',
+            source='group',
+            managed=True,
+            key='upstream:one',
+        )
+        profiles = [retained]
+        synchronizer = SubscriptionSynchronizer()
+        snapshot = synchronizer.snapshot(profiles, 'group')
+        plan = synchronizer.prepare(
+            snapshot,
+            (profile('After', 'new.example', key='upstream:one'),),
+        )
+
+        retained.connection['address'] = 'locally-changed.example'
+
+        with self.assertRaisesRegex(RuntimeError, 'source changed'):
+            synchronizer.commit(profiles, plan)
+
+        self.assertIs(profiles[0], retained)
+        self.assertEqual(retained.connection['address'], 'locally-changed.example')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -18,13 +18,18 @@
 """Verify subscription workflow ownership outside table widgets."""
 
 import os
+import threading
+import time
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from Furious.Repository import Storage
 from Furious.Repository.Subscriptions import SubscriptionGroup
 from Furious.Qt import gettext
-from Furious.Service.SubscriptionManager import SubscriptionManager
+from Furious.Service.SubscriptionManager import (
+    SubscriptionManager,
+    _SubscriptionBatchState,
+)
 from Furious.Window.SubscriptionPage import SubscriptionPage
 from Furious.Widget.SubscriptionTableView import SubscriptionTableView
 
@@ -765,9 +770,10 @@ class SubscriptionManagerTest(TestCase):
                 else None
             )
 
-        def upsert(value):
-            """Persist one status transition into the isolated repository."""
-            subscriptions[value.id] = value.toMapping()
+        def upsert(groups):
+            """Persist one status batch into the isolated repository."""
+            for value in groups:
+                subscriptions[value.id] = value.toMapping()
 
         def stateChanged(uniques):
             """Capture the stable IDs and their state at notification time."""
@@ -785,7 +791,8 @@ class SubscriptionManagerTest(TestCase):
         with (
             mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
             mock.patch.object(Storage, 'SubscriptionGroup', side_effect=group),
-            mock.patch.object(Storage, 'upsertSubscriptionGroup', side_effect=upsert),
+            mock.patch.object(Storage, 'upsertSubscriptionGroups', side_effect=upsert),
+            mock.patch.object(Storage, 'persistSubscriptionGroups') as persist,
             mock.patch.object(manager, 'updateSubsByWebGET') as update,
         ):
             manager.updateSubs()
@@ -793,6 +800,7 @@ class SubscriptionManagerTest(TestCase):
         self.assertEqual(snapshots, [('syncing', 'syncing')])
         self.assertEqual(stateChanges, [('group-a', 'group-b')])
         self.assertEqual(structuralChanges, [])
+        persist.assert_called_once_with()
         self.assertEqual(update.call_count, 2)
         self.assertEqual(
             {call.kwargs['unique'] for call in update.call_args_list},
@@ -821,7 +829,8 @@ class SubscriptionManagerTest(TestCase):
         with (
             mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
             mock.patch.object(Storage, 'SubscriptionGroup', return_value=group),
-            mock.patch.object(Storage, 'upsertSubscriptionGroup'),
+            mock.patch.object(Storage, 'upsertSubscriptionGroups'),
+            mock.patch.object(Storage, 'persistSubscriptionGroups') as persist,
             mock.patch.object(manager, 'updateSubsByWebGET') as update,
         ):
             manager.updateSubsByUnique('group-a')
@@ -829,6 +838,7 @@ class SubscriptionManagerTest(TestCase):
         self.assertEqual(snapshots, ['syncing'])
         self.assertEqual(stateChanges, [('group-a',)])
         self.assertEqual(structuralChanges, [])
+        persist.assert_called_once_with()
         update.assert_called_once()
 
         manager.deleteLater()
@@ -938,14 +948,16 @@ class SubscriptionManagerTest(TestCase):
                 else None
             )
 
-        def upsert(value):
-            """Persist one status transition into the isolated repository."""
-            subscriptions[value.id] = value.toMapping()
+        def upsert(groups):
+            """Persist one status batch into the isolated repository."""
+            for value in groups:
+                subscriptions[value.id] = value.toMapping()
 
         with (
             mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
             mock.patch.object(Storage, 'SubscriptionGroup', side_effect=group),
-            mock.patch.object(Storage, 'upsertSubscriptionGroup', side_effect=upsert),
+            mock.patch.object(Storage, 'upsertSubscriptionGroups', side_effect=upsert),
+            mock.patch.object(Storage, 'persistSubscriptionGroups'),
         ):
             manager = SubscriptionManager()
             stateChanges = []
@@ -1001,6 +1013,229 @@ class SubscriptionManagerTest(TestCase):
             page.deleteLater()
             manager.deleteLater()
 
+        processQtEvents()
+
+    def testLargePreparationRunsOffGuiThreadAndKeepsEventLoopResponsive(self):
+        """Keep unrelated Qt delivery responsive while payload work is gated."""
+        subscriptions = {'group-a': self._subscription(autoupdate='Never')}
+        started = threading.Event()
+        release = threading.Event()
+        workerThreads = []
+
+        class Registry:
+            """Declare this deterministic test importer worker-safe."""
+
+            @staticmethod
+            def subscriptionDecoderWorkerSafe(_decoderId):
+                return True
+
+        class Importer:
+            """Gate representative expensive parsing in the pool."""
+
+            registry = Registry()
+
+            @staticmethod
+            def importPayload(_data, _source, **_kwargs):
+                workerThreads.append(threading.get_ident())
+                started.set()
+                release.wait(2)
+
+                return None
+
+        def group(unique):
+            return SubscriptionGroup.fromMapping(unique, subscriptions[unique])
+
+        def upsert(groups):
+            for value in groups:
+                subscriptions[value.id] = value.toMapping()
+
+        with (
+            mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
+            mock.patch.object(Storage, 'SubscriptionGroup', side_effect=group),
+            mock.patch.object(Storage, 'upsertSubscriptionGroups', side_effect=upsert),
+            mock.patch.object(
+                Storage,
+                'upsertSubscriptionGroup',
+                side_effect=lambda value: upsert((value,)),
+            ),
+            mock.patch.object(Storage, 'persistSubscriptionGroups') as persist,
+        ):
+            manager = SubscriptionManager()
+            manager.importer = Importer()
+            requests = []
+            manager.updateSubsByWebGET = lambda **context: requests.append(context)
+            completed = []
+            manager.updateCompleted.connect(completed.append)
+
+            manager.updateSubsByUnique('group-a')
+            manager.successCallback(_Reply(b'large payload'), **requests[0])
+
+            self.assertTrue(started.wait(2))
+
+            handled = []
+            QtCore.QTimer.singleShot(0, lambda: handled.append(True))
+            processQtEvents(1)
+
+            self.assertEqual(handled, [True])
+            self.assertNotEqual(workerThreads, [threading.get_ident()])
+
+            release.set()
+            deadline = time.monotonic() + 3
+
+            while not completed and time.monotonic() < deadline:
+                QtTest.QTest.qWait(10)
+
+            self.assertEqual(len(completed), 1)
+            self.assertEqual(
+                completed[0].failed[0]['error'],
+                'UnsupportedSubscriptionFormat',
+            )
+            self.assertEqual(persist.call_count, 2)
+
+            manager.shutdown()
+            manager.deleteLater()
+
+        processQtEvents()
+
+    def testParsingResultIsDiscardedAfterReupdateDeleteOrSourceEdit(self):
+        """Reject worker results after every source-generation invalidation path."""
+        base = self._subscription(autoupdate='Never')
+
+        for mutation in ('reupdate', 'delete', 'edit'):
+            with self.subTest(mutation=mutation):
+                subscriptions = {'group-a': dict(base)}
+                manager = self._manager(subscriptions)
+                manager._requestVersions['group-a'] = 1
+                context = {
+                    'unique': 'group-a',
+                    'webURL': base['webURL'],
+                    'requestVersion': 1,
+                    'requestSignature': manager._requestSignature(base),
+                }
+                manager._handleImportedResult = mock.Mock()
+
+                if mutation == 'reupdate':
+                    manager._nextRequestVersion('group-a')
+                elif mutation == 'delete':
+                    subscriptions.clear()
+                else:
+                    subscriptions['group-a']['filter'] = 'changed'
+
+                with mock.patch.object(Storage, 'UserSubs', return_value=subscriptions):
+                    self.assertFalse(manager._isCurrentRequest(context))
+
+                manager._handleImportedResult.assert_not_called()
+                manager.shutdown()
+                manager.deleteLater()
+
+        processQtEvents()
+
+    def testPartialBatchFailuresRemainIsolatedAndPublishOnce(self):
+        """Commit successful members and report failed members as one batch."""
+        subscriptions = {
+            unique: self._subscription(
+                remark=unique,
+                webURL=f'https://invalid.test/{unique}',
+                autoupdate='Never',
+            )
+            for unique in ('group-a', 'group-b', 'group-c', 'group-d')
+        }
+        manager = self._manager(subscriptions)
+        contexts = []
+
+        for unique, subscription in subscriptions.items():
+            manager._requestVersions[unique] = 1
+            contexts.append(
+                {
+                    'unique': unique,
+                    'remark': subscription['remark'],
+                    'webURL': subscription['webURL'],
+                    'requestVersion': 1,
+                    'requestSignature': manager._requestSignature(subscription),
+                    'batchId': 7,
+                }
+            )
+
+        manager._batches[7] = _SubscriptionBatchState(
+            {(context['unique'], 1) for context in contexts},
+            True,
+            [],
+            [],
+        )
+        completed = []
+        structural = []
+        manager.updateCompleted.connect(completed.append)
+        manager.subscriptionsChanged.connect(lambda: structural.append(True))
+
+        def group(unique):
+            return SubscriptionGroup.fromMapping(unique, subscriptions[unique])
+
+        def upsert(value):
+            subscriptions[value.id] = value.toMapping()
+
+        with (
+            mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
+            mock.patch.object(Storage, 'SubscriptionGroup', side_effect=group),
+            mock.patch.object(Storage, 'upsertSubscriptionGroup', side_effect=upsert),
+            mock.patch.object(Storage, 'persistSubscriptionGroups') as persist,
+        ):
+            manager._finishOperation(
+                contexts[0], successful=contexts[0], structural=True
+            )
+            manager._failOperation(contexts[1], 'decode failed')
+            manager._failOperation(contexts[2], 'network failed')
+            manager._finishOperation(
+                contexts[3], successful=contexts[3], structural=True
+            )
+
+        self.assertEqual(len(completed), 1)
+        self.assertEqual(
+            [value['unique'] for value in completed[0].successful],
+            ['group-a', 'group-d'],
+        )
+        self.assertEqual(
+            [value['unique'] for value in completed[0].failed],
+            ['group-b', 'group-c'],
+        )
+        self.assertEqual(structural, [True])
+        persist.assert_called_once_with()
+
+        manager.shutdown()
+        manager.deleteLater()
+        processQtEvents()
+
+    def testShutdownCancelsAndWaitsForRunningPreparation(self):
+        """Prevent an active worker from delivering any post-shutdown commit."""
+        subscriptions = {'group-a': self._subscription(autoupdate='Never')}
+        manager = self._manager(subscriptions)
+        manager._requestVersions['group-a'] = 1
+        context = {
+            'unique': 'group-a',
+            'webURL': subscriptions['group-a']['webURL'],
+            'requestVersion': 1,
+            'requestSignature': manager._requestSignature(subscriptions['group-a']),
+        }
+        started = threading.Event()
+        stopped = threading.Event()
+
+        def work(isCancelled):
+            started.set()
+
+            while not isCancelled():
+                stopped.wait(0.005)
+
+            stopped.set()
+
+        with mock.patch.object(Storage, 'UserSubs', return_value=subscriptions):
+            manager._startPreparationJob('probe', context, work)
+            self.assertTrue(started.wait(2))
+            manager.shutdown()
+
+        self.assertTrue(stopped.is_set())
+        self.assertEqual(manager._preparationJobs, {})
+        self.assertEqual(manager._preparationPool.activeThreadCount(), 0)
+
+        manager.deleteLater()
         processQtEvents()
 
     def testPageNavigationIsPresentationOnlyForAutoUpdateScheduler(self):

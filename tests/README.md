@@ -44,7 +44,7 @@ strategy in an individual test.
 | Plugin registration, capability dispatch, factories, rollback, and Hysteria1 ownership | `test_plugin_architecture.py`, `test_hysteria1_protocol.py` |
 | Controller state and error transitions with injected runtimes | `test_controllers.py` |
 | SOCKS and SIP002 Shadowsocks codecs and generated round trips | `test_socks_uri.py`, `test_shadowsocks_uri.py` |
-| Subscription workflow, timers, stale requests, and reconciliation | `test_subscription_manager.py`, `test_subscription_sync.py` |
+| Subscription workflow, worker responsiveness, stale requests, reconciliation, and deterministic scale | `test_subscription_manager.py`, `test_subscription_sync.py`, `test_subscription_scalability.py` |
 | Service-first profile-test identity, explicit results, endpoint deduplication, adaptive Tcping, cancellation, late callbacks, and worker/thread lifetime | `test_profile_test_jobs.py` |
 | External process launch, output, shutdown, threads, TUN metadata | `test_external_core.py` |
 | Backend structured-editor observational load and unknown-value preservation | `test_backend_editor_contract.py` |
@@ -109,7 +109,7 @@ Then run the desired test tier.
 python -m unittest discover -s tests -v
 
 # Regular logic, persistence, plugin, controller, codec, and UI regressions
-python -m unittest tests.test_interface tests.test_models_and_services tests.test_repository_contracts tests.test_architecture_refactors tests.test_connection_startup_async tests.test_plugin_architecture tests.test_hysteria1_protocol tests.test_hysteria2_compatibility tests.test_controllers tests.test_subscription_manager tests.test_subscription_sync tests.test_profile_test_jobs tests.test_socks_uri tests.test_shadowsocks_uri tests.test_backend_editor_contract tests.test_xray_asset_download tests.test_native_tun_semantics tests.test_metrics_behavior tests.test_endpoint_info tests.test_service_runtime tests.test_frozenlib tests.test_isolation_and_navigation tests.test_main_window_geometry tests.test_dialog_geometry tests.test_ui_behavior tests.test_qt_interactions tests.test_stylesheet_states tests.test_theme_transition tests.test_public_api -v
+python -m unittest tests.test_interface tests.test_models_and_services tests.test_repository_contracts tests.test_architecture_refactors tests.test_connection_startup_async tests.test_plugin_architecture tests.test_hysteria1_protocol tests.test_hysteria2_compatibility tests.test_controllers tests.test_subscription_manager tests.test_subscription_sync tests.test_subscription_scalability tests.test_profile_test_jobs tests.test_socks_uri tests.test_shadowsocks_uri tests.test_backend_editor_contract tests.test_xray_asset_download tests.test_native_tun_semantics tests.test_metrics_behavior tests.test_endpoint_info tests.test_service_runtime tests.test_frozenlib tests.test_isolation_and_navigation tests.test_main_window_geometry tests.test_dialog_geometry tests.test_ui_behavior tests.test_qt_interactions tests.test_stylesheet_states tests.test_theme_transition tests.test_public_api -v
 
 # Direct Qt/process integration and destruction/lifetime checks
 python -m unittest tests.test_application_process tests.test_external_core tests.test_layout_matrix tests.test_qt_lifetime -v
@@ -150,6 +150,10 @@ resources only at batch boundaries, so its assertions remain ownership-oriented.
 Neither stress tier is enabled by a normal focused module run. Treat the runner's
 final status and exit code as authoritative; expected diagnostic output still ends in
 `OK`.
+
+`tests/benchmarks/benchmark_subscription_updates.py` is a development-only 1/3/8-group benchmark. It generates 1,500 profiles
+per group by default and reports decode/parse CPU time, reconciliation preparation, worker wall time, and GUI-thread
+commit time. Pass `--url` explicitly to benchmark a live subscription; normal tests never use the network.
 
 ## Packaged-build smoke procedure
 
