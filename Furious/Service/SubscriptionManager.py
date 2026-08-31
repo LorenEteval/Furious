@@ -31,6 +31,11 @@ from Furious.Repository import Storage
 from Furious.Service.SubscriptionImporter import (
     SubscriptionImportService,
     SubscriptionSource,
+    SubscriptionWorkerUnsafe,
+)
+from Furious.Service.SubscriptionPreparation import (
+    SubscriptionPreparationJob,
+    SubscriptionPreparationRelay,
 )
 from Furious.Service.SubscriptionSync import SubscriptionSynchronizer
 
@@ -40,6 +45,8 @@ from PySide6.QtNetwork import QNetworkRequest
 from dataclasses import dataclass
 
 import re
+import os
+import time
 import logging
 import datetime
 
@@ -99,6 +106,17 @@ class SubscriptionUpdateBatch:
     showMessageBox: bool
 
 
+@dataclass
+class _SubscriptionBatchState:
+    """Track logical completion independently from network reply completion."""
+
+    pending: set
+    showMessageBox: bool
+    successful: list
+    failed: list
+    structural: bool = False
+
+
 class SubscriptionManager(HttpGetManager):
     """Own subscription networking, decoding, reconciliation, and persistence."""
 
@@ -124,6 +142,23 @@ class SubscriptionManager(HttpGetManager):
         self._requestVersions = {}
         self._activeReplies = {}
         self._replySubscriptions = {}
+        self._batches = {}
+        self._preparationJobs = {}
+        self._preparationPayloads = {}
+        self._nextBatchId = 0
+        self._nextPreparationJobId = 0
+        self._shuttingDown = False
+
+        self._preparationRelay = SubscriptionPreparationRelay(self)
+        self._preparationRelay.completed.connect(
+            self._handlePreparationOutcome,
+            QtCore.Qt.ConnectionType.QueuedConnection,
+        )
+
+        self._preparationPool = QtCore.QThreadPool(self)
+        self._preparationPool.setMaxThreadCount(
+            max(1, min((os.cpu_count() or 1) // 2, 4))
+        )
 
         self.refreshAutoUpdates()
 
@@ -157,9 +192,25 @@ class SubscriptionManager(HttpGetManager):
         subscription = Storage.UserSubs().get(unique)
 
         return bool(
-            subscription
+            not self._shuttingDown
+            and subscription
             and self._requestVersions.get(unique) == version
             and subscription.get('webURL') == kwargs.get('webURL')
+            and (
+                'requestSignature' not in kwargs
+                or self._requestSignature(subscription) == kwargs['requestSignature']
+            )
+        )
+
+    @staticmethod
+    def _requestSignature(subscription):
+        """Capture every source option whose edit invalidates prepared data."""
+        return (
+            subscription.get('webURL', ''),
+            subscription.get('enabled', True),
+            subscription.get('userAgent', ''),
+            subscription.get('filter', ''),
+            subscription.get('lastDecoderId', ''),
         )
 
     @QtCore.Slot(object)
@@ -296,7 +347,7 @@ class SubscriptionManager(HttpGetManager):
             self._pruneRequestVersion(unique)
 
     def cancelUpdates(self, unique: str | None = None):
-        """Cancel exact active replies and invalidate their eventual completions."""
+        """Cancel network and preparation work and invalidate eventual completions."""
         if unique is None:
             subscriptions = {
                 *self._requestVersions,
@@ -311,6 +362,332 @@ class SubscriptionManager(HttpGetManager):
         for reply in tuple(self._activeReplies):
             if unique is None or self._replySubscriptions.get(reply) == unique:
                 reply.abort()
+
+        for job in tuple(self._preparationJobs.values()):
+            if unique is None or job.context.get('unique') == unique:
+                job.cancel()
+
+    def shutdown(self):
+        """Boundedly stop every manager-owned request, timer, and preparation job."""
+        if self._shuttingDown:
+            return
+
+        self._shuttingDown = True
+
+        for timer in self._autoUpdateTimers.values():
+            timer.stop()
+
+        self.cancelUpdates()
+        self._preparationPool.clear()
+
+        for job in self._preparationJobs.values():
+            job.cancel()
+
+        # Running third-party Python code may not be interruptible. Keep the
+        # relay/pool alive until those exact jobs finish rather than allowing a
+        # worker to publish through a destroyed QObject during application exit.
+        self._preparationPool.waitForDone()
+
+        self._preparationJobs.clear()
+        self._preparationPayloads.clear()
+        self._batches.clear()
+
+    @staticmethod
+    def _filterImportResult(result, profileFilter: str, remark: str):
+        """Apply a copied regex filter as part of subscription preparation."""
+        profileFilter = str(profileFilter).strip()
+
+        if result is None or not profileFilter:
+            return result
+
+        try:
+            pattern = re.compile(profileFilter, re.IGNORECASE)
+        except re.error as ex:
+            logger.error(
+                f'invalid subscription filter for {remark!r}: {ex}. '
+                f'Importing all profiles'
+            )
+
+            return result
+
+        return type(result)(
+            result.decoderId,
+            tuple(
+                profile
+                for profile in result.profiles
+                if pattern.search(str(getattr(profile, 'itemRemark', '')))
+            ),
+            result.rejectedItems,
+        )
+
+    def _startPreparationJob(self, stage: str, context: dict, work):
+        """Dispatch one copied operation to the bounded preparation pool."""
+        if not self._isCurrentRequest(context):
+            self._finishOperation(context)
+
+            return None
+
+        self._nextPreparationJobId += 1
+
+        jobId = self._nextPreparationJobId
+        job = SubscriptionPreparationJob(
+            jobId,
+            stage,
+            context,
+            work,
+            self._preparationRelay,
+        )
+
+        self._preparationJobs[jobId] = job
+        self._preparationPool.start(job)
+
+        return jobId
+
+    def _startImportPreparation(self, data: bytes, context: dict):
+        """Decode, parse, normalize, and validate a copied payload off-thread."""
+        source = SubscriptionSource(
+            context.get('unique', ''),
+            context.get('webURL', ''),
+            context.get('remark', ''),
+            context.get('decoderId'),
+        )
+        importer = self.importer
+        filterResult = type(self)._filterImportResult
+        profileFilter = str(context.get('filter', ''))
+        remark = str(context.get('remark', ''))
+
+        def work(isCancelled):
+            """Operate only on captured bytes, values, and plugin data capabilities."""
+            result = importer.importPayload(
+                data,
+                source,
+                requireWorkerSafe=True,
+                isCancelled=isCancelled,
+            )
+
+            return filterResult(result, profileFilter, remark)
+
+        jobId = self._startPreparationJob('import', context, work)
+
+        if jobId is not None:
+            self._preparationPayloads[jobId] = data
+
+    def _runGuiThreadImport(self, data: bytes, context: dict):
+        """Isolate non-opted-in third-party parsing on its required GUI thread."""
+        source = SubscriptionSource(
+            context.get('unique', ''),
+            context.get('webURL', ''),
+            context.get('remark', ''),
+            context.get('decoderId'),
+        )
+
+        try:
+            result = self.importer.importPayload(data, source)
+            result = self._filterImportResult(
+                result,
+                context.get('filter', ''),
+                context.get('remark', ''),
+            )
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.exception(
+                f'failed to prepare subscription {context.get("unique", "")!r}'
+            )
+
+            self._failOperation(context, str(ex) or type(ex).__name__)
+
+            return
+
+        self._handleImportedResult(context, result, 0.0)
+
+    def _handleImportedResult(self, context: dict, result, duration: float):
+        """Capture current group data and dispatch copied reconciliation work."""
+        if not self._isCurrentRequest(context):
+            self._finishOperation(context)
+
+            return
+
+        if result is None or not result.profiles:
+            self._failOperation(context, 'UnsupportedSubscriptionFormat')
+
+            return
+
+        context = {**context, 'decoderId': result.decoderId}
+
+        logger.info(
+            f'prepared subscription ({context.get("remark", "")}, '
+            f'{context.get("unique", "")!r}) with {len(result.profiles)} profiles '
+            f'from {result.decoderId!r}; rejected {result.rejectedItems}; '
+            f'decode/parse {duration:.3f}s'
+        )
+
+        try:
+            snapshot = self.synchronizer.snapshot(
+                Storage.UserServers(),
+                context.get('unique', ''),
+            )
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            self._failOperation(context, str(ex) or type(ex).__name__)
+
+            return
+
+        synchronizer = self.synchronizer
+        incoming = result.profiles
+
+        def work(isCancelled):
+            """Compare copied existing and incoming profiles without live state."""
+            if isCancelled():
+                return None
+
+            return synchronizer.prepare(snapshot, incoming)
+
+        self._startPreparationJob('reconcile', context, work)
+
+    @QtCore.Slot(object)
+    def _handlePreparationOutcome(self, outcome):
+        """Validate one queued worker result and commit only on this Qt thread."""
+        jobId = getattr(outcome, 'jobId', -1)
+
+        self._preparationJobs.pop(jobId, None)
+
+        fallbackPayload = self._preparationPayloads.pop(jobId, None)
+        context = getattr(outcome, 'context', {})
+
+        if self._shuttingDown:
+            return
+
+        if getattr(outcome, 'cancelled', False) or not self._isCurrentRequest(context):
+            logger.debug(
+                f'discard stale/cancelled subscription preparation for '
+                f'{context.get("unique", "")!r}'
+            )
+
+            self._finishOperation(context)
+
+            return
+
+        if getattr(outcome, 'errorType', ''):
+            if (
+                outcome.errorType == SubscriptionWorkerUnsafe.__name__
+                and fallbackPayload is not None
+            ):
+                self._runGuiThreadImport(fallbackPayload, context)
+            else:
+                logger.error(
+                    f'subscription {outcome.stage} preparation failed for '
+                    f'{context.get("unique", "")!r} ({outcome.errorType})'
+                )
+
+                self._failOperation(context, outcome.error)
+
+            return
+
+        if outcome.stage == 'import':
+            self._handleImportedResult(context, outcome.value, outcome.duration)
+
+            return
+
+        if outcome.stage != 'reconcile' or outcome.value is None:
+            self._finishOperation(context)
+
+            return
+
+        started = time.perf_counter()
+
+        try:
+            result = self._synchronizePreparedProfiles(context['unique'], outcome.value)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            error = str(ex) or type(ex).__name__
+
+            if not self._isCurrentRequest(context):
+                self._finishOperation(context)
+            else:
+                logger.exception(
+                    f'failed to commit subscription {context.get("unique", "")!r}'
+                )
+                self._failOperation(context, error)
+
+            return
+
+        committed = {**context, 'syncResult': result}
+
+        self.subscriptionCommitted.emit(context['unique'])
+        self._recordGroupSuccess(committed, result)
+        self.subscriptionStateChanged.emit((context['unique'],))
+        self._finishOperation(committed, successful=committed, structural=True)
+
+        logger.info(
+            f'committed subscription {context["unique"]!r}; reconciliation '
+            f'{outcome.duration:.3f}s, GUI commit {time.perf_counter() - started:.3f}s'
+        )
+
+    def _failOperation(self, context: dict, error: str):
+        """Finalize one current logical operation as an isolated failure."""
+        failed = {**context, 'error': error}
+
+        if self._isCurrentRequest(context):
+            self._recordGroupFailure(failed)
+            self.subscriptionStateChanged.emit((context.get('unique', ''),))
+
+        self._finishOperation(context, failed=failed)
+
+    def _finishOperation(
+        self,
+        context: dict,
+        *,
+        successful=None,
+        failed=None,
+        structural: bool = False,
+    ):
+        """Complete one batch member and publish one coalesced batch outcome."""
+        batchId = context.get('batchId')
+        state = self._batches.get(batchId)
+
+        if state is None or self._shuttingDown:
+            return
+
+        token = (context.get('unique', ''), context.get('requestVersion'))
+
+        if token not in state.pending:
+            return
+
+        state.pending.remove(token)
+
+        if successful is not None:
+            state.successful.append(successful)
+        if failed is not None and self._isCurrentRequest(context):
+            state.failed.append(failed)
+
+        state.structural = state.structural or structural
+
+        if state.pending:
+            return
+
+        self._batches.pop(batchId, None)
+
+        try:
+            Storage.persistSubscriptionGroups()
+        except Exception:
+            # Any non-exit exceptions
+
+            logger.exception('failed to persist completed subscription batch')
+
+        if state.structural:
+            self.subscriptionsChanged.emit()
+
+        if state.successful or state.failed:
+            self.updateCompleted.emit(
+                SubscriptionUpdateBatch(
+                    tuple(state.successful),
+                    tuple(state.failed),
+                    state.showMessageBox,
+                )
+            )
 
     def _synchronizeProfiles(self, unique: str, profiles):
         """Reconcile one group and apply connection effects without UI ownership."""
@@ -364,6 +741,59 @@ class SubscriptionManager(HttpGetManager):
 
             # Reconciliation has committed at this point.  A controller-side
             # follow-up failure is not a failed or rolled-back synchronization.
+            logger.exception(
+                f'failed to apply connection effects after synchronizing '
+                f'subscription {unique!r}'
+            )
+
+        return result
+
+    def _synchronizePreparedProfiles(self, unique: str, plan):
+        """Commit one accepted worker plan and apply GUI-owned connection effects."""
+        servers = Storage.UserServers()
+        activatedIndex = Storage.UserActivatedItemIndex()
+
+        activeProfileId = ''
+        activeWasManagedByGroup = False
+
+        if 0 <= activatedIndex < len(servers):
+            active = servers[activatedIndex]
+            activeProfileId = active.metadata.profileId
+            activeWasManagedByGroup = (
+                active.itemSubscription == unique and active.itemSubscriptionManaged
+            )
+
+        controller = AppConnectionController()
+        wasConnected = controller is not None and controller.isConnected()
+        result = self.synchronizer.commit(servers, plan)
+        newActivatedIndex = next(
+            (
+                index
+                for index, profile in enumerate(servers)
+                if profile.metadata.profileId == activeProfileId
+            ),
+            -1,
+        )
+
+        try:
+            AppSettings.set('ActivatedItemIndex', str(newActivatedIndex))
+        except Exception:
+            # Any non-exit exceptions
+
+            logger.exception(
+                'failed to persist the active profile index after '
+                f'synchronizing subscription {unique!r}'
+            )
+
+        try:
+            if wasConnected and activeProfileId:
+                if newActivatedIndex < 0 and activeWasManagedByGroup:
+                    controller.startDisconnection()
+                elif activeProfileId in result.changedProfileIds:
+                    controller.startReconnection()
+        except Exception:
+            # Any non-exit exceptions
+
             logger.exception(
                 f'failed to apply connection effects after synchronizing '
                 f'subscription {unique!r}'
@@ -507,6 +937,9 @@ class SubscriptionManager(HttpGetManager):
 
     def completionCallback(self, **kwargs):
         """Complete a batch after its final reply finishes."""
+        if 'batchId' in kwargs:
+            return
+
         depthMap = kwargs.get('depthMap', {})
         depthMap['depth'] -= 1
 
@@ -516,6 +949,20 @@ class SubscriptionManager(HttpGetManager):
     def successCallback(self, networkReply, **kwargs):
         """Decode one successful subscription response."""
         if not self._isCurrentRequest(kwargs):
+            self._finishOperation(kwargs)
+
+            return
+
+        if 'batchId' in kwargs:
+            data = bytes(networkReply.readAll().data())
+            decoderId = kwargs.get('decoderId') or kwargs.get('lastDecoderId')
+            context = {**kwargs, 'decoderId': decoderId}
+
+            if self.importer.registry.subscriptionDecoderWorkerSafe(decoderId):
+                self._startImportPreparation(data, context)
+            else:
+                self._runGuiThreadImport(data, context)
+
             return
 
         unique = kwargs.get('unique', '')
@@ -573,6 +1020,8 @@ class SubscriptionManager(HttpGetManager):
     def failureCallback(self, networkReply, **kwargs):
         """Record one failed subscription response."""
         if not self._isCurrentRequest(kwargs):
+            self._finishOperation(kwargs)
+
             return
 
         unique = kwargs.get('unique', '')
@@ -582,6 +1031,11 @@ class SubscriptionManager(HttpGetManager):
         error = networkReply.errorString()
 
         logger.error(f'update subscription ({remark}, {unique!r}) failed: {error}')
+
+        if 'batchId' in kwargs:
+            self._failOperation(kwargs, error)
+
+            return
 
         failureArgs.append({'error': error, **kwargs})
 
@@ -631,8 +1085,14 @@ class SubscriptionManager(HttpGetManager):
             return
 
         changedSubscriptions = []
+        groups = []
+        operations = []
 
-        for unique, _subscription in batch:
+        self._nextBatchId += 1
+
+        batchId = self._nextBatchId
+
+        for unique, subscription in batch:
             group = Storage.SubscriptionGroup(unique)
 
             if group is None:
@@ -641,26 +1101,57 @@ class SubscriptionManager(HttpGetManager):
             group.lastSyncStatus = 'syncing'
             group.lastSyncError = ''
 
-            Storage.upsertSubscriptionGroup(group)
+            self.cancelUpdates(unique)
+
+            version = self._requestVersions[unique]
+            context = {
+                'unique': unique,
+                'remark': subscription.get('remark', ''),
+                'webURL': subscription.get('webURL', ''),
+                'userAgent': subscription.get('userAgent', ''),
+                'filter': subscription.get('filter', ''),
+                'decoderId': subscription.get('lastDecoderId') or None,
+                'lastDecoderId': subscription.get('lastDecoderId', ''),
+                'batchId': batchId,
+                'requestVersion': version,
+                'requestSignature': self._requestSignature(subscription),
+            }
+
+            groups.append(group)
+            operations.append(context)
             changedSubscriptions.append(unique)
+
+        if not operations:
+            return
+
+        Storage.upsertSubscriptionGroups(groups)
+        Storage.persistSubscriptionGroups()
+
+        self._batches[batchId] = _SubscriptionBatchState(
+            {(context['unique'], context['requestVersion']) for context in operations},
+            bool(kwargs.get('showMessageBox', True)),
+            [],
+            [],
+        )
 
         if changedSubscriptions:
             self.subscriptionStateChanged.emit(tuple(changedSubscriptions))
 
-        depthMap = {'depth': len(batch)}
-        successArgs = []
-        failureArgs = []
+        for context in operations:
+            try:
+                self.updateSubsByWebGET(
+                    **context,
+                    logActionMessage=bool(kwargs.get('logActionMessage', False)),
+                )
+            except Exception as ex:
+                # Any non-exit exceptions
 
-        for unique, subscription in batch:
-            self.updateSubsByWebGET(
-                unique=unique,
-                **subscription,
-                **kwargs,
-                depthMap=depthMap,
-                successArgs=successArgs,
-                failureArgs=failureArgs,
-                requestVersion=self._nextRequestVersion(unique),
-            )
+                logger.exception(
+                    f'failed to start subscription request for '
+                    f'{context.get("unique", "")!r}'
+                )
+
+                self._failOperation(context, str(ex) or type(ex).__name__)
 
     def updateSubsByUnique(self, unique: str, **kwargs):
         """Update one enabled subscription through the canonical batch path."""

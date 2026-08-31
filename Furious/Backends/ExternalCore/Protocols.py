@@ -47,6 +47,7 @@ _TRANSLATABLE = (
 class ExternalCoreProtocolHandler(ProtocolHandler):
     """Own local External Core mappings while declining URI import/export."""
 
+    workerSafe = True
     descriptor = ProtocolDescriptor(
         id=EXTERNAL_CORE_TYPE,
         displayName='External Core',

@@ -25,6 +25,9 @@
   entry-point plugins; do not give bundled code hidden repository/UI side channels.
 - Evolve contracts additively when practical. Before a breaking change, inspect external discovery, compatibility
   exports, every bundled implementation, tests, and compiled inclusion; do not infer compatibility from built-ins alone.
+- Capability instances default to GUI-thread-only for background subscription preparation. A decoder or protocol
+  handler opts into worker execution only after its parsing, validation, caches, globals, and Qt usage are audited as
+  safe for concurrent copied inputs; keep unclassified third-party capability execution on the GUI thread.
 
 ## Verification
 

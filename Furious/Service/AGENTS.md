@@ -22,6 +22,9 @@
   connectivity, endpoint, subscription, and asset requests own their exact reply and reject stale generations.
 - Subscription stages remain separate: decoders return neutral items; import constructs profiles/metadata;
   synchronization prepares one group reconciliation; the manager owns request/schedule generations and commits it.
+  Large payload import and reconciliation preparation run in the manager's bounded pool over copied payload/profile
+  data. Workers never read live repositories or Qt models; the GUI thread verifies the full source signature and group
+  revision, commits while preserving live profile identity/local metadata, then publishes coalesced status/structure.
   Post-commit reconnect/test invalidation failure is reported without undoing the committed profiles.
 - Log transport, traffic collection, and metric history remain bounded and independent of page visibility. Rendering may
   be lazy; collection/draining ownership is not.

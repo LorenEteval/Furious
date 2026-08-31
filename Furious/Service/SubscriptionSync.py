@@ -25,7 +25,12 @@ import copy
 
 from dataclasses import dataclass
 
-__all__ = ['SubscriptionSyncResult', 'SubscriptionSynchronizer']
+__all__ = [
+    'SubscriptionSyncPlan',
+    'SubscriptionSyncResult',
+    'SubscriptionSyncSnapshot',
+    'SubscriptionSynchronizer',
+]
 
 
 @dataclass(frozen=True)
@@ -41,6 +46,25 @@ class SubscriptionSyncResult:
     changedProfileIds: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class SubscriptionSyncSnapshot:
+    """Hold copied group profiles and the live source revision they represent."""
+
+    groupId: str
+    profiles: tuple[ServerProfile, ...]
+    sourceRevision: tuple[tuple[str, str, str], ...]
+
+
+@dataclass(frozen=True)
+class SubscriptionSyncPlan:
+    """Describe a worker-prepared replacement for one subscription group."""
+
+    groupId: str
+    sourceRevision: tuple[tuple[str, str, str], ...]
+    profiles: tuple[ServerProfile, ...]
+    result: SubscriptionSyncResult
+
+
 class SubscriptionSynchronizer:
     """Own stable, group-scoped profile reconciliation semantics."""
 
@@ -52,6 +76,112 @@ class SubscriptionSynchronizer:
         'speed',
         'tags',
     )
+
+    @staticmethod
+    def _sourceRevision(profiles, groupId: str):
+        """Fingerprint the relevant live group state without using row identity."""
+        return tuple(
+            (
+                profile.metadata.profileId,
+                profile.metadata.subscriptionProfileKey,
+                profileConnectionFingerprint(profile),
+            )
+            for profile in profiles
+            if profile.itemSubscription == groupId and profile.itemSubscriptionManaged
+        )
+
+    def snapshot(self, profiles, groupId: str) -> SubscriptionSyncSnapshot:
+        """Copy only the live profiles owned by *groupId* for worker preparation."""
+        if not groupId:
+            raise ValueError('subscription group ID must not be empty')
+
+        owned = tuple(
+            copy.deepcopy(profile)
+            for profile in profiles
+            if profile.itemSubscription == groupId and profile.itemSubscriptionManaged
+        )
+
+        return SubscriptionSyncSnapshot(
+            groupId,
+            owned,
+            self._sourceRevision(profiles, groupId),
+        )
+
+    def prepare(
+        self,
+        snapshot: SubscriptionSyncSnapshot,
+        incomingProfiles,
+    ) -> SubscriptionSyncPlan:
+        """Build a reconciliation plan using copied profiles only."""
+        working = list(snapshot.profiles)
+        result = self.reconcile(working, incomingProfiles, snapshot.groupId)
+
+        return SubscriptionSyncPlan(
+            snapshot.groupId,
+            snapshot.sourceRevision,
+            tuple(working),
+            result,
+        )
+
+    def commit(self, profiles, plan: SubscriptionSyncPlan) -> SubscriptionSyncResult:
+        """Atomically apply a current worker plan while preserving live identities."""
+        groupId = plan.groupId
+
+        if self._sourceRevision(profiles, groupId) != plan.sourceRevision:
+            raise RuntimeError('subscription profile source changed during preparation')
+
+        managedIndexes = [
+            index
+            for index, profile in enumerate(profiles)
+            if profile.itemSubscription == groupId and profile.itemSubscriptionManaged
+        ]
+        insertionIndex = min(managedIndexes) if managedIndexes else len(profiles)
+        existingById = {
+            profiles[index].metadata.profileId: profiles[index]
+            for index in managedIndexes
+        }
+        synchronized = []
+
+        for prepared in plan.profiles:
+            existing = existingById.pop(prepared.metadata.profileId, None)
+
+            if existing is None:
+                synchronized.append(prepared)
+
+                continue
+
+            metadata = copy.deepcopy(prepared.metadata)
+
+            for fieldName in self.LocalMetadataFields:
+                setattr(metadata, fieldName, getattr(existing.metadata, fieldName))
+
+            existing.connection = prepared.connection
+            existing.metadata = metadata
+            synchronized.append(existing)
+
+        for removed in existingById.values():
+            removed.deleted = True
+
+        unmanagedOrOther = [
+            profile
+            for profile in profiles
+            if not (
+                profile.itemSubscription == groupId and profile.itemSubscriptionManaged
+            )
+        ]
+        finalProfiles = (
+            unmanagedOrOther[:insertionIndex]
+            + synchronized
+            + unmanagedOrOther[insertionIndex:]
+        )
+
+        profiles[:] = finalProfiles
+
+        for index, profile in enumerate(finalProfiles):
+            profile.index = index
+            profile.deleted = False
+
+        return plan.result
 
     @staticmethod
     def _keyAssignments(profiles: list[ServerProfile], groupId: str):

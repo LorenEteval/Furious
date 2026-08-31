@@ -48,6 +48,8 @@ __all__ = ['XRAY_PROTOCOL_HANDLERS']
 class XrayProtocolHandler(ProtocolHandler):
     """Adapt one Xray outbound protocol to the host protocol contract."""
 
+    workerSafe = True
+
     def __init__(
         self,
         descriptor,

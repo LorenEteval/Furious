@@ -124,6 +124,16 @@ class Storage:
         Storage._UserSubsStorage().upsertGroup(group)
 
     @staticmethod
+    def upsertSubscriptionGroups(groups):
+        """Mutate a validated subscription-group batch in one commit."""
+        Storage._UserSubsStorage().upsertGroups(groups)
+
+    @staticmethod
+    def persistSubscriptionGroups():
+        """Serialize the current subscription repository once."""
+        Storage._UserSubsStorage().sync()
+
+    @staticmethod
     def removeSubscriptionGroup(unique: str) -> SubscriptionGroup | None:
         """Remove one subscription group through the shared repository."""
         return Storage._UserSubsStorage().removeGroup(unique)

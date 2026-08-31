@@ -1917,6 +1917,7 @@ class ServerTableView(
 
     def cleanup(self):
         """Release resources owned by the user servers Qt table view."""
+        self.subsManager.shutdown()
         self.profileTestManager.shutdown()
         self._clearSubscriptionActions()
 

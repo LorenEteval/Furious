@@ -728,17 +728,31 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             self.ItemKey.index('profiles'),
         )
 
-        for unique in dict.fromkeys(uniques):
-            row = rows.get(unique)
+        changedRows = sorted(
+            row
+            for unique in dict.fromkeys(uniques)
+            if (row := rows.get(unique)) is not None
+        )
 
-            if row is None:
+        if not changedRows:
+            return
+
+        firstRow = previousRow = changedRows[0]
+
+        for row in (*changedRows[1:], None):
+            if row is not None and row == previousRow + 1:
+                previousRow = row
+
                 continue
 
             self.sourceModel.dataChanged.emit(
-                self.sourceModel.index(row, firstColumn),
-                self.sourceModel.index(row, lastColumn),
+                self.sourceModel.index(firstRow, firstColumn),
+                self.sourceModel.index(previousRow, lastColumn),
                 [],
             )
+
+            if row is not None:
+                firstRow = previousRow = row
 
     def flushItem(self, row, column, item):
         """Refresh item."""
@@ -806,6 +820,9 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         subsob = {unique: group.toMapping()}
 
         if unique in Storage.UserSubs():
+            if self.subsManager is not None:
+                self.subsManager.cancelUpdates(unique)
+
             row = list(Storage.UserSubs().keys()).index(unique)
 
             Storage.upsertSubscriptionGroup(group)

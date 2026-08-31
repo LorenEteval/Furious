@@ -91,6 +91,9 @@ class PluginCapability:
     """Define one independently queryable plugin capability."""
 
     capabilityKind = CapabilityKind.Utility
+    # Capability instances may be process-lifetime and externally supplied.
+    # Worker execution therefore requires an explicit opt-in after auditing.
+    workerSafe = False
 
     @property
     def capabilityId(self) -> str:

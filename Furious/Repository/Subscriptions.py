@@ -221,10 +221,22 @@ class UserSubs(Mixins.CleanupOnExit, StorageBackend):
 
     def upsertGroup(self, group: SubscriptionGroup):
         """Insert or replace one group without changing its identity."""
-        if not group.id:
-            raise ValueError('subscription group ID must not be empty')
+        self.upsertGroups((group,))
 
-        self._data[group.id] = group.toMapping()
+    def upsertGroups(self, groups):
+        """Atomically insert or replace a batch of validated groups."""
+        staged = {}
+
+        for group in groups:
+            if not isinstance(group, SubscriptionGroup):
+                raise TypeError('subscription group must be a SubscriptionGroup')
+
+            if not group.id:
+                raise ValueError('subscription group ID must not be empty')
+
+            staged[group.id] = group.toMapping()
+
+        self._data.update(staged)
 
     def removeGroup(self, unique: str) -> SubscriptionGroup | None:
         """Remove and return one group definition."""

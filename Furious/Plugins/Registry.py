@@ -576,6 +576,37 @@ class PluginRegistry:
             )
         )
 
+    def subscriptionDecoderWorkerSafe(self, decoderId=None) -> bool:
+        """Return whether the selected subscription decoder path is worker-safe."""
+        if decoderId:
+            entry = self._decoders.get(_normalizeIdentifier(decoderId))
+            decoders = (entry[1],) if entry is not None else tuple()
+        else:
+            decoders = self.subscriptionDecoders()
+
+        return bool(decoders) and all(
+            bool(getattr(decoder, 'workerSafe', False)) for decoder in decoders
+        )
+
+    def subscriptionItemWorkerSafe(self, item: SubscriptionItem) -> bool:
+        """Classify only the protocol capability needed by one decoded item."""
+        if item.uri is not None:
+            entry = self._schemes.get(_schemeFromURI(item.uri))
+
+            return entry is None or bool(getattr(entry[1], 'workerSafe', False))
+
+        protocol = item.configuration.get('type', '')
+        entry = self._protocols.get(_normalizeIdentifier(protocol))
+
+        if entry is not None:
+            return bool(getattr(entry[1], 'workerSafe', False))
+
+        # Undiscriminated mappings are probed against every handler.
+        return all(
+            bool(getattr(handler, 'workerSafe', False))
+            for _plugin, handler in self._protocolEntries
+        )
+
     def trafficStatsProviders(self):
         """Return registered runtime traffic-statistics providers."""
         return self.capabilities(CapabilityKind.TrafficStats)

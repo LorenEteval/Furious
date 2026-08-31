@@ -30,7 +30,12 @@ __all__ = [
     'SubscriptionImportResult',
     'SubscriptionImportService',
     'SubscriptionSource',
+    'SubscriptionWorkerUnsafe',
 ]
+
+
+class SubscriptionWorkerUnsafe(RuntimeError):
+    """Signal that one plugin capability must remain on the GUI thread."""
 
 
 @dataclass(frozen=True)
@@ -62,8 +67,25 @@ class SubscriptionImportService:
         """Use the supplied capability registry or the application registry."""
         self.registry = registry or getPluginRegistry()
 
-    def importPayload(self, data: bytes, source: SubscriptionSource):
+    def importPayload(
+        self,
+        data: bytes,
+        source: SubscriptionSource,
+        *,
+        requireWorkerSafe: bool = False,
+        isCancelled=None,
+    ):
         """Decode *data* and construct supported profiles for *source*."""
+        if requireWorkerSafe and not self.registry.subscriptionDecoderWorkerSafe(
+            source.decoderId
+        ):
+            raise SubscriptionWorkerUnsafe(
+                'subscription capabilities did not opt in to worker execution'
+            )
+
+        if callable(isCancelled) and isCancelled():
+            return None
+
         result = self.registry.decodeSubscription(data, source.decoderId)
 
         if result is None:
@@ -74,6 +96,14 @@ class SubscriptionImportService:
         identityOccurrences = {}
 
         for item in result.items:
+            if callable(isCancelled) and isCancelled():
+                return None
+
+            if requireWorkerSafe and not self.registry.subscriptionItemWorkerSafe(item):
+                raise SubscriptionWorkerUnsafe(
+                    'subscription protocol capability did not opt in to worker execution'
+                )
+
             value = item.configuration if item.configuration is not None else item.uri
             metadata = {
                 **dict(item.metadata),

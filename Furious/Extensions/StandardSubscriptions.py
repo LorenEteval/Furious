@@ -50,6 +50,7 @@ def _shareLinks(text: str):
 class PlainShareLinkDecoder(SubscriptionDecoder):
     """Decode newline-delimited plain-text share links."""
 
+    workerSafe = True
     decoderId = 'plain-share-links'
     displayName = 'Share Links (plain text)'
     priority = 100
@@ -76,6 +77,7 @@ class PlainShareLinkDecoder(SubscriptionDecoder):
 class Base64ShareLinkDecoder(SubscriptionDecoder):
     """Decode a Base64 envelope containing plain share links."""
 
+    workerSafe = True
     decoderId = 'base64-share-links'
     displayName = 'Share Links (Base64)'
     priority = 90

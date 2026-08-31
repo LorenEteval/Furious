@@ -51,6 +51,7 @@ _TRANSLATABLE = (
 class Hysteria2ProtocolHandler(ProtocolHandler):
     """Own Hysteria 2 URI, mapping, validation, and export behavior."""
 
+    workerSafe = True
     descriptor = ProtocolDescriptor(
         id='hysteria2',
         displayName='Hysteria2',
