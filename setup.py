@@ -38,6 +38,7 @@ setup(
     url=APPLICATION_ABOUT_PAGE,
     packages=find_packages(),
     package_data={'Furious': ['Data/**']},
+    exclude_package_data={'Furious': ['Data/AGENTS.md']},
     include_package_data=True,
     install_requires=install_requires,
     entry_points={

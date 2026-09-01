@@ -64,6 +64,9 @@ version = { attr = "Furious.Version.__version__" }
 [tool.setuptools.package-data]
 Furious = ["Data/**"]
 
+[tool.setuptools.exclude-package-data]
+Furious = ["Data/AGENTS.md"]
+
 [tool.uv.extra-build-dependencies]
 Furious-GUI = ["PySide6-Essentials", "PySide6-Addons"]
 
