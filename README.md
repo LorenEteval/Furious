@@ -33,6 +33,10 @@ the [Quick Start](https://github.com/LorenEteval/Furious/wiki/Quick-Start), or
 consult [Troubleshooting and Diagnostics](https://github.com/LorenEteval/Furious/wiki/Troubleshooting-and-Diagnostics)
 when something goes wrong.
 
+## Contributing
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/LorenEteval/Furious)
+
 ## Credits
 
 - [Xray-core](https://github.com/XTLS/Xray-core)
