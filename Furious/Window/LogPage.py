@@ -689,6 +689,10 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         if firstHighlightBlock is not None:
             self._scheduleHighlight(firstHighlightBlock)
+        elif self._highlightNextBlock is not None:
+            # Hidden updates can belong only to another filter. Catching up
+            # then adds no text, but must resume any paused highlighting.
+            self._scheduleHighlight(self._highlightNextBlock)
         else:
             self._setHighlightBusy(False)
 
@@ -947,7 +951,11 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
     def hideEvent(self, event):
         """Pause presentation work while preserving collection and scroll intent."""
-        self._updateFollowTailFromScrollbar()
+        # Layout/highlighting may still be moving the tail. Only a pending user
+        # action can change intent; hiding is not itself a scroll action.
+        if self._followStateTimer.isActive():
+            self._updateFollowTailFromScrollbar()
+
         self._updateTimer.stop()
         self._highlightTimer.stop()
         self._scrollTimer.stop()

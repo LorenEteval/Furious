@@ -124,6 +124,7 @@ from PySide6 import QtCore
 from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
+    QStackedWidget,
     QToolButton,
     QComboBox,
     QHBoxLayout,
@@ -1876,6 +1877,123 @@ class UnifiedLogPageTest(unittest.TestCase):
             self.assertTrue(page.plainText().endswith('while hidden 024'))
 
             self.disposePage(page)
+
+    def testNavigationDuringProcessingPreservesTailIntent(self):
+        """Hide after document replacement, before its deferred tail restore."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=1000)
+            stack = QStackedWidget()
+            page = LogPage(manager=manager)
+            other = QWidget()
+
+            stack.addWidget(page)
+            stack.addWidget(other)
+            stack.resize(800, 320)
+
+            self.addCleanup(stack.deleteLater)
+            self.addCleanup(stack.close)
+
+            for index in range(300):
+                manager.append(f'processing {index:03d}')
+
+            # This connection runs after the real render callback, before the
+            # zero-delay scroll/highlight timers, exactly at the race boundary.
+            def navigateAway():
+                stack.setCurrentWidget(other)
+
+            page._updateTimer.timeout.connect(navigateAway)
+            stack.show()
+
+            self.assertTrue(waitFor(lambda: stack.currentWidget() is other))
+
+            page._updateTimer.timeout.disconnect(navigateAway)
+
+            self.assertIsNotNone(page._highlightNextBlock)
+            self.assertTrue(page._followTail)
+
+            manager.append('arrived while away')
+            stack.setCurrentWidget(page)
+
+            self.assertRendered(page)
+
+            scrollbar = page.textBrowser.verticalScrollBar()
+
+            self.assertTrue(waitFor(lambda: scrollbar.value() == scrollbar.maximum()))
+            self.assertTrue(page.plainText().endswith('arrived while away'))
+
+            manager.append('still following')
+
+            self.assertRendered(page)
+            self.assertTrue(waitFor(lambda: scrollbar.value() == scrollbar.maximum()))
+
+    def testManualScrollImmediatelyBeforeHidePreservesReadingIntent(self):
+        """Capture pending user input, but never infer intent from navigation."""
+        with isolatedSettings():
+            page = LogPage(manager=LogManager(maximumEntries=500))
+            self.addCleanup(self.disposePage, page)
+
+            page.resize(800, 320)
+
+            for index in range(200):
+                page.manager.append(f'history {index}')
+
+            page.show()
+
+            self.assertRendered(page)
+
+            scrollbar = page.textBrowser.verticalScrollBar()
+            scrollbar.setFocus()
+
+            QTest.keyClick(scrollbar, QtCore.Qt.Key.Key_Home)
+            page.hide()
+
+            self.assertFalse(page._followTail)
+
+            page.manager.append('arrived while reading')
+            page.show()
+
+            self.assertRendered(page)
+            self.assertEqual(scrollbar.value(), 0)
+            self.assertFalse(page._followTail)
+
+            QTest.keyClick(scrollbar, QtCore.Qt.Key.Key_End)
+
+            self.assertTrue(waitFor(lambda: page._followTail))
+
+    def testFilteredProcessingResumesAfterUnmatchedHiddenUpdates(self):
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=1000)
+            page = LogPage(manager=manager)
+            self.addCleanup(self.disposePage, page)
+
+            page.resize(800, 320)
+            page.filterComboBox.setCurrentIndex(
+                page.filterComboBox.findData(CORE_LOG_CATEGORY)
+            )
+
+            for index in range(300):
+                manager.append(f'core {index}', CORE_LOG_CATEGORY)
+
+            page._updateTimer.timeout.connect(page.hide)
+            page.show()
+
+            self.assertTrue(waitFor(lambda: not page.isVisible()))
+
+            page._updateTimer.timeout.disconnect(page.hide)
+
+            self.assertIsNotNone(page._highlightNextBlock)
+
+            manager.append('unmatched update', APPLICATION_LOG_CATEGORY)
+            processQtEvents()
+
+            page.show()
+
+            self.assertRendered(page)
+            self.assertTrue(page.plainText().endswith('core 299'))
+
+            scrollbar = page.textBrowser.verticalScrollBar()
+
+            self.assertTrue(waitFor(lambda: scrollbar.value() == scrollbar.maximum()))
 
     def testLogPreferencesDefaultOnAndPersistAcrossPageRecreation(self):
         """Restore both switch preferences without rewriting them at startup."""
