@@ -2831,7 +2831,7 @@ class DialogBehaviorTest(unittest.TestCase):
                     [action.text() for action in ruleActions],
                     [_('Move Up', language), _('Move Down', language)],
                 )
-                self.assertEqual(dialog.moveButton.text(), _('Move...', language))
+                self.assertEqual(dialog.moveButton.text(), _('Move', language))
                 self.assertEqual(
                     [action.data() for action in ruleActions], ['up', 'down']
                 )

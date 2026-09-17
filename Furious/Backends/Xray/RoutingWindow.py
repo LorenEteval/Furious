@@ -1000,7 +1000,7 @@ class RoutingRulesDialog(AppQTransientDialog):
         connectWeakly(self.moveMenu.triggered, self, '_moveRules')
 
         self.moveButton = AppQMenuPushButton(
-            _('Move...'),
+            _('Move'),
             icon=bootstrapIcon('arrows-move.svg'),
             popupMenu=self.moveMenu,
             parent=self,
