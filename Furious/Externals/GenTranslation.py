@@ -500,6 +500,7 @@ TRANSLATION = {
     },
     "Move Up": {
         "source": [
+            "Furious.Backends.Xray.RoutingWindow",
             "Furious.Widget.ServerTableView",
             "Furious.Widget.SubscriptionTableView"
         ],
@@ -509,6 +510,7 @@ TRANSLATION = {
     },
     "Move Down": {
         "source": [
+            "Furious.Backends.Xray.RoutingWindow",
             "Furious.Widget.ServerTableView",
             "Furious.Widget.SubscriptionTableView"
         ],
@@ -3215,13 +3217,14 @@ TRANSLATION = {
     },
     "Move...": {
         "source": [
+            "Furious.Backends.Xray.RoutingWindow",
             "Furious.Widget.ServerTableView"
         ],
         "RU": "Переместить...",
         "ZH": "移动...",
         "isReviewed": "True"
     },
-    "Move to Top": {
+    "Move To Top": {
         "source": [
             "Furious.Widget.ServerTableView"
         ],
@@ -3229,7 +3232,7 @@ TRANSLATION = {
         "ZH": "移到顶部",
         "isReviewed": "True"
     },
-    "Move to Bottom": {
+    "Move To Bottom": {
         "source": [
             "Furious.Widget.ServerTableView"
         ],
@@ -3339,14 +3342,6 @@ TRANSLATION = {
         ],
         "RU": "Нет записей журнала, соответствующих текущим фильтрам.",
         "ZH": "没有符合当前筛选条件的日志。",
-        "isReviewed": "True"
-    },
-    "Tests": {
-        "source": [
-            "Furious.Window.HomePage"
-        ],
-        "RU": "Тесты",
-        "ZH": "测试",
         "isReviewed": "True"
     }
 }

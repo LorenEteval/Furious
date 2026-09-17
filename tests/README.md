@@ -59,7 +59,7 @@ strategy in an individual test.
 | Theme cross-fade activation, interruption, multi-window cleanup, and animation policy | `test_theme_transition.py` |
 | AppQMainWindow lifecycle, subclass policies, geometry restoration, and migration | `test_main_window_geometry.py` |
 | AppQDialog first-presentation geometry, native show paths, centering, and async lifetime | `test_dialog_geometry.py` |
-| Editor mappings, lazy log rendering, routing/message-box/connection UI | `test_ui_behavior.py` |
+| Editor mappings, lazy log rendering, routing-rule internal-move drag restrictions, Move menu/shortcuts and persisted order, message-box/connection UI | `test_ui_behavior.py` |
 | Bounded, incremental, cancellable QR export and snapshot/lifetime safety | `test_qr_export_scalability.py` |
 | Real keyboard/mouse/focus, proxy mapping, shared Home/Settings state, Home empty/filter recovery and shared menus, direct small profile operations and batched imports/deletions with throttled progress and stable cancellation targets, and transient editor input | `test_qt_interactions.py` |
 | Direct Qt ownership and destruction across independent UI families | `test_qt_lifetime.py` |

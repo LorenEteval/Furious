@@ -31,6 +31,11 @@ full JSON preservation, routing/assets/statistics, and protocol/transport/TLS pr
   custom document content and named-profile identity while composing runtime routing/API statistics. Trace the
   selected repository routing document separately from the connection's own routing branch; neither may be mutated
   as a side effect of preparing a launch.
+- Routing-rule row moves mutate the live profile's rule list in matching order, with Qt move notifications preserving
+  selection. Internal drag-and-drop, the Move menu, and list-scoped Ctrl+Up/Ctrl+Down shortcuts use this same model
+  mutation and preserve selected-row order. Pending rule editors/confirmations use persistent model indexes so moving or deleting
+  a rule cannot retarget their completion. Verify this through `tests/test_ui_behavior.py` and repository/runtime order
+  round trips.
 - Statistics preparation is optional and may leave a valid runtime without a statistics target. Preserve that
   distinction from connection failure; later sampling uses the target captured for this runtime, not newly edited
   settings or an assumption based solely on the backend name.

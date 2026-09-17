@@ -704,6 +704,157 @@ class RoutingProfileEditDialog(AppQTransientDialog):
         }
 
 
+class RoutingRulesModel(QtCore.QAbstractListModel):
+    """Expose the live routing rule list in backend matching order."""
+
+    def __init__(self, routing: dict, parent=None):
+        super().__init__(parent)
+
+        self.routing = routing
+
+        if not isinstance(routing.get('rules'), list):
+            routing['rules'] = []
+
+    def rules(self):
+        return self.routing['rules']
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return 0 if parent.isValid() else len(self.rules())
+
+    def flags(self, index):
+        flags = super().flags(index)
+
+        if index.isValid():
+            return flags | QtCore.Qt.ItemFlag.ItemIsDragEnabled
+
+        # Only insertion between rows is meaningful for a flat rule list.
+        return flags | QtCore.Qt.ItemFlag.ItemIsDropEnabled
+
+    def supportedDropActions(self):
+        return QtCore.Qt.DropAction.MoveAction
+
+    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if index.isValid() and 0 <= index.row() < self.rowCount():
+            if role == QtCore.Qt.ItemDataRole.DisplayRole:
+                return self.ruleText(self.rules()[index.row()])
+
+        return None
+
+    @staticmethod
+    def ruleText(rule: dict) -> str:
+        """Preview each filled destination field within a shared text budget."""
+        name = rule.get('ruleTag', '') or 'Untitled Rule'
+        outbound = rule.get('outboundTag', 'proxy')
+        fields = []
+
+        # Use the same field names and order as the Destination Match editor.
+        for key, label in (
+            ('domain', 'domain'),
+            ('ip', 'ip'),
+            ('port', 'port'),
+            ('vlessRoute', 'vless route'),
+        ):
+            value = rule.get(key)
+
+            if value is None or value == '' or value == []:
+                continue
+
+            extra = ''
+
+            if isinstance(value, list):
+                extra = f' +{len(value) - 1}' if len(value) > 1 else ''
+                value = value[0]
+
+            text = str(value).strip()
+
+            if text:
+                fields.append((label, text, extra))
+
+        prefix = f'{name} -> {outbound}'
+
+        if not fields:
+            return prefix
+
+        # Reserve room for every label: a long domain must not crowd out Port
+        # or VLESS Route. The view's native elision handles narrower windows.
+        overhead = sum(len(label) + 2 for label, _text, _extra in fields)
+        overhead += 2 * (len(fields) - 1)
+        valueBudget = min(48, (96 - overhead) // len(fields))
+        previews = []
+
+        for label, text, extra in fields:
+            limit = max(1, valueBudget - len(extra))
+            preview = ' '.join(text[: limit + 1].split())
+
+            if len(text) > limit:
+                preview = preview[: limit - 1].rstrip() + '…'
+
+            previews.append(f'{label}: {preview}{extra}')
+
+        return f'{prefix} ({"; ".join(previews)})'
+
+    def moveRows(
+        self, sourceParent, sourceRow, count, destinationParent, destinationChild
+    ):
+        """Move the actual rules; Qt retains selection and persistent indexes."""
+        if (
+            sourceParent.isValid()
+            or destinationParent.isValid()
+            or count <= 0
+            or sourceRow < 0
+            or sourceRow + count > self.rowCount()
+            or not 0 <= destinationChild <= self.rowCount()
+            or sourceRow <= destinationChild <= sourceRow + count
+        ):
+            return False
+
+        if not self.beginMoveRows(
+            sourceParent,
+            sourceRow,
+            sourceRow + count - 1,
+            destinationParent,
+            destinationChild,
+        ):
+            return False
+
+        rules = self.rules()
+        moved = rules[sourceRow : sourceRow + count]
+
+        del rules[sourceRow : sourceRow + count]
+
+        insertion = (
+            destinationChild - count
+            if destinationChild > sourceRow
+            else destinationChild
+        )
+        rules[insertion:insertion] = moved
+
+        self.endMoveRows()
+
+        return True
+
+    def appendRule(self, rule):
+        row = self.rowCount()
+
+        self.beginInsertRows(QtCore.QModelIndex(), row, row)
+        self.rules().append(rule)
+        self.endInsertRows()
+
+    def setRule(self, row, rule):
+        self.rules()[row] = rule
+
+        index = self.index(row, 0)
+
+        self.dataChanged.emit(index, index, [QtCore.Qt.ItemDataRole.DisplayRole])
+
+    def deleteRules(self, rows):
+        for row in sorted(set(rows), reverse=True):
+            if 0 <= row < self.rowCount():
+                self.beginRemoveRows(QtCore.QModelIndex(), row, row)
+                self.rules().pop(row)
+                self.endRemoveRows()
+
+
 class RoutingRulesListView(AppQListView):
     """Provide the model-based routing rules list."""
 
@@ -714,17 +865,23 @@ class RoutingRulesListView(AppQListView):
         super().__init__(parent)
 
         self.routing = routing
-        self.rulesModel = QtCore.QStringListModel(parent=self)
+        self.rulesModel = RoutingRulesModel(routing, parent=self)
+
         self.setModel(self.rulesModel)
 
         self.setAlternatingRowColors(True)
+        self.setTextElideMode(QtCore.Qt.TextElideMode.ElideRight)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setSelectionBehavior(AppQListView.SelectionBehavior.SelectRows)
         self.setSelectionMode(AppQListView.SelectionMode.ExtendedSelection)
         self.setEditTriggers(AppQListView.EditTrigger.NoEditTriggers)
 
-        connectWeakly(self.doubleClicked, self, '_requestEdit')
+        self.setDragDropMode(AppQListView.DragDropMode.InternalMove)
+        self.setDragDropOverwriteMode(False)
+        self.setDropIndicatorShown(True)
+        self.setDefaultDropAction(QtCore.Qt.DropAction.MoveAction)
 
-        self.flushAll()
+        connectWeakly(self.doubleClicked, self, '_requestEdit')
 
     @QtCore.Slot(QtCore.QModelIndex)
     def _requestEdit(self, _index):
@@ -733,12 +890,7 @@ class RoutingRulesListView(AppQListView):
 
     def rules(self):
         """Return the rules represented by the routing list."""
-        rules = self.routing.setdefault('rules', list())
-
-        if not isinstance(rules, list):
-            self.routing['rules'] = rules = list()
-
-        return rules
+        return self.rulesModel.rules()
 
     def ruleAt(self, index: int):
         """Return the rule represented by one list row."""
@@ -746,14 +898,7 @@ class RoutingRulesListView(AppQListView):
 
     def ruleText(self, rule: dict) -> str:
         """Return the display text for one routing rule."""
-        name, outbound, domains, ips = (
-            rule.get('ruleTag', '') or 'Untitled Rule',
-            rule.get('outboundTag', 'proxy'),
-            len(rule.get('domain', [])),
-            len(rule.get('ip', [])),
-        )
-
-        return f'{name} -> {outbound} ({domains} domains, {ips} IPs)'
+        return self.rulesModel.ruleText(rule)
 
     def selectedRuleText(self):
         """Select ed rule text."""
@@ -766,24 +911,43 @@ class RoutingRulesListView(AppQListView):
 
     def appendRule(self, rule: dict):
         """Append rule."""
-        self.rules().append(rule)
-        self.flushAll()
+        self.rulesModel.appendRule(rule)
 
     def setRule(self, index: int, rule: dict):
         """Set rule."""
-        self.rules()[index] = rule
-        self.flushAll()
+        self.rulesModel.setRule(index, rule)
 
     def deleteRules(self, indexes: list[int]):
         """Delete rules."""
-        for i in range(len(indexes)):
-            self.rules().pop(indexes[i] - i)
+        self.rulesModel.deleteRules(indexes)
 
-        self.flushAll()
+    def moveSelectedRules(self, position: str):
+        """Move selected rows with Home's stable multi-selection semantics."""
+        rows = self.selectedIndex
 
-    def flushAll(self):
-        """Refresh all."""
-        self.rulesModel.setStringList([self.ruleText(rule) for rule in self.rules()])
+        if not rows or position not in ('up', 'down'):
+            return
+
+        backwards = position == 'down'
+        boundary = self.rulesModel.rowCount() - 1 if backwards else 0
+        root = QtCore.QModelIndex()
+
+        # Work toward the destination edge so unprocessed source rows keep
+        # their indexes. Adjacent selected rows never cross each other.
+        for row in reversed(rows) if backwards else rows:
+            if position == 'up':
+                target = max(boundary, row - 1)
+            else:
+                target = min(boundary, row + 1)
+
+            destination = target + 1 if target > row else target
+
+            self.rulesModel.moveRow(root, row, root, destination)
+
+            boundary = target - 1 if backwards else target + 1
+
+        self.scrollTo(self.currentIndex())
+        self.setFocus()
 
 
 class RoutingRulesDialog(AppQTransientDialog):
@@ -817,6 +981,31 @@ class RoutingRulesDialog(AppQTransientDialog):
 
         connectWeakly(self.deleteButton.clicked, self, 'deleteRule')
 
+        self.moveMenu = AppQMenu(parent=self)
+
+        for text, position, key in (
+            (_('Move Up'), 'up', QtCore.Qt.Key.Key_Up),
+            (_('Move Down'), 'down', QtCore.Qt.Key.Key_Down),
+        ):
+            action = AppQAction(text, parent=self.moveMenu)
+            action.setData(position)
+            action.setShortcut(
+                QtCore.QKeyCombination(QtCore.Qt.KeyboardModifier.ControlModifier, key)
+            )
+            action.setShortcutContext(QtCore.Qt.ShortcutContext.WidgetShortcut)
+
+            self.moveMenu.addAction(action)
+            self.listView.addAction(action)
+
+        connectWeakly(self.moveMenu.triggered, self, '_moveRules')
+
+        self.moveButton = AppQMenuPushButton(
+            _('Move...'),
+            icon=bootstrapIcon('arrows-move.svg'),
+            popupMenu=self.moveMenu,
+            parent=self,
+        )
+
         self.closeWindowButton = AppQPushButton(
             _('Close Window'),
             icon=bootstrapIcon('window-x.svg'),
@@ -827,6 +1016,7 @@ class RoutingRulesDialog(AppQTransientDialog):
         for button in (
             self.addButton,
             self.deleteButton,
+            self.moveButton,
             self.closeWindowButton,
         ):
             button.setAutoDefault(False)
@@ -837,6 +1027,7 @@ class RoutingRulesDialog(AppQTransientDialog):
         actionLayout.setSpacing(8)
         actionLayout.addWidget(self.addButton)
         actionLayout.addWidget(self.deleteButton)
+        actionLayout.addWidget(self.moveButton)
         actionLayout.addStretch(1)
         actionLayout.addWidget(self.closeWindowButton)
 
@@ -847,6 +1038,11 @@ class RoutingRulesDialog(AppQTransientDialog):
         layout.addWidget(self.listView)
 
         self.setLayout(layout)
+
+    @QtCore.Slot(QAction)
+    def _moveRules(self, action):
+        """Apply the same model mutation for menu and keyboard activation."""
+        self.listView.moveSelectedRules(action.data())
 
     def addRule(self):
         """Add rule."""
@@ -871,13 +1067,18 @@ class RoutingRulesDialog(AppQTransientDialog):
         if len(indexes) != 1:
             return
 
-        index = indexes[0]
-        dialog = RoutingRuleEditDialog(self.listView.ruleAt(index), parent=self)
+        index = QtCore.QPersistentModelIndex(
+            self.listView.rulesModel.index(indexes[0], 0)
+        )
+        dialog = RoutingRuleEditDialog(self.listView.ruleAt(index.row()), parent=self)
 
         def handleResultCode(_index, code):
             """Handle result code."""
-            if code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted):
-                self.listView.setRule(_index, dialog.routingRule())
+            if (
+                code == PySide6Legacy.enumValueWrapper(AppQDialog.DialogCode.Accepted)
+                and _index.isValid()
+            ):
+                self.listView.setRule(_index.row(), dialog.routingRule())
 
         dialog.finished.connect(functools.partial(handleResultCode, index))
         dialog.open()
@@ -889,12 +1090,19 @@ class RoutingRulesDialog(AppQTransientDialog):
         if len(indexes) == 0:
             return
 
+        indexes = [
+            QtCore.QPersistentModelIndex(self.listView.rulesModel.index(row, 0))
+            for row in indexes
+        ]
+
         def handleResultCode(_indexes, code):
             """Handle result code."""
             if code == PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
-                self.listView.deleteRules(_indexes)
+                self.listView.deleteRules(
+                    [index.row() for index in _indexes if index.isValid()]
+                )
             else:
                 # Do not delete
                 pass

@@ -45,7 +45,9 @@ from Furious.Backends.Xray.RoutingWindow import (
     RoutingRulesDialog,
     RoutingTextEdit,
     RoutingTextEditDialog,
+    routingObjectFromProfile,
 )
+from Furious.Backends.Xray.Routing import customRoutingObjectFromSettings
 from Furious.Backends.Xray.ShadowsocksEditor import ShadowsocksEditor
 from Furious.Backends.Xray.SocksEditor import SocksEditor
 from Furious.Backends.Xray.TrojanEditor import TrojanEditor
@@ -88,6 +90,7 @@ from Furious.Models import (
 )
 from Furious.Plugins.API import RoutingOption
 from Furious.Repository import Storage
+from Furious.Repository.Routings import UserRoutings
 from Furious.Qt import (
     AppHue,
     AppQComboBox,
@@ -122,7 +125,7 @@ from Furious.Widget.ServerTableView import ServerTableView
 
 from PySide6 import QtCore
 from PySide6.QtGui import QImage
-from PySide6.QtTest import QTest
+from PySide6.QtTest import QAbstractItemModelTester, QSignalSpy, QTest
 from PySide6.QtWidgets import (
     QStackedWidget,
     QToolButton,
@@ -2363,20 +2366,513 @@ class DialogBehaviorTest(unittest.TestCase):
 
         self.assertTrue(dialog.addButton.isEnabled())
         self.assertTrue(dialog.deleteButton.isEnabled())
+        self.assertTrue(dialog.moveButton.isEnabled())
         self.assertTrue(dialog.closeWindowButton.isEnabled())
         self.assertIsNotNone(dialog.layout().itemAt(0).layout())
         self.assertIs(dialog.layout().itemAt(1).widget(), dialog.listView)
         self.assertIs(dialog.listView.model(), dialog.listView.rulesModel)
         self.assertIs(dialog.listView.rulesModel.parent(), dialog.listView)
-        self.assertEqual(dialog.listView.rulesModel.stringList(), [])
+        self.assertEqual(dialog.listView.rulesModel.rowCount(), 0)
 
         dialog.deleteRule()
         dialog.editRule()
+
+        for action in dialog.moveMenu.actions():
+            action.trigger()
 
         self.assertEqual(AppQDialog._openDialogs, {})
         self.assertEqual(dialog.routing['rules'], [])
 
         dialog.closeWindowButton.click()
+
+    def testRuleMovesPreserveIdentitySelectionAndPersistence(self):
+        """Keep identical labels distinct through moves, edits and serialization."""
+        with isolatedSettings():
+            repository = UserRoutings()
+            routing = {
+                'rules': [
+                    {'ruleTag': 'same', 'domain': [domain], 'outboundTag': 'proxy'}
+                    for domain in ('a.test', 'b.test', 'c.test', 'd.test')
+                ]
+            }
+
+            repository.data()['ordered'] = routing
+
+            original = list(routing['rules'])
+
+            dialog = RoutingRulesDialog(routing)
+            self.addCleanup(dialog.deleteLater)
+            self.addCleanup(dialog.close)
+
+            view = dialog.listView
+            model = view.rulesModel
+
+            tester = QAbstractItemModelTester(
+                model, QAbstractItemModelTester.FailureReportingMode.Warning
+            )
+            moved = QSignalSpy(model.rowsMoved)
+            resets = QSignalSpy(model.modelReset)
+
+            view.setCurrentIndex(model.index(1, 0))
+            selected = QtCore.QPersistentModelIndex(model.index(1, 0))
+            removed = QtCore.QPersistentModelIndex(model.index(2, 0))
+            root = QtCore.QModelIndex()
+
+            self.assertTrue(model.moveRows(root, 1, 2, root, 4))
+
+            self.assertEqual(routing['rules'], [original[i] for i in (0, 3, 1, 2)])
+            self.assertEqual(selected.row(), 2)
+            self.assertEqual(view.currentIndex().row(), 2)
+            self.assertEqual(view.selectedIndex, [2])
+
+            dialog.moveMenu.actions()[0].trigger()
+            dialog.moveMenu.actions()[0].trigger()
+
+            self.assertIs(routing['rules'][0], original[1])
+            self.assertEqual(view.currentIndex().row(), 0)
+            self.assertEqual(moved.count(), 3)
+            self.assertEqual(resets.count(), 0)
+
+            edited = dict(original[1], outboundTag='direct')
+
+            view.setRule(selected.row(), edited)
+            view.deleteRules([removed.row()])
+
+            self.assertFalse(removed.isValid())
+            self.assertIs(routing['rules'][0], edited)
+            self.assertEqual(model.data(model.index(0, 0)), view.ruleText(edited))
+
+            repository.sync()
+
+            restored = UserRoutings().data()['ordered']
+
+            self.assertEqual(restored, routing)
+
+            exported = routingObjectFromProfile(restored)
+
+            self.assertEqual(
+                [rule['domain'] for rule in exported['rules']],
+                [['b.test'], ['a.test'], ['d.test']],
+            )
+
+            with mock.patch.object(
+                Storage, 'UserRoutings', return_value={'ordered': restored}
+            ):
+                self.assertEqual(
+                    customRoutingObjectFromSettings('Custom:ordered'), exported
+                )
+
+            self.assertIsNotNone(tester)
+
+    def testRuleDescriptionsPreviewEveryFilledDestinationField(self):
+        rules = [
+            {'ruleTag': 'direct', 'outboundTag': 'direct', 'ip': ['1.14.96.57']},
+            {
+                'domain': ['geosite:cn', 'domain:example.test', 'full:example.org'],
+                'ip': ['geoip:private'],
+                'port': '53,443',
+                'vlessRoute': '100-200',
+            },
+            {'port': '443'},
+            {'vlessRoute': '0'},
+            {'domain': [], 'ip': [], 'port': ' ', 'sourceIP': ['10.0.0.1']},
+        ]
+
+        dialog = RoutingRulesDialog({'rules': rules})
+        self.addCleanup(dialog.deleteLater)
+        self.addCleanup(dialog.close)
+
+        model = dialog.listView.rulesModel
+
+        self.assertEqual(
+            [model.data(model.index(row, 0)) for row in range(model.rowCount())],
+            [
+                'direct -> direct (ip: 1.14.96.57)',
+                'Untitled Rule -> proxy (domain: geosite:cn +2; ip: geoip:private; '
+                'port: 53,443; vless route: 100-200)',
+                'Untitled Rule -> proxy (port: 443)',
+                'Untitled Rule -> proxy (vless route: 0)',
+                'Untitled Rule -> proxy',
+            ],
+        )
+
+    def testRuleDescriptionBudgetDoesNotHideOtherDestinationFieldsOrMutateRules(self):
+        rule = {
+            'domain': ['regexp:' + '域' * 200, 'domain:second.test'],
+            'ip': ['2001:db8:' + 'abcd:' * 100],
+            'port': '443,\n' * 100,
+            'vlessRoute': '100-200,' * 100,
+        }
+
+        original = copy.deepcopy(rule)
+
+        dialog = RoutingRulesDialog({'rules': [rule]})
+        self.addCleanup(dialog.deleteLater)
+        self.addCleanup(dialog.close)
+
+        view = dialog.listView
+        model = view.rulesModel
+
+        text = model.data(model.index(0, 0))
+        summary = text.split(' (', 1)[1][:-1]
+
+        self.assertLessEqual(len(summary), 96)
+
+        for label in ('domain:', 'ip:', 'port:', 'vless route:'):
+            self.assertIn(label, summary)
+
+        self.assertEqual(summary.count('…'), 4)
+        self.assertIn('+1', summary)
+        self.assertNotIn('\n', summary)
+        self.assertEqual(rule, original)
+
+        self.assertEqual(view.textElideMode(), QtCore.Qt.TextElideMode.ElideRight)
+        self.assertEqual(
+            view.horizontalScrollBarPolicy(),
+            QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff,
+        )
+
+        changed = QSignalSpy(model.dataChanged)
+
+        view.setRule(0, {'port': '80'})
+
+        self.assertEqual(changed.count(), 1)
+        self.assertEqual(
+            model.data(model.index(0, 0)), 'Untitled Rule -> proxy (port: 80)'
+        )
+
+    def testRuleModelRejectsInvalidMovesWithoutMutation(self):
+        dialog = RoutingRulesDialog({'rules': [{'ruleTag': str(i)} for i in range(4)]})
+        self.addCleanup(dialog.deleteLater)
+        self.addCleanup(dialog.close)
+
+        model = dialog.listView.rulesModel
+        before = list(model.rules())
+        root = QtCore.QModelIndex()
+        moved = QSignalSpy(model.rowsMoved)
+
+        for source, count, destination in (
+            (-1, 1, 2),
+            (0, 0, 2),
+            (3, 2, 0),
+            (0, 1, 5),
+            (1, 2, 2),
+            (1, 2, 3),
+        ):
+            self.assertFalse(model.moveRows(root, source, count, root, destination))
+
+        self.assertFalse(model.moveRows(model.index(0, 0), 0, 1, root, 4))
+
+        self.assertEqual(model.rules(), before)
+        self.assertEqual(moved.count(), 0)
+
+        self.assertEqual(
+            dialog.listView.dragDropMode(), dialog.listView.DragDropMode.InternalMove
+        )
+        self.assertTrue(dialog.listView.dragEnabled())
+        self.assertTrue(dialog.listView.acceptDrops())
+        self.assertTrue(dialog.listView.showDropIndicator())
+        self.assertFalse(dialog.listView.dragDropOverwriteMode())
+
+        self.assertEqual(model.supportedDropActions(), QtCore.Qt.DropAction.MoveAction)
+        self.assertEqual(model.supportedDragActions(), QtCore.Qt.DropAction.MoveAction)
+
+        self.assertTrue(
+            model.flags(model.index(0, 0)) & QtCore.Qt.ItemFlag.ItemIsDragEnabled
+        )
+        self.assertFalse(
+            model.flags(model.index(0, 0)) & QtCore.Qt.ItemFlag.ItemIsDropEnabled
+        )
+        self.assertTrue(model.flags(root) & QtCore.Qt.ItemFlag.ItemIsDropEnabled)
+
+    def testRuleListRejectsExternalDragsEvenWithMatchingMimeType(self):
+        from PySide6.QtGui import QDragEnterEvent, QDropEvent
+
+        dialog = RoutingRulesDialog({'rules': [{'ruleTag': 'keep'}]})
+        other = RoutingRulesDialog({'rules': [{'ruleTag': 'other'}]})
+
+        self.addCleanup(dialog.deleteLater)
+        self.addCleanup(dialog.close)
+        self.addCleanup(other.deleteLater)
+        self.addCleanup(other.close)
+
+        dialog.show()
+        processQtEvents()
+
+        view = dialog.listView
+        otherModel = other.listView.rulesModel
+        mime = otherModel.mimeData([otherModel.index(0, 0)])
+        self.addCleanup(mime.deleteLater)
+
+        self.assertTrue(mime.hasFormat(view.rulesModel.mimeTypes()[0]))
+
+        point = view.visualRect(view.rulesModel.index(0, 0)).bottomLeft()
+
+        for action in (
+            QtCore.Qt.DropAction.MoveAction,
+            QtCore.Qt.DropAction.CopyAction,
+        ):
+            enter = QDragEnterEvent(
+                point,
+                action,
+                mime,
+                QtCore.Qt.MouseButton.LeftButton,
+                QtCore.Qt.KeyboardModifier.NoModifier,
+            )
+
+            application().sendEvent(view.viewport(), enter)
+
+            self.assertFalse(enter.isAccepted())
+
+            drop = QDropEvent(
+                QtCore.QPointF(point),
+                action,
+                mime,
+                QtCore.Qt.MouseButton.LeftButton,
+                QtCore.Qt.KeyboardModifier.NoModifier,
+            )
+
+            application().sendEvent(view.viewport(), drop)
+
+            self.assertFalse(drop.isAccepted())
+
+        self.assertEqual(view.rules(), [{'ruleTag': 'keep'}])
+        self.assertEqual(otherModel.rules(), [{'ruleTag': 'other'}])
+
+    def testRuleMoveMenuPreservesMultiSelectionOrderAndCurrentRule(self):
+        expectedOrders = {
+            'up': [1, 2, 0, 4, 3, 5],
+            'down': [0, 3, 1, 2, 5, 4],
+        }
+
+        for position, order in expectedOrders.items():
+            with self.subTest(position=position):
+                # Equal labels and values must not collapse distinct rule rows.
+                rules = [{'ruleTag': 'same'} for _ in range(6)]
+                original = list(rules)
+
+                dialog = RoutingRulesDialog({'rules': rules})
+                self.addCleanup(dialog.deleteLater)
+                self.addCleanup(dialog.close)
+
+                view = dialog.listView
+                model = view.rulesModel
+                selection = view.selectionModel()
+
+                for row in (1, 2, 4):
+                    selection.select(
+                        model.index(row, 0),
+                        QtCore.QItemSelectionModel.SelectionFlag.Select,
+                    )
+
+                selection.setCurrentIndex(
+                    model.index(2, 0), QtCore.QItemSelectionModel.SelectionFlag.NoUpdate
+                )
+
+                reset = QSignalSpy(model.modelReset)
+                actions = {
+                    action.data(): action for action in dialog.moveMenu.actions()
+                }
+
+                self.assertIs(dialog.moveButton.popupMenu(), dialog.moveMenu)
+                self.assertEqual(list(actions), ['up', 'down'])
+
+                actions[position].trigger()
+
+                self.assertEqual(
+                    [id(rule) for rule in rules], [id(original[i]) for i in order]
+                )
+                self.assertEqual(
+                    view.selectedIndex, sorted(order.index(i) for i in (1, 2, 4))
+                )
+                self.assertIs(rules[view.currentIndex().row()], original[2])
+                self.assertEqual(reset.count(), 0)
+
+    def testRuleMovesStopAtBoundariesWithoutCrossingSelectedRows(self):
+        for position, order in (
+            ('up', [0, 2, 1, 3, 5, 4]),
+            ('down', [1, 0, 3, 2, 4, 5]),
+        ):
+            with self.subTest(position=position):
+                rules = [{'ruleTag': str(i)} for i in range(6)]
+                original = list(rules)
+
+                dialog = RoutingRulesDialog({'rules': rules})
+                self.addCleanup(dialog.deleteLater)
+                self.addCleanup(dialog.close)
+
+                view = dialog.listView
+
+                for row in (0, 2, 5):
+                    view.selectionModel().select(
+                        view.rulesModel.index(row, 0),
+                        QtCore.QItemSelectionModel.SelectionFlag.Select,
+                    )
+
+                view.moveSelectedRules(position)
+
+                self.assertEqual(rules, [original[i] for i in order])
+
+                for _iteration in range(8):
+                    view.moveSelectedRules(position)
+
+                final = [0, 2, 5, 1, 3, 4] if position == 'up' else [1, 3, 4, 0, 2, 5]
+
+                self.assertEqual(rules, [original[i] for i in final])
+
+                moved = QSignalSpy(view.rulesModel.rowsMoved)
+
+                view.moveSelectedRules(position)
+
+                self.assertEqual(moved.count(), 0)
+
+                view.selectAll()
+                for direction in ('up', 'down'):
+                    view.moveSelectedRules(direction)
+
+                self.assertEqual(moved.count(), 0)
+
+    def testRuleMoveButtonAndShortcutsUseTheSameActions(self):
+        dialog = RoutingRulesDialog({'rules': [{'ruleTag': str(i)} for i in range(4)]})
+        self.addCleanup(dialog.deleteLater)
+        self.addCleanup(dialog.close)
+
+        view = dialog.listView
+
+        dialog.show()
+        dialog.activateWindow()
+        view.setCurrentIndex(view.rulesModel.index(2, 0))
+        view.setFocus()
+        processQtEvents()
+
+        for _iteration in range(2):
+            QTest.keyClick(
+                view, QtCore.Qt.Key.Key_Up, QtCore.Qt.KeyboardModifier.ControlModifier
+            )
+            processQtEvents()
+
+        self.assertEqual(
+            [rule['ruleTag'] for rule in view.rules()], ['2', '0', '1', '3']
+        )
+        self.assertEqual(view.selectedIndex, [0])
+        self.assertTrue(view.hasFocus())
+
+        QTest.keyClick(
+            view, QtCore.Qt.Key.Key_Down, QtCore.Qt.KeyboardModifier.ControlModifier
+        )
+        processQtEvents()
+
+        self.assertEqual(view.selectedIndex, [1])
+
+        dialog.addButton.setFocus()
+        processQtEvents()
+
+        QTest.keyClick(
+            dialog.addButton,
+            QtCore.Qt.Key.Key_Down,
+            QtCore.Qt.KeyboardModifier.ControlModifier,
+        )
+
+        self.assertEqual(view.selectedIndex, [1])
+
+        QTest.mouseClick(dialog.moveButton, QtCore.Qt.MouseButton.LeftButton)
+        processQtEvents()
+
+        self.assertTrue(dialog.moveMenu.isVisible())
+
+        dialog.moveMenu.setActiveAction(dialog.moveMenu.actions()[-1])
+        QTest.keyClick(dialog.moveMenu, QtCore.Qt.Key.Key_Return)
+        processQtEvents()
+
+        self.assertEqual(
+            [rule['ruleTag'] for rule in view.rules()], ['0', '1', '2', '3']
+        )
+        self.assertEqual(view.selectedIndex, [2])
+        self.assertTrue(view.hasFocus())
+
+    def testHomeAndRoutingMoveMenusRetranslateWithoutChangingActions(self):
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+
+            table = ServerTableView(
+                configurationEditorFactory=QWidget,
+                qrCodeWindowFactory=QWidget,
+                importActionsFactory=tuple,
+            )
+            dialog = RoutingRulesDialog({'rules': [{'ruleTag': 'user label'}]})
+
+            self.addCleanup(table.deleteLater)
+            self.addCleanup(table.close)
+            self.addCleanup(table.cleanup)
+            self.addCleanup(dialog.deleteLater)
+            self.addCleanup(dialog.close)
+
+            homeActions = table.moveMenu.actions()
+            ruleActions = dialog.moveMenu.actions()
+            homeLabels = ['Move To Top', 'Move Up', 'Move Down', 'Move To Bottom']
+
+            self.assertEqual([action.text() for action in homeActions], homeLabels)
+            self.assertEqual(
+                [action.text() for action in ruleActions], ['Move Up', 'Move Down']
+            )
+
+            for language in ('ZH', 'RU', 'EN'):
+                AppSettings.set('Language', language)
+
+                for action in homeActions + ruleActions:
+                    action.retranslate()
+                dialog.moveButton.retranslate()
+
+                self.assertEqual(
+                    [action.text() for action in homeActions],
+                    [_(label, language) for label in homeLabels],
+                )
+                self.assertEqual(
+                    [action.text() for action in ruleActions],
+                    [_('Move Up', language), _('Move Down', language)],
+                )
+                self.assertEqual(dialog.moveButton.text(), _('Move...', language))
+                self.assertEqual(
+                    [action.data() for action in ruleActions], ['up', 'down']
+                )
+                self.assertEqual(dialog.listView.rules(), [{'ruleTag': 'user label'}])
+
+    def testOpenRuleEditorFollowsMovedRuleAndIgnoresRemovedRule(self):
+        dialog = RoutingRulesDialog(
+            {'rules': [{'ruleTag': 'first'}, {'ruleTag': 'second'}]}
+        )
+        self.addCleanup(dialog.deleteLater)
+        self.addCleanup(dialog.close)
+
+        dialog.show()
+
+        view = dialog.listView
+        model = view.rulesModel
+
+        view.setCurrentIndex(model.index(0, 0))
+        dialog.editRule()
+
+        editor = dialog.findChild(RoutingRuleEditDialog)
+        editor.ruleTagEdit.setText('edited first')
+
+        self.assertTrue(model.moveRow(QtCore.QModelIndex(), 0, QtCore.QModelIndex(), 2))
+
+        editor.accept()
+        processQtEvents()
+
+        self.assertEqual(
+            [rule['ruleTag'] for rule in model.rules()], ['second', 'edited first']
+        )
+
+        dialog.editRule()
+
+        editor = dialog.findChild(RoutingRuleEditDialog)
+        view.deleteRules([view.currentIndex().row()])
+
+        editor.accept()
+        processQtEvents()
+
+        self.assertEqual([rule['ruleTag'] for rule in model.rules()], ['second'])
 
     def testRoutingRuleGuidanceUsesPlaceholdersInsteadOfLabels(self):
         """Keep routing field names compact while retaining input guidance."""

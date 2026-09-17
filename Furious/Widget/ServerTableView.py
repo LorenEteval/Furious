@@ -836,7 +836,7 @@ class ServerTableView(
 
         self.moveMenu = AppQMenu(
             AppQAction(
-                _('Move to Top'),
+                _('Move To Top'),
                 callback=lambda: self.moveSelectedItems('top'),
             ),
             AppQAction(
@@ -856,7 +856,7 @@ class ServerTableView(
                 ),
             ),
             AppQAction(
-                _('Move to Bottom'),
+                _('Move To Bottom'),
                 callback=lambda: self.moveSelectedItems('bottom'),
             ),
             parent=self,
