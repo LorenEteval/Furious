@@ -185,6 +185,7 @@ class ConnectionControllerTest(unittest.TestCase):
                 coreManager=core,
                 updatesManager=FixtureUpdatesManager(),
             )
+
             states = []
             interactions = []
             controller.stateChanged.connect(states.append)
@@ -200,6 +201,7 @@ class ConnectionControllerTest(unittest.TestCase):
                 mock.patch.object(controller, '_runPostConnectTasksOnce'),
             ):
                 self.assertTrue(controller.startConnection(self.profile))
+
                 self.assertEqual(controller.state, ConnectionState.Connected)
                 self.assertIs(controller.activeProfile, self.profile)
                 self.assertEqual(
@@ -216,6 +218,7 @@ class ConnectionControllerTest(unittest.TestCase):
             self.assertEqual(controller.state, ConnectionState.Disconnected)
             self.assertIsNone(controller.activeProfile)
             self.assertEqual(core.stopCalls, 1)
+
             self.assertEqual(
                 states,
                 [
@@ -240,6 +243,7 @@ class ConnectionControllerTest(unittest.TestCase):
                 coreManager=core,
                 updatesManager=FixtureUpdatesManager(),
             )
+
             errors = []
             notifications = []
             controller.errorOccurred.connect(errors.append)
@@ -258,6 +262,7 @@ class ConnectionControllerTest(unittest.TestCase):
                 AppSettings.get('Connect'),
                 AppBinarySettings.OFF,
             )
+
             self.assertEqual(len(errors), 1)
             self.assertIn('fixture launch failure', errors[0].message)
             self.assertEqual(notifications, [])
@@ -272,9 +277,11 @@ class ConnectionControllerTest(unittest.TestCase):
                 coreManager=core,
                 updatesManager=FixtureUpdatesManager(),
             )
+
             events = []
             controller.stateChanged.connect(lambda state: events.append(state.value))
             controller.errorOccurred.connect(lambda error: events.append(error.message))
+
             process = mock.Mock()
             process.name.return_value = 'Fixture Core'
 
@@ -384,6 +391,7 @@ class ConnectionControllerTest(unittest.TestCase):
                 mock.patch.object(controller, '_runPostConnectTasksOnce'),
             ):
                 self.assertTrue(controller.startConnection(self.profile))
+
                 self.assertTrue(controller.isConnecting())
                 proxySet.assert_not_called()
 
@@ -393,6 +401,7 @@ class ConnectionControllerTest(unittest.TestCase):
 
                 self.assertTrue(controller.isConnected())
                 proxySet.assert_called_once()
+
                 self.assertTrue(controller.startDisconnection())
 
             controller.deleteLater()
@@ -405,6 +414,7 @@ class ConnectionControllerTest(unittest.TestCase):
                 coreManager=core,
                 updatesManager=FixtureUpdatesManager(),
             )
+
             errors = []
             controller.errorOccurred.connect(errors.append)
 
@@ -416,6 +426,7 @@ class ConnectionControllerTest(unittest.TestCase):
                 ),
             ):
                 self.assertTrue(controller.startConnection(self.profile))
+
                 operation = core.operations[0][0]
                 operation.fail(
                     'Invalid server configuration',
@@ -482,17 +493,21 @@ class ConnectionControllerTest(unittest.TestCase):
             ):
                 self.assertTrue(controller.startConnection(self.profile))
                 first = core.operations[0][0]
+
                 self.assertTrue(controller.startReconnection())
                 second = core.operations[1][0]
 
                 first.succeed()
+
                 self.assertTrue(controller.isConnecting())
                 proxySet.assert_not_called()
 
                 core.runtimes.append(object())
                 second.succeed()
+
                 self.assertTrue(controller.isConnected())
                 proxySet.assert_called_once()
+
                 controller.startDisconnection()
 
             self.assertEqual(core.cancelCalls, [first])

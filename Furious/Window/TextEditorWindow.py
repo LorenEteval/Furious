@@ -242,6 +242,7 @@ class TextEditorWindow(AppQMainWindow):
             icon=bootstrapIcon('eye.svg'),
             popupMenu=self.viewMenu,
         )
+
         self.closeWindowButton = AppQPushButton(
             _('Close Window'),
             icon=bootstrapIcon('window-x.svg'),

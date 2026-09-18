@@ -305,6 +305,7 @@ class _LatencyScheduler(QtCore.QObject):
         self._publishResult = publishResult
         self.maxConcurrency = max(int(pingConcurrency), 1)
         self.tcpingMaxConcurrency = max(int(tcpingConcurrency), 1)
+
         self.threadPool = threadPool
         self._ownsThreadPool = self.threadPool is None
 
@@ -716,6 +717,7 @@ class _DownloadSpeedWorker(HttpGetManager):
         self._startInProgress = False
         self._completionInProgress = False
         self._pendingCompletionKwargs = None
+
         self._runtimeLease = None
         self.networkReply = None
 
@@ -1092,6 +1094,7 @@ class _DownloadSpeedScheduler(QtCore.QObject):
         self.maxConcurrency = max(int(maxConcurrency), 1)
         self.portRange = portRange
         self.workerFactory = workerFactory
+
         self.queue = collections.deque()
         self.activeJobs = {}
         self.activePorts = set()

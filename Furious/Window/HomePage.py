@@ -729,6 +729,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.connectionStatus = ConnectionStatusWidget(parent=self)
         self.networkState = self.connectionStatus.networkState
         self.trafficStats = self.connectionStatus.trafficStats
+
         self.trafficStatsManager = TrafficStatsManager(parent=self)
         self.trafficStatsManager.speedChanged.connect(self.trafficStats.setSpeeds)
         self.trafficStatsManager.usageChanged.connect(self.trafficStats.setUsage)
@@ -740,6 +741,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
 
         self._widget = QWidget()
         self._widget.setObjectName('HomePageContent')
+
         self._layout = QVBoxLayout(self._widget)
         self._layout.setContentsMargins(20, 18, 20, 20)
         self._layout.setSpacing(12)
@@ -861,6 +863,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.subscriptionFilterComboBox.currentIndexChanged.connect(
             self.handleSubscriptionFilterChanged
         )
+
         self.systemProxyComboBox.currentIndexChanged.connect(
             self.handleSystemProxyModeChanged
         )

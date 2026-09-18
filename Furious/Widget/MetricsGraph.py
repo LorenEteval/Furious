@@ -472,6 +472,7 @@ class MetricsGraphWidget(QWidget):
 
         transparentFill = QtGui.QColor(fillColor)
         transparentFill.setAlpha(0)
+
         gradient = QtGui.QLinearGradient(
             chartRect.topLeft(),
             chartRect.bottomLeft(),

@@ -204,6 +204,7 @@ class DnsResolver(HttpGetManager):
                         f'DNS resolution for \'{domain}\' returned an invalid '
                         f'answer record'
                     )
+
                     resultMap['error'] = True
 
                     continue
@@ -224,6 +225,7 @@ class DnsResolver(HttpGetManager):
                         f'DNS resolution for \'{domain}\' returned an unsupported '
                         f'non-address answer record'
                     )
+
                     resultMap['error'] = True
 
                     continue
@@ -241,6 +243,7 @@ class DnsResolver(HttpGetManager):
                         f'DNS resolution for \'{domain}\' returned a cyclic '
                         f'reference to \'{reference}\''
                     )
+
                     resultMap['error'] = True
 
                     continue
@@ -250,6 +253,7 @@ class DnsResolver(HttpGetManager):
                         f'DNS resolution for \'{domain}\' exceeded the maximum '
                         f'reference depth {self.MAX_REFERENCE_DEPTH}'
                     )
+
                     resultMap['error'] = True
 
                     continue
@@ -370,6 +374,7 @@ class DnsResolver(HttpGetManager):
             logger.error(
                 f'DNS resolution for \'{domain}\' reached timeout {timeout // 1000}s'
             )
+
             resultMap['error'] = True
 
             for networkReply in resultMap['reference']:

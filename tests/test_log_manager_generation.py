@@ -456,17 +456,20 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                     maximumCharacters=size * 30 + 100,
                     autoClearMaximumEntries=size,
                 )
+
                 for index in range(size):
                     manager.append(f'core {index}', CORE_LOG_CATEGORY)
                     manager.append(f'other {index}', 'other.extra')
 
                 observed = []
+
                 for generation in manager._activeGenerationsLocked():
                     index = _ObservedEntries(generation.entries)
                     generation.entries = index
                     observed.append(index)
 
                 manager.append('trigger', CORE_LOG_CATEGORY)
+
                 self.assertEqual(sum(item.iterations for item in observed), 0)
                 self.assertEqual(sum(item.deletions for item in observed), 0)
                 self.assertEqual(sum(item.oldestRemovals for item in observed), 0)
@@ -475,20 +478,26 @@ class GenerationLogManagerContractTest(unittest.TestCase):
 
                 for index in range(size):
                     manager.append(f'runtime {index}', 'runtime.extra')
+
                 runtime = manager._runtimeGeneration
                 watchedRuntime = _ObservedEntries(runtime.entries)
                 runtime.entries = watchedRuntime
+
                 manager.clear(runtimeOnly=True)
+
                 self.assertEqual(watchedRuntime.iterations, 0)
                 self.assertEqual(watchedRuntime.oldestRemovals, 0)
 
                 manager.append('application', APPLICATION_LOG_CATEGORY)
                 watched = []
+
                 for generation in manager._activeGenerationsLocked():
                     index = _ObservedEntries(generation.entries)
                     generation.entries = index
                     watched.append(index)
+
                 manager.clear()
+
                 self.assertEqual(sum(item.iterations for item in watched), 0)
                 self.assertEqual(sum(item.oldestRemovals for item in watched), 0)
                 _assertManagerInvariants(self, manager)
@@ -955,18 +964,23 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             with self.subTest(backlog=backlog, budget=budget):
                 manager = self.makeManager(maximumEntries=200)
                 manager.RetiredCleanupBudget = budget
+
                 for index in range(backlog):
                     manager.append(str(index), CORE_LOG_CATEGORY)
                     if index in (1, 4):
                         manager.clear(runtimeOnly=True)
+
                 manager.clear(runtimeOnly=True)
+
                 before = manager.retiredEntryCount
                 identifiers = tuple(
                     getattr(batch, 'identifier', None)
                     for batch in manager._retiredBatches
                 )
+
                 with manager._lock:
                     released = manager._cleanupRetiredLocked()
+
                 self.assertEqual(released, min(budget, before))
                 self.assertEqual(manager.retiredEntryCount, before - released)
                 if manager._retiredBatches and identifiers:
@@ -974,13 +988,16 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                         getattr(manager._retiredBatches[0], 'identifier', None),
                         identifiers,
                     )
+
                 _assertManagerInvariants(self, manager)
 
         manager = self.makeManager()
         manager.append('retired', CORE_LOG_CATEGORY)
         manager.clear(runtimeOnly=True)
+
         with manager._lock:
             self.assertEqual(manager._cleanupRetiredLocked(0), 0)
+
         manager.RetiredCleanupBudget = 0
         with manager._lock:
             self.assertEqual(manager._cleanupRetiredLocked(), 1)
@@ -989,25 +1006,32 @@ class GenerationLogManagerContractTest(unittest.TestCase):
         """Finish each older clear-all stream before touching the next one."""
         manager = self.makeManager(autoClearEnabled=False)
         manager.RetiredCleanupBudget = 1
+
         manager.append('application 1', APPLICATION_LOG_CATEGORY)
         manager.append('application 2', APPLICATION_LOG_CATEGORY)
         manager.append('runtime 1', CORE_LOG_CATEGORY)
         manager.append('runtime 2', CORE_LOG_CATEGORY)
         manager.append('other 1', 'other.extra')
         manager.append('other 2', 'other.extra')
+
         expectedIdentifiers = tuple(
             generation.identifier for generation in manager._activeGenerationsLocked()
         )
+
         manager.clear()
+
         self.assertEqual(
             tuple(batch.identifier for batch in manager._retiredBatches),
             expectedIdentifiers,
         )
+
         observedHeads = []
+
         while manager.retiredEntryCount:
             observedHeads.append(manager._retiredBatches[0].identifier)
             with manager._lock:
                 self.assertEqual(manager._cleanupRetiredLocked(), 1)
+
         self.assertEqual(
             observedHeads,
             [
@@ -1108,6 +1132,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             autoClearEnabled=False,
         )
         categoryIds = []
+
         for index in range(100):
             category = manager.registerCategory(
                 LogCategory(
@@ -1118,17 +1143,23 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                 )
             )
             categoryIds.append(category.id)
+
         for index in range(2_000):
             manager.append(str(index), categoryIds[index % len(categoryIds)])
+
         for categoryId in (categoryIds[0], categoryIds[-1], categoryIds[51]):
             expected = tuple(
                 entry for entry in manager.entries() if entry.categoryId != categoryId
             )
+
             manager.clear(categoryId)
+
             self.assertEqual(manager.entries(), expected)
             _assertManagerInvariants(self, manager)
+
         duplicate = manager.category(categoryIds[1])
         self.assertIs(manager.registerCategory(duplicate), duplicate)
+
         with self.assertRaises(ValueError):
             manager.registerCategory(LogCategory(categoryIds[1], 'Different'))
 
@@ -1136,8 +1167,10 @@ class GenerationLogManagerContractTest(unittest.TestCase):
         """Account normalized storage and preserve state after bad input."""
         manager = self.makeManager(maximumEntryCharacters=32)
         messages = ('', 'x', 'line\r\n', '😀é', 'a\0b', 'n\n' * 20, 'z' * 33)
+
         for message in messages:
             entry = manager.append(message)
+
             self.assertLessEqual(len(entry.message), 32)
             _assertManagerInvariants(self, manager)
 
@@ -1146,16 +1179,22 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                 raise RuntimeError('conversion failed')
 
         before = manager.entries()
+
         with self.assertRaises(RuntimeError):
             manager.append(RaisingString())
+
         with self.assertRaises(RuntimeError):
             manager.appendMany(('must not commit', RaisingString(), 'unreached'))
+
         with self.assertRaises(TypeError):
             manager.append('bad timestamp', timestamp='not a datetime')
+
         with self.assertRaises(KeyError):
             manager.append('unknown', 'missing')
+
         with self.assertRaises(ValueError):
             manager.clear(CORE_LOG_CATEGORY, runtimeOnly=True)
+
         self.assertEqual(manager.entries(), before)
         _assertManagerInvariants(self, manager)
 
@@ -1259,6 +1298,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                 errors = []
                 returnedSequences = []
                 sequenceLock = threading.Lock()
+
                 # Producers plus the reader and mutator are the complete
                 # participant set.  Keeping the exact cardinality here makes a
                 # failed synchronization a real deadlock signal rather than a
@@ -1267,8 +1307,10 @@ class GenerationLogManagerContractTest(unittest.TestCase):
 
                 def producer(workerIndex):
                     randomizer = random.Random(10_000 + workerIndex)
+
                     try:
                         start.wait(5)
+
                         for index in range(300):
                             categoryId = randomizer.choice(
                                 (
@@ -1280,6 +1322,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                                 )
                             )
                             entry = manager.append(f'{workerIndex}:{index}', categoryId)
+
                             with sequenceLock:
                                 returnedSequences.append(entry.sequence)
                     except Exception as error:
@@ -1289,13 +1332,17 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                     try:
                         start.wait(5)
                         cursor = None
+
                         for _index in range(500):
                             entries = manager.entries()
+
                             self.assertEqual(
                                 tuple(item.sequence for item in entries),
                                 tuple(sorted(item.sequence for item in entries)),
                             )
+
                             batch = manager.entriesSince(cursor, CORE_LOG_CATEGORY)
+
                             self.assertEqual(
                                 tuple(item.sequence for item in batch.entries),
                                 tuple(sorted(item.sequence for item in batch.entries)),
@@ -1316,10 +1363,13 @@ class GenerationLogManagerContractTest(unittest.TestCase):
 
                 def mutator():
                     randomizer = random.Random(77)
+
                     try:
                         start.wait(5)
+
                         for index in range(180):
                             choice = randomizer.randrange(4)
+
                             if choice == 0:
                                 manager.clear(runtimeOnly=True)
                             elif choice == 1:
@@ -1338,11 +1388,14 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                 threads.extend(
                     (threading.Thread(target=reader), threading.Thread(target=mutator))
                 )
+
                 for thread in threads:
                     thread.start()
+
                 for thread in threads:
                     thread.join(20)
                     self.assertFalse(thread.is_alive(), 'possible LogManager deadlock')
+
                 self.assertEqual(errors, [])
                 self.assertEqual(len(returnedSequences), producerCount * 300)
                 self.assertEqual(len(set(returnedSequences)), len(returnedSequences))

@@ -684,6 +684,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
     def _restoreGroupSelection(self, selectedUniques, currentUnique):
         """Restore logical selection, current item, and keyboard focus by ID."""
         rows = {unique: row for row, unique in enumerate(Storage.UserSubs())}
+
         selection = self.selectionModel()
         selection.clearSelection()
         flags = (
@@ -749,6 +750,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
                     value['sortOrder'] = order
 
                 self.flushAll()
+
                 self.groupsChanged.emit()
             else:
                 # Do not delete
@@ -789,6 +791,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         changed = Storage.moveSubscriptionGroups(selectedUniques, position)
 
         self.sourceModel.layoutChanged.emit()
+
         self._restoreGroupSelection(selectedUniques, currentUnique)
 
         if changed:

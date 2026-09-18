@@ -504,6 +504,7 @@ class SubscriptionManagerTest(TestCase):
         self.assertEqual(completed[0].successful[0]['unique'], 'group-b')
         self.assertEqual(completed[0].failed[0]['unique'], 'group-a')
         self.assertIn('injected failure', completed[0].failed[0]['error'])
+
         self.assertEqual(committedSubscriptions, ['group-b'])
         self.assertEqual(stateChanges, [('group-b', 'group-a')])
         self.assertEqual(structuralChanges, [True])
@@ -704,39 +705,47 @@ class SubscriptionManagerTest(TestCase):
             ) as lifecycleLog,
         ):
             manager.configureAutoUpdate('group-a')
+
             lifecycleLog.assert_not_called()
 
             subscriptions['group-a']['autoupdate'] = 'Every 5 mins'
             manager.configureAutoUpdate('group-a')
+
             self.assertTrue(timer.isActive())
             self.assertEqual(timer.interval(), 5 * 60 * 1000)
             self.assertIn('start auto update job', lifecycleLog.call_args.args[0])
 
             activeTimerId = timer.timerId()
             manager.configureAutoUpdate('group-a')
+
             self.assertEqual(timer.timerId(), activeTimerId)
             self.assertEqual(lifecycleLog.call_count, 1)
 
             subscriptions['group-a']['autoupdate'] = 'Every 10 mins'
             manager.configureAutoUpdate('group-a')
+
             self.assertIs(manager._autoUpdateTimers['group-a'], timer)
             self.assertEqual(timer.interval(), 10 * 60 * 1000)
             self.assertIn('reschedule auto update job', lifecycleLog.call_args.args[0])
 
             subscriptions['group-a']['enabled'] = False
             manager.configureAutoUpdate('group-a')
+
             self.assertFalse(timer.isActive())
             self.assertIn('stop auto update job', lifecycleLog.call_args.args[0])
 
             manager.configureAutoUpdate('group-a')
+
             self.assertEqual(lifecycleLog.call_count, 3)
 
             subscriptions['group-a']['enabled'] = True
             manager.configureAutoUpdate('group-a')
+
             self.assertTrue(timer.isActive())
             self.assertIn('start auto update job', lifecycleLog.call_args.args[0])
 
         self.assertEqual(lifecycleLog.call_count, 4)
+
         manager.deleteLater()
 
     def testUnrelatedSubscriptionEditDoesNotRestartItsTimer(self):
@@ -1064,6 +1073,7 @@ class SubscriptionManagerTest(TestCase):
         groupBReply = _AbortableReply()
         destroyed = []
         groupATimer.destroyed.connect(lambda *_args: destroyed.append(True))
+
         manager._activeReplies.update(
             {groupAReply: groupAReply, groupBReply: groupBReply}
         )
@@ -1334,6 +1344,7 @@ class SubscriptionManagerTest(TestCase):
             [],
             [],
         )
+
         completed = []
         structural = []
         manager.updateCompleted.connect(completed.append)

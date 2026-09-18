@@ -78,6 +78,7 @@ class MainWindow(AppQMainWindow):
             self.homePage.userServersQTableWidget,
             parent=self.navigationView,
         )
+
         self.metricsHistory = MetricsHistory(parent=self)
         self.homePage.trafficStatsManager.sampleChanged.connect(
             self.metricsHistory.recordTrafficSample
@@ -89,6 +90,7 @@ class MainWindow(AppQMainWindow):
             self.metricsHistory,
             parent=self.navigationView,
         )
+
         self.logPage = AppLogPage()
         self.settingsPage = SettingsPage(
             tunSettingsDialogFactory=self.homePage.getGuiTUNSettings,
@@ -132,8 +134,10 @@ class MainWindow(AppQMainWindow):
             'Subscription',
             'star.svg',
         )
+
         self.pluginNavigationManager = PluginNavigationManager()
         self.pluginNavigationManager.registerPages(self.navigationView)
+
         self.navigationView.addPage(
             'metrics',
             self.metricsPage,
@@ -147,6 +151,7 @@ class MainWindow(AppQMainWindow):
             'gear-wide-connected.svg',
             placement='bottom',
         )
+
         self.setCentralWidget(self.navigationView)
 
         # Preserve the established application-facing server-management API.

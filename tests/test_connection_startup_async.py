@@ -244,8 +244,10 @@ class ConnectionStartupAsyncTest(TestCase):
         server = self._server()
         port = server.serverPort()
         server.close()
+
         runtime = _Runtime()
         manager = self._manager()
+
         operation = self._operation(
             manager,
             PreparedRuntime(
@@ -257,10 +259,12 @@ class ConnectionStartupAsyncTest(TestCase):
                 ),
             ),
         )
+
         failures = []
         operation.failed.connect(lambda *_args: failures.append(_args))
 
         self.assertTrue(waitFor(lambda: bool(failures)))
+
         self.assertEqual(failures[0][1], 'Failed to start core')
         self.assertEqual(failures[0][2], 'core readiness check timed out')
         self.assertEqual(manager.lastStartError, 'Failed to start core')
@@ -272,6 +276,7 @@ class ConnectionStartupAsyncTest(TestCase):
         """Let the runtime's typed exit remain the sole terminal authority."""
         runtime = _Runtime()
         manager = self._manager()
+
         operation = self._operation(
             manager,
             PreparedRuntime(
@@ -283,6 +288,7 @@ class ConnectionStartupAsyncTest(TestCase):
                 ),
             ),
         )
+
         failures = []
         operation.failed.connect(lambda *_args: failures.append(_args))
 
@@ -291,6 +297,7 @@ class ConnectionStartupAsyncTest(TestCase):
 
         self.assertTrue(waitFor(lambda: bool(failures)))
         processQtEvents(5)
+
         self.assertEqual(len(failures), 1)
         self.assertIs(failures[0][0], operation)
         self.assertEqual(failures[0][1], 'Invalid server configuration')
@@ -307,6 +314,7 @@ class ConnectionStartupAsyncTest(TestCase):
         """Preserve code 23 when timeout delivery races a queued runtime event."""
         runtime = _Runtime()
         manager = self._manager()
+
         operation = self._operation(
             manager,
             PreparedRuntime(
@@ -318,6 +326,7 @@ class ConnectionStartupAsyncTest(TestCase):
                 ),
             ),
         )
+
         failures = []
         operation.failed.connect(lambda *_args: failures.append(_args))
 
@@ -327,6 +336,7 @@ class ConnectionStartupAsyncTest(TestCase):
 
         self.assertTrue(waitFor(lambda: bool(failures)))
         processQtEvents(5)
+
         self.assertEqual(len(failures), 1)
         self.assertEqual(failures[0][1], 'Invalid server configuration')
         self.assertEqual(
@@ -342,6 +352,7 @@ class ConnectionStartupAsyncTest(TestCase):
         """Let process termination own the terminal result before timeout."""
         runtime = _Runtime()
         manager = self._manager()
+
         operation = self._operation(
             manager,
             PreparedRuntime(
@@ -352,6 +363,7 @@ class ConnectionStartupAsyncTest(TestCase):
                 ),
             ),
         )
+
         failures = []
         operation.failed.connect(lambda *_args: failures.append(_args))
 
@@ -360,6 +372,7 @@ class ConnectionStartupAsyncTest(TestCase):
 
         self.assertTrue(waitFor(lambda: bool(failures)))
         processQtEvents(5)
+
         self.assertEqual(len(failures), 1)
         self.assertEqual(failures[0][1], 'Core terminated unexpectedly')
         self.assertEqual(
@@ -404,8 +417,10 @@ class ConnectionStartupAsyncTest(TestCase):
                 'Global',
                 deepcopy=False,
             )
+
             cancelled = []
             firstOperation.cancelled.connect(cancelled.append)
+
             processQtEvents()
 
             secondOperation = manager.startAsync(
@@ -413,6 +428,7 @@ class ConnectionStartupAsyncTest(TestCase):
                 'Global',
                 deepcopy=False,
             )
+
             succeeded = []
             secondOperation.succeeded.connect(succeeded.append)
 
@@ -488,13 +504,16 @@ class ConnectionStartupAsyncTest(TestCase):
             'example.test',
             timeout=200,
         )
+
         results = []
         operation.finished.connect(
             lambda error, addresses: results.append((error, addresses))
         )
+
         operation.start()
 
         self.assertTrue(waitFor(lambda: bool(results)))
+
         self.assertEqual(results, [(False, ['192.0.2.10'])])
 
         cancelled = DnsResolutionOperation(
@@ -502,10 +521,12 @@ class ConnectionStartupAsyncTest(TestCase):
             'cancelled.test',
             timeout=200,
         )
+
         staleResults = []
         cancelled.finished.connect(
             lambda error, addresses: staleResults.append((error, addresses))
         )
+
         cancelled.start()
         cancelled.cancel()
         processQtEvents(5)

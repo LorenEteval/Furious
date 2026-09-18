@@ -430,6 +430,7 @@ class ProfileTestServiceTest(unittest.TestCase):
         profiles = [
             self._profile(f'profile-{index}', f'{index}.example') for index in range(4)
         ]
+
         manager = self._manager(profiles, controlledDownloads=False)
         scheduler = manager._concurrentDownloadScheduler
         scheduler.maxConcurrency = len(profiles)
@@ -444,6 +445,7 @@ class ProfileTestServiceTest(unittest.TestCase):
             return worker
 
         scheduler.workerFactory = workerFactory
+
         registry = mock.Mock()
         registry.prepareDownloadTest.side_effect = lambda profile, _port: profile
         registry.createCoreRuntime.side_effect = (
@@ -485,6 +487,7 @@ class ProfileTestServiceTest(unittest.TestCase):
         active = self._profile('active', 'active.example')
         queued = self._profile('queued', 'queued.example')
         valid = self._profile('valid', 'valid.example')
+
         manager = self._manager((active, queued, valid))
         scheduler = manager._serialDownloadScheduler
 
@@ -512,6 +515,7 @@ class ProfileTestServiceTest(unittest.TestCase):
         processQtEvents()
 
         self.assertFalse(isValid(first))
+
         second = _ControlledDownloadWorker.instances[1]
         self.assertEqual(
             second.profile.metadata.profileId,
@@ -913,6 +917,7 @@ class ProfileTestServiceTest(unittest.TestCase):
         self.assertIs(activeLatency.job.state, ProfileTestJobState.Cancelled)
         self.assertEqual(serialWorker.cancelCount, 1)
         self.assertEqual(concurrentWorker.cancelCount, 1)
+
         self.assertTrue(
             all(
                 job.target.subscriptionSource == 'group-b'
