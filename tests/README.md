@@ -236,3 +236,7 @@ The reusable `source-tests.yml` workflow runs full unittest discovery on Windows
 Linux, and macOS with Python 3.13 and PySide6 6.8.3. The publication workflow requires
 that job before PyPI publication. Opt-in tests and packaged/manual smoke checks remain
 separate; local Windows results do not establish the other CI targets.
+
+The Home/Log workflow regressions exercise debounced typing, explicit submit/clear, navigation catch-up, focus-scoped
+Find/edit shortcuts, and paused log selection/export across eviction and clear. These are real Qt tests in
+`test_qt_interactions.py` and `test_ui_behavior.py`; no production log source or profile network is started.
