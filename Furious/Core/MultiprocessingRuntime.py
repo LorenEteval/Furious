@@ -86,12 +86,16 @@ class MultiprocessingRuntime(CoreRuntime):
         self._exitPublished = False
         self._output = MsgQueue(msgCallback=msgCallback)
 
-        launch = launchFactory(self._output)
+        try:
+            launch = launchFactory(self._output)
 
-        if not isinstance(launch, ProcessLaunchSpec):
+            if not isinstance(launch, ProcessLaunchSpec):
+                raise TypeError('launch factory must return ProcessLaunchSpec')
+        except BaseException:
+            # Construction has not transferred this resource to a service owner.
             self._output.dispose()
 
-            raise TypeError('launch factory must return ProcessLaunchSpec')
+            raise
 
         self._launch = launch
         self._monitor = QtCore.QTimer()

@@ -254,6 +254,35 @@ class RuntimeLifecycleTest(TestCase):
 
         runtime.dispose()
 
+    def testLaunchFactoryFailureDisposesAcquiredOutput(self):
+        """Release the real queue, callback, and Qt timer before returning failure."""
+        outputs = []
+        destroyed = []
+
+        def fail(output):
+            outputs.append(output)
+            output.timer.destroyed.connect(lambda: destroyed.append(True))
+            raise ValueError('fixture preparation failure')
+
+        runtime = _ProcessRuntime.__new__(_ProcessRuntime)
+
+        try:
+            with self.assertRaisesRegex(ValueError, 'fixture preparation failure'):
+                MultiprocessingRuntime.__init__(
+                    runtime, fail, msgCallback=lambda _: None
+                )
+
+            processQtEvents()
+
+            self.assertEqual(destroyed, [True])
+            self.assertTrue(outputs[0]._closed)
+            self.assertIsNone(outputs[0].callback)
+            self.assertIsNone(outputs[0]._timerConnection)
+        finally:
+            outputs[0].dispose()
+
+            processQtEvents()
+
     def testMultiprocessingSpawnFailureRaisesStructuredError(self):
         """Represent expected acquisition failure without mutable side state."""
         process = mock.Mock()

@@ -7,7 +7,9 @@ This scope owns reusable embedded execution machinery and application tun2socks;
   Core owns its separate direct `subprocess.Popen`; neither layer owns controller, repository, UI, or protocol policy.
 - A launch spec describes prepared child construction, never semantic connection readiness. Serialization and launch
   arguments are prepared before execution starts; constructors may create owned timers/queues that still need
-  disposal if execution never starts. The service observes endpoints/process survival and commits later.
+  disposal if execution never starts. Failed launch-factory construction must dispose resources already acquired
+  before propagating the failure, because no service has received ownership yet. The service observes
+  endpoints/process survival and commits later.
 - `CoreRuntime` execution state, typed terminal exit, and readiness are separate contracts. A process becoming alive is
   not proof that its proxy/TUN endpoint is ready, while a readiness timeout must not overwrite an already observed typed
   exit.

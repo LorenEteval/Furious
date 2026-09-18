@@ -227,3 +227,5 @@ instead.
 
 `test_repository_contracts.py` verifies all-or-nothing hydration and preservation of
 original stored bytes after malformed records or plugin parsing failures.
+`test_runtime_lifecycle.py` verifies real Qt timer destruction and queue disposal when
+launch preparation fails before a service acquires the runtime.
