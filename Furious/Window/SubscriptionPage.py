@@ -270,6 +270,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             self.viewProfilesButton,
             self.updateSelectedButton,
             self.updateAllButton,
+            self.stopUpdatesButton,
         ) = (
             AppQPushButton(_('Add')),
             AppQPushButton(_('Edit')),
@@ -278,6 +279,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             AppQPushButton(_('View Profiles')),
             AppQPushButton(_('Update Selected')),
             AppQPushButton(_('Update All')),
+            AppQPushButton(_('Stop Updates')),
         )
 
         self.table = SubscriptionTableView(
@@ -295,6 +297,15 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         self.serverTable.subsManager.subscriptionStateChanged.connect(
             self.table.refreshSubscriptionState
         )
+        self.serverTable.subsManager.subscriptionStateChanged.connect(
+            self._refreshUpdateActions
+        )
+        self.serverTable.subsManager.subscriptionsChanged.connect(
+            self._refreshUpdateActions
+        )
+
+        self.stopUpdatesButton.clicked.connect(self.serverTable.subsManager.stopUpdates)
+        self._refreshUpdateActions()
 
         self.addButton.clicked.connect(self.addSubscription)
         self.editButton.clicked.connect(self.editSelected)
@@ -326,6 +337,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
         actions.addWidget(self.copyURLButton)
         actions.addWidget(self.viewProfilesButton)
         actions.addStretch(1)
+        actions.addWidget(self.stopUpdatesButton)
 
         content = QWidget()
         content.setObjectName('SubscriptionPageContent')
@@ -341,6 +353,15 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
 
         self.setIconsByTheme(APP().theme())
         self.retranslate()
+
+    def _refreshUpdateActions(self, *_args):
+        """Derive cancellation availability from shared synchronization state."""
+        self.stopUpdatesButton.setEnabled(
+            any(
+                group.get('lastSyncStatus') == 'syncing'
+                for group in Storage.UserSubs().values()
+            )
+        )
 
     @QtCore.Slot(QtCore.QModelIndex)
     def _editDoubleClicked(self, _index):
@@ -542,6 +563,7 @@ class SubscriptionPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             (self.viewProfilesButton, 'funnel.svg'),
             (self.updateSelectedButton, 'arrow-repeat.svg'),
             (self.updateAllButton, 'cloud-arrow-down.svg'),
+            (self.stopUpdatesButton, 'stop-circle.svg'),
         ):
             button.setIcon(iconFactory(iconName))
 

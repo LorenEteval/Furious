@@ -296,6 +296,7 @@ def subscriptionSyncStatusText(item: dict) -> str:
         'syncing': _('Updating...'),
         'success': _('Updated'),
         'error': _('Update Failed'),
+        'cancelled': _('Update Cancelled'),
     }.get(str(item.get('lastSyncStatus', '')), _('Never'))
 
 

@@ -229,3 +229,5 @@ instead.
 original stored bytes after malformed records or plugin parsing failures.
 `test_runtime_lifecycle.py` verifies real Qt timer destruction and queue disposal when
 launch preparation fails before a service acquires the runtime.
+`test_subscription_manager.py` exercises Stop Updates with a real button click,
+partial batch success, stale-result rejection, unchanged automatic schedules, and restart.

@@ -34,7 +34,7 @@ from Furious.Service.SubscriptionManager import (
 from Furious.Window.SubscriptionPage import SubscriptionPage
 from Furious.Widget.SubscriptionTableView import SubscriptionTableView
 
-from tests.support import application, processQtEvents
+from tests.support import application, processQtEvents, waitFor
 
 from PySide6 import QtCore, QtNetwork, QtTest, QtWidgets
 
@@ -821,6 +821,7 @@ class SubscriptionManagerTest(TestCase):
                 ('syncing', 'Updating...'),
                 ('success', 'Updated'),
                 ('error', 'Update Failed'),
+                ('cancelled', 'Update Cancelled'),
                 ('future-value', 'Never'),
             ):
                 with self.subTest(persisted=persisted):
@@ -844,6 +845,10 @@ class SubscriptionManagerTest(TestCase):
         self.assertEqual(gettext('Updating...', 'RU'), 'Обновление...')
         self.assertEqual(gettext('Updated', 'ZH'), '已更新')
         self.assertEqual(gettext('Update Failed', 'ZH'), '更新失败')
+        self.assertEqual(gettext('Update Cancelled', 'ZH'), '更新已取消')
+        self.assertEqual(gettext('Update Cancelled', 'RU'), 'Обновление отменено')
+        self.assertEqual(gettext('Stop Updates', 'ZH'), '停止更新')
+        self.assertEqual(gettext('Stop Updates', 'RU'), 'Остановить обновления')
         self.assertEqual(gettext('Usage / Expiry', 'RU'), 'Трафик / Срок')
         self.assertEqual(gettext('Usage / Expiry', 'ZH'), '用量 / 到期')
 
@@ -1195,6 +1200,214 @@ class SubscriptionManagerTest(TestCase):
             manager.deleteLater()
 
         processQtEvents()
+
+    def testStopUpdatesClickPreservesCommitsSchedulesAndRejectsLateWork(self):
+        """Cancel a partial batch through real Qt input and allow another update."""
+        subscriptions = {
+            unique: self._subscription(remark=unique)
+            for unique in ('group-a', 'group-b')
+        }
+
+        def group(unique):
+            return SubscriptionGroup.fromMapping(unique, subscriptions[unique])
+
+        def upsert(groups):
+            for value in groups:
+                subscriptions[value.id] = value.toMapping()
+
+        with (
+            mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
+            mock.patch.object(Storage, 'SubscriptionGroup', side_effect=group),
+            mock.patch.object(Storage, 'upsertSubscriptionGroups', side_effect=upsert),
+            mock.patch.object(Storage, 'persistSubscriptionGroups'),
+        ):
+            manager = SubscriptionManager()
+            page = SubscriptionPage(SimpleNamespace(subsManager=manager))
+            replies = []
+            contexts = []
+            completed = []
+            manager.updateCompleted.connect(completed.append)
+            timerIds = {
+                key: timer.timerId() for key, timer in manager._autoUpdateTimers.items()
+            }
+
+            def request(**context):
+                reply = _Reply()
+                replies.append(reply)
+                contexts.append(context)
+                manager._activeReplies[reply] = reply
+                manager._replySubscriptions[reply] = context['unique']
+
+            try:
+                page.show()
+                processQtEvents()
+
+                self.assertFalse(page.stopUpdatesButton.isEnabled())
+
+                with mock.patch.object(
+                    manager, 'updateSubsByWebGET', side_effect=request
+                ):
+                    manager.updateSubscriptions(('group-a', 'group-b'))
+
+                    self.assertTrue(page.stopUpdatesButton.isEnabled())
+
+                    subscriptions['group-a']['lastSyncStatus'] = 'success'
+                    subscriptions['group-a']['lastUpdated'] = 'preserved timestamp'
+                    manager._finishOperation(
+                        contexts[0], successful=contexts[0], structural=True
+                    )
+                    manager._releaseFinishedReply(replies[0])
+
+                    QtTest.QTest.mouseClick(
+                        page.stopUpdatesButton, QtCore.Qt.MouseButton.LeftButton
+                    )
+                    processQtEvents()
+
+                    self.assertFalse(page.stopUpdatesButton.isEnabled())
+                    self.assertEqual(
+                        subscriptions['group-a']['lastSyncStatus'], 'success'
+                    )
+                    self.assertEqual(
+                        subscriptions['group-a']['lastUpdated'], 'preserved timestamp'
+                    )
+                    self.assertEqual(
+                        subscriptions['group-b']['lastSyncStatus'], 'cancelled'
+                    )
+                    self.assertFalse(replies[1].isOpen())
+                    self.assertEqual(manager._batches, {})
+                    self.assertEqual(len(completed), 1)
+                    self.assertEqual(completed[0].successful, (contexts[0],))
+                    self.assertEqual(completed[0].failed, ())
+                    self.assertFalse(manager._isCurrentRequest(contexts[1]))
+                    self.assertEqual(
+                        timerIds,
+                        {
+                            key: timer.timerId()
+                            for key, timer in manager._autoUpdateTimers.items()
+                        },
+                    )
+
+                    with mock.patch.object(
+                        manager, '_startImportPreparation'
+                    ) as prepare:
+                        manager.successCallback(replies[1], **contexts[1])
+                        prepare.assert_not_called()
+
+                    manager.updateSubscriptions(('group-b',))
+
+                    self.assertTrue(page.stopUpdatesButton.isEnabled())
+                    self.assertTrue(manager._isCurrentRequest(contexts[2]))
+
+                    manager.stopUpdates()
+
+                    self.assertEqual(len(completed), 1)
+            finally:
+                manager.shutdown()
+
+                for reply in replies:
+                    manager._releaseFinishedReply(reply)
+                    reply.deleteLater()
+
+                page.deleteLater()
+                manager.deleteLater()
+                processQtEvents()
+
+    def testStopCompletionCanImmediatelyStartANewUpdate(self):
+        """A synchronous abort observer must not lose the next generation's status."""
+        subscriptions = {'group-a': self._subscription(lastSyncStatus='syncing')}
+        manager = self._manager()
+        context = {'unique': 'group-a', 'batchId': 1, 'requestVersion': 1}
+        manager._nextBatchId = 1
+        manager._requestVersions['group-a'] = 1
+        manager._batches[1] = _SubscriptionBatchState(
+            {('group-a', 1)}, False, [{'unique': 'completed-group'}], []
+        )
+        reply = mock.Mock()
+        manager._activeReplies[reply] = reply
+        manager._replySubscriptions[reply] = 'group-a'
+
+        def abort():
+            manager._releaseFinishedReply(reply)
+            manager._finishOperation(context)
+
+        reply.abort.side_effect = abort
+        manager.updateCompleted.connect(
+            lambda _batch: manager.updateSubsByUnique('group-a')
+        )
+
+        def upsert(groups):
+            for group in groups:
+                subscriptions[group.id] = group.toMapping()
+
+        with (
+            mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
+            mock.patch.object(
+                Storage,
+                'SubscriptionGroup',
+                side_effect=lambda unique: SubscriptionGroup.fromMapping(
+                    unique, subscriptions[unique]
+                ),
+            ),
+            mock.patch.object(Storage, 'upsertSubscriptionGroups', side_effect=upsert),
+            mock.patch.object(Storage, 'persistSubscriptionGroups'),
+            mock.patch.object(manager, 'updateSubsByWebGET') as request,
+        ):
+            try:
+                manager.stopUpdates()
+                request.assert_called_once()
+
+                self.assertTrue(manager._isCurrentRequest(request.call_args.kwargs))
+                self.assertEqual(subscriptions['group-a']['lastSyncStatus'], 'syncing')
+                self.assertEqual(len(manager._batches), 1)
+            finally:
+                manager.shutdown()
+                manager.deleteLater()
+
+                processQtEvents()
+
+    def testStopUpdatesRetainsRunningPreparationUntilItsLateResultArrives(self):
+        """Logical stop releases the batch, while the pool retains executing work."""
+        manager = self._manager()
+        started = threading.Event()
+        release = threading.Event()
+        context = {'unique': 'group-a', 'batchId': 1, 'requestVersion': 1}
+        subscriptions = {'group-a': self._subscription()}
+        manager._requestVersions['group-a'] = 1
+        context['webURL'] = subscriptions['group-a']['webURL']
+        manager._batches[1] = _SubscriptionBatchState({('group-a', 1)}, True, [], [])
+        manager._handleImportedResult = mock.Mock()
+        completed = []
+        manager.updateCompleted.connect(completed.append)
+
+        def work(_isCancelled):
+            started.set()
+            release.wait(3)
+
+            return object()
+
+        with (
+            mock.patch.object(Storage, 'UserSubs', return_value=subscriptions),
+            mock.patch.object(Storage, 'persistSubscriptionGroups'),
+        ):
+            try:
+                manager._startPreparationJob('import', context, work)
+                self.assertTrue(started.wait(2))
+                manager.stopUpdates()
+
+                self.assertEqual(manager._batches, {})
+                self.assertEqual(len(manager._preparationJobs), 1)
+                self.assertEqual(manager._preparationPool.activeThreadCount(), 1)
+
+                release.set()
+                self.assertTrue(waitFor(lambda: not manager._preparationJobs))
+                manager._handleImportedResult.assert_not_called()
+                self.assertEqual(completed, [])
+            finally:
+                release.set()
+                manager.shutdown()
+                manager.deleteLater()
+
+                processQtEvents()
 
     def testLargePreparationRunsOffGuiThreadAndKeepsEventLoopResponsive(self):
         """Keep unrelated Qt delivery responsive while payload work is gated."""

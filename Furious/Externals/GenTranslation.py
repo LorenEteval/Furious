@@ -3348,7 +3348,23 @@ TRANSLATION = {
             "Furious.Backends.Xray.RoutingWindow"
         ],
         "RU": "Переместить",
-        "isReviewed": "True",
-        "ZH": "移动"
+        "ZH": "移动",
+        "isReviewed": "True"
+    },
+    "Update Cancelled": {
+        "source": [
+            "Furious.Widget.SubscriptionTableView"
+        ],
+        "RU": "Обновление отменено",
+        "ZH": "更新已取消",
+        "isReviewed": "True"
+    },
+    "Stop Updates": {
+        "source": [
+            "Furious.Window.SubscriptionPage"
+        ],
+        "RU": "Остановить обновления",
+        "ZH": "停止更新",
+        "isReviewed": "True"
     }
 }

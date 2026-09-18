@@ -426,6 +426,48 @@ class SubscriptionManager(HttpGetManager):
             if unique is None or job.context.get('unique') == unique:
                 job.cancel()
 
+    @QtCore.Slot()
+    def stopUpdates(self):
+        """Stop current updates, preserving completed commits and future schedules."""
+        if self._shuttingDown:
+            return
+
+        pending = tuple(
+            {'batchId': batchId, 'unique': unique, 'requestVersion': version}
+            for batchId, state in self._batches.items()
+            for unique, version in state.pending
+        )
+        groups = []
+
+        for unique, value in Storage.UserSubs().items():
+            if value.get('lastSyncStatus') != 'syncing':
+                continue
+
+            group = Storage.SubscriptionGroup(unique)
+
+            if group is not None:
+                group.lastSyncStatus = 'cancelled'
+                group.lastSyncError = ''
+
+                groups.append(group)
+
+        if groups:
+            # abort() can synchronously finish a batch whose observers start a new
+            # update. Publish the old status before that boundary, never over it.
+            Storage.upsertSubscriptionGroups(groups)
+
+        self.cancelUpdates()
+
+        if groups:
+            Storage.persistSubscriptionGroups()
+
+            self.subscriptionStateChanged.emit(tuple(group.id for group in groups))
+
+        # Logical cancellation does not destroy a worker still using its relay.
+        # Release batch reporting now; exact replies/jobs retain their usual owners.
+        for context in pending:
+            self._finishOperation(context)
+
     def shutdown(self):
         """Cancel owned resources and synchronously wait for preparation workers."""
         if self._shuttingDown:
