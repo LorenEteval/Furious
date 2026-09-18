@@ -1107,16 +1107,13 @@ class RoutingRulesDialog(AppQTransientDialog):
                 # Do not delete
                 pass
 
-        if PLATFORM == 'Windows':
-            # Windows
-            mbox = MBoxQuestionDelete(icon=AppQMessageBox.Icon.Question)
-        else:
-            # macOS & linux
-            mbox = MBoxQuestionDelete(
-                icon=AppQMessageBox.Icon.Question,
-                parent=self,
-            )
-            mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+        # This prompt is subordinate to a transient editor on every platform.
+        # Native owner destruction must also end its pending confirmation.
+        mbox = MBoxQuestionDelete(
+            icon=AppQMessageBox.Icon.Question,
+            parent=self,
+        )
+        mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         mbox.isMulti = bool(len(indexes) > 1)
         mbox.possibleRemark = self.listView.selectedRuleText()

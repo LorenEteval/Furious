@@ -827,6 +827,77 @@ class ProfileTestServiceTest(unittest.TestCase):
         receiver.deleteLater()
         processQtEvents()
 
+    def testSlowPingShutdownStillReapsTcpingAndCancelsDownloads(self):
+        """A gated pool cannot strand independent resources or prevent retry."""
+        profile = self._profile('profile', 'profile.example')
+        manager = self._manager((profile,))
+        scheduler = manager._latencyScheduler
+        entered = threading.Event()
+        release = threading.Event()
+
+        class GatedWorker(QtCore.QRunnable):
+            def run(self):
+                entered.set()
+                release.wait(10)
+
+        scheduler.threadPool.start(GatedWorker())
+
+        engine = scheduler.ensureTcpingEngine()
+        thread = scheduler.tcpingThread
+
+        manager.testDownloadSpeed((profile,), concurrent=False)
+        manager.testDownloadSpeed((profile,), concurrent=True)
+
+        processQtEvents()
+
+        workers = list(_ControlledDownloadWorker.instances)
+        waitForDone = scheduler.threadPool.waitForDone
+
+        try:
+            self.assertTrue(entered.wait(2))
+
+            with mock.patch.object(
+                scheduler.threadPool,
+                'waitForDone',
+                side_effect=lambda _: waitForDone(1),
+            ) as wait:
+                with self.assertRaisesRegex(
+                    RuntimeError, 'Ping worker pool did not stop'
+                ):
+                    manager.shutdown()
+
+                self.assertFalse(thread.isRunning())
+                self.assertFalse(isValid(engine))
+                self.assertIsNone(scheduler.tcpingThread)
+                self.assertEqual([worker.cancelCount for worker in workers], [1, 1])
+                self.assertGreater(scheduler.threadPool.activeThreadCount(), 0)
+
+                manager.testPing((profile,))
+
+                self.assertFalse(scheduler.queue)
+
+                release.set()
+
+                self.assertTrue(waitForDone(2000))
+
+                manager.shutdown()
+
+                self.assertEqual(wait.call_count, 2)
+
+            processQtEvents()
+
+            self.assertFalse(isValid(thread))
+            self.assertTrue(all(not isValid(worker) for worker in workers))
+        finally:
+            release.set()
+
+            waitForDone(2000)
+
+            # Keep a failed regression from destroying a still-running QThread.
+            if isValid(thread) and thread.isRunning():
+                thread.quit()
+                thread.wait(2000)
+
     def testTcpingNetworkingThreadHasRepeatableTerminalCleanup(self):
         """Stop and destroy the reusable engine and thread repeatedly."""
         for iteration in range(10):

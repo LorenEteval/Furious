@@ -204,7 +204,11 @@ started for the smoke test.
 ### Focused lifetime audit regressions
 
 `test_qt_lifetime.py` checks that independent signal endpoints do not accumulate
-cleanup hooks when senders die first and releases message-box masks on native deletion.
+cleanup hooks when senders die first and releases message-box masks on native deletion. It also
+checks reusable-dialog reopen generations, owner-first routing confirmation teardown, and static
+routing documentation callbacks under simulated compiled-method protection.
+`test_profile_test_jobs.py` gates a real pool worker to verify that a missed Ping shutdown deadline
+still reaps the independent TCPing thread, cancels downloads, and permits a later shutdown retry.
 `test_theme_transition.py` covers both target-window and coordinator destruction during a fade. `test_connection_startup_async.py` covers DNS
 cancellation/timeout with already-deleted recursive replies. `test_service_runtime.py`
 rejects deleted plugin-page wrappers. `test_xray_asset_download.py` exercises real
@@ -213,8 +217,8 @@ of pending replies and hashes.
 
 Run `python -m tests.fixtures.editor_lifetime_probe --iterations 100 --pattern representative --close-method close`
 natively and compile that fixture with Nuitka's PySide6 plugin for a separate standalone
-check. It checks both independent signal endpoint destruction orders as well as seven
-transient editor families. Repeat with `--close-method accept` and `--close-method reject`.
+check. It checks reopen generations, routing confirmation owner destruction, both independent
+signal endpoint destruction orders, and seven transient editor families. Repeat with `--close-method accept` and `--close-method reject`.
 A null protected-list count means Nuitka does not expose that diagnostic; inspect its
 installed package configuration and require zero live wrappers and registry entries
 instead.

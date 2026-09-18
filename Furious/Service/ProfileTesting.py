@@ -650,15 +650,19 @@ class _LatencyScheduler(QtCore.QObject):
 
     def shutdown(self):
         """Stop the dedicated TCPing event loop exactly once."""
-        if self.shuttingDown:
-            return
-
         self.shuttingDown = True
         self.cancelAll()
 
-        if self._ownsThreadPool and not self.threadPool.waitForDone(5000):
-            raise RuntimeError('Ping worker pool did not stop')
+        try:
+            if self._ownsThreadPool and not self.threadPool.waitForDone(5000):
+                raise RuntimeError('Ping worker pool did not stop')
+        finally:
+            # A slow Ping must not strand the independent networking thread.
+            # Keep the pool owned, and allow another shutdown call to drain it.
+            self._shutdownTcping()
 
+    def _shutdownTcping(self):
+        """Release the networking engine only after its thread actually stops."""
         thread = self.tcpingThread
         engine = self.tcpingEngine
 
@@ -1465,11 +1469,12 @@ class ProfileTestManager(QtCore.QObject):
 
     def shutdown(self):
         """Cancel exact work and stop every owned reusable execution resource."""
-        if self._shuttingDown:
-            return
-
         self._shuttingDown = True
 
-        self._latencyScheduler.shutdown()
-        self._serialDownloadScheduler.cancelAll()
-        self._concurrentDownloadScheduler.cancelAll()
+        try:
+            self._latencyScheduler.shutdown()
+        finally:
+            try:
+                self._serialDownloadScheduler.cancelAll()
+            finally:
+                self._concurrentDownloadScheduler.cancelAll()

@@ -24,6 +24,7 @@ from Furious.Backends.Hysteria1.Editor import Hysteria1Editor
 from Furious.Backends.Hysteria2.Editor import Hysteria2Editor
 from Furious.Backends.Hysteria2.TunSettingsDialog import Hysteria2TunSettingsDialog
 from Furious.Backends.Xray.RoutingWindow import (
+    RoutingDocumentationURL,
     RoutingPreviewDialog,
     RoutingRuleEditDialog,
     RoutingRulesDialog,
@@ -139,6 +140,122 @@ class DelayedReceiver(QtCore.QObject):
 
 class QtLifetimeTest(unittest.TestCase):
     """Stress direct destruction evidence without relying on process RSS alone."""
+
+    def testRoutingDocumentationDoesNotEnterCompiledMethodProtection(self):
+        """Closing routing editors releases labels under Nuitka-style retention."""
+        originalConnect = QtCore.SignalInstance.connect
+        protectedCallbacks = []
+        references = []
+        destroyed = []
+
+        def protectingConnect(signal, callback, *args, **kwargs):
+            if isinstance(getattr(callback, '__self__', None), QtCore.QObject):
+                protectedCallbacks.append(callback)
+
+            return originalConnect(signal, callback, *args, **kwargs)
+
+        with mock.patch.object(QtCore.SignalInstance, 'connect', protectingConnect):
+            for _ in range(30):
+                dialog = RoutingRuleEditDialog({'type': 'field'})
+
+                for label in dialog.findChildren(RoutingDocumentationURL):
+                    references.append(weakref.ref(label))
+                    label.destroyed.connect(lambda *_args: destroyed.append(True))
+
+                del label
+
+                dialog.open()
+                dialog.reject()
+
+                del dialog
+
+                processQtEvents()
+
+        collectAtBoundary()
+
+        self.assertAllDestroyed(references, destroyed, 30)
+        self.assertFalse(protectedCallbacks)
+
+    def testRoutingDeleteConfirmationDiesWithTransientOwner(self):
+        """A Windows confirmation cannot retain or call a deleted rules editor."""
+        references = []
+        destroyed = []
+
+        for _ in range(30):
+            routing = {'rules': [{'ruleTag': 'keep'}]}
+            dialog = RoutingRulesDialog(routing)
+            dialog.open()
+            dialog.listView.setCurrentIndex(dialog.listView.rulesModel.index(0, 0))
+
+            with mock.patch('Furious.Backends.Xray.RoutingWindow.PLATFORM', 'Windows'):
+                dialog.deleteRule()
+
+            confirmation = next(
+                item
+                for item in AppQDialog._openDialogs.values()
+                if isinstance(item, AppQMessageBox)
+            )
+
+            for item in (dialog, confirmation):
+                references.append(weakref.ref(item))
+                item.destroyed.connect(lambda *_args: destroyed.append(True))
+
+            del item
+
+            try:
+                dialog.deleteLater()
+                processQtEvents()
+
+                self.assertFalse(isValid(dialog))
+                self.assertFalse(isValid(confirmation))
+                self.assertEqual(routing['rules'], [{'ruleTag': 'keep'}])
+            finally:
+                if isValid(confirmation):
+                    confirmation.reject()
+                    processQtEvents()
+
+            del dialog, confirmation
+
+        collectAtBoundary()
+
+        self.assertAllDestroyed(references, destroyed, 60)
+
+    def testReopenedDialogSurvivesPreviousPresentationCleanup(self):
+        """A queued finish must not release the next asynchronous presentation."""
+        destroyed = []
+        references = []
+
+        for method in ('accept', 'reject', 'close'):
+            for _ in range(20):
+                dialog = AppQDialog()
+                dialog.destroyed.connect(lambda *_args: destroyed.append(True))
+
+                reference = weakref.ref(dialog)
+                references.append(reference)
+
+                key = dialog._lifetimeKey
+
+                dialog.open()
+                getattr(dialog, method)()
+                dialog.open()
+
+                del dialog
+
+                processQtEvents()
+
+                self.assertIsNotNone(reference())
+                self.assertTrue(isValid(reference()))
+                self.assertTrue(reference().isVisible())
+                self.assertIs(AppQDialog._openDialogs.get(key), reference())
+
+                getattr(reference(), method)()
+
+                processQtEvents()
+
+                self.assertIsNone(reference())
+                self.assertNotIn(key, AppQDialog._openDialogs)
+
+        self.assertAllDestroyed(references, destroyed, 60)
 
     def testIndependentSenderDestructionReleasesReceiverCleanupHooks(self):
         """A surviving receiver must not accumulate hooks for dead senders."""

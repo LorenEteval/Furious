@@ -379,10 +379,25 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
     @staticmethod
     def _scheduleOpenDialogRelease(key, *_args):
         """Release an async wrapper after the current Qt signal dispatch."""
+        dialog = AppQDialog._openDialogs.get(key)
+
+        if dialog is None:
+            return
+
         QtCore.QTimer.singleShot(
             0,
-            functools.partial(AppQDialog._releaseOpenDialog, key),
+            functools.partial(
+                AppQDialog._releaseFinishedPresentation, key, dialog._openGeneration
+            ),
         )
+
+    @staticmethod
+    def _releaseFinishedPresentation(key, generation):
+        """Do not let an earlier finish release a newly reopened dialog."""
+        dialog = AppQDialog._openDialogs.get(key)
+
+        if dialog is not None and dialog._openGeneration == generation:
+            AppQDialog._releaseOpenDialog(key)
 
     def __init__(self, *args, **kwargs):
         """Initialize the AppQDialog."""
@@ -393,6 +408,7 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
         # ID reused by a newer dialog must not let the older destroyed signal
         # evict that newer dialog from the asynchronous lifetime registry.
         self._lifetimeKey = object()
+        self._openGeneration = 0
 
         # Signal callbacks carry only the lifetime token, never this dialog.
         # That avoids a Python self-cycle around the complete native widget tree.
@@ -437,6 +453,9 @@ class AppQDialog(Mixins.QTranslatable, Mixins.ConnectionAware, QDialog):
     def open(self):
         """Open and retain the dialog until it finishes or is destroyed."""
         key = self._lifetimeKey
+
+        self._openGeneration += 1
+
         AppQDialog._openDialogs[key] = self
 
         try:

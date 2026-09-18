@@ -88,7 +88,8 @@ for lifetime primitives. This scope owns multi-stage workflows and temporary res
 
 - Cover success plus invalid, stale, superseded, timeout, cancellation, partial acquisition, hidden-page, reentrant, and
   repeated-shutdown paths. Assert current identity at write-back and exact cleanup of pools, threads, sockets, replies,
-  timers, ports, runtimes, callbacks, and host mutations.
+  timers, ports, runtimes, callbacks, and host mutations. A failed worker drain must still attempt independent resource
+  cleanup; closing admission is not evidence of completed shutdown and must not prevent retrying retained resources.
 - Test pre-commit failure with unchanged live/persisted state separately from post-commit side-effect failure. Never
   use a broad rollback assertion to conceal which boundary actually committed. Use `tests/README.md` for
   workflow-specific modules; `test_log_manager_generation.py`, `test_profile_test_jobs.py`,

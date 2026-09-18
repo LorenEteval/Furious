@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from Furious.Backends import OFFICIAL_PLUGIN_TYPES
+from Furious.Backends.Xray.RoutingWindow import RoutingRulesDialog
 from Furious.Plugins import blankProfile, initializePluginRegistry
 from Furious.Qt import AppQDialog, AppQMessageBox, ThemeTransition, connectWeakly
 from Furious.Widget.ServerTableView import ServerTableView
@@ -239,6 +240,58 @@ def runInfrastructureProbe(iterations=100):
     """Check signal, mask, and animation ownership under real Qt destruction."""
     application()
     result = {}
+
+    for closeMethod in CLOSE_METHODS:
+        destroyed = []
+        for _ in range(iterations):
+            dialog = AppQDialog()
+            dialog.destroyed.connect(lambda *_args: destroyed.append(True))
+            reference = weakref.ref(dialog)
+            key = dialog._lifetimeKey
+            dialog.open()
+            getattr(dialog, closeMethod)()
+            dialog.open()
+            del dialog
+            processQtEvents()
+
+            assert reference() is not None and isValid(reference())
+            assert reference().isVisible()
+            assert AppQDialog._openDialogs.get(key) is reference()
+
+            getattr(reference(), closeMethod)()
+            processQtEvents()
+            assert reference() is None
+            assert key not in AppQDialog._openDialogs
+
+        assert len(destroyed) == iterations
+        result['reopenAfter' + closeMethod.title()] = iterations
+
+    routingReferences = []
+    routingDestroyed = []
+    for _ in range(iterations):
+        dialog = RoutingRulesDialog({'rules': [{'ruleTag': 'keep'}]})
+        dialog.open()
+        dialog.listView.setCurrentIndex(dialog.listView.rulesModel.index(0, 0))
+        dialog.deleteRule()
+        confirmation = next(
+            item
+            for item in AppQDialog._openDialogs.values()
+            if isinstance(item, AppQMessageBox)
+        )
+        for item in (dialog, confirmation):
+            routingReferences.append(weakref.ref(item))
+            item.destroyed.connect(lambda *_args: routingDestroyed.append(True))
+        del item
+        dialog.deleteLater()
+        processQtEvents()
+        assert not isValid(dialog) and not isValid(confirmation)
+        del dialog, confirmation
+
+    collectAtBoundary()
+    assert len(routingDestroyed) == iterations * 2
+    assert all(reference() is None for reference in routingReferences)
+    assert not AppQDialog._openDialogs
+    result['routingOwnerFirst'] = iterations
 
     for senderFirst in (True, False):
         survivor = _SignalEndpoint()

@@ -30,7 +30,8 @@ primitives; pages and services consume them without creating parallel registries
   do not need it.
 - `AppQDialog`/`AppQMainWindow` registries bridge asynchronous presentation/visibility; they are not substitute
   application owners. Cleanup captures a unique lifetime token, never the object being released or a reusable
-  numeric object ID. A delayed destruction callback must not evict a newer wrapper from the registry.
+  numeric object ID. A delayed destruction callback must not evict a newer wrapper from the registry. A queued
+  finish must also match the presentation generation so reopening the same reusable dialog cannot lose its owner.
 - A Qt parent alone does not prove the Python wrapper or logical feature lifetime. Bare Qt `.show()` does not retain
   an unparented wrapper; `AppQMainWindow.show()` adds its own visible-window retention until accepted close. Do not
   solve ambiguity by global retention, indiscriminate delete-on-close, routine `gc.collect()`, or broad
