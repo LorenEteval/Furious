@@ -339,6 +339,85 @@ class RepositoryContractTest(unittest.TestCase):
             self.assertEqual(Storage.UserActivatedItemIndex(), -1)
             self.assertEqual(settings.value('ActivatedItemIndex'), 'not-an-index')
 
+    def testMalformedRecordsPreserveOriginalStorageDuringCleanup(self):
+        """Reject incomplete hydration without crashing or saving a partial prefix."""
+        validProfile = {'config': '{}', 'remark': 'Valid profile'}
+        cases = (
+            ('Configuration', UserServers, {'model': [validProfile, None]}, []),
+            (
+                'Configuration',
+                UserServers,
+                {
+                    'model': [
+                        validProfile,
+                        {'config': '{}', 'profileMetadata': {'tags': 42}},
+                    ]
+                },
+                [],
+            ),
+            (
+                'Configuration',
+                UserServers,
+                {'model': [validProfile, {'connection': {}, 'metadata': {'tags': 42}}]},
+                [],
+            ),
+            (
+                'CustomSubscription',
+                UserSubs,
+                {'valid': {'remark': 'Valid group'}, 'broken': 42},
+                {},
+            ),
+            (
+                'CustomSubscription',
+                UserSubs,
+                {'valid': {'remark': 'Valid group'}, 'broken': None},
+                {},
+            ),
+            (
+                'CustomSubscription',
+                UserSubs,
+                {'valid': {'remark': 'Valid group'}, 'broken': []},
+                {},
+            ),
+        )
+
+        for setting, repositoryType, payload, empty in cases:
+            with self.subTest(setting=setting, payload=payload), isolatedSettings():
+                encoded = PyBase64Encoder.encode(UJSONEncoder.encode(payload).encode())
+                AppSettings.set(setting, encoded)
+
+                with self.assertLogs(repositoryType.__module__, level='ERROR'):
+                    repository = repositoryType()
+
+                self.assertEqual(repository.data(), empty)
+                repository.cleanup()
+                repository.cleanup()
+                self.assertEqual(AppSettings.get(setting), encoded)
+
+    def testRecordHydrationFailureDoesNotLogPrivateInput(self):
+        """Parser exceptions can contain secrets; diagnostics identify only the type."""
+        module = importlib.import_module('Furious.Repository.Servers')
+
+        with isolatedSettings():
+            encoded = PyBase64Encoder.encode(
+                UJSONEncoder.encode({'model': [{'config': '{}'}]}).encode()
+            )
+            AppSettings.set('Configuration', encoded)
+
+            with (
+                mock.patch.object(
+                    module,
+                    'configurationFromAny',
+                    side_effect=ValueError('private-token'),
+                ),
+                self.assertLogs(module.__name__, level='ERROR') as logged,
+            ):
+                repository = UserServers()
+
+            self.assertNotIn('private-token', '\n'.join(logged.output))
+            repository.cleanup()
+            self.assertEqual(AppSettings.get('Configuration'), encoded)
+
     def testFailedRestoreIsNotOverwrittenByAutomaticCleanup(self):
         """Preserve recoverable persisted bytes when decoding fails at startup."""
         corrupt = b'eA=='

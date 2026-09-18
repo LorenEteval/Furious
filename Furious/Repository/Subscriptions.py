@@ -197,17 +197,32 @@ class UserSubs(Mixins.CleanupOnExit, StorageBackend):
 
         restored = restore()
 
-        self._data = restored
+        self._data = {}
+        normalized = {}
 
-        # Normalize legacy URL-only entries into the current group schema. The
-        # dictionary key remains the stable group ID used by existing profiles.
-        for order, (unique, value) in enumerate(tuple(self._data.items())):
-            group = SubscriptionGroup.fromMapping(unique, value)
+        # Publish only a completely hydrated collection. Failed startup cleanup
+        # must not serialize a partly normalized document over recoverable input.
+        try:
+            for order, (unique, value) in enumerate(restored.items()):
+                if not isinstance(value, Mapping):
+                    raise TypeError('subscription repository records must be objects')
 
-            if not group.sortOrder:
-                group.sortOrder = order
+                group = SubscriptionGroup.fromMapping(unique, value)
 
-            self._data[unique] = group.toMapping()
+                if not group.sortOrder:
+                    group.sortOrder = order
+
+                normalized[unique] = group.toMapping()
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            self._restoreFailed = True
+
+            logger.error(
+                'failed to restore subscription records (%s)', type(ex).__name__
+            )
+        else:
+            self._data = normalized
 
     def sync(self):
         """Persist the current user subs data."""

@@ -222,3 +222,8 @@ signal endpoint destruction orders, and seven transient editor families. Repeat 
 A null protected-list count means Nuitka does not expose that diagnostic; inspect its
 installed package configuration and require zero live wrappers and registry entries
 instead.
+
+### Evolution regressions and CI
+
+`test_repository_contracts.py` verifies all-or-nothing hydration and preservation of
+original stored bytes after malformed records or plugin parsing failures.

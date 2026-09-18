@@ -147,25 +147,34 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
         self._data = restore()
         self._list = []
 
-        records = self._data.get('model', [])
+        profiles = []
 
-        for index, value in enumerate(records):
-            record = dict(value)
+        try:
+            for index, value in enumerate(self._data.get('model', [])):
+                if not isinstance(value, Mapping):
+                    raise TypeError('server repository records must be objects')
 
-            if 'connection' in record:
-                connection = configurationFromAny(record.get('connection', ''))
-                metadata = ProfileMetadata.fromMapping(record.get('metadata', {}))
-            else:
-                connection = configurationFromAny(record.pop('config', ''))
-                metadata = UserServer.metadataFromMapping(record)
+                record = dict(value)
 
-            self._list.append(
-                ServerProfile.fromConfiguration(
-                    connection,
-                    metadata,
-                    index=index,
+                if 'connection' in record:
+                    connection = configurationFromAny(record.get('connection', ''))
+                    metadata = ProfileMetadata.fromMapping(record.get('metadata', {}))
+                else:
+                    connection = configurationFromAny(record.pop('config', ''))
+                    metadata = UserServer.metadataFromMapping(record)
+
+                profiles.append(
+                    ServerProfile.fromConfiguration(connection, metadata, index=index)
                 )
-            )
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            # Keep the original persisted bytes recoverable, never a partial prefix.
+            self._restoreFailed = True
+
+            logger.error('failed to restore server records (%s)', type(ex).__name__)
+        else:
+            self._list = profiles
 
     def sync(self):
         """Persist the current user servers data."""
