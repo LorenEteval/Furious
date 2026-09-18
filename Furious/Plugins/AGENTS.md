@@ -16,8 +16,9 @@ capability definitions, atomic registration, dispatch, and plugin lifecycle; bac
 - Host plugin types register before external entry-point discovery. Bundled registrations are explicit for source,
   wheel, and Nuitka inclusion. External entries currently follow metadata enumeration order; do not promise sorted
   discovery or rely on it for precedence. Registration is atomic per plugin, not across a multi-plugin entry point.
-- Optional provider failure is isolated when another candidate can continue; required-operation failure remains
-  observable with plugin/capability identity and without secret configuration data.
+- Failure policy belongs to the dispatch operation. Automatic subscription detection tries decoders by priority; an
+  explicitly selected decoder restricts candidates. URI dispatch selects the registered scheme owner rather than
+  probing unrelated handlers after failure. Keep required-operation failures observable without secret payloads.
 
 ## Ownership and compatibility
 
@@ -55,5 +56,4 @@ capability definitions, atomic registration, dispatch, and plugin lifecycle; bac
 - Cover discovery/order, API version and duplicate rejection, each changed dispatch path, registration rollback,
   reverse idempotent shutdown, provider failure isolation, invalid factory results, repeated transient creations
   without registry retention, and packaged discovery/import. `tests/test_plugin_architecture.py` and
-  `tests/test_public_api.py` anchor compatibility; challenge this guide when API versions or capability ownership
-  change.
+  `tests/test_public_api.py` anchor compatibility.

@@ -19,5 +19,5 @@ resource-manifest contract; it does not govern general UI layout.
 - Verify alias uniqueness and source/package resolution, then inspect the actual control or tray use under both
   themes, high DPI, relevant sizes, disabled/selected states, and platform packaging where applicable. Deployment
   icons also have direct filesystem consumers in `Deploy.py`; a resource alias search alone cannot prove a PNG is
-  unused. Revalidate this guide against `Resources.qrc`, `Furious/Qt/QtGui.py`, and deployment consumers when asset
-  policy changes.
+  unused. Keep direct installer/application icons in verification alongside Qt aliases: a successful `pyside6-rcc`
+  invocation proves resource generation, not deployment-icon inclusion or correct themed rendering.

@@ -25,7 +25,9 @@ Hysteria 2's nested upstream document, native-TUN capability, statistics, and ed
   sampling owns its monitor/query lifetime. API URL, client ID, and authorization secret are distinct from client
   connection credentials. Keep requests bounded, validate counters, and never log the secret or infer statistics
   from merely having a running Hysteria2 process. The configured server statistics target is separate from the
-  client's local readiness endpoint; capability availability does not imply a usable target was configured.
+  client's local readiness endpoint; capability availability does not imply a usable target was configured. Queries
+  consume cumulative counters without requesting server-side clearing; query failure is distinct from a valid
+  response with no entry for the selected client, which currently represents zero counters.
 - Capability presence is independent: native TUN, statistics, actions, settings, routing, and protocol editing must
   continue to work or fail through their own declared contracts rather than being inferred from the runtime type.
 - Verify nested sibling/default preservation, known and unknown values, obfuscation switching, URI/document

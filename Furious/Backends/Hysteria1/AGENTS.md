@@ -17,7 +17,9 @@ preserve Hysteria 1's legacy flat schema and lifecycle without importing assumpt
   launch data before the child starts; a missing/unreadable file is logged and falls back to empty input. Preserve
   that observable fallback unless deliberately changing the contract, and include this synchronous file work in
   preparation responsiveness review. A prepared runtime advertises its local HTTP readiness endpoint separately
-  from child liveness. The built-in factory has no statistics provider; shared UI handles that absence.
+  from child liveness. The built-in factory has no statistics provider; shared UI handles that absence. Download
+  preparation replaces the HTTP listener and removes SOCKS on a copy; do not route test traffic through a stored
+  listener or apply host System Proxy/TUN merely because the ordinary profile enables it.
 - Verify legacy/current URI and mapping compatibility, unknown/tolerated values, stored-copy isolation, MMDB/ACL
   absence or malformed paths, asynchronous readiness and rollback, core-exit translation, application-TUN policy,
   and repeated editor/runtime cleanup. Use `tests/test_hysteria1_protocol.py`,

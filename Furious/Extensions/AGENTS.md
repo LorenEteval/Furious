@@ -10,8 +10,9 @@ host-shipped non-runtime plugins and must not gain private authority merely beca
   `SubscriptionResult` envelope; nested mappings are not necessarily deeply immutable. Profile construction/metadata
   belongs to `SubscriptionImportService`, and group reconciliation, request generations, timers, persistence, and
   post-commit effects belong to the subscription service/repository path.
-- Decoder probing is priority-ordered and failure-isolated. Return `None` when a format does not match, validate the
-  declared result shape, preserve useful names/upstream IDs, and never log a complete payload or link. Current
+- Automatic detection probes decoders by priority; explicit selection does not authorize format substitution. Return
+  `None` for a mismatch. Recognizing a share-link envelope does not validate its URI schemes or protocols; the importer
+  owns that decision. Preserve useful names/upstream IDs and never log a complete payload or link. Current
   standard formats are linear plain/Base64 share-link envelopes; introduce explicit size/depth/work limits before
   adding richer recursive or nested formats. Standard decoders opt into worker execution; that declaration covers
   all shared parser state and caches, not merely absence of widgets in the immediate method. Worker preparation also

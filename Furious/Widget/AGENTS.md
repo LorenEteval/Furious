@@ -15,7 +15,9 @@ some service owners; that construction detail does not make every view an indepe
   async write-back.
 - Sorting/filtering/reordering must retain logical selection and keyboard focus. Capture domain IDs before yielding
   to a dialog or event-loop turn; an ordinary QModelIndex/source row may become invalid or refer to another item.
-  Map the resolved current object back through the proxy when restoring focus. Recursively scope table-owned menu
+  Resolve a multi-target confirmation independently for each captured ID: targets may move or disappear while it is
+  open, and later selection must not change the command. Map resolved objects back through the proxy when restoring
+  focus. Recursively scope table-owned menu
   shortcuts as `WidgetShortcut` so focused editors and other surfaces keep their own shortcut semantics.
 
 ## Workflow and lifetime boundaries

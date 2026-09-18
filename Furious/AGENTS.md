@@ -29,9 +29,9 @@ domain, persistence, orchestration, platform integration, and presentation; nest
 - Process-lifetime global accessors expose deliberate application owners and can be unavailable during partial startup,
   isolated tests, or teardown. New code prefers explicit dependencies; compatibility callers tolerate absence rather
   than inventing fallback globals.
-- Classify every Qt object as application-lifetime, reusable, or transient. Give it a durable Python owner, compatible
-  QObject parent, and explicit reuse/destruction path. UI/lifetime work follows `Furious/Qt/AGENTS.md` even when the
-  caller lives under `Widget`, `Window`, `Actions`, or a backend.
+- UI/lifetime work consults `Furious/Qt/AGENTS.md` even from `Widget`, `Window`, `Actions`, or a backend; that sibling
+  scope owns the shared presentation contract. A forwarding attribute or global accessor exposes an existing owner,
+  not permission to construct a replacement service when the owner is absent.
 
 ## Change routing
 

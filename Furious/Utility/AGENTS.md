@@ -8,10 +8,10 @@ general-purpose utility bucket.
 - `AppMainProcess` owns one exact Qt application child and one small synchronized crash-log result. Do not add a
   `multiprocessing.Manager` or auxiliary child merely to communicate status, and preserve the platform’s explicit spawn
   behavior.
-- Exception reporting must work before and after application construction. Signal handlers are installed after the
-  application factory returns; do not claim that this wrapper handles pre-construction signals. Preserve semantic
-  `ApplicationRunner.ExitCode` values, original exception/traceback context, and best-effort crash logging; a
-  log-write failure never replaces the primary failure.
+- Exception reporting must work before and after application construction. The child runs the supplied application
+  factory; the parent must not construct a Qt application to pass across the process boundary. Signal handlers are
+  installed only after the factory returns, so pre-construction signals are outside this wrapper's handler coverage.
+  Preserve semantic exit codes and original exception/traceback context; crash-log failure is secondary.
 - The parent entry point joins only the child it created and shows the fallback Qt report only for a nonzero result.
   Never discover or terminate processes by name, and keep normal/source/packaged command-line entry points equivalent.
 - Shared crash status is a synchronized Boolean plus the child's semantic exit result; set the flag only after the

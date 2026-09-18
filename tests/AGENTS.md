@@ -49,8 +49,10 @@ and test-tier selection; test convenience never weakens a production invariant.
   local Git revision; it loads that revision's implementation. Report this opt-in and any skips separately rather
   than assuming the very-heavy switch alone executes every discovered case.
 - Source-only tests and an offscreen platform do not prove a packaged Qt runtime. Compiler-sensitive changes need
-  the relevant native lifecycle module and a separate compiled probe; report skipped or unavailable targets
-  explicitly. The release workflow currently builds/checks artifacts without running this source behavioral suite.
+  native lifecycle tests and the compiled fixture documented in `tests/README.md`, including accept/reject/close
+  and owner-first teardown. An unavailable private Nuitka counter is unknown, not measured zero; combine toolchain
+  inspection with native destruction, weak-wrapper and registry evidence. Report skipped/unavailable targets.
+  Release artifact checks do not execute this source behavioral suite.
 - Separate deterministic correctness/scale assertions from performance measurements. Opt-in stress tests may gate
   relative scaling or resource bounds; document the measured contract and environment rather than treating one
   machine's absolute timing as a portable product requirement.

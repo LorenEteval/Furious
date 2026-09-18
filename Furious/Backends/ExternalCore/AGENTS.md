@@ -32,9 +32,10 @@ the intentionally different direct-subprocess scope for user-selected executable
   users remain responsible for matching that metadata to the executable's own configuration.
 - Verify unknown-field and editor round trips, path/argument/environment validation, paths with spaces,
   immediate-exit failure, complete and partial output, exact callback/reader/watcher cleanup, repeated stop/dispose,
-  TUN opt-in and remote-address handling, subscription rejection, and transient editor destruction. Update this
-  guide when the process contract evolves rather than preserving today’s implementation mechanically. Start with
+  TUN opt-in and remote-address handling, subscription rejection, and transient editor destruction. Start with
   `tests/test_external_core.py` and `tests/test_backend_editor_contract.py`. Exercise a child that remains alive
   after escalation and readers/watchers that outlast their joins. A failed final reap is a cleanup failure to report;
   clearing the runtime's process/thread references must not be used as evidence that those resources exited.
-  Direct-child exit also does not prove that descendants closed inherited pipes.
+  Direct-child exit also does not prove that descendants closed inherited pipes. Current stop/join paths can clear
+  references after unsuccessful waits; treat that as a cleanup-contract gap, not a guarantee of reaping. A repair must
+  retain observable outstanding resources and coordinate failure semantics with the consuming runtime lease.

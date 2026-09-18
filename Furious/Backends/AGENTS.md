@@ -16,8 +16,10 @@ scope adds rules shared by all bundled proxy backends without making the richest
   of every document field; exporting must leave the source document unchanged.
 - Malformed external input returns controlled validation with backend context. Do not create a plausible but different
   profile, and do not log credentials, complete URIs, or documents.
-- Configuration/runtime modules stay importable without constructing Qt editors. Plugin registration remains literal
-  enough for compiled discovery; editor/runtime factories return fresh objects that the registry does not retain.
+- Configuration/runtime modules stay importable without constructing Qt editors. Plugin registration remains explicit
+  enough for compiled discovery. An editor factory returns a fresh projection, not a repository commit: the caller
+  owns the editable snapshot, acceptance validation, identity resolution, and eventual write-back. Runtime factories
+  likewise transfer fresh execution resources to the workflow owner.
 
 ## TUN and runtime policy
 

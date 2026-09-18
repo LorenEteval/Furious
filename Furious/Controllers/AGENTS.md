@@ -17,7 +17,8 @@ transitions. Services own execution resources; existing prompts are presentation
   failure. Worker/native callbacks cross to the controller’s Qt thread before transition.
 - The active live profile is not the prepared document used by an already-started runtime. Resolve identity and
   generation before changing state or host effects, and preserve typed runtime failures; cancellation and supersession
-  are not generic connection errors.
+  are not generic connection errors. Progress completion ends the presentation interval; it is not a success result.
+  Consumers use connection state and structured error/notification signals to distinguish failure from Connected.
 - `RoutingController` owns available capability options plus selected/persisted routing. Distinguish a newly
   selected repository profile from the active-profile reference and the independent runtime document; changes use
   controlled reconnect, not mutation of the running document. Capability refresh prefers the active profile and
@@ -34,7 +35,6 @@ transitions. Services own execution resources; existing prompts are presentation
 
 - Test exact states and signal counts for async success, invalid input, supersession, cancellation, partial
   acquisition, System Proxy failure, unexpected exit, routing refresh/reconnect, startup restoration, failed host
-  settings, missing partial-startup dependencies, and repeated shutdown. If ownership moves deliberately, update
-  this guide and the affected controller tests instead of keeping a compatibility controller as a second authority.
-  Start with `tests/test_controllers.py`, `tests/test_connection_startup_async.py`, and the shared-state cases in
+  settings, missing partial-startup dependencies, and repeated shutdown. Ownership changes must retire the former
+  state authority rather than leave two controllers. Start with `tests/test_controllers.py`, `tests/test_connection_startup_async.py`, and the shared-state cases in
   `tests/test_qt_interactions.py`.

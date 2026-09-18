@@ -25,8 +25,9 @@ full JSON preservation, routing/assets/statistics, and protocol/transport/TLS pr
   Action providers retain reusable routing/asset windows through the created action owner and create transient
   settings dialogs per request; the capability registry does not become a transient-window owner.
 - Runtime asset updates stage bytes and digest verification before atomic replacement. Failure preserves the prior
-  usable file. Distinguish this updater from `Deploy.py --download`, whose download/integrity behavior must be
-  inspected separately; shared filenames do not make the two mechanisms equivalent.
+  usable file. Network reply and checksum worker have separate lifetimes: cancellation/shutdown must suppress late
+  hash publication as well as abort requests. The plugin capability owns its lazy updater through shutdown.
+  `Deploy.py --download` has a separate integrity contract; shared filenames do not make the mechanisms equivalent.
 - Routing selection IDs, user routing documents, and translated built-in labels are different contracts. Preserve
   custom document content and named-profile identity while composing runtime routing/API statistics. Trace the
   selected repository routing document separately from the connection's own routing branch; neither may be mutated
@@ -43,5 +44,4 @@ full JSON preservation, routing/assets/statistics, and protocol/transport/TLS pr
 - Verify full-document and URI preservation, aliases and unknown values, runtime-copy isolation for
   routing/log/TUN/tests, multiple TUN inbounds, asset integrity/failure, statistics and process cleanup,
   compiled-safe UI callbacks, and repeated editor/window destruction. Use `tests/test_xray_asset_download.py`,
-  `tests/test_native_tun_semantics.py`, and `tests/test_backend_editor_contract.py`. Update this scope when a
-  verified backend capability changes intentionally.
+  `tests/test_native_tun_semantics.py`, and `tests/test_backend_editor_contract.py`.

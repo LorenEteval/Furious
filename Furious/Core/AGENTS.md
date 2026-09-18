@@ -19,7 +19,9 @@ This scope owns reusable embedded execution machinery and application tun2socks;
   preserving the raw exit and whether stop was requested. `isRunning()` is a passive liveness query and must not
   consume or dispatch lifecycle events.
 - Child targets never touch Qt widgets. Output transport is non-blocking and bounded in message size, pending volume, and
-  per-turn drain work; draining continues independently of Log-page visibility and backs off only when idle.
+  per-turn drain work; draining continues independently of Log-page visibility and backs off only when idle. Diagnostic
+  output may be truncated or dropped under pressure, so it cannot be the authoritative terminal-event channel. Preserve
+  typed exit delivery independently of log transport and rendering.
 - Parentless timers are acceptable only with a durable runtime owner and explicit disposal. Leaving the manager pool
   must not leave timers, callbacks, queues, or process handles alive. Stopping execution is not QObject destruction:
   disposal must also release monitors and output infrastructure, including for a runtime that was never started.

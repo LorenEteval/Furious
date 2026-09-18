@@ -26,7 +26,9 @@
   overrides; record each scope and its nearest ancestor guide. At handoff compare exact path sets and Git
   status/diff: no original path may disappear or become a rename. Default to exact equality and improve redundant
   scopes in place.
-- Inheritance follows directory ancestry. A sibling guide identifies a contract to consult, not another parent.
+- Inheritance follows directory ancestry. Name the nearest governing guide when clarifying a scope; a sibling guide
+  identifies a contract to consult, not another parent. Verification and self-evolution here apply to every descendant
+  scope without repeating the same maintenance checklist in each file.
 
 ## Operating model
 
@@ -44,8 +46,10 @@
 
 ## Project-wide invariants
 
-- Keep one authority for each state and one owner for each resource. Multiple UI surfaces observe shared
-  controllers/models; they do not copy connection, routing, System Proxy, TUN, subscription, or test state.
+- Keep one authority for each state and one responsible owner for each resource. UI surfaces observe shared
+  controllers/models; presentation snapshots must not become competing connection, routing, System Proxy, TUN,
+  subscription, or test authorities. State transitions, result freshness, and physical resource release are separate
+  claims: prove each at its owning boundary.
 - Treat persisted profiles and plugin documents as input. Prepare runtime, routing, probe, and TUN state on explicit
   copies unless an API deliberately mutates storage. A failed pre-commit stage leaves persistence unchanged; a failed
   post-commit side effect is reported without pretending the commit rolled back. Identify the unit of commit:
@@ -114,8 +118,9 @@
   same change.
 - Put a rule at the narrowest scope where it helps future decisions; let child guides specialize rather than repeat
   parents. For each local rule, identify the decision it protects and the implementation or test that could disprove
-  it. Remove obsolete content inside files, distinguish preferred architecture from compatibility paths, and preserve
-  every established file path while doing so. A guidance audit must not turn an observed defect into a required design.
+  it. Anchor non-obvious rules to owning implementations and focused tests; label untested assumptions or known gaps
+  rather than promoting them into guarantees. Remove obsolete content inside files, distinguish preferred architecture
+  from compatibility paths, and preserve every established path. A guidance audit must not turn a defect into a design.
 - After significant architectural work, re-read the applicable hierarchy as a fresh agent: can it identify the
   owner, invariant, failure boundary, and relevant tests without relying on conversation history? Challenge rules
   likely to become stale, circular references, and wording that freezes incidental structure.

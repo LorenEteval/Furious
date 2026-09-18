@@ -19,7 +19,9 @@ human-reviewed translations.
 - Inspect the full diff. Preserve deliberate translations/review flags, HTML/newline semantics, and natural RU/ZH
   meaning. Curated, verified translations need `isReviewed` set to the string `'True'`, as the generator compares that
   literal; a Python Boolean is not equivalent. Review applies to the entry, so inspect its other language values too.
-  Do not clear approved review flags or hand-maintain the generated `source` module list.
+  Do not clear approved review flags or hand-maintain the generated `source` module list. Runtime lookup reverse-maps
+  translated text to a source key, so collisions can change retranslation behavior even when extraction succeeds.
+  Exercise colliding translations at lookup time rather than treating the diagnostic as cosmetic.
 
 ## Extractable source text
 

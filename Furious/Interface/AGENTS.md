@@ -15,8 +15,9 @@ satisfy without importing application composition or concrete backends.
 - `CoreRuntime` is mechanism-neutral: embedded multiprocessing, direct `subprocess`, or an in-process binding can satisfy
   it. It owns execution only: zero-argument start, passive liveness, typed terminal events, and bounded idempotent
   stop/dispose. Preparation, serialization, readiness, and startup transactions belong outside this contract. Bind its
-  event sink once before start; raw exit interpretation occurs once at the concrete runtime boundary. Process/child
-  terminology belongs only to implementations that own one.
+  event sink once before start; the callback may originate on a worker thread, so the receiving owner supplies explicit
+  thread-safe delivery. Concrete runtimes own once-only terminal publication; the base publisher forwards events and
+  does not deduplicate them. Process/child terminology belongs only to implementations that own one.
 - `StorageBackend.data()` deliberately exposes a live mutable collection for compatibility. Do not reinterpret it as a
   snapshot or introduce a second authoritative cache. Editor bindings map input to configuration and back; they do not
   decide runtime, persistence, or host policy.

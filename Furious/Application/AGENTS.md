@@ -9,8 +9,10 @@ child-process supervisor and the inner application event loop.
   owners already exist during election. Plugins are available before repository restoration interprets persisted
   profiles. Register cleanup as each acquisition succeeds, including election-failure paths, and preserve these
   dependencies when changing stage order.
-- Partial startup, normal exit, signals, and event-loop failure converge on one reverse-order, failure-isolating,
-  idempotent cleanup path. `exit()` requests Qt termination; action/window/session handlers do not run cleanup directly.
+- Partial startup, normal exit, signals, and event-loop failure converge on one reverse-order cleanup path. Each
+  registered stage is attempted once and one failure does not skip later stages. This stack does not retry a failed
+  callback: service-level retry/retention obligations must be satisfied before its owner disappears. `exit()` requests
+  Qt termination; action/window/session handlers do not run cleanup directly.
 - A stage that fails before its cleanup callback is registered must release its own partial acquisitions. The outer
   cleanup stack releases completed stages; it cannot discover half-built controllers, UI, logging handlers, or
   native listeners. Restore logging configuration as well as closing handlers. Run service shutdown while its

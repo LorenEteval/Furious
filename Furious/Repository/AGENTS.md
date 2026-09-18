@@ -15,7 +15,7 @@ This scope owns restoration, migration, ordering, and persistence; workflows and
   serialization are separate failure boundaries. Test malformed records inside a valid root as well as malformed
   roots; the existing root fallback is not a guarantee that every record error is recoverable.
 - Stage fallible decode/migration before live mutation. Subscription reconciliation currently belongs to
-  `Service/SubscriptionSync.py` and commits through the compatibility live collection: matched managed profiles
+  `Furious/Service/SubscriptionSync.py` and commits through the compatibility live collection: matched managed profiles
   retain object/profile identity and local metadata, removed profiles become stale, and unrelated groups remain
   intact. Do not add a second reconciliation algorithm here merely because persistence belongs to this scope.
 - Distinguish a live-collection commit from serialization/flush and subsequent controller effects. The compatibility
@@ -23,8 +23,10 @@ This scope owns restoration, migration, ordering, and persistence; workflows and
   transaction. Preserve explicit flush/cleanup behavior and report failures at the boundary that actually failed.
   Batched UI commands may commit several live mutations; cancellation prevents later batches without restoring
   already committed ones. Do not impose whole-command atomicity without changing callers and failure semantics.
-- Moving a profile between subscription displays does not automatically make it remotely managed; preserve the explicit
-  distinction between local membership and synchronization ownership.
+- Moving a profile to another subscription makes it a local member and clears its remote matching key; unchanged
+  membership does not demote an already-managed profile. Removing a group definition alone does not delete profiles,
+  cancel requests, or stop timers. Callers coordinate those effects through existing workflow boundaries; do not hide
+  cascades inside a low-level repository operation.
 - Verify legacy/current/unknown-field round trips, malformed roots, restore-failure preservation, ordering/stable
   identity, group isolation, reconciliation commit behavior, and persistence in temporary QSettings namespaces. Use
   `tests/test_repository_contracts.py` and `tests/test_subscription_sync.py` to revalidate this scope. Reordering a

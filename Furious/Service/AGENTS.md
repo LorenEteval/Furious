@@ -15,9 +15,11 @@ for lifetime primitives. This scope owns multi-stage workflows and temporary res
   Construct Qt services only after an application exists.
 - Inject repositories/providers/clients/runtime factories where practical. Stage results, prove freshness, and commit
   through the owning repository/controller rather than creating a parallel authoritative collection.
-- Every async workflow defines supersession and one terminal path. Generation/version or exact target identity rejects
-  stale completion. Terminal cleanup runs once and deletes replies/Qt objects in their owning thread. Release callback
-  contexts when execution no longer needs them; late delivery must not revive a shut-down manager or mutate live state.
+- Every async workflow defines supersession and one terminal publication path. Generation/version or exact target
+  identity rejects stale completion. Successful release is idempotent; failed drains may require retry while their
+  owner remains alive, without publishing another terminal result. Delete replies/Qt objects in their owning thread
+  and release contexts only when execution no longer needs them. Late delivery must not revive a shut-down manager
+  or mutate live state.
 
 ## Connection and network workflows
 
@@ -45,14 +47,15 @@ for lifetime primitives. This scope owns multi-stage workflows and temporary res
   not a deadline that permits destroying running workers; a non-returning plugin can still block shutdown.
   Workers never read live repositories or Qt models. The GUI thread verifies the full source signature and group
   revision, commits while preserving live profile identity/local metadata, then publishes coalesced status/structure.
-  Post-commit reconnect/test invalidation
-  failure is reported without undoing the committed profiles. Here commit means live reconciliation; repository
-  flush and status persistence are separate boundaries, not one disk transaction.
+  Post-commit reconnect/test invalidation failure is reported without undoing committed profiles. This is live
+  reconciliation; repository flush and status persistence are separate boundaries, not one disk transaction.
 - Provider-reported subscription usage/expiry metadata is untrusted advisory input. Parse it with strict bounds at the
   network boundary and commit or clear it only alongside a successful current synchronization; failed synchronization
   preserves the last successful metadata.
-- Log transport, traffic collection, and metric history remain bounded and independent of page visibility. Rendering may
-  be lazy; collection/draining ownership is not.
+- Log transport, traffic collection, and metric history remain bounded and independent of page visibility. Endpoint
+  inspection is different: visibility may initiate its lazy proxy-only lookup, while disabling inspection or changing
+  the connection invalidates the cache and request generation. Hiding the page does not transfer request ownership
+  to presentation or authorize direct-network fallback.
 - Logging accepts concurrent producers through one globally ordered model with count, total-character, and per-entry
   limits. Batch input conversions are validated before mutation; compatibility per-entry signals observe the fully
   committed batch. Presenters consume coalesced changes/cursors rather than replaying those signals as a second log.

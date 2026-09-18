@@ -41,14 +41,18 @@ primitives; pages and services consume them without creating parallel registries
 
 - Only the GUI thread mutates widgets/live GUI models. Slots do not sleep or perform unbounded file, host, process, or
   network work; split work into bounded event-loop units or an owned worker and reject stale results on return.
-- Native and Nuitka PySide6 can retain Python callbacks differently. A transient/repeated receiver must not be connected
-  through a compiled bound method or a closure/partial that strongly captures it. Use `connectWeakly()` with a static
-  method name and `sender=` when the sender is independent/longer-lived; use `forwardSender=True` instead of relying on
-  `QObject.sender()` and `singleShotWeakly()` for deferred named-method delivery.
+- Native and Nuitka PySide6 can retain Python callbacks differently. Avoid protected compiled bound methods for
+  transient/repeated receivers. Use `connectWeakly()` with a static method name and `sender=` for a sender outside
+  the receiver's QObject subtree; use `forwardSender=True` instead of relying on `QObject.sender()` and
+  `singleShotWeakly()` for deferred named-method delivery. A closure/partial that captures the receiver does not
+  substitute for weak dispatch. Bounded dialog-completion closures may intentionally capture context; verify their
+  native destruction/disconnection boundary and both owner-first and sender-first teardown.
 - Direct connections are appropriate for deliberately shared persistent lifetimes; syntax alone does not prove a
   leak. Recheck the selected Nuitka/PySide6 callback protection when the toolchain changes. Static weak method names
   are runtime contracts, so renames must update registrations and tests. Weak dispatch itself does not marshal
-  arbitrary worker calls to the GUI thread; choose an explicit queued owner-thread delivery boundary.
+  arbitrary worker calls to the GUI thread; choose an explicit queued owner-thread delivery boundary. A surviving
+  Python wrapper can already be natively invalid, so callback freshness and `shiboken6.isValid()` address different
+  failure modes. Neither replaces the strong owner required while asynchronous UI remains active.
 - `AppQAction.callback` is strong by design, so the action owner cannot outlive the captured receiver.
 - Every `QNetworkReply` has one manager/context owner, one freshness rule, and one terminal deletion path. Do not attach
   ad-hoc attributes to third-party Qt objects or multiply timers/connections across show/hide cycles.

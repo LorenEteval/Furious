@@ -8,16 +8,19 @@ exceptions; it does not define the source test suite or imply that every package
 - `workflows/deploy-pypi.yml` is both packaging coverage and the publication graph. Pull requests and ordinary pushes
   build artifacts; tag pushes additionally publish Python distributions, create the GitHub release, and enable the
   dependent WinGet flow. Preserve permission, secret, environment, `if`, and `needs` boundaries.
-- `workflows/daily-matrix-build.yml` owns the shared binary matrix, called by `deploy-pypi.yml` and also run daily or
+- `workflows/daily-matrix-build.yml` owns the shared binary matrix, called by `workflows/deploy-pypi.yml` and also run daily or
   manually. Its standalone runs build, verify, and upload artifacts with read-only repository permissions; publication
-  remains in `deploy-pypi.yml`.
+  remains in `workflows/deploy-pypi.yml`.
 - Treat each matrix row as a supported product target with explicit runner OS/architecture, Python, Qt/PySide source,
   native-binding toolchain, compatibility floor, `Deploy.py` output, and upload pattern. Artifact names and architecture
   checks must agree; never infer target architecture from the host label alone.
 - Current target-specific assertions are intentional: Linux proves an Essentials-only/no-WebEngine application and its
   Flatpak sandbox dependencies; macOS verifies its WebEngine frameworks, helpers, resources, relocation, and signing;
   Windows verifies native imports and every packaged PE machine type, with a separate Windows 7 compatibility toolchain.
-  Change an exception only with evidence from the affected target.
+  Change an exception only with evidence from the affected target. Binary jobs filter shared requirements before
+  installing target-specific Qt/native bindings; copying the ordinary package dependency list into those jobs can
+  reintroduce Addons on Linux or replace a compatibility build. Review the effective installed set, not just the
+  checked-in requirements.
 
 ## Workflow engineering
 

@@ -39,13 +39,13 @@ This scope owns persistent page composition and top-level presentation, not shar
   scales the cached module image at integer factors with its quiet zone, rather than regenerating or smoothing
   secret-bearing QR content. Reuse plugin export semantics and never log the encoded URI.
 - Log views keep per-filter cursors and catch up on visibility; metrics pages derive series from shared raw history.
-  Switching pages, ranges, or filters must not reset collection or create a second history.
+  Switching pages, ranges, or filters must not reset collection or create a second history. Metric buckets use the
+  shared monotonic timeline: moving the visible range must not regroup unchanged historical samples. Preserve missing
+  samples separately from zero measurements and usage-history clearing separately from speed history.
 
 ## Verification and evolution
 
 - Verify initial/plugin navigation, shared Home/Settings/tray state, service ownership, lazy rendering versus
   continuous collection, async continuation cleanup, unsaved-close behavior, translation/theme changes, geometry
-  migration, and repeated open/show/hide/destroy stability with real Qt input where semantics depend on it. Keep
-  this guide as current architectural memory: change it with intentional page ownership, not after forcing new code
-  through stale structure. Relevant anchors include `tests/test_ui_behavior.py`,
+  migration, and repeated open/show/hide/destroy stability with real Qt input where semantics depend on it. Anchors include `tests/test_ui_behavior.py`,
   `tests/test_qr_export_scalability.py`, `tests/test_metrics_behavior.py`, and `tests/test_main_window_geometry.py`.

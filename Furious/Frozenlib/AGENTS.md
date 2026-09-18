@@ -29,12 +29,12 @@ for unrelated application orchestration to accumulate in a broad helper namespac
   responsiveness review.
 - Own exact native threads/processes/handles and clear stale daemon references. Externally keyed caches are bounded and
   no cache/weak pool captures QObject instances or bound methods accidentally.
-- `CleanupOnExit` and translation/theme/connection pools are weak registries, not owners. Cleanup normally
-  de-duplicates by type; repeated instances with separate resources require per-instance cleanup registration or an
-  explicit containing cleanup stage. Registry membership neither retains a wrapper nor proves every instance drained.
+- `CleanupOnExit` and translation/theme/connection pools are weak registries, not owners. Native destruction must
+  remove membership even while another Python reference retains an invalid wrapper. Cleanup normally de-duplicates
+  by type; repeated instances with separate resources require per-instance registration or a containing cleanup
+  stage. Membership neither keeps active objects alive nor proves every instance drained.
 - `AppResources.py` is generated from `Resources.qrc` and referenced assets. Change the manifest/input files and
   regenerate with the compatible PySide6 resource compiler; never hand-edit generated resource code.
 - Verify every affected OS branch with mocked host calls, plus persistence-on-failure, bounded cleanup, import-time
   side effects, sensitive logging, stale handles/daemons, and cache growth. Use `tests/test_frozenlib.py` and the
-  mocked platform cases in `tests/test_connection_startup_async.py`; update this guide when observed host contracts
-  change.
+  mocked platform cases in `tests/test_connection_startup_async.py`.
