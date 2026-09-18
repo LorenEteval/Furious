@@ -24,6 +24,10 @@ defaults:
     shell: bash
 
 jobs:
+  source-tests:
+    name: Source regression tests
+    uses: ./.github/workflows/source-tests.yml
+
   build-distribution:
     name: Build distribution
     runs-on: ubuntu-latest
@@ -60,6 +64,7 @@ jobs:
     name: Publish Python distribution to PyPI
     if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
     needs:
+      - source-tests
       - build-distribution
       - deploy-binaries
     runs-on: ubuntu-latest

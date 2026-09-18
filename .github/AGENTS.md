@@ -41,9 +41,11 @@ exceptions; it does not define the source test suite or imply that every package
 - Validate YAML and every affected expression/shell. Trace each changed matrix row through dependency installation,
   source/native import checks, Nuitka/installer output, packaged architecture/dependency checks, artifact upload, and tag
   gates. When a target cannot run locally, add a narrow CI assertion that fails before publication with a useful reason.
-- The current workflow performs packaging/import/native checks but does not run the unittest behavioral suite. Do
-  not call an artifact build a regression-test pass; use `tests/README.md` for source verification. Check actual
-  `needs` and tag gates rather than assuming a downstream publish job runs on every build. Follow each publication
+- `workflows/source-tests.yml` runs isolated source unittest discovery on Windows, Linux, and macOS and is a
+  required dependency of PyPI publication through `deploy-pypi.yml`. It can also run manually. Daily binary
+  builds retain their separate artifact scope. Source tests do not establish packaged behavior or Python/Qt
+  floors beyond their matrix. Do not call an artifact build a regression-test pass; use `tests/README.md` for
+  source verification. Check actual `needs` and tag gates rather than assuming a downstream publish job runs on every build. Follow each publication
   dependency back to its required artifact checks; upload success alone does not establish release eligibility.
 - Revalidate version/architecture claims against the current matrix instead of duplicating all pins here. When build
   topology intentionally changes, update this scope and follow every consumer through upload and publication.

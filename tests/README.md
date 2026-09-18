@@ -231,3 +231,8 @@ original stored bytes after malformed records or plugin parsing failures.
 launch preparation fails before a service acquires the runtime.
 `test_subscription_manager.py` exercises Stop Updates with a real button click,
 partial batch success, stale-result rejection, unchanged automatic schedules, and restart.
+
+The reusable `source-tests.yml` workflow runs full unittest discovery on Windows,
+Linux, and macOS with Python 3.13 and PySide6 6.8.3. The publication workflow requires
+that job before PyPI publication. Opt-in tests and packaged/manual smoke checks remain
+separate; local Windows results do not establish the other CI targets.
