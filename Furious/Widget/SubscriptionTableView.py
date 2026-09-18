@@ -714,21 +714,29 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
         self.contextMenu.exec(self.viewport().mapToGlobal(point))
 
     def deleteSelectedItem(self):
-        """Delete selected item."""
+        """Confirm deletion of the selected stable subscription IDs."""
         indexes = self.selectedIndex
 
         if len(indexes) == 0:
             # Nothing to do
             return
 
-        def handleResultCode(_indexes, code):
-            """Handle result code."""
+        uniques = self.selectedUniques
+
+        def handleResultCode(_uniques, code):
+            """Resolve captured IDs against the current repository after confirmation."""
             if code == PySide6Legacy.enumValueWrapper(
                 AppQMessageBox.StandardButton.Yes
             ):
-                for i in range(len(_indexes)):
-                    deleteIndex = _indexes[i] - i
-                    deleteUnique = list(Storage.UserSubs().keys())[deleteIndex]
+                removedAny = False
+
+                for deleteUnique in _uniques:
+                    currentUniques = tuple(Storage.UserSubs())
+
+                    if deleteUnique not in currentUniques:
+                        continue
+
+                    deleteIndex = currentUniques.index(deleteUnique)
 
                     self.sourceModel.beginRemoveRows(
                         QtCore.QModelIndex(),
@@ -743,8 +751,13 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
 
                     self.sourceModel.endRemoveRows()
 
+                    removedAny = True
+
                     if callable(self.deleteUniqueCallback):
                         self.deleteUniqueCallback(deleteUnique)
+
+                if not removedAny:
+                    return
 
                 for order, value in enumerate(Storage.UserSubs().values()):
                     value['sortOrder'] = order
@@ -772,7 +785,7 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
             QtCore.Qt.ItemDataRole.DisplayRole,
         )
         mbox.setText(mbox.customText())
-        mbox.finished.connect(functools.partial(handleResultCode, indexes))
+        mbox.finished.connect(functools.partial(handleResultCode, uniques))
 
         # Show the MessageBox asynchronously
         mbox.open()

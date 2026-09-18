@@ -814,6 +814,165 @@ class SubscriptionTableQtInteractionTest(unittest.TestCase):
         table.close()
         table.deleteLater()
 
+    @contextmanager
+    def _deleteConfirmation(self, table):
+        """Open the real asynchronous prompt and release it after each case."""
+        confirmation = MBoxQuestionDelete(parent=table)
+
+        try:
+            with mock.patch(
+                'Furious.Widget.SubscriptionTableView.MBoxQuestionDelete',
+                return_value=confirmation,
+            ):
+                table.deleteSelectedItem()
+
+            self.assertTrue(waitFor(confirmation.isVisible))
+
+            yield confirmation
+        finally:
+            if isValid(confirmation):
+                confirmation.close()
+
+            processQtEvents()
+
+    def testDeleteConfirmationKeepsCapturedGroupsAfterReordering(self):
+        """Delete the original IDs at their current rows despite selection changes."""
+        for position, expectedRows in (
+            (None, (1, 2)),
+            ('down', (2, 3)),
+            ('up', (0, 1)),
+        ):
+            with self.subTest(position=position), isolatedSettings():
+                Storage._UserSubsStorage.cache_clear()
+
+                table = self._table()
+                table.subsManager = mock.Mock()
+                table.deleteUniqueCallback = mock.Mock()
+
+                try:
+                    self._clickRow(table, 1)
+                    self._clickRow(table, 3, QtCore.Qt.KeyboardModifier.ControlModifier)
+
+                    with self._deleteConfirmation(table) as confirmation:
+                        if position is not None:
+                            table.moveSelectedGroups(position)
+
+                        table.clearSelection()
+                        table.setCurrentIndex(table.sourceModel.index(0, 0))
+
+                        removed = QSignalSpy(table.sourceModel.rowsRemoved)
+                        changed = QSignalSpy(table.groupsChanged)
+
+                        confirmation.done(int(confirmation.StandardButton.Yes))
+                        processQtEvents()
+
+                        self.assertEqual(tuple(Storage.UserSubs()), ('A', 'C', 'E'))
+                        self.assertEqual(
+                            [item['sortOrder'] for item in Storage.UserSubs().values()],
+                            [0, 1, 2],
+                        )
+                        self.assertEqual(
+                            table.deleteUniqueCallback.call_args_list,
+                            [mock.call('B'), mock.call('D')],
+                        )
+                        self.assertEqual(
+                            table.subsManager.removeAutoUpdate.call_args_list,
+                            [mock.call('B'), mock.call('D')],
+                        )
+                        self.assertEqual(removed.count(), 2)
+                        self.assertEqual(
+                            [(removed.at(i)[1], removed.at(i)[2]) for i in range(2)],
+                            [(row, row) for row in expectedRows],
+                        )
+                        self.assertEqual(changed.count(), 1)
+                        self.assertFalse(isValid(confirmation))
+                finally:
+                    self._destroyTable(table)
+
+    def testDeleteConfirmationSkipsMissingGroupsAndPreservesNewGroups(self):
+        """Ignore vanished targets without retargeting their replacement rows."""
+        for missing in (('B',), ('B', 'D')):
+            with self.subTest(missing=missing), isolatedSettings():
+                Storage._UserSubsStorage.cache_clear()
+
+                table = self._table()
+                table.subsManager = mock.Mock()
+                table.deleteUniqueCallback = mock.Mock()
+
+                try:
+                    self._clickRow(table, 1)
+                    self._clickRow(table, 3, QtCore.Qt.KeyboardModifier.ControlModifier)
+
+                    with self._deleteConfirmation(table) as confirmation:
+                        for unique in missing:
+                            row = tuple(Storage.UserSubs()).index(unique)
+
+                            table.sourceModel.beginRemoveRows(
+                                QtCore.QModelIndex(), row, row
+                            )
+                            Storage.removeSubscriptionGroup(unique)
+                            table.sourceModel.endRemoveRows()
+
+                        table.appendNewItem(unique='F', remark='F')
+
+                        removed = QSignalSpy(table.sourceModel.rowsRemoved)
+                        changed = QSignalSpy(table.groupsChanged)
+                        expectedCalls = [] if 'D' in missing else [mock.call('D')]
+
+                        confirmation.done(int(confirmation.StandardButton.Yes))
+                        processQtEvents()
+
+                        self.assertEqual(
+                            tuple(Storage.UserSubs()), ('A', 'C', 'E', 'F')
+                        )
+                        self.assertEqual(
+                            table.deleteUniqueCallback.call_args_list, expectedCalls
+                        )
+                        self.assertEqual(
+                            table.subsManager.removeAutoUpdate.call_args_list,
+                            expectedCalls,
+                        )
+                        self.assertEqual(removed.count(), len(expectedCalls))
+                        self.assertEqual(changed.count(), len(expectedCalls))
+                        self.assertFalse(isValid(confirmation))
+                finally:
+                    self._destroyTable(table)
+
+    def testDeleteConfirmationRejectionLeavesGroupsUntouched(self):
+        """Keep cancellation and window-close paths free of deletion side effects."""
+        for closeWindow in (False, True):
+            with self.subTest(closeWindow=closeWindow), isolatedSettings():
+                Storage._UserSubsStorage.cache_clear()
+
+                table = self._table()
+                table.subsManager = mock.Mock()
+                table.deleteUniqueCallback = mock.Mock()
+
+                try:
+                    self._clickRow(table, 1)
+
+                    with self._deleteConfirmation(table) as confirmation:
+                        removed = QSignalSpy(table.sourceModel.rowsRemoved)
+                        changed = QSignalSpy(table.groupsChanged)
+
+                        if closeWindow:
+                            confirmation.close()
+                        else:
+                            confirmation.done(int(confirmation.StandardButton.No))
+
+                        processQtEvents()
+
+                        self.assertEqual(
+                            tuple(Storage.UserSubs()), ('A', 'B', 'C', 'D', 'E')
+                        )
+                        table.deleteUniqueCallback.assert_not_called()
+                        table.subsManager.removeAutoUpdate.assert_not_called()
+                        self.assertEqual(removed.count(), 0)
+                        self.assertEqual(changed.count(), 0)
+                        self.assertFalse(isValid(confirmation))
+                finally:
+                    self._destroyTable(table)
+
     def testContextMenuHasOnlyWidgetScopedMoveShortcuts(self):
         """Expose only table-scoped Ctrl+Up and Ctrl+Down move commands."""
         with isolatedSettings():
