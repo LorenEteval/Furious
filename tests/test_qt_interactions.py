@@ -238,6 +238,32 @@ class ServerTableQtInteractionTest(unittest.TestCase):
 
         return None
 
+    def testSearchUsesCurrentDisplayedMetadataWithoutAStaleCache(self):
+        """The fast row projection retains regex, literal and live-cell semantics."""
+        with isolatedSettings():
+            table = self._table(('alpha[1]', 'beta'))
+            try:
+                table.search('alpha[1]', regex=False)
+                self.assertEqual(table.proxyModel.rowCount(), 1)
+                table.search('ALPHA', caseSensitive=True)
+                self.assertEqual(table.proxyModel.rowCount(), 0)
+                table.search('ALPHA')
+                self.assertEqual(table.proxyModel.rowCount(), 1)
+                table.search('23 ms')
+                self.assertEqual(table.proxyModel.rowCount(), 0)
+                profile = Storage.UserServers()[1]
+                profile.metadata.latency = '23 ms'
+                table.sourceModel.emitRowChanged(1)
+                self.assertEqual(table.proxyModel.rowCount(), 1)
+                self.assertEqual(
+                    table.sourceRowFromProxyIndex(table.proxyModel.index(0, 0)), 1
+                )
+                profile.metadata.latency = '42 ms'
+                table.sourceModel.emitRowChanged(1)
+                self.assertEqual(table.proxyModel.rowCount(), 0)
+            finally:
+                self._destroyTable(table)
+
     def testConnectionStateRepaintsActiveRowWithoutMouseEvent(self):
         """Invalidate the active row's color through source and proxy models."""
         poolType = type(Mixins.ConnectionAware.ObjectsPool)
@@ -1166,6 +1192,68 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                 home.userServersQTableWidget.cleanup()
                 home.close()
                 home.deleteLater()
+
+    def testHomeSearchDebouncesTypingAndRetainsStableProfileIdentity(self):
+        """Search without Enter, then clear immediately without stale timer work."""
+        with isolatedSettings():
+            settings = SettingsController()
+            connection = _ConnectionControllerFixture()
+            routing = _RoutingControllerFixture(
+                (RoutingOption('default', 'Default'),), 'default'
+            )
+            try:
+                with self._home(settings, connection, routing) as home:
+                    table = home.userServersQTableWidget
+                    profiles = [
+                        ServerTableQtInteractionTest._profile(name)
+                        for name in ('alpha', 'beta')
+                    ]
+                    for profile in profiles:
+                        table.appendNewItemByFactory(profile)
+                    home.show()
+                    home.activateWindow()
+                    table.setFocus()
+                    processQtEvents()
+                    QTest.keyClick(table, QtCore.Qt.Key_F, QtCore.Qt.ControlModifier)
+                    self.assertTrue(waitFor(home.searchLineEdit.hasFocus))
+                    with mock.patch.object(
+                        table, 'search', wraps=table.search
+                    ) as search:
+                        QTest.keyClicks(home.searchLineEdit, 'alpha')
+                        self.assertEqual(search.call_count, 0)
+                        self.assertTrue(
+                            waitFor(lambda: table.proxyModel.rowCount() == 1)
+                        )
+                        self.assertEqual(search.call_count, 1)
+                        self.assertEqual(
+                            table.sourceRowFromProxyIndex(table.proxyModel.index(0, 0)),
+                            0,
+                        )
+                        home.searchLineEdit.setText('beta')
+                        home.searchLineEdit.clear()
+                        self.assertEqual(table.proxyModel.rowCount(), 2)
+                        self.assertFalse(home._searchTimer.isActive())
+                        home.searchLineEdit.setText('beta')
+                        QTest.keyClick(home.searchLineEdit, QtCore.Qt.Key_Return)
+                        self.assertEqual(table.proxyModel.rowCount(), 1)
+                        self.assertFalse(home._searchTimer.isActive())
+                        self.assertEqual(
+                            table.sourceRowFromProxyIndex(table.proxyModel.index(0, 0)),
+                            1,
+                        )
+                    self.assertEqual(list(Storage.UserServers()), profiles)
+                    home.searchLineEdit.setText('alpha')
+                    home.hide()
+                    self.assertFalse(home._searchTimer.isActive())
+                    home.show()
+                    self.assertEqual(table.proxyModel.rowCount(), 1)
+                    self.assertEqual(
+                        table.sourceRowFromProxyIndex(table.proxyModel.index(0, 0)), 0
+                    )
+            finally:
+                settings.deleteLater()
+                connection.deleteLater()
+                routing.deleteLater()
 
     def testHomeEmptyStateRecoversFilteredProfilesAndReusesActions(self):
         """Use existing menus, search clear and group selection to recover profiles."""

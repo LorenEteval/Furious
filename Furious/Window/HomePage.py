@@ -595,24 +595,28 @@ class ConnectionStatusWidget(QWidget):
         self.networkState.setProfileDetailsVisible(True)
 
 
-class SearchButton(AppQIconTextPushButton):
-    """Represent search button."""
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the SearchButton."""
-        super().__init__(*args, **kwargs)
-
-        self.setObjectName('SearchButton')
-        self.setSizePolicy(
-            QSizePolicy.Policy.Fixed,
-            QSizePolicy.Policy.Fixed,
-        )
-        self.setText(_('Search'))
-        self.setIcon(bootstrapIcon('search.svg'))
-
-    def retranslate(self):
-        """Refresh translated text for the search button."""
-        self.setText(_('Search'))
+# Retained for optional manual-search presentation. Live filtering and Enter
+# submission make this button redundant, so its implementation and usage stay
+# commented out. To re-enable it, restore this class, the three marked usage
+# sites below, and its disabled rule in Qt/StyleSheets/Controls.py.
+# class SearchButton(AppQIconTextPushButton):
+#     """Represent search button."""
+#
+#     def __init__(self, *args, **kwargs):
+#         """Initialize the SearchButton."""
+#         super().__init__(*args, **kwargs)
+#
+#         self.setObjectName('SearchButton')
+#         self.setSizePolicy(
+#             QSizePolicy.Policy.Fixed,
+#             QSizePolicy.Policy.Fixed,
+#         )
+#         self.setText(_('Search'))
+#         self.setIcon(bootstrapIcon('search.svg'))
+#
+#     def retranslate(self):
+#         """Refresh translated text for the search button."""
+#         self.setText(_('Search'))
 
 
 class HomePage(Mixins.QTranslatable, QMainWindow):
@@ -785,7 +789,23 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             QSizePolicy.Policy.Fixed,
         )
 
-        self.searchButton = SearchButton()
+        # Optional manual-search button; see the retained SearchButton above.
+        # self.searchButton = SearchButton()
+
+        self._searchTimer = QtCore.QTimer(self)
+        self._searchTimer.setSingleShot(True)
+        self._searchTimer.setInterval(180)
+        self._searchTimer.timeout.connect(self.applySearch)
+
+        self.findAction = AppQAction(
+            _('Search'),
+            parent=self,
+            callback=self.focusSearch,
+            shortcut=QKeySequence.StandardKey.Find,
+        )
+        self.findAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
+
+        self.addAction(self.findAction)
 
         self.subscriptionFilterComboBox = AppQComboBox()
         self.subscriptionFilterComboBox.setContentWidthAdjustable()
@@ -801,7 +821,9 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.headerLayout.addWidget(self.pageTitleLabel)
         self.headerLayout.addStretch(1)
         self.headerLayout.addWidget(self.searchLineEdit, 4)
-        self.headerLayout.addWidget(self.searchButton)
+
+        # Keep disabled together with SearchButton construction and connection.
+        # self.headerLayout.addWidget(self.searchButton)
 
         self.connectionLayout = QHBoxLayout()
         self.connectionLayout.setContentsMargins(0, 0, 0, 0)
@@ -851,13 +873,11 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
 
         self.refreshEmptyState()
 
-        self.searchButton.clicked.connect(
-            lambda: self.userServersQTableWidget.search(self.searchLineEdit.text())
-        )
+        # Reuse applySearch when restoring the optional button so clicking it
+        # also cancels pending debounce work, just like Enter.
+        # self.searchButton.clicked.connect(self.applySearch)
 
-        self.searchLineEdit.returnPressed.connect(
-            lambda: self.userServersQTableWidget.search(self.searchLineEdit.text())
-        )
+        self.searchLineEdit.returnPressed.connect(self.applySearch)
         self.searchLineEdit.textChanged.connect(self.handleUserServersSearchTextChanged)
 
         self.subscriptionFilterComboBox.currentIndexChanged.connect(
@@ -962,9 +982,39 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
 
     @QtCore.Slot(str)
     def handleUserServersSearchTextChanged(self, text: str):
-        """Handle user servers search text changed."""
+        """Coalesce typing; clearing and explicit submission remain immediate."""
         if not text:
-            self.userServersQTableWidget.clearSearch()
+            self.applySearch()
+        elif self.isVisible():
+            self._searchTimer.start()
+
+    @QtCore.Slot()
+    def applySearch(self):
+        """Apply only the current query through the existing proxy model."""
+        self._searchTimer.stop()
+        self.userServersQTableWidget.search(self.searchLineEdit.text())
+
+    @QtCore.Slot()
+    def focusSearch(self):
+        """Keep repeated searches in the keyboard workflow."""
+        self.searchLineEdit.setFocus(QtCore.Qt.ShortcutFocusReason)
+        self.searchLineEdit.selectAll()
+
+    def hideEvent(self, event):
+        """Avoid filtering an invisible page during navigation."""
+        self._searchTimer.stop()
+
+        super().hideEvent(event)
+
+    def showEvent(self, event):
+        """Apply a query whose debounce was interrupted by navigation."""
+        super().showEvent(event)
+
+        if (
+            self.userServersQTableWidget.proxyModel.searchPattern
+            != self.searchLineEdit.text()
+        ):
+            self.applySearch()
 
     @QtCore.Slot()
     def refreshSubscriptionFilter(self):

@@ -267,9 +267,12 @@ def controlStyleSheet(
                 color: {palette['disabled']};
             }}
 
+            /* Retained for HomePage's optional SearchButton. Re-enable this
+               rule together with its commented implementation and usage.
             QPushButton#SearchButton {{
                 padding: 3px 0;
             }}
+            */
 
             QToolButton:hover {{
                 border-color: {palette['border']};

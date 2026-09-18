@@ -429,6 +429,15 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
 
         return None
 
+    def searchText(self, row: int) -> str:
+        """Use the displayed columns without constructing a QModelIndex per cell."""
+        if 0 <= row < self.rowCount():
+            profile = Storage.UserServers()[row]
+
+            return '\n'.join(str(header(profile) or '') for header in self.headers)
+
+        return ''
+
     def headerData(
         self,
         section: int,
@@ -671,16 +680,7 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
         if not self.searchPattern or self.searchRegex is None:
             return True
 
-        searchableText = '\n'.join(
-            str(
-                model.data(
-                    model.index(sourceRow, column, sourceParent),
-                    QtCore.Qt.ItemDataRole.DisplayRole,
-                )
-                or ''
-            )
-            for column in range(model.columnCount(sourceParent))
-        )
+        searchableText = model.searchText(sourceRow)
 
         return self.searchRegex.search(searchableText) is not None
 
