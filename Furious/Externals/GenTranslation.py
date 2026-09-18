@@ -1618,7 +1618,8 @@ TRANSLATION = {
     },
     "Search": {
         "source": [
-            "Furious.Window.HomePage"
+            "Furious.Window.HomePage",
+            "Furious.Window.LogPage"
         ],
         "RU": "Поиск",
         "ZH": "查找",
@@ -3365,6 +3366,22 @@ TRANSLATION = {
         ],
         "RU": "Остановить обновления",
         "ZH": "停止更新",
+        "isReviewed": "True"
+    },
+    "Pause Updates": {
+        "source": [
+            "Furious.Window.LogPage"
+        ],
+        "RU": "Приостановить обновление",
+        "ZH": "暂停刷新",
+        "isReviewed": "True"
+    },
+    "Resume Updates": {
+        "source": [
+            "Furious.Window.LogPage"
+        ],
+        "RU": "Возобновить обновление",
+        "ZH": "继续刷新",
         "isReviewed": "True"
     }
 }

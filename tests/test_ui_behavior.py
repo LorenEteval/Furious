@@ -1548,6 +1548,124 @@ class UnifiedLogPageTest(unittest.TestCase):
         page.close()
         page.deleteLater()
 
+    def testPausedViewPreservesSelectionAcrossEvictionClearAndHide(self):
+        """Pause presentation while the shared bounded stream keeps collecting."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=3)
+            page = LogPage(manager=manager)
+            self.addCleanup(self.disposePage, page)
+            manager.append('original text', APPLICATION_LOG_CATEGORY)
+            page.show()
+            self.assertRendered(page)
+            page.textBrowser.selectAll()
+            selected = page.textBrowser.textCursor().selectedText()
+
+            QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
+            manager.clear()
+            for number in range(10):
+                manager.append(f'new {number}', APPLICATION_LOG_CATEGORY)
+            processQtEvents()
+            page.hide()
+            page.show()
+            processQtEvents()
+
+            self.assertEqual(page.plainText(), 'original text')
+            self.assertEqual(page.textBrowser.textCursor().selectedText(), selected)
+            self.assertFalse(page.searchLineEdit.isEnabled())
+            self.assertFalse(page.filterComboBox.isEnabled())
+            self.assertFalse(page._updateTimer.isActive())
+            self.assertFalse(page._highlightTimer.isActive())
+            self.assertFalse(page._scrollTimer.isActive())
+
+            QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
+            self.assertRendered(page)
+            self.assertEqual(page.plainText().splitlines(), ['new 7', 'new 8', 'new 9'])
+            self.assertTrue(page.searchLineEdit.isEnabled())
+            self.assertTrue(page.filterComboBox.isEnabled())
+
+    def testPausedFilteredViewExportsItsSnapshotAndRetranslates(self):
+        """Export the frozen filtered document, then resume the same filter."""
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            manager = LogManager(maximumEntries=4)
+            page = LogPage(manager=manager)
+            self.addCleanup(self.disposePage, page)
+            manager.append('core match', CORE_LOG_CATEGORY)
+            manager.append('application match', APPLICATION_LOG_CATEGORY)
+            page.filterComboBox.setCurrentIndex(
+                page.filterComboBox.findData(CORE_LOG_CATEGORY)
+            )
+            page.searchLineEdit.setText('match')
+            page.show()
+            self.assertRendered(page)
+            QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
+            manager.append('core later match', CORE_LOG_CATEGORY)
+            processQtEvents()
+            with mock.patch('Furious.Window.LogPage.saveAsFile') as save:
+                page._fileMenu.actions()[0].trigger()
+                save.assert_called_once_with('core match')
+            for language in ('ZH', 'RU', 'EN'):
+                AppSettings.set('Language', language)
+                page.pauseButton.retranslate()
+                self.assertEqual(page.pauseButton.text(), _('Resume Updates'))
+            QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
+            self.assertRendered(page)
+            self.assertEqual(
+                page.plainText().splitlines(), ['core match', 'core later match']
+            )
+            self.assertEqual(page.pauseButton.text(), _('Pause Updates'))
+
+    def testSearchKeyboardKeepsEditingSeparateFromLogSelection(self):
+        """Find focuses search; editing shortcuts act on the focused widget."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=3)
+            page = LogPage(manager=manager)
+            self.addCleanup(self.disposePage, page)
+            self.addCleanup(QTest.keyRelease, page.textBrowser, QtCore.Qt.Key_Control)
+            manager.append('alpha log', APPLICATION_LOG_CATEGORY)
+            page.show()
+            page.activateWindow()
+            self.assertRendered(page)
+            page.textBrowser.setFocus()
+            processQtEvents()
+            QTest.keyClick(page.textBrowser, QtCore.Qt.Key_F, QtCore.Qt.ControlModifier)
+            self.assertTrue(waitFor(page.searchLineEdit.hasFocus))
+            QTest.keyClicks(page.searchLineEdit, 'alpha')
+            QTest.keyClick(
+                page.searchLineEdit, QtCore.Qt.Key_A, QtCore.Qt.ControlModifier
+            )
+            QTest.keyClick(
+                page.searchLineEdit, QtCore.Qt.Key_C, QtCore.Qt.ControlModifier
+            )
+            self.assertEqual(application().clipboard().text(), 'alpha')
+            self.assertFalse(page.textBrowser.textCursor().hasSelection())
+            self.assertRendered(page)
+            page.textBrowser.setFocus()
+            QTest.keyClick(page.textBrowser, QtCore.Qt.Key_A, QtCore.Qt.ControlModifier)
+            QTest.keyClick(page.textBrowser, QtCore.Qt.Key_C, QtCore.Qt.ControlModifier)
+            self.assertEqual(application().clipboard().text(), 'alpha log')
+
+    def testFindShortcutFollowsTheVisiblePage(self):
+        """Two persistent pages share one window without ambiguous Find actions."""
+        with isolatedSettings():
+            stack = QStackedWidget()
+            pages = [LogPage(manager=LogManager(maximumEntries=3)) for _ in range(2)]
+            for page in pages:
+                stack.addWidget(page)
+            self.addCleanup(stack.deleteLater)
+            self.addCleanup(stack.close)
+            self.addCleanup(QTest.keyRelease, stack, QtCore.Qt.Key_Control)
+            stack.show()
+            stack.activateWindow()
+            for page in (pages[0], pages[1], pages[0]):
+                stack.setCurrentWidget(page)
+                page.textBrowser.setFocus()
+                processQtEvents()
+                QTest.keyClick(
+                    page.textBrowser, QtCore.Qt.Key_F, QtCore.Qt.ControlModifier
+                )
+                self.assertTrue(waitFor(page.searchLineEdit.hasFocus))
+
     def testLabelsOwnTheirDynamicTranslation(self):
         """Let each AppQLabel translate itself without page-level setters."""
         with isolatedSettings():

@@ -218,6 +218,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         )
 
         self._searchRegex = None
+        self._paused = False
 
         self.textBrowser = DraculaTextBrowser(
             fontFamily=fontFamily,
@@ -384,6 +385,22 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             popupMenu=self._viewMenu,
         )
 
+        self.pauseButton = AppQPushButton(
+            _('Pause Updates'), icon=bootstrapIcon('pause-circle.svg'), parent=self
+        )
+        self.pauseButton.setCheckable(True)
+        self.pauseButton.toggled.connect(self._pauseChanged)
+
+        self.findAction = AppQAction(
+            _('Search'),
+            parent=self,
+            callback=self.focusSearch,
+            shortcut=QtGui.QKeySequence.StandardKey.Find,
+        )
+        self.findAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
+
+        self.addAction(self.findAction)
+
         self.autoScrollLabel = AppQLabel(_('Auto Scroll Down'))
 
         self.autoScrollSwitch = AppQSwitch()
@@ -400,6 +417,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         actionLayout.addWidget(self.fileButton)
         actionLayout.addWidget(self.editButton)
         actionLayout.addWidget(self.viewButton)
+        actionLayout.addWidget(self.pauseButton)
         actionLayout.addStretch(1)
         actionLayout.addWidget(self.autoScrollLabel)
         actionLayout.addWidget(self.autoScrollSwitch)
@@ -435,17 +453,49 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.retranslate()
 
     def _registerMenuShortcuts(self, menu):
-        """Associate popup actions with the page so shortcuts stay active."""
+        """Keep document shortcuts local to the log browser and its children."""
         for action in menu.actions():
             if action.isSeparator():
                 continue
 
-            self.addAction(action)
+            action.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
+
+            self.textBrowser.addAction(action)
 
             submenu = action.menu() if hasattr(action, 'menu') else None
 
             if submenu is not None:
                 self._registerMenuShortcuts(submenu)
+
+    @QtCore.Slot()
+    def focusSearch(self):
+        """Focus the enabled search field without interrupting a paused view."""
+        if self.searchLineEdit.isEnabled():
+            self.searchLineEdit.setFocus(QtCore.Qt.ShortcutFocusReason)
+            self.searchLineEdit.selectAll()
+
+    @QtCore.Slot(bool)
+    def _pauseChanged(self, paused):
+        """Freeze only presentation; the manager retains collection ownership."""
+        self._paused = paused
+
+        self.pauseButton.setText(_('Resume Updates') if paused else _('Pause Updates'))
+        self.pauseButton.setIcon(
+            bootstrapIcon('play-circle.svg' if paused else 'pause-circle.svg')
+        )
+
+        for widget in [self.searchLineEdit, self.filterComboBox, self.filterLabel]:
+            widget.setEnabled(not paused)
+
+        if paused:
+            self._updateTimer.stop()
+            self._highlightTimer.stop()
+            self._scrollTimer.stop()
+            self._followStateTimer.stop()
+            self._setHighlightBusy(False)
+            self._entriesDirty = True
+        else:
+            self._requestRefresh(invalidate=True, immediate=True)
 
     def _categoryText(self, category) -> str:
         """Return a category's translated or literal display label."""
@@ -480,8 +530,10 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         """Return whether document work can currently reach the screen."""
         window = self.window()
 
-        return self.isVisible() and not (
-            hasattr(window, 'isMinimized') and window.isMinimized()
+        return (
+            not self._paused
+            and self.isVisible()
+            and not (hasattr(window, 'isMinimized') and window.isMinimized())
         )
 
     def _requestRefresh(self, *, invalidate=False, immediate=False):
