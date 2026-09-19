@@ -1036,6 +1036,7 @@ class ProfileTestServiceTest(unittest.TestCase):
             for worker in _ControlledDownloadWorker.instances
             if worker.profile.metadata.profileId == other.metadata.profileId
         )
+
         otherDownload.finish('3.00 MiB/s')
         processQtEvents()
 

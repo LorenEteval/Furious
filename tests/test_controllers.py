@@ -712,6 +712,7 @@ class RoutingControllerTest(unittest.TestCase):
         from Furious.Widget.RoutingSelector import RoutingSelector
 
         app = application()
+
         with isolatedSettings():
             profile = ServerProfile.fromConfiguration(
                 ConfigXray(
@@ -723,11 +724,14 @@ class RoutingControllerTest(unittest.TestCase):
                     }
                 )
             )
+
             routings = {
                 'active': {'remark': 'My routing', 'enabled': True, 'rules': []}
             }
+
             registry = PluginRegistry()
             registry.register(XrayPlugin())
+
             core = FixtureCoreManager()
             launchedRoutes = []
 
@@ -735,13 +739,16 @@ class RoutingControllerTest(unittest.TestCase):
                 launchedRoutes.append(
                     registry.normalizeRouting(configuration, kwargs['routing'])
                 )
+
                 return True
 
             core.start = start
+
             connection = ConnectionController(
                 coreManager=core, updatesManager=FixtureUpdatesManager()
             )
             logManager = LogManager()
+
             with (
                 mock.patch.object(app, 'connectionController', connection),
                 mock.patch.object(app, 'logManager', logManager),
@@ -759,36 +766,50 @@ class RoutingControllerTest(unittest.TestCase):
             ):
                 AppSettings.set('Routing', 'Custom:active')
                 controller = RoutingController()
+
                 with mock.patch.object(app, 'routingController', controller):
                     view = UserRoutingTableView()
                     tray = RoutingAction(parent=view)
                     selector = RoutingSelector(parent=view)
+
                     try:
                         self.assertTrue(connection.startConnection(profile))
+
                         self.assertEqual(launchedRoutes, ['Custom:active'])
+
                         view.indexWidget(view.sourceModel.index(0, 2)).setCurrentIndex(
                             1
                         )
+
                         prompt = view.findChild(MBoxNewChangesNextTime)
                         self.assertIsNotNone(prompt)
+
                         prompt.button(AppQMessageBox.StandardButton.Yes).click()
                         processQtEvents()
+
                         fallback = AppBuiltinRouting.BypassMainlandChina.value
+
                         self.assertEqual(launchedRoutes, ['Custom:active', fallback])
+
                         tray.rebuildMenu()
+
                         self.assertEqual(controller.routing, fallback)
+
                         view.indexWidget(view.sourceModel.index(0, 2)).setCurrentIndex(
                             0
                         )
                         tray.rebuildMenu()
+
                         self.assertEqual(controller.routing, fallback)
                         self.assertEqual(AppSettings.get('Routing'), fallback)
                         self.assertEqual(selector.currentData(), fallback)
+
                         checked = [
                             action.routingValue
                             for action in tray._menu.actions()
                             if action.isChecked()
                         ]
+
                         self.assertEqual(checked, [fallback])
                         self.assertEqual(len(launchedRoutes), 2)
                         self.assertEqual(view.findChildren(MBoxNewChangesNextTime), [])
@@ -798,22 +819,30 @@ class RoutingControllerTest(unittest.TestCase):
                             for action in tray._menu.actions()
                             if getattr(action, 'routingValue', None) == 'Custom:active'
                         )
+
                         customAction.trigger()
+
                         self.assertEqual(
                             launchedRoutes, ['Custom:active', fallback, 'Custom:active']
                         )
                         self.assertEqual(selector.currentData(), 'Custom:active')
+
                         view.indexWidget(view.sourceModel.index(0, 2)).setCurrentIndex(
                             1
                         )
+
                         prompt = view.findChild(MBoxNewChangesNextTime)
+
                         prompt.button(AppQMessageBox.StandardButton.No).click()
                         processQtEvents()
+
                         self.assertEqual(len(launchedRoutes), 3)
+
                         view.indexWidget(view.sourceModel.index(0, 2)).setCurrentIndex(
                             0
                         )
                         tray.rebuildMenu()
+
                         self.assertEqual(controller.routing, fallback)
                         self.assertEqual(AppSettings.get('Routing'), fallback)
                         self.assertEqual(len(launchedRoutes), 3)
@@ -823,6 +852,7 @@ class RoutingControllerTest(unittest.TestCase):
                         view.deleteLater()
                         controller.deleteLater()
                         processQtEvents()
+
             connection.deleteLater()
             logManager.deleteLater()
             registry.shutdown()
@@ -831,9 +861,11 @@ class RoutingControllerTest(unittest.TestCase):
     def testOnlyExplicitInvalidationPersistsFallbackWithoutReconnecting(self):
         """Capability refresh stays observational until a selected choice is revoked."""
         connection = mock.Mock(activeProfile=self.connectedProfile)
+
         registry = mock.Mock()
         registry.routingOptions.return_value = (SimpleNamespace(id='fallback'),)
         registry.normalizeRouting.return_value = 'fallback'
+
         with (
             isolatedSettings(),
             mock.patch(
@@ -847,14 +879,19 @@ class RoutingControllerTest(unittest.TestCase):
         ):
             AppSettings.set('Routing', 'unavailable')
             controller = RoutingController()
+
             try:
                 controller.refresh(force=True)
+
                 self.assertEqual(controller.routing, 'fallback')
                 self.assertEqual(AppSettings.get('Routing'), 'unavailable')
+
                 self.assertFalse(controller.invalidateRouting('other'))
                 self.assertEqual(AppSettings.get('Routing'), 'unavailable')
+
                 self.assertTrue(controller.invalidateRouting('unavailable'))
                 self.assertEqual(AppSettings.get('Routing'), 'fallback')
+
                 self.assertFalse(controller.invalidateRouting('fallback'))
                 connection.startReconnection.assert_not_called()
             finally:

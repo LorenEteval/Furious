@@ -937,10 +937,12 @@ class LogManager(QtCore.QObject):
 
                 characterCount = len(entry.message)
                 generation = self._generationForCategoryLocked(category)
+
                 generation.append(entry, characterCount)
 
                 self._retainedEntryCount += 1
                 self._retainedCharacters += characterCount
+
                 self._enforceRetentionLimitsLocked()
 
                 events.append((clearedCategoryIds, entry))
@@ -1089,6 +1091,7 @@ class LogManager(QtCore.QObject):
 
                     self._retainedEntryCount -= retiredCategory.entryCount
                     self._retainedCharacters -= retiredCategory.characterCount
+
                     self._retireBatchLocked(retiredCategory)
 
         if changed:

@@ -2479,6 +2479,7 @@ class RoutingChangeNoticeTest(unittest.TestCase):
         app = application()
         self.addCleanup(collectAtBoundary)
         self.enterContext(isolatedSettings())
+
         self.routings = {
             unique: {
                 'remark': 'Same display name',
@@ -2491,9 +2492,11 @@ class RoutingChangeNoticeTest(unittest.TestCase):
             }
             for unique in ('active', 'other')
         }
+
         self.connection = mock.Mock()
         self.connection.isConnected.return_value = True
         self.routing = mock.Mock(routing='Custom:active')
+
         self.enterContext(
             mock.patch.object(app, 'connectionController', self.connection)
         )
@@ -2504,6 +2507,7 @@ class RoutingChangeNoticeTest(unittest.TestCase):
         self.notice = self.enterContext(
             mock.patch('Furious.Backends.Xray.RoutingWindow.showMBoxNewChangesNextTime')
         )
+
         self.view = UserRoutingTableView()
         self.addCleanup(self.disposeView)
 
@@ -2524,30 +2528,40 @@ class RoutingChangeNoticeTest(unittest.TestCase):
             self.view.flushAll()
             self.view.setDomainStrategy(0, 'AsIs')
             self.view.setEnabled(0, 'Enabled')
+
             self.notice.assert_not_called()
 
             strategy = self.view.indexWidget(self.view.sourceModel.index(0, 1))
             strategy.setCurrentText('IPOnDemand')
+
             self.assertEqual(self.routings['active']['domainStrategy'], 'IPOnDemand')
             self.notice.assert_called_once_with(parent=self.view)
+
             self.notice.reset_mock()
 
             enabled = self.view.indexWidget(self.view.sourceModel.index(0, 2))
             enabled.setCurrentIndex(1)
+
             self.assertFalse(self.routings['active']['enabled'])
             self.notice.assert_called_once_with(parent=self.view)
+
             self.notice.reset_mock()
 
             self.view.setDomainStrategy(1, 'IPIfNonMatch')
             self.view.setEnabled(1, 'Disabled')
+
             self.connection.isConnected.return_value = False
             self.view.setDomainStrategy(0, 'AsIs')
             self.view.setEnabled(0, 'Enabled')
+
             self.connection.isConnected.return_value = True
             self.routing.routing = 'Global'
             self.view.setDomainStrategy(0, 'IPIfNonMatch')
+
             self.notice.assert_not_called()
+
             processQtEvents()
+
             exceptionHook.assert_not_called()
 
     def testRuleChangesNotifyOnCloseWithoutRetargetingSelection(self):
@@ -2558,6 +2572,7 @@ class RoutingChangeNoticeTest(unittest.TestCase):
             ) as exceptionHook:
                 dialog = self.openRules()
                 view = dialog.listView
+
                 if change == 'add':
                     view.appendRule({'domain': ['new.test'], 'outboundTag': 'proxy'})
                 elif change == 'edit':
@@ -2567,12 +2582,16 @@ class RoutingChangeNoticeTest(unittest.TestCase):
                 else:
                     view.setCurrentIndex(view.rulesModel.index(0, 0))
                     view.moveSelectedRules('down')
+
                 self.view.selectRow(1)
                 self.notice.assert_not_called()
+
                 dialog.closeWindowButton.click()
                 processQtEvents()
+
                 self.notice.assert_called_once_with(parent=self.view)
                 exceptionHook.assert_not_called()
+
                 self.notice.reset_mock()
 
     def testRuleNoticeSkipsUnchangedRevertedStaleAndInactiveEdits(self):
@@ -2587,10 +2606,12 @@ class RoutingChangeNoticeTest(unittest.TestCase):
         ):
             with self.subTest(case=case), mock.patch('sys.excepthook') as exceptionHook:
                 dialog = self.openRules(1 if case == 'other' else 0)
+
                 if case != 'unchanged':
                     dialog.listView.appendRule(
                         {'domain': ['new.test'], 'outboundTag': 'proxy'}
                     )
+
                 if case == 'reverted':
                     dialog.listView.deleteRules([len(dialog.listView.rules()) - 1])
                 elif case == 'disconnected':
@@ -2599,10 +2620,13 @@ class RoutingChangeNoticeTest(unittest.TestCase):
                     self.routing.routing = 'Custom:other'
                 elif case == 'replaced':
                     self.routings['active'] = copy.deepcopy(self.routings['active'])
+
                 dialog.reject()
                 processQtEvents()
+
                 self.notice.assert_not_called()
                 exceptionHook.assert_not_called()
+
                 self.connection.isConnected.return_value = True
                 self.routing.routing = 'Custom:active'
 
@@ -2615,23 +2639,30 @@ class RoutingChangeNoticeTest(unittest.TestCase):
         from shiboken6 import delete as deleteQObject, isValid
 
         self.notice.side_effect = showMBoxNewChangesNextTime
+
         for button in (
             AppQMessageBox.StandardButton.No,
             AppQMessageBox.StandardButton.Yes,
         ):
             dialog = self.openRules()
             dialog.listView.appendRule({'domain': ['new.test'], 'outboundTag': 'proxy'})
+
             dialog.closeWindowButton.click()
             processQtEvents()
+
             prompt = self.view.findChild(MBoxNewChangesNextTime)
+
             self.assertIsNotNone(prompt)
             self.assertTrue(prompt.isVisible())
             self.assertFalse(isValid(dialog))
             self.assertIn(prompt, AppQDialog._openDialogs.values())
+
             prompt.button(button).click()
             processQtEvents()
+
             self.assertFalse(isValid(prompt))
             self.assertNotIn(prompt, AppQDialog._openDialogs.values())
+
             if button == AppQMessageBox.StandardButton.No:
                 self.connection.startReconnection.assert_not_called()
             else:
@@ -2639,8 +2670,10 @@ class RoutingChangeNoticeTest(unittest.TestCase):
 
         self.view.setDomainStrategy(0, 'IPOnDemand')
         prompt = self.view.findChild(MBoxNewChangesNextTime)
+
         deleteQObject(self.view)
         processQtEvents()
+
         self.assertFalse(isValid(prompt))
         self.assertNotIn(prompt, AppQDialog._openDialogs.values())
 

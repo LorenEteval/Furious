@@ -176,12 +176,15 @@ class _SubscriptionEditorDialog(AppQTransientDialog):
         form.addWidget(self.remarkLabel, 0, 0)
         form.addWidget(self.remarkEdit, 0, 1)
         form.addLayout(enabledLayout, 0, 2, 1, 2)
+
         form.addWidget(self.urlLabel, 1, 0)
         form.addWidget(self.urlEdit, 1, 1, 1, 3)
+
         form.addWidget(self.autoUpdateLabel, 2, 0)
         form.addWidget(self.autoUpdateComboBox, 2, 1)
         form.addWidget(self.proxyLabel, 2, 2)
         form.addWidget(self.proxyComboBox, 2, 3)
+
         form.addWidget(self.userAgentLabel, 3, 0)
         form.addWidget(self.userAgentEdit, 3, 1)
         form.addWidget(self.filterLabel, 3, 2)

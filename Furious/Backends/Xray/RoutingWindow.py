@@ -960,10 +960,12 @@ class RoutingRulesDialog(AppQTransientDialog):
         super().__init__(parent)
 
         self.routing = routing
+
         self.setWindowTitle(_('Routing Rules'))
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         self.listView = RoutingRulesListView(self.routing, parent=self)
+
         self.routingUnique = routingUnique
         self.originalRules = copy.deepcopy(self.listView.rules())
 
@@ -1248,9 +1250,11 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
             return
 
         unique = self.routingUniqueByRow(row)
+
         routing['domainStrategy'] = text
 
         self.sourceModel.emitAllChanged()
+
         self._routingChanged(unique)
 
     def setEnabled(self, row: int, state: str):
@@ -1265,9 +1269,11 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
             return
 
         unique = self.routingUniqueByRow(row)
+
         routing['enabled'] = enabled
 
         self.sourceModel.emitAllChanged()
+
         self._routingChanged(unique, disabled=not enabled)
 
     def _routingChanged(self, unique, *, disabled=False):

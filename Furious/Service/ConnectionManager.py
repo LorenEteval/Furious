@@ -441,6 +441,7 @@ class ConnectionStartOperation(QtCore.QObject):
             ) = self.manager._prepareTUNPolicy(configcopy, self.proxyModeOnly)
         except TUNPreparationError as ex:
             self.manager._lastStartError = str(ex)
+
             self._fail(str(ex), 'native TUN preparation failed')
 
             return
@@ -665,6 +666,7 @@ class ConnectionStartOperation(QtCore.QObject):
             exitCallback=router.publish,
             msgCallback=self.msgCallbackTUN_,
         )
+
         router.attach(tun, self)
 
         self._tun = tun
@@ -1050,6 +1052,7 @@ class ConnectionStartOperation(QtCore.QObject):
             return
 
         self._terminal = True
+
         self._cancelObservers()
 
         concise = str(message or '')
@@ -1071,6 +1074,7 @@ class ConnectionStartOperation(QtCore.QObject):
             return False
 
         self._terminal = True
+
         self._cancelObservers()
 
         self.attempt.rollback('connection startup cancelled')
