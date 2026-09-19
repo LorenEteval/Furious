@@ -143,7 +143,7 @@ class ProxyEndpointHttpClient(AppQNetworkAccessManager):
 
         reply = self.get(request)
 
-        self._pendingRequests[reply] = context
+        self._trackReplyContext(reply, self._pendingRequests, context)
 
         connectWeakly(
             reply.finished,

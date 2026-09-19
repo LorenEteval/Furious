@@ -25,6 +25,9 @@ from PySide6.QtNetwork import *
 
 from typing import Union
 
+import weakref
+import functools
+
 __all__ = ['AppQNetworkAccessManager']
 
 
@@ -34,6 +37,29 @@ class AppQNetworkAccessManager(QNetworkAccessManager):
     def __init__(self, parent=None):
         """Initialize the AppQNetworkAccessManager."""
         super().__init__(parent)
+
+    @staticmethod
+    def _releaseReplyContext(contexts, replyReference, *_args):
+        """Drop plain request state even when native deletion skips finished."""
+        reply = replyReference()
+
+        if reply is not None:
+            contexts.pop(reply, None)
+
+    def _trackReplyContext(self, reply, contexts, context):
+        """Retain request state until completion or exact reply destruction."""
+        contexts[reply] = context
+
+        # Native manager teardown also destroys its replies. Capture storage and
+        # a weak key, never a bound QObject method or the destroyed signal's
+        # temporary wrapper. Completion may already have removed this entry.
+        reply.destroyed.connect(
+            functools.partial(
+                AppQNetworkAccessManager._releaseReplyContext,
+                contexts,
+                weakref.ref(reply),
+            )
+        )
 
     def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
         """Configure HTTP proxy."""

@@ -54,8 +54,10 @@ primitives; pages and services consume them without creating parallel registries
   Python wrapper can already be natively invalid, so callback freshness and `shiboken6.isValid()` address different
   failure modes. Neither replaces the strong owner required while asynchronous UI remains active.
 - `AppQAction.callback` is strong by design, so the action owner cannot outlive the captured receiver.
-- Every `QNetworkReply` has one manager/context owner, one freshness rule, and one terminal deletion path. Do not attach
-  ad-hoc attributes to third-party Qt objects or multiply timers/connections across show/hide cycles.
+- Every `QNetworkReply` has one manager/context owner, one freshness rule, and one terminal deletion path. Request
+  context must also be released when native destruction skips `finished`, including manager-first teardown with
+  retained Python wrappers. Use the shared network-manager tracking boundary; cleanup must not capture a reply
+  strongly. Do not attach ad-hoc attributes to third-party Qt objects or multiply timers/connections across show/hide cycles.
 - Queued delivery never transfers ownership implicitly. The sender may finish before delivery, so callbacks resolve a
   still-valid receiver and current generation in the receiver's Qt thread before touching widgets, models, or wrappers.
 

@@ -91,7 +91,7 @@ class HttpGetManager(AppQNetworkAccessManager):
     @QtCore.Slot(object)
     def _handleReadyRead(self, networkReply):
         """Dispatch ready-read data without a closure retaining the reply."""
-        if isinstance(networkReply, QNetworkReply):
+        if networkReply in self._replyContexts:
             self.handleReadyReadByNetworkReply(
                 networkReply,
                 **self._replyContexts.get(networkReply, {}),
@@ -100,10 +100,10 @@ class HttpGetManager(AppQNetworkAccessManager):
     @QtCore.Slot(object)
     def _handleFinished(self, networkReply):
         """Dispatch and release one completed network reply."""
-        if not isinstance(networkReply, QNetworkReply):
+        if networkReply not in self._replyContexts:
             return
 
-        kwargs = self._replyContexts.pop(networkReply, {})
+        kwargs = self._replyContexts.pop(networkReply)
 
         self.handleFinishedByNetworkReply(networkReply, **kwargs)
 
@@ -140,7 +140,7 @@ class HttpGetManager(AppQNetworkAccessManager):
                 # QNetworkAccessManager owns replies by default and does not
                 # remove completed children automatically.  All response data
                 # has been consumed by this point.  The shared slots above use
-                # sender(), so no per-request closure retains this wrapper.
+                # weak sender forwarding, without a closure retaining this wrapper.
                 networkReply.deleteLater()
 
     def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
@@ -166,7 +166,7 @@ class HttpGetManager(AppQNetworkAccessManager):
 
         networkReply = self.get(request)
 
-        self._replyContexts[networkReply] = dict(kwargs)
+        self._trackReplyContext(networkReply, self._replyContexts, dict(kwargs))
 
         connectWeakly(
             networkReply.readyRead,

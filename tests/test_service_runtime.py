@@ -26,6 +26,7 @@ from Furious.Plugins import (
     TrafficStatsMonitor,
 )
 from Furious.Service.ConnectivityManager import ConnectivityManager
+from Furious.Service.EndpointInfoService import ProxyEndpointHttpClient
 from Furious.Qt.HttpGetManager import HttpGetManager
 from Furious.Service.PluginUIManager import PluginNavigationManager
 from Furious.Service.TrafficStatsManager import TrafficStatsManager
@@ -169,6 +170,83 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
         finished.assert_called_once_with(reply, marker='fixture')
 
         manager.deleteLater()
+
+    def testEarlyReplyDestructionReleasesContextAcrossRepeatedRequests(self):
+        """Native deletion without finished releases payloads and reply wrappers."""
+        for managerType, contextAttribute in (
+            (HttpGetManager, '_replyContexts'),
+            (ProxyEndpointHttpClient, '_pendingRequests'),
+        ):
+            with self.subTest(manager=managerType.__name__):
+                manager = managerType()
+                references = []
+                destroyed = []
+                self.addCleanup(manager.deleteLater)
+
+                for _ in range(30):
+                    payload = _ResponseBody(b'fixture')
+                    references.append(weakref.ref(payload))
+                    reply = _ManagedReply(manager)
+                    references.append(weakref.ref(reply))
+                    reply.destroyed.connect(lambda *_args: destroyed.append(True))
+
+                    with patch.object(manager, 'get', lambda _request: reply):
+                        if isinstance(manager, HttpGetManager):
+                            manager.webGET('https://invalid.test', payload=payload)
+                        else:
+                            manager.request('https://invalid.test', payload)
+
+                    del payload
+                    reply.deleteLater()
+                    processQtEvents()
+
+                    self.assertFalse(isValid(reply))
+                    self.assertFalse(getattr(manager, contextAttribute))
+                    del reply
+
+                self.assertEqual(len(destroyed), 30)
+                self.assertTrue(all(reference() is None for reference in references))
+
+    def testManagerDestructionReleasesPendingContextWithRetainedWrappers(self):
+        """Surviving invalid wrappers cannot keep operation payloads alive."""
+        for managerType, contextAttribute in (
+            (HttpGetManager, '_replyContexts'),
+            (ProxyEndpointHttpClient, '_pendingRequests'),
+        ):
+            with self.subTest(manager=managerType.__name__):
+                manager = managerType()
+                payload = _ResponseBody(b'fixture')
+                reference = weakref.ref(payload)
+                reply = _ManagedReply(manager)
+
+                with patch.object(manager, 'get', lambda _request: reply):
+                    if isinstance(manager, HttpGetManager):
+                        manager.webGET('https://invalid.test', payload=payload)
+                    else:
+                        manager.request('https://invalid.test', payload)
+
+                del payload
+                manager.deleteLater()
+                processQtEvents()
+
+                self.assertFalse(isValid(manager))
+                self.assertFalse(isValid(reply))
+                self.assertFalse(getattr(manager, contextAttribute))
+                self.assertIsNone(reference())
+
+    def testRepeatedFinishedSignalPublishesOnlyOnce(self):
+        """A completed reply cannot invoke hooks again before deferred deletion."""
+        manager = _CapturingHttpGetManager()
+        self.addCleanup(manager.deleteLater)
+        reply = manager.webGET('https://invalid.test', marker='fixture')
+
+        with patch.object(manager, 'successCallback') as completed:
+            reply.finished.emit()
+            reply.finished.emit()
+
+        completed.assert_called_once_with(reply, marker='fixture')
+        processQtEvents()
+        self.assertFalse(isValid(reply))
 
     capabilityId = 'fixture.navigation'
 
