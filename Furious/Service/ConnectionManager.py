@@ -1279,6 +1279,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
         synchronous launch semantics.
         """
         self._retryPendingReleases()
+
         self._lastStartError = ''
 
         attempt = _ConnectionStartAttempt(
@@ -1320,6 +1321,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
             self._activeStartOperation.cancel()
 
         self._retryPendingReleases()
+
         self._lastStartError = ''
         self._startGeneration += 1
 
@@ -1803,6 +1805,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
         self._pendingReleases.extend(reversed(self._leases))
         self._leases.clear()
+
         self._retryPendingReleases()
 
     def _retryPendingReleases(self):

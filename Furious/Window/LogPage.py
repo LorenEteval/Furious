@@ -850,6 +850,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
         elapsed = QtCore.QElapsedTimer()
         elapsed.start()
+
         end = start
 
         while end < maximumEnd:

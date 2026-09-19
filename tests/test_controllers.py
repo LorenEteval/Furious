@@ -195,6 +195,7 @@ class ConnectionControllerTest(unittest.TestCase):
                 controller = ConnectionController(
                     coreManager=core, updatesManager=FixtureUpdatesManager()
                 )
+
                 if phase == 'profile':
                     controller.activeProfileChanged.connect(
                         lambda profile: (
@@ -209,6 +210,7 @@ class ConnectionControllerTest(unittest.TestCase):
                         if phase == 'connecting'
                         else ConnectionState.Connected
                     )
+
                     controller.stateChanged.connect(
                         lambda state: (
                             controller.startDisconnection() if state is target else None
@@ -221,6 +223,7 @@ class ConnectionControllerTest(unittest.TestCase):
                         'finish': controller.progressFinished,
                         'notification': controller.notificationRequested,
                     }[phase]
+
                     signal.connect(lambda *_: controller.startDisconnection())
 
                 with mock.patch(
@@ -231,21 +234,27 @@ class ConnectionControllerTest(unittest.TestCase):
                     controller, '_runPostConnectTasksOnce'
                 ) as postConnect:
                     admitted = controller.startConnection(self.profile)
+
                     if phase in ('profile', 'connecting', 'progress'):
                         self.assertFalse(admitted)
                         self.assertEqual(core.operations, [])
                     else:
                         self.assertTrue(admitted)
+
                         core.operations[0][0].succeed()
+
                     self.assertEqual(controller.state, ConnectionState.Disconnected)
                     self.assertIsNone(controller.activeProfile)
                     self.assertFalse(controller._actionTimer.isActive())
                     self.assertEqual(AppSettings.get('Connect'), AppBinarySettings.OFF)
                     postConnect.assert_not_called()
+
                     if phase in ('profile', 'connecting', 'progress', 'runtimes'):
                         proxySet.assert_not_called()
+
                 controller.deleteLater()
                 processQtEvents()
+
                 qtErrors.assert_not_called()
 
     def testReentrantReplacementOfSameProfileKeepsNewStartPending(self):
@@ -260,7 +269,9 @@ class ConnectionControllerTest(unittest.TestCase):
             def replace(*_):
                 if replaced:
                     return
+
                 replaced.append(True)
+
                 controller.startDisconnection()
                 controller.startConnection(self.profile)
 
@@ -273,11 +284,14 @@ class ConnectionControllerTest(unittest.TestCase):
             ):
                 controller.startConnection(self.profile)
                 controller.runtimesChanged.connect(replace)
+
                 core.operations[0][0].succeed()
+
                 self.assertEqual(len(core.operations), 2)
                 self.assertIs(controller._startOperation, core.operations[1][0])
                 self.assertTrue(controller.isConnecting())
                 proxySet.assert_not_called()
+
                 controller.shutdown()
             controller.deleteLater()
             processQtEvents()

@@ -113,31 +113,44 @@ class RuntimeLifecycleTest(TestCase):
         router = RuntimeEventRouter()
         router.attach(runtime, owner)
         lease = attempt.ownRuntime(runtime, router)
+
         with mock.patch.object(
             runtime, 'dispose', side_effect=RuntimeError('still owned')
         ):
             attempt.rollback()
+
             self.assertEqual(manager._pendingReleases, [lease])
             self.assertIs(lease.state, RuntimeLeaseState.Releasing)
+
             runtime.publishCode(0)
             processQtEvents()
+
             self.assertEqual(owner.events, [])
+
             for start in (manager.start, manager.startAsync):
                 with self.assertRaisesRegex(RuntimeError, 'cleanup is incomplete'):
                     start(None, '')
+
             with self.assertRaisesRegex(RuntimeError, 'cleanup is incomplete'):
                 manager.stopAll()
+
             self.assertEqual(manager._pendingReleases, [lease])
+
             resolver = mock.Mock()
             manager._dnsResolver = resolver
+
             with self.assertRaisesRegex(RuntimeError, 'cleanup is incomplete'):
                 manager.cleanup()
+
             resolver.dispose.assert_called_once_with()
             self.assertIsNone(manager._dnsResolver)
             self.assertEqual(manager._pendingReleases, [lease])
+
         manager.stopAll()
+
         self.assertEqual(manager._pendingReleases, [])
         self.assertIs(lease.state, RuntimeLeaseState.Released)
+
         manager.cleanup()
         owner.deleteLater()
         processQtEvents()
@@ -150,11 +163,14 @@ class RuntimeLifecycleTest(TestCase):
             RuntimeLease(runtime, RuntimeEventRouter()) for runtime in (first, second)
         ]
         manager._leases.extend(leases)
+
         with mock.patch.object(second, 'dispose', side_effect=RuntimeError('retry')):
             with self.assertRaisesRegex(RuntimeError, 'cleanup is incomplete'):
                 manager.stopAll()
+
             self.assertIs(first.state, RuntimeState.Disposed)
             self.assertEqual(manager._pendingReleases, [leases[1]])
+
         manager.stopAll()
         manager.cleanup()
         processQtEvents()
@@ -165,17 +181,23 @@ class RuntimeLifecycleTest(TestCase):
         child = mock.Mock()
         child.is_alive.return_value = True
         child.exitcode = None
+
         runtime._process = child
         runtime.setState(RuntimeState.Alive)
+
         with self.assertRaisesRegex(RuntimeError, 'did not stop'):
             runtime.dispose()
+
         self.assertTrue(child.is_alive())
         self.assertIs(runtime.process, child)
         self.assertIsNone(runtime.lastExit)
         child.close.assert_not_called()
+
         child.is_alive.return_value = False
         child.exitcode = 0
+
         runtime.dispose()
+
         self.assertIsNone(runtime.process)
         self.assertIs(runtime.state, RuntimeState.Disposed)
 
@@ -186,13 +208,19 @@ class RuntimeLifecycleTest(TestCase):
         child.is_alive.return_value = False
         child.exitcode = 0
         child.close.side_effect = OSError('handle still owned')
+
         runtime._process = child
+
         with self.assertRaisesRegex(RuntimeError, 'could not be closed'):
             runtime.dispose()
+
         self.assertIs(runtime.process, child)
         self.assertIsNot(runtime.state, RuntimeState.Disposed)
+
         child.close.side_effect = None
+
         runtime.dispose()
+
         self.assertIsNone(runtime.process)
         self.assertIs(runtime.state, RuntimeState.Disposed)
 

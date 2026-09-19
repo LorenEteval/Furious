@@ -170,6 +170,7 @@ class ConnectionStartupAsyncTest(TestCase):
                 self.managers.append(manager)
                 runtime = _Runtime()
                 registry = _Registry([PreparedRuntime(runtime)])
+
                 with mock.patch.object(
                     manager, '_prepareTUNPolicy', return_value=(False, False)
                 ) as prepare, mock.patch(
@@ -182,17 +183,23 @@ class ConnectionStartupAsyncTest(TestCase):
                     operation.stageChanged.connect(
                         lambda current: operation.cancel() if current is stage else None
                     )
+
                     operation.start()
+
                     self.assertEqual(manager.runtimes, [])
                     self.assertIsNone(manager._activeStartOperation)
+
                     if stage is ConnectionStartStage.Preparing:
                         prepare.assert_not_called()
+
                     if stage is not ConnectionStartStage.Committing:
                         self.assertEqual(runtime.startOptions, [])
                     else:
                         self.assertEqual(runtime.stopCount, 1)
                         self.assertEqual(runtime.disposeCount, 1)
+
                     processQtEvents()
+
                     qtErrors.assert_not_called()
 
     def setUp(self):

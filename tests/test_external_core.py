@@ -107,14 +107,19 @@ class ExternalCoreProcessTest(unittest.TestCase):
             with self.subTest(value=str(value)[:20]):
                 config = self.configuration(['-c', 'pass'], str(Path.cwd()))
                 config['shutdownTimeout'] = value
+
                 self.assertTrue(config.validateProcess())
+
                 runtime = ExternalCoreProcess(config)
+
                 with mock.patch(
                     'Furious.Backends.ExternalCore.Process.subprocess.Popen'
                 ) as spawn:
                     with self.assertRaises(RuntimeStartError):
                         runtime.start()
+
                     spawn.assert_not_called()
+
                 runtime.dispose()
 
     def testFailedReapRetainsChildUntilRetrySucceeds(self):
@@ -122,10 +127,13 @@ class ExternalCoreProcessTest(unittest.TestCase):
         runtime = ExternalCoreProcess(
             self.configuration(['-c', 'pass'], str(Path.cwd()))
         )
+
         child = mock.Mock(pid=1234)
         child.poll.return_value = None
+
         runtime._process = child
         runtime.setState(RuntimeState.Alive)
+
         with mock.patch.object(runtime, '_requestStop'), mock.patch.object(
             runtime, '_terminate'
         ), mock.patch.object(runtime, '_kill'), mock.patch.object(
@@ -133,11 +141,15 @@ class ExternalCoreProcessTest(unittest.TestCase):
         ):
             with self.assertRaisesRegex(RuntimeError, 'could not be reaped'):
                 runtime.dispose()
+
         self.assertIsNone(child.poll())
         self.assertIs(runtime.process, child)
         self.assertIs(runtime.state, RuntimeState.Stopping)
+
         child.poll.return_value = 0
+
         runtime.dispose()
+
         self.assertIsNone(runtime.process)
         self.assertIs(runtime.state, RuntimeState.Disposed)
 
@@ -146,20 +158,27 @@ class ExternalCoreProcessTest(unittest.TestCase):
         runtime = ExternalCoreProcess(
             self.configuration(['-c', 'pass'], str(Path.cwd()))
         )
+
         child = mock.Mock()
         child.poll.return_value = 0
         reader, watcher = mock.Mock(), mock.Mock()
         reader.is_alive.return_value = watcher.is_alive.return_value = True
+
         runtime._process = child
         runtime._readerThreads = [reader]
         runtime._watcherThread = watcher
+
         with self.assertRaisesRegex(RuntimeError, 'reader or watcher'):
             runtime.dispose()
+
         self.assertIs(runtime.process, child)
         self.assertEqual(runtime._readerThreads, [reader])
         self.assertIs(runtime._watcherThread, watcher)
+
         reader.is_alive.return_value = watcher.is_alive.return_value = False
+
         runtime.dispose()
+
         self.assertEqual(runtime._readerThreads, [])
         self.assertIsNone(runtime._watcherThread)
         self.assertIsNone(runtime.process)

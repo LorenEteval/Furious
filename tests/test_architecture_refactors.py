@@ -143,25 +143,32 @@ class ApplicationLifecycleTransactionTest(TestCase):
         from tests.support import application, processQtEvents
 
         application()
+
         controller = QtCore.QObject()
         controller.shutdown = mock.Mock(
             side_effect=RuntimeError('resource still owned')
         )
+
         destroyed = []
         controller.destroyed.connect(lambda: destroyed.append(True))
+
         owner = SimpleNamespace(
             connectionController=controller,
             routingController=None,
             settingsController=None,
         )
+
         with self.assertLogs('Furious.Application.DesktopApplication', level='ERROR'):
             DesktopApplication._cleanupControllers(owner)
         processQtEvents()
+
         self.assertIs(owner.connectionController, controller)
         self.assertEqual(destroyed, [])
+
         controller.shutdown.side_effect = None
         DesktopApplication._cleanupControllers(owner)
         processQtEvents()
+
         self.assertIsNone(owner.connectionController)
         self.assertEqual(destroyed, [True])
 
@@ -171,6 +178,7 @@ class ApplicationLifecycleTransactionTest(TestCase):
 
         application()
         module = importlib.import_module('Furious.Application.DesktopApplication')
+
         for failedIndex in (1, 2):
             with self.subTest(failedIndex=failedIndex):
                 owner = QtCore.QObject()
@@ -180,6 +188,7 @@ class ApplicationLifecycleTransactionTest(TestCase):
                 owner._cleanupControllers = (
                     lambda: DesktopApplication._cleanupControllers(owner)
                 )
+
                 acquired = []
                 destroyed = []
                 shutdown = []
@@ -193,9 +202,11 @@ class ApplicationLifecycleTransactionTest(TestCase):
                 def construct(parent):
                     if len(acquired) == failedIndex:
                         raise RuntimeError('constructor failed')
+
                     controller = Controller(parent)
                     controller.destroyed.connect(lambda: destroyed.append(True))
                     acquired.append(controller)
+
                     return controller
 
                 with mock.patch.object(
@@ -208,11 +219,13 @@ class ApplicationLifecycleTransactionTest(TestCase):
                     with self.assertRaisesRegex(RuntimeError, 'constructor failed'):
                         DesktopApplication._initializeControllers(owner)
                 processQtEvents()
+
                 self.assertEqual(len(destroyed), failedIndex)
                 self.assertEqual(shutdown, [acquired[0]])
                 self.assertIsNone(owner.connectionController)
                 self.assertIsNone(owner.routingController)
                 self.assertIsNone(owner.settingsController)
+
                 owner.deleteLater()
                 processQtEvents()
 

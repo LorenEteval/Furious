@@ -165,6 +165,7 @@ class ConnectionController(QtCore.QObject):
         generation = self._connectionGeneration
 
         self._state = state
+
         self.stateChanged.emit(state)
 
         if generation != self._connectionGeneration or self._state is not state:
