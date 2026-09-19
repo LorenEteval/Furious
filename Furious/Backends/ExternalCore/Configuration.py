@@ -232,9 +232,14 @@ class ConfigExternalCore(CoreConfiguration):
                 'Shutdown timeout must be a number of seconds'
             )
 
-        value = float(value)
+        try:
+            value = float(value)
+        except OverflowError as ex:
+            raise ExternalCoreConfigurationError(
+                'Shutdown timeout must be between 0.1 and 60 seconds'
+            ) from ex
 
-        if value < 0.1 or value > 60:
+        if not 0.1 <= value <= 60:
             raise ExternalCoreConfigurationError(
                 'Shutdown timeout must be between 0.1 and 60 seconds'
             )

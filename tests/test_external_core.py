@@ -101,6 +101,22 @@ class ExternalCoreProcessTest(unittest.TestCase):
             }
         )
 
+    def testShutdownTimeoutRejectsNonFiniteAndOverflowingValues(self):
+        """Reject invalid wait values before any executable can be acquired."""
+        for value in (float('nan'), float('inf'), -float('inf'), 10**400):
+            with self.subTest(value=str(value)[:20]):
+                config = self.configuration(['-c', 'pass'], str(Path.cwd()))
+                config['shutdownTimeout'] = value
+                self.assertTrue(config.validateProcess())
+                runtime = ExternalCoreProcess(config)
+                with mock.patch(
+                    'Furious.Backends.ExternalCore.Process.subprocess.Popen'
+                ) as spawn:
+                    with self.assertRaises(RuntimeStartError):
+                        runtime.start()
+                    spawn.assert_not_called()
+                runtime.dispose()
+
     def testDisposedRuntimeCannotAcquireAnotherProcess(self):
         """Disposal is terminal even when the stored launch specification is valid."""
         runtime = ExternalCoreProcess(
