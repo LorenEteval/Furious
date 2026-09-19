@@ -63,9 +63,9 @@ from Furious.Widget.ServerTableView import DeleteServersProgressDialog
 
 from PySide6 import QtCore
 from PySide6.QtGui import QImage
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QPushButton, QWidget
 
-from shiboken6 import isValid
+from shiboken6 import isValid, delete as deleteQObject
 
 from tests.support import (
     application,
@@ -148,6 +148,102 @@ class DelayedReceiver(QtCore.QObject):
 
 class QtLifetimeTest(unittest.TestCase):
     """Stress direct destruction evidence without relying on process RSS alone."""
+
+    def testRemovedMessageBoxButtonDisconnectsAndCanBeReused(self):
+        """Detaching a button ends only the box-owned signal and role lifetime."""
+        application()
+        with isolatedSettings():
+            box = AppQMessageBox()
+            button = QPushButton('Reusable button')
+            finished = []
+            externalClicks = []
+            box.finished.connect(finished.append)
+            button.clicked.connect(lambda: externalClicks.append(True))
+            try:
+                for _ in range(30):
+                    box.addButton(button, box.ButtonRole.AcceptRole)
+                    box.setDefaultButton(button)
+                    box.setEscapeButton(button)
+                    box.removeButton(button)
+                    button.click()
+                    self.assertEqual(finished, [])
+                    self.assertIsNone(box.defaultButton())
+                    self.assertIsNone(box.escapeButton())
+                    self.assertIsNone(button.parent())
+                    self.assertEqual(button.receivers(QtCore.SIGNAL('clicked()')), 1)
+
+                self.assertEqual(len(externalClicks), 30)
+                box.addButton(button, box.ButtonRole.AcceptRole)
+                box.addButton(button, box.ButtonRole.AcceptRole)
+                box.open()
+                button.click()
+                processQtEvents()
+                self.assertEqual(finished, [int(AppQDialog.DialogCode.Accepted)])
+                self.assertFalse(isValid(box))
+                self.assertFalse(isValid(button))
+            finally:
+                if isValid(box):
+                    deleteQObject(box)
+                if isValid(button):
+                    deleteQObject(button)
+                processQtEvents()
+
+    def testReplacingMessageBoxButtonsReleasesOldDefaultAndEscape(self):
+        """A retained dialog must not retain removed standard-button wrappers."""
+        application()
+        with isolatedSettings():
+            box = AppQMessageBox()
+            references = []
+            try:
+                for _ in range(30):
+                    box.setStandardButtons(box.StandardButton.Yes)
+                    button = box.button(box.StandardButton.Yes)
+                    references.append(weakref.ref(button))
+                    box.setDefaultButton(button)
+                    box.setEscapeButton(button)
+                    box.setStandardButtons(box.StandardButton.No)
+                    del button
+                    processQtEvents()
+                    self.assertIsNone(box.defaultButton())
+                    self.assertIsNone(box.escapeButton())
+                self.assertTrue(all(reference() is None for reference in references))
+            finally:
+                deleteQObject(box)
+                processQtEvents()
+
+    def testNativeButtonDestructionRemovesMessageBoxRegistrations(self):
+        """Deleting an attached button cannot leave invalid wrapper roles behind."""
+        application()
+        with isolatedSettings():
+            box = AppQMessageBox()
+            try:
+                for _ in range(30):
+                    button = box.addButton(box.StandardButton.Yes)
+                    box.setDefaultButton(button)
+                    box.setEscapeButton(button)
+                    deleteQObject(button)
+                    self.assertEqual(box.buttons(), [])
+                    self.assertIsNone(box.defaultButton())
+                    self.assertIsNone(box.escapeButton())
+                    self.assertIsNone(box.button(box.StandardButton.Yes))
+            finally:
+                deleteQObject(box)
+                processQtEvents()
+
+    def testMessageBoxCallbackMayDestroyItsOwner(self):
+        """Button activation cannot finish a box destroyed by its own listener."""
+        application()
+        with isolatedSettings():
+            owner = QWidget()
+            box = AppQMessageBox(parent=owner)
+            button = box.addButton(box.StandardButton.Yes)
+            box.buttonClicked.connect(lambda *_args: deleteQObject(owner))
+            with mock.patch('sys.excepthook') as exceptionHook:
+                button.click()
+                processQtEvents()
+            exceptionHook.assert_not_called()
+            self.assertFalse(isValid(box))
+            self.assertFalse(isValid(button))
 
     def testRoutingDocumentationDoesNotEnterCompiledMethodProtection(self):
         """Closing routing editors releases labels under Nuitka-style retention."""

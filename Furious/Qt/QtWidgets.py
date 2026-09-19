@@ -32,6 +32,8 @@ from PySide6 import QtCore
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+from shiboken6 import isValid
+
 from typing import Union
 
 import functools
@@ -1126,6 +1128,7 @@ class AppQMessageBox(AppQTransientDialog):
         self._standardButtons = self.StandardButton.NoButton
         self._standardButtonMap = {}
         self._buttonRoles = {}
+        self._buttonConnections = {}
         self._defaultButton = None
         self._escapeButton = None
         self._clickedButton = None
@@ -1264,15 +1267,7 @@ class AppQMessageBox(AppQTransientDialog):
         button.setMinimumHeight(34)
         button.setAttribute(QtCore.Qt.WidgetAttribute.WA_LayoutUsesWidgetRect)
 
-        connectWeakly(
-            button.clicked,
-            self,
-            '_handleButtonClicked',
-            sender=button,
-            forwardSender=True,
-        )
-
-        self._buttonRoles[button] = role
+        self._registerButton(button, role)
 
         if standardButton is not None:
             self._standardButtonMap[standardButton] = button
@@ -1280,6 +1275,33 @@ class AppQMessageBox(AppQTransientDialog):
         self._rebuildButtonLayout()
 
         return button
+
+    def _registerButton(self, button, role):
+        """Own exactly one click and destruction connection per attached button."""
+        if button not in self._buttonConnections:
+            self._buttonConnections[button] = (
+                connectWeakly(
+                    button.clicked,
+                    self,
+                    '_handleButtonClicked',
+                    sender=button,
+                    forwardSender=True,
+                ),
+                connectWeakly(
+                    button.destroyed,
+                    self,
+                    '_removeDestroyedButtons',
+                    sender=button,
+                ),
+            )
+
+        self._buttonRoles[button] = role
+
+    def _removeDestroyedButtons(self):
+        """Release registrations even while an invalid Python wrapper survives."""
+        for button in tuple(self._buttonRoles):
+            if not isValid(button):
+                self.removeButton(button)
 
     def _rebuildButtonLayout(self):
         """Lay out actions with Fluent-style margins and equal stretch."""
@@ -1529,15 +1551,7 @@ class AppQMessageBox(AppQTransientDialog):
             customButton.setParent(self.buttonFrame)
             customButton.setAttribute(QtCore.Qt.WidgetAttribute.WA_LayoutUsesWidgetRect)
 
-            connectWeakly(
-                customButton.clicked,
-                self,
-                '_handleButtonClicked',
-                sender=customButton,
-                forwardSender=True,
-            )
-
-            self._buttonRoles[customButton] = role
+            self._registerButton(customButton, role)
             self._rebuildButtonLayout()
 
             return customButton
@@ -1555,14 +1569,31 @@ class AppQMessageBox(AppQTransientDialog):
 
     def removeButton(self, button):
         """Remove one custom or standard button."""
-        self._buttonRoles.pop(button, None)
+        if button not in self._buttonRoles:
+            return
+
+        self._buttonRoles.pop(button)
+
+        for connection in self._buttonConnections.pop(button):
+            QtCore.QObject.disconnect(connection)
+
+        if self._defaultButton is button:
+            self._defaultButton = None
+
+        if self._escapeButton is button:
+            self._escapeButton = None
+
+        if self._clickedButton is button:
+            self._clickedButton = None
 
         for standardButton, candidate in tuple(self._standardButtonMap.items()):
             if candidate is button:
                 self._standardButtons &= ~standardButton
                 self._standardButtonMap.pop(standardButton, None)
 
-        button.setParent(None)
+        if isValid(button):
+            button.setParent(None)
+
         self._rebuildButtonLayout()
 
     def buttons(self):
@@ -1645,6 +1676,10 @@ class AppQMessageBox(AppQTransientDialog):
             self.buttonClicked.emit(button)
         finally:
             self._handlingButton = False
+
+        # A button listener may synchronously destroy this box or its parent.
+        if not isValid(self):
+            return
 
         standardButton = self.standardButton(button)
 
