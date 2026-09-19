@@ -26,6 +26,8 @@ from Furious.Qt.Signals import connectWeakly
 from PySide6 import QtCore
 from PySide6.QtNetwork import *
 
+from shiboken6 import isValid
+
 from typing import Union
 
 import logging
@@ -135,13 +137,16 @@ class HttpGetManager(AppQNetworkAccessManager):
                 self.successCallback(networkReply, **kwargs)
         finally:
             try:
-                self.runCompletionCallback(**kwargs)
+                if isValid(self):
+                    self.runCompletionCallback(**kwargs)
             finally:
                 # QNetworkAccessManager owns replies by default and does not
                 # remove completed children automatically.  All response data
                 # has been consumed by this point.  The shared slots above use
                 # weak sender forwarding, without a closure retaining this wrapper.
-                networkReply.deleteLater()
+                # User hooks can destroy the reply or its manager synchronously.
+                if isValid(networkReply):
+                    networkReply.deleteLater()
 
     def configureHttpProxy(self, httpProxy: Union[str, None]) -> bool:
         """Configure HTTP proxy."""

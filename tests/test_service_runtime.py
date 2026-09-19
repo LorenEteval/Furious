@@ -36,7 +36,7 @@ from PySide6 import QtCore
 from PySide6.QtNetwork import QNetworkReply
 from PySide6.QtWidgets import QWidget
 
-from shiboken6 import isValid
+from shiboken6 import isValid, delete as deleteQObject
 
 from tests.support import processQtEvents, application, collectAtBoundary, waitFor
 
@@ -153,6 +153,67 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         application()
+
+    def testCompletionMayDestroyReplyOrManager(self):
+        """Real finished delivery tolerates native deletion from user callbacks."""
+        for managerType, contextAttribute in (
+            (HttpGetManager, '_replyContexts'),
+            (ProxyEndpointHttpClient, '_pendingRequests'),
+        ):
+            for deleteManager in (False, True):
+                with self.subTest(manager=managerType.__name__, owner=deleteManager):
+                    for _ in range(20):
+                        manager = managerType()
+                        reply = _ManagedReply(manager)
+                        destroyed = []
+                        reply.destroyed.connect(lambda *_a: destroyed.append(True))
+                        completion = []
+
+                        def destroyFromCallback(*_args, **_kwargs):
+                            deleteQObject(manager if deleteManager else reply)
+
+                        try:
+                            with patch.object(manager, 'get', lambda _request: reply):
+                                if isinstance(manager, HttpGetManager):
+                                    manager.webGET(
+                                        'https://invalid.test', logActionMessage=False
+                                    )
+                                    manager.successCallback = destroyFromCallback
+                                    manager.completionCallback = (
+                                        lambda **_k: completion.append(True)
+                                    )
+                                else:
+                                    manager.request('https://invalid.test', 'fixture')
+                                    manager.completed.connect(destroyFromCallback)
+
+                            with patch('sys.excepthook') as exceptionHook:
+                                reply.finished.emit()
+                                processQtEvents()
+                            exceptionHook.assert_not_called()
+                            self.assertEqual(destroyed, [True])
+                            self.assertFalse(isValid(reply))
+                            self.assertFalse(getattr(manager, contextAttribute))
+                            if isinstance(manager, HttpGetManager):
+                                self.assertEqual(
+                                    completion, [] if deleteManager else [True]
+                                )
+                        finally:
+                            if isValid(manager):
+                                deleteQObject(manager)
+                            processQtEvents()
+
+    def testEndpointCancellationToleratesOwnerDestructionDuringAbort(self):
+        """An abort listener may delete the manager and its other pending replies."""
+        manager = ProxyEndpointHttpClient()
+        replies = [_ManagedReply(manager), _ManagedReply(manager)]
+        for index, reply in enumerate(replies):
+            with patch.object(manager, 'get', lambda _request: reply):
+                manager.request('https://invalid.test', index)
+        replies[0].abort = lambda: deleteQObject(manager)
+        manager.cancelAll()
+        self.assertFalse(isValid(manager))
+        self.assertTrue(all(not isValid(reply) for reply in replies))
+        self.assertEqual(manager._pendingRequests, {})
 
     def testRequestHasFiniteTimeoutAndTerminalPathDropsContext(self):
         manager = _CapturingHttpGetManager()

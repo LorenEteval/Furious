@@ -32,6 +32,8 @@ from Furious.Repository import Storage
 from PySide6 import QtCore
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
+from shiboken6 import isValid
+
 from enum import Enum
 from dataclasses import dataclass, replace
 from ipaddress import IPv4Address, IPv6Address, ip_address
@@ -172,7 +174,8 @@ class ProxyEndpointHttpClient(AppQNetworkAccessManager):
 
             self.completed.emit(context, data, error)
         finally:
-            reply.deleteLater()
+            if isValid(reply):
+                reply.deleteLater()
 
     def cancelAll(self):
         """Abort all connection-specific requests without retaining replies."""
@@ -181,8 +184,12 @@ class ProxyEndpointHttpClient(AppQNetworkAccessManager):
         self._pendingRequests.clear()
 
         for reply in pendingReplies:
-            reply.abort()
-            reply.deleteLater()
+            if isValid(reply):
+                reply.abort()
+
+            # abort() can synchronously notify listeners that destroy this owner.
+            if isValid(reply):
+                reply.deleteLater()
 
 
 @dataclass(frozen=True)
