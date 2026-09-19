@@ -1,7 +1,7 @@
 # Action guidance
 
-Inherit the root and `Furious/AGENTS.md`; this scope adds rules for translating user gestures into owned commands and
-presentation without becoming a workflow authority.
+Inherit `Furious/AGENTS.md` and its root ancestor; this scope adds rules for translating user gestures into
+owned commands and presentation without becoming a workflow authority.
 
 ## Command boundary
 
@@ -29,9 +29,10 @@ presentation without becoming a workflow authority.
   transient windows. Each screen-capture action owns a separate native capture handle, including separate tray/page
   instances; type-deduplicated cleanup must not leave one open. QR export generation belongs to its result window,
   not a parallel action-owned exporter.
-- Small profile imports use the direct bulk path; large imports yield between bounded batches. Preserve captured
-  input and one operation context until completion/cancellation, reject deferred calls after teardown, and retain
-  already committed batches when cancellation stops later work. A parser call itself is not preempted by a batch.
+- Small profile imports use the direct bulk path; large imports yield between bounded batches. One operation owns
+  captured input and its continuation through completion/cancellation; teardown rejects deferred calls. A parser call
+  itself is not preempted by a batch. Keep preparation and insertion distinct so a failed batch cannot publish a
+  partially validated result.
 - Batch limits bound work between event-loop yields; the minimum progress interval throttles status refreshes at
   those boundaries. It is not an independent paint timer. Keep terminal feedback accurate and choose scale policies
   from measured responsiveness rather than freezing a batch count into the command contract.

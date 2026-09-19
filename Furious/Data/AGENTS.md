@@ -1,7 +1,7 @@
 # Bundled runtime data guidance
 
-Inherit the root and package guides. This scope exists for shipped runtime assets and their provenance; it is not an
-application-data or settings directory.
+Inherit `Furious/AGENTS.md` and its root ancestor. This scope exists for shipped runtime assets and their
+provenance; it is not an application-data or settings directory.
 
 ## Boundary and provenance
 
@@ -34,5 +34,6 @@ application-data or settings directory.
 - Verify the real consuming backend/widget, source and packaged path resolution, package-data/Nuitka inclusion,
   integrity and failure behavior, and license presence. Tests use fixtures or mocked downloads, never live asset
   refreshes. `tests/test_endpoint_info.py` and `tests/test_public_api.py` cover map/resource consumers; release
-  artifacts require their own inclusion checks. Revalidate provenance/network claims when an asset provider or
-  loader changes.
+  artifacts require their own inclusion checks. Check actual artifact contents, including nested Markdown exclusions,
+  rather than only the presence of package-data patterns. Successful inclusion does not prove runtime write access or
+  optional WebEngine availability. Revalidate provenance/network claims when an asset provider or loader changes.

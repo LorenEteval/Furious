@@ -1,7 +1,8 @@
 # Controller guidance
 
-Inherit the root and package guides. This scope preserves controllers as process-lifetime authorities for shared
-transitions. Services own execution resources; existing prompts are presentation compatibility paths.
+Inherit `Furious/AGENTS.md` and its root ancestor. This scope preserves controllers as process-lifetime
+authorities for shared transitions. Services own execution resources; existing prompts are presentation
+compatibility paths.
 
 ## Shared state authorities
 
@@ -17,8 +18,9 @@ transitions. Services own execution resources; existing prompts are presentation
   failure. Worker/native callbacks cross to the controller’s Qt thread before transition.
 - The active live profile is not the prepared document used by an already-started runtime. Resolve identity and
   generation before changing state or host effects, and preserve typed runtime failures; cancellation and supersession
-  are not generic connection errors. Progress completion ends the presentation interval; it is not a success result.
-  Consumers use connection state and structured error/notification signals to distinguish failure from Connected.
+  are not generic connection errors. Runtime commit, host-effect success, and visible connection state are distinct
+  observations. Progress completion only ends the presentation interval; consumers and tests use connection state,
+  structured errors/notifications, and host results to establish the outcome.
 - `RoutingController` owns available capability options plus selected/persisted routing. Distinguish a newly
   selected repository profile from the active-profile reference and the independent runtime document; changes use
   controlled reconnect, not mutation of the running document. Capability refresh prefers the active profile and

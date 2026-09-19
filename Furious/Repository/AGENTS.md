@@ -1,7 +1,8 @@
 # Repository guidance
 
-Inherit the root and `Furious/AGENTS.md`. Consult the Interface and Models guides when changing their contracts.
-This scope owns restoration, migration, ordering, and persistence; workflows and presentation remain outside it.
+Inherit `Furious/AGENTS.md` and its root ancestor. Consult the Interface and Models guides when changing their
+contracts. This scope owns restoration, migration, ordering, and persistence; workflows and presentation remain
+outside it.
 
 - Repositories restore, migrate, order, and persist profiles, subscriptions, routings, and TUN settings. They do not own
   network workflows, controller state, test schedulers, or presentation.
@@ -9,7 +10,10 @@ This scope owns restoration, migration, ordering, and persistence; workflows and
   Do not add a second cache/snapshot authority. Prefer named repository mutations so validation and commit boundaries
   can move behind the repository over time.
 - Preserve stable profile/subscription IDs, subscription ownership/key, ordering, unknown fields, and legacy schemas.
-  Active row/index and display text are compatibility/presentation state, not identity.
+  Active row/index and display text are compatibility/presentation state, not identity. Record-shape dispatch and
+  metadata precedence are migration behavior: legacy `UserServer` aliases override nested metadata, and explicit
+  top-level current fields then override those aliases. Preserve this order and unknown extras unless a tested
+  migration deliberately changes it; do not treat every duplicate key as interchangeable.
 - A restore failure remains observable. Automatic cleanup must not replace unreadable persisted bytes with an empty
   fallback; only an explicit successful replacement may do so. Root decoding, individual-record hydration, and later
   serialization are separate failure boundaries. Test malformed records inside a valid root as well as malformed

@@ -1,7 +1,8 @@
 # Backend guidance
 
-Inherit the root and package guides. Consult Plugins/Models/Service for the contracts consumed by this scope. This
-scope adds rules shared by all bundled proxy backends without making the richest backend the generic default.
+Inherit `Furious/AGENTS.md` and its root ancestor. Consult Plugins/Models/Service for the contracts consumed by
+this scope. This scope adds rules shared by all bundled proxy backends without making the richest backend the
+generic default.
 
 ## Common backend contract
 
@@ -19,7 +20,8 @@ scope adds rules shared by all bundled proxy backends without making the richest
 - Configuration/runtime modules stay importable without constructing Qt editors. Plugin registration remains explicit
   enough for compiled discovery. An editor factory returns a fresh projection, not a repository commit: the caller
   owns the editable snapshot, acceptance validation, identity resolution, and eventual write-back. Runtime factories
-  likewise transfer fresh execution resources to the workflow owner.
+  likewise transfer fresh execution resources to the workflow owner. Editor acceptance and runtime readiness are
+  different validations; neither may silently rewrite stored data to make a later stage succeed.
 
 ## TUN and runtime policy
 

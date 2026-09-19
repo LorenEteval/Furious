@@ -1,7 +1,7 @@
 # Xray guidance
 
-Inherit the root, package, and common backend guides; consult Plugins for capability contracts. This scope owns Xray's
-full JSON preservation, routing/assets/statistics, and protocol/transport/TLS projections.
+Inherit `Furious/Backends/AGENTS.md` and its ancestors; consult Plugins for capability contracts. This scope
+owns Xray's full JSON preservation, routing/assets/statistics, and protocol/transport/TLS projections.
 
 ## Full-document preservation
 
@@ -40,7 +40,9 @@ full JSON preservation, routing/assets/statistics, and protocol/transport/TLS pr
   so owner destruction also ends pending confirmation callbacks.
 - Statistics preparation is optional and may leave a valid runtime without a statistics target. Preserve that
   distinction from connection failure; later sampling uses the target captured for this runtime, not newly edited
-  settings or an assumption based solely on the backend name.
+  settings or an assumption based solely on the backend name. `configureXrayStats()` merges the required API service
+  and counter policy into the runtime copy, preserving unrelated valid API/policy fields. Do not replace a user's
+  entire API or policy branch merely to enable counters; test both the merged launch and unchanged stored document.
 - Verify full-document and URI preservation, aliases and unknown values, runtime-copy isolation for
   routing/log/TUN/tests, multiple TUN inbounds, asset integrity/failure, statistics and process cleanup,
   compiled-safe UI callbacks, and repeated editor/window destruction. Use `tests/test_xray_asset_download.py`,

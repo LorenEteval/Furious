@@ -1,7 +1,7 @@
 # Application composition guidance
 
-Inherit the root and package guides. This scope owns process-lifetime Qt composition and the boundary between the outer
-child-process supervisor and the inner application event loop.
+Inherit `Furious/AGENTS.md` and its root ancestor. This scope owns process-lifetime Qt composition and the
+boundary between the outer child-process supervisor and the inner application event loop.
 
 - `Furious.__main__` and `AppMainProcess` own the outer process/crash boundary; `DesktopApplication` owns the inner Qt
   composition. Keep those responsibilities separate and preserve semantic exit codes and original failure context.
@@ -26,8 +26,10 @@ child-process supervisor and the inner application event loop.
   observations.
 - Native session callbacks cross to the GUI thread before touching Qt-owned state. Tray, dock, System Proxy daemon,
   Flatpak/AppImage, and no-tray behavior are explicit platform capabilities.
-- The application owns the top-level window/tray wrappers; `MainWindow` owns the persistent page tree. Do not let dynamic
-  menus, sockets, theme snapshots, workers, or partial startup owners outlive their registered cleanup stage.
+- The application owns the top-level window/tray wrappers; `MainWindow` owns the persistent page tree. Cleanup order
+  follows dependencies: consumers stop while the plugins, repositories, and Qt objects they need are still valid.
+  A registered cleanup callback establishes responsibility, not proof that its menus, sockets, snapshots, or workers
+  were released. Verify partial composition as well as a fully constructed application.
 - Verify each acquisition failure, reverse/repeated cleanup, singleton races/commands, queued session shutdown,
   tray-present/absent close policy, restored connection, and exact child/thread-pool ownership with host effects
   mocked. Start with `tests/test_architecture_refactors.py`, `tests/test_application_process.py`, and

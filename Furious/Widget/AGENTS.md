@@ -1,8 +1,9 @@
 # Reusable widget guidance
 
-Inherit the root and package guides; consult `Furious/Qt/AGENTS.md` for shared lifetime/presentation contracts. This
-scope covers reusable controls and model/view adapters below page composition. Persistent widgets currently host
-some service owners; that construction detail does not make every view an independent workflow authority.
+Inherit `Furious/AGENTS.md` and its root ancestor; consult `Furious/Qt/AGENTS.md` for shared
+lifetime/presentation contracts. This scope covers reusable controls and model/view adapters below page
+composition. Persistent widgets currently host some service owners; that construction detail does not make every
+view an independent workflow authority.
 
 ## Presentation and identity
 
@@ -17,8 +18,10 @@ some service owners; that construction detail does not make every view an indepe
   to a dialog or event-loop turn; an ordinary QModelIndex/source row may become invalid or refer to another item.
   Resolve a multi-target confirmation independently for each captured ID: targets may move or disappear while it is
   open, and later selection must not change the command. Map resolved objects back through the proxy when restoring
-  focus. Recursively scope table-owned menu
-  shortcuts as `WidgetShortcut` so focused editors and other surfaces keep their own shortcut semantics.
+  focus. Recursively scope table-owned menu shortcuts as `WidgetShortcut` so focused editors and other surfaces
+  keep their own shortcut semantics. Selection identity, current keyboard index, and selection painting are separate:
+  keeping targets highlighted while a command button/menu has focus must not change selection or steal editor focus.
+  Exercise the button-focus interval before popup display as well as the open menu to catch highlight flicker.
 
 ## Workflow and lifetime boundaries
 

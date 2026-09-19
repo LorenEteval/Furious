@@ -1,7 +1,7 @@
 # Translation catalog guidance
 
-Inherit the root and package guides. This scope preserves the split between extracted catalog structure and
-human-reviewed translations.
+Inherit `Furious/AGENTS.md` and its root ancestor. This scope preserves the split between extracted catalog
+structure and human-reviewed translations.
 
 ## Source and generation contract
 
@@ -20,8 +20,9 @@ human-reviewed translations.
   meaning. Curated, verified translations need `isReviewed` set to the string `'True'`, as the generator compares that
   literal; a Python Boolean is not equivalent. Review applies to the entry, so inspect its other language values too.
   Do not clear approved review flags or hand-maintain the generated `source` module list. Runtime lookup reverse-maps
-  translated text to a source key, so collisions can change retranslation behavior even when extraction succeeds.
-  Exercise colliding translations at lookup time rather than treating the diagnostic as cosmetic.
+  translated text to a source key through a shared reverse index across languages. Equal translations for different
+  source keys can therefore affect later retranslation, including after a language switch. Exercise lookup and
+  retranslation under explicit locales rather than treating collision diagnostics as cosmetic.
 
 ## Extractable source text
 

@@ -14,9 +14,10 @@ exceptions; it does not define the source test suite or imply that every package
 - Treat each matrix row as a supported product target with explicit runner OS/architecture, Python, Qt/PySide source,
   native-binding toolchain, compatibility floor, `Deploy.py` output, and upload pattern. Artifact names and architecture
   checks must agree; never infer target architecture from the host label alone.
-- Current target-specific assertions are intentional: Linux proves an Essentials-only/no-WebEngine application and its
-  Flatpak sandbox dependencies; macOS verifies its WebEngine frameworks, helpers, resources, relocation, and signing;
-  Windows verifies native imports and every packaged PE machine type, with a separate Windows 7 compatibility toolchain.
+- Current target-specific checks are intentional: Linux checks the Essentials-only/no-WebEngine build and its
+  Flatpak native dependency closure; macOS checks WebEngine frameworks, helpers, resources, relocation, and signing;
+  Windows checks native imports and packaged PE machine types, with a separate Windows 7 compatibility toolchain.
+  These assertions establish artifact properties, not complete application behavior on those platforms.
   Change an exception only with evidence from the affected target. Binary jobs filter shared requirements before
   installing target-specific Qt/native bindings; copying the ordinary package dependency list into those jobs can
   reintroduce Addons on Linux or replace a compatibility build. Review the effective installed set, not just the
@@ -42,10 +43,11 @@ exceptions; it does not define the source test suite or imply that every package
   source/native import checks, Nuitka/installer output, packaged architecture/dependency checks, artifact upload, and tag
   gates. When a target cannot run locally, add a narrow CI assertion that fails before publication with a useful reason.
 - `workflows/source-tests.yml` runs isolated source unittest discovery on Windows, Linux, and macOS and is a
-  required dependency of PyPI publication through `deploy-pypi.yml`. It can also run manually. Daily binary
+  required dependency of PyPI publication through `workflows/deploy-pypi.yml`. It can also run manually. Daily binary
   builds retain their separate artifact scope. Source tests do not establish packaged behavior or Python/Qt
   floors beyond their matrix. Do not call an artifact build a regression-test pass; use `tests/README.md` for
-  source verification. Check actual `needs` and tag gates rather than assuming a downstream publish job runs on every build. Follow each publication
-  dependency back to its required artifact checks; upload success alone does not establish release eligibility.
+  source verification. Follow actual `needs` and tag gates back to required checks; upload success alone does not
+  establish release eligibility. A diagnostic Nuitka build that changes compiler/runtime flags is separate evidence
+  from the ordinary release configuration; record and exercise the latter before claiming a packaged defect resolved.
 - Revalidate version/architecture claims against the current matrix instead of duplicating all pins here. When build
   topology intentionally changes, update this scope and follow every consumer through upload and publication.

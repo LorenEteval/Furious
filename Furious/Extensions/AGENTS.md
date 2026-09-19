@@ -1,7 +1,8 @@
 # Bundled extension guidance
 
-Inherit the root and package guides; consult Plugins for capability and registration contracts. This scope covers
-host-shipped non-runtime plugins and must not gain private authority merely because the code is bundled.
+Inherit `Furious/AGENTS.md` and its root ancestor; consult Plugins for capability and registration contracts.
+This scope covers host-shipped non-runtime plugins and must not gain private authority merely because the code
+is bundled.
 
 - `Extensions` contains host-shipped plugins that are not proxy runtimes. They register through the same public API
   and lifecycle as entry-point plugins. New extension contracts must be usable without private
@@ -13,11 +14,11 @@ host-shipped non-runtime plugins and must not gain private authority merely beca
 - Automatic detection probes decoders by priority; explicit selection does not authorize format substitution. Return
   `None` for a mismatch. Recognizing a share-link envelope does not validate its URI schemes or protocols; the importer
   owns that decision. Preserve useful names/upstream IDs and never log a complete payload or link. Current
-  standard formats are linear plain/Base64 share-link envelopes; introduce explicit size/depth/work limits before
-  adding richer recursive or nested formats. Standard decoders opt into worker execution; that declaration covers
-  all shared parser state and caches, not merely absence of widgets in the immediate method. Worker preparation also
-  requires the selected protocol handlers to opt in; a safe envelope decoder cannot authorize an unsafe downstream
-  parser. Preserve the GUI compatibility fallback for unclassified capabilities.
+  standard formats are plain/Base64 share-link envelopes; linear parsing is not an input-size bound. Introduce
+  explicit size/depth/work limits before adding richer recursive or nested formats.
+- Worker safety is a property of the whole preparation path. Standard decoders opt in, but the selected protocol
+  handlers must also opt in after their shared state, caches, and Qt use are audited. Preserve the GUI compatibility
+  fallback for unclassified capabilities; a safe envelope decoder cannot authorize an unsafe downstream parser.
 - Decoder output is descriptive, not a repository transaction. Supplied names and upstream IDs are input to profile
   construction, not permission to overwrite local identity or grant remote ownership. It cannot mutate a group,
   cancel tests, reconnect, or publish UI state; those decisions remain at the import/manager commit boundaries.

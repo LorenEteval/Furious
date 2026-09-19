@@ -1,7 +1,7 @@
 # Interface guidance
 
-Inherit the root and package guides. This file preserves dependency-light contracts that multiple implementations can
-satisfy without importing application composition or concrete backends.
+Inherit `Furious/AGENTS.md` and its root ancestor. This file preserves dependency-light contracts that multiple
+implementations can satisfy without importing application composition or concrete backends.
 
 - This package defines dependency-light contracts shared across layers. It does not import Qt presentation,
   controllers, services, repositories, plugins, or concrete backends; a contract may depend on a small model/constant
@@ -27,8 +27,9 @@ satisfy without importing application composition or concrete backends.
 - Runtime liveness is observational: querying it must not consume an exit, transfer ownership, or dispatch
   callbacks. A zero process exit can still be an unexpected connection failure; requested stop and raw exit success
   are different facts. Keep semantic startup errors separate from process codes and readiness timeouts. Define
-  cleanup-failure semantics without assuming every runtime owns a subprocess; bounded stop/dispose requirements
-  must remain meaningful for an in-process implementation as well as a child process that resists termination.
+  cleanup-failure semantics without assuming every runtime owns a subprocess. Bounded stop/dispose is a contract to
+  verify, not a guarantee supplied by the base class: third-party work may be non-cooperative. Report known violations
+  at their implementation/owner boundary rather than weakening the interface to bless an unreleased resource.
 - Verify cheap/import-independent contracts plus representative runtime, storage, editor, application-exit,
   encoding, and configuration implementations. Update this guide when a contract intentionally changes, together
   with all implementers and compatibility tests. Start with `tests/test_interface.py` and

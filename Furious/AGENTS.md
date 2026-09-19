@@ -1,7 +1,8 @@
 # Furious package guidance
 
 Inherit repository-wide rules from the root `AGENTS.md`. This file preserves the package-level boundary between
-domain, persistence, orchestration, platform integration, and presentation; nested guides specialize it in place.
+domain, persistence, orchestration, platform integration, and presentation; nested guides specialize it in
+place.
 
 ## Responsibility boundaries
 
@@ -53,8 +54,9 @@ domain, persistence, orchestration, platform integration, and presentation; nest
   record. Choose the explicit profile, metadata, or connection representation required by each boundary; generic
   mapping conversion is not a profile backup.
 - Import, clipboard, share-link, file, and QR paths reuse the owning plugin codecs and validation. QR is a presentation
-  transport, not a second protocol parser; construct a complete neutral result before repository mutation and never log
-  the secret-bearing payload.
+  transport, not a second protocol parser. Decoding a transport envelope, validating a protocol, and committing a
+  profile are separate boundaries: a recognized envelope is not permission to clear a group or import an unsupported
+  protocol. Construct a complete valid result for each commit unit and never log the secret-bearing payload.
 
 ## Local guides
 

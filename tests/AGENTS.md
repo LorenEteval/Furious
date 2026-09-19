@@ -51,8 +51,10 @@ and test-tier selection; test convenience never weakens a production invariant.
 - Source-only tests and an offscreen platform do not prove a packaged Qt runtime. Compiler-sensitive changes need
   native lifecycle tests and the compiled fixture documented in `tests/README.md`, including accept/reject/close
   and owner-first teardown. An unavailable private Nuitka counter is unknown, not measured zero; combine toolchain
-  inspection with native destruction, weak-wrapper and registry evidence. Report skipped/unavailable targets.
-  Release artifact checks do not execute this source behavioral suite.
+  inspection with native destruction, weak-wrapper and registry evidence. Record the interpreter, binding/compiler,
+  target, and relevant build flags with results: diagnostic flags can change the failing behavior and are not a
+  substitute for the ordinary release build. Report skipped/unavailable targets and distinguish commented test
+  examples from discovered tests. Release artifact checks do not execute this source behavioral suite.
 - Separate deterministic correctness/scale assertions from performance measurements. Opt-in stress tests may gate
   relative scaling or resource bounds; document the measured contract and environment rather than treating one
   machine's absolute timing as a portable product requirement.

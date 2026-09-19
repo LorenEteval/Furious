@@ -11,7 +11,8 @@ resource-manifest contract; it does not govern general UI layout.
 - Preserve license/provenance and the `Resources.qrc` alias contract. Any add, removal, rename, or alias change
   updates all consumers and the manifest, then regenerates `Furious/Frozenlib/AppResources.py` with the selected
   environment's `pyside6-rcc Resources.qrc -o Furious/Frozenlib/AppResources.py`. Never hand-edit generated resource
-  code; inspect compiler-version churn separately from the intended alias/asset change.
+  code. Editing the bytes of an existing manifest input also requires regeneration even if its path and alias stay
+  unchanged. Inspect compiler-version churn separately from the intended asset change.
 - Treat the alias as the application-facing identity and the source path as an implementation detail. Search both before
   replacement so an apparently unused file is not removed while still generated or consumed through an alias. Selecting
   an already bundled Bootstrap icon normally changes its consumer only; it does not require regeneration or another

@@ -1,7 +1,8 @@
 # Embedded runtime guidance
 
-Inherit the root and package guides. Consult Interface for runtime contracts and Service for connection ownership.
-This scope owns reusable embedded execution machinery and application tun2socks; connection policy remains outside it.
+Inherit `Furious/AGENTS.md` and its root ancestor. Consult Interface for runtime contracts and Service for
+connection ownership. This scope owns reusable embedded execution machinery and application tun2socks;
+connection policy remains outside it.
 
 - `Core` supplies shared multiprocessing runtime machinery, bounded output transport, and application tun2socks. External
   Core owns its separate direct `subprocess.Popen`; neither layer owns controller, repository, UI, or protocol policy.
@@ -17,6 +18,9 @@ This scope owns reusable embedded execution machinery and application tun2socks;
   resources. Stop must bound waits, escalate only the owned child, and remain safe after partial start or repetition.
   A join timeout or failed handle close is not a successful reap. Verify actual child liveness before describing a
   terminal execution state as complete resource release; include failed escalation in ownership tests.
+  `MultiprocessingRuntime._closeProcess()` currently discards its process reference even when handle close fails.
+  This is a cleanup-contract gap, not a permissible ownership transfer: a fix must preserve observability of the
+  outstanding child/handle and agree with the service lease's cleanup-failure semantics.
 - Process-backed runtimes own exit monitoring and interpretation: publish one typed terminal event per execution,
   preserving the raw exit and whether stop was requested. `isRunning()` is a passive liveness query and must not
   consume or dispatch lifecycle events.

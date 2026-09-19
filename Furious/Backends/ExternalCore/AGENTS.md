@@ -1,7 +1,7 @@
 # External Core guidance
 
-Inherit the root, package, and common backend guides; consult Plugins for capability contracts. This file preserves
-the intentionally different direct-subprocess scope for user-selected executables.
+Inherit `Furious/Backends/AGENTS.md` and its ancestors; consult Plugins for capability contracts. This file
+preserves the intentionally different direct-subprocess scope for user-selected executables.
 
 ## Structured executable boundary
 
@@ -36,6 +36,7 @@ the intentionally different direct-subprocess scope for user-selected executable
   `tests/test_external_core.py` and `tests/test_backend_editor_contract.py`. Exercise a child that remains alive
   after escalation and readers/watchers that outlast their joins. A failed final reap is a cleanup failure to report;
   clearing the runtime's process/thread references must not be used as evidence that those resources exited.
-  Direct-child exit also does not prove that descendants closed inherited pipes. Current stop/join paths can clear
-  references after unsuccessful waits; treat that as a cleanup-contract gap, not a guarantee of reaping. A repair must
-  retain observable outstanding resources and coordinate failure semantics with the consuming runtime lease.
+  Retain an independent reference in failure tests so an empty runtime field cannot make the test pass. Direct-child
+  exit also does not prove that descendants closed inherited pipes. `Process.py` currently clears references after
+  unsuccessful waits; this is a cleanup-contract gap. A repair must retain observable outstanding resources and
+  coordinate failure semantics with `Furious/Service/RuntimeLease.py`, without broad process-name cleanup.

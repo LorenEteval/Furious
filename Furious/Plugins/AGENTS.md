@@ -1,7 +1,8 @@
 # Plugin guidance
 
-Inherit the root and package guides; consult Interface guidance for runtime/storage contracts. This scope owns
-capability definitions, atomic registration, dispatch, and plugin lifecycle; backend policy remains in each implementation.
+Inherit `Furious/AGENTS.md` and its root ancestor; consult Interface guidance for runtime/storage contracts.
+This scope owns capability definitions, atomic registration, dispatch, and plugin lifecycle; backend policy
+remains in each implementation.
 
 ## Contracts and registry
 
@@ -34,8 +35,9 @@ capability definitions, atomic registration, dispatch, and plugin lifecycle; bac
 - Evolve contracts additively when practical. Before a breaking change, inspect external discovery, compatibility
   exports, every bundled implementation, tests, and compiled inclusion; do not infer compatibility from built-ins alone.
 - A capability contract is generic only when an external plugin can satisfy it without importing private application
-  state. Backend-specific defaults, settings keys, document branches, and host assumptions stay behind the provider
-  rather than becoming undeclared registry requirements.
+  state. Backend-specific defaults, settings keys, document branches, and host assumptions stay behind the provider.
+  Capability presence advertises an operation, not a configured target or successful execution; callers must handle
+  absence, unavailable configuration, and operation failure separately (notably statistics, export, and probes).
 - API-version-3 runtime factories return `PreparedRuntime` directly. The runtime is fully prepared before return,
   starts with zero arguments, raises typed startup failures, and exposes readiness separately. An alternate result
   shape requires an explicit contract/version migration, not an implicit adapter inferred from built-in factories.

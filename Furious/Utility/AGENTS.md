@@ -1,7 +1,7 @@
 # Outer process guidance
 
-Inherit the root and package guides. This scope preserves the exact outer child-process/crash protocol and is not a
-general-purpose utility bucket.
+Inherit `Furious/AGENTS.md` and its root ancestor. This scope preserves the exact outer child-process/crash
+protocol and is not a general-purpose utility bucket.
 
 - `Utility` owns the child-side wrapper used by the outer application process and crash/exit translation. It is not a
   miscellaneous helper namespace and does not own application composition, repositories, runtimes, or UI policy.
@@ -17,7 +17,8 @@ general-purpose utility bucket.
 - Shared crash status is a synchronized Boolean plus the child's semantic exit result; set the flag only after the
   diagnostic file is written successfully. Text may include retained logs plus a traceback, so the Boolean channel
   does not bound the crash file's size or sanitize its contents. Keep crash-write failure separate from the primary
-  exit result, and test reporting both with and without a constructed application/log manager.
+  exit result: the flag proves only that a file write completed, not that the child succeeded or the report can be
+  parsed as an exit protocol. Test reporting both with and without a constructed application/log manager.
 - Fallback presentation runs in the parent after a nonzero child result. It constructs a Qt application for the
   report but does not call the ordinary application `run()` initialization. Keep that constructor dependency in
   failure-path tests, and preserve the original result when evolving reporting failures rather than adding a supervisor.

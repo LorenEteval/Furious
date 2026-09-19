@@ -1,7 +1,7 @@
 # Service guidance
 
-Inherit the root and package guides. Consult Models/Repository for data contracts, Plugins/Core for execution, and Qt
-for lifetime primitives. This scope owns multi-stage workflows and temporary resources.
+Inherit `Furious/AGENTS.md` and its root ancestor. Consult Models/Repository for data contracts, Plugins/Core
+for execution, and Qt for lifetime primitives. This scope owns multi-stage workflows and temporary resources.
 
 ## Workflow ownership
 
@@ -68,10 +68,13 @@ for lifetime primitives. This scope owns multi-stage workflows and temporary res
   a new first-retained sequence so presenters can prune their prefix without rebuilding history. Capture entries and
   the next cursor atomically, and coalesce notifications without losing producer updates.
 - Metrics sampling owns its worker/future generation and rejects results after disconnect, disablement, replacement,
-  or shutdown. Cancellation cannot stop an already-running plugin query: monitor contracts must bound blocking work.
-  Normalize cumulative-counter resets before history aggregation; clearing usage must not erase speed history.
+  or shutdown. Normalize cumulative-counter resets before history aggregation; clearing usage must not erase speed
+  history.
   History contains finite values for registered metrics on a monotonic timeline. A missing metric sample is not a
-  measured zero; preserve that distinction when adding providers or aggregating sparse series.
+  measured zero; preserve that distinction when adding providers or aggregating sparse series. Closing executor
+  admission or cancelling a future does not terminate a query already inside plugin code; test stale-result suppression
+  separately from worker completion. Monitor contracts must bound blocking work; report non-returning providers as a
+  shutdown limitation, not successful cancellation.
 
 ## Profile testing
 

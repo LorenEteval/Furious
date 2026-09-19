@@ -3,8 +3,8 @@
 Use the `manage-qt-pyside6-lifetimes` skill for QObject ownership, transient/reusable UI, signal retention, or packaged
 PySide6 lifetime work.
 
-Inherit the root and package guides. This scope owns reusable Qt presentation, translation/theme behavior, and lifetime
-primitives; pages and services consume them without creating parallel registries.
+Inherit `Furious/AGENTS.md` and its root ancestor. This scope owns reusable Qt presentation, translation/theme
+behavior, and lifetime primitives; pages and services consume them without creating parallel registries.
 
 ## Canonical presentation
 
@@ -53,8 +53,9 @@ primitives; pages and services consume them without creating parallel registries
   arbitrary worker calls to the GUI thread; choose an explicit queued owner-thread delivery boundary. A surviving
   Python wrapper can already be natively invalid, so callback freshness and `shiboken6.isValid()` address different
   failure modes. Neither replaces the strong owner required while asynchronous UI remains active.
-- `AppQAction.callback` is strong by design, so the action owner cannot outlive the captured receiver. An action
-  also owns a submenu supplied without a QWidget parent and schedules its native deletion when the action dies;
+- `AppQAction.callback` is strong by design, so its owner must not outlive the captured receiver; construction alone
+  does not enforce that requirement. An action also owns a submenu supplied without a QWidget parent and schedules
+  its native deletion when the action dies;
   `QAction.setMenu()` alone does not establish parent ownership. Explicitly parented menus retain their chosen owner.
 - Every `QNetworkReply` has one manager/context owner, one freshness rule, and one terminal deletion path. Request
   context must also be released when native destruction skips `finished`, including manager-first teardown with
@@ -78,6 +79,8 @@ primitives; pages and services consume them without creating parallel registries
 - For lifetime-sensitive changes, repeat open/close/accept/reject paths and assert destroyed signals, weak wrappers,
   registries, timers, callbacks, replies, threads, handles, and child counts return to baseline. Run a
   representative Nuitka probe when compiled callback retention or packaged-only behavior is part of the defect.
+  Retained Python wrappers may already be invalid: count native destruction independently, including owner-first
+  teardown. A pass under diagnostic compiler flags does not establish behavior under ordinary release flags.
   Start with `tests/test_qt_lifetime.py`, `tests/test_dialog_geometry.py`, and `tests/test_main_window_geometry.py`;
   use the `tests/fixtures/editor_lifetime_probe.py` fixture for compiled investigation. Treat unrun packaged probes
   as unverified, and update these rules when measured ownership or the toolchain changes.

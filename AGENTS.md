@@ -28,7 +28,9 @@
   scopes in place.
 - Inheritance follows directory ancestry. Name the nearest governing guide when clarifying a scope; a sibling guide
   identifies a contract to consult, not another parent. Verification and self-evolution here apply to every descendant
-  scope without repeating the same maintenance checklist in each file.
+  scope without repeating the same maintenance checklist in each file. Ignored comparison checkouts retain their own
+  scopes and toolchains; their manifests and local guides govern their code, not Furious's Python/Qt recipes.
+  Git diff alone cannot verify ignored guides: compare their paths and contents with the initial inventory too.
 
 ## Operating model
 
@@ -124,6 +126,7 @@
 - After significant architectural work, re-read the applicable hierarchy as a fresh agent: can it identify the
   owner, invariant, failure boundary, and relevant tests without relying on conversation history? Challenge rules
   likely to become stale, circular references, and wording that freezes incidental structure.
-- Distinguish observed behavior from design requirements and name tests/consumers that can challenge a local rule.
-  A known limitation is not a desired invariant. During guidance-only work, report code defects separately instead
-  of changing production code to satisfy the prose.
+- Distinguish requirements, observed implementation, and verified gaps. State the evidence boundary: a test name is an
+  investigation anchor, not proof that every failure path is covered. Keep run-specific counts, versions, and diagnostic
+  experiments in the work report; put only durable constraints in guidance. During guidance-only work, report defects
+  separately instead of changing production code to satisfy the prose.

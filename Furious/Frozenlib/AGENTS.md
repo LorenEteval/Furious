@@ -1,7 +1,7 @@
 # Platform and compatibility guidance
 
-Inherit the root and package guides. This scope contains compatibility and host-integration boundaries, not a license
-for unrelated application orchestration to accumulate in a broad helper namespace.
+Inherit `Furious/AGENTS.md` and its root ancestor. This scope contains compatibility and host-integration
+boundaries, not a license for unrelated application orchestration to accumulate in a broad helper namespace.
 
 - `Frozenlib` is the low-level settings, platform, compatibility, and broad export surface. Keep imports cheap,
   cross-platform, and free of application/UI construction; preserve curated wildcard exports until consumers and
@@ -10,7 +10,9 @@ for unrelated application orchestration to accumulate in a broad helper namespac
   isolated tests, or teardown; do not add fallback global owners that create competing lifecycles.
 - `AppSettings` keys include preferences and encoded repository blobs. Preserve names, defaults, string/binary
   encodings, migrations, and import-time registration. Distinguish desired preferences from confirmed host effects;
-  startup-registration success is persisted only after its helper reports success.
+  startup-registration success is persisted only after its helper reports success. Settings storage and cached
+  repository objects are distinct lifetimes: changing a QSettings identity does not reconstruct `Storage` backends.
+  Tests that replace settings must isolate both boundaries before exercising cleanup or restoration.
 - Keep proxy, DNS, routing, TUN, startup registration, session callbacks, external commands, and platform detection here
   or behind a runtime boundary so tests can replace them completely. Windows, macOS, Linux, Flatpak, AppImage, and older
   platform paths are distinct capabilities; never generalize from the current host.

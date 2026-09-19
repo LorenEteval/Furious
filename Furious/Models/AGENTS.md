@@ -1,7 +1,7 @@
 # Model guidance
 
-Inherit the root and package guides. This scope owns dependency-light domain shape and identity, never live persistence,
-Qt presentation, plugin discovery, or workflow execution.
+Inherit `Furious/AGENTS.md` and its root ancestor. This scope owns dependency-light domain shape and identity,
+never live persistence, Qt presentation, plugin discovery, or workflow execution.
 
 ## Domain shape and identity
 
@@ -12,8 +12,10 @@ Qt presentation, plugin discovery, or workflow execution.
   distinct and preserve useful context through callers. Successful generic mapping construction is not protocol
   validation: backend acceptance belongs to the selected capability, and serializability is a separate check.
 - `ServerProfile` separates connection data from `ProfileMetadata`. `fromConfiguration()` copies a bare configuration
-  but returns an already-supplied profile unchanged; the direct dataclass constructor does not imply copying. Choose explicit copy semantics before independent editing or worker handoff. Display name,
-  profile ID, subscription ownership/key, latency, speed, annotations, and local flags never become core fields.
+  but returns an already-supplied profile unchanged; the direct dataclass constructor does not imply copying. A type
+  conversion is therefore not an isolation boundary. Choose explicit copy semantics before independent editing or
+  worker handoff. Display name, profile ID, subscription ownership/key, latency, speed, annotations, and local flags
+  never become core fields.
 - Preserve unknown metadata and legacy aliases across load/save. `independentCopy()` creates a manual profile with a new
   ID and no subscription owner; a runtime `deepcopy()` preserves identity while isolating mutable preparation.
 - Treat serialized and plugin-provided mappings as untrusted values. Normalize only documented compatibility aliases,
