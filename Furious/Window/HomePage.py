@@ -725,6 +725,18 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         )
         self.importButton.setEnabled(bool(self.userServersQTableWidget.importActions))
 
+        self.testMenu = AppQMenu(*self.userServersQTableWidget.testActions, parent=self)
+        self.testMenu.aboutToShow.connect(self.highlightTestSelection)
+        self.testMenu.aboutToHide.connect(self.restoreTestSelectionHighlight)
+
+        self.testButton = AppQMenuPushButton(
+            _('Tests'),
+            icon=bootstrapIcon('magic.svg'),
+            popupMenu=self.testMenu,
+            parent=self,
+        )
+        self.testButton.installEventFilter(self)
+
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.NoContextMenu)
 
         # TODO: Custom status tip
@@ -840,6 +852,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.actionLayout.setSpacing(8)
         self.actionLayout.addWidget(self.serverButton)
         self.actionLayout.addWidget(self.importButton)
+        self.actionLayout.addWidget(self.testButton)
         self.actionLayout.addStretch(1)
         self.actionLayout.addWidget(self.subscriptionFilterComboBox)
 
@@ -915,6 +928,33 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.setConnectionControlsEnabled(AppConnectionController().interactionEnabled)
 
         self.setCentralWidget(self._widget)
+
+    def eventFilter(self, watched, event):
+        """Cover button focus before mouse release opens the Tests popup."""
+        if watched is self.testButton:
+            if event.type() == QtCore.QEvent.Type.FocusIn:
+                self.highlightTestSelection()
+            elif (
+                event.type() == QtCore.QEvent.Type.FocusOut
+                and not self.testMenu.isVisible()
+            ):
+                self.restoreTestSelectionHighlight()
+
+        return super().eventFilter(watched, event)
+
+    @QtCore.Slot()
+    def highlightTestSelection(self):
+        """Keep test targets highlighted throughout button and popup focus."""
+        self.userServersQTableWidget.setProperty('keepSelectionHighlighted', True)
+        self.userServersQTableWidget.viewport().update()
+
+    @QtCore.Slot()
+    def restoreTestSelectionHighlight(self):
+        """Resume ordinary selection painting once focus leaves Tests."""
+        self.userServersQTableWidget.setProperty(
+            'keepSelectionHighlighted', self.testButton.hasFocus()
+        )
+        self.userServersQTableWidget.viewport().update()
 
     @QtCore.Slot()
     def refreshEmptyState(self, *_args):

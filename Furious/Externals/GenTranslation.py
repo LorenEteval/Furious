@@ -3383,5 +3383,13 @@ TRANSLATION = {
         "RU": "Возобновить обновление",
         "ZH": "继续刷新",
         "isReviewed": "True"
+    },
+    "Tests": {
+        "source": [
+            "Furious.Window.HomePage"
+        ],
+        "RU": "Тесты",
+        "ZH": "测试",
+        "isReviewed": "True"
     }
 }

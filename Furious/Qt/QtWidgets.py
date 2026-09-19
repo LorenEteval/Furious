@@ -723,6 +723,10 @@ class _AppQItemViewSelectionDelegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         """Paint the rounded selection before native item contents."""
+        if self.parent().property('keepSelectionHighlighted'):
+            option = QStyleOptionViewItem(option)
+            option.state |= QStyle.StateFlag.State_Active
+
         if option.state & QStyle.StateFlag.State_Selected:
             selectionRect = self._selectionRect(option)
 

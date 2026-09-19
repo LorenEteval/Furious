@@ -61,7 +61,7 @@ strategy in an individual test.
 | AppQDialog first-presentation geometry, native show paths, centering, and async lifetime | `test_dialog_geometry.py` |
 | Editor mappings, lazy log rendering, routing-rule internal-move drag restrictions, Move menu/shortcuts and persisted order, message-box/connection UI | `test_ui_behavior.py` |
 | Bounded, incremental, cancellable QR export and snapshot/lifetime safety | `test_qr_export_scalability.py` |
-| Real keyboard/mouse/focus, proxy mapping, shared Home/Settings state, Home empty/filter recovery and shared menus, direct small profile operations and batched imports/deletions with throttled progress and stable cancellation targets, and transient editor input | `test_qt_interactions.py` |
+| Real keyboard/mouse/focus, proxy mapping, shared Home/Settings state, Home empty/filter recovery, shared menus and Tests-popup selection highlighting, direct small profile operations and batched imports/deletions with throttled progress and stable cancellation targets, and transient editor input | `test_qt_interactions.py` |
 | Direct Qt ownership and destruction across independent UI families | `test_qt_lifetime.py` |
 | Batched real/probe Qt object, QR rendering/window lifecycle, handle, Python allocation, and RSS trends | `test_qt_stress.py` |
 | Repeated harmless subprocess, pipe, thread, handle, and RSS trends | `test_process_stress.py` |

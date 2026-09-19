@@ -883,6 +883,7 @@ class ServerTableView(
         self.testActions = (
             AppQAction(
                 _('Test Ping Latency'),
+                parent=self,
                 callback=lambda: self.testSelectedItemPingLatency(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier,
@@ -891,6 +892,7 @@ class ServerTableView(
             ),
             AppQAction(
                 _('Test Tcping Latency'),
+                parent=self,
                 callback=lambda: self.testSelectedItemTcpingLatency(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier,
@@ -902,20 +904,24 @@ class ServerTableView(
             # that need that scheduler explicitly.
             AppQAction(
                 _('Test Download Speed'),
+                parent=self,
                 callback=lambda: self.testSelectedItemDownloadSpeedMulti(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier,
                     QtCore.Qt.Key.Key_M,
                 ),
             ),
+            AppQSeparator(),
             AppQAction(
                 _('Clear Test Results'),
+                parent=self,
                 callback=lambda: self.clearSelectedItemTestResult(),
                 shortcut=QtCore.QKeyCombination(
                     QtCore.Qt.KeyboardModifier.ControlModifier,
                     QtCore.Qt.Key.Key_R,
                 ),
             ),
+            AppQSeparator(),
             AppQAction(
                 _('Stop All Tests'),
                 callback=self.profileTestManager.cancelAll,
@@ -957,8 +963,6 @@ class ServerTableView(
                 ),
             ),
             AppQSeparator(),
-            *self.testActions,
-            AppQSeparator(),
             self.advancedActionRef,
             AppQSeparator(),
             AppQAction(
@@ -989,6 +993,7 @@ class ServerTableView(
 
         self._registerActionShortcuts(self.contextMenu.actions())
         self._registerActionShortcuts(self.importActions)
+        self._registerActionShortcuts(self.testActions)
 
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.handleCustomContextMenuRequested)
@@ -1905,7 +1910,7 @@ class ServerTableView(
     def testSelectedItemDownloadSpeed(self):
         """Run the retained serial download-test API for selected rows.
 
-        The Home context menu uses the concurrent variant; this method remains
+        The Home Tests menu uses the concurrent variant; this method remains
         available for programmatic callers that explicitly need serial scheduling.
         """
         self.testSelectedItemDownloadSpeedWithTimeout(5000)

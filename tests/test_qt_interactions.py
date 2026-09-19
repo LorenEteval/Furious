@@ -30,7 +30,14 @@ from Furious.Plugins.API import RoutingOption
 from Furious.Repository import Storage, SubscriptionGroup
 from Furious.Service import ProfileTestField, ProfileTestResult
 from Furious.Service.ProfileTesting import ProfileTestTarget
-from Furious.Qt import AppQAction, AppHue, AppQDialog, AppQSwitch, gettext
+from Furious.Qt import (
+    AppQAction,
+    AppHue,
+    AppQDialog,
+    AppQSwitch,
+    AppStyleSheet,
+    gettext,
+)
 from Furious.Widget.RoutingSelector import RoutingSelector
 from Furious.Widget.ServerTableView import (
     DeleteServersProgressDialog,
@@ -1255,6 +1262,156 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                 connection.deleteLater()
                 routing.deleteLater()
 
+    def testHomeTestsMenuPreservesSelectionAndHighlight(self):
+        """Keep mouse-opened tests tied to visibly selected, mapped profiles."""
+        with isolatedSettings():
+            settings = SettingsController()
+            connection = _ConnectionControllerFixture()
+            routing = _RoutingControllerFixture(
+                (RoutingOption('default', 'Default'),), 'default'
+            )
+            profiles = [
+                ServerTableQtInteractionTest._profile(name)
+                for name in ('match zeta', 'hidden', 'match alpha')
+            ]
+            Storage.UserServers().extend(profiles)
+            try:
+                with self._home(settings, connection, routing) as home:
+                    home.resize(1000, 600)
+                    home.show()
+                    home.activateWindow()
+                    table = home.userServersQTableWidget
+                    home.searchLineEdit.setText('match')
+                    home.applySearch()
+                    table.sortByColumn(0, QtCore.Qt.AscendingOrder)
+                    processQtEvents()
+                    expectedIds = {
+                        p.metadata.profileId for p in (profiles[0], profiles[2])
+                    }
+                    for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
+                        with self.subTest(theme=theme), mock.patch.object(
+                            application(), 'theme', return_value=theme
+                        ):
+                            home.setStyleSheet(AppStyleSheet.forTheme(theme))
+                            table.setFocus()
+                            QTest.mouseClick(
+                                table.viewport(),
+                                QtCore.Qt.LeftButton,
+                                QtCore.Qt.NoModifier,
+                                table.visualRect(table.proxyModel.index(0, 0)).center(),
+                            )
+                            QTest.mouseClick(
+                                table.viewport(),
+                                QtCore.Qt.LeftButton,
+                                QtCore.Qt.ControlModifier,
+                                table.visualRect(table.proxyModel.index(1, 0)).center(),
+                            )
+                            QTest.keyRelease(table, QtCore.Qt.Key_Control)
+                            processQtEvents()
+                            rect = table.visualRect(table.proxyModel.index(0, 0))
+                            sample = QtCore.QPoint(rect.right() - 12, rect.center().y())
+                            before = (
+                                table.viewport().grab().toImage().pixelColor(sample)
+                            )
+                            self.assertEqual(
+                                before,
+                                QtGui.QColor(
+                                    AppStyleSheet.paletteForTheme(theme)['selection']
+                                ),
+                            )
+                            # A real click can paint between press and release.
+                            QTest.mousePress(home.testButton, QtCore.Qt.LeftButton)
+                            processQtEvents()
+                            self.assertFalse(home.testMenu.isVisible())
+                            self.assertEqual(
+                                table.viewport().grab().toImage().pixelColor(sample),
+                                before,
+                            )
+                            QTest.mouseRelease(home.testButton, QtCore.Qt.LeftButton)
+                            processQtEvents()
+                            self.assertTrue(home.testMenu.isVisible())
+                            self.assertEqual(
+                                {
+                                    Storage.UserServers()[i].metadata.profileId
+                                    for i in table.selectedIndex
+                                },
+                                expectedIds,
+                            )
+                            self.assertEqual(
+                                table.viewport().grab().toImage().pixelColor(sample),
+                                before,
+                            )
+                            with mock.patch.object(
+                                table.profileTestManager, 'testPing'
+                            ) as testPing:
+                                home.testMenu.setActiveAction(table.testActions[0])
+                                QTest.keyClick(home.testMenu, QtCore.Qt.Key_Return)
+                                processQtEvents()
+                                testPing.assert_called_once()
+                                self.assertEqual(
+                                    {
+                                        p.metadata.profileId
+                                        for p in testPing.call_args.args[0]
+                                    },
+                                    expectedIds,
+                                )
+                            self.assertTrue(home.testButton.hasFocus())
+                            self.assertEqual(
+                                table.viewport().grab().toImage().pixelColor(sample),
+                                before,
+                            )
+                            # A cancelled click must not open a menu or leave a
+                            # highlight override after focus moves elsewhere.
+                            QTest.mousePress(home.testButton, QtCore.Qt.LeftButton)
+                            QTest.mouseRelease(
+                                home.testButton,
+                                QtCore.Qt.LeftButton,
+                                pos=QtCore.QPoint(-10, -10),
+                            )
+                            processQtEvents()
+                            self.assertFalse(home.testMenu.isVisible())
+                            home.searchLineEdit.setFocus()
+                            processQtEvents()
+                            self.assertFalse(table.property('keepSelectionHighlighted'))
+                            self.assertEqual(
+                                table.viewport().grab().toImage().pixelColor(sample),
+                                QtGui.QColor(
+                                    AppStyleSheet.paletteForTheme(theme)['raised']
+                                ),
+                            )
+
+                    # Opening and dismissing from the keyboard returns to the button.
+                    home.testButton.setFocus(QtCore.Qt.TabFocusReason)
+                    processQtEvents()
+                    before = table.viewport().grab().toImage().pixelColor(sample)
+                    QTest.keyPress(home.testButton, QtCore.Qt.Key_Space)
+                    processQtEvents()
+                    self.assertEqual(
+                        table.viewport().grab().toImage().pixelColor(sample), before
+                    )
+                    QTest.keyRelease(home.testButton, QtCore.Qt.Key_Space)
+                    processQtEvents()
+                    self.assertTrue(home.testMenu.isVisible())
+                    QTest.keyClick(home.testMenu, QtCore.Qt.Key_Escape)
+                    processQtEvents()
+                    self.assertTrue(home.testButton.hasFocus())
+                    home.searchLineEdit.setFocus()
+                    with mock.patch.object(
+                        table.profileTestManager, 'testPing'
+                    ) as testPing:
+                        QTest.keyClick(
+                            home.searchLineEdit,
+                            QtCore.Qt.Key_P,
+                            QtCore.Qt.ControlModifier,
+                        )
+                        QTest.keyRelease(home.searchLineEdit, QtCore.Qt.Key_Control)
+                        processQtEvents()
+                        testPing.assert_not_called()
+            finally:
+                settings.deleteLater()
+                connection.deleteLater()
+                routing.deleteLater()
+
     def testHomeEmptyStateRecoversFilteredProfilesAndReusesActions(self):
         """Use existing menus, search clear and group selection to recover profiles."""
         with isolatedSettings():
@@ -1358,10 +1515,7 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                         if isinstance(action, AppQAction)
                     ]
                     contextActions = table.contextMenu.actions()
-                    firstTestIndex = contextActions.index(testActions[0])
-                    testSection = contextActions[
-                        firstTestIndex : firstTestIndex + len(table.testActions)
-                    ]
+                    testSection = home.testMenu.actions()
 
                     self.assertEqual(len(testActions), 5)
                     self.assertEqual(
@@ -1377,23 +1531,17 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                             'Test Ping Latency',
                             'Test Tcping Latency',
                             'Test Download Speed',
+                            None,
                             'Clear Test Results',
+                            None,
                             'Stop All Tests',
                         ],
                     )
                     self.assertTrue(testActions[-1].icon().isNull())
-                    self.assertFalse(hasattr(home, 'testButton'))
-                    self.assertFalse(hasattr(home, 'testMenu'))
-                    self.assertTrue(contextActions[firstTestIndex - 1].isSeparator())
-
-                    afterTests = firstTestIndex + len(testSection)
-                    self.assertTrue(contextActions[afterTests].isSeparator())
-                    self.assertIs(
-                        contextActions[afterTests + 1], table.advancedActionRef
-                    )
-
+                    self.assertIs(home.testButton.popupMenu(), home.testMenu)
                     for testAction in testActions:
-                        self.assertEqual(contextActions.count(testAction), 1)
+                        self.assertNotIn(testAction, contextActions)
+                        self.assertIn(testAction, table.actions())
 
                     table.setFocus()
                     processQtEvents()
@@ -1416,8 +1564,8 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                         manager._latencyScheduler, 'cancelAll'
                     ) as cancel:
                         table = home.userServersQTableWidget
-                        menu = table.contextMenu
-                        menu.popup(table.viewport().mapToGlobal(QtCore.QPoint(10, 10)))
+                        menu = home.testMenu
+                        QTest.mouseClick(home.testButton, QtCore.Qt.LeftButton)
                         processQtEvents()
                         menu.setActiveAction(table.testActions[-1])
                         QTest.keyClick(menu, QtCore.Qt.Key_Return)
