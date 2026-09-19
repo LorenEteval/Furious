@@ -183,10 +183,12 @@ class RuntimeLifecycleTest(TestCase):
         """Keep one terminal authority after ownership has transferred."""
         owner = _AttemptOwner()
         committed = []
+
         router = RuntimeEventRouter()
         runtime = _Runtime(exitCallback=router.publish)
         router.attach(runtime, owner)
         lease = RuntimeLease(runtime, router)
+
         lease.commit(lambda current, event: committed.append((current, event)))
 
         runtime.publishCode(12)

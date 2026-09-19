@@ -293,6 +293,7 @@ class ConnectionStartupAsyncTest(TestCase):
         operation.failed.connect(lambda *_args: failures.append(_args))
 
         processQtEvents()
+
         runtime.fail(CoreRuntime.ExitCode.ConfigurationError.value)
 
         self.assertTrue(waitFor(lambda: bool(failures)))
@@ -307,6 +308,7 @@ class ConnectionStartupAsyncTest(TestCase):
             'reason=invalid-configuration',
         )
         self.assertEqual(manager.lastStartError, 'Invalid server configuration')
+
         self.assertEqual(runtime.stopCount, 1)
         self.assertEqual(runtime.disposeCount, 1)
 
@@ -331,6 +333,7 @@ class ConnectionStartupAsyncTest(TestCase):
         operation.failed.connect(lambda *_args: failures.append(_args))
 
         processQtEvents()
+
         runtime.fail(CoreRuntime.ExitCode.ConfigurationError.value)
         operation._readinessProbe._finishFailed('core readiness check timed out')
 
@@ -345,6 +348,7 @@ class ConnectionStartupAsyncTest(TestCase):
             'reason=invalid-configuration',
         )
         self.assertEqual(manager.lastStartError, 'Invalid server configuration')
+
         self.assertEqual(runtime.stopCount, 1)
         self.assertEqual(runtime.disposeCount, 1)
 

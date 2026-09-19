@@ -173,6 +173,7 @@ def main(argv=None):
     parser.add_argument('--entries', type=int, default=50_000)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--baseline', type=Path)
+
     arguments = parser.parse_args(argv)
 
     if arguments.entries < 10:
@@ -185,6 +186,7 @@ def main(argv=None):
             baseline = validateReport(
                 json.loads(arguments.baseline.read_text(encoding='utf-8'))
             )
+
             if baseline['entries'] != arguments.entries:
                 raise ValueError('baseline entries must match --entries')
         except (OSError, ValueError) as error:

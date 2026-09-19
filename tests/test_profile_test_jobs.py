@@ -621,8 +621,10 @@ class ProfileTestServiceTest(unittest.TestCase):
         running = self._profile('running', 'running.example')
         queued = self._profile('queued', 'queued.example')
         valid = self._profile('valid', 'valid.example')
+
         manager = self._manager((running, queued, valid))
         scheduler = manager._latencyScheduler
+
         pool = _ControlledThreadPool()
         scheduler.threadPool = pool
         scheduler.pingWorkerFactory = _ControlledLatencyWorker
@@ -648,6 +650,7 @@ class ProfileTestServiceTest(unittest.TestCase):
         self.assertEqual(len(pool.started), 2)
 
         second = pool.started[1]
+
         second.finish('7ms')
         processQtEvents()
 

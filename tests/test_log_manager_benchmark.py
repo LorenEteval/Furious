@@ -103,10 +103,12 @@ class LogManagerBenchmarkTest(unittest.TestCase):
                 (current, ['--baseline', str(baseline)]),
             ):
                 arguments = ['--entries', '50', '--output', str(output), *extra]
+
                 result = runPythonChild(
                     'from tests.benchmarks.benchmark_log_manager import main\n'
                     f'main({arguments!r})'
                 )
+
                 assertChildSucceeded(self, result, 'log benchmark CLI')
                 self.assertEqual(
                     json.loads(result.stdout),

@@ -782,6 +782,7 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(manager.retainedCharacters, 0)
         self.assertEqual(manager.retiredEntryCount, 301)
         self.assertEqual(manager.entries(), tuple())
+
         self.assertEqual(
             sum(index.iterationRequests for index in observedIndexes),
             0,
@@ -799,14 +800,17 @@ class LogManagerTest(unittest.TestCase):
     def testSnapshotsNeverTraverseRetiredGenerations(self):
         """Materialize only live streams after an immediate runtime rollover."""
         manager = LogManager(maximumEntries=100, autoClearEnabled=False)
+
         manager.append('application', APPLICATION_LOG_CATEGORY)
         manager.append('core', CORE_LOG_CATEGORY)
         manager.append('tun2socks', TUN2SOCKS_LOG_CATEGORY)
+
         retiredGeneration = manager._runtimeGeneration
         observedGlobal = _ObservedEntryIndex(retiredGeneration.entries)
         observedCore = _ObservedEntryIndex(
             retiredGeneration.entriesByCategory[CORE_LOG_CATEGORY].entries
         )
+
         retiredGeneration.entries = observedGlobal
         retiredGeneration.entriesByCategory[CORE_LOG_CATEGORY].entries = observedCore
 
@@ -817,6 +821,7 @@ class LogManagerTest(unittest.TestCase):
             tuple(entry.message for entry in manager.entries()),
             ('application',),
         )
+
         self.assertEqual(observedGlobal.iterationRequests, 0)
         self.assertEqual(observedCore.iterationRequests, 0)
         self.assertEqual(observedGlobal.oldestRemovals, 0)

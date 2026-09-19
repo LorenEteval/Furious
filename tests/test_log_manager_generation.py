@@ -379,14 +379,18 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             ('t', TUN2SOCKS_LOG_CATEGORY),
             ('c2', CORE_LOG_CATEGORY),
         )
+
         for message, categoryId in operations:
             self.appendBoth(manager, model, message, categoryId)
 
         manager.clear('runtime.extra')
         model.clear('runtime.extra')
+
         _assertManagerInvariants(self, manager, model)
+
         manager.clear(runtimeOnly=True)
         model.clear(runtimeOnly=True)
+
         _assertManagerInvariants(self, manager, model)
 
         for index in range(9):
@@ -394,13 +398,18 @@ class GenerationLogManagerContractTest(unittest.TestCase):
 
         manager.setAutoClearEnabled(False)
         model.setAutoClearEnabled(False)
+
         manager.clear('other.extra')
         model.clear('other.extra')
+
         self.appendBoth(manager, model, 'x' * 80, 'other.extra')
         self.appendBoth(manager, model, 'y' * 81, APPLICATION_LOG_CATEGORY)
+
         manager.clear()
         model.clear()
+
         _assertManagerInvariants(self, manager, model)
+
         self.appendBoth(manager, model, 'after-clear', APPLICATION_LOG_CATEGORY)
 
     def testSeededModelBasedStateMachine(self):

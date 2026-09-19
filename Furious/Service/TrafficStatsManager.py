@@ -221,9 +221,11 @@ class TrafficStatsManager(
         self._monitor = None
         self._generation = 0
         self._queryInFlight = False
+
         self._previousCounters = None
         self._previousSampleTime = None
         self._usageAccumulator = _TrafficUsageAccumulator()
+
         self._hasConnected = False
         self._connected = False
         self._collectionEnabled = AppSettings.isStateON_(METRICS_COLLECTION_SETTING)
@@ -231,6 +233,7 @@ class TrafficStatsManager(
         self._sampleTimer = QtCore.QTimer(self)
         self._sampleTimer.setInterval(TRAFFIC_STATS_SAMPLE_INTERVAL)
         self._sampleTimer.timeout.connect(self._requestSample)
+
         self._sampleReady.connect(self._consumeResult)
 
     def _resumeSampling(self):

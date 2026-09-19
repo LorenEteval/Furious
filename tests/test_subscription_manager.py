@@ -280,6 +280,7 @@ class SubscriptionManagerTest(TestCase):
             )
 
         self.assertEqual(metadataAfterFailure, (1024, 2048, 8192, 1893456000))
+
         self.assertEqual(group.subscriptionUpload, 0)
         self.assertEqual(group.subscriptionDownload, 0)
         self.assertEqual(group.subscriptionTotal, 0)
@@ -1063,10 +1064,12 @@ class SubscriptionManagerTest(TestCase):
 
         self.assertIs(manager._autoUpdateTimers['group-a'], groupATimer)
         self.assertEqual(groupATimer.interval(), 10 * 60 * 1000)
+
         self.assertIs(manager._autoUpdateTimers['group-b'], groupBTimer)
         self.assertEqual(groupBTimer.timerId(), groupBTimerId)
         self.assertLessEqual(groupBTimer.remainingTime(), groupBRemainingBefore + 5)
         self.assertEqual(len(manager._autoUpdateTimers), 2)
+
         manager.deleteLater()
 
     def testRemovingSubscriptionDestroysOnlyItsTimerAndCancelsItsReply(self):
@@ -1331,12 +1334,14 @@ class SubscriptionManagerTest(TestCase):
         """A synchronous abort observer must not lose the next generation's status."""
         subscriptions = {'group-a': self._subscription(lastSyncStatus='syncing')}
         manager = self._manager()
+
         context = {'unique': 'group-a', 'batchId': 1, 'requestVersion': 1}
         manager._nextBatchId = 1
         manager._requestVersions['group-a'] = 1
         manager._batches[1] = _SubscriptionBatchState(
             {('group-a', 1)}, False, [{'unique': 'completed-group'}], []
         )
+
         reply = mock.Mock()
         manager._activeReplies[reply] = reply
         manager._replySubscriptions[reply] = 'group-a'
@@ -1369,6 +1374,7 @@ class SubscriptionManagerTest(TestCase):
         ):
             try:
                 manager.stopUpdates()
+
                 request.assert_called_once()
 
                 self.assertTrue(manager._isCurrentRequest(request.call_args.kwargs))
