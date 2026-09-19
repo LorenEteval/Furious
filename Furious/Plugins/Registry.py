@@ -420,6 +420,7 @@ class PluginRegistry:
 
                 for configType in configurationTypes:
                     self._configurationFactories[configType] = entry
+
                 for runtimeType in runtimeTypes:
                     self._runtimeFactories[runtimeType] = entry
             elif isinstance(capability, TrafficStatsProvider):

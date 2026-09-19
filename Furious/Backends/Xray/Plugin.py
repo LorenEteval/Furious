@@ -61,6 +61,7 @@ def fixLogObjectPath(config, attr: str, value: str, log=True):
         config['log'][attr] = absolutePath(path)
 
     result = config['log'][attr]
+
     if result:
         try:
             with open(result, 'x', encoding='utf-8'):

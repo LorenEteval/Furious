@@ -186,6 +186,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
                 for _ in range(30):
                     payload = _ResponseBody(b'fixture')
                     references.append(weakref.ref(payload))
+
                     reply = _ManagedReply(manager)
                     references.append(weakref.ref(reply))
                     reply.destroyed.connect(lambda *_args: destroyed.append(True))
@@ -202,6 +203,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
 
                     self.assertFalse(isValid(reply))
                     self.assertFalse(getattr(manager, contextAttribute))
+
                     del reply
 
                 self.assertEqual(len(destroyed), 30)
@@ -238,6 +240,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
         """A completed reply cannot invoke hooks again before deferred deletion."""
         manager = _CapturingHttpGetManager()
         self.addCleanup(manager.deleteLater)
+
         reply = manager.webGET('https://invalid.test', marker='fixture')
 
         with patch.object(manager, 'successCallback') as completed:
@@ -245,7 +248,9 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
             reply.finished.emit()
 
         completed.assert_called_once_with(reply, marker='fixture')
+
         processQtEvents()
+
         self.assertFalse(isValid(reply))
 
     capabilityId = 'fixture.navigation'

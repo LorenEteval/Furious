@@ -1655,20 +1655,26 @@ class UnifiedLogPageTest(unittest.TestCase):
         with isolatedSettings():
             stack = QStackedWidget()
             pages = [LogPage(manager=LogManager(maximumEntries=3)) for _ in range(2)]
+
             for page in pages:
                 stack.addWidget(page)
+
             self.addCleanup(stack.deleteLater)
             self.addCleanup(stack.close)
             self.addCleanup(QTest.keyRelease, stack, QtCore.Qt.Key_Control)
+
             stack.show()
             stack.activateWindow()
+
             for page in (pages[0], pages[1], pages[0]):
                 stack.setCurrentWidget(page)
                 page.textBrowser.setFocus()
                 processQtEvents()
+
                 QTest.keyClick(
                     page.textBrowser, QtCore.Qt.Key_F, QtCore.Qt.ControlModifier
                 )
+
                 self.assertTrue(waitFor(page.searchLineEdit.hasFocus))
 
     def testLabelsOwnTheirDynamicTranslation(self):

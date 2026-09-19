@@ -272,6 +272,7 @@ class _RequestPayload:
 def runNetworkProbe(iterations=100):
     """Verify native teardown releases both reply registries under compilation."""
     application()
+
     result = {}
 
     for managerType, contextAttribute in (
@@ -286,8 +287,10 @@ def runNetworkProbe(iterations=100):
                 manager = managerType()
                 payload = _RequestPayload()
                 reply = _PendingReply(manager)
+
                 references.extend((weakref.ref(payload), weakref.ref(reply)))
                 reply.destroyed.connect(lambda *_args: destroyed.append(True))
+
                 manager.get = lambda _request: reply
 
                 if isinstance(manager, HttpGetManager):
@@ -306,6 +309,7 @@ def runNetworkProbe(iterations=100):
                     manager.deleteLater()
 
                 processQtEvents()
+
                 assert not isValid(reply)
                 assert not getattr(manager, contextAttribute)
 
@@ -317,6 +321,7 @@ def runNetworkProbe(iterations=100):
 
             assert len(destroyed) == iterations
             assert all(reference() is None for reference in references)
+
             result[managerType.__name__ + ':' + terminal] = iterations
 
     return result
@@ -325,18 +330,22 @@ def runNetworkProbe(iterations=100):
 def runInfrastructureProbe(iterations=100):
     """Check signal, mask, and animation ownership under real Qt destruction."""
     application()
+
     result = {}
 
     for closeMethod in CLOSE_METHODS:
         destroyed = []
+
         for _ in range(iterations):
             dialog = AppQDialog()
             dialog.destroyed.connect(lambda *_args: destroyed.append(True))
             reference = weakref.ref(dialog)
             key = dialog._lifetimeKey
+
             dialog.open()
             getattr(dialog, closeMethod)()
             dialog.open()
+
             del dialog
             processQtEvents()
 
@@ -346,37 +355,49 @@ def runInfrastructureProbe(iterations=100):
 
             getattr(reference(), closeMethod)()
             processQtEvents()
+
             assert reference() is None
             assert key not in AppQDialog._openDialogs
 
         assert len(destroyed) == iterations
+
         result['reopenAfter' + closeMethod.title()] = iterations
 
     routingReferences = []
     routingDestroyed = []
+
     for _ in range(iterations):
         dialog = RoutingRulesDialog({'rules': [{'ruleTag': 'keep'}]})
         dialog.open()
         dialog.listView.setCurrentIndex(dialog.listView.rulesModel.index(0, 0))
+
         dialog.deleteRule()
+
         confirmation = next(
             item
             for item in AppQDialog._openDialogs.values()
             if isinstance(item, AppQMessageBox)
         )
+
         for item in (dialog, confirmation):
             routingReferences.append(weakref.ref(item))
             item.destroyed.connect(lambda *_args: routingDestroyed.append(True))
+
         del item
+
         dialog.deleteLater()
         processQtEvents()
+
         assert not isValid(dialog) and not isValid(confirmation)
+
         del dialog, confirmation
 
     collectAtBoundary()
+
     assert len(routingDestroyed) == iterations * 2
     assert all(reference() is None for reference in routingReferences)
     assert not AppQDialog._openDialogs
+
     result['routingOwnerFirst'] = iterations
 
     for senderFirst in (True, False):
@@ -403,6 +424,7 @@ def runInfrastructureProbe(iterations=100):
             counts.append(survivor.receivers(QtCore.SIGNAL('destroyed(QObject*)')))
 
         assert counts == [counts[0]] * iterations, counts
+
         result['senderFirst' if senderFirst else 'receiverFirst'] = iterations
 
         survivor.deleteLater()
@@ -421,6 +443,7 @@ def runInfrastructureProbe(iterations=100):
             )
 
             transition.apply(lambda: None)
+
             animation = next(iter(transition._animations))
             overlay = window.findChild(QWidget, transition.OverlayObjectName)
 
@@ -435,6 +458,7 @@ def runInfrastructureProbe(iterations=100):
             else:
                 transition.deleteLater()
                 processQtEvents()
+
                 window.deleteLater()
 
             processQtEvents()
@@ -463,6 +487,7 @@ def runInfrastructureProbe(iterations=100):
             assert not isValid(mask)
 
         assert not AppQDialog._openDialogs
+
         result['messageBoxDeleted'] = iterations
     finally:
         owner.deleteLater()
@@ -474,63 +499,81 @@ def runInfrastructureProbe(iterations=100):
 def runConfirmationProbe(iterations=100):
     """Check native menu ownership and representative view-owned prompts."""
     application()
+
     result = {}
 
     for explicitOwner in (False, True):
         references = []
         destroyed = []
+
         for _ in range(iterations):
             owner = QWidget()
             menu = AppQMenu(parent=owner if explicitOwner else None)
             action = AppQAction('Menu fixture', menu=menu, parent=owner)
+
             references.append(weakref.ref(menu))
             menu.destroyed.connect(lambda *_args: destroyed.append(True))
+
             action.deleteLater()
             processQtEvents()
+
             assert not isValid(action)
             assert isValid(menu) == explicitOwner
+
             owner.deleteLater()
             processQtEvents()
+
             del action, menu, owner
 
         assert len(destroyed) == iterations
         assert all(reference() is None for reference in references)
+
         result['widgetOwnedMenu' if explicitOwner else 'actionOwnedMenu'] = iterations
 
     originalAssetDirectory = assetModule.XRAY_ASSET_DIR
+
     try:
         with tempfile.TemporaryDirectory() as directory:
             assetModule.XRAY_ASSET_DIR = Path(directory)
             asset = Path(directory) / 'fixture.dat'
             asset.write_bytes(b'keep')
+
             for overwrite in (False, True):
                 references = []
                 destroyed = []
+
                 for _ in range(iterations):
                     owner = QWidget()
                     view = XrayAssetListView(parent=owner)
                     view.setCurrentIndex(view.model().index(0, 0))
+
                     if overwrite:
                         view.appendNewItem(str(asset))
                     else:
                         view.deleteSelectedItem()
+
                     confirmation = next(iter(AppQDialog._openDialogs.values()))
                     references.append(weakref.ref(confirmation))
                     confirmation.destroyed.connect(
                         lambda *_args: destroyed.append(True)
                     )
+
                     view.deleteLater()
                     processQtEvents()
+
                     assert not isValid(view) and not isValid(confirmation)
                     assert isValid(owner)
                     assert asset.read_bytes() == b'keep'
+
                     owner.deleteLater()
                     processQtEvents()
+
                     del confirmation, view, owner
 
                 assert len(destroyed) == iterations
                 assert all(reference() is None for reference in references)
                 assert not AppQDialog._openDialogs
+
                 result[
                     'assetOverwriteOwnerFirst' if overwrite else 'assetDeleteOwnerFirst'
                 ] = iterations

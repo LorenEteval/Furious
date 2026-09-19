@@ -221,6 +221,7 @@ class GuiHy1ItemTLSInsecure(GuiEditorItemTextSwitch):
                 config['insecure'] = False
 
                 return True
+
             if oldChecked is False:
                 return False
 

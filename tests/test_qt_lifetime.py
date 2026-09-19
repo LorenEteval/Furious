@@ -238,6 +238,7 @@ class QtLifetimeTest(unittest.TestCase):
                 owner = QWidget()
                 menu = AppQMenu(parent=owner if explicitOwner else None)
                 action = AppQAction('Menu fixture', menu=menu, parent=owner)
+
                 references.append(weakref.ref(menu))
                 menu.destroyed.connect(lambda *_args: destroyed.append(True))
 
@@ -245,11 +246,13 @@ class QtLifetimeTest(unittest.TestCase):
                 processQtEvents()
 
                 self.assertFalse(isValid(action))
+
                 try:
                     self.assertEqual(isValid(menu), explicitOwner)
                 finally:
                     if isValid(menu):
                         menu.deleteLater()
+
                     owner.deleteLater()
                     processQtEvents()
 
@@ -290,8 +293,10 @@ class QtLifetimeTest(unittest.TestCase):
                     with self.subTest(platform=platform, family=family):
                         references = []
                         destroyed = []
+
                         for _ in range(20):
                             parent = QWidget()
+
                             if family == 'servers':
                                 view = ServerTableView(
                                     parent=parent,
@@ -308,6 +313,7 @@ class QtLifetimeTest(unittest.TestCase):
 
                             view.setCurrentIndex(view.model().index(0, 0))
                             module = type(view).__module__
+
                             with mock.patch(module + '.PLATFORM', platform):
                                 if family == 'assetOverwrite':
                                     view.appendNewItem(str(asset))
@@ -327,9 +333,11 @@ class QtLifetimeTest(unittest.TestCase):
                             try:
                                 view.deleteLater()
                                 processQtEvents()
+
                                 self.assertFalse(isValid(view))
                                 self.assertFalse(isValid(confirmation))
                                 self.assertTrue(isValid(parent))
+
                                 self.assertEqual(profiles, [profile])
                                 self.assertIn('fixture', subscriptions)
                                 self.assertIn('fixture', routings)
@@ -337,6 +345,7 @@ class QtLifetimeTest(unittest.TestCase):
                             finally:
                                 if isValid(confirmation):
                                     confirmation.reject()
+
                                 parent.deleteLater()
                                 processQtEvents()
 

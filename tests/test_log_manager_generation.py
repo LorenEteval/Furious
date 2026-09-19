@@ -1528,6 +1528,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
             return time.perf_counter_ns() - started
 
         matrix = []
+
         for size in (100, 1_000, 10_000):
             samples = {
                 name: []
@@ -1544,13 +1545,16 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                     'oldest_eviction',
                 )
             }
+
             for _repetition in range(5):
                 manager = LogManager(
                     maximumEntries=size * 2 + 10,
                     autoClearMaximumEntries=size,
                 )
+
                 for index in range(size):
                     manager.append(str(index), CORE_LOG_CATEGORY)
+
                 samples['normal_append'].append(
                     elapsed(lambda: manager.append('ordinary'))
                 )
@@ -1559,22 +1563,27 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                 )
 
                 manager = LogManager(maximumEntries=size + 10, autoClearEnabled=False)
+
                 for index in range(size):
                     manager.append(str(index), CORE_LOG_CATEGORY)
+
                 samples['category_snapshot'].append(
                     elapsed(lambda: manager.snapshot(CORE_LOG_CATEGORY))
                 )
                 samples['runtime_clear'].append(
                     elapsed(lambda: manager.clear(runtimeOnly=True))
                 )
+
                 with manager._lock:
                     samples['cleanup_64'].append(
                         elapsed(lambda: manager._cleanupRetiredLocked())
                     )
 
                 manager = LogManager(maximumEntries=size + 10, autoClearEnabled=False)
+
                 for index in range(size):
                     manager.append(str(index), APPLICATION_LOG_CATEGORY)
+
                 samples['sole_category_clear'].append(
                     elapsed(lambda: manager.clear(APPLICATION_LOG_CATEGORY))
                 )
@@ -1583,14 +1592,17 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                     maximumEntries=size * 2 + 10,
                     autoClearEnabled=False,
                 )
+
                 for index in range(size):
                     manager.append(str(index), CORE_LOG_CATEGORY)
                 manager.append('shared', TUN2SOCKS_LOG_CATEGORY)
+
                 samples['shared_category_clear'].append(
                     elapsed(lambda: manager.clear(CORE_LOG_CATEGORY))
                 )
 
                 manager = LogManager(maximumEntries=size + 10, autoClearEnabled=False)
+
                 for index in range(size):
                     manager.append(
                         str(index),
@@ -1600,10 +1612,12 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                             TUN2SOCKS_LOG_CATEGORY,
                         )[index % 3],
                     )
+
                 samples['global_snapshot'].append(elapsed(lambda: manager.snapshot()))
                 samples['clear_all'].append(elapsed(lambda: manager.clear()))
 
                 manager = LogManager(maximumEntries=size, autoClearEnabled=False)
+
                 for index in range(size):
                     manager.append(
                         str(index),
@@ -1613,6 +1627,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                             TUN2SOCKS_LOG_CATEGORY,
                         )[index % 3],
                     )
+
                 samples['oldest_eviction'].append(
                     elapsed(lambda: manager.append('evict'))
                 )
@@ -1632,6 +1647,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
             for name in matrix[0]
             if name != 'n'
         }
+
         for name in (
             'normal_append_us',
             'core_rollover_us',
@@ -1642,6 +1658,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
             'oldest_eviction_us',
         ):
             self.assertLess(ratios[name], 50)
+
         self.report('operation-scaling-matrix', samples=matrix, ratios=ratios)
 
     def testAppendLatencyWithRolloverRetentionAndBacklog(self):
@@ -1715,8 +1732,10 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
     def testCleanupLatencyDoesNotScaleWithBacklog(self):
         """Keep append cleanup capped at one for geometrically larger queues."""
         results = []
+
         for backlog in (64, 1_000, 10_000):
             samples = []
+
             for _repetition in range(9):
                 manager = LogManager(
                     maximumEntries=backlog + 10,
@@ -1726,17 +1745,25 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                 )
                 manager.RetiredCleanupBudget = 64
                 manager.AppendRetiredCleanupBudget = 1
+
                 for index in range(backlog):
                     manager.append(str(index), CORE_LOG_CATEGORY)
+
                 manager.clear(runtimeOnly=True)
                 before = manager.retiredEntryCount
+
                 started = time.perf_counter_ns()
                 manager.append('new')
                 samples.append(time.perf_counter_ns() - started)
+
                 self.assertEqual(manager.retiredEntryCount, max(0, before - 1))
+
             results.append({'backlog': backlog, 'median_us': median(samples) / 1_000})
+
         ratio = results[-1]['median_us'] / max(results[0]['median_us'], 0.001)
+
         self.assertLess(ratio, 20)
+
         self.report('cleanup-backlog-latency', samples=results, endpoint_ratio=ratio)
 
     def testAdversarialClearRateCannotGrowPhysicalBacklog(self):
@@ -1942,6 +1969,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
             capture_output=True,
             text=True,
         ).stdout
+
         baselineModule = types.ModuleType('tests._baseline_log_manager')
         previousModule = sys.modules.get(baselineModule.__name__)
         sys.modules[baselineModule.__name__] = baselineModule
@@ -1959,47 +1987,60 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
 
         def benchmark(managerClass):
             results = {}
+
             manager = managerClass(maximumEntries=50_000, autoClearEnabled=False)
+
             started = time.perf_counter_ns()
             for index in range(50_000):
                 manager.append(str(index), APPLICATION_LOG_CATEGORY)
+
             results['steady_append_ms'] = (time.perf_counter_ns() - started) / 1e6
 
             manager = managerClass(
                 maximumEntries=50_000,
                 autoClearMaximumEntries=20_000,
             )
+
             for index in range(20_000):
                 manager.append(str(index), CORE_LOG_CATEGORY)
             for index in range(20_000):
                 manager.append(str(index), TUN2SOCKS_LOG_CATEGORY)
+
             started = time.perf_counter_ns()
             manager.append('trigger', CORE_LOG_CATEGORY)
             results['core_rollover_us'] = (time.perf_counter_ns() - started) / 1e3
 
             manager = managerClass(maximumEntries=50_000, autoClearEnabled=False)
+
             for index in range(30_000):
                 manager.append(
                     str(index),
                     CORE_LOG_CATEGORY if index % 5 == 0 else APPLICATION_LOG_CATEGORY,
                 )
+
             started = time.perf_counter_ns()
             manager.snapshot(CORE_LOG_CATEGORY)
             results['category_snapshot_us'] = (time.perf_counter_ns() - started) / 1e3
+
             started = time.perf_counter_ns()
             manager.snapshot()
             results['global_snapshot_us'] = (time.perf_counter_ns() - started) / 1e3
 
             manager = managerClass(maximumEntries=1_000, autoClearEnabled=False)
+
             started = time.perf_counter_ns()
             for index in range(50_000):
                 manager.append(str(index), APPLICATION_LOG_CATEGORY)
+
             results['retention_heavy_ms'] = (time.perf_counter_ns() - started) / 1e6
+
             return results
 
         current = benchmark(LogManager)
         baseline = benchmark(baselineModule.LogManager)
+
         self.assertEqual(LogManager(maximumEntries=1).entries(), tuple())
+
         self.report(
             'baseline-comparison',
             baseline_revision=revision,

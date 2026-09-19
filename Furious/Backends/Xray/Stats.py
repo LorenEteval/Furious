@@ -133,6 +133,7 @@ def configureXrayStats(
         config['api'] = currentApi
 
     configuredServer = currentApi.get('listen')
+
     if not isinstance(configuredServer, str) or not configuredServer.strip():
         configuredServer = None
 
@@ -143,6 +144,7 @@ def configureXrayStats(
     currentApi['listen'] = apiServer
 
     services = currentApi.get('services', [])
+
     if not isinstance(services, list):
         services = []
 
@@ -159,11 +161,13 @@ def configureXrayStats(
         config['stats'] = generated['stats']
 
     policy = config.get('policy')
+
     if not isinstance(policy, dict):
         policy = {}
         config['policy'] = policy
 
     systemPolicy = policy.get('system')
+
     if not isinstance(systemPolicy, dict):
         systemPolicy = {}
         policy['system'] = systemPolicy
