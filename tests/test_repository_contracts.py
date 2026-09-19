@@ -121,7 +121,17 @@ class RepositoryContractTest(unittest.TestCase):
             )
             AppSettings.set('CustomTUNSettings', encodedList)
 
-            self.assertEqual(UserTUNSettings().data(), {})
+            # This failure is intentional. Capture and verify its diagnostic so
+            # CI does not annotate the expected traceback as an unexpected error.
+            with self.assertLogs(
+                'Furious.Repository.TunSettings', level='ERROR'
+            ) as logged:
+                self.assertEqual(UserTUNSettings().data(), {})
+
+            self.assertIn(
+                'TUN settings repository root must be an object',
+                '\n'.join(logged.output),
+            )
 
     def testStorageCachesOneLiveOwnerPerRepositoryType(self):
         """Return one intentional process-lifetime owner and its live collection."""
