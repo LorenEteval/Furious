@@ -252,6 +252,22 @@ cover an aliased root and rejection of paths outside that root. The QR responsiv
 queues unrelated work after generation starts and requires delivery before completion;
 it does not assume a platform-specific order between zero-delay Qt timers.
 
+On the CI Qt 6.8.3 runtime, the shared offscreen application uses
+`fixtures/offscreen.json` to provide a 1920×1080 virtual desktop. Geometry fixtures
+account for translated controls' Qt minimum sizes instead of assuming one host's
+font metrics. Menu tests explicitly reactivate the owning test window after popup
+dismissal: macOS offscreen does not supply the desktop's reactivation event. They
+still assert the retained child focus and focus-scoped shortcuts. Selection-color
+checks sample an empty cell in logical coordinates, avoiding text glyphs and
+high-DPI image-coordinate assumptions. Log catch-up checks wait for the separate
+queued scroll update as well as document rendering.
+
+The singleton race uses a short unique socket name that fits under macOS's long
+temporary paths and retains child stderr in failure diagnostics. The Windows
+executable-path test copies a Python interpreter and its DLLs into a disposable
+path with spaces, so it also works when Python and the checkout are on different
+volumes; it waits for child output before asserting shutdown.
+
 The Home/Log workflow regressions exercise debounced typing, explicit submit/clear, navigation catch-up, focus-scoped
 Find/edit shortcuts, and live log filtering. These are real Qt tests in `test_qt_interactions.py` and
 `test_ui_behavior.py`; no production log source or profile network is started. The two optional pause regressions

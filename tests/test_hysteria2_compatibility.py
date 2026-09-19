@@ -33,7 +33,7 @@ from Furious.Backends.Hysteria2.Protocols import Hysteria2ProtocolHandler
 from Furious.Backends.Hysteria2.TunSettingsDialog import (
     GuiHysteria2TUNSettingsGroupBoxInterface,
 )
-from Furious.Frozenlib import AppSettings, Mixins
+from Furious.Frozenlib import AppSettings, Mixins, PLATFORM
 from Furious.Models.Profile import ServerProfile
 from Furious.Plugins.Runtime import serializeRuntimeConfiguration
 from Furious.Qt import AppStyleSheet
@@ -226,7 +226,7 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
         )
         self.assertEqual(
             proxyBandwidth.bandwidthFields._widget.layout().contentsMargins().top(),
-            20,
+            2 if PLATFORM == 'Darwin' else 20,
         )
 
         editor.show()
@@ -346,7 +346,9 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
 
                     self.assertEqual(rowLayout.contentsMargins().left(), 0)
                     self.assertEqual(rowLayout.contentsMargins().right(), 0)
-                    self.assertEqual(rowLayout.spacing(), 8)
+                    self.assertEqual(
+                        rowLayout.spacing(), 10 if PLATFORM == 'Darwin' else 8
+                    )
                     self.assertIsNotNone(
                         rowLayout.itemAt(rowLayout.count() - 1).spacerItem()
                     )

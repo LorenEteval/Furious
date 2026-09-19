@@ -48,6 +48,7 @@ import sys
 import json
 import time
 import tempfile
+import shutil
 import threading
 import subprocess
 import unittest
@@ -593,27 +594,42 @@ class ExternalCoreProcessTest(unittest.TestCase):
 
             lease.release()
 
-    @unittest.skipUnless(os.name == 'nt', 'Windows executable hard-link coverage')
+    @unittest.skipUnless(os.name == 'nt', 'Windows executable path coverage')
     def testExecutablePathContainingSpaces(self):
-        """Launch an executable hard link whose local path contains spaces."""
+        """Launch a copied interpreter whose local path contains spaces."""
         with tempfile.TemporaryDirectory(
             prefix='furious executable path ', dir=Path.cwd()
         ) as directory:
             executable = Path(directory) / 'python executable.exe'
+            # The interpreter and checkout can be on different Windows volumes.
+            # Copy the base interpreter (not a venv redirector) and its DLLs;
+            # PYTHONHOME supplies its existing standard library without installing
+            # an environment or writing into the interpreter's directory.
+            shutil.copy2(sys._base_executable, executable)
 
-            os.link(sys.executable, executable)
+            for library in Path(sys.base_prefix).glob('python*.dll'):
+                shutil.copy2(library, directory)
 
             config = self.configuration(
-                ['-c', 'import time; time.sleep(60)'],
+                ['-c', 'import time; print("ready", flush=True); time.sleep(60)'],
                 directory,
+                environment={'PYTHONHOME': sys.base_prefix},
             )
             config['executable'] = str(executable)
+            messages = []
+            runtime = ExternalCoreProcess(config, msgCallback=messages.append)
 
-            runtime = ExternalCoreProcess(config)
-
-            runtime.start()
-
-            runtime.stop()
+            try:
+                runtime.start()
+                self.assertTrue(
+                    self.waitFor(
+                        lambda: any('ready' in message for message in messages)
+                    ),
+                    messages,
+                )
+                self.assertTrue(runtime.isRunning())
+            finally:
+                runtime.stop()
 
             self.assertFalse(runtime.isRunning())
 

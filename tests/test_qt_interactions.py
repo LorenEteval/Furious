@@ -1316,6 +1316,16 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                         p.metadata.profileId for p in (profiles[0], profiles[2])
                     }
 
+                    def selectionColor():
+                        # Grab in logical widget coordinates; raw image pixels
+                        # otherwise need conversion for the device pixel ratio.
+                        return (
+                            table.viewport()
+                            .grab(QtCore.QRect(sample, QtCore.QSize(1, 1)))
+                            .toImage()
+                            .pixelColor(0, 0)
+                        )
+
                     for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
                         with self.subTest(theme=theme), mock.patch.object(
                             application(), 'theme', return_value=theme
@@ -1338,11 +1348,12 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                             QTest.keyRelease(table, QtCore.Qt.Key_Control)
                             processQtEvents()
 
-                            rect = table.visualRect(table.proxyModel.index(0, 0))
-                            sample = QtCore.QPoint(rect.right() - 12, rect.center().y())
-                            before = (
-                                table.viewport().grab().toImage().pixelColor(sample)
-                            )
+                            # The address is empty in this fixture. Sample its
+                            # background rather than a font-dependent remark glyph.
+                            index = table.proxyModel.index(0, 2)
+                            self.assertEqual(index.data(), '')
+                            sample = table.visualRect(index).center()
+                            before = selectionColor()
 
                             self.assertEqual(
                                 before,
@@ -1357,7 +1368,7 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
 
                             self.assertFalse(home.testMenu.isVisible())
                             self.assertEqual(
-                                table.viewport().grab().toImage().pixelColor(sample),
+                                selectionColor(),
                                 before,
                             )
 
@@ -1373,7 +1384,7 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                                 expectedIds,
                             )
                             self.assertEqual(
-                                table.viewport().grab().toImage().pixelColor(sample),
+                                selectionColor(),
                                 before,
                             )
 
@@ -1393,9 +1404,13 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                                     expectedIds,
                                 )
 
-                            self.assertTrue(home.testButton.hasFocus())
+                            # macOS offscreen activates popups but does not
+                            # reactivate their owner on dismissal. Supply only
+                            # window activation; Qt must retain the focused child.
+                            home.activateWindow()
+                            self.assertTrue(waitFor(home.testButton.hasFocus))
                             self.assertEqual(
-                                table.viewport().grab().toImage().pixelColor(sample),
+                                selectionColor(),
                                 before,
                             )
 
@@ -1416,7 +1431,7 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
 
                             self.assertFalse(table.property('keepSelectionHighlighted'))
                             self.assertEqual(
-                                table.viewport().grab().toImage().pixelColor(sample),
+                                selectionColor(),
                                 QtGui.QColor(
                                     AppStyleSheet.paletteForTheme(theme)['raised']
                                 ),
@@ -1426,14 +1441,12 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     home.testButton.setFocus(QtCore.Qt.TabFocusReason)
                     processQtEvents()
 
-                    before = table.viewport().grab().toImage().pixelColor(sample)
+                    before = selectionColor()
 
                     QTest.keyPress(home.testButton, QtCore.Qt.Key_Space)
                     processQtEvents()
 
-                    self.assertEqual(
-                        table.viewport().grab().toImage().pixelColor(sample), before
-                    )
+                    self.assertEqual(selectionColor(), before)
 
                     QTest.keyRelease(home.testButton, QtCore.Qt.Key_Space)
                     processQtEvents()
@@ -1443,7 +1456,8 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     QTest.keyClick(home.testMenu, QtCore.Qt.Key_Escape)
                     processQtEvents()
 
-                    self.assertTrue(home.testButton.hasFocus())
+                    home.activateWindow()
+                    self.assertTrue(waitFor(home.testButton.hasFocus))
 
                     home.searchLineEdit.setFocus()
 
@@ -1510,8 +1524,9 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     self.assertEqual(imported, [True])
 
                     table = home.userServersQTableWidget
+                    home.activateWindow()
                     table.setFocus()
-                    processQtEvents()
+                    self.assertTrue(waitFor(table.hasFocus))
                     QTest.keyClick(table, QtCore.Qt.Key_V, QtCore.Qt.ControlModifier)
                     processQtEvents()
 

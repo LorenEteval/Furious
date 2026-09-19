@@ -675,7 +675,9 @@ class ApplicationLifecycleTransactionTest(TestCase):
 
     def testConcurrentProcessesElectExactlyOnePrimary(self):
         """Exercise the real Qt local-server race with isolated processes."""
-        serverName = f'furious-singleton-test-{uuid.uuid4()}'
+        # Qt prefixes relative socket names with the temporary directory. macOS
+        # paths are long enough that a descriptive prefix exceeds sun_path.
+        serverName = uuid.uuid4().hex
         script = textwrap.dedent(r"""
             import os
             import sys
@@ -799,7 +801,8 @@ class ApplicationLifecycleTransactionTest(TestCase):
 
                 for process in processes:
                     stdout, stderr = process.communicate(timeout=15)
-                    outputs.append(stdout)
+                    outputs.append(stdout + stderr)
+
                     self.assertEqual(
                         process.returncode,
                         0,

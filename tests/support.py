@@ -63,7 +63,23 @@ class TestApplication(QApplication):
 
     def __init__(self):
         """Initialize one side-effect-free application for this test process."""
-        super().__init__([])
+        arguments = []
+
+        if os.environ.get('QT_QPA_PLATFORM') == 'offscreen':
+            # The plugin's default 800x800 desktop cannot contain the translated
+            # MainWindow minimum on all hosts. Give geometry tests a real-sized
+            # virtual desktop without altering any physical display.
+            configuration = Path(__file__).with_name('fixtures') / 'offscreen.json'
+            # Platform arguments are colon-separated, including on Windows.
+            configuration = os.path.relpath(configuration)
+
+            arguments = [
+                'furious-tests',
+                '-platform',
+                f'offscreen:configfile={configuration}',
+            ]
+
+        super().__init__(arguments)
 
         self.setApplicationName('Furious Tests')
         self.setOrganizationName('Furious Tests')

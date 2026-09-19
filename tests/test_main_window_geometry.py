@@ -243,6 +243,8 @@ class AppQMainWindowLifecycleTest(unittest.TestCase):
         )
 
         with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+
             for windowType, expectedSize in cases:
                 with self.subTest(windowType=windowType.__name__):
                     window = windowType()
@@ -250,7 +252,13 @@ class AppQMainWindowLifecycleTest(unittest.TestCase):
                     with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
                         window.show()
 
-                        self.assertEqual(window.size(), expectedSize)
+                        self.assertEqual(
+                            window.size(),
+                            # Use the enforced layout constraint: a fixed-size
+                            # window may deliberately override its size hint.
+                            expectedSize.expandedTo(window.minimumSize()),
+                        )
+
                         moveToCenter.assert_called_once_with(window)
 
                         window.move(61, 73)
@@ -343,12 +351,18 @@ class MainWindowNavigationSessionTest(unittest.TestCase):
 
     def testNewWindowResetsSessionStateButRestoresGeometry(self):
         """Reset page and expansion while retaining persistent geometry."""
-        expectedSize = QtCore.QSize(760, 600)
-
         with isolatedSettings() as settings:
+            AppSettings.set('Language', 'EN')
+
             with _realMainWindow() as firstWindow:
                 firstWindow.show()
+                expectedSize = (
+                    QtCore.QSize(760, 600)
+                    .expandedTo(firstWindow.minimumSizeHint())
+                    .expandedTo(firstWindow.minimumSize())
+                )
                 firstWindow.resize(expectedSize)
+                self.assertEqual(firstWindow.size(), expectedSize)
                 firstWindow.navigationView.setExpanded(True, animated=False)
                 firstWindow.showPage('settings')
                 firstWindow.cleanup()
@@ -723,7 +737,14 @@ class MainWindowGeometryTest(unittest.TestCase):
     def testRoutingWindowKeepsValidSmallGeometryAndIgnoresInvalidState(self):
         """Preserve intentional compact geometry independently from layout state."""
         with isolatedSettings():
-            expected = QtCore.QRect(35, 45, 420, 260)
+            AppSettings.set('Language', 'EN')
+            window = XrayRoutingWindow()
+            compactSize = (
+                QtCore.QSize(420, 260)
+                .expandedTo(window.minimumSizeHint())
+                .expandedTo(window.minimumSize())
+            )
+            expected = QtCore.QRect(QtCore.QPoint(35, 45), compactSize)
             AppSettings.set(
                 'UserRoutingWindowGeometry',
                 self._saveGeometry(expected),
@@ -732,8 +753,6 @@ class MainWindowGeometryTest(unittest.TestCase):
                 'UserRoutingWindowState',
                 QtCore.QByteArray(b'broken'),
             )
-
-            window = XrayRoutingWindow()
 
             with patch('Furious.Qt.QtWidgets.moveToCenter') as moveToCenter:
                 window.show()

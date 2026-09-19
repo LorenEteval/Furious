@@ -1999,7 +1999,8 @@ class UnifiedLogPageTest(unittest.TestCase):
             scrollbar = page.textBrowser.verticalScrollBar()
 
             self.assertGreater(scrollbar.maximum(), 0)
-            self.assertEqual(scrollbar.value(), scrollbar.maximum())
+            # Rendering completion schedules a separate zero-delay scroll update.
+            self.assertTrue(waitFor(lambda: scrollbar.value() == scrollbar.maximum()))
             self.assertTrue(page._followTail)
 
             page.hide()
@@ -3130,7 +3131,8 @@ class DialogBehaviorTest(unittest.TestCase):
             [rule['ruleTag'] for rule in view.rules()], ['0', '1', '2', '3']
         )
         self.assertEqual(view.selectedIndex, [2])
-        self.assertTrue(view.hasFocus())
+        dialog.activateWindow()
+        self.assertTrue(waitFor(view.hasFocus))
 
     def testHomeAndRoutingMoveMenusRetranslateWithoutChangingActions(self):
         with isolatedSettings():
