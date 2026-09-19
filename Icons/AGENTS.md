@@ -8,6 +8,8 @@ resource-manifest contract; it does not govern general UI layout.
 - Use the shared icon helpers and the bundled monochrome/default and white variants as appropriate. An SVG's
   `currentColor` alone does not establish Qt theme behavior; verify how `Furious/Qt/QtGui.py` resolves and masks the
   chosen asset. Reuse that path instead of adding control-specific recoloring, and do not rely on color alone.
+  Mask/opacity helpers cache shared icon values: keep cache size bounded and keys independent of widgets, and avoid
+  mutating a cached icon as if it belonged to one control.
 - Preserve license/provenance and the `Resources.qrc` alias contract. Any add, removal, rename, or alias change
   updates all consumers and the manifest, then regenerates `Furious/Frozenlib/AppResources.py` with the selected
   environment's `pyside6-rcc Resources.qrc -o Furious/Frozenlib/AppResources.py`. Never hand-edit generated resource

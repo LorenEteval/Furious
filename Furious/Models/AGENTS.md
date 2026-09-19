@@ -34,8 +34,10 @@ never live persistence, Qt presentation, plugin discovery, or workflow execution
 
 ## Compatibility and verification
 
-- Protocol construction/export belongs to plugin capabilities. Compatibility shims may remain while callers migrate,
-  but new protocol-name branches do not belong in core models.
+- Protocol construction/export belongs to plugin capabilities. Profile mapping access and `toJSONString()` expose
+  the connection document, not a complete profile record; persistence must encode metadata explicitly through its
+  repository contract. A URI is the selected codec's projection. Compatibility shims may remain while callers
+  migrate, but new protocol-name branches do not belong in core models.
 - Verify malformed/current/legacy/unknown-field round trips, metadata/connection separation, copy/identity
   semantics, deterministic fingerprints, construction/serialization diagnostics, and capability-based import/export.
   Revise this guide with intentional domain changes; do not preserve a legacy identity rule after migration replaces

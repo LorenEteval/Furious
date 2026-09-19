@@ -10,8 +10,11 @@ preserves the intentionally different direct-subprocess scope for user-selected 
   TUN address, and application-tun2socks opt-in distinct while preserving unknown top-level fields.
 - Loading is observational: do not silently absolutize or rewrite relative paths. Validation before spawn owns path
   existence/type, argument and environment types/NULs, endpoint requirements, and a finite bounded shutdown timeout.
-- Execute an argument vector with `shell=False`. Never concatenate a shell command, search or kill by process name, or
-  log arguments/environment values that may contain credentials.
+  Finite validation must reject non-finite numbers explicitly; range comparisons alone do not reject NaN.
+  `shutdownTimeout()` currently accepts NaN: this is a validation gap, not a supported timeout.
+- Execute an argument vector with `shell=False`. Environment overrides apply to a copy of the inherited process
+  environment; preparation must not mutate the host's `os.environ`. Never concatenate a shell command, search or
+  kill by process name, or log arguments/environment values that may contain credentials.
 
 ## Runtime and TUN ownership
 

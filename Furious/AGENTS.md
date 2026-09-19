@@ -14,8 +14,9 @@ place.
   presentation in `Qt`, `Widget`, `Window`, or `Actions`.
 - `Interface` and `Models` stay dependency-light and must not import UI, controllers, services, repositories, or concrete
   backends. Backend/runtime modules remain importable without constructing editors or the application.
-- Package `__init__.py` files are curated compatibility surfaces, not mirrors. Import order can register settings or
-  affect lazy plugin/Nuitka discovery; search public-import and packaging tests before changing exports.
+- Package `__init__.py` files are curated compatibility surfaces, not mirrors. Import-time settings registration and
+  lazy capability imports are distinct from application construction or plugin discovery. Preserve that distinction
+  when changing exports; trace transitive imports and public-import/packaging tests, not just the edited module.
 
 ## State, data, and ownership
 

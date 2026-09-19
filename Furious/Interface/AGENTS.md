@@ -26,8 +26,9 @@ implementations can satisfy without importing application composition or concret
   contracts.
 - Runtime liveness is observational: querying it must not consume an exit, transfer ownership, or dispatch
   callbacks. A zero process exit can still be an unexpected connection failure; requested stop and raw exit success
-  are different facts. Keep semantic startup errors separate from process codes and readiness timeouts. Define
-  cleanup-failure semantics without assuming every runtime owns a subprocess. Bounded stop/dispose is a contract to
+  are different facts. Preserve both in terminal events so orchestration can interpret the exit in its current
+  attempt/connection context without making the runtime own controller policy. Keep semantic startup errors separate
+  from process codes and readiness timeouts. Define cleanup-failure semantics without assuming every runtime owns a subprocess. Bounded stop/dispose is a contract to
   verify, not a guarantee supplied by the base class: third-party work may be non-cooperative. Report known violations
   at their implementation/owner boundary rather than weakening the interface to bless an unreleased resource.
 - Verify cheap/import-independent contracts plus representative runtime, storage, editor, application-exit,

@@ -105,7 +105,9 @@
   elapsed timeout is not evidence of native resource release; distinguish that observation from the intended guarantee.
 - Report source inspection, executed tests, mocked platform evidence, and packaged validation separately. A passing
   source suite does not prove native distributions or every declared Python/Qt floor. Release import checks do not
-  replace behavioral tests; record untested targets and compatibility gaps explicitly.
+  replace behavioral tests; record untested targets and compatibility gaps explicitly. Match verification to the
+  changed contract: guidance-only work checks claims, references, scope, and path preservation; formatting-only work
+  checks the promised structural equivalence. Neither warrants unrelated code changes or generated-file refreshes.
 - Use real Qt semantics when focus, selection, keyboard modifiers, proxy mapping, event delivery, queued callbacks,
   geometry, or QObject destruction matters. Prefer semantic state and destroyed/resource counts; use targeted
   rendering assertions when pixels are the defect, without relying on whole-window snapshots or arbitrary sleeps.

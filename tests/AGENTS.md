@@ -59,7 +59,9 @@ and test-tier selection; test convenience never weakens a production invariant.
   relative scaling or resource bounds; document the measured contract and environment rather than treating one
   machine's absolute timing as a portable product requirement.
 - Update `tests/README.md` when coverage ownership, modules, commands, tiers, opt-ins, or environment requirements change.
-  The final unittest status and process exit code are authoritative even when negative paths intentionally log errors.
+  Expected negative-path logs do not themselves mean failure. However, an exception raised inside a Qt-dispatched
+  callback may reach `sys.excepthook` without failing the surrounding unittest. Reentrant/lifetime tests must also
+  capture and assert callback exceptions, restoring the hook afterward; a successful runner exit alone is insufficient.
 - Review new tests for production-state mutation, live network dependence, process-name cleanup, unbounded waits,
   shared mutable fixtures, order dependence, timing-only assertions, and storage assertions where runtime output is
   the contract. For guidance-only changes, verify path preservation, changed-file scope, referenced commands/tests,

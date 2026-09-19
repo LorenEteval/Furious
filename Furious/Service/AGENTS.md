@@ -49,9 +49,11 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   revision, commits while preserving live profile identity/local metadata, then publishes coalesced status/structure.
   Post-commit reconnect/test invalidation failure is reported without undoing committed profiles. This is live
   reconciliation; repository flush and status persistence are separate boundaries, not one disk transaction.
-- User-requested subscription stop invalidates pending generations and marks unfinished groups cancelled. Keep
-  completed commits/results and automatic update schedules; future updates remain admissible. Logical batch
-  completion does not release a still-running preparation worker or its relay.
+- User-requested subscription stop invalidates pending generations and marks unfinished groups cancelled. Publish
+  old group cancellation state before aborting replies: abort can synchronously finish a batch whose observers start
+  another update. Finish only captured old operation contexts, never overwrite a newer generation's status. Keep
+  completed commits/results and automatic schedules; future updates remain admissible. Logical batch completion
+  does not release a still-running preparation worker or its relay.
 - Provider-reported subscription usage/expiry metadata is untrusted advisory input. Parse it with strict bounds at the
   network boundary and commit or clear it only alongside a successful current synchronization; failed synchronization
   preserves the last successful metadata.

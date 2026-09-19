@@ -29,8 +29,9 @@ state.
   cleanup path through the containing window/application. Moving a service between pages must not duplicate schedules,
   histories, requests, or controller connections during the transition.
 - One-shot editors/prompts use managed transient dialogs and weak compiled-safe continuations. Reusable text/editor
-  windows and retained settings dialogs need an explicit owner and reopen policy. A settings label or Qt parent does
-  not determine lifetime: check the actual base class and close/accept/reject path before changing deletion policy.
+  windows and retained settings dialogs need an explicit owner and reopen policy. Classify a plugin-created page or
+  dialog by the lifetime transferred to its caller, not by the registry's process lifetime. A settings label or Qt
+  parent does not determine lifetime: inspect the base class and close/accept/reject path before changing deletion policy.
 - Empty-state presentation distinguishes an empty repository from a filtered view with no matches. Recovery changes
   view filters only; reuse existing import/edit/test actions instead of creating page-specific workflow owners.
 - Use normal layouts and `AppQ*` controls. Restore top-level geometry only after persistent composition and through the

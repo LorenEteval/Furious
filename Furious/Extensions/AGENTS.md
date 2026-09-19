@@ -11,9 +11,9 @@ is bundled.
   `SubscriptionResult` envelope; nested mappings are not necessarily deeply immutable. Profile construction/metadata
   belongs to `SubscriptionImportService`, and group reconciliation, request generations, timers, persistence, and
   post-commit effects belong to the subscription service/repository path.
-- Automatic detection probes decoders by priority; explicit selection does not authorize format substitution. Return
-  `None` for a mismatch. Recognizing a share-link envelope does not validate its URI schemes or protocols; the importer
-  owns that decision. Preserve useful names/upstream IDs and never log a complete payload or link. Current
+- Automatic detection probes decoders by priority. An explicit decoder ID restricts dispatch to that decoder;
+  an unknown ID or a mismatch must not silently resume automatic detection. Return `None` for a mismatch. Recognizing
+  a share-link envelope does not validate its URI schemes or protocols; the importer owns that decision. Preserve useful names/upstream IDs and never log a complete payload or link. Current
   standard formats are plain/Base64 share-link envelopes; linear parsing is not an input-size bound. Introduce
   explicit size/depth/work limits before adding richer recursive or nested formats.
 - Worker safety is a property of the whole preparation path. Standard decoders opt in, but the selected protocol

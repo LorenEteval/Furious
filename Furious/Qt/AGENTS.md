@@ -49,7 +49,9 @@ behavior, and lifetime primitives; pages and services consume them without creat
   native destruction/disconnection boundary and both owner-first and sender-first teardown.
 - Detaching a child ends the shared QObject-tree lifetime assumption. Disconnect the registrations owned by that
   feature before reparenting, preserve unrelated listeners, and remove default/escape/selection references when the
-  child dies. `AppQMessageBox` button reuse and native-destruction regressions exercise this boundary.
+  child dies. Signal delivery is also a reentrancy boundary: a listener may delete the sender or its owner before
+  the emitting method resumes. Recheck validity before later native calls. `AppQMessageBox` button reuse and
+  native-destruction regressions exercise both boundaries.
 - Direct connections are appropriate for deliberately shared persistent lifetimes; syntax alone does not prove a
   leak. Recheck the selected Nuitka/PySide6 callback protection when the toolchain changes. Static weak method names
   are runtime contracts, so renames must update registrations and tests. Weak dispatch itself does not marshal

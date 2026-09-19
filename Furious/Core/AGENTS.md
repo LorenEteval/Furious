@@ -16,8 +16,10 @@ connection policy remains outside it.
   exit.
 - Required cleanup covers the exact child, process handle, monitor/drain timers, queues, callbacks, and feeder
   resources. Stop must bound waits, escalate only the owned child, and remain safe after partial start or repetition.
-  A join timeout or failed handle close is not a successful reap. Verify actual child liveness before describing a
-  terminal execution state as complete resource release; include failed escalation in ownership tests.
+  Execution exit, terminal-event delivery, and monitor/transport disposal need separate assertions; success at one
+  boundary must not hide a leak at another. A join timeout or failed handle close is not a successful reap. Verify
+  actual child liveness before describing a terminal execution state as complete resource release; include failed
+  escalation in ownership tests.
   `MultiprocessingRuntime._closeProcess()` currently discards its process reference even when handle close fails.
   This is a cleanup-contract gap, not a permissible ownership transfer: a fix must preserve observability of the
   outstanding child/handle and agree with the service lease's cleanup-failure semantics.

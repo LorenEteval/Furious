@@ -22,7 +22,8 @@ owns Hysteria 2's nested upstream document, native-TUN capability, statistics, a
   Failure to establish required managed server-route exclusions is terminal: use `TUNPreparationError` so registry
   dispatch cannot interpret it as permission to fall back to another TUN path. Probe/download copies always remove
   native TUN. Managed preparation currently resolves server addresses synchronously; asynchronous readiness does not
-  make that preparation interruptible.
+  make that preparation interruptible. Test resolved addresses and explicit route exclusions as separate inputs to
+  the exclusion guarantee; a resolution failure alone does not prove that valid manual exclusions are absent.
 - The statistics provider is a process-lifetime capability; the runtime captures a configured server-API target and
   sampling owns its monitor/query lifetime. API URL, client ID, and authorization secret are distinct from client
   connection credentials. Keep requests bounded, validate counters, and never log the secret or infer statistics

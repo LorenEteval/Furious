@@ -22,7 +22,9 @@ structure and human-reviewed translations.
   Do not clear approved review flags or hand-maintain the generated `source` module list. Runtime lookup reverse-maps
   translated text to a source key through a shared reverse index across languages. Equal translations for different
   source keys can therefore affect later retranslation, including after a language switch. Exercise lookup and
-  retranslation under explicit locales rather than treating collision diagnostics as cosmetic.
+  retranslation under explicit locales rather than treating collision diagnostics as cosmetic. A collision-free
+  extraction report does not prove reverse lookup is unambiguous across every language; inspect the runtime index
+  and language-switch behavior when two source keys share translated text.
 
 ## Extractable source text
 

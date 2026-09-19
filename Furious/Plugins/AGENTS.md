@@ -52,6 +52,8 @@ remains in each implementation.
 - Capability instances default to GUI-thread-only for background subscription preparation. A decoder or protocol
   handler opts into worker execution only after its parsing, validation, caches, globals, and Qt usage are audited as
   safe for concurrent copied inputs; keep unclassified third-party capability execution on the GUI thread.
+  `workerSafe` authorizes concurrent execution, not bounded duration or interruptibility. Cancellation can reject a
+  result while the provider still runs; define resource retention and shutdown separately from that opt-in.
 
 ## Verification
 

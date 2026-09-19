@@ -49,5 +49,7 @@ exceptions; it does not define the source test suite or imply that every package
   source verification. Follow actual `needs` and tag gates back to required checks; upload success alone does not
   establish release eligibility. A diagnostic Nuitka build that changes compiler/runtime flags is separate evidence
   from the ordinary release configuration; record and exercise the latter before claiming a packaged defect resolved.
-- Revalidate version/architecture claims against the current matrix instead of duplicating all pins here. When build
-  topology intentionally changes, update this scope and follow every consumer through upload and publication.
+- Revalidate version/architecture claims against the current matrix instead of duplicating all pins here. Record
+  which workflow invocation and effective dependency set produced an artifact; a passing standalone binary job
+  does not inherit source-test evidence from a different invocation. When topology changes, follow every consumer
+  through upload and publication and update this scope.

@@ -9,8 +9,9 @@ boundaries, not a license for unrelated application orchestration to accumulate 
 - `Globals` exposes only deliberate application-lifetime owners. Accessors may be absent during partial startup,
   isolated tests, or teardown; do not add fallback global owners that create competing lifecycles.
 - `AppSettings` keys include preferences and encoded repository blobs. Preserve names, defaults, string/binary
-  encodings, migrations, and import-time registration. Distinguish desired preferences from confirmed host effects;
-  startup-registration success is persisted only after its helper reports success. Settings storage and cached
+  encodings, migrations, and import-time registration. Distinguish desired preferences, helper-reported success,
+  and independently observed host state; a Boolean success is not an OS read-back guarantee. Startup-registration
+  success is persisted only after its helper reports success. Settings storage and cached
   repository objects are distinct lifetimes: changing a QSettings identity does not reconstruct `Storage` backends.
   Tests that replace settings must isolate both boundaries before exercising cleanup or restoration.
 - Keep proxy, DNS, routing, TUN, startup registration, session callbacks, external commands, and platform detection here

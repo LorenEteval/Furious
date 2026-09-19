@@ -26,8 +26,9 @@ provenance; it is not an application-data or settings directory.
 - Linux Essentials-only builds deliberately operate without WebEngine; map consumers must retain their non-WebEngine
   fallback. macOS/Windows packaged paths may include WebEngine and must resolve all local resources from the bundle.
   Audit map assets together with `Furious/Widget/EndpointInfoWidget.py`: local loading, the WebChannel bridge, remote
-  tile permissions, and external attribution navigation form one boundary. A CSP change alone does not establish
-  that arbitrary navigation or remote executable code is allowed by the host.
+  tile permissions, and external attribution navigation form one boundary. Validate both the renderer payload and
+  host-side acceptance when that bridge changes; editing bundled JavaScript alone cannot establish host behavior.
+  A CSP change alone does not establish that arbitrary navigation or remote executable code is allowed by the host.
 
 ## Verification
 

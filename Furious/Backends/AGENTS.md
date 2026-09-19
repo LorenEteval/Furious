@@ -45,8 +45,9 @@ generic default.
 - Read the selected backend's nested guide before changing its configuration, editor, protocol codec, runtime, TUN,
   routing, asset, statistics, or process behavior. Those child guides own backend-specific compatibility details; keep
   this parent focused on rules that every backend must satisfy.
-- A shared backend-contract change must be checked against Xray, Hysteria 1, Hysteria 2, and External Core rather than
-  making the most feature-rich backend the implicit default for the others.
+- Check a shared backend-contract change against Xray, Hysteria 1, Hysteria 2, and External Core, including an absent
+  optional capability and a present capability that cannot perform the requested operation. Those are different
+  outcomes; neither permits shared code to substitute another backend's policy.
 
 ## Verification
 

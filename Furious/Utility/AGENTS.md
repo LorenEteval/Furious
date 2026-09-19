@@ -20,8 +20,9 @@ protocol and is not a general-purpose utility bucket.
   exit result: the flag proves only that a file write completed, not that the child succeeded or the report can be
   parsed as an exit protocol. Test reporting both with and without a constructed application/log manager.
 - Fallback presentation runs in the parent after a nonzero child result. It constructs a Qt application for the
-  report but does not call the ordinary application `run()` initialization. Keep that constructor dependency in
-  failure-path tests, and preserve the original result when evolving reporting failures rather than adding a supervisor.
+  report but does not call the ordinary application `run()` initialization. Do not assume plugin, storage, controller,
+  or main-window initialization occurred merely because the fallback has a Qt application. Keep its constructor
+  dependencies in failure-path tests and preserve the original result when evolving reporting failures.
 - Verify normal return, exception, assertion, signal, pre-application failure, crash-log failure, command dispatch,
   cross-platform spawn, exact child joining, and absence of manager servers or orphaned resources. If this process
   topology changes intentionally, rewrite this guide rather than layering another supervisor over the old one.

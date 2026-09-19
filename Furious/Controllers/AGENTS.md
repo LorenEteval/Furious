@@ -15,7 +15,10 @@ compatibility paths.
   the active profile. Disconnect/reconnect cancels the exact in-flight generation and ignores stale completion.
 - Preserve state and signal ordering, interaction gating, the exact selected `ServerProfile`, runtime snapshots,
   reconnect preference, and rollback after validation, runtime, TUN, System Proxy exceptions, cancellation, or unexpected-exit
-  failure. Worker/native callbacks cross to the controller’s Qt thread before transition.
+  failure. Worker/native callbacks cross to the controller’s Qt thread before transition. Signal listeners and queued
+  actions can synchronously disconnect or replace a start. Required invariant: revalidate current state/operation
+  after invoking them before completing the connection or applying further host effects; a check before signal
+  emission alone cannot establish freshness afterward.
 - The active live profile is not the prepared document used by an already-started runtime. Resolve identity and
   generation before changing state or host effects, and preserve typed runtime failures; cancellation and supersession
   are not generic connection errors. Runtime commit, host-effect success, and visible connection state are distinct

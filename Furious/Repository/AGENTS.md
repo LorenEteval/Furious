@@ -35,4 +35,6 @@ outside it.
 - Verify legacy/current/unknown-field round trips, malformed roots, restore-failure preservation, ordering/stable
   identity, group isolation, reconciliation commit behavior, and persistence in temporary QSettings namespaces. Use
   `tests/test_repository_contracts.py` and `tests/test_subscription_sync.py` to revalidate this scope. Reordering a
-  filtered view must preserve hidden slots and relocate activation by profile ID, not by its former row.
+  filtered view must preserve hidden slots, selected relative order, and unrelated profiles, then relocate activation
+  by profile ID. Test the complete repository order as well as the visible projection; a correctly painted view can
+  conceal a wrong persisted ordering.
