@@ -252,6 +252,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
                 manager = managerType()
                 references = []
                 destroyed = []
+
                 self.addCleanup(manager.deleteLater)
 
                 for _ in range(30):
@@ -269,6 +270,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
                             manager.request('https://invalid.test', payload)
 
                     del payload
+
                     reply.deleteLater()
                     processQtEvents()
 

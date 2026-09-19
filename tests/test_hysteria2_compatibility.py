@@ -406,13 +406,17 @@ class Hysteria2CompatibilityTest(unittest.TestCase):
             ),
             ('dual', 'v4', 'v6'),
         )
+
         ipMode.setText('v4')
+
         chromeParrot = self.binding(editor, ('quic', 'disableChromeParrot'))
         chromeParrot.setChecked(True)
+
         mimicEnabled = self.binding(editor, ('mimic', 'enabled'))
         mimicEnabled.setChecked(True)
 
         self.assertTrue(editor.inputToFactory(profile))
+
         self.assertEqual(profile.connection['realm']['ipMode'], 'v4')
         self.assertTrue(profile.connection['mimic']['enabled'])
         self.assertTrue(profile.connection['quic']['disableChromeParrot'])

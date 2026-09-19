@@ -170,6 +170,7 @@ class ExternalCoreProcessTest(unittest.TestCase):
                     for child in children:
                         if child.poll() is None:
                             child.kill()
+
                         child.wait(timeout=5)
 
                     for thread in threads:
@@ -182,6 +183,7 @@ class ExternalCoreProcessTest(unittest.TestCase):
                                 stream.close()
 
                     runtime._watcherThread = None
+
                     runtime.dispose()
 
     def testWindowsTaskkillHasBoundedWait(self):
@@ -601,6 +603,7 @@ class ExternalCoreProcessTest(unittest.TestCase):
             prefix='furious executable path ', dir=Path.cwd()
         ) as directory:
             executable = Path(directory) / 'python executable.exe'
+
             # The interpreter and checkout can be on different Windows volumes.
             # Copy the base interpreter (not a venv redirector) and its DLLs;
             # PYTHONHOME supplies its existing standard library without installing
@@ -616,11 +619,13 @@ class ExternalCoreProcessTest(unittest.TestCase):
                 environment={'PYTHONHOME': sys.base_prefix},
             )
             config['executable'] = str(executable)
+
             messages = []
             runtime = ExternalCoreProcess(config, msgCallback=messages.append)
 
             try:
                 runtime.start()
+
                 self.assertTrue(
                     self.waitFor(
                         lambda: any('ready' in message for message in messages)

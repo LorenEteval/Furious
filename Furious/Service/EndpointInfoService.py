@@ -496,6 +496,7 @@ class EndpointInfoService(QtCore.QObject):
             logger.debug(f'{provider.name} IPv{family} endpoint lookup failed: {ex}')
 
             self._providerIndex += 1
+
             self._requestIPProvider()
 
             return
@@ -518,6 +519,7 @@ class EndpointInfoService(QtCore.QObject):
 
             self._family = 6
             self._providerIndex = 0
+
             self._requestIPProvider()
 
             return

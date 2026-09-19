@@ -1482,6 +1482,7 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
         """Use existing menus, search clear and group selection to recover profiles."""
         with isolatedSettings():
             AppSettings.set('Language', 'EN')
+
             settings = SettingsController()
             connection = _ConnectionControllerFixture()
             routing = _RoutingControllerFixture(
@@ -1524,9 +1525,12 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     self.assertEqual(imported, [True])
 
                     table = home.userServersQTableWidget
+
                     home.activateWindow()
                     table.setFocus()
+
                     self.assertTrue(waitFor(table.hasFocus))
+
                     QTest.keyClick(table, QtCore.Qt.Key_V, QtCore.Qt.ControlModifier)
                     processQtEvents()
 
@@ -1537,6 +1541,7 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     )
 
                     profile = ServerTableQtInteractionTest._profile('alpha')
+
                     home.userServersQTableWidget.appendNewItemByFactory(profile)
                     processQtEvents()
 
@@ -1606,6 +1611,7 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     )
                     self.assertTrue(testActions[-1].icon().isNull())
                     self.assertIs(home.testButton.popupMenu(), home.testMenu)
+
                     for testAction in testActions:
                         self.assertNotIn(testAction, contextActions)
                         self.assertIn(testAction, table.actions())
@@ -1632,8 +1638,10 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     ) as cancel:
                         table = home.userServersQTableWidget
                         menu = home.testMenu
+
                         QTest.mouseClick(home.testButton, QtCore.Qt.LeftButton)
                         processQtEvents()
+
                         menu.setActiveAction(table.testActions[-1])
                         QTest.keyClick(menu, QtCore.Qt.Key_Return)
                         processQtEvents()

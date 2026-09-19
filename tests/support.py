@@ -70,6 +70,7 @@ class TestApplication(QApplication):
             # MainWindow minimum on all hosts. Give geometry tests a real-sized
             # virtual desktop without altering any physical display.
             configuration = Path(__file__).with_name('fixtures') / 'offscreen.json'
+
             # Platform arguments are colon-separated, including on Windows.
             configuration = os.path.relpath(configuration)
 

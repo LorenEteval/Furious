@@ -120,15 +120,18 @@ class _SettingsCard(Mixins.ThemeAware, QFrame):
 
         self.setObjectName('SettingsCard')
         self.iconFileName = ''
+
         self.iconLabel = QLabel(parent=self)
         self.iconLabel.setObjectName('SettingsCardIcon')
         self.iconLabel.setFixedSize(self.IconSize)
+
         self.titleLabel = AppQLabel(
             title,
             translatable=translatable,
             parent=self,
         )
         self.titleLabel.setObjectName('SettingsCardTitle')
+
         self.descriptionLabel = AppQLabel(
             description,
             translatable=translatable,
@@ -136,6 +139,7 @@ class _SettingsCard(Mixins.ThemeAware, QFrame):
         )
         self.descriptionLabel.setObjectName('SettingsCardDescription')
         self.descriptionLabel.setWordWrap(True)
+
         self.control = control
         self.control.setParent(self)
 

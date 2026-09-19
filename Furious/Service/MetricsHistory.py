@@ -182,6 +182,7 @@ class MetricsHistory(QtCore.QObject):
 
         if changed:
             self._samples = retainedSamples
+
             self.historyChanged.emit()
 
     @QtCore.Slot()

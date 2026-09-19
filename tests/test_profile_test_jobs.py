@@ -565,10 +565,12 @@ class ProfileTestServiceTest(unittest.TestCase):
             concurrent=False,
         )
         processQtEvents()
+
         firstWorker = _ControlledDownloadWorker.instances[0]
 
         self._setProfiles((secondProfile, firstProfile))
         firstProfile.metadata.subscriptionSource = 'new-subscription'
+
         manager.reconcileProfiles()
 
         self.assertEqual(firstWorker.cancelCount, 0)
@@ -576,6 +578,7 @@ class ProfileTestServiceTest(unittest.TestCase):
 
         firstWorker.finish('1.00 MiB/s')
         processQtEvents()
+
         secondWorker = _ControlledDownloadWorker.instances[1]
         secondWorker.finish('2.00 MiB/s')
         processQtEvents()
@@ -1114,7 +1117,9 @@ class ProfileTestServiceTest(unittest.TestCase):
             profile = self._profile('profile', 'profile.example')
             Storage.UserServers().append(profile)
             profile.index = 0
+
             AppSettings.set('ActivatedItemIndex', '-1')
+
             table = ServerTableView(
                 configurationEditorFactory=QWidget,
                 qrCodeWindowFactory=QWidget,
@@ -1142,9 +1147,11 @@ class ProfileTestServiceTest(unittest.TestCase):
             finally:
                 table.cleanup()
                 table.deleteLater()
+
                 Storage.UserServers().clear()
                 Storage._UserServersStorage.cache_clear()
                 Storage._UserSubsStorage.cache_clear()
+
                 processQtEvents()
 
 

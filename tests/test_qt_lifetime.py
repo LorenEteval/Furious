@@ -211,10 +211,12 @@ class QtLifetimeTest(unittest.TestCase):
                     box.setStandardButtons(box.StandardButton.Yes)
                     button = box.button(box.StandardButton.Yes)
                     references.append(weakref.ref(button))
+
                     box.setDefaultButton(button)
                     box.setEscapeButton(button)
 
                     box.setStandardButtons(box.StandardButton.No)
+
                     del button
                     processQtEvents()
 

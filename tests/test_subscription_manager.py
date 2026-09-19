@@ -713,6 +713,7 @@ class SubscriptionManagerTest(TestCase):
             lifecycleLog.assert_not_called()
 
             subscriptions['group-a']['autoupdate'] = 'Every 5 mins'
+
             manager.configureAutoUpdate('group-a')
 
             self.assertTrue(timer.isActive())
@@ -720,12 +721,14 @@ class SubscriptionManagerTest(TestCase):
             self.assertIn('start auto update job', lifecycleLog.call_args.args[0])
 
             activeTimerId = timer.timerId()
+
             manager.configureAutoUpdate('group-a')
 
             self.assertEqual(timer.timerId(), activeTimerId)
             self.assertEqual(lifecycleLog.call_count, 1)
 
             subscriptions['group-a']['autoupdate'] = 'Every 10 mins'
+
             manager.configureAutoUpdate('group-a')
 
             self.assertIs(manager._autoUpdateTimers['group-a'], timer)
@@ -733,6 +736,7 @@ class SubscriptionManagerTest(TestCase):
             self.assertIn('reschedule auto update job', lifecycleLog.call_args.args[0])
 
             subscriptions['group-a']['enabled'] = False
+
             manager.configureAutoUpdate('group-a')
 
             self.assertFalse(timer.isActive())
@@ -743,6 +747,7 @@ class SubscriptionManagerTest(TestCase):
             self.assertEqual(lifecycleLog.call_count, 3)
 
             subscriptions['group-a']['enabled'] = True
+
             manager.configureAutoUpdate('group-a')
 
             self.assertTrue(timer.isActive())

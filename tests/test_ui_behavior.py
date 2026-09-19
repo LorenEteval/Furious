@@ -918,6 +918,7 @@ class QRCodeWindowBehaviorTest(unittest.TestCase):
         firstPage.destroyed.connect(lambda *_args: firstPageDestroyed.append(True))
 
         window.handleTabCloseRequested(0)
+
         del firstPage
         collectAtBoundary()
 
@@ -931,6 +932,7 @@ class QRCodeWindowBehaviorTest(unittest.TestCase):
         window.destroyed.connect(lambda *_args: windowDestroyed.append(True))
 
         window.handleTabCloseRequested(0)
+
         del window
         collectAtBoundary()
 
@@ -2552,11 +2554,13 @@ class RoutingChangeNoticeTest(unittest.TestCase):
             self.view.setEnabled(1, 'Disabled')
 
             self.connection.isConnected.return_value = False
+
             self.view.setDomainStrategy(0, 'AsIs')
             self.view.setEnabled(0, 'Enabled')
 
             self.connection.isConnected.return_value = True
             self.routing.routing = 'Global'
+
             self.view.setDomainStrategy(0, 'IPIfNonMatch')
 
             self.notice.assert_not_called()

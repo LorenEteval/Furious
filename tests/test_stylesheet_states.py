@@ -114,12 +114,15 @@ class StyleSheetStateRenderingTest(unittest.TestCase):
         frame = QImage(actual.size(), QImage.Format.Format_ARGB32_Premultiplied)
         frame.setDevicePixelRatio(actual.devicePixelRatio())
         frame.fill(QtCore.Qt.transparent)
+
         view.render(frame, renderFlags=QWidget.RenderFlag.DrawWindowBackground)
+
         panel = QColor(AppStyleSheet.Palettes[theme]['panel'])
         paddingPoint = QtCore.QPoint(view.width() // 2, 2)
         host = view.parentWidget()
         hostImage = host.grab().toImage()
         hostPoint = view.mapTo(host, paddingPoint)
+
         self.assertEqual(
             hostImage.pixelColor(
                 round(hostPoint.x() * hostImage.devicePixelRatio()),
@@ -127,6 +130,7 @@ class StyleSheetStateRenderingTest(unittest.TestCase):
             ),
             QColor(AppStyleSheet.Palettes[theme]['window']),
         )
+
         cornerSize = round(8 * actual.devicePixelRatio())
 
         for left in (0, actual.width() - cornerSize):
@@ -244,6 +248,7 @@ class StyleSheetStateRenderingTest(unittest.TestCase):
         submenu = AppQMenu(parent=menu)
         submenu.setTitle('More')
         submenu.addAction('Another example')
+
         menu.addMenu(submenu)
 
         try:
@@ -257,6 +262,7 @@ class StyleSheetStateRenderingTest(unittest.TestCase):
                         shadow = QGraphicsDropShadowEffect(menu)
                         shadow.setBlurRadius(3)
                         shadow.setOffset(3, 3)
+
                         menu.setGraphicsEffect(shadow)
                         menu.setLayoutDirection(direction)
                         menu.popup(QtCore.QPoint(20, 20))
@@ -271,15 +277,19 @@ class StyleSheetStateRenderingTest(unittest.TestCase):
                             if direction == QtCore.Qt.LeftToRight
                             else QtCore.Qt.Key_Left
                         )
+
                         QTest.keyClick(menu, openKey)
                         waitFor(submenu.isVisible)
+
                         self.assertRoundedPopup(submenu)
 
                         QTest.keyClick(submenu, QtCore.Qt.Key_Escape)
+
                         self.assertFalse(submenu.isVisible())
 
                         menu.setActiveAction(action)
                         wasChecked = action.isChecked()
+
                         QTest.keyClick(menu, QtCore.Qt.Key_Return)
 
                         self.assertEqual(action.isChecked(), not wasChecked)
@@ -288,6 +298,7 @@ class StyleSheetStateRenderingTest(unittest.TestCase):
             menu.close()
             menu.deleteLater()
             processQtEvents()
+
             app.setStyleSheet(originalStyleSheet)
 
     def testComboPopupCornersStayTransparentAcrossThemesAndReopens(self):

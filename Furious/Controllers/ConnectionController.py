@@ -482,6 +482,7 @@ class ConnectionController(QtCore.QObject):
         operation = self._startOperation
 
         self._startOperation = None
+
         self._setState(ConnectionState.Disconnecting)
         self._actionTimer.stop()
 

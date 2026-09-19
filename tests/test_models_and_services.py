@@ -936,8 +936,10 @@ class LogManagerTest(unittest.TestCase):
     def testQueuedCleanupDoesNotOutliveDestroyedManager(self):
         """Discard pending self-delivery at the manager's QObject boundary."""
         application()
+
         manager = LogManager(maximumEntries=100, autoClearEnabled=False)
         manager.RetiredCleanupBudget = 1
+
         destroyed = []
         manager.destroyed.connect(lambda: destroyed.append(True))
 
@@ -947,6 +949,7 @@ class LogManagerTest(unittest.TestCase):
         manager.clear(runtimeOnly=True)
 
         managerReference = weakref.ref(manager)
+
         manager.deleteLater()
         del manager
 

@@ -179,6 +179,7 @@ def _assertManagerInvariants(testCase, manager, model=None):
     """
     with manager._lock:
         generations = manager._activeGenerationsLocked()
+
         testCase.assertEqual(len(generations), 3)
         testCase.assertEqual(len({id(item) for item in generations}), 3)
         testCase.assertEqual(len({item.identifier for item in generations}), 3)
@@ -193,6 +194,7 @@ def _assertManagerInvariants(testCase, manager, model=None):
 
         for generation in generations:
             chronological = tuple(generation.entries.values())
+
             testCase.assertEqual(
                 tuple(entry.sequence for entry in chronological),
                 tuple(sorted(entry.sequence for entry in chronological)),
@@ -203,11 +205,13 @@ def _assertManagerInvariants(testCase, manager, model=None):
             )
 
             indexedSequences = []
+
             for categoryId, categoryEntries in generation.entriesByCategory.items():
                 category = manager._categories[categoryId]
                 testCase.assertIs(
                     manager._generationForCategoryLocked(category), generation
                 )
+
                 indexed = tuple(categoryEntries.entries.values())
                 testCase.assertTrue(indexed)
                 testCase.assertEqual(
@@ -221,6 +225,7 @@ def _assertManagerInvariants(testCase, manager, model=None):
                     categoryEntries.characterCount,
                     sum(len(entry.message) for entry in indexed),
                 )
+
                 indexedSequences.extend(entry.sequence for entry in indexed)
                 categoryTruth[categoryId].extend(indexed)
 
@@ -228,12 +233,15 @@ def _assertManagerInvariants(testCase, manager, model=None):
                 indexedSequences,
                 (entry.sequence for entry in chronological),
             )
+
             for entry in chronological:
                 testCase.assertNotIn(id(entry), liveObjectIds)
                 liveObjectIds.add(id(entry))
+
             liveEntries.extend(chronological)
 
         liveEntries.sort(key=lambda entry: entry.sequence)
+
         testCase.assertEqual(
             tuple(entry.sequence for entry in liveEntries),
             tuple(sorted({entry.sequence for entry in liveEntries})),
@@ -247,15 +255,19 @@ def _assertManagerInvariants(testCase, manager, model=None):
         testCase.assertGreaterEqual(manager._retainedCharacters, 0)
 
         retiredEntries = []
+
         for batch in manager._retiredBatches:
             entries = _batchEntries(batch)
+
             testCase.assertEqual(
                 batch.characterCount,
                 sum(len(entry.message) for entry in entries),
             )
+
             retiredEntries.extend(entries)
 
         retiredIds = {id(entry) for entry in retiredEntries}
+
         testCase.assertTrue(liveObjectIds.isdisjoint(retiredIds))
         testCase.assertEqual(len(retiredEntries), manager._retiredEntryCount)
         testCase.assertEqual(
@@ -266,6 +278,7 @@ def _assertManagerInvariants(testCase, manager, model=None):
         testCase.assertGreaterEqual(manager._retiredCharacters, 0)
 
         publicEntries = manager.entries()
+
         testCase.assertEqual(publicEntries, tuple(liveEntries))
         testCase.assertTrue(retiredIds.isdisjoint(id(entry) for entry in publicEntries))
         testCase.assertEqual(manager.entryCount(), len(liveEntries))
@@ -276,6 +289,7 @@ def _assertManagerInvariants(testCase, manager, model=None):
 
         for category in manager.categories():
             expected = tuple(categoryTruth[category.id])
+
             testCase.assertEqual(manager.entries(category.id), expected)
             testCase.assertEqual(manager.entryCount(category.id), len(expected))
 
@@ -526,6 +540,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             maximumEntryCharacters=100,
             autoClearEnabled=False,
         )
+
         for categoryId in (
             APPLICATION_LOG_CATEGORY,
             CORE_LOG_CATEGORY,
@@ -535,30 +550,38 @@ class GenerationLogManagerContractTest(unittest.TestCase):
 
         globalIndexes = []
         categoryIndexes = []
+
         for generation in manager._activeGenerationsLocked():
             observed = _ObservedEntries(generation.entries)
             generation.entries = observed
             globalIndexes.append(observed)
+
             for categoryEntries in generation.entriesByCategory.values():
                 observed = _ObservedEntries(categoryEntries.entries)
                 categoryEntries.entries = observed
                 categoryIndexes.append(observed)
 
         manager.snapshot(CORE_LOG_CATEGORY)
+
         self.assertEqual(sum(index.iterations for index in globalIndexes), 0)
         self.assertEqual(sum(index.iterations for index in categoryIndexes), 1)
+
         for index in (*globalIndexes, *categoryIndexes):
             index.iterations = 0
 
         manager.snapshot()
+
         self.assertEqual(sum(index.iterations for index in globalIndexes), 3)
         self.assertEqual(sum(index.iterations for index in categoryIndexes), 0)
+
         for index in globalIndexes:
             index.iterations = 0
 
         manager.append('evict', CORE_LOG_CATEGORY)
+
         self.assertLessEqual(sum(index.iterations for index in globalIndexes), 3)
         self.assertEqual(sum(index.oldestRemovals for index in globalIndexes), 1)
+
         _assertManagerInvariants(self, manager)
 
     def testIncrementalBatchesReturnOnlyOrderedMissingEntries(self):
@@ -922,6 +945,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                 maximumCharacters=20_000,
                 autoClearEnabled=False,
             )
+
             manager.appendMany(tuple(f'initial {index}' for index in range(200)))
 
             fullReads = []
@@ -971,6 +995,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
 
                 for index in range(backlog):
                     manager.append(str(index), CORE_LOG_CATEGORY)
+
                     if index in (1, 4):
                         manager.clear(runtimeOnly=True)
 
@@ -987,6 +1012,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
 
                 self.assertEqual(released, min(budget, before))
                 self.assertEqual(manager.retiredEntryCount, before - released)
+
                 if manager._retiredBatches and identifiers:
                     self.assertIn(
                         getattr(manager._retiredBatches[0], 'identifier', None),
@@ -996,6 +1022,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                 _assertManagerInvariants(self, manager)
 
         manager = self.makeManager()
+
         manager.append('retired', CORE_LOG_CATEGORY)
         manager.clear(runtimeOnly=True)
 
@@ -1003,6 +1030,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             self.assertEqual(manager._cleanupRetiredLocked(0), 0)
 
         manager.RetiredCleanupBudget = 0
+
         with manager._lock:
             self.assertEqual(manager._cleanupRetiredLocked(), 1)
 
@@ -1105,6 +1133,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             autoClearEnabled=False,
         )
         manager._sequence = 10**40
+
         categories = (
             APPLICATION_LOG_CATEGORY,
             CORE_LOG_CATEGORY,
@@ -1115,17 +1144,21 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             CORE_LOG_CATEGORY,
         )
         expected = []
+
         for index, categoryId in enumerate(categories):
             entry = manager.append(str(index) * (index % 4 + 1), categoryId)
             expected.append(entry)
+
             while (
                 len(expected) > manager.maximumEntries
                 or sum(len(item.message) for item in expected)
                 > manager.maximumCharacters
             ):
                 del expected[0]
+
             self.assertEqual(manager.entries(), tuple(expected))
             _assertManagerInvariants(self, manager)
+
         self.assertTrue(all(entry.sequence > 10**40 for entry in manager.entries()))
 
     def testSelectiveClearAndRegistrationStress(self):

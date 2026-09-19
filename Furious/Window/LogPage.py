@@ -449,6 +449,7 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         self.searchLineEdit.textChanged.connect(self._searchChanged)
         self.autoScrollSwitch.toggled.connect(self._autoScrollChanged)
         self.autoClearSwitch.toggled.connect(self._autoClearChanged)
+
         self.manager.categoryRegistered.connect(self._categoryRegistered)
 
         # Do not drive the document directly from entryAdded: cross-thread Qt
