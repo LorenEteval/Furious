@@ -628,15 +628,10 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
     def _initializeControllers(self):
         """Create the process-lifetime application state authorities."""
         try:
-            (
-                self.connectionController,
-                self.routingController,
-                self.settingsController,
-            ) = (
-                ConnectionController(parent=self),
-                RoutingController(parent=self),
-                SettingsController(parent=self),
-            )
+            # Publish ownership before the next constructor can fail.
+            self.connectionController = ConnectionController(parent=self)
+            self.routingController = RoutingController(parent=self)
+            self.settingsController = SettingsController(parent=self)
 
             self.connectionController.interactionEnabledChanged.connect(
                 self.routingController.setInteractionEnabled
@@ -650,11 +645,15 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
 
     def _cleanupControllers(self):
         """Shut down and release each controller acquired during startup."""
+        connectionReleased = True
+
         if self.connectionController is not None:
             try:
                 self.connectionController.shutdown()
             except Exception:
                 # Any non-exit exceptions
+
+                connectionReleased = False
 
                 logger.exception('connection controller shutdown failed')
 
@@ -663,6 +662,10 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
             'routingController',
             'connectionController',
         ):
+            if controllerName == 'connectionController' and not connectionReleased:
+                # Keep failed runtime cleanup owned rather than orphaning it.
+                continue
+
             controller = getattr(self, controllerName)
 
             if isinstance(controller, QtCore.QObject):

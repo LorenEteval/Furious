@@ -87,7 +87,7 @@ worker. Choose tests by the changed contract rather than by filename alone.
 | Module | Coverage |
 | --- | --- |
 | [test_application_process.py](test_application_process.py) | Exact application-child ownership, shared crash flag, exception/signal handling, temporary crash logs, command-line dispatch. |
-| [test_architecture_refactors.py](test_architecture_refactors.py) | Startup acquisition/rollback, singleton election and real isolated IPC race, tray/exit policy, host integration ownership, bounded core-log transport, connection transactions, stylesheet composition. |
+| [test_architecture_refactors.py](test_architecture_refactors.py) | Startup acquisition/rollback including partial controller construction and cleanup retry, singleton election and real isolated IPC race, tray/exit policy, host integration ownership, bounded core-log transport, connection transactions, stylesheet composition. |
 | [test_connection_startup_async.py](test_connection_startup_async.py) | Real local-listener readiness, timeout/cancel/replacement, semantic exits, DNS reply lifetime, mocked platform-specific TUN sequencing. |
 | [test_controllers.py](test_controllers.py) | Connection state/error/reconnect transitions, startup restoration, shared settings, routing fallback persistence and tray/selector agreement after custom-routing disable/re-enable. |
 | [test_runtime_lifecycle.py](test_runtime_lifecycle.py) | Qt-thread exit dispatch, commit/exit races, duplicate and late exits, idempotent release, spawn failure, queue/timer disposal on preparation failure. |
