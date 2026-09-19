@@ -84,7 +84,7 @@ jobs:
 
   deploy-binaries:
     name: Build binaries
-    uses: ./.github/workflows/daily-matrix-build.yml
+    uses: ./.github/workflows/matrix-build.yml
 
   github-release:
     name: Upload to GitHub Release

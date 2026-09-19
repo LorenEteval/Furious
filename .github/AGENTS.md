@@ -8,7 +8,7 @@ exceptions; it does not define the source test suite or imply that every package
 - `workflows/deploy-pypi.yml` is both packaging coverage and the publication graph. Pull requests and ordinary pushes
   build artifacts; tag pushes additionally publish Python distributions, create the GitHub release, and enable the
   dependent WinGet flow. Preserve permission, secret, environment, `if`, and `needs` boundaries.
-- `workflows/daily-matrix-build.yml` owns the shared binary matrix, called by `workflows/deploy-pypi.yml` and also run daily or
+- `workflows/matrix-build.yml` owns the shared binary matrix, called by `workflows/deploy-pypi.yml` and also run hourly or
   manually. Its standalone runs build, verify, and upload artifacts with read-only repository permissions; publication
   remains in `workflows/deploy-pypi.yml`.
 - Treat each matrix row as a supported product target with explicit runner OS/architecture, Python, Qt/PySide source,
@@ -43,7 +43,7 @@ exceptions; it does not define the source test suite or imply that every package
   source/native import checks, Nuitka/installer output, packaged architecture/dependency checks, artifact upload, and tag
   gates. When a target cannot run locally, add a narrow CI assertion that fails before publication with a useful reason.
 - `workflows/source-tests.yml` runs isolated source unittest discovery on Windows, Linux, and macOS and is a
-  required dependency of PyPI publication through `workflows/deploy-pypi.yml`. It can also run manually. Daily binary
+  required dependency of PyPI publication through `workflows/deploy-pypi.yml`. It can also run manually. Hourly binary
   builds retain their separate artifact scope. Source tests do not establish packaged behavior or Python/Qt
   floors beyond their matrix. Do not call an artifact build a regression-test pass; use `tests/README.md` for
   source verification. The source suite's offscreen Qt environment exercises widgets and event delivery, not native

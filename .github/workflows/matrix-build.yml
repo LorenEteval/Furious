@@ -15,12 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-name: Daily matrix build
+name: Matrix build
 
 on:
   schedule:
-    # Daily at 02:17 UTC (10:17 Asia/Shanghai).
-    - cron: '17 2 * * *'
+    # Every hour at minute 17 (UTC).
+    - cron: '17 * * * *'
   workflow_dispatch:
   workflow_call:
 
