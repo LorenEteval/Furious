@@ -40,9 +40,9 @@ import PySide6
 
 from PySide6 import QtCore
 from PySide6.QtNetwork import QNetworkReply
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QPushButton, QWidget
 
-from shiboken6 import isValid
+from shiboken6 import isValid, delete as deleteQObject
 
 from tests.support import (
     application,
@@ -55,6 +55,7 @@ from collections import Counter
 
 import argparse
 import json
+import sys
 import weakref
 from pathlib import Path
 import tempfile
@@ -279,7 +280,13 @@ def runNetworkProbe(iterations=100):
         (HttpGetManager, '_replyContexts'),
         (ProxyEndpointHttpClient, '_pendingRequests'),
     ):
-        for terminal in ('finished', 'replyDestroyed', 'managerDestroyed'):
+        for terminal in (
+            'finished',
+            'replyDestroyed',
+            'managerDestroyed',
+            'callbackReplyDestroyed',
+            'callbackManagerDestroyed',
+        ):
             references = []
             destroyed = []
 
@@ -301,7 +308,20 @@ def runNetworkProbe(iterations=100):
                 del manager.get
                 del payload
 
-                if terminal == 'finished':
+                if terminal.startswith('callback'):
+
+                    def destroyFromCallback(*_args, **_kwargs):
+                        deleteQObject(
+                            manager if terminal == 'callbackManagerDestroyed' else reply
+                        )
+
+                    if isinstance(manager, HttpGetManager):
+                        manager.successCallback = destroyFromCallback
+                    else:
+                        manager.completed.connect(destroyFromCallback)
+
+                    reply.finished.emit()
+                elif terminal == 'finished':
                     reply.finished.emit()
                 elif terminal == 'replyDestroyed':
                     reply.deleteLater()
@@ -325,6 +345,72 @@ def runNetworkProbe(iterations=100):
             result[managerType.__name__ + ':' + terminal] = iterations
 
     return result
+
+
+def runButtonOwnershipProbe(iterations=100):
+    """Exercise button detach/reuse, native removal, and owner-first callbacks."""
+    application()
+    references = []
+    destroyed = []
+
+    for _ in range(iterations):
+        box = AppQMessageBox()
+        button = QPushButton('Fixture')
+        results = []
+        box.finished.connect(results.append)
+        for item in (box, button):
+            references.append(weakref.ref(item))
+            item.destroyed.connect(lambda *_args: destroyed.append(True))
+        del item
+
+        for _detach in range(3):
+            box.addButton(button, box.ButtonRole.AcceptRole)
+            box.setDefaultButton(button)
+            box.setEscapeButton(button)
+            box.removeButton(button)
+            button.click()
+            assert not results
+            assert box.defaultButton() is None and box.escapeButton() is None
+            assert button.receivers(QtCore.SIGNAL('clicked()')) == 0
+
+        box.addButton(button, box.ButtonRole.AcceptRole)
+        box.addButton(button, box.ButtonRole.AcceptRole)
+        box.open()
+        button.click()
+        processQtEvents()
+        assert results == [int(AppQDialog.DialogCode.Accepted)]
+        assert not isValid(box) and not isValid(button)
+        del box, button
+
+        box = AppQMessageBox()
+        button = box.addButton(box.StandardButton.Yes)
+        box.setDefaultButton(button)
+        box.setEscapeButton(button)
+        deleteQObject(button)
+        assert not box.buttons()
+        assert box.defaultButton() is None and box.escapeButton() is None
+        deleteQObject(box)
+        del box, button
+
+        owner = QWidget()
+        box = AppQMessageBox(parent=owner)
+        button = box.addButton(box.StandardButton.Yes)
+        box.buttonClicked.connect(lambda *_args: deleteQObject(owner))
+        button.click()
+        assert not isValid(box) and not isValid(button)
+        del box, button, owner
+
+    processQtEvents()
+    assert len(destroyed) == iterations * 2
+    assert all(reference() is None for reference in references)
+    assert not AppQDialog._openDialogs
+    return {
+        'buttonDetachReuse': iterations,
+        'nativeButtonRemoval': iterations,
+        'buttonCallbackOwnerDestruction': iterations,
+        'destroyed': len(destroyed),
+        'liveWrappers': 0,
+    }
 
 
 def runInfrastructureProbe(iterations=100):
@@ -593,20 +679,31 @@ def main():
     parser.add_argument('--close-method', choices=CLOSE_METHODS, default='reject')
     arguments = parser.parse_args()
 
-    print(json.dumps(runConfirmationProbe(arguments.iterations), sort_keys=True))
-    print(json.dumps(runNetworkProbe(arguments.iterations), sort_keys=True))
-    print(json.dumps(runInfrastructureProbe(arguments.iterations), sort_keys=True))
-
-    print(
-        json.dumps(
-            runProbe(
-                arguments.iterations,
-                pattern=arguments.pattern,
-                closeMethod=arguments.close_method,
-            ),
-            sort_keys=True,
-        )
+    callbackErrors = []
+    previousExceptionHook = sys.excepthook
+    sys.excepthook = lambda kind, value, traceback: callbackErrors.append(
+        (kind.__name__, str(value))
     )
+    try:
+        print(json.dumps(runButtonOwnershipProbe(arguments.iterations), sort_keys=True))
+        print(json.dumps(runConfirmationProbe(arguments.iterations), sort_keys=True))
+        print(json.dumps(runNetworkProbe(arguments.iterations), sort_keys=True))
+        print(json.dumps(runInfrastructureProbe(arguments.iterations), sort_keys=True))
+
+        print(
+            json.dumps(
+                runProbe(
+                    arguments.iterations,
+                    pattern=arguments.pattern,
+                    closeMethod=arguments.close_method,
+                ),
+                sort_keys=True,
+            )
+        )
+    finally:
+        sys.excepthook = previousExceptionHook
+
+    assert not callbackErrors, callbackErrors
 
 
 if __name__ == '__main__':
