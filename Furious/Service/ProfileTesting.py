@@ -762,7 +762,7 @@ class _DownloadSpeedWorker(HttpGetManager):
             self.progressed.emit(self, self.result)
 
     def completionCallback(self, **_kwargs):
-        """Dispose runtime callbacks before publishing terminal completion."""
+        """Attempt runtime cleanup before publishing terminal completion."""
         self.coreStartupTimer.stop()
         self.timeoutTimer.stop()
 
@@ -778,13 +778,19 @@ class _DownloadSpeedWorker(HttpGetManager):
         return lease is not None and lease.runtime.isRunning()
 
     def _releaseRuntime(self):
-        """Release this worker's exact runtime lease once."""
+        """Forget the exact lease only after all of its resources are released."""
+        lease = self._runtimeLease
+
+        if lease is not None and lease.release():
+            self._runtimeLease = None
+
+    def takeRuntimeLease(self):
+        """Transfer unfinished cleanup to the scheduler before worker deletion."""
         lease = self._runtimeLease
 
         self._runtimeLease = None
 
-        if lease is not None:
-            lease.release()
+        return lease
 
     def runCompletionCallback(self, **kwargs):
         """Defer terminal publication until synchronous startup has unwound."""
@@ -1103,11 +1109,16 @@ class _DownloadSpeedScheduler(QtCore.QObject):
         self.queue = collections.deque()
         self.activeJobs = {}
         self.activePorts = set()
+        self._pendingReleases = {}
+        self._shuttingDown = False
         self.nextPort = portRange.start
         self.drainScheduled = False
 
     def enqueue(self, profiles, options: DownloadSpeedTestOptions):
         """Capture each profile with the same explicit operation options."""
+        if self._shuttingDown:
+            return
+
         self.queue.extend(
             _DownloadSpeedTestJob(ProfileTestTarget.capture(profile), options)
             for profile in profiles
@@ -1117,6 +1128,8 @@ class _DownloadSpeedScheduler(QtCore.QObject):
 
     def cancelAll(self):
         """Cancel every pending and active job through one terminal path."""
+        self._retryPendingReleases()
+
         for job in self.queue:
             job.state = ProfileTestJobState.Cancelled
 
@@ -1127,9 +1140,26 @@ class _DownloadSpeedScheduler(QtCore.QObject):
 
             worker.cancel()
 
+    def _retryPendingReleases(self):
+        """Keep failed runtimes and their ports owned until cleanup succeeds."""
+        for port, lease in tuple(self._pendingReleases.items()):
+            if lease.release():
+                del self._pendingReleases[port]
+
+                self.activePorts.discard(port)
+
+    def shutdown(self):
+        """Close admission and report resources still retained for another retry."""
+        self._shuttingDown = True
+
+        self.cancelAll()
+
+        if self._pendingReleases:
+            raise RuntimeError('Download runtime cleanup is incomplete')
+
     def scheduleDrain(self):
         """Schedule valid pending jobs without recursive startup."""
-        if self.drainScheduled:
+        if self.drainScheduled or self._shuttingDown:
             return
 
         self.drainScheduled = True
@@ -1140,12 +1170,20 @@ class _DownloadSpeedScheduler(QtCore.QObject):
         """Start valid jobs while concurrency and local ports are available."""
         self.drainScheduled = False
 
+        if self._shuttingDown:
+            return
+
         if _appIsExiting():
             self.cancelAll()
 
             return
 
-        while self.queue and len(self.activeJobs) < self.maxConcurrency:
+        self._retryPendingReleases()
+
+        while (
+            self.queue
+            and len(self.activeJobs) + len(self._pendingReleases) < self.maxConcurrency
+        ):
             job = self.queue.popleft()
 
             if self._resolveTarget(job.target) is None:
@@ -1224,13 +1262,19 @@ class _DownloadSpeedScheduler(QtCore.QObject):
 
     @QtCore.Slot(object, object)
     def handleWorkerFinished(self, worker, result):
-        """Release one terminal worker after disposing its runtime callbacks."""
+        """Transfer outstanding cleanup before deleting one terminal worker."""
         active = self.activeJobs.pop(id(worker), None)
 
         if active is None:
             return
 
         _, job, port = active
+        lease = worker.takeRuntimeLease()
+
+        # Completion may notify reentrant consumers. Establish the durable
+        # cleanup owner before publishing a result or deleting the worker.
+        if lease is not None:
+            self._pendingReleases[port] = lease
 
         if job.state is not ProfileTestJobState.Cancelled:
             if self._publishResult(job.target, result):
@@ -1238,7 +1282,9 @@ class _DownloadSpeedScheduler(QtCore.QObject):
             else:
                 job.state = ProfileTestJobState.Cancelled
 
-        self.activePorts.discard(port)
+        if lease is None:
+            self.activePorts.discard(port)
+
         worker.deleteLater()
 
         self.scheduleDrain()
@@ -1477,6 +1523,6 @@ class ProfileTestManager(QtCore.QObject):
             self._latencyScheduler.shutdown()
         finally:
             try:
-                self._serialDownloadScheduler.cancelAll()
+                self._serialDownloadScheduler.shutdown()
             finally:
-                self._concurrentDownloadScheduler.cancelAll()
+                self._concurrentDownloadScheduler.shutdown()

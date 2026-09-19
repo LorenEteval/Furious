@@ -99,6 +99,9 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
 - Download jobs own a temporary proxy-only runtime, readiness timer, port, network reply, and cancellation path. Serial
   and concurrent admission share scheduler semantics; startup never blocks admission on a grace wait. Reentrant
   cancellation defers terminal deletion until the active start frame unwinds.
+  Failed runtime release transfers its lease from the terminal worker to the scheduler before worker deletion.
+  Keep the port and concurrency slot reserved until a later drain/cancel/shutdown retries cleanup successfully;
+  final shutdown reports remaining leases and preserves retry ownership. Completion is not proof of resource release.
 
 ## Verification
 
