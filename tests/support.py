@@ -108,7 +108,9 @@ def _initializeSettingsSandbox():
     global _settingsDirectory
 
     if _settingsDirectory is not None:
-        return Path(_settingsDirectory.name)
+        # TemporaryDirectory may retain a macOS /var alias or Windows short
+        # path. Match the canonical root used on initialization and by Qt.
+        return Path(_settingsDirectory.name).resolve()
 
     _settingsDirectory = tempfile.TemporaryDirectory(
         prefix='furious-tests-settings-root-'

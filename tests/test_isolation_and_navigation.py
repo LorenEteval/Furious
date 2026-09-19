@@ -26,6 +26,9 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
 from pathlib import Path
+from unittest import mock
+
+import tests.support as SupportModule
 
 from tests.support import (
     application,
@@ -58,7 +61,9 @@ class TestHarnessIsolationTest(unittest.TestCase):
 
             assertIsolatedSettings(outer)
 
-            self.assertIn(settingsSandboxPath(), Path(outer.fileName()).parents)
+            self.assertIn(
+                settingsSandboxPath(), Path(outer.fileName()).resolve().parents
+            )
 
             with isolatedSettings() as inner:
                 innerIdentity = (app.organizationName(), app.applicationName())
@@ -87,7 +92,35 @@ class TestHarnessIsolationTest(unittest.TestCase):
 
         assertIsolatedSettings(settings)
 
-        self.assertIn(settingsSandboxPath(), Path(settings.fileName()).parents)
+        self.assertIn(
+            settingsSandboxPath(), Path(settings.fileName()).resolve().parents
+        )
+
+    def testExistingSandboxRootUsesTheSameCanonicalPath(self):
+        """Normalize reused temporary-directory aliases before containment checks."""
+        root = settingsSandboxPath().resolve()
+        alias = root / '..' / root.name
+
+        # TemporaryDirectory.name can retain an alias even though QSettings
+        # returns the canonical path (macOS /var or Windows short user names).
+        with mock.patch.object(SupportModule._settingsDirectory, 'name', str(alias)):
+            self.assertEqual(settingsSandboxPath(), root)
+
+            with isolatedSettings() as settings:
+                assertIsolatedSettings(settings)
+                settings.setValue('alias-fixture', 'isolated')
+                settings.sync()
+                self.assertEqual(settings.value('alias-fixture'), 'isolated')
+
+    def testSettingsOutsideSandboxAreStillRejected(self):
+        """Reject a sibling path even when its name shares the sandbox prefix."""
+        root = settingsSandboxPath().resolve()
+        outside = root.with_name(root.name + '-outside') / 'settings.ini'
+        settings = QtCore.QSettings(str(outside), QtCore.QSettings.Format.IniFormat)
+
+        # Constructing this object does not write; rejection must precede writes.
+        with self.assertRaisesRegex(AssertionError, 'escaped sandbox'):
+            assertIsolatedSettings(settings)
 
 
 class NavigationBehaviorTest(unittest.TestCase):

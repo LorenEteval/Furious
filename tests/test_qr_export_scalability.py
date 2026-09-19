@@ -168,7 +168,7 @@ class QRCodeExportScalabilityTest(unittest.TestCase):
                 self.assertEqual(appendExportItem.call_count, expected)
 
     def testGenerationYieldsToAnUnrelatedQtEvent(self):
-        """Deliver unrelated work after one attempt and before batch completion."""
+        """Deliver unrelated work during generation, before batch completion."""
         profiles = self.profiles(6)
         attempts = []
         marker = []
@@ -177,6 +177,12 @@ class QRCodeExportScalabilityTest(unittest.TestCase):
         def export(profile):
             """Record one exported snapshot."""
             attempts.append(profile.itemRemark)
+
+            if len(attempts) == 1:
+                # Zero-timer ordering is platform-dependent. Queue the marker
+                # only once generation has started, then require it to run
+                # before all profiles finish rather than after exactly one.
+                QtCore.QTimer.singleShot(0, lambda: marker.append(len(attempts)))
 
             return f'socks://{len(attempts)}.example:1080#Fixture'
 
@@ -191,13 +197,14 @@ class QRCodeExportScalabilityTest(unittest.TestCase):
             side_effect=self.qrImage,
         ):
             result = window.startExportByIndex(range(len(profiles)))
-            QtCore.QTimer.singleShot(0, lambda: marker.append(len(attempts)))
 
             self.assertIs(result, window)
             self.assertEqual(attempts, [])
             self.assertTrue(window.isVisible())
             self.assertTrue(waitFor(lambda: bool(marker)))
-            self.assertEqual(marker, [1])
+            self.assertEqual(len(marker), 1)
+            self.assertGreaterEqual(marker[0], 1)
+            self.assertLess(marker[0], len(profiles))
             self.assertTrue(waitFor(lambda: not window.isExporting()))
 
         self.assertEqual(len(attempts), len(profiles))
