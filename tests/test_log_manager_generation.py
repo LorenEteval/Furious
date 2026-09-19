@@ -42,13 +42,9 @@ from statistics import median
 
 import gc
 import json
-import os
 import random
-import subprocess
-import sys
 import threading
 import time
-import types
 import unittest
 import weakref
 
@@ -1998,100 +1994,6 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
             snapshot_us=snapshotUs,
             clear_all_us=clearUs,
             synchronous_traversals=0,
-        )
-
-    @unittest.skipUnless(
-        os.environ.get('FURIOUS_LOG_MANAGER_BASELINE'),
-        'set FURIOUS_LOG_MANAGER_BASELINE to a Git revision for comparison',
-    )
-    def testIdenticalWorkloadAgainstPreviousImplementation(self):
-        """Compare the same steady, rollover, snapshot, and retention workloads."""
-        revision = os.environ['FURIOUS_LOG_MANAGER_BASELINE']
-        source = subprocess.run(
-            ['git', 'show', f'{revision}:Furious/Service/LogManager.py'],
-            cwd=os.getcwd(),
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
-
-        baselineModule = types.ModuleType('tests._baseline_log_manager')
-        previousModule = sys.modules.get(baselineModule.__name__)
-        sys.modules[baselineModule.__name__] = baselineModule
-
-        try:
-            exec(
-                compile(source, f'<LogManager:{revision}>', 'exec'),
-                baselineModule.__dict__,
-            )
-        finally:
-            if previousModule is None:
-                sys.modules.pop(baselineModule.__name__, None)
-            else:
-                sys.modules[baselineModule.__name__] = previousModule
-
-        def benchmark(managerClass):
-            results = {}
-
-            manager = managerClass(maximumEntries=50_000, autoClearEnabled=False)
-
-            started = time.perf_counter_ns()
-            for index in range(50_000):
-                manager.append(str(index), APPLICATION_LOG_CATEGORY)
-
-            results['steady_append_ms'] = (time.perf_counter_ns() - started) / 1e6
-
-            manager = managerClass(
-                maximumEntries=50_000,
-                autoClearMaximumEntries=20_000,
-            )
-
-            for index in range(20_000):
-                manager.append(str(index), CORE_LOG_CATEGORY)
-            for index in range(20_000):
-                manager.append(str(index), TUN2SOCKS_LOG_CATEGORY)
-
-            started = time.perf_counter_ns()
-            manager.append('trigger', CORE_LOG_CATEGORY)
-            results['core_rollover_us'] = (time.perf_counter_ns() - started) / 1e3
-
-            manager = managerClass(maximumEntries=50_000, autoClearEnabled=False)
-
-            for index in range(30_000):
-                manager.append(
-                    str(index),
-                    CORE_LOG_CATEGORY if index % 5 == 0 else APPLICATION_LOG_CATEGORY,
-                )
-
-            started = time.perf_counter_ns()
-            manager.snapshot(CORE_LOG_CATEGORY)
-            results['category_snapshot_us'] = (time.perf_counter_ns() - started) / 1e3
-
-            started = time.perf_counter_ns()
-            manager.snapshot()
-            results['global_snapshot_us'] = (time.perf_counter_ns() - started) / 1e3
-
-            manager = managerClass(maximumEntries=1_000, autoClearEnabled=False)
-
-            started = time.perf_counter_ns()
-            for index in range(50_000):
-                manager.append(str(index), APPLICATION_LOG_CATEGORY)
-
-            results['retention_heavy_ms'] = (time.perf_counter_ns() - started) / 1e6
-
-            return results
-
-        current = benchmark(LogManager)
-        baseline = benchmark(baselineModule.LogManager)
-
-        self.assertEqual(LogManager(maximumEntries=1).entries(), tuple())
-
-        self.report(
-            'baseline-comparison',
-            baseline_revision=revision,
-            current=current,
-            baseline=baseline,
-            ratios={key: current[key] / max(baseline[key], 0.001) for key in current},
         )
 
 

@@ -48,9 +48,9 @@ and test-tier selection; test convenience never weakens a production invariant.
   tests -v` for full source-suite discovery (opt-in tests still skip). The runner is unittest, not pytest. Run the
   narrow module first, then the affected tier documented in `tests/README.md`. The release-confidence tier is
   explicitly opt-in with `FURIOUS_VERY_HEAVY_TESTS=1`; packaged/manual smoke work uses disposable environments.
-  The historical log comparison additionally requires `FURIOUS_LOG_MANAGER_BASELINE` naming a trusted, compatible
-  local Git revision; it loads that revision's implementation. Report this opt-in and any skips separately rather
-  than assuming the very-heavy switch alone executes every discovered case.
+  Discovered tests must be self-contained in the checkout: do not load or execute source from Git history.
+  The standalone log benchmark compares saved JSON timing reports; keep that optional measurement outside
+  unittest and report opt-ins, platform skips, and standalone measurements separately.
 - Source-only tests and an offscreen platform do not prove a packaged Qt runtime. Compiler-sensitive changes need
   native lifecycle tests and the compiled fixture documented in `tests/README.md`, including accept/reject/close
   and owner-first teardown. An unavailable private Nuitka counter is unknown, not measured zero; combine toolchain
