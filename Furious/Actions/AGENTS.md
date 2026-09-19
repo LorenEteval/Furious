@@ -12,8 +12,10 @@ owned commands and presentation without becoming a workflow authority.
   Distinct window/tray contexts may need separate actions that observe the same controller; do not force one global
   action across incompatible lifetimes. Keep checked/enabled state and translation consistent, and do not make menu
   shortcuts application-wide when focused editors or other controls own the same keys.
-- Routing and connection actions render the shared controllers. Rebuilding a dynamic menu releases the old actions,
-  action group, and callbacks before publishing the new snapshot; user-defined labels remain untranslated.
+- Routing and connection actions render the shared controllers. Rebuilding a dynamic menu retires its old actions
+  and action group; deferred deletion completes only when Qt processes it. Verify native destruction after repeated
+  rebuilds rather than treating an emptied Python list as release. Refreshing options is observational, not a user
+  selection or reconnect command; user-defined labels remain untranslated.
 - Existing import actions still combine capture/file/clipboard presentation with incremental repository insertion. Treat
   that as a compatibility path, not a service template. Reuse plugin protocol parsing, construct a complete valid result
   before each mutation, and keep batched GUI work cancellable and bounded per event-loop turn.

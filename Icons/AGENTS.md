@@ -19,6 +19,8 @@ resource-manifest contract; it does not govern general UI layout.
   replacement so an apparently unused file is not removed while still generated or consumed through an alias. Selecting
   an already bundled Bootstrap icon normally changes its consumer only; it does not require regeneration or another
   SVG copy. Compare the glyph's visible bounds at the actual control size, not only its nominal SVG canvas.
+  An icon substitution preserves the command's accessible text, shortcut, checked state, selection target, and
+  popup-focus behavior. Verify those semantics at the consumer rather than imposing a new action-construction pattern.
 - Verify alias uniqueness and source/package resolution, then inspect the actual control or tray use under both
   themes, high DPI, relevant sizes, disabled/selected states, and platform packaging where applicable. Deployment
   icons also have direct filesystem consumers in `Deploy.py`; a resource alias search alone cannot prove a PNG is

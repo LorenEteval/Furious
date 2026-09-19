@@ -37,8 +37,14 @@ owns Xray's full JSON preservation, routing/assets/statistics, and protocol/tran
   mutation and preserve selected-row order. Pending rule editors/confirmations use persistent indexes in that exact
   model: moves preserve their targets, while removal/reset can invalidate them and must suppress write-back.
   Persistent indexes are not identities across model replacement. Verify this through `tests/test_ui_behavior.py`
-  and repository/runtime order round trips. Rule-editing confirmations share the transient rules dialog as their Qt
-  owner on every platform, so owner destruction also ends pending confirmation callbacks.
+  and repository/runtime order round trips. Confirmations within a rules editor share that transient dialog's Qt
+  lifetime; the reconnect notice after editor completion belongs to the surviving routing table instead.
+- The rules editor mutates the live routing document; closing/rejecting it is not rollback. Compare net rule changes
+  against the snapshot captured after model normalization and verify the same document still occupies the captured
+  routing ID before notifying. Reverted/no-op edits and replaced/deleted targets do not notify. Reordering is a rule
+  change, but the notice occurs at editor completion, not on each move. `RoutingChangeNoticeTest` in
+  `tests/test_ui_behavior.py` covers this boundary. Its connected/selected-route predicate must not be mistaken for
+  proof of the running core's routing after a declined reconnect.
 - Statistics preparation is optional and may leave a valid runtime without a statistics target. Preserve that
   distinction from connection failure; later sampling uses the target captured for this runtime, not newly edited
   settings or an assumption based solely on the backend name. `configureXrayStats()` merges the required API service

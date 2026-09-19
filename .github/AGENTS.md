@@ -46,8 +46,9 @@ exceptions; it does not define the source test suite or imply that every package
   required dependency of PyPI publication through `workflows/deploy-pypi.yml`. It can also run manually. Daily binary
   builds retain their separate artifact scope. Source tests do not establish packaged behavior or Python/Qt
   floors beyond their matrix. Do not call an artifact build a regression-test pass; use `tests/README.md` for
-  source verification. Follow actual `needs` and tag gates back to required checks; upload success alone does not
-  establish release eligibility. A diagnostic Nuitka build that changes compiler/runtime flags is separate evidence
+  source verification. The source suite's offscreen Qt environment exercises widgets and event delivery, not native
+  tray integration, privilege prompts, or an installed application's host effects. Follow actual `needs` and tag gates
+  back to required checks; upload success alone does not establish release eligibility. A diagnostic Nuitka build that changes compiler/runtime flags is separate evidence
   from the ordinary release configuration; record and exercise the latter before claiming a packaged defect resolved.
 - Revalidate version/architecture claims against the current matrix instead of duplicating all pins here. Record
   which workflow invocation and effective dependency set produced an artifact; a passing standalone binary job

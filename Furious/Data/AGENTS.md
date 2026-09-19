@@ -19,7 +19,9 @@ provenance; it is not an application-data or settings directory.
 
 ## Local endpoint map
 
-- MapLibre JavaScript/CSS and the host bridge are bundled; the style requests vector tiles and glyphs from
+- Keep vendored `maplibre-gl.js`/CSS and their license distinct from the application-owned `EndpointMap.js`/HTML
+  bridge. Change host behavior in the bridge and its Python consumer; a vendor replacement needs separate provenance
+  and compatibility review. The style requests vector tiles and glyphs from
   `tiles.openfreemap.org`. This is not an offline map. Keep executable code local, preserve attribution, and review
   the HTML content-security policy and the widget's attribution-link validation when changing network resources or
   links. Missing tiles/network detail must degrade without crashing the renderer or the application.

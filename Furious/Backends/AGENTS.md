@@ -22,6 +22,9 @@ generic default.
   owns the editable snapshot, acceptance validation, identity resolution, and eventual write-back. Runtime factories
   likewise transfer fresh execution resources to the workflow owner. Editor acceptance and runtime readiness are
   different validations; neither may silently rewrite stored data to make a later stage succeed.
+- `Furious/Plugins/Runtime.py` checks that serialization yields nonempty text and carries structured diagnostics on failure;
+  it does not parse pre-serialized strings or validate a backend's complete schema. Keep serialization success,
+  backend configuration acceptance, execution start, and readiness as separate evidence.
 
 ## TUN and runtime policy
 

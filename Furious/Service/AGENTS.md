@@ -19,7 +19,8 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   identity rejects stale completion. Successful release is idempotent; failed drains may require retry while their
   owner remains alive, without publishing another terminal result. Delete replies/Qt objects in their owning thread
   and release contexts only when execution no longer needs them. Late delivery must not revive a shut-down manager
-  or mutate live state.
+  or mutate live state. A terminal result ends an operation's publication contract, not necessarily its execution:
+  a replacement may be admitted only under the scheduler's resource bounds while cancelled work still occupies a slot.
 
 ## Connection and network workflows
 
@@ -45,8 +46,9 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   unclassified plugin parsers stay on the GUI compatibility path. The manager's synchronous shutdown closes
   admission, cancels work, and retains the pool/relay until workers finish. A slow-shutdown warning is diagnostic,
   not a deadline that permits destroying running workers; a non-returning plugin can still block shutdown.
-  Workers never read live repositories or Qt models. The GUI thread verifies the full source signature and group
-  revision, commits while preserving live profile identity/local metadata, then publishes coalesced status/structure.
+  Subscription preparation workers never read live repositories or Qt models. The GUI thread verifies the full source
+  signature and group revision, commits while preserving live profile identity/local metadata, then publishes
+  coalesced status/structure.
   Post-commit reconnect/test invalidation failure is reported without undoing committed profiles. This is live
   reconciliation; repository flush and status persistence are separate boundaries, not one disk transaction.
 - User-requested subscription stop invalidates pending generations and marks unfinished groups cancelled. Publish

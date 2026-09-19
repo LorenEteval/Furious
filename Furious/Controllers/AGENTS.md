@@ -30,6 +30,9 @@ compatibility paths.
   otherwise the repository's activated profile. Normalizing the displayed option does not itself persist a new
   preference; explicit selection or invalidation owns that mutation. Disabling the selected custom route persists
   its supported fallback without reconnecting by itself; re-enabling restores availability, not selection.
+  If reconnect is declined, selected/persisted routing may differ from the running document. Menu checkmarks prove
+  selection only; exercise fallback persistence separately from reconnect acceptance and runtime preparation.
+  `RoutingControllerTest` in `tests/test_controllers.py` anchors explicit invalidation versus observational refresh.
   User-defined routing labels are not translatable UI literals.
 - `SettingsController` is the shared policy path used by Home, Settings, tray, and platform integration. Startup
   registration persists only after host success; other preferences may apply immediately or on the next connection.

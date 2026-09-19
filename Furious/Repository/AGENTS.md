@@ -18,7 +18,9 @@ outside it.
   fallback; only an explicit successful replacement may do so. Root decoding, individual-record hydration, and later
   serialization are separate failure boundaries. Test malformed records inside a valid root as well as malformed
   roots. Profile and subscription hydration publishes only a complete collection; an invalid record must not
-  expose a partially restored prefix that cleanup can serialize over the original document.
+  expose a partially restored prefix that cleanup can serialize over the original document. The restore-failure
+  guard protects automatic cleanup, not an arbitrary explicit `sync()` call. Do not flush an empty fallback merely
+  to inspect or acknowledge a load failure; test the original persisted bytes through the cleanup path.
 - Stage fallible decode/migration before live mutation. Subscription reconciliation currently belongs to
   `Furious/Service/SubscriptionSync.py` and commits through the compatibility live collection: matched managed profiles
   retain object/profile identity and local metadata, removed profiles become stale, and unrelated groups remain

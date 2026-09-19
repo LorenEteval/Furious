@@ -23,9 +23,9 @@
   represent. A new scope never makes an existing one disposable. Keep override files explicit about which inherited
   assumption they replace and why.
 - Before a hierarchy-wide audit, inventory tracked, untracked, hidden, and ignored AGENTS paths, including
-  overrides; record each scope and its nearest ancestor guide. At handoff compare exact path sets and Git
-  status/diff: no original path may disappear or become a rename. Default to exact equality and improve redundant
-  scopes in place.
+  overrides; record each scope, nearest ancestor guide, tracking status, and initial content. At handoff compare
+  exact path sets and Git status/diff; separately compare ignored/untracked guides that Git's ordinary diff omits.
+  No original path may disappear or become a rename. Default to exact equality and improve redundant scopes in place.
 - Inheritance follows directory ancestry. Name the nearest governing guide when clarifying a scope; a sibling guide
   identifies a contract to consult, not another parent. Verification and self-evolution here apply to every descendant
   scope without repeating the same maintenance checklist in each file. Ignored comparison checkouts retain their own
@@ -128,7 +128,8 @@
 - After significant architectural work, re-read the applicable hierarchy as a fresh agent: can it identify the
   owner, invariant, failure boundary, and relevant tests without relying on conversation history? Challenge rules
   likely to become stale, circular references, and wording that freezes incidental structure.
-- Distinguish requirements, observed implementation, and verified gaps. State the evidence boundary: a test name is an
-  investigation anchor, not proof that every failure path is covered. Keep run-specific counts, versions, and diagnostic
-  experiments in the work report; put only durable constraints in guidance. During guidance-only work, report defects
-  separately instead of changing production code to satisfy the prose.
+- Distinguish requirements, observed implementation, and verified gaps. For a claimed guarantee, trace its failure
+  path as well as its successful caller; a test name is an investigation anchor, not proof of unexercised behavior.
+  Keep run-specific counts, versions, and diagnostic experiments in the work report; put only durable constraints in
+  guidance. During guidance-only work, report defects separately instead of changing production code to satisfy
+  the prose.

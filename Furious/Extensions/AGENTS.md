@@ -23,7 +23,9 @@ is bundled.
   construction, not permission to overwrite local identity or grant remote ownership. It cannot mutate a group,
   cancel tests, reconnect, or publish UI state; those decisions remain at the import/manager commit boundaries.
   Test recognized-empty, wholly unsupported, and mixed-validity payloads separately so decoder matching is not
-  confused with successful profile import or authorization to clear an existing group.
+  confused with successful profile import or authorization to clear an existing group. The standard share-link
+  decoder treats blank/comment-only content as a mismatch; an empty result from a different decoder needs its own
+  import/reconciliation policy, not an assumption borrowed from this format.
 - Keep bundled registration deterministic, side-effect-light, and discoverable in source, wheel, and Nuitka builds.
   Test format selection/fallback, malformed and secret-bearing input, duplicate occurrence identity, unsupported
   subscription protocols, registration rollback, and absence of repository/UI mutation during decoding. Evolve this

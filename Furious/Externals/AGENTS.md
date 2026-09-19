@@ -29,8 +29,9 @@ structure and human-reviewed translations.
 ## Extractable source text
 
 - `_()` normally receives one static literal. The only supported dynamic form is an f-string composed solely of bare
-  names imported from `Furious.Frozenlib.Constants`; ordinary placeholders, attributes, calls, conversions, format
-  specifications, concatenation helpers, and `.format()` are not extractable.
+  names imported from `Furious.Frozenlib.Constants`; runtime expressions, attributes, calls, conversions, format
+  specifications, and concatenation helpers inside that argument are not extractable. A static literal containing
+  brace placeholders is extractable: translate it first, then interpolate with `.format()` outside `_()`.
 - Keep runtime interpolation outside the translatable expression. Translate UI language, not identifiers, protocol
   values, user-defined names, persisted values, paths, or diagnostic payloads.
 - When a control stores source text for later retranslation, update that source instead of manually translating one

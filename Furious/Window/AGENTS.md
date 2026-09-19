@@ -8,6 +8,9 @@ state.
 
 - `MainWindow` owns the persistent built-in page tree and navigation; plugin pages enter through the plugin navigation
   service. Pages adapt shared controllers/services/repositories and must not become competing state authorities.
+  Plugin page factories transfer widgets to the navigation owner; the registry's lifetime does not keep a page valid.
+  Verify failed construction/registration cleanup as well as successful one-time registration through
+  `PluginNavigationManager` and `tests/test_service_runtime.py`.
   Preserve application-facing forwarding APIs until their consumers migrate deliberately. Bulk profile forwarding
   must retain the bulk mutation boundary through Home and its model, without expanding into per-profile refreshes.
 - Home, Settings, tray actions, and reusable dialogs render the same connection, routing, and settings controllers.

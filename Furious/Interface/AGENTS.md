@@ -21,9 +21,11 @@ implementations can satisfy without importing application composition or concret
 - `StorageBackend.data()` deliberately exposes a live mutable collection for compatibility. Do not reinterpret it as a
   snapshot or introduce a second authoritative cache. Editor bindings map input to configuration and back; they do not
   decide runtime, persistence, or host policy.
-- `ApplicationRunner.ExitCode` is a process-boundary protocol. Model encoders may raise, while configuration
-  construction deliberately captures diagnostics; do not impose one blanket exception convention on those different
-  contracts.
+- `ApplicationRunner.ExitCode` is the outer application process protocol; it is not interchangeable with a core's
+  raw exit code or `RuntimeExitReason`. Preserve the meaning at each boundary instead of translating every nonzero
+  value into one generic failure.
+- Model encoders may raise, while configuration construction deliberately captures diagnostics. Callers must inspect
+  the contract they consume; successful construction alone proves neither serialization nor backend acceptance.
 - Runtime liveness is observational: querying it must not consume an exit, transfer ownership, or dispatch
   callbacks. A zero process exit can still be an unexpected connection failure; requested stop and raw exit success
   are different facts. Preserve both in terminal events so orchestration can interpret the exit in its current

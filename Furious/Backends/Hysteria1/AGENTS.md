@@ -11,8 +11,10 @@ exists to preserve Hysteria 1's legacy flat schema and lifecycle without importi
 - Subscription import is allowed only through supported Hysteria 1 protocol handlers. Subscription identity and test
   metadata stay in `ServerProfile`, and validation diagnostics never disclose passwords or complete links.
 - This backend participates in application tun2socks through the shared startup workflow; its factory does not own
-  host routing or connection commit. Keep MMDB/ACL launch preparation here and application-TUN acquisition/rollback
-  with that workflow. Hysteria 2 native-TUN policy does not apply to this legacy backend.
+  host routing or connection commit. Keep the factory's unsupported routing/TUN combination rejection before
+  execution acquisition; do not silently substitute Global routing or borrow native TUN from Hysteria 2.
+  Keep MMDB/ACL launch preparation here and application-TUN acquisition/rollback with that workflow. The existing
+  rejection prompt is a compatibility path, not a requirement that runtime factories own UI.
 - Routing ACL/MMDB launch inputs remain distinct from the stored connection JSON. Optional files are read into
   launch data before the child starts; a missing/unreadable file is logged and falls back to empty input. Preserve
   that observable fallback unless deliberately changing the contract, and include this synchronous file work in

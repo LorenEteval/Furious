@@ -24,6 +24,9 @@ and test-tier selection; test convenience never weakens a production invariant.
   counters/registries are valid evidence when ownership, reclamation, or complexity is the contract; pair them with
   an observable result instead of treating every implementation detail as forbidden. Cover success, invalid input,
   timeout/cancel, stale/partial completion, rollback, cleanup, and compatible persisted input where applicable.
+- Small workflow tests compose real shared controllers, models, and signals across the relevant UI surfaces;
+  mock the external effect instead of replacing the authority whose consistency is under test. A mocked reconnect
+  proves a request was issued, not which document a real runtime launched.
 - For staged changes, fail immediately before commit and prove live plus persisted state is unchanged. Test a
   post-commit side-effect failure separately. Keep persisted-profile assertions distinct from runtime-copy output.
 - Use stable profile/subscription identities in reconciliation and async tests. Exercise supersession, removal/reorder,

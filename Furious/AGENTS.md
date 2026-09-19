@@ -45,8 +45,10 @@ place.
   preserve one scheduler, result boundary, and cleanup path. Widgets should not absorb new workflow orchestration.
 - Plugin registries index process-lifetime plugins, descriptors, and capabilities. Created editors and active
   runtimes transfer to explicit UI/workflow owners. A capability may own a reusable service, such as asset updating,
-  but that service still needs a cleanup boundary. Built-ins use the public capability contract; existing
-  global-access helpers are host integration, not an extra requirement for external plugins.
+  but that service still needs a cleanup boundary. Capability dispatch does not implicitly clone input or commit
+  preferences: callers establish isolation and the owning controller/repository establishes mutation. Built-ins use
+  the public capability contract; existing global-access helpers are host integration, not an extra requirement
+  for external plugins.
 - Keep GUI work bounded, cross worker results through the owning Qt thread, and define cancellation/supersession for
   every asynchronous workflow. Page visibility may control rendering, never ownership of collection or draining.
 - Preserve unknown/forward-compatible fields through model, repository, backend editor, and serialization changes.

@@ -47,8 +47,10 @@ remains in each implementation.
   log and return an unhandled result; required TUN rejection must use the typed error rather than assume all
   exceptions stop fallback. Optional capabilities may be absent; an External Core need not implement statistics or
   download probes.
-- Frozen result envelopes are not recursively immutable: embedded configuration/metadata mappings still require copy
-  isolation before mutation or worker handoff.
+- Frozen request/result envelopes are not recursively immutable: embedded configuration/metadata mappings still
+  require copy isolation before mutation or worker handoff. `createCoreRuntime()` dispatches preparation to a factory;
+  it does not protect live configuration from that factory's mutations. Routing normalization chooses a supported
+  option but does not persist it; that decision belongs to the routing controller.
 - Capability instances default to GUI-thread-only for background subscription preparation. A decoder or protocol
   handler opts into worker execution only after its parsing, validation, caches, globals, and Qt usage are audited as
   safe for concurrent copied inputs; keep unclassified third-party capability execution on the GUI thread.

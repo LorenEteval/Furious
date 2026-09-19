@@ -28,6 +28,9 @@ preserves the intentionally different direct-subprocess scope for user-selected 
 - Application tun2socks is an explicit profile capability. It requires a usable SOCKS endpoint and a separate remote
   server address for bypass routing; an executable path is never a network destination, and this backend never invents
   native core TUN support. Subscription decoding must continue to reject executable profiles.
+- The embedded backends' JSON serialization helper is not this launch boundary: External Core passes a structured
+  executable/argument/environment specification to `Popen`. Validate through `validateProcess()` and the launch path,
+  including the documented timeout gap, rather than assuming a serializable mapping is safe or executable.
 - This is a mapping-only protocol: its explicit type discriminator selects local executable configuration, it
   declares no URI schemes, and portable URI/QR export may return no result. Shared import/export UI must preserve
   that capability absence. Endpoint readiness checks the configured proxy; it does not validate an arbitrary

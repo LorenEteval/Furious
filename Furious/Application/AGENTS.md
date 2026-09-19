@@ -11,9 +11,10 @@ boundary between the outer child-process supervisor and the inner application ev
   dependencies when changing stage order.
 - Partial startup, normal exit, signals, and event-loop failure converge on one reverse-order cleanup path.
   `aboutToQuit` and the event-loop `finally` may both reach it; repeated entry must not repeat registered stages.
-  One callback failure does not skip later stages, but the stack does not retry it. Service-level retry/retention
-  obligations must be satisfied before the owner disappears. `exit()` requests Qt termination;
-  action/window/session handlers do not run cleanup directly.
+  One callback failure does not skip later stages, but the stack consumes that callback and does not retry it.
+  Its successful `close()` return means this invocation ran the stack, not that every resource was released.
+  Service-level retry/retention obligations must be satisfied before the owner disappears. `exit()` requests Qt
+  termination; action/window/session handlers do not run cleanup directly.
 - A stage that fails before its cleanup callback is registered must release its own partial acquisitions. The outer
   cleanup stack releases completed stages; it cannot discover half-built controllers, UI, logging handlers, or
   native listeners. Restore logging configuration as well as closing handlers. Run service shutdown while its

@@ -22,6 +22,8 @@ view an independent workflow authority.
   keep their own shortcut semantics. Selection identity, current keyboard index, and selection painting are separate:
   keeping targets highlighted while a command button/menu has focus must not change selection or steal editor focus.
   Exercise the button-focus interval before popup display as well as the open menu to catch highlight flicker.
+  An action shared with a page button still resolves the table's selected domain targets when triggered; moving its
+  presentation must not introduce another test scheduler or a second selection model.
 
 ## Workflow and lifetime boundaries
 

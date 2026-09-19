@@ -33,6 +33,8 @@ owns Hysteria 2's nested upstream document, native-TUN capability, statistics, a
   response with no entry for the selected client, which currently represents zero counters.
 - Capability presence is independent: native TUN, statistics, actions, settings, routing, and protocol editing must
   continue to work or fail through their own declared contracts rather than being inferred from the runtime type.
+  This factory does not publish Xray's named/custom routing options. Preserve the no-options case through shared
+  routing presentation and runtime preparation; a stored routing preference is not evidence of backend support.
 - Verify nested sibling/default preservation, known and unknown values, obfuscation switching, URI/document
   projection preservation, every native/application-TUN and resolution case, probe stripping, readiness/exit cleanup,
   statistics cancellation, and repeated transient editor/settings-dialog destruction. Keep this guide synchronized with
