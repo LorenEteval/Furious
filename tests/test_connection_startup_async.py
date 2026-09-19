@@ -158,6 +158,43 @@ class _ResolverFixture(QtCore.QObject):
 class ConnectionStartupAsyncTest(TestCase):
     """Verify readiness, cancellation, rollback, and compatibility."""
 
+    def testStageListenerCancellationStopsNextAcquisitionOrCommit(self):
+        """Cancel through real Qt stage signals before the next ownership boundary."""
+        for stage in (
+            ConnectionStartStage.Preparing,
+            ConnectionStartStage.StartingPrimary,
+            ConnectionStartStage.Committing,
+        ):
+            with self.subTest(stage=stage):
+                manager = ConnectionManager()
+                self.managers.append(manager)
+                runtime = _Runtime()
+                registry = _Registry([PreparedRuntime(runtime)])
+                with mock.patch.object(
+                    manager, '_prepareTUNPolicy', return_value=(False, False)
+                ) as prepare, mock.patch(
+                    'Furious.Service.ConnectionManager.getPluginRegistry',
+                    return_value=registry,
+                ), mock.patch(
+                    'sys.excepthook'
+                ) as qtErrors:
+                    operation = manager.startAsync(_Configuration(), '', deepcopy=False)
+                    operation.stageChanged.connect(
+                        lambda current: operation.cancel() if current is stage else None
+                    )
+                    operation.start()
+                    self.assertEqual(manager.runtimes, [])
+                    self.assertIsNone(manager._activeStartOperation)
+                    if stage is ConnectionStartStage.Preparing:
+                        prepare.assert_not_called()
+                    if stage is not ConnectionStartStage.Committing:
+                        self.assertEqual(runtime.startOptions, [])
+                    else:
+                        self.assertEqual(runtime.stopCount, 1)
+                        self.assertEqual(runtime.disposeCount, 1)
+                    processQtEvents()
+                    qtErrors.assert_not_called()
+
     def setUp(self):
         """Ensure a Qt application exists for real timer/socket delivery."""
         self.app = application()

@@ -117,6 +117,53 @@ class ExternalCoreProcessTest(unittest.TestCase):
                     spawn.assert_not_called()
                 runtime.dispose()
 
+    def testFailedReapRetainsChildUntilRetrySucceeds(self):
+        """Keep independently observed live execution after every escalation fails."""
+        runtime = ExternalCoreProcess(
+            self.configuration(['-c', 'pass'], str(Path.cwd()))
+        )
+        child = mock.Mock(pid=1234)
+        child.poll.return_value = None
+        runtime._process = child
+        runtime.setState(RuntimeState.Alive)
+        with mock.patch.object(runtime, '_requestStop'), mock.patch.object(
+            runtime, '_terminate'
+        ), mock.patch.object(runtime, '_kill'), mock.patch.object(
+            runtime, '_waitForExit', return_value=False
+        ):
+            with self.assertRaisesRegex(RuntimeError, 'could not be reaped'):
+                runtime.dispose()
+        self.assertIsNone(child.poll())
+        self.assertIs(runtime.process, child)
+        self.assertIs(runtime.state, RuntimeState.Stopping)
+        child.poll.return_value = 0
+        runtime.dispose()
+        self.assertIsNone(runtime.process)
+        self.assertIs(runtime.state, RuntimeState.Disposed)
+
+    def testFailedThreadJoinRetainsReaderAndWatcherUntilRetry(self):
+        """A reaped child does not prove its pipe readers or watcher have exited."""
+        runtime = ExternalCoreProcess(
+            self.configuration(['-c', 'pass'], str(Path.cwd()))
+        )
+        child = mock.Mock()
+        child.poll.return_value = 0
+        reader, watcher = mock.Mock(), mock.Mock()
+        reader.is_alive.return_value = watcher.is_alive.return_value = True
+        runtime._process = child
+        runtime._readerThreads = [reader]
+        runtime._watcherThread = watcher
+        with self.assertRaisesRegex(RuntimeError, 'reader or watcher'):
+            runtime.dispose()
+        self.assertIs(runtime.process, child)
+        self.assertEqual(runtime._readerThreads, [reader])
+        self.assertIs(runtime._watcherThread, watcher)
+        reader.is_alive.return_value = watcher.is_alive.return_value = False
+        runtime.dispose()
+        self.assertEqual(runtime._readerThreads, [])
+        self.assertIsNone(runtime._watcherThread)
+        self.assertIsNone(runtime.process)
+
     def testDisposedRuntimeCannotAcquireAnotherProcess(self):
         """Disposal is terminal even when the stored launch specification is valid."""
         runtime = ExternalCoreProcess(
@@ -471,6 +518,7 @@ class ExternalCoreProcessTest(unittest.TestCase):
             dnsResolver.resolve.return_value = (True, [])
 
             tunRuntime = mock.Mock(spec=CoreRuntime)
+            tunRuntime.isRunning.return_value = False
 
             manager = NoCoreRuntimeConnectionManager(dnsResolver=dnsResolver)
 

@@ -99,7 +99,8 @@ class _ConnectionStartAttempt:
             return False
 
         for lease in reversed(self.leases):
-            lease.release()
+            if not lease.release():
+                self.manager._pendingReleases.append(lease)
 
         self.leases.clear()
 
@@ -432,6 +433,9 @@ class ConnectionStartOperation(QtCore.QObject):
 
         self._setStage(ConnectionStartStage.Preparing)
 
+        if not self._isCurrent():
+            return
+
         configcopy = self.attempt.runtimeConfiguration
 
         try:
@@ -460,6 +464,9 @@ class ConnectionStartOperation(QtCore.QObject):
             return
 
         self._setStage(ConnectionStartStage.StartingPrimary)
+
+        if not self._isCurrent():
+            return
 
         router = RuntimeEventRouter()
 
@@ -491,6 +498,11 @@ class ConnectionStartOperation(QtCore.QObject):
 
         self.attempt.ownRuntime(runtime, router)
 
+        if not self._isCurrent():
+            self.attempt.rollback()
+
+            return
+
         try:
             launch.start()
         except RuntimeStartError as ex:
@@ -520,6 +532,10 @@ class ConnectionStartOperation(QtCore.QObject):
             return
 
         self._setStage(stage)
+
+        if not self._isCurrent():
+            return
+
         self._conditionContinuation = continuation
 
         probe = _RuntimeReadinessProbe(runtime, startup, parent=self)
@@ -593,6 +609,9 @@ class ConnectionStartOperation(QtCore.QObject):
             return
 
         self._setStage(ConnectionStartStage.PreparingTUN)
+
+        if not self._isCurrent():
+            return
 
         configcopy = self.attempt.runtimeConfiguration
 
@@ -675,6 +694,9 @@ class ConnectionStartOperation(QtCore.QObject):
 
         if PLATFORM != 'Linux':
             self._setStage(ConnectionStartStage.StartingTUNRuntime)
+
+            if not self._isCurrent():
+                return
 
             try:
                 self._startTUN()
@@ -796,6 +818,10 @@ class ConnectionStartOperation(QtCore.QObject):
             return
 
         self._setStage(ConnectionStartStage.WaitingTUNDevice)
+
+        if not self._isCurrent():
+            return
+
         self._conditionContinuation = continuation
 
         probe = _ConditionProbe(
@@ -1000,6 +1026,9 @@ class ConnectionStartOperation(QtCore.QObject):
 
         self._setStage(ConnectionStartStage.StartingTUNRuntime)
 
+        if not self._isCurrent():
+            return
+
         try:
             self._startTUN()
         except RuntimeStartError as ex:
@@ -1020,6 +1049,9 @@ class ConnectionStartOperation(QtCore.QObject):
             return
 
         self._setStage(ConnectionStartStage.Committing)
+
+        if not self._isCurrent():
+            return
 
         self.attempt.commit(self.exitCallback)
         self._terminal = True
@@ -1099,6 +1131,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
         self.uniqueCleanup = False
         self._leases = list()
+        self._pendingReleases = []
         self._lastStartError = ''
         self._startGeneration = 0
         self._activeStartOperation = None
@@ -1245,6 +1278,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
         third-party plugins and non-interactive callers that rely on historical
         synchronous launch semantics.
         """
+        self._retryPendingReleases()
         self._lastStartError = ''
 
         attempt = _ConnectionStartAttempt(
@@ -1285,6 +1319,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
         if self._activeStartOperation is not None:
             self._activeStartOperation.cancel()
 
+        self._retryPendingReleases()
         self._lastStartError = ''
         self._startGeneration += 1
 
@@ -1757,7 +1792,8 @@ class ConnectionManager(Mixins.CleanupOnExit):
         if lease is None:
             return
 
-        lease.release()
+        if not lease.release():
+            self._pendingReleases.append(lease)
 
         self._leases.remove(lease)
 
@@ -1765,20 +1801,29 @@ class ConnectionManager(Mixins.CleanupOnExit):
         """Stop every managed proxy-core and TUN runtime."""
         self.cancelStart()
 
-        for lease in reversed(self._leases):
-            lease.release()
-
+        self._pendingReleases.extend(reversed(self._leases))
         self._leases.clear()
+        self._retryPendingReleases()
+
+    def _retryPendingReleases(self):
+        """Keep exact failed resources and refuse replacement until release succeeds."""
+        self._pendingReleases[:] = [
+            lease for lease in self._pendingReleases if not lease.release()
+        ]
+
+        if self._pendingReleases:
+            raise RuntimeError('Connection runtime cleanup is incomplete')
 
     def cleanup(self):
         """Release resources owned by the core manager."""
-        self.cancelStart()
-        self.stopAll()
+        try:
+            self.stopAll()
+        finally:
+            # A failed runtime release must not strand independent DNS replies.
+            if self._dnsResolver is not None:
+                dispose = getattr(self._dnsResolver, 'dispose', None)
 
-        if self._dnsResolver is not None:
-            dispose = getattr(self._dnsResolver, 'dispose', None)
+                if callable(dispose):
+                    dispose()
 
-            if callable(dispose):
-                dispose()
-
-            self._dnsResolver = None
+                self._dnsResolver = None

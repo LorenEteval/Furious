@@ -37,8 +37,10 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   replacing the runtime callback. Worker-thread exits are queued to the router's Qt thread, delivered at most once, and
   suppressed after release. Execution liveness and endpoint/TUN readiness remain separate observations. A readiness
   timeout never replaces a typed exit after execution has already stopped, even when that exit is still queued.
-  Lease release currently logs stop/dispose errors and completes logical callback release; this is not evidence that
-  the underlying resource was reaped. Changes to cleanup-failure reporting must cover both runtime and lease owners.
+  Failed stop/dispose keeps the lease in Releasing with terminal delivery suppressed. The manager retains it for
+  retry and refuses new startup while release remains incomplete. A failed attempt transfers unreleased leases
+  back to that durable owner; deleting the attempt must not abandon them. Independent DNS cleanup still runs.
+  Verify runtime liveness and actual handle/thread release separately from the lease's logical state.
 - `HttpGetManager` owns reply/error/timeout cleanup. DNS recursion and external-input caches are bounded. Update,
   connectivity, endpoint, subscription, and asset requests own their exact reply and reject stale generations.
 - Subscription stages remain separate: decoders return neutral items; import constructs profiles/metadata;

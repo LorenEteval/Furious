@@ -134,7 +134,8 @@ class MultiprocessingRuntime(CoreRuntime):
         if self.isRunning():
             raise RuntimeStartError('Runtime is already running')
 
-        self._closeProcess()
+        if not self._closeProcess():
+            raise RuntimeStartError('Previous runtime handle could not be closed')
 
         self._stopRequested = False
         self._exitPublished = False
@@ -212,21 +213,27 @@ class MultiprocessingRuntime(CoreRuntime):
         self.publishExit(event)
 
     def _closeProcess(self):
-        """Close and forget the exact inactive multiprocessing handle."""
+        """Release a handle only after close succeeds; keep failures retryable."""
         process = self._process
 
-        if process is not None:
-            try:
-                process.join(0)
-            except (AssertionError, OSError, ValueError):
-                pass
+        if process is None:
+            return True
 
-            try:
-                process.close()
-            except (OSError, ValueError):
-                pass
+        try:
+            process.join(0)
+        except (AssertionError, OSError, ValueError):
+            pass
+
+        try:
+            process.close()
+        except (OSError, ValueError) as ex:
+            logger.error(f'{self.name()} process handle could not be closed: {ex}')
+
+            return False
 
         self._process = None
+
+        return True
 
     def stop(self):
         """Idempotently terminate execution without disposing this object."""
@@ -258,7 +265,13 @@ class MultiprocessingRuntime(CoreRuntime):
                 process.kill()
                 process.join(self.StopJoinTimeout)
 
+        if process.is_alive():
+            raise RuntimeError(f'{self.name()} process did not stop after escalation')
+
         event = self._consumeExit()
+
+        if not self._closeProcess():
+            raise RuntimeError(f'{self.name()} process handle could not be closed')
 
         logger.info(f'{self.name()} stopped with exitcode {event.code}')
 

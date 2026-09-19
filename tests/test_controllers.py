@@ -177,6 +177,111 @@ class ConnectionControllerTest(unittest.TestCase):
 
         processQtEvents()
 
+    def testReentrantDisconnectPreventsStartupAndCompletion(self):
+        """Real signal callbacks cancel admission and later host/publication work."""
+        for phase in (
+            'profile',
+            'connecting',
+            'progress',
+            'runtimes',
+            'finish',
+            'connected',
+            'notification',
+        ):
+            with self.subTest(phase=phase), isolatedSettings(), mock.patch(
+                'sys.excepthook'
+            ) as qtErrors:
+                core = FixtureAsyncCoreManager()
+                controller = ConnectionController(
+                    coreManager=core, updatesManager=FixtureUpdatesManager()
+                )
+                if phase == 'profile':
+                    controller.activeProfileChanged.connect(
+                        lambda profile: (
+                            controller.startDisconnection()
+                            if profile is self.profile
+                            else None
+                        )
+                    )
+                elif phase in ('connecting', 'connected'):
+                    target = (
+                        ConnectionState.Connecting
+                        if phase == 'connecting'
+                        else ConnectionState.Connected
+                    )
+                    controller.stateChanged.connect(
+                        lambda state: (
+                            controller.startDisconnection() if state is target else None
+                        )
+                    )
+                else:
+                    signal = {
+                        'progress': controller.progressStarted,
+                        'runtimes': controller.runtimesChanged,
+                        'finish': controller.progressFinished,
+                        'notification': controller.notificationRequested,
+                    }[phase]
+                    signal.connect(lambda *_: controller.startDisconnection())
+
+                with mock.patch(
+                    'Furious.Controllers.ConnectionController.SystemProxy.set'
+                ) as proxySet, mock.patch(
+                    'Furious.Controllers.ConnectionController.SystemProxy.off'
+                ), mock.patch.object(
+                    controller, '_runPostConnectTasksOnce'
+                ) as postConnect:
+                    admitted = controller.startConnection(self.profile)
+                    if phase in ('profile', 'connecting', 'progress'):
+                        self.assertFalse(admitted)
+                        self.assertEqual(core.operations, [])
+                    else:
+                        self.assertTrue(admitted)
+                        core.operations[0][0].succeed()
+                    self.assertEqual(controller.state, ConnectionState.Disconnected)
+                    self.assertIsNone(controller.activeProfile)
+                    self.assertFalse(controller._actionTimer.isActive())
+                    self.assertEqual(AppSettings.get('Connect'), AppBinarySettings.OFF)
+                    postConnect.assert_not_called()
+                    if phase in ('profile', 'connecting', 'progress', 'runtimes'):
+                        proxySet.assert_not_called()
+                controller.deleteLater()
+                processQtEvents()
+                qtErrors.assert_not_called()
+
+    def testReentrantReplacementOfSameProfileKeepsNewStartPending(self):
+        """State/profile equality must not let an old success finish a new generation."""
+        with isolatedSettings():
+            core = FixtureAsyncCoreManager()
+            controller = ConnectionController(
+                coreManager=core, updatesManager=FixtureUpdatesManager()
+            )
+            replaced = []
+
+            def replace(*_):
+                if replaced:
+                    return
+                replaced.append(True)
+                controller.startDisconnection()
+                controller.startConnection(self.profile)
+
+            with mock.patch(
+                'Furious.Controllers.ConnectionController.SystemProxy.set'
+            ) as proxySet, mock.patch(
+                'Furious.Controllers.ConnectionController.SystemProxy.off'
+            ), mock.patch.object(
+                controller, '_runPostConnectTasksOnce'
+            ):
+                controller.startConnection(self.profile)
+                controller.runtimesChanged.connect(replace)
+                core.operations[0][0].succeed()
+                self.assertEqual(len(core.operations), 2)
+                self.assertIs(controller._startOperation, core.operations[1][0])
+                self.assertTrue(controller.isConnecting())
+                proxySet.assert_not_called()
+                controller.shutdown()
+            controller.deleteLater()
+            processQtEvents()
+
     def testSuccessfulConnectionAndDisconnectionStateMachine(self):
         """Publish stable states while using only injected runtime resources."""
         with isolatedSettings():

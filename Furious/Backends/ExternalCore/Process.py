@@ -204,8 +204,6 @@ class ExternalCoreProcess(CoreRuntime):
         with self._lock:
             readers = tuple(self._readerThreads)
 
-            self._readerThreads.clear()
-
         current = threading.current_thread()
 
         for thread in readers:
@@ -227,6 +225,11 @@ class ExternalCoreProcess(CoreRuntime):
             for thread in pending:
                 if thread is not current:
                     thread.join(self.ForcedShutdownTimeout)
+
+        with self._lock:
+            self._readerThreads = [
+                thread for thread in self._readerThreads if thread.is_alive()
+            ]
 
     def _watch(self, process: subprocess.Popen):
         """Reap the process and report an unexpected exit exactly once."""
@@ -509,21 +512,28 @@ class ExternalCoreProcess(CoreRuntime):
         exitCode = process.poll()
 
         if exitCode is None:
-            logger.error('external core process could not be reaped')
-        else:
-            logger.info(f'external core process stopped with code {exitCode}')
+            # Readers and the watcher still need this exact child and its pipes.
+            raise RuntimeError('External core process could not be reaped')
+
+        logger.info(f'external core process stopped with code {exitCode}')
 
         self._joinReaders(process)
 
         with self._lock:
             watcher = self._watcherThread
 
-            self._watcherThread = None
-
         if watcher is not None and watcher is not threading.current_thread():
             watcher.join(self.ForcedShutdownTimeout)
 
         with self._lock:
+            if watcher is not None and not watcher.is_alive():
+                self._watcherThread = None
+
+            if self._readerThreads or self._watcherThread is not None:
+                self.setState(RuntimeState.Stopping)
+
+                raise RuntimeError('External core reader or watcher did not stop')
+
             self._lastExitCode = exitCode
             self.setState(RuntimeState.Exited)
             self._process = None

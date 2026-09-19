@@ -107,6 +107,10 @@ class ConnectionController(QtCore.QObject):
         self._lastError = None
         self._startOperation = None
         self._pendingHttpProxy = ''
+        self._connectionGeneration = 0
+        self._startAdmissionPending = False
+        self._shuttingDown = False
+        self._runtimeCleanupFailed = False
 
         self._actionTimer = QtCore.QTimer(self)
         self._actionTimer.timeout.connect(self._callActionFromQueue)
@@ -158,8 +162,13 @@ class ConnectionController(QtCore.QObject):
 
         interactionWasEnabled = self.interactionEnabled
 
+        generation = self._connectionGeneration
+
         self._state = state
         self.stateChanged.emit(state)
+
+        if generation != self._connectionGeneration or self._state is not state:
+            return
 
         if self.interactionEnabled != interactionWasEnabled:
             self.interactionEnabledChanged.emit(self.interactionEnabled)
@@ -202,26 +211,48 @@ class ConnectionController(QtCore.QObject):
 
         self._setState(ConnectionState.Disconnected)
 
+    def _isCurrentConnection(self, generation):
+        """Reject continuations from an earlier, synchronously replaced lifecycle."""
+        return generation == self._connectionGeneration and not self._shuttingDown
+
     def _startConnecting(self):
         """Enter the connecting state and request progress presentation."""
+        generation = self._connectionGeneration
+
         self._setState(ConnectionState.Connecting)
-        self.progressStarted.emit()
+
+        if self._isCurrentConnection(generation) and self.isConnecting():
+            self.progressStarted.emit()
 
     def _finishConnecting(self):
-        """Enter the connected state and notify connection-aware consumers."""
+        """Publish connection completion only while this lifecycle stays current."""
+        generation = self._connectionGeneration
+
         self.progressFinished.emit(True)
+
+        if not self._isCurrentConnection(generation) or not self.isConnecting():
+            return False
 
         AppSettings.turnON_('Connect')
 
         self._setState(ConnectionState.Connected)
 
+        if not self._isCurrentConnection(generation) or not self.isConnected():
+            return False
+
         Mixins.ConnectionAware.callConnectedCallback()
+
+        return self._isCurrentConnection(generation) and self.isConnected()
 
     def startConnection(self, configuration=None) -> bool:
         """Start *configuration* or the active repository profile."""
         # QObject already exposes a legacy ``connect`` attribute in PySide.
         # Using an explicit operation name avoids shadowing Qt signal plumbing.
-        if self.state is not ConnectionState.Disconnected:
+        if (
+            self.state is not ConnectionState.Disconnected
+            or self._startAdmissionPending
+            or self._shuttingDown
+        ):
             return False
 
         if configuration is None:
@@ -275,16 +306,32 @@ class ConnectionController(QtCore.QObject):
 
             return False
 
+        self._connectionGeneration += 1
+
+        generation = self._connectionGeneration
+
+        self._startAdmissionPending = True
         self._lastError = None
-        self._setActiveProfile(configuration)
         self._pendingHttpProxy = httpProxy
+        self._setActiveProfile(configuration)
+
+        if not self._isCurrentConnection(generation):
+            return False
 
         self._startConnecting()
+
+        if not self._isCurrentConnection(generation) or not self.isConnecting():
+            return False
+
+        self._startAdmissionPending = False
 
         logManager = AppLogManager()
 
         # Retain application diagnostics while starting a fresh runtime log.
         logManager.clear(runtimeOnly=True)
+
+        if not self._isCurrentConnection(generation) or not self.isConnecting():
+            return False
 
         startAsync = getattr(self._coreManager, 'startAsync', None)
 
@@ -309,6 +356,11 @@ class ConnectionController(QtCore.QObject):
                     f'{configuration.coreName()}: ' + _('Unknown error'),
                     str(ex),
                 )
+
+            if not self._isCurrentConnection(generation) or not self.isConnecting():
+                self._coreManager.cancelStart(operation)
+
+                return False
 
             self._startOperation = operation
 
@@ -362,6 +414,9 @@ class ConnectionController(QtCore.QObject):
 
             return False
 
+        if not self._isCurrentConnection(generation) or not self.isConnecting():
+            return False
+
         if not success:
             logger.error('failed to start core manager')
 
@@ -377,6 +432,8 @@ class ConnectionController(QtCore.QObject):
 
     def _finishConnection(self, configuration, httpProxy) -> bool:
         """Commit system integration after manager runtime ownership commits."""
+        generation = self._connectionGeneration
+
         settings = AppSettings.get('CustomProxyBypass')
 
         proxyServerBypass = (
@@ -401,11 +458,18 @@ class ConnectionController(QtCore.QObject):
                 f'{configuration.coreName()}: ' + _('Unknown error'), str(ex)
             )
 
-        self._finishConnecting()
+        if not self._isCurrentConnection(generation) or not self.isConnecting():
+            return False
+
+        if not self._finishConnecting():
+            return False
 
         self.notificationRequested.emit(
             f'{configuration.coreName()}: ' + _('Connected')
         )
+
+        if not self._isCurrentConnection(generation) or not self.isConnected():
+            return False
 
         interval = CORE_CHECK_ALIVE_INTERVAL
 
@@ -424,6 +488,8 @@ class ConnectionController(QtCore.QObject):
         if operation is not self._startOperation or not self.isConnecting():
             return
 
+        generation = self._connectionGeneration
+
         self._startOperation = None
 
         self._emitRuntimesChanged()
@@ -431,7 +497,7 @@ class ConnectionController(QtCore.QObject):
         while not self._actionQueue.empty():
             self._callActionFromQueue()
 
-        if not self.isConnecting():
+        if not self._isCurrentConnection(generation) or not self.isConnecting():
             return
 
         configuration = self.activeProfile
@@ -449,9 +515,14 @@ class ConnectionController(QtCore.QObject):
         if operation is not self._startOperation:
             return
 
+        generation = self._connectionGeneration
+
         self._startOperation = None
 
         self._emitRuntimesChanged()
+
+        if not self._isCurrentConnection(generation):
+            return
 
         configuration = self.activeProfile
         coreName = configuration.coreName() if configuration is not None else ''
@@ -468,16 +539,30 @@ class ConnectionController(QtCore.QObject):
         if operation is not self._startOperation:
             return
 
+        generation = self._connectionGeneration
+
         self._startOperation = None
 
         self._emitRuntimesChanged()
+
+        if not self._isCurrentConnection(generation):
+            return
 
         self._reset()
 
     def startDisconnection(self, notification: str = '') -> bool:
         """Stop the active runtime and optionally request a notification."""
-        if self.state is ConnectionState.Disconnected:
+        if self.isDisconnecting() or (
+            self.state is ConnectionState.Disconnected
+            and not self._startAdmissionPending
+        ):
             return False
+
+        self._connectionGeneration += 1
+
+        generation = self._connectionGeneration
+
+        self._startAdmissionPending = False
 
         operation = self._startOperation
 
@@ -504,6 +589,8 @@ class ConnectionController(QtCore.QObject):
 
             logger.error(f'failed to turn off system proxy: {ex}')
 
+        self._runtimeCleanupFailed = False
+
         try:
             self._coreManager.stopAll()
         except Exception as ex:
@@ -511,10 +598,15 @@ class ConnectionController(QtCore.QObject):
 
             # Always complete the state transition. A cleanup failure must not
             # strand every connection UI in the disabled Disconnecting state.
+            self._runtimeCleanupFailed = True
+
             logger.error(f'failed to stop connection runtime: {ex}')
 
         self._emitRuntimesChanged()
         self._reset()
+
+        if generation != self._connectionGeneration:
+            return True
 
         while not self._actionQueue.empty():
             try:
@@ -552,11 +644,25 @@ class ConnectionController(QtCore.QObject):
         """Stop runtime resources without changing the next-start preference."""
         reconnectOnStartup = AppSettings.isStateON_('Connect')
 
-        if self.state is not ConnectionState.Disconnected:
-            self.startDisconnection()
+        self._shuttingDown = True
 
-        if reconnectOnStartup:
-            AppSettings.turnON_('Connect')
+        try:
+            if (
+                self.state is not ConnectionState.Disconnected
+                or self._startAdmissionPending
+            ):
+                self.startDisconnection()
+
+                if not self._runtimeCleanupFailed:
+                    return
+
+            # Disconnect keeps the UI usable on failure. Final shutdown must
+            # surface retained resources before its owner is destroyed.
+            self._coreManager.stopAll()
+            self._runtimeCleanupFailed = False
+        finally:
+            if reconnectOnStartup:
+                AppSettings.turnON_('Connect')
 
     def toggle(self) -> bool:
         """Perform the operation represented by the current stable state."""

@@ -171,6 +171,7 @@ class RuntimeLease:
 
         self.runtime = runtime
         self.router = router
+        self._releaseInProgress = False
 
     @property
     def state(self):
@@ -182,23 +183,55 @@ class RuntimeLease:
         self.router.commit(callback)
 
     def release(self):
-        """Idempotently stop and dispose the exact owned runtime."""
-        if not self.router.beginRelease():
-            return
+        """Release execution, retaining failed cleanup for the owner to retry."""
+        if self.state is RuntimeLeaseState.Released:
+            return True
+
+        if self._releaseInProgress:
+            return False
+
+        self.router.beginRelease()
+        self._releaseInProgress = True
+
+        stopped, disposed = True, True
 
         try:
-            self.runtime.stop()
-        except Exception as ex:
-            # Any non-exit exceptions
+            try:
+                self.runtime.stop()
+            except Exception as ex:
+                # Any non-exit exceptions
 
-            logger.error(f'error stopping core runtime: {ex}')
-        finally:
+                stopped = False
+
+                logger.error(f'error stopping core runtime: {ex}')
+
             try:
                 self.runtime.dispose()
             except Exception as ex:
                 # Any non-exit exceptions
 
+                disposed = False
+
                 logger.error(f'error disposing core runtime: {ex}')
+
+            if not stopped or not disposed:
+                return False
+
+            try:
+                if self.runtime.isRunning():
+                    logger.error('core runtime remains alive after disposal')
+
+                    return False
+            except Exception as ex:
+                # Any non-exit exceptions
+
+                logger.error(f'could not verify core runtime shutdown: {ex}')
+
+                return False
 
             self.router.finishRelease()
             self.router.deleteLater()
+
+            return True
+        finally:
+            self._releaseInProgress = False
