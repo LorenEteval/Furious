@@ -428,6 +428,7 @@ class ProfileTestServiceTest(unittest.TestCase):
                     self.assertEqual(runtime.isRunning(), failure == 'stop')
 
                     runtime.failure = None
+
                     worker._releaseRuntime()
 
                     self.assertIsNone(worker._runtimeLease)
@@ -446,16 +447,19 @@ class ProfileTestServiceTest(unittest.TestCase):
                         if concurrent
                         else manager._serialDownloadScheduler
                     )
+
                     results = []
                     manager.resultApplied.connect(
                         lambda _profile, result: results.append(result)
                     )
+
                     manager.testDownloadSpeed(profiles, concurrent=concurrent)
                     processQtEvents()
 
                     worker, runtime = workers[0], runtimes[0]
                     port = worker.port
                     lease = worker._runtimeLease
+
                     destroyed = []
                     worker.destroyed.connect(lambda: destroyed.append(True))
                     results.clear()
@@ -479,9 +483,11 @@ class ProfileTestServiceTest(unittest.TestCase):
 
                     runtime.publishExit(RuntimeExit(1, RuntimeExitReason.Unexpected))
                     processQtEvents()
+
                     self.assertEqual(len(results), 1)
 
                     runtime.failure = None
+
                     scheduler.scheduleDrain()
                     processQtEvents()
 
@@ -500,7 +506,9 @@ class ProfileTestServiceTest(unittest.TestCase):
             manager.testDownloadSpeed(profiles[:1], concurrent=False)
             manager.testDownloadSpeed(profiles[1:], concurrent=True)
             processQtEvents()
+
             self.assertEqual(len(workers), 2)
+
             runtimes[1].failure = None
 
             with self.assertLogs('Furious.Service.RuntimeLease', level='ERROR'):
@@ -516,9 +524,11 @@ class ProfileTestServiceTest(unittest.TestCase):
 
             manager.testDownloadSpeed(profiles)
             processQtEvents()
+
             self.assertEqual(len(workers), 2)
 
             runtimes[0].failure = None
+
             manager.shutdown()
             processQtEvents()
 

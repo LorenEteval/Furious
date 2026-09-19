@@ -531,6 +531,7 @@ class _LatencyScheduler(QtCore.QObject):
                 continue
 
             job.state = ProfileTestJobState.Running
+
             worker = self.pingWorkerFactory(job, self)
 
             self.activeJobs[id(job)] = (job, worker)
@@ -1269,6 +1270,7 @@ class _DownloadSpeedScheduler(QtCore.QObject):
             return
 
         _, job, port = active
+
         lease = worker.takeRuntimeLease()
 
         # Completion may notify reentrant consumers. Establish the durable
