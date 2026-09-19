@@ -249,24 +249,32 @@ class ServerTableQtInteractionTest(unittest.TestCase):
         """The fast row projection retains regex, literal and live-cell semantics."""
         with isolatedSettings():
             table = self._table(('alpha[1]', 'beta'))
+
             try:
                 table.search('alpha[1]', regex=False)
                 self.assertEqual(table.proxyModel.rowCount(), 1)
+
                 table.search('ALPHA', caseSensitive=True)
                 self.assertEqual(table.proxyModel.rowCount(), 0)
+
                 table.search('ALPHA')
                 self.assertEqual(table.proxyModel.rowCount(), 1)
+
                 table.search('23 ms')
                 self.assertEqual(table.proxyModel.rowCount(), 0)
+
                 profile = Storage.UserServers()[1]
                 profile.metadata.latency = '23 ms'
                 table.sourceModel.emitRowChanged(1)
+
                 self.assertEqual(table.proxyModel.rowCount(), 1)
                 self.assertEqual(
                     table.sourceRowFromProxyIndex(table.proxyModel.index(0, 0)), 1
                 )
+
                 profile.metadata.latency = '42 ms'
                 table.sourceModel.emitRowChanged(1)
+
                 self.assertEqual(table.proxyModel.rowCount(), 0)
             finally:
                 self._destroyTable(table)

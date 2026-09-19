@@ -1380,12 +1380,15 @@ class SubscriptionManagerTest(TestCase):
         manager = self._manager()
         started = threading.Event()
         release = threading.Event()
+
         context = {'unique': 'group-a', 'batchId': 1, 'requestVersion': 1}
         subscriptions = {'group-a': self._subscription()}
+
         manager._requestVersions['group-a'] = 1
         context['webURL'] = subscriptions['group-a']['webURL']
         manager._batches[1] = _SubscriptionBatchState({('group-a', 1)}, True, [], [])
         manager._handleImportedResult = mock.Mock()
+
         completed = []
         manager.updateCompleted.connect(completed.append)
 
@@ -1402,6 +1405,7 @@ class SubscriptionManagerTest(TestCase):
             try:
                 manager._startPreparationJob('import', context, work)
                 self.assertTrue(started.wait(2))
+
                 manager.stopUpdates()
 
                 self.assertEqual(manager._batches, {})
@@ -1410,6 +1414,7 @@ class SubscriptionManagerTest(TestCase):
 
                 release.set()
                 self.assertTrue(waitFor(lambda: not manager._preparationJobs))
+
                 manager._handleImportedResult.assert_not_called()
                 self.assertEqual(completed, [])
             finally:
@@ -1649,6 +1654,7 @@ class SubscriptionManagerTest(TestCase):
         manager = self._manager({})
         manager.ShutdownWarningMilliseconds = 1
         manager._preparationPool.setMaxThreadCount(1)
+
         started = threading.Event()
         release = threading.Event()
         queuedStarted = threading.Event()
@@ -1666,21 +1672,26 @@ class SubscriptionManagerTest(TestCase):
             self.assertTrue(
                 all(job.cancelled.is_set() for job in manager._preparationJobs.values())
             )
+
             release.set()
 
         try:
             manager._startPreparationJob('import', {}, work)
             self.assertTrue(started.wait(2))
+
             manager._startPreparationJob('import', {}, lambda _: queuedStarted.set())
+
             with mock.patch(
                 'Furious.Service.SubscriptionManager.logger.warning',
                 side_effect=afterWarning,
             ) as warning:
                 manager.shutdown()
                 manager.shutdown()
+
                 warning.assert_called_once()
 
             processQtEvents()
+
             self.assertFalse(queuedStarted.is_set())
             self.assertEqual(manager._preparationPool.activeThreadCount(), 0)
             self.assertEqual(manager._preparationJobs, {})
@@ -1690,6 +1701,7 @@ class SubscriptionManagerTest(TestCase):
             release.set()
             manager.shutdown()
             manager.deleteLater()
+
             processQtEvents()
 
     def testShutdownRejectsNewWorkAndVersionlessCompletions(self):

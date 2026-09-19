@@ -697,10 +697,12 @@ class ProfileTestServiceTest(unittest.TestCase):
         self.assertTrue(
             server.listen(QtNetwork.QHostAddress.SpecialAddress.LocalHost, 0)
         )
+
         first = self._profile('first', '127.0.0.1', server.serverPort())
         second = self._profile('second', '127.0.0.1', server.serverPort())
         manager = self._manager((first, second))
         scheduler = manager._latencyScheduler
+
         guiEventDelivered = threading.Event()
 
         try:
@@ -714,6 +716,7 @@ class ProfileTestServiceTest(unittest.TestCase):
             )
             self.assertIs(scheduler.tcpingEngine.thread(), scheduler.tcpingThread)
             self.assertIsNot(scheduler.tcpingThread, application().thread())
+
             self.assertTrue(waitFor(lambda: not scheduler.tcpingRequests, timeout=2000))
             self.assertTrue(guiEventDelivered.is_set())
             self.assertRegex(first.metadata.latency, r'^\d+ms$')

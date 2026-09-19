@@ -135,9 +135,11 @@ class MultiprocessingRuntime(CoreRuntime):
             raise RuntimeStartError('Runtime is already running')
 
         self._closeProcess()
+
         self._stopRequested = False
         self._exitPublished = False
         self._lastExit = None
+
         self.setState(RuntimeState.Starting)
 
         try:
@@ -229,6 +231,7 @@ class MultiprocessingRuntime(CoreRuntime):
     def stop(self):
         """Idempotently terminate execution without disposing this object."""
         self._stopRequested = True
+
         self._monitor.stop()
         self._output.stopTimer()
 
@@ -237,6 +240,7 @@ class MultiprocessingRuntime(CoreRuntime):
         if process is None:
             if self.state not in (RuntimeState.Created, RuntimeState.Disposed):
                 self.setState(RuntimeState.Exited)
+
             return
 
         self.setState(RuntimeState.Stopping)

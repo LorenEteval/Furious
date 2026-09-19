@@ -1817,6 +1817,7 @@ class AppQMessageBox(AppQTransientDialog):
             baseSurfaceWidth = self.MultipleActionBaseWidth
 
         baseSurfaceWidth = min(baseSurfaceWidth, maximumSurfaceWidth)
+
         hasIcon = not self.iconLabel.isHidden()
         iconSpace = 58 if hasIcon else 0
         horizontalChrome = 56 + iconSpace
@@ -1843,6 +1844,7 @@ class AppQMessageBox(AppQTransientDialog):
             naturalTextWidth,
         )
         textWidth = min(maximumTextWidth, preferredTextWidth)
+
         textHeight = self._textContentHeight(textWidth)
         maximumTextHeight = max(
             72,

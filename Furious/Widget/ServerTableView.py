@@ -1523,6 +1523,7 @@ class ServerTableView(
         """Apply one repository reorder and preserve active and selected identities."""
         selectedProfileIds = self._selectedProfileIds()
         currentProfileId = self._currentProfileId()
+
         activatedIndex = Storage.UserActivatedItemIndex()
         profiles = Storage.UserServers()
         activatedProfileId = (
@@ -1621,6 +1622,7 @@ class ServerTableView(
             for profile in Storage.UserServers()
             if profile.metadata.profileId in selected
         }
+
         destinations = [(_('No subscription'), '')]
         destinations.extend(
             (

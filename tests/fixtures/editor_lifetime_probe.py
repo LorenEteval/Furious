@@ -350,6 +350,7 @@ def runNetworkProbe(iterations=100):
 def runButtonOwnershipProbe(iterations=100):
     """Exercise button detach/reuse, native removal, and owner-first callbacks."""
     application()
+
     references = []
     destroyed = []
 
@@ -358,37 +359,47 @@ def runButtonOwnershipProbe(iterations=100):
         button = QPushButton('Fixture')
         results = []
         box.finished.connect(results.append)
+
         for item in (box, button):
             references.append(weakref.ref(item))
             item.destroyed.connect(lambda *_args: destroyed.append(True))
+
         del item
 
         for _detach in range(3):
             box.addButton(button, box.ButtonRole.AcceptRole)
             box.setDefaultButton(button)
             box.setEscapeButton(button)
+
             box.removeButton(button)
             button.click()
+
             assert not results
             assert box.defaultButton() is None and box.escapeButton() is None
             assert button.receivers(QtCore.SIGNAL('clicked()')) == 0
 
         box.addButton(button, box.ButtonRole.AcceptRole)
         box.addButton(button, box.ButtonRole.AcceptRole)
+
         box.open()
         button.click()
         processQtEvents()
+
         assert results == [int(AppQDialog.DialogCode.Accepted)]
         assert not isValid(box) and not isValid(button)
+
         del box, button
 
         box = AppQMessageBox()
         button = box.addButton(box.StandardButton.Yes)
         box.setDefaultButton(button)
         box.setEscapeButton(button)
+
         deleteQObject(button)
+
         assert not box.buttons()
         assert box.defaultButton() is None and box.escapeButton() is None
+
         deleteQObject(box)
         del box, button
 
@@ -396,14 +407,19 @@ def runButtonOwnershipProbe(iterations=100):
         box = AppQMessageBox(parent=owner)
         button = box.addButton(box.StandardButton.Yes)
         box.buttonClicked.connect(lambda *_args: deleteQObject(owner))
+
         button.click()
+
         assert not isValid(box) and not isValid(button)
+
         del box, button, owner
 
     processQtEvents()
+
     assert len(destroyed) == iterations * 2
     assert all(reference() is None for reference in references)
     assert not AppQDialog._openDialogs
+
     return {
         'buttonDetachReuse': iterations,
         'nativeButtonRemoval': iterations,
@@ -677,6 +693,7 @@ def main():
         '--pattern', choices=tuple(PROTOCOL_PATTERNS), default='alternating'
     )
     parser.add_argument('--close-method', choices=CLOSE_METHODS, default='reject')
+
     arguments = parser.parse_args()
 
     callbackErrors = []
@@ -684,6 +701,7 @@ def main():
     sys.excepthook = lambda kind, value, traceback: callbackErrors.append(
         (kind.__name__, str(value))
     )
+
     try:
         print(json.dumps(runButtonOwnershipProbe(arguments.iterations), sort_keys=True))
         print(json.dumps(runConfirmationProbe(arguments.iterations), sort_keys=True))

@@ -193,17 +193,21 @@ class ProcessOutputRedirector:
             or SystemRuntime.isPythonw()
         ):
             entrypoint()
+
             return
 
         temporaryFile = ProcessOutputRedirector.TemporaryDir.filePath(str(uuid.uuid4()))
         tmpFileStream = open(temporaryFile, 'w+b')
+
         stdoutFileno = sys.stdout.fileno()
         stderrFileno = sys.stderr.fileno()
 
         sys.stdout.close()
         sys.stderr.close()
+
         os.dup2(tmpFileStream.fileno(), stdoutFileno)
         os.dup2(tmpFileStream.fileno(), stderrFileno)
+
         sys.stdout = tmpFileStream
         sys.stderr = tmpFileStream
 

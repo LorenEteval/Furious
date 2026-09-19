@@ -923,6 +923,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                 autoClearEnabled=False,
             )
             manager.appendMany(tuple(f'initial {index}' for index in range(200)))
+
             fullReads = []
             suffixReads = []
             originalFullRead = manager._entriesLocked
@@ -938,9 +939,11 @@ class GenerationLogManagerContractTest(unittest.TestCase):
 
             manager._entriesLocked = fullRead
             manager._entriesAfterLocked = suffixRead
+
             page = LogPage(manager=manager)
             page.resize(900, 420)
             page.show()
+
             self.assertTrue(waitFor(lambda: not page._entriesDirty))
             self.assertEqual(len(fullReads), 1)
 
@@ -954,6 +957,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                 page.plainText().splitlines(),
                 [entry.message for entry in manager.entries()],
             )
+
             page.close()
             page.deleteLater()
             collectAtBoundary()
@@ -1208,8 +1212,10 @@ class GenerationLogManagerContractTest(unittest.TestCase):
 
         def onAdded(entry):
             added.append(entry.sequence)
+
             manager.snapshot()
             manager.entryCount()
+
             if not lockWasFreeDuringSignal:
                 completed = threading.Event()
 
@@ -1221,21 +1227,27 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                 worker.start()
                 lockWasFreeDuringSignal.append(completed.wait(2))
                 worker.join(2)
+
             if entry.categoryId == CORE_LOG_CATEGORY:
                 manager.clear(runtimeOnly=True)
 
         manager.entryAdded.connect(onAdded)
         manager.entriesCleared.connect(cleared.append)
         manager.entriesChanged.connect(changed.append)
+
         manager.append('core', CORE_LOG_CATEGORY)
+
         for index in range(20):
             manager.append(f'application {index}')
+
         processQtEvents()
+
         self.assertEqual(len(added), 21)
         self.assertEqual(cleared, [manager._runtimeCategoryIds])
         self.assertEqual(changed, [21])
         self.assertEqual(lockWasFreeDuringSignal, [True])
         self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 0)
+
         _assertManagerInvariants(self, manager)
 
     def testAppendAndClearCannotSplitOneAtomicMutation(self):

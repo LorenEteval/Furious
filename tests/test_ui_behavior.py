@@ -1627,14 +1627,17 @@ class UnifiedLogPageTest(unittest.TestCase):
             page = LogPage(manager=manager)
             self.addCleanup(self.disposePage, page)
             self.addCleanup(QTest.keyRelease, page.textBrowser, QtCore.Qt.Key_Control)
+
             manager.append('alpha log', APPLICATION_LOG_CATEGORY)
             page.show()
             page.activateWindow()
             self.assertRendered(page)
+
             page.textBrowser.setFocus()
             processQtEvents()
             QTest.keyClick(page.textBrowser, QtCore.Qt.Key_F, QtCore.Qt.ControlModifier)
             self.assertTrue(waitFor(page.searchLineEdit.hasFocus))
+
             QTest.keyClicks(page.searchLineEdit, 'alpha')
             QTest.keyClick(
                 page.searchLineEdit, QtCore.Qt.Key_A, QtCore.Qt.ControlModifier
@@ -1642,12 +1645,15 @@ class UnifiedLogPageTest(unittest.TestCase):
             QTest.keyClick(
                 page.searchLineEdit, QtCore.Qt.Key_C, QtCore.Qt.ControlModifier
             )
+
             self.assertEqual(application().clipboard().text(), 'alpha')
             self.assertFalse(page.textBrowser.textCursor().hasSelection())
             self.assertRendered(page)
+
             page.textBrowser.setFocus()
             QTest.keyClick(page.textBrowser, QtCore.Qt.Key_A, QtCore.Qt.ControlModifier)
             QTest.keyClick(page.textBrowser, QtCore.Qt.Key_C, QtCore.Qt.ControlModifier)
+
             self.assertEqual(application().clipboard().text(), 'alpha log')
 
     def testFindShortcutFollowsTheVisiblePage(self):
