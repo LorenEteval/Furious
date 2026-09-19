@@ -52,7 +52,7 @@ strategy in an individual test.
 | Xray/Hysteria2 native-TUN ownership and proxy-only stripping | `test_native_tun_semantics.py` |
 | Rolling metrics, stable buckets, lazy rendering, and hover | `test_metrics_behavior.py` |
 | Proxy-only endpoint discovery, caching, and presentation | `test_endpoint_info.py` |
-| Bounded service work, update validation, plugin UI, and worker lifetime | `test_service_runtime.py` |
+| Bounded service work, update validation, plugin UI, worker lifetime, and reentrant HTTP completion/cancellation | `test_service_runtime.py` |
 | Frozenlib state helpers and mocked platform-operation boundaries | `test_frozenlib.py` |
 | Settings sandbox, navigation overlay behavior, public exports, and scale/theme isolation | `test_isolation_and_navigation.py`, `test_public_api.py`, `test_layout_matrix.py` |
 | Shared Fluent visual states, zero table padding and intact rounded list corners, rounded menu/combo popup transparency and interaction, and native line-edit clear-button alignment and theme changes | `test_stylesheet_states.py` |
@@ -62,7 +62,7 @@ strategy in an individual test.
 | Editor mappings, lazy log rendering, routing-rule internal-move drag restrictions, Move menu/shortcuts and persisted order, message-box/connection UI | `test_ui_behavior.py` |
 | Bounded, incremental, cancellable QR export and snapshot/lifetime safety | `test_qr_export_scalability.py` |
 | Real keyboard/mouse/focus, proxy mapping, shared Home/Settings state, Home empty/filter recovery, shared menus and Tests-popup selection highlighting, direct small profile operations and batched imports/deletions with throttled progress and stable cancellation targets, and transient editor input | `test_qt_interactions.py` |
-| Direct Qt ownership and destruction across independent UI families | `test_qt_lifetime.py` |
+| Direct Qt ownership and destruction across independent UI families, message-box button detachment/reuse, and callback-driven owner destruction | `test_qt_lifetime.py` |
 | Batched real/probe Qt object, QR rendering/window lifecycle, handle, Python allocation, and RSS trends | `test_qt_stress.py` |
 | Repeated harmless subprocess, pipe, thread, handle, and RSS trends | `test_process_stress.py` |
 | Opt-in release-confidence counts (100 app children, 100 external cores, 100k metrics, 40k logs, 20k navigation, 5k plugins, 1k dialogs, 1k real QR tabs) | `test_very_heavy.py` |

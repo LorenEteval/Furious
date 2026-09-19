@@ -47,6 +47,9 @@ behavior, and lifetime primitives; pages and services consume them without creat
   `singleShotWeakly()` for deferred named-method delivery. A closure/partial that captures the receiver does not
   substitute for weak dispatch. Bounded dialog-completion closures may intentionally capture context; verify their
   native destruction/disconnection boundary and both owner-first and sender-first teardown.
+- Detaching a child ends the shared QObject-tree lifetime assumption. Disconnect the registrations owned by that
+  feature before reparenting, preserve unrelated listeners, and remove default/escape/selection references when the
+  child dies. `AppQMessageBox` button reuse and native-destruction regressions exercise this boundary.
 - Direct connections are appropriate for deliberately shared persistent lifetimes; syntax alone does not prove a
   leak. Recheck the selected Nuitka/PySide6 callback protection when the toolchain changes. Static weak method names
   are runtime contracts, so renames must update registrations and tests. Weak dispatch itself does not marshal
@@ -60,7 +63,9 @@ behavior, and lifetime primitives; pages and services consume them without creat
 - Every `QNetworkReply` has one manager/context owner, one freshness rule, and one terminal deletion path. Request
   context must also be released when native destruction skips `finished`, including manager-first teardown with
   retained Python wrappers. Use the shared network-manager tracking boundary; cleanup must not capture a reply
-  strongly. Do not attach ad-hoc attributes to third-party Qt objects or multiply timers/connections across show/hide cycles.
+  strongly. User hooks and signal delivery can synchronously destroy the reply or manager; recheck native validity
+  before subsequent hooks or Qt cleanup. `test_service_runtime.py` covers completion and abort reentrancy.
+  Do not attach ad-hoc attributes to third-party Qt objects or multiply timers/connections across show/hide cycles.
 - Queued delivery never transfers ownership implicitly. The sender may finish before delivery, so callbacks resolve a
   still-valid receiver and current generation in the receiver's Qt thread before touching widgets, models, or wrappers.
 

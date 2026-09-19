@@ -224,7 +224,7 @@ Avoid unnecessary manual disconnect boilerplate when Qt already manages the conn
 
 Native PySide6 and a Nuitka-compiled application do not necessarily have the same
 Python-callable retention graph. In the locally selected and inspected toolchain
-(Nuitka 4.1.3, PySide6 6.8.3), Nuitka's standard PySide6 package configuration patches
+(Nuitka 4.2.1, PySide6 6.8.3), Nuitka's standard PySide6 package configuration patches
 `SignalInstance.connect()` and `QTimer.singleShot()`. When the callback is a compiled
 bound method, the generated post-import code protects it in a process-global list named
 `_protected` and may also expose its underlying function on the receiver class. The
@@ -233,10 +233,9 @@ attribute. This protection keeps the bound receiver strongly reachable. Repeated
 transient receivers can therefore grow for the whole packaged-process lifetime even
 when native CPython destroys them.
 
-The same protection pattern exists in current upstream Nuitka source. Related PySide6
-workaround behavior is documented for earlier Nuitka/PySide6 combinations, but do not
-assume an exact introduction version without checking the selected release. Always
-inspect the package configuration installed in the environment being shipped.
+This observation is specific to the inspected local package configuration. Do not
+assume an exact introduction version or unchanged upstream behavior; inspect the
+package configuration installed in the environment being shipped.
 
 The following is prohibited for a transient or repeatedly created receiver:
 
@@ -286,6 +285,14 @@ leave safe no-op dispatchers attached to a long-lived sender even though the wea
 receiver itself is gone. When the sender is the receiver or a child/descendant, Qt tree
 destruction already removes the connection and the extra destroyed-receiver hook is
 unnecessary. Supplying `sender=` still keeps only a weak sender reference.
+
+That subtree check describes the ownership at registration time. When a child can be
+detached or reused, its feature must disconnect its own stored connection handles
+before reparenting and clear stale child references on native destruction.
+`AppQMessageBox` button registration and its detach/reuse tests cover this boundary.
+User callbacks can also synchronously destroy a sender or receiver during delivery;
+recheck native validity before further Qt work, as the HTTP completion and abort
+regressions in `test_service_runtime.py` demonstrate.
 
 `singleShotWeakly(milliseconds, receiver, 'methodName')` uses the same named weak
 dispatcher without a sender. If the receiver wrapper is gone or its native QObject is
@@ -443,7 +450,7 @@ alone is not proof of no leak.
 
 Treat the exact retention workaround as version-sensitive. The repository currently
 ships several PySide6 versions across platform artifacts, while the inspected local
-development combination is PySide6 6.8.3 with Nuitka 4.1.3. Re-inspect the selected
+development combination is PySide6 6.8.3 with Nuitka 4.2.1. Re-inspect the selected
 Nuitka package configuration and run the representative compiled probe when a release
 toolchain changes; do not generalize one combination's private `_protected` visibility
 or behavior to every native or packaged build.
