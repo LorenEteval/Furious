@@ -45,6 +45,7 @@ from Furious.Backends.Xray.RoutingWindow import (
     RoutingRulesDialog,
     RoutingTextEdit,
     RoutingTextEditDialog,
+    UserRoutingTableView,
     routingObjectFromProfile,
 )
 from Furious.Backends.Xray.Routing import customRoutingObjectFromSettings
@@ -2469,6 +2470,179 @@ class UnifiedLogPageTest(unittest.TestCase):
             collectAtBoundary()
 
             self.assertTrue(all(reference() is None for reference in references))
+
+
+class RoutingChangeNoticeTest(unittest.TestCase):
+    """Report only saved changes to the connected custom routing profile."""
+
+    def setUp(self):
+        app = application()
+        self.addCleanup(collectAtBoundary)
+        self.enterContext(isolatedSettings())
+        self.routings = {
+            unique: {
+                'remark': 'Same display name',
+                'domainStrategy': 'AsIs',
+                'enabled': True,
+                'rules': [
+                    {'domain': ['a.test'], 'outboundTag': 'proxy'},
+                    {'domain': ['b.test'], 'outboundTag': 'direct'},
+                ],
+            }
+            for unique in ('active', 'other')
+        }
+        self.connection = mock.Mock()
+        self.connection.isConnected.return_value = True
+        self.routing = mock.Mock(routing='Custom:active')
+        self.enterContext(
+            mock.patch.object(app, 'connectionController', self.connection)
+        )
+        self.enterContext(mock.patch.object(app, 'routingController', self.routing))
+        self.enterContext(
+            mock.patch.object(Storage, 'UserRoutings', return_value=self.routings)
+        )
+        self.notice = self.enterContext(
+            mock.patch('Furious.Backends.Xray.RoutingWindow.showMBoxNewChangesNextTime')
+        )
+        self.view = UserRoutingTableView()
+        self.addCleanup(self.disposeView)
+
+    def disposeView(self):
+        from shiboken6 import isValid
+
+        if isValid(self.view):
+            self.view.deleteLater()
+
+    def openRules(self, row=0):
+        self.view.selectRow(row)
+        self.view.editSelectedRules()
+        return self.view.findChild(RoutingRulesDialog)
+
+    def testInlineChangesOnlyNotifyForConnectedSelectedRouting(self):
+        """Real combo signals distinguish routing IDs and ignore no-op refreshes."""
+        with mock.patch('sys.excepthook') as exceptionHook:
+            self.view.flushAll()
+            self.view.setDomainStrategy(0, 'AsIs')
+            self.view.setEnabled(0, 'Enabled')
+            self.notice.assert_not_called()
+
+            strategy = self.view.indexWidget(self.view.sourceModel.index(0, 1))
+            strategy.setCurrentText('IPOnDemand')
+            self.assertEqual(self.routings['active']['domainStrategy'], 'IPOnDemand')
+            self.notice.assert_called_once_with(parent=self.view)
+            self.notice.reset_mock()
+
+            enabled = self.view.indexWidget(self.view.sourceModel.index(0, 2))
+            enabled.setCurrentIndex(1)
+            self.assertFalse(self.routings['active']['enabled'])
+            self.notice.assert_called_once_with(parent=self.view)
+            self.notice.reset_mock()
+
+            self.view.setDomainStrategy(1, 'IPIfNonMatch')
+            self.view.setEnabled(1, 'Disabled')
+            self.connection.isConnected.return_value = False
+            self.view.setDomainStrategy(0, 'AsIs')
+            self.view.setEnabled(0, 'Enabled')
+            self.connection.isConnected.return_value = True
+            self.routing.routing = 'Global'
+            self.view.setDomainStrategy(0, 'IPIfNonMatch')
+            self.notice.assert_not_called()
+            processQtEvents()
+            exceptionHook.assert_not_called()
+
+    def testRuleChangesNotifyOnCloseWithoutRetargetingSelection(self):
+        """Closing commits live edits and identifies the edited route by ID."""
+        for change in ('add', 'edit', 'delete', 'move'):
+            with self.subTest(change=change), mock.patch(
+                'sys.excepthook'
+            ) as exceptionHook:
+                dialog = self.openRules()
+                view = dialog.listView
+                if change == 'add':
+                    view.appendRule({'domain': ['new.test'], 'outboundTag': 'proxy'})
+                elif change == 'edit':
+                    view.setRule(0, {'domain': ['edited.test'], 'outboundTag': 'proxy'})
+                elif change == 'delete':
+                    view.deleteRules([0])
+                else:
+                    view.setCurrentIndex(view.rulesModel.index(0, 0))
+                    view.moveSelectedRules('down')
+                self.view.selectRow(1)
+                self.notice.assert_not_called()
+                dialog.closeWindowButton.click()
+                processQtEvents()
+                self.notice.assert_called_once_with(parent=self.view)
+                exceptionHook.assert_not_called()
+                self.notice.reset_mock()
+
+    def testRuleNoticeSkipsUnchangedRevertedStaleAndInactiveEdits(self):
+        """An open editor does not keep authority over a replaced route or connection."""
+        for case in (
+            'unchanged',
+            'reverted',
+            'disconnected',
+            'switched',
+            'replaced',
+            'other',
+        ):
+            with self.subTest(case=case), mock.patch('sys.excepthook') as exceptionHook:
+                dialog = self.openRules(1 if case == 'other' else 0)
+                if case != 'unchanged':
+                    dialog.listView.appendRule(
+                        {'domain': ['new.test'], 'outboundTag': 'proxy'}
+                    )
+                if case == 'reverted':
+                    dialog.listView.deleteRules([len(dialog.listView.rules()) - 1])
+                elif case == 'disconnected':
+                    self.connection.isConnected.return_value = False
+                elif case == 'switched':
+                    self.routing.routing = 'Custom:other'
+                elif case == 'replaced':
+                    self.routings['active'] = copy.deepcopy(self.routings['active'])
+                dialog.reject()
+                processQtEvents()
+                self.notice.assert_not_called()
+                exceptionHook.assert_not_called()
+                self.connection.isConnected.return_value = True
+                self.routing.routing = 'Custom:active'
+
+    def testExistingNoticeReconnectsOnlyWhenAcceptedAndDiesWithOwner(self):
+        """Reuse the real asynchronous prompt without retaining the rules editor."""
+        from Furious.Qt.QtWidgets import (
+            MBoxNewChangesNextTime,
+            showMBoxNewChangesNextTime,
+        )
+        from shiboken6 import delete as deleteQObject, isValid
+
+        self.notice.side_effect = showMBoxNewChangesNextTime
+        for button in (
+            AppQMessageBox.StandardButton.No,
+            AppQMessageBox.StandardButton.Yes,
+        ):
+            dialog = self.openRules()
+            dialog.listView.appendRule({'domain': ['new.test'], 'outboundTag': 'proxy'})
+            dialog.closeWindowButton.click()
+            processQtEvents()
+            prompt = self.view.findChild(MBoxNewChangesNextTime)
+            self.assertIsNotNone(prompt)
+            self.assertTrue(prompt.isVisible())
+            self.assertFalse(isValid(dialog))
+            self.assertIn(prompt, AppQDialog._openDialogs.values())
+            prompt.button(button).click()
+            processQtEvents()
+            self.assertFalse(isValid(prompt))
+            self.assertNotIn(prompt, AppQDialog._openDialogs.values())
+            if button == AppQMessageBox.StandardButton.No:
+                self.connection.startReconnection.assert_not_called()
+            else:
+                self.connection.startReconnection.assert_called_once_with()
+
+        self.view.setDomainStrategy(0, 'IPOnDemand')
+        prompt = self.view.findChild(MBoxNewChangesNextTime)
+        deleteQObject(self.view)
+        processQtEvents()
+        self.assertFalse(isValid(prompt))
+        self.assertNotIn(prompt, AppQDialog._openDialogs.values())
 
 
 class DialogBehaviorTest(unittest.TestCase):

@@ -955,7 +955,7 @@ class RoutingRulesDialog(AppQTransientDialog):
 
     FIXED_DIALOG_SIZE = QtCore.QSize(760, 470)
 
-    def __init__(self, routing: dict, parent=None):
+    def __init__(self, routing: dict, parent=None, *, routingUnique=None):
         """Initialize the RoutingRulesDialog."""
         super().__init__(parent)
 
@@ -964,6 +964,8 @@ class RoutingRulesDialog(AppQTransientDialog):
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         self.listView = RoutingRulesListView(self.routing, parent=self)
+        self.routingUnique = routingUnique
+        self.originalRules = copy.deepcopy(self.listView.rules())
 
         connectWeakly(self.listView.editRequested, self, 'editRule')
 
@@ -1240,16 +1242,53 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
         if row < 0 or row >= self.sourceModel.rowCount():
             return
 
-        self.sourceModel.routingByRow(row)['domainStrategy'] = text
+        routing = self.sourceModel.routingByRow(row)
+
+        if routing.get('domainStrategy', 'AsIs') == text:
+            return
+
+        unique = self.routingUniqueByRow(row)
+        routing['domainStrategy'] = text
+
         self.sourceModel.emitAllChanged()
+        self._routingChanged(unique)
 
     def setEnabled(self, row: int, state: str):
         """Set enabled."""
         if row < 0 or row >= self.sourceModel.rowCount():
             return
 
-        self.sourceModel.routingByRow(row)['enabled'] = state == 'Enabled'
+        routing = self.sourceModel.routingByRow(row)
+        enabled = state == 'Enabled'
+
+        if routing.get('enabled', True) == enabled:
+            return
+
+        unique = self.routingUniqueByRow(row)
+        routing['enabled'] = enabled
+
         self.sourceModel.emitAllChanged()
+        self._routingChanged(unique, disabled=not enabled)
+
+    def _routingChanged(self, unique, *, disabled=False):
+        """Reconcile routing availability and offer reconnection for active edits."""
+        connectionController, routingController = (
+            AppConnectionController(),
+            AppRoutingController(),
+        )
+
+        notify = (
+            connectionController is not None
+            and connectionController.isConnected()
+            and routingController is not None
+            and routingController.routing == f'Custom:{unique}'
+        )
+
+        if disabled and routingController is not None:
+            routingController.invalidateRouting(f'Custom:{unique}')
+
+        if notify:
+            showMBoxNewChangesNextTime(parent=self)
 
     def appendNewItem(self):
         """Append new item."""
@@ -1378,21 +1417,31 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
 
         routing = self.sourceModel.routingByRow(indexes[0])
 
-        dialog = RoutingRulesDialog(routing, parent=self)
+        dialog = RoutingRulesDialog(
+            routing, parent=self, routingUnique=self.routingUniqueByRow(indexes[0])
+        )
 
         connectWeakly(
             dialog.finished,
             self,
             '_rulesDialogFinished',
             sender=dialog,
+            forwardSender=True,
         )
 
         dialog.open()
 
-    @QtCore.Slot(int)
-    def _rulesDialogFinished(self, _code):
-        """Refresh routing presentation after the rules dialog finishes."""
+    @QtCore.Slot(object, int)
+    def _rulesDialogFinished(self, dialog, _code):
+        """Refresh and report saved rule edits, including window-close dismissal."""
         self.flushAll()
+
+        # Rules are edited live; a rejected/closed dialog does not discard them.
+        if (
+            Storage.UserRoutings().get(dialog.routingUnique) is dialog.routing
+            and dialog.originalRules != dialog.listView.rules()
+        ):
+            self._routingChanged(dialog.routingUnique)
 
 
 class XrayRoutingWindow(AppQMainWindow):

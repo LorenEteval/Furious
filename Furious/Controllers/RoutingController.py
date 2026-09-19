@@ -132,6 +132,27 @@ class RoutingController(QtCore.QObject):
 
         return self.state()
 
+    def invalidateRouting(self, routing: str) -> bool:
+        """Persist the fallback after an explicit removal or disabling of a choice."""
+        if AppSettings.get('Routing') != routing:
+            return False
+
+        profile = self.currentProfileForRouting()
+
+        if profile is None:
+            return False
+
+        fallback = getPluginRegistry().normalizeRouting(profile, routing)
+
+        if fallback == routing:
+            return False
+
+        AppSettings.set('Routing', fallback)
+
+        self.refresh(force=True)
+
+        return True
+
     @QtCore.Slot(str)
     def selectRouting(self, routing: str) -> bool:
         """Persist a supported route and reconnect the active proxy if needed."""
