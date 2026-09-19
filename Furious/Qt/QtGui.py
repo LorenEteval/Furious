@@ -147,6 +147,12 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
             # Create reference
             self._menu = menu
 
+            if menu.parent() is None:
+                # setMenu() associates a submenu without giving it a Qt parent.
+                # This action owns otherwise unparented menus; explicit widget
+                # parents retain their own lifetime. deleteLater is a native slot.
+                self.destroyed.connect(menu.deleteLater)
+
             # Some old version PySide6 does not have setMenu method
             # for QAction. Protect it. Currently only used in TrayIcon
             if hasattr(self, 'setMenu') and useSetMenu:

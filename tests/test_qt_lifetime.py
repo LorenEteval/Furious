@@ -220,6 +220,35 @@ class QtLifetimeTest(unittest.TestCase):
 
         self.assertAllDestroyed(references, destroyed, 60)
 
+    def testActionOwnedMenusDieWithActionAndPreserveExplicitOwners(self):
+        """QAction's menu association must not strand an unparented native menu."""
+        references = []
+        destroyed = []
+
+        for explicitOwner in (False, True):
+            for _ in range(30):
+                owner = QWidget()
+                menu = AppQMenu(parent=owner if explicitOwner else None)
+                action = AppQAction('Menu fixture', menu=menu, parent=owner)
+                references.append(weakref.ref(menu))
+                menu.destroyed.connect(lambda *_args: destroyed.append(True))
+
+                action.deleteLater()
+                processQtEvents()
+
+                self.assertFalse(isValid(action))
+                try:
+                    self.assertEqual(isValid(menu), explicitOwner)
+                finally:
+                    if isValid(menu):
+                        menu.deleteLater()
+                    owner.deleteLater()
+                    processQtEvents()
+
+                del action, menu, owner
+
+        self.assertAllDestroyed(references, destroyed, 60)
+
     def testReopenedDialogSurvivesPreviousPresentationCleanup(self):
         """A queued finish must not release the next asynchronous presentation."""
         destroyed = []

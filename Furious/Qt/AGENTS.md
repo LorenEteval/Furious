@@ -53,7 +53,9 @@ primitives; pages and services consume them without creating parallel registries
   arbitrary worker calls to the GUI thread; choose an explicit queued owner-thread delivery boundary. A surviving
   Python wrapper can already be natively invalid, so callback freshness and `shiboken6.isValid()` address different
   failure modes. Neither replaces the strong owner required while asynchronous UI remains active.
-- `AppQAction.callback` is strong by design, so the action owner cannot outlive the captured receiver.
+- `AppQAction.callback` is strong by design, so the action owner cannot outlive the captured receiver. An action
+  also owns a submenu supplied without a QWidget parent and schedules its native deletion when the action dies;
+  `QAction.setMenu()` alone does not establish parent ownership. Explicitly parented menus retain their chosen owner.
 - Every `QNetworkReply` has one manager/context owner, one freshness rule, and one terminal deletion path. Request
   context must also be released when native destruction skips `finished`, including manager-first teardown with
   retained Python wrappers. Use the shared network-manager tracking boundary; cleanup must not capture a reply
