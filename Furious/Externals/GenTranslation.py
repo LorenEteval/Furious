@@ -3368,22 +3368,6 @@ TRANSLATION = {
         "ZH": "停止更新",
         "isReviewed": "True"
     },
-    "Pause Updates": {
-        "source": [
-            "Furious.Window.LogPage"
-        ],
-        "RU": "Приостановить обновление",
-        "ZH": "暂停刷新",
-        "isReviewed": "True"
-    },
-    "Resume Updates": {
-        "source": [
-            "Furious.Window.LogPage"
-        ],
-        "RU": "Возобновить обновление",
-        "ZH": "继续刷新",
-        "isReviewed": "True"
-    },
     "Tests": {
         "source": [
             "Furious.Window.HomePage"

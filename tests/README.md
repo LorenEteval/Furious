@@ -238,5 +238,7 @@ that job before PyPI publication. Opt-in tests and packaged/manual smoke checks 
 separate; local Windows results do not establish the other CI targets.
 
 The Home/Log workflow regressions exercise debounced typing, explicit submit/clear, navigation catch-up, focus-scoped
-Find/edit shortcuts, and paused log selection/export across eviction and clear. These are real Qt tests in
-`test_qt_interactions.py` and `test_ui_behavior.py`; no production log source or profile network is started.
+Find/edit shortcuts, and live log filtering. These are real Qt tests in `test_qt_interactions.py` and
+`test_ui_behavior.py`; no production log source or profile network is started. The two optional pause regressions
+(selection across eviction/clear and frozen filtered export/retranslation) are retained as comments alongside
+LogPage's disabled Pause/Resume Updates implementation; re-enable them together when restoring that feature.

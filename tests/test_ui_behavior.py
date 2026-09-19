@@ -1548,72 +1548,75 @@ class UnifiedLogPageTest(unittest.TestCase):
         page.close()
         page.deleteLater()
 
-    def testPausedViewPreservesSelectionAcrossEvictionClearAndHide(self):
-        """Pause presentation while the shared bounded stream keeps collecting."""
-        with isolatedSettings():
-            manager = LogManager(maximumEntries=3)
-            page = LogPage(manager=manager)
-            self.addCleanup(self.disposePage, page)
-            manager.append('original text', APPLICATION_LOG_CATEGORY)
-            page.show()
-            self.assertRendered(page)
-            page.textBrowser.selectAll()
-            selected = page.textBrowser.textCursor().selectedText()
-
-            QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
-            manager.clear()
-            for number in range(10):
-                manager.append(f'new {number}', APPLICATION_LOG_CATEGORY)
-            processQtEvents()
-            page.hide()
-            page.show()
-            processQtEvents()
-
-            self.assertEqual(page.plainText(), 'original text')
-            self.assertEqual(page.textBrowser.textCursor().selectedText(), selected)
-            self.assertFalse(page.searchLineEdit.isEnabled())
-            self.assertFalse(page.filterComboBox.isEnabled())
-            self.assertFalse(page._updateTimer.isActive())
-            self.assertFalse(page._highlightTimer.isActive())
-            self.assertFalse(page._scrollTimer.isActive())
-
-            QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
-            self.assertRendered(page)
-            self.assertEqual(page.plainText().splitlines(), ['new 7', 'new 8', 'new 9'])
-            self.assertTrue(page.searchLineEdit.isEnabled())
-            self.assertTrue(page.filterComboBox.isEnabled())
-
-    def testPausedFilteredViewExportsItsSnapshotAndRetranslates(self):
-        """Export the frozen filtered document, then resume the same filter."""
-        with isolatedSettings():
-            AppSettings.set('Language', 'EN')
-            manager = LogManager(maximumEntries=4)
-            page = LogPage(manager=manager)
-            self.addCleanup(self.disposePage, page)
-            manager.append('core match', CORE_LOG_CATEGORY)
-            manager.append('application match', APPLICATION_LOG_CATEGORY)
-            page.filterComboBox.setCurrentIndex(
-                page.filterComboBox.findData(CORE_LOG_CATEGORY)
-            )
-            page.searchLineEdit.setText('match')
-            page.show()
-            self.assertRendered(page)
-            QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
-            manager.append('core later match', CORE_LOG_CATEGORY)
-            processQtEvents()
-            with mock.patch('Furious.Window.LogPage.saveAsFile') as save:
-                page._fileMenu.actions()[0].trigger()
-                save.assert_called_once_with('core match')
-            for language in ('ZH', 'RU', 'EN'):
-                AppSettings.set('Language', language)
-                page.pauseButton.retranslate()
-                self.assertEqual(page.pauseButton.text(), _('Resume Updates'))
-            QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
-            self.assertRendered(page)
-            self.assertEqual(
-                page.plainText().splitlines(), ['core match', 'core later match']
-            )
-            self.assertEqual(page.pauseButton.text(), _('Pause Updates'))
+    # Retain these two regressions with LogPage's disabled optional pause code.
+    # Uncomment both when restoring the control, handler, state and render guard;
+    # they verify frozen selection/export, retention changes and translations.
+    # def testPausedViewPreservesSelectionAcrossEvictionClearAndHide(self):
+    #     """Pause presentation while the shared bounded stream keeps collecting."""
+    #     with isolatedSettings():
+    #         manager = LogManager(maximumEntries=3)
+    #         page = LogPage(manager=manager)
+    #         self.addCleanup(self.disposePage, page)
+    #         manager.append('original text', APPLICATION_LOG_CATEGORY)
+    #         page.show()
+    #         self.assertRendered(page)
+    #         page.textBrowser.selectAll()
+    #         selected = page.textBrowser.textCursor().selectedText()
+    #
+    #         QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
+    #         manager.clear()
+    #         for number in range(10):
+    #             manager.append(f'new {number}', APPLICATION_LOG_CATEGORY)
+    #         processQtEvents()
+    #         page.hide()
+    #         page.show()
+    #         processQtEvents()
+    #
+    #         self.assertEqual(page.plainText(), 'original text')
+    #         self.assertEqual(page.textBrowser.textCursor().selectedText(), selected)
+    #         self.assertFalse(page.searchLineEdit.isEnabled())
+    #         self.assertFalse(page.filterComboBox.isEnabled())
+    #         self.assertFalse(page._updateTimer.isActive())
+    #         self.assertFalse(page._highlightTimer.isActive())
+    #         self.assertFalse(page._scrollTimer.isActive())
+    #
+    #         QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
+    #         self.assertRendered(page)
+    #         self.assertEqual(page.plainText().splitlines(), ['new 7', 'new 8', 'new 9'])
+    #         self.assertTrue(page.searchLineEdit.isEnabled())
+    #         self.assertTrue(page.filterComboBox.isEnabled())
+    #
+    # def testPausedFilteredViewExportsItsSnapshotAndRetranslates(self):
+    #     """Export the frozen filtered document, then resume the same filter."""
+    #     with isolatedSettings():
+    #         AppSettings.set('Language', 'EN')
+    #         manager = LogManager(maximumEntries=4)
+    #         page = LogPage(manager=manager)
+    #         self.addCleanup(self.disposePage, page)
+    #         manager.append('core match', CORE_LOG_CATEGORY)
+    #         manager.append('application match', APPLICATION_LOG_CATEGORY)
+    #         page.filterComboBox.setCurrentIndex(
+    #             page.filterComboBox.findData(CORE_LOG_CATEGORY)
+    #         )
+    #         page.searchLineEdit.setText('match')
+    #         page.show()
+    #         self.assertRendered(page)
+    #         QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
+    #         manager.append('core later match', CORE_LOG_CATEGORY)
+    #         processQtEvents()
+    #         with mock.patch('Furious.Window.LogPage.saveAsFile') as save:
+    #             page._fileMenu.actions()[0].trigger()
+    #             save.assert_called_once_with('core match')
+    #         for language in ('ZH', 'RU', 'EN'):
+    #             AppSettings.set('Language', language)
+    #             page.pauseButton.retranslate()
+    #             self.assertEqual(page.pauseButton.text(), _('Resume Updates'))
+    #         QTest.mouseClick(page.pauseButton, QtCore.Qt.LeftButton)
+    #         self.assertRendered(page)
+    #         self.assertEqual(
+    #             page.plainText().splitlines(), ['core match', 'core later match']
+    #         )
+    #         self.assertEqual(page.pauseButton.text(), _('Pause Updates'))
 
     def testSearchKeyboardKeepsEditingSeparateFromLogSelection(self):
         """Find focuses search; editing shortcuts act on the focused widget."""

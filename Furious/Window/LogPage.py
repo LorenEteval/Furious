@@ -218,7 +218,8 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         )
 
         self._searchRegex = None
-        self._paused = False
+        # Optional pause state; restore with the pauseButton block below.
+        # self._paused = False
 
         self.textBrowser = DraculaTextBrowser(
             fontFamily=fontFamily,
@@ -385,11 +386,22 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
             popupMenu=self._viewMenu,
         )
 
-        self.pauseButton = AppQPushButton(
-            _('Pause Updates'), icon=bootstrapIcon('pause-circle.svg'), parent=self
-        )
-        self.pauseButton.setCheckable(True)
-        self.pauseButton.toggled.connect(self._pauseChanged)
+        # Optional Pause/Resume Updates is intentionally disabled. Keep its
+        # implementation for reuse; visible logs currently update continuously.
+        # To restore it, uncomment the state, button/connection, layout entry,
+        # _pauseChanged, focusSearch guard, and _pageCanRender guard together.
+        # Re-enable the two retained pause tests in test_ui_behavior.py and
+        # regenerate/review translations. Previously reviewed button text:
+        # RU: Pause Updates = Приостановить обновление;
+        #     Resume Updates = Возобновить обновление.
+        # ZH: Pause Updates = 暂停刷新; Resume Updates = 继续刷新.
+        # Pausing freezes only presentation and filters, never collection;
+        # resume rebuilds from retained logs, which may have cleared/evicted.
+        # self.pauseButton = AppQPushButton(
+        #     _('Pause Updates'), icon=bootstrapIcon('pause-circle.svg'), parent=self
+        # )
+        # self.pauseButton.setCheckable(True)
+        # self.pauseButton.toggled.connect(self._pauseChanged)
 
         self.findAction = AppQAction(
             _('Search'),
@@ -417,7 +429,8 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         actionLayout.addWidget(self.fileButton)
         actionLayout.addWidget(self.editButton)
         actionLayout.addWidget(self.viewButton)
-        actionLayout.addWidget(self.pauseButton)
+        # Optional pause control; restore with its construction above.
+        # actionLayout.addWidget(self.pauseButton)
         actionLayout.addStretch(1)
         actionLayout.addWidget(self.autoScrollLabel)
         actionLayout.addWidget(self.autoScrollSwitch)
@@ -469,33 +482,35 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
 
     @QtCore.Slot()
     def focusSearch(self):
-        """Focus the enabled search field without interrupting a paused view."""
-        if self.searchLineEdit.isEnabled():
-            self.searchLineEdit.setFocus(QtCore.Qt.ShortcutFocusReason)
-            self.searchLineEdit.selectAll()
+        """Focus the search field for the next query."""
+        # Restore this guard and indent the focus calls when pause is re-enabled:
+        # if self.searchLineEdit.isEnabled():
+        self.searchLineEdit.setFocus(QtCore.Qt.ShortcutFocusReason)
+        self.searchLineEdit.selectAll()
 
-    @QtCore.Slot(bool)
-    def _pauseChanged(self, paused):
-        """Freeze only presentation; the manager retains collection ownership."""
-        self._paused = paused
-
-        self.pauseButton.setText(_('Resume Updates') if paused else _('Pause Updates'))
-        self.pauseButton.setIcon(
-            bootstrapIcon('play-circle.svg' if paused else 'pause-circle.svg')
-        )
-
-        for widget in [self.searchLineEdit, self.filterComboBox, self.filterLabel]:
-            widget.setEnabled(not paused)
-
-        if paused:
-            self._updateTimer.stop()
-            self._highlightTimer.stop()
-            self._scrollTimer.stop()
-            self._followStateTimer.stop()
-            self._setHighlightBusy(False)
-            self._entriesDirty = True
-        else:
-            self._requestRefresh(invalidate=True, immediate=True)
+    # Retained optional pause handler; see the button restoration checklist.
+    # @QtCore.Slot(bool)
+    # def _pauseChanged(self, paused):
+    #     """Freeze only presentation; the manager retains collection ownership."""
+    #     self._paused = paused
+    #
+    #     self.pauseButton.setText(_('Resume Updates') if paused else _('Pause Updates'))
+    #     self.pauseButton.setIcon(
+    #         bootstrapIcon('play-circle.svg' if paused else 'pause-circle.svg')
+    #     )
+    #
+    #     for widget in [self.searchLineEdit, self.filterComboBox, self.filterLabel]:
+    #         widget.setEnabled(not paused)
+    #
+    #     if paused:
+    #         self._updateTimer.stop()
+    #         self._highlightTimer.stop()
+    #         self._scrollTimer.stop()
+    #         self._followStateTimer.stop()
+    #         self._setHighlightBusy(False)
+    #         self._entriesDirty = True
+    #     else:
+    #         self._requestRefresh(invalidate=True, immediate=True)
 
     def _categoryText(self, category) -> str:
         """Return a category's translated or literal display label."""
@@ -531,8 +546,9 @@ class LogPage(Mixins.QTranslatable, QMainWindow):
         window = self.window()
 
         return (
-            not self._paused
-            and self.isVisible()
+            # Optional pause guard; restore with _paused and _pauseChanged:
+            # not self._paused and
+            self.isVisible()
             and not (hasattr(window, 'isMinimized') and window.isMinimized())
         )
 

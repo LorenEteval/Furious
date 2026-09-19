@@ -40,9 +40,9 @@ This scope owns persistent page composition and top-level presentation, not shar
   secret-bearing QR content. Reuse plugin export semantics and never log the encoded URI.
 - Search debounce belongs to the persistent page: clear/submit cancels pending work, hide stops it, and show applies
   only the current query. Find shortcuts are page-scoped; document editing shortcuts stay with their document widget.
-- Pausing a log view freezes its displayed document, selection, and filters without stopping collection or extending
-  manager retention. Resume resynchronizes from retained entries; export while paused uses the displayed snapshot.
-  Verify clear/eviction/navigation during pause, not just ordinary append.
+- LogPage's optional Pause/Resume Updates control and logic are currently commented out. Its restoration notes and
+  the two retained pause tests in `tests/test_ui_behavior.py` describe the intended contract if re-enabled: freeze
+  presentation/filters only, keep collection bounded, and resume from retained entries after clear/eviction/navigation.
 - Log views keep per-filter cursors and catch up on visibility; metrics pages derive series from shared raw history.
   Switching pages, ranges, or filters must not reset collection or create a second history. Metric buckets use the
   shared monotonic timeline: moving the visible range must not regroup unchanged historical samples. Preserve missing
