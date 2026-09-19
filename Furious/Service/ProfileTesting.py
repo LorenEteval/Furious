@@ -651,6 +651,7 @@ class _LatencyScheduler(QtCore.QObject):
     def shutdown(self):
         """Stop the dedicated TCPing event loop exactly once."""
         self.shuttingDown = True
+
         self.cancelAll()
 
         try:
@@ -1333,6 +1334,7 @@ class ProfileTestManager(QtCore.QObject):
             portRange=self.SerialDownloadPorts,
             parent=self,
         )
+
         self._concurrentDownloadScheduler = _DownloadSpeedScheduler(
             self.resolveTarget,
             self.applyResult,

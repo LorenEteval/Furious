@@ -126,6 +126,7 @@ class ApplicationLifecycleTransactionTest(TestCase):
             _exitRequested=False,
             _exitCode=ApplicationRunner.ExitCode.ExitSuccess.value,
         )
+
         application.addEnviron = mock.Mock(
             side_effect=(
                 RuntimeError('plugins failed')
@@ -1161,6 +1162,7 @@ class ApplicationLifecycleTransactionTest(TestCase):
             ) as daemonOff,
         ):
             DesktopApplication._initializeSystemIntegration(application)
+
             cleanupStack.close()
 
         proxyOff.assert_called_once_with()

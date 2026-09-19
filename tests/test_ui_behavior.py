@@ -591,6 +591,7 @@ class ServerTableBehaviorTest(unittest.TestCase):
                 Storage._UserServersStorage.cache_clear()
                 Storage.UserServers().extend(self._profile(name) for name in names)
                 AppSettings.set('ActivatedItemIndex', '0')
+
                 table = ServerTableView(
                     configurationEditorFactory=QWidget,
                     qrCodeWindowFactory=QWidget,
@@ -600,6 +601,7 @@ class ServerTableBehaviorTest(unittest.TestCase):
                 table.search('^visible')
                 table.show()
                 table.activateWindow()
+
                 table.selectMultipleRows(selected, True)
                 table.selectionModel().setCurrentIndex(
                     table.proxyIndexFromSourceRow(selected[0]),

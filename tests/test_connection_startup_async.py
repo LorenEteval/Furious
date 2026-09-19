@@ -544,6 +544,7 @@ class ConnectionStartupAsyncTest(TestCase):
         primary = _Runtime()
         tun = _Runtime()
         tun.cleanup = None
+
         events = []
         deviceChecks = 0
 
@@ -673,6 +674,7 @@ class ConnectionStartupAsyncTest(TestCase):
         primary = _Runtime()
         tun = _Runtime()
         tun.cleanup = None
+
         events = []
 
         def tunFactory(*_args, **kwargs):
@@ -796,6 +798,7 @@ class ConnectionStartupAsyncTest(TestCase):
         primary = _Runtime()
         tun = _Runtime()
         tun.cleanup = None
+
         events = []
 
         def tunFactory(*_args, **kwargs):

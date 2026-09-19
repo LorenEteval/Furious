@@ -1744,30 +1744,39 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
         capacity = 2_000
         manager = LogManager(maximumEntries=capacity, autoClearEnabled=False)
         manager.RetiredCleanupBudget = 1
+
         maximumRetired = 0
         maximumPhysical = 0
         maximumBatches = 0
+
         for cycle in range(100):
             for index in range(capacity):
                 manager.append(f'{cycle}:{index}', CORE_LOG_CATEGORY)
+
                 maximumRetired = max(maximumRetired, manager.retiredEntryCount)
                 maximumPhysical = max(
                     maximumPhysical,
                     manager.entryCount() + manager.retiredEntryCount,
                 )
+
             manager.clear(runtimeOnly=True)
+
             maximumRetired = max(maximumRetired, manager.retiredEntryCount)
             maximumPhysical = max(
                 maximumPhysical,
                 manager.entryCount() + manager.retiredEntryCount,
             )
             maximumBatches = max(maximumBatches, len(manager._retiredBatches))
+
             self.assertLessEqual(maximumPhysical, capacity)
+
         while manager.retiredEntryCount:
             with manager._lock:
                 manager._cleanupRetiredLocked()
+
         self.assertEqual(manager.retiredCharacters, 0)
         self.assertEqual(len(manager._retiredBatches), 0)
+
         self.report(
             'adversarial-backlog',
             operations=capacity * 100,
@@ -1782,6 +1791,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
         """Sustain mixed operations while checking invariants and RSS plateaus."""
         seed = 0xF017105
         randomizer = random.Random(seed)
+
         manager = LogManager(
             maximumEntries=2_000,
             maximumCharacters=200_000,
@@ -1791,6 +1801,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
         manager.RetiredCleanupBudget = 64
         manager.registerComponent('soak.runtime', 'Soak runtime', runtime=True)
         manager.registerComponent('soak.other', 'Soak other', runtime=False)
+
         categories = (
             APPLICATION_LOG_CATEGORY,
             CORE_LOG_CATEGORY,
@@ -1798,15 +1809,19 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
             'soak.runtime',
             'soak.other',
         )
+
         rssSamples = []
         maximumRetired = 0
         maximumRetiredCharacters = 0
         maximumBatches = 0
         maximumLive = 0
         maximumPhysical = 0
+
         started = time.perf_counter()
+
         for index in range(250_000):
             operation = randomizer.randrange(100)
+
             if operation < 70:
                 manager.append(
                     f'{index}:{randomizer.randrange(10**9)}',
@@ -1833,6 +1848,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                 maximumPhysical,
                 manager.entryCount() + manager.retiredEntryCount,
             )
+
             if (index + 1) % 10_000 == 0:
                 _assertManagerInvariants(self, manager)
                 rssSamples.append(resourceSnapshot()['rss'])
@@ -1840,10 +1856,13 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
         while manager.retiredEntryCount:
             with manager._lock:
                 manager._cleanupRetiredLocked()
+
         _assertManagerInvariants(self, manager)
         self.assertLessEqual(maximumRetired, manager.maximumEntries)
+
         rssValues = [value for value in rssSamples if value is not None]
         rssGrowth = rssValues[-1] - rssValues[0] if len(rssValues) > 1 else None
+
         self.report(
             'soak',
             seed=seed,
@@ -1868,30 +1887,39 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
             maximumEntryCharacters=8,
             autoClearEnabled=False,
         )
+
         categories = (
             APPLICATION_LOG_CATEGORY,
             CORE_LOG_CATEGORY,
             TUN2SOCKS_LOG_CATEGORY,
         )
+
         for index in range(count):
             manager.append(str(index), categories[index % 3])
+
         started = time.perf_counter_ns()
         entries = manager.entries()
         snapshotUs = (time.perf_counter_ns() - started) / 1_000
+
         self.assertEqual(
             tuple(entry.sequence for entry in entries), tuple(range(1, count + 1))
         )
+
         watched = []
+
         for generation in manager._activeGenerationsLocked():
             index = _ObservedEntries(generation.entries)
             generation.entries = index
             watched.append(index)
+
         started = time.perf_counter_ns()
         manager.clear()
         clearUs = (time.perf_counter_ns() - started) / 1_000
+
         self.assertEqual(sum(index.iterations for index in watched), 0)
         self.assertEqual(manager.entries(), tuple())
         self.assertEqual(manager.retiredEntryCount, count)
+
         self.report(
             'large-merge-clear',
             entries=count,

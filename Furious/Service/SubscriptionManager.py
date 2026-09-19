@@ -437,6 +437,7 @@ class SubscriptionManager(HttpGetManager):
             for batchId, state in self._batches.items()
             for unique, version in state.pending
         )
+
         groups = []
 
         for unique, value in Storage.UserSubs().items():
@@ -556,6 +557,7 @@ class SubscriptionManager(HttpGetManager):
             context.get('remark', ''),
             context.get('decoderId'),
         )
+
         importer = self.importer
         filterResult = type(self)._filterImportResult
         profileFilter = str(context.get('filter', ''))

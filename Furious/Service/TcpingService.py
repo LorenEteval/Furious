@@ -103,6 +103,7 @@ class TcpingProbe(QtCore.QObject):
 
         self.elapsedTimer = QtCore.QElapsedTimer()
         self.socket = QTcpSocket(self)
+
         self.timeoutTimer = QtCore.QTimer(self)
         self.timeoutTimer.setSingleShot(True)
 
@@ -118,6 +119,7 @@ class TcpingProbe(QtCore.QObject):
             'handleSocketError',
             sender=self.socket,
         )
+
         connectWeakly(
             self.timeoutTimer.timeout,
             self,
@@ -260,6 +262,7 @@ class TcpingEngine(QtCore.QObject):
 
         if not cancelled:
             self.recordOutcome(deadlineExpired)
+
             self.postResult(requestId, result)
 
         self.drain()

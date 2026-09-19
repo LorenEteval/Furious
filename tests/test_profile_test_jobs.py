@@ -759,18 +759,23 @@ class ProfileTestServiceTest(unittest.TestCase):
         """Invalidate a TCPing group before a network result reaches profiles."""
         profile = self._profile('profile', '192.0.2.1', 9)
         profile.metadata.subscriptionSource = 'group-a'
+
         manager = self._manager((profile,))
         scheduler = manager._latencyScheduler
 
         manager.testTcping((profile,))
+
         group = next(iter(scheduler.tcpingRequests.values()))
         job = group.jobs[0]
+
         scheduler.invalidateSubscriptions({'group-a'})
 
         self.assertIs(job.state, ProfileTestJobState.Cancelled)
         self.assertFalse(scheduler.tcpingRequests)
         self.assertFalse(scheduler.tcpingEndpointRequests)
+
         processQtEvents()
+
         self.assertEqual(profile.metadata.latency, '')
 
     def testTcpingSharedResultFanOutIsBoundedPerGuiBatch(self):
@@ -1082,6 +1087,7 @@ class ProfileTestServiceTest(unittest.TestCase):
             30000,
             DownloadSpeedTestOptions(5000, 'https://example.test'),
         )
+
         lease = mock.Mock()
         worker._runtimeLease = lease
         worker.finished.connect(lambda current, _result: current.deleteLater())
@@ -1090,10 +1096,12 @@ class ProfileTestServiceTest(unittest.TestCase):
 
         lease.release.assert_called_once_with()
         self.assertTrue(waitFor(lambda: not isValid(worker)))
+
         worker.runtimeExited(
             profile.connection,
             RuntimeExit(1, RuntimeExitReason.Unexpected),
         )
+
         self.assertEqual(profile.metadata.speed, '')
 
     def testServerTableRepaintsOnlyTheCellCommittedByTheService(self):

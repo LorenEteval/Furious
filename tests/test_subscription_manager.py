@@ -419,8 +419,10 @@ class SubscriptionManagerTest(TestCase):
                 'enabled': True,
             }
         }
+
         manager = self._manager(subscriptions)
         manager._requestVersions['group-a'] = 1
+
         profile = SimpleNamespace(itemRemark='profile')
         manager.importer = SimpleNamespace(
             importPayload=mock.Mock(
@@ -431,6 +433,7 @@ class SubscriptionManagerTest(TestCase):
                 )
             )
         )
+
         successful = []
         failed = []
 
@@ -464,6 +467,7 @@ class SubscriptionManagerTest(TestCase):
             )
 
         upsert.assert_not_called()
+
         manager.deleteLater()
 
     def testOneSynchronizationFailureDoesNotAbortOtherGroups(self):
@@ -1223,10 +1227,12 @@ class SubscriptionManagerTest(TestCase):
         ):
             manager = SubscriptionManager()
             page = SubscriptionPage(SimpleNamespace(subsManager=manager))
+
             replies = []
             contexts = []
             completed = []
             manager.updateCompleted.connect(completed.append)
+
             timerIds = {
                 key: timer.timerId() for key, timer in manager._autoUpdateTimers.items()
             }
@@ -1253,6 +1259,7 @@ class SubscriptionManagerTest(TestCase):
 
                     subscriptions['group-a']['lastSyncStatus'] = 'success'
                     subscriptions['group-a']['lastUpdated'] = 'preserved timestamp'
+
                     manager._finishOperation(
                         contexts[0], successful=contexts[0], structural=True
                     )
@@ -1273,12 +1280,14 @@ class SubscriptionManagerTest(TestCase):
                     self.assertEqual(
                         subscriptions['group-b']['lastSyncStatus'], 'cancelled'
                     )
+
                     self.assertFalse(replies[1].isOpen())
                     self.assertEqual(manager._batches, {})
                     self.assertEqual(len(completed), 1)
                     self.assertEqual(completed[0].successful, (contexts[0],))
                     self.assertEqual(completed[0].failed, ())
                     self.assertFalse(manager._isCurrentRequest(contexts[1]))
+
                     self.assertEqual(
                         timerIds,
                         {
@@ -1291,6 +1300,7 @@ class SubscriptionManagerTest(TestCase):
                         manager, '_startImportPreparation'
                     ) as prepare:
                         manager.successCallback(replies[1], **contexts[1])
+
                         prepare.assert_not_called()
 
                     manager.updateSubscriptions(('group-b',))

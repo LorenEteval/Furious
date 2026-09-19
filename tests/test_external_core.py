@@ -217,15 +217,18 @@ class ExternalCoreProcessTest(unittest.TestCase):
                 'print("stderr fixture",file=sys.stderr,flush=True); '
                 'time.sleep(60)'
             )
+
             config = self.configuration(
                 ['-u', '-c', code, str(resultPath), payload],
                 directory,
                 {'FURIOUS_EXTERNAL_TEST': 'Unicode ✓'},
             )
+
             messages = []
             runtime = ExternalCoreProcess(config, msgCallback=messages.append)
 
             runtime.start()
+
             self.assertTrue(self.waitFor(resultPath.exists))
             self.assertTrue(
                 self.waitFor(
@@ -444,8 +447,10 @@ class ExternalCoreProcessTest(unittest.TestCase):
             registry = mock.Mock()
             registry.prepareTUN.return_value = False
             registry.usesApplicationTun2socks.return_value = True
+
             dnsResolver = mock.Mock()
             dnsResolver.resolve.return_value = (True, [])
+
             tunRuntime = mock.Mock(spec=CoreRuntime)
 
             manager = NoCoreRuntimeConnectionManager(dnsResolver=dnsResolver)

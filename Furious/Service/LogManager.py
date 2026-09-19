@@ -322,11 +322,13 @@ class LogManager(QtCore.QObject):
 
         self._lock = threading.RLock()
         self._categories: dict[str, LogCategory] = {}
+
         self._maximumEntries = maximumEntries
         self._maximumCharacters = maximumCharacters
         self._maximumEntryCharacters = maximumEntryCharacters
         self._autoClearMaximumEntries = autoClearMaximumEntries
         self._autoClearEnabled = bool(autoClearEnabled)
+
         self._sequence = 0
         self._retainedEntryCount = 0
         self._retainedCharacters = 0

@@ -390,8 +390,10 @@ class RepositoryContractTest(unittest.TestCase):
                     repository = repositoryType()
 
                 self.assertEqual(repository.data(), empty)
+
                 repository.cleanup()
                 repository.cleanup()
+
                 self.assertEqual(AppSettings.get(setting), encoded)
 
     def testRecordHydrationFailureDoesNotLogPrivateInput(self):

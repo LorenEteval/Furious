@@ -337,6 +337,7 @@ class IsolatedRepositoryTest(unittest.TestCase):
                     },
                 )
             )
+
             repository.sync()
 
             restored = UserSubs()
@@ -345,6 +346,7 @@ class IsolatedRepositoryTest(unittest.TestCase):
             self.assertEqual(tuple(group.id for group in groups), ('first', 'second'))
             self.assertFalse(groups[0].enabled)
             self.assertEqual(groups[1].extras['futureField'], 'two')
+
             self.assertEqual(restored.removeGroup('first').remark, 'Alpha')
             self.assertIsNone(restored.group('first'))
 
@@ -714,6 +716,7 @@ class LogManagerTest(unittest.TestCase):
                     sum(index.oldestRemovals for index in observedIndexes),
                     0,
                 )
+
                 self.assertEqual(
                     manager.retiredEntryCount,
                     coreCount + tunCount,
@@ -729,6 +732,7 @@ class LogManagerTest(unittest.TestCase):
                     tuple(f'application {index}' for index in range(applicationCount))
                     + ('new core after clear',),
                 )
+
                 self._assertIndexesConsistent(manager)
 
     def testWholeGenerationClearDoesNoPhysicalEntryWorkOnCaller(self):

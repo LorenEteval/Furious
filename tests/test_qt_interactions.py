@@ -1208,6 +1208,7 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
             routing = _RoutingControllerFixture(
                 (RoutingOption('default', 'Default'),), 'default'
             )
+
             try:
                 with self._home(settings, connection, routing) as home:
                     table = home.userServersQTableWidget
@@ -1215,18 +1216,23 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                         ServerTableQtInteractionTest._profile(name)
                         for name in ('alpha', 'beta')
                     ]
+
                     for profile in profiles:
                         table.appendNewItemByFactory(profile)
+
                     home.show()
                     home.activateWindow()
                     table.setFocus()
                     processQtEvents()
+
                     QTest.keyClick(table, QtCore.Qt.Key_F, QtCore.Qt.ControlModifier)
                     self.assertTrue(waitFor(home.searchLineEdit.hasFocus))
+
                     with mock.patch.object(
                         table, 'search', wraps=table.search
                     ) as search:
                         QTest.keyClicks(home.searchLineEdit, 'alpha')
+
                         self.assertEqual(search.call_count, 0)
                         self.assertTrue(
                             waitFor(lambda: table.proxyModel.rowCount() == 1)
@@ -1236,23 +1242,32 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                             table.sourceRowFromProxyIndex(table.proxyModel.index(0, 0)),
                             0,
                         )
+
                         home.searchLineEdit.setText('beta')
                         home.searchLineEdit.clear()
+
                         self.assertEqual(table.proxyModel.rowCount(), 2)
                         self.assertFalse(home._searchTimer.isActive())
+
                         home.searchLineEdit.setText('beta')
                         QTest.keyClick(home.searchLineEdit, QtCore.Qt.Key_Return)
+
                         self.assertEqual(table.proxyModel.rowCount(), 1)
                         self.assertFalse(home._searchTimer.isActive())
                         self.assertEqual(
                             table.sourceRowFromProxyIndex(table.proxyModel.index(0, 0)),
                             1,
                         )
+
                     self.assertEqual(list(Storage.UserServers()), profiles)
+
                     home.searchLineEdit.setText('alpha')
                     home.hide()
+
                     self.assertFalse(home._searchTimer.isActive())
+
                     home.show()
+
                     self.assertEqual(table.proxyModel.rowCount(), 1)
                     self.assertEqual(
                         table.sourceRowFromProxyIndex(table.proxyModel.index(0, 0)), 0
@@ -1270,30 +1285,36 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
             routing = _RoutingControllerFixture(
                 (RoutingOption('default', 'Default'),), 'default'
             )
+
             profiles = [
                 ServerTableQtInteractionTest._profile(name)
                 for name in ('match zeta', 'hidden', 'match alpha')
             ]
             Storage.UserServers().extend(profiles)
+
             try:
                 with self._home(settings, connection, routing) as home:
                     home.resize(1000, 600)
                     home.show()
                     home.activateWindow()
+
                     table = home.userServersQTableWidget
                     home.searchLineEdit.setText('match')
                     home.applySearch()
                     table.sortByColumn(0, QtCore.Qt.AscendingOrder)
                     processQtEvents()
+
                     expectedIds = {
                         p.metadata.profileId for p in (profiles[0], profiles[2])
                     }
+
                     for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
                         with self.subTest(theme=theme), mock.patch.object(
                             application(), 'theme', return_value=theme
                         ):
                             home.setStyleSheet(AppStyleSheet.forTheme(theme))
                             table.setFocus()
+
                             QTest.mouseClick(
                                 table.viewport(),
                                 QtCore.Qt.LeftButton,
@@ -1308,27 +1329,33 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                             )
                             QTest.keyRelease(table, QtCore.Qt.Key_Control)
                             processQtEvents()
+
                             rect = table.visualRect(table.proxyModel.index(0, 0))
                             sample = QtCore.QPoint(rect.right() - 12, rect.center().y())
                             before = (
                                 table.viewport().grab().toImage().pixelColor(sample)
                             )
+
                             self.assertEqual(
                                 before,
                                 QtGui.QColor(
                                     AppStyleSheet.paletteForTheme(theme)['selection']
                                 ),
                             )
+
                             # A real click can paint between press and release.
                             QTest.mousePress(home.testButton, QtCore.Qt.LeftButton)
                             processQtEvents()
+
                             self.assertFalse(home.testMenu.isVisible())
                             self.assertEqual(
                                 table.viewport().grab().toImage().pixelColor(sample),
                                 before,
                             )
+
                             QTest.mouseRelease(home.testButton, QtCore.Qt.LeftButton)
                             processQtEvents()
+
                             self.assertTrue(home.testMenu.isVisible())
                             self.assertEqual(
                                 {
@@ -1341,12 +1368,14 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                                 table.viewport().grab().toImage().pixelColor(sample),
                                 before,
                             )
+
                             with mock.patch.object(
                                 table.profileTestManager, 'testPing'
                             ) as testPing:
                                 home.testMenu.setActiveAction(table.testActions[0])
                                 QTest.keyClick(home.testMenu, QtCore.Qt.Key_Return)
                                 processQtEvents()
+
                                 testPing.assert_called_once()
                                 self.assertEqual(
                                     {
@@ -1355,11 +1384,13 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                                     },
                                     expectedIds,
                                 )
+
                             self.assertTrue(home.testButton.hasFocus())
                             self.assertEqual(
                                 table.viewport().grab().toImage().pixelColor(sample),
                                 before,
                             )
+
                             # A cancelled click must not open a menu or leave a
                             # highlight override after focus moves elsewhere.
                             QTest.mousePress(home.testButton, QtCore.Qt.LeftButton)
@@ -1369,9 +1400,12 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                                 pos=QtCore.QPoint(-10, -10),
                             )
                             processQtEvents()
+
                             self.assertFalse(home.testMenu.isVisible())
+
                             home.searchLineEdit.setFocus()
                             processQtEvents()
+
                             self.assertFalse(table.property('keepSelectionHighlighted'))
                             self.assertEqual(
                                 table.viewport().grab().toImage().pixelColor(sample),
@@ -1383,19 +1417,28 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     # Opening and dismissing from the keyboard returns to the button.
                     home.testButton.setFocus(QtCore.Qt.TabFocusReason)
                     processQtEvents()
+
                     before = table.viewport().grab().toImage().pixelColor(sample)
+
                     QTest.keyPress(home.testButton, QtCore.Qt.Key_Space)
                     processQtEvents()
+
                     self.assertEqual(
                         table.viewport().grab().toImage().pixelColor(sample), before
                     )
+
                     QTest.keyRelease(home.testButton, QtCore.Qt.Key_Space)
                     processQtEvents()
+
                     self.assertTrue(home.testMenu.isVisible())
+
                     QTest.keyClick(home.testMenu, QtCore.Qt.Key_Escape)
                     processQtEvents()
+
                     self.assertTrue(home.testButton.hasFocus())
+
                     home.searchLineEdit.setFocus()
+
                     with mock.patch.object(
                         table.profileTestManager, 'testPing'
                     ) as testPing:
@@ -1406,6 +1449,7 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                         )
                         QTest.keyRelease(home.searchLineEdit, QtCore.Qt.Key_Control)
                         processQtEvents()
+
                         testPing.assert_not_called()
             finally:
                 settings.deleteLater()
