@@ -26,8 +26,11 @@ remains in each implementation.
 - Registries own plugin/capability instances and descriptors; created editors and runtimes transfer to their
   callers. Capabilities may retain explicitly owned reusable services with shutdown obligations. Do not cache
   created transient UI in the registry or treat the registry as the connection/repository authority.
-- Once a runtime factory returns a valid launch, the caller acquires that exact runtime even if start raises, so partial
-  resources can be stopped/disposed. Return no runtime only when none was acquired.
+- Separate factory construction, registry result validation, and execution start. A factory owns partial resources
+  until it returns a valid launch; the caller cannot recover an object hidden by construction failure or an invalid
+  result shape. After valid transfer the caller owns that exact runtime even if start raises. Keep failure evidence
+  for all three boundaries when changing factory contracts; returning no runtime after acquisition loses cleanup
+  authority.
 - Plugin/model data is untrusted at the boundary even though installed code is trusted to execute. Validate types,
   ownership, required fields, and QObject validity before publishing results.
 - API and model layers never import concrete plugins. Bundled backends/extensions obey the public lifecycle; their

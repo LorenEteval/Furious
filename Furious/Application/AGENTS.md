@@ -17,8 +17,9 @@ boundary between the outer child-process supervisor and the inner application ev
   termination; action/window/session handlers do not run cleanup directly.
 - A stage that fails before its cleanup callback is registered must release its own partial acquisitions. The outer
   cleanup stack releases completed stages; it cannot discover half-built controllers, UI, logging handlers, or
-  native listeners. Restore logging configuration as well as closing handlers. Run service shutdown while its
-  owners remain valid; scheduling `deleteLater()` is not evidence that workers or native resources have finished.
+  native listeners. Keep each successful sub-acquisition reachable by the stage's failure cleanup before beginning
+  the next fallible constructor; assigning several constructed owners together does not provide this guarantee.
+  Restore logging configuration as well as closing handlers. Run service shutdown while its owners remain valid; scheduling `deleteLater()` is not evidence that workers or native resources have finished.
   Review cooperative pool drains separately from the cleanup stack's ordering guarantees. The application pool's
   timed wait logs unfinished work, whereas subscription preparation waits synchronously after its diagnostic timeout.
   Neither policy can be inferred from reverse cleanup order or from the name of a shutdown method.

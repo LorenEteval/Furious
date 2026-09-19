@@ -16,7 +16,8 @@ generic default.
   siblings and unrelated branches. URI export represents the codec's supported projection, not a lossless backup
   of every document field; exporting must leave the source document unchanged.
 - Malformed external input returns controlled validation with backend context. Do not create a plausible but different
-  profile, and do not log credentials, complete URIs, or documents.
+  profile, and do not log credentials, complete URIs, or documents. Keep parsing, editor acceptance, and runtime
+  validation distinct: a tolerant loader preserves a document for correction without promising it can execute.
 - Configuration/runtime modules stay importable without constructing Qt editors. Plugin registration remains explicit
   enough for compiled discovery. An editor factory returns a fresh projection, not a repository commit: the caller
   owns the editable snapshot, acceptance validation, identity resolution, and eventual write-back. Runtime factories

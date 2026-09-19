@@ -30,7 +30,6 @@
   identifies a contract to consult, not another parent. Verification and self-evolution here apply to every descendant
   scope without repeating the same maintenance checklist in each file. Ignored comparison checkouts retain their own
   scopes and toolchains; their manifests and local guides govern their code, not Furious's Python/Qt recipes.
-  Git diff alone cannot verify ignored guides: compare their paths and contents with the initial inventory too.
 
 ## Operating model
 
@@ -130,6 +129,6 @@
   likely to become stale, circular references, and wording that freezes incidental structure.
 - Distinguish requirements, observed implementation, and verified gaps. For a claimed guarantee, trace its failure
   path as well as its successful caller; a test name is an investigation anchor, not proof of unexercised behavior.
-  Keep run-specific counts, versions, and diagnostic experiments in the work report; put only durable constraints in
-  guidance. During guidance-only work, report defects separately instead of changing production code to satisfy
-  the prose.
+  Keep run-specific counts, versions, diagnostic experiments, and defect inventories in the work report; guidance
+  retains the required invariant and a source/test anchor. Do not repeatedly append symptoms to a local guide.
+  During guidance-only work, report defects separately instead of changing production code to satisfy the prose.

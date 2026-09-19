@@ -27,7 +27,9 @@ owns Xray's full JSON preservation, routing/assets/statistics, and protocol/tran
 - Runtime asset updates stage bytes and digest verification before atomic replacement. Failure preserves the prior
   usable file. Network reply and checksum worker have separate lifetimes: cancellation/shutdown must suppress late
   hash publication as well as abort requests. The plugin capability owns its lazy updater through shutdown.
-  `Deploy.py --download` has a separate integrity contract; shared filenames do not make the mechanisms equivalent.
+  The atomic replacement guarantee applies to each asset file, not a multi-file GeoIP/geosite snapshot.
+  Test sibling failure without assuming another successfully replaced asset rolls back. `Deploy.py --download`
+  is a separate build-time integrity boundary.
 - Routing selection IDs, user routing documents, and translated built-in labels are different contracts. Preserve
   custom document content and named-profile identity while composing runtime routing/API statistics. Trace the
   selected repository routing document separately from the connection's own routing branch; neither may be mutated

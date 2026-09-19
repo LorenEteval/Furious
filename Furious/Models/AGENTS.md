@@ -18,6 +18,9 @@ never live persistence, Qt presentation, plugin discovery, or workflow execution
   never become core fields.
 - Preserve unknown metadata and legacy aliases across load/save. `independentCopy()` creates a manual profile with a new
   ID and no subscription owner; a runtime `deepcopy()` preserves identity while isolating mutable preparation.
+  Replacing a connection preserves the logical profile's metadata/ID but may create a new wrapper. Consumers must
+  choose explicitly between logical identity and exact-object ownership; neither copying nor equal IDs transfers
+  a live repository or runtime reference automatically.
 - Treat serialized and plugin-provided mappings as untrusted values. Normalize only documented compatibility aliases,
   retain unknown forward-compatible fields, and keep construction diagnostics available without mutating repositories
   or invoking a backend runtime.

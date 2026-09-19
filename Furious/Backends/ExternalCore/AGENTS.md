@@ -11,7 +11,8 @@ preserves the intentionally different direct-subprocess scope for user-selected 
 - Loading is observational: do not silently absolutize or rewrite relative paths. Validation before spawn owns path
   existence/type, argument and environment types/NULs, endpoint requirements, and a finite bounded shutdown timeout.
   Finite validation must reject non-finite numbers explicitly; range comparisons alone do not reject NaN.
-  `shutdownTimeout()` currently accepts NaN: this is a validation gap, not a supported timeout.
+  Check timeout validation through `shutdownTimeout()` and the launch boundary; serializability does not prove
+  a numeric value is usable by process wait APIs.
 - Execute an argument vector with `shell=False`. Environment overrides apply to a copy of the inherited process
   environment; preparation must not mutate the host's `os.environ`. Never concatenate a shell command, search or
   kill by process name, or log arguments/environment values that may contain credentials.
@@ -30,7 +31,7 @@ preserves the intentionally different direct-subprocess scope for user-selected 
   native core TUN support. Subscription decoding must continue to reject executable profiles.
 - The embedded backends' JSON serialization helper is not this launch boundary: External Core passes a structured
   executable/argument/environment specification to `Popen`. Validate through `validateProcess()` and the launch path,
-  including the documented timeout gap, rather than assuming a serializable mapping is safe or executable.
+  including non-finite timeout rejection, rather than assuming a serializable mapping is safe or executable.
 - This is a mapping-only protocol: its explicit type discriminator selects local executable configuration, it
   declares no URI schemes, and portable URI/QR export may return no result. Shared import/export UI must preserve
   that capability absence. Endpoint readiness checks the configured proxy; it does not validate an arbitrary
@@ -43,6 +44,6 @@ preserves the intentionally different direct-subprocess scope for user-selected 
   after escalation and readers/watchers that outlast their joins. A failed final reap is a cleanup failure to report;
   clearing the runtime's process/thread references must not be used as evidence that those resources exited.
   Retain an independent reference in failure tests so an empty runtime field cannot make the test pass. Direct-child
-  exit also does not prove that descendants closed inherited pipes. `Process.py` currently clears references after
-  unsuccessful waits; this is a cleanup-contract gap. A repair must retain observable outstanding resources and
-  coordinate failure semantics with `Furious/Service/RuntimeLease.py`, without broad process-name cleanup.
+  exit also does not prove that descendants closed inherited pipes. Review `Process.py` and
+  `Furious/Service/RuntimeLease.py` together: incomplete shutdown must preserve observable outstanding resources
+  and an owner able to finish cleanup, without broad process-name cleanup.

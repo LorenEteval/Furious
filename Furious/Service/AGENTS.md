@@ -28,9 +28,10 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   observe the primary runtime, acquire optional tun2socks/DNS resources, and mutate host networking in platform
   order before commit. Preserve Windows runtime-before-device, Linux device-before-runtime, and macOS
   survival-before-DNS ordering. Failure/cancellation releases attempt-owned runtimes and registered host cleanup.
-  The synchronous start path is a compatibility boundary, not the default GUI mechanism. Timed readiness/DNS
-  continuations do not make synchronous platform commands or backend preparation interruptible; audit those calls
-  and shared route bookkeeping separately.
+  The synchronous start path remains a compatibility boundary. Review GUI responsiveness at each stage, including
+  factory preparation, host commands, and reverse cleanup: a scheduled start only defers the first call. Readiness
+  timers and asynchronous DNS cannot preempt synchronous work. Keep cancellation checks at reentrant stage boundaries
+  before acquiring the next resource, and audit shared route bookkeeping separately from attempt-local leases.
 - Construct a runtime event router before asking a plugin to create its runtime. One lease owns the runtime/router from
   acquisition through attempt ownership, commit, and reverse-order release; commit changes logical delivery without
   replacing the runtime callback. Worker-thread exits are queued to the router's Qt thread, delivered at most once, and

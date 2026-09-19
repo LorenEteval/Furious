@@ -24,6 +24,8 @@ owns Hysteria 2's nested upstream document, native-TUN capability, statistics, a
   native TUN. Managed preparation currently resolves server addresses synchronously; asynchronous readiness does not
   make that preparation interruptible. Test resolved addresses and explicit route exclusions as separate inputs to
   the exclusion guarantee; a resolution failure alone does not prove that valid manual exclusions are absent.
+  DNS failure and insufficient Linux privilege are independent preparation failures. Manual exclusions can satisfy
+  the former route-input requirement but do not grant the latter privilege or prove remote connectivity.
 - The statistics provider is a process-lifetime capability; the runtime captures a configured server-API target and
   sampling owns its monitor/query lifetime. API URL, client ID, and authorization secret are distinct from client
   connection credentials. Keep requests bounded, validate counters, and never log the secret or infer statistics

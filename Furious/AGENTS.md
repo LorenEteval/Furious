@@ -53,9 +53,9 @@ place.
   every asynchronous workflow. Page visibility may control rendering, never ownership of collection or draining.
 - Preserve unknown/forward-compatible fields through model, repository, backend editor, and serialization changes.
   Compatibility normalization must be narrow, intentional, and tested separately from observational loading.
-  A dict-like profile exposes its connection document through the mapping interface, not its complete persistence
-  record. Choose the explicit profile, metadata, or connection representation required by each boundary; generic
-  mapping conversion is not a profile backup.
+  Choose the representation required by the next boundary: profile for identity/metadata, connection document for
+  backend preparation, repository record for persistence. Consult Models/Repository for their copying and encoding
+  contracts; converting between these representations does not itself validate, isolate, or commit data.
 - Import, clipboard, share-link, file, and QR paths reuse the owning plugin codecs and validation. QR is a presentation
   transport, not a second protocol parser. Decoding a transport envelope, validating a protocol, and committing a
   profile are separate boundaries: a recognized envelope is not permission to clear a group or import an unsupported

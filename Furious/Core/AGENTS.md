@@ -20,9 +20,9 @@ connection policy remains outside it.
   boundary must not hide a leak at another. A join timeout or failed handle close is not a successful reap. Verify
   actual child liveness before describing a terminal execution state as complete resource release; include failed
   escalation in ownership tests.
-  `MultiprocessingRuntime._closeProcess()` currently discards its process reference even when handle close fails.
-  This is a cleanup-contract gap, not a permissible ownership transfer: a fix must preserve observability of the
-  outstanding child/handle and agree with the service lease's cleanup-failure semantics.
+  Keep an independently observable outstanding child/handle when release fails; forgetting it cannot satisfy
+  this contract. Review `MultiprocessingRuntime._closeProcess()` together with service lease release when changing
+  failure reporting or retry ownership, and exercise a child that survives both escalation attempts.
 - Process-backed runtimes own exit monitoring and interpretation: publish one typed terminal event per execution,
   preserving the raw exit and whether stop was requested. `isRunning()` is a passive liveness query and must not
   consume or dispatch lifecycle events.

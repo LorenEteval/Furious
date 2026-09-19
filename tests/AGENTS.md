@@ -15,8 +15,9 @@ and test-tier selection; test convenience never weakens a production invariant.
   hermetic child, temporary settings, disabled singleton/tray/restoration, and mocked host mutation.
 - Import order is part of isolation: select the offscreen Qt platform and temporary settings identity before importing
   modules that can create Qt/application globals. A late patch is not equivalent to preventing the side effect.
-  A temporary QSettings namespace does not reset already-cached `Storage` collections: explicitly isolate and restore
-  live repository fixtures as well as persisted settings, especially when exercising cleanup or partial startup.
+  Canonicalize both QSettings file paths and the sandbox root before containment checks, including symlinked
+  temporary directories; retain an outside-path rejection case so portability does not weaken isolation. A temporary
+  QSettings namespace does not reset cached `Storage` collections: isolate and restore live repository fixtures too.
 
 ## Test the contract
 
@@ -50,7 +51,9 @@ and test-tier selection; test convenience never weakens a production invariant.
   explicitly opt-in with `FURIOUS_VERY_HEAVY_TESTS=1`; packaged/manual smoke work uses disposable environments.
   Discovered tests must be self-contained in the checkout: do not load or execute source from Git history.
   The standalone log benchmark compares saved JSON timing reports; keep that optional measurement outside
-  unittest and report opt-ins, platform skips, and standalone measurements separately.
+  unittest and report opt-ins, platform skips, and standalone measurements separately. Discovery is an inventory,
+  not execution evidence: record the actual runner result, opt-in state, and skips. Standalone benchmarks and
+  compiled fixture entrypoints need separate invocations; a full discovered-suite pass does not run them.
 - Source-only tests and an offscreen platform do not prove a packaged Qt runtime. Compiler-sensitive changes need
   native lifecycle tests and the compiled fixture documented in `tests/README.md`, including accept/reject/close
   and owner-first teardown. An unavailable private Nuitka counter is unknown, not measured zero; combine toolchain

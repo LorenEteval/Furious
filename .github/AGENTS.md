@@ -10,7 +10,9 @@ exceptions; it does not define the source test suite or imply that every package
   dependent WinGet flow. Preserve permission, secret, environment, `if`, and `needs` boundaries.
 - `workflows/matrix-build.yml` owns the shared binary matrix, called by `workflows/deploy-pypi.yml` and also run hourly or
   manually. Its standalone runs build, verify, and upload artifacts with read-only repository permissions; publication
-  remains in `workflows/deploy-pypi.yml`.
+  remains in `workflows/deploy-pypi.yml`. The WinGet publisher's installer selection is another explicit contract:
+  validate its filename filter against produced artifacts and the intended manifest architectures. Editing an
+  individual downstream manifest PR does not change future automatic publication.
 - Treat each matrix row as a supported product target with explicit runner OS/architecture, Python, Qt/PySide source,
   native-binding toolchain, compatibility floor, `Deploy.py` output, and upload pattern. Artifact names and architecture
   checks must agree; never infer target architecture from the host label alone.
@@ -30,8 +32,9 @@ exceptions; it does not define the source test suite or imply that every package
   newer matrix rows cannot prove that floor. Likewise, successful Qt imports do not prove event-loop or binding-call
   compatibility. Default-to-newest dependencies/assets still need recorded provenance and deterministic assertions
   at ABI/feature boundaries; pin or checksum external build tools where the workflow establishes that boundary.
-- The workflow default shell is Bash, including Windows jobs. Select PowerShell explicitly for native Windows paths,
-  process APIs, or PowerShell syntax, and keep OS/architecture conditions on the step that owns the difference.
+- Inspect shell defaults per workflow/job: matrix and publication workflows set Bash, including Windows jobs;
+  the source-test workflow uses runner defaults. Select PowerShell explicitly when native Windows paths/process
+  APIs need it, and keep OS/architecture conditions on the step that owns the difference.
 - Flatpak checks run inside the installed sandbox, inspect the application's required native closure rather than every
   unused Qt plugin, and fail before upload. Do not mask an actually loadable plugin/runtime mismatch with a broad allowlist.
 - Generated helper files, downloaded SDKs/assets, build directories, and local bundles are disposable workflow inputs;

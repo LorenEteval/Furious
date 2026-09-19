@@ -72,6 +72,9 @@ behavior, and lifetime primitives; pages and services consume them without creat
   Do not attach ad-hoc attributes to third-party Qt objects or multiply timers/connections across show/hide cycles.
 - Queued delivery never transfers ownership implicitly. The sender may finish before delivery, so callbacks resolve a
   still-valid receiver and current generation in the receiver's Qt thread before touching widgets, models, or wrappers.
+  A zero-delay timer yields work but does not establish ordering against an unrelated Qt event. Express required
+  ordering through an owned continuation or semantic completion signal and test that boundary rather than one
+  platform's incidental event order.
 
 ## Geometry and verification
 

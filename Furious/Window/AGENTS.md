@@ -40,7 +40,9 @@ state.
 - Use normal layouts and `AppQ*` controls. Restore top-level geometry only after persistent composition and through the
   canonical first-show path; never-shown Qt fallback geometry must not overwrite a prior user decision.
 - QR export captures capped independent profile snapshots before deferred work. Incremental generation is owned by
-  the result window and stops on close; a malformed item cannot retarget or invalidate completed tabs. Resizing
+  the result window and stops on close; a malformed item cannot retarget or invalidate completed tabs. Attempted
+  items and successful tabs are separate counts: failures still advance the batch, and an all-failed export closes
+  its empty window. Cancellation preserves already generated tabs while releasing pending snapshots. Resizing
   scales the cached module image at integer factors with its quiet zone, rather than regenerating or smoothing
   secret-bearing QR content. Reuse plugin export semantics and never log the encoded URI.
 - Search debounce belongs to the persistent page: clear/submit cancels pending work, hide stops it, and show applies

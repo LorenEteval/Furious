@@ -14,8 +14,9 @@ provenance; it is not an application-data or settings directory.
 - Markdown files in this directory are repository metadata, not runtime data. Keep top-level and nested Markdown files
   excluded consistently from setuptools package data and Nuitka inclusion while preserving them in the source tree.
 - `Deploy.py --download` performs a networked refresh and may rewrite large, time-varying assets. Run it only when that
-  mutation is explicitly in scope; inspect its actual integrity checks, provenance, exact changed files, and existing
-  user modifications. A backend's digest-verified runtime updater does not establish this build downloader's guarantees.
+  mutation is explicitly in scope; inspect integrity checks, provenance, exact changed files, and user modifications.
+  Validate each downloaded file and the consumer's expected format; successful HTTP transfer is not format validation
+  or a transaction over the whole asset set. A backend's runtime updater does not establish build-time guarantees.
 
 ## Local endpoint map
 

@@ -13,9 +13,10 @@ is bundled.
   post-commit effects belong to the subscription service/repository path.
 - Automatic detection probes decoders by priority. An explicit decoder ID restricts dispatch to that decoder;
   an unknown ID or a mismatch must not silently resume automatic detection. Return `None` for a mismatch. Recognizing
-  a share-link envelope does not validate its URI schemes or protocols; the importer owns that decision. Preserve useful names/upstream IDs and never log a complete payload or link. Current
-  standard formats are plain/Base64 share-link envelopes; linear parsing is not an input-size bound. Introduce
-  explicit size/depth/work limits before adding richer recursive or nested formats.
+  a share-link envelope does not validate its URI schemes or protocols; the importer owns that decision.
+  Preserve useful names/upstream IDs and never log a complete payload or link. Standard plain/Base64 decoding
+  materializes input before per-item import can be cancelled; linear parsing is not a size or responsiveness bound.
+  Review decoded size and work limits at this boundary before adding richer formats.
 - Worker safety is a property of the whole preparation path. Standard decoders opt in, but the selected protocol
   handlers must also opt in after their shared state, caches, and Qt use are audited. Preserve the GUI compatibility
   fallback for unclassified capabilities; a safe envelope decoder cannot authorize an unsafe downstream parser.

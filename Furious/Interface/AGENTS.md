@@ -30,9 +30,10 @@ implementations can satisfy without importing application composition or concret
   callbacks. A zero process exit can still be an unexpected connection failure; requested stop and raw exit success
   are different facts. Preserve both in terminal events so orchestration can interpret the exit in its current
   attempt/connection context without making the runtime own controller policy. Keep semantic startup errors separate
-  from process codes and readiness timeouts. Define cleanup-failure semantics without assuming every runtime owns a subprocess. Bounded stop/dispose is a contract to
-  verify, not a guarantee supplied by the base class: third-party work may be non-cooperative. Report known violations
-  at their implementation/owner boundary rather than weakening the interface to bless an unreleased resource.
+  from process codes and readiness timeouts. Bounded stop/dispose is a requirement to verify at each implementation,
+  not a guarantee supplied by the base class. `Disposed` describes terminal API state; prove release using the
+  implementation's actual resources, without assuming every runtime owns a subprocess. Define how incomplete
+  cleanup remains observable to its owner and report violations separately from the required contract.
 - Verify cheap/import-independent contracts plus representative runtime, storage, editor, application-exit,
   encoding, and configuration implementations. Update this guide when a contract intentionally changes, together
   with all implementers and compatibility tests. Start with `tests/test_interface.py` and

@@ -18,8 +18,9 @@ exists to preserve Hysteria 1's legacy flat schema and lifecycle without importi
 - Routing ACL/MMDB launch inputs remain distinct from the stored connection JSON. Optional files are read into
   launch data before the child starts; a missing/unreadable file is logged and falls back to empty input. Preserve
   that observable fallback unless deliberately changing the contract, and include this synchronous file work in
-  preparation responsiveness review. A prepared runtime advertises its local HTTP readiness endpoint separately
-  from child liveness.
+  preparation responsiveness review. The child receives prepared ACL/MMDB inputs; editing an asset or stored
+  routing preference does not reconfigure an existing execution. A prepared runtime advertises its local HTTP
+  readiness endpoint separately from child liveness.
 - Capability absence is deliberate: this factory supplies neither native TUN nor a statistics provider. Shared UI
   must not infer either from Hysteria 2 support. Download preparation replaces the HTTP listener and removes SOCKS
   on a copy; test traffic must use its owned endpoint without applying ordinary connection host effects.

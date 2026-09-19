@@ -5,7 +5,8 @@ contracts. This scope owns restoration, migration, ordering, and persistence; wo
 outside it.
 
 - Repositories restore, migrate, order, and persist profiles, subscriptions, routings, and TUN settings. They do not own
-  network workflows, controller state, test schedulers, or presentation.
+  network workflows, controller state, test schedulers, or presentation. A repository method name does not imply
+  serialization: trace its mutation and `sync()`/cleanup calls to locate the actual persistence boundary.
 - `Storage` owns one application-lifetime backend per collection and exposes live mutable collections for compatibility.
   Do not add a second cache/snapshot authority. Prefer named repository mutations so validation and commit boundaries
   can move behind the repository over time.

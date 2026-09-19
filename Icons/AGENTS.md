@@ -21,8 +21,9 @@ resource-manifest contract; it does not govern general UI layout.
   SVG copy. Compare the glyph's visible bounds at the actual control size, not only its nominal SVG canvas.
   An icon substitution preserves the command's accessible text, shortcut, checked state, selection target, and
   popup-focus behavior. Verify those semantics at the consumer rather than imposing a new action-construction pattern.
-- Verify alias uniqueness and source/package resolution, then inspect the actual control or tray use under both
-  themes, high DPI, relevant sizes, disabled/selected states, and platform packaging where applicable. Deployment
+- Verify resource identity as prefix plus alias: the default and white collections intentionally repeat aliases
+  under different prefixes. Check duplicate full resource paths and missing inputs, then inspect control/tray use
+  under both themes, high DPI, relevant sizes, disabled/selected states, and platform packaging where applicable. Deployment
   icons also have direct filesystem consumers in `Deploy.py`; a resource alias search alone cannot prove a PNG is
   unused. Keep direct installer/application icons in verification alongside Qt aliases: a successful `pyside6-rcc`
   invocation proves resource generation, not deployment-icon inclusion or correct themed rendering.
