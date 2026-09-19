@@ -770,14 +770,11 @@ class SubscriptionTableView(Mixins.QTranslatable, AppQTableView):
                 # Do not delete
                 pass
 
-        if PLATFORM == 'Windows':
-            # Windows
-            mbox = MBoxQuestionDelete(icon=AppQMessageBox.Icon.Question)
-        else:
-            # macOS & linux
-            mbox = MBoxQuestionDelete(
-                icon=AppQMessageBox.Icon.Question, parent=self.parent()
-            )
+        # The completion callback uses this view. Native view destruction must
+        # also end the pending confirmation, even while its window survives.
+        mbox = MBoxQuestionDelete(icon=AppQMessageBox.Icon.Question, parent=self)
+
+        if PLATFORM != 'Windows':
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         mbox.isMulti = bool(len(indexes) > 1)

@@ -1109,11 +1109,10 @@ class RoutingRulesDialog(AppQTransientDialog):
 
         # This prompt is subordinate to a transient editor on every platform.
         # Native owner destruction must also end its pending confirmation.
-        mbox = MBoxQuestionDelete(
-            icon=AppQMessageBox.Icon.Question,
-            parent=self,
-        )
-        mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+        mbox = MBoxQuestionDelete(icon=AppQMessageBox.Icon.Question, parent=self)
+
+        if PLATFORM != 'Windows':
+            mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         mbox.isMulti = bool(len(indexes) > 1)
         mbox.possibleRemark = self.listView.selectedRuleText()
@@ -1305,15 +1304,11 @@ class UserRoutingTableView(Mixins.QTranslatable, AppQTableView):
 
             self.flushAll()
 
-        if PLATFORM == 'Windows':
-            # Windows
-            mbox = MBoxQuestionDelete(icon=AppQMessageBox.Icon.Question)
-        else:
-            # macOS & linux
-            mbox = MBoxQuestionDelete(
-                icon=AppQMessageBox.Icon.Question,
-                parent=self,
-            )
+        # The completion callback uses this view. Native view destruction must
+        # also end the pending confirmation, even while its window survives.
+        mbox = MBoxQuestionDelete(icon=AppQMessageBox.Icon.Question, parent=self)
+
+        if PLATFORM != 'Windows':
             mbox.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
 
         mbox.isMulti = bool(len(indexes) > 1)

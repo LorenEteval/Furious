@@ -30,6 +30,9 @@ some service owners; that construction detail does not make every view an indepe
 - Models, delegates, headers, menus, actions, animations, spinners, WebEngine/map objects, timers, workers, and replies
   each need one owner. Persistent widgets connect once and refresh state; visibility may pause rendering/animation, not
   application-level log draining, traffic collection, or other service ownership.
+- A pending confirmation whose callback mutates a view belongs to that exact view on every platform. A shared
+  window parent can outlive the view, and an unparented prompt can outlive both. Native view destruction must end
+  the prompt without running its mutation; `test_qt_lifetime.py` exercises this with the containing window still alive.
 - Model notifications describe the real source mutation. Structural replacement may legitimately use a model reset;
   metadata-only test results should update the exact cell. Do not use resets/full repaints to mask broken mapping or
   missing identity restoration. Test selected identities and the current keyboard index independently.

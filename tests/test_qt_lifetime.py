@@ -23,7 +23,9 @@ from Furious.Backends.ExternalCore.Editor import ExternalCoreEditor
 from Furious.Backends.Hysteria1.Editor import Hysteria1Editor
 from Furious.Backends.Hysteria2.Editor import Hysteria2Editor
 from Furious.Backends.Hysteria2.TunSettingsDialog import Hysteria2TunSettingsDialog
+from Furious.Backends.Xray.AssetListView import XrayAssetListView
 from Furious.Backends.Xray.RoutingWindow import (
+    UserRoutingTableView,
     RoutingDocumentationURL,
     RoutingPreviewDialog,
     RoutingRuleEditDialog,
@@ -37,6 +39,10 @@ from Furious.Backends.Xray.VlessEditor import VlessEditor
 from Furious.Backends.Xray.VmessEditor import VmessEditor
 from Furious.Actions.Import import ImportURIsProgressDialog
 from Furious.Frozenlib import Mixins
+from Furious.Models import CoreConfiguration, ServerProfile
+from Furious.Repository import Storage
+from Furious.Widget.ServerTableView import ServerTableView
+from Furious.Widget.SubscriptionTableView import SubscriptionTableView
 from Furious.Qt import (
     AppQAction,
     AppQDialog,
@@ -72,6 +78,8 @@ from tests.support import (
 )
 
 import gc
+from pathlib import Path
+import tempfile
 import unittest
 from unittest import mock
 import weakref
@@ -248,6 +256,93 @@ class QtLifetimeTest(unittest.TestCase):
                 del action, menu, owner
 
         self.assertAllDestroyed(references, destroyed, 60)
+
+    def testViewConfirmationsDieWithTheirCallbackOwner(self):
+        """Deleting a view also destroys every prompt that could mutate it."""
+        profile = ServerProfile.fromConfiguration(
+            CoreConfiguration({'type': 'fixture'}), {'displayName': 'Keep'}
+        )
+        profiles = [profile]
+        subscriptions = {'fixture': {'remark': 'Keep', 'enabled': False}}
+        routings = {'fixture': {'remark': 'Keep', 'rules': []}}
+
+        with (
+            isolatedSettings(),
+            mock.patch.object(Storage, 'UserServers', lambda: profiles),
+            mock.patch.object(Storage, 'UserSubs', lambda: subscriptions),
+            mock.patch.object(Storage, 'UserRoutings', lambda: routings),
+            tempfile.TemporaryDirectory() as directory,
+            mock.patch(
+                'Furious.Backends.Xray.AssetListView.XRAY_ASSET_DIR', Path(directory)
+            ),
+        ):
+            asset = Path(directory) / 'fixture.dat'
+            asset.write_bytes(b'keep')
+
+            for platform in ('Windows', 'Linux', 'Darwin'):
+                for family in (
+                    'servers',
+                    'subscriptions',
+                    'routings',
+                    'assetDelete',
+                    'assetOverwrite',
+                ):
+                    with self.subTest(platform=platform, family=family):
+                        references = []
+                        destroyed = []
+                        for _ in range(20):
+                            parent = QWidget()
+                            if family == 'servers':
+                                view = ServerTableView(
+                                    parent=parent,
+                                    configurationEditorFactory=QWidget,
+                                    qrCodeWindowFactory=QWidget,
+                                    importActionsFactory=tuple,
+                                )
+                            elif family == 'subscriptions':
+                                view = SubscriptionTableView(parent=parent)
+                            elif family == 'routings':
+                                view = UserRoutingTableView(parent=parent)
+                            else:
+                                view = XrayAssetListView(parent=parent)
+
+                            view.setCurrentIndex(view.model().index(0, 0))
+                            module = type(view).__module__
+                            with mock.patch(module + '.PLATFORM', platform):
+                                if family == 'assetOverwrite':
+                                    view.appendNewItem(str(asset))
+                                else:
+                                    view.deleteSelectedItem()
+
+                            confirmation = next(iter(AppQDialog._openDialogs.values()))
+                            references.append(weakref.ref(confirmation))
+                            confirmation.destroyed.connect(
+                                lambda *_args: destroyed.append(True)
+                            )
+
+                            if isinstance(view, ServerTableView):
+                                view.cleanup()
+                                view.configurationEditor.deleteLater()
+
+                            try:
+                                view.deleteLater()
+                                processQtEvents()
+                                self.assertFalse(isValid(view))
+                                self.assertFalse(isValid(confirmation))
+                                self.assertTrue(isValid(parent))
+                                self.assertEqual(profiles, [profile])
+                                self.assertIn('fixture', subscriptions)
+                                self.assertIn('fixture', routings)
+                                self.assertEqual(asset.read_bytes(), b'keep')
+                            finally:
+                                if isValid(confirmation):
+                                    confirmation.reject()
+                                parent.deleteLater()
+                                processQtEvents()
+
+                            del confirmation, view, parent
+
+                        self.assertAllDestroyed(references, destroyed, 20)
 
     def testReopenedDialogSurvivesPreviousPresentationCleanup(self):
         """A queued finish must not release the next asynchronous presentation."""
