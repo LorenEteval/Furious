@@ -30,7 +30,9 @@ remains in each implementation.
   until it returns a valid launch; the caller cannot recover an object hidden by construction failure or an invalid
   result shape. After valid transfer the caller owns that exact runtime even if start raises. Keep failure evidence
   for all three boundaries when changing factory contracts; returning no runtime after acquisition loses cleanup
-  authority.
+  authority. Current result validation raises on a wrong launch/runtime type without a generic disposal protocol
+  for that invalid value. Do not describe shape rejection alone as resource rollback; test a resource-bearing
+  invalid result if changing this boundary.
 - Plugin/model data is untrusted at the boundary even though installed code is trusted to execute. Validate types,
   ownership, required fields, and QObject validity before publishing results.
 - API and model layers never import concrete plugins. Bundled backends/extensions obey the public lifecycle; their

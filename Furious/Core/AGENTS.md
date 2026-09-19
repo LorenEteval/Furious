@@ -22,7 +22,9 @@ connection policy remains outside it.
   escalation in ownership tests.
   Keep an independently observable outstanding child/handle when release fails; forgetting it cannot satisfy
   this contract. Review `MultiprocessingRuntime._closeProcess()` together with service lease release when changing
-  failure reporting or retry ownership, and exercise a child that survives both escalation attempts.
+  failure reporting or retry ownership. A stopped child can still have an unclosed process handle; retry must
+  finish that release without restarting execution or publishing a second exit. Exercise failed escalation and
+  failed handle close as separate cases.
 - Process-backed runtimes own exit monitoring and interpretation: publish one typed terminal event per execution,
   preserving the raw exit and whether stop was requested. `isRunning()` is a passive liveness query and must not
   consume or dispatch lifecycle events.

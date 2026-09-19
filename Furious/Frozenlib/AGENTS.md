@@ -37,7 +37,9 @@ boundaries, not a license for unrelated application orchestration to accumulate 
 - `CleanupOnExit` and translation/theme/connection pools are weak registries, not owners. Native destruction must
   remove membership even while another Python reference retains an invalid wrapper. Cleanup normally de-duplicates
   by type; repeated instances with separate resources require per-instance registration or a containing cleanup
-  stage. Membership neither keeps active objects alive nor proves every instance drained.
+  stage. Membership neither keeps active objects alive nor proves every instance drained. When a callback keeps
+  resources after failure, inspect the containing shutdown caller as well as the registry; registry iteration is
+  not an automatic retry scheduler.
 - `AppResources.py` is generated from `Resources.qrc` and referenced assets. Change the manifest/input files and
   regenerate with the compatible PySide6 resource compiler; never hand-edit generated resource code.
 - Verify every affected OS branch with mocked host calls, plus persistence-on-failure, bounded cleanup, import-time

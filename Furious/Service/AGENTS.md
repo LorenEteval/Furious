@@ -101,7 +101,9 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   cancellation defers terminal deletion until the active start frame unwinds.
   Failed runtime release transfers its lease from the terminal worker to the scheduler before worker deletion.
   Keep the port and concurrency slot reserved until a later drain/cancel/shutdown retries cleanup successfully;
-  final shutdown reports remaining leases and preserves retry ownership. Completion is not proof of resource release.
+  final shutdown reports remaining leases and preserves retry ownership. Publish completion only after that
+  transfer: a result listener may synchronously submit another job, cancel work, or shut down the manager. Those
+  listeners must see the still-reserved resources. Completion is not proof of resource release.
 
 ## Verification
 

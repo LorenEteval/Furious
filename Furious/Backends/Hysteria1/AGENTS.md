@@ -8,8 +8,9 @@ exists to preserve Hysteria 1's legacy flat schema and lifecycle without importi
 - Preserve tolerated legacy types, upstream field names, absent defaults, and unknown combo values through mapping
   and untouched-editor round trips. URI round trips cover supported share-link fields only. Explicit user edits may
   normalize the represented field; runtime validation may reject values that observational loading must preserve.
-- Subscription import is allowed only through supported Hysteria 1 protocol handlers. Subscription identity and test
-  metadata stay in `ServerProfile`, and validation diagnostics never disclose passwords or complete links.
+- Preserve the distinction between Hysteria 1's ACL/MMDB launch inputs and its flat connection mapping. A routing
+  change must be checked through both the serialized document and the extra prepared launch inputs; a JSON-only
+  assertion cannot establish which routing the child received. URI parsing remains in this backend's handler.
 - This backend participates in application tun2socks through the shared startup workflow; its factory does not own
   host routing or connection commit. Keep the factory's unsupported routing/TUN combination rejection before
   execution acquisition; do not silently substitute Global routing or borrow native TUN from Hysteria 2.

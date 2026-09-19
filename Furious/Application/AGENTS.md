@@ -19,9 +19,10 @@ boundary between the outer child-process supervisor and the inner application ev
   cleanup stack releases completed stages; it cannot discover half-built controllers, UI, logging handlers, or
   native listeners. Keep each successful sub-acquisition reachable by the stage's failure cleanup before beginning
   the next fallible constructor; assigning several constructed owners together does not provide this guarantee.
-  Restore logging configuration as well as closing handlers. Retain a controller whose final resource cleanup
-  fails so another cleanup pass can reach it; schedule native deletion only after successful shutdown.
-  Run service shutdown while its owners remain valid; scheduling `deleteLater()` is not evidence that workers or native resources have finished.
+  Restore logging configuration as well as closing handlers. A failed controller shutdown currently retains that
+  controller, but the consumed application cleanup stage does not automatically retry it. Preserve the owner and
+  report incomplete cleanup; any retry policy must specify who invokes it before dependent owners are dismantled.
+  Schedule native deletion only after successful shutdown. `deleteLater()` does not wait for workers or resources.
   Review cooperative pool drains separately from the cleanup stack's ordering guarantees. The application pool's
   timed wait logs unfinished work, whereas subscription preparation waits synchronously after its diagnostic timeout.
   Neither policy can be inferred from reverse cleanup order or from the name of a shutdown method.

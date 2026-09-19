@@ -14,7 +14,9 @@ protocol and is not a general-purpose utility bucket.
   Preserve semantic exit codes and original exception/traceback context; crash-log failure is secondary.
 - The parent entry point joins only the child it created and shows the fallback Qt report only for a nonzero result.
   That join follows the GUI session lifetime; it is not a short startup-readiness deadline. Tests must bound their
-  own waits and reap their exact child if the fixture fails. Never discover or terminate processes by name, and keep
+  own waits and reap their exact child if the fixture fails. A child stuck in cooperative worker cleanup can
+  therefore keep the parent join pending; there is no general shutdown watchdog here. Do not turn a test timeout
+  into an undocumented production kill policy. Never discover or terminate processes by name, and keep
   normal/source/packaged command-line entry points equivalent.
 - Shared crash status is a synchronized Boolean plus the child's semantic exit result; set the flag only after the
   diagnostic file is written successfully. Text may include retained logs plus a traceback, so the Boolean channel

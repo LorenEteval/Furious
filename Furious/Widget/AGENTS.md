@@ -41,8 +41,10 @@ view an independent workflow authority.
 - Model notifications describe the real source mutation. Structural replacement may legitimately use a model reset;
   metadata-only test results should update the exact cell. Observers may run synchronously at notification boundaries:
   expose consistent source contents, activation, and index/deleted fields before publishing completion. A persistent
-  model index is valid only within its model and can be invalidated by removal/reset; use domain IDs across collection/model replacement. Do not use resets or
-  full repaints to mask broken mapping. Test selected identities and the current keyboard index independently.
+  model index is valid only within its model and can be invalidated by removal/reset; use domain IDs across
+  collection/model replacement. For a non-reset update, preserve the model's persistent-index mapping as well as
+  the view's selected IDs. Do not use resets or full repaints to mask broken mapping. Test selected identities and
+  the current keyboard index independently.
 - Bulk profile mutations validate/prepare a batch before beginning structural notifications. Resolve captured IDs
   again after confirmation and between deferred batches, report actual source ranges, and preserve activation before
   observers see completed removal. Forward bulk insert/delete operations through the model instead of replaying a

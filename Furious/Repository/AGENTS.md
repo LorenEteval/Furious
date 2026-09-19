@@ -25,7 +25,9 @@ outside it.
 - Stage fallible decode/migration before live mutation. Subscription reconciliation currently belongs to
   `Furious/Service/SubscriptionSync.py` and commits through the compatibility live collection: matched managed profiles
   retain object/profile identity and local metadata, removed profiles become stale, and unrelated groups remain
-  intact. Do not add a second reconciliation algorithm here merely because persistence belongs to this scope.
+  intact. The source revision rejects connection/ownership changes during preparation, while newer local metadata
+  is preserved from the live matched profile at commit. Do not replace that merge with the worker's entire snapshot
+  or add a second reconciliation algorithm here merely because persistence belongs to this scope.
 - Distinguish a live-collection commit from serialization/flush and subsequent controller effects. The compatibility
   collection can change before it is flushed; a successful in-memory synchronization is not proof of an atomic disk
   transaction. Preserve explicit flush/cleanup behavior and report failures at the boundary that actually failed.

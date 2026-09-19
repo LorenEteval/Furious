@@ -38,8 +38,11 @@ and test-tier selection; test convenience never weakens a production invariant.
   Stylesheet selector counts are not rendering invariants: shared rules and component overrides can both be valid.
 - Prefer exact state, signal counts, destroyed signals, weak references, registry/child counts, thread/process/handle
   ownership, and final exit status. A mock cleared from its owner does not prove termination: failure-to-reap tests
-  must independently retain and inspect the fake process. For Qt API compatibility, a permissive Python fake cannot
-  validate a real binding's accepted argument types; exercise a harmless real object at that boundary.
+  must independently retain and inspect the fake process. Include stopped-but-undisposed resources: false
+  liveness does not prove that handles, reader threads, callbacks, or reserved ports were released. Reentrant
+  result observers must see retained cleanup ownership before admitting replacement work. For Qt API compatibility,
+  a permissive Python fake cannot validate a real binding's accepted argument types; exercise a harmless real
+  object at that boundary.
   RSS/handle trends and repeated lifecycle batches belong in stress tiers; `gc.collect()` is diagnostic at batch
   boundaries, never a production fix or per-cycle requirement.
 

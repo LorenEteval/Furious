@@ -47,10 +47,10 @@ state.
   secret-bearing QR content. Reuse plugin export semantics and never log the encoded URI.
 - Search debounce belongs to the persistent page: clear/submit cancels pending work, hide stops it, and show applies
   only the current query. Find shortcuts are page-scoped; document editing shortcuts stay with their document widget.
-- Optional log freezing is presentation policy, not a collector lifecycle. Pause/Resume Updates is currently disabled
-  in source; its restoration notes and commented cases in `tests/test_ui_behavior.py` are design references, not
-  executed coverage. If restored, verify frozen presentation/filter behavior and catch-up after clear, eviction, and
-  navigation while collection stays bounded. Do not present disabled behavior as an active product guarantee.
+- Log freezing is currently commented out. Its restoration notes and commented cases in
+  `tests/test_ui_behavior.py` are design references, not executed coverage. If restored, keep freezing a
+  presentation policy and verify filtering/catch-up after clear, eviction, and navigation against the live
+  bounded collector. Do not infer active features or coverage from preserved restoration code.
 - Log views keep per-filter cursors and catch up on visibility; metrics pages derive series from shared raw history.
   Switching pages, ranges, or filters must not reset collection or create a second history. Metric buckets use the
   shared monotonic timeline: moving the visible range must not regroup unchanged historical samples. Preserve missing

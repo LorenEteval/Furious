@@ -42,8 +42,9 @@ structure and human-reviewed translations.
 ## Verification
 
 - Run extraction for every affected language, inspect collision/unreviewed diagnostics and the complete catalog
-  diff, then run it again to check stability. Collision and write failures are logged rather than guaranteed to
-  produce a nonzero process exit; exit status alone is not validation. Exercise runtime lookup and UI retranslation
+  diff, then run it again to check stability. Idempotent output proves generator stability, not translation quality
+  or runtime reachability; verify the changed keys through their controls or lookup paths. Collision and write
+  failures are logged rather than guaranteed to produce a nonzero process exit; exit status alone is not validation. Exercise runtime lookup and UI retranslation
   under explicit locales; `tests/test_models_and_services.py` and `tests/test_ui_behavior.py` cover extraction/UI
   consumers.
 - Translation generation is a scoped repository mutation: do not run it as an incidental formatter, and do not

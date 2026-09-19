@@ -50,7 +50,8 @@
 - Keep one authority for each state and one responsible owner for each resource. UI surfaces observe shared
   controllers/models; presentation snapshots must not become competing connection, routing, System Proxy, TUN,
   subscription, or test authorities. State transitions, result freshness, and physical resource release are separate
-  claims: prove each at its owning boundary.
+  claims: prove each at its owning boundary. When cleanup can fail, trace both the retained resource and the caller
+  responsible for another attempt; retryable cleanup does not establish that application shutdown will retry it.
 - Treat persisted profiles and plugin documents as input. Prepare runtime, routing, probe, and TUN state on explicit
   copies unless an API deliberately mutates storage. A failed pre-commit stage leaves persistence unchanged; a failed
   post-commit side effect is reported without pretending the commit rolled back. Identify the unit of commit:

@@ -39,6 +39,11 @@ compatibility paths.
 - `SettingsController` is the shared policy path used by Home, Settings, tray, and platform integration. Startup
   registration persists only after host success; other preferences may apply immediately or on the next connection.
   Preserve each setting's actual application timing instead of imposing one transaction order on all preferences.
+- A completed disconnect restores usable UI state even if runtime cleanup failed. `Disconnected` and an empty
+  active-runtime snapshot therefore do not prove physical release: the service retains failed leases and blocks
+  new acquisition while they remain. Final controller shutdown surfaces unresolved cleanup and preserves the
+  next-start preference. Check these outcomes independently in `tests/test_controllers.py` and
+  `tests/test_runtime_lifecycle.py`.
 - System Proxy configuration is best effort. Its helper logs host failures; an explicit False return does not roll
   back an otherwise usable committed runtime or prevent Connected. Preserve exception-path recovery separately.
   Exercise actual helper results with mocked OS boundaries; Connected does not guarantee the OS proxy was applied.

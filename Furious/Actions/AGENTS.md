@@ -24,8 +24,9 @@ owned commands and presentation without becoming a workflow authority.
 
 - `AppQAction.callback` is a deliberate strong reference. The action owner must not outlive a captured receiver, and a
   transient/repeated receiver uses the weak named-method facilities required by `Furious/Qt/AGENTS.md`.
-- Clipboard text, files, QR images, share links, and plugin results are untrusted and may contain credentials. Bound
-  diagnostic excerpts and never log or echo a complete secret-bearing payload merely to explain a parse failure.
+- Clipboard text, files, QR images, share links, and plugin results may contain credentials. A character limit is
+  not redaction: avoid echoing secret-bearing input in failure dialogs as well as logs. Inspect existing error
+  presentation when changing import validation; the short-input clipboard error path currently includes its input.
 - Screen capture and QR decoding currently run synchronously; batching the resulting imports does not make capture
   interruptible. If moved to workers, transfer data through an owned GUI-thread continuation without retaining
   transient windows. Each screen-capture action owns a separate native capture handle, including separate tray/page

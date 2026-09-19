@@ -10,7 +10,9 @@ generic default.
   asset capabilities it actually supports. Shared code dispatches capabilities; a built-in backend with no
   statistics, URI export, or download-test implementation remains valid.
 - The complete persisted core document is authoritative. Prepare logging, routing, endpoints, probes, and TUN on an
-  independent runtime copy; failed preparation must not mutate the stored profile.
+  independent runtime copy; failed preparation must not mutate the stored profile. The registry passes the
+  supplied connection document through to the factory, so caller isolation is part of the contract. Inspect both
+  normal connection preparation and temporary probes when changing a mutating factory.
 - Structured editors are partial projections. Loading is observational except for a narrow documented migration;
   untouched save preserves unknown fields/values and absent defaults. Editing one represented leaf preserves unknown
   siblings and unrelated branches. URI export represents the codec's supported projection, not a lossless backup

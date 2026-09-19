@@ -32,9 +32,10 @@ exceptions; it does not define the source test suite or imply that every package
   newer matrix rows cannot prove that floor. Likewise, successful Qt imports do not prove event-loop or binding-call
   compatibility. Default-to-newest dependencies/assets still need recorded provenance and deterministic assertions
   at ABI/feature boundaries; pin or checksum external build tools where the workflow establishes that boundary.
-- Inspect shell defaults per workflow/job: matrix and publication workflows set Bash, including Windows jobs;
-  the source-test workflow uses runner defaults. Select PowerShell explicitly when native Windows paths/process
-  APIs need it, and keep OS/architecture conditions on the step that owns the difference.
+- Resolve the effective shell at the step, including workflow/job defaults and explicit overrides. Matrix and
+  publication workflows default to Bash, while native Windows dependency/architecture steps explicitly use PowerShell;
+  source tests use runner defaults. Syntax and environment assignment must match that effective shell. Keep
+  OS/architecture conditions on the step that owns the difference.
 - Flatpak checks run inside the installed sandbox, inspect the application's required native closure rather than every
   unused Qt plugin, and fail before upload. Do not mask an actually loadable plugin/runtime mismatch with a broad allowlist.
 - Generated helper files, downloaded SDKs/assets, build directories, and local bundles are disposable workflow inputs;

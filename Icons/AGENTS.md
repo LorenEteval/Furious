@@ -26,4 +26,6 @@ resource-manifest contract; it does not govern general UI layout.
   under both themes, high DPI, relevant sizes, disabled/selected states, and platform packaging where applicable. Deployment
   icons also have direct filesystem consumers in `Deploy.py`; a resource alias search alone cannot prove a PNG is
   unused. Keep direct installer/application icons in verification alongside Qt aliases: a successful `pyside6-rcc`
-  invocation proves resource generation, not deployment-icon inclusion or correct themed rendering.
+  invocation proves resource generation, not deployment-icon inclusion or correct themed rendering. Check the
+  generated module through an existing application resource consumer as well as the manifest: resolving a file
+  on disk does not prove its compiled Qt resource path exists.

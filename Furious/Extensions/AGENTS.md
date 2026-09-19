@@ -23,9 +23,11 @@ is bundled.
 - Decoder output is descriptive, not a repository transaction. Supplied names and upstream IDs are input to profile
   construction, not permission to overwrite local identity or grant remote ownership. It cannot mutate a group,
   cancel tests, reconnect, or publish UI state; those decisions remain at the import/manager commit boundaries.
-  Test recognized-empty, wholly unsupported, and mixed-validity payloads separately so decoder matching is not
-  confused with successful profile import or authorization to clear an existing group. The standard share-link
-  decoder treats blank/comment-only content as a mismatch; an empty result from a different decoder needs its own
+  Preserve duplicate item order through decoding: the importer assigns occurrence keys when upstream IDs or
+  connection fingerprints repeat. Deduplicating at the envelope layer can change which stored profile keeps local
+  metadata. Test recognized-empty, wholly unsupported, mixed-validity, and duplicate payloads separately so
+  decoder matching is not confused with successful import or authorization to clear an existing group. The standard
+  share-link decoder treats blank/comment-only content as a mismatch; an empty result from a different decoder needs its own
   import/reconciliation policy, not an assumption borrowed from this format.
 - Keep bundled registration deterministic, side-effect-light, and discoverable in source, wheel, and Nuitka builds.
   Test format selection/fallback, malformed and secret-bearing input, duplicate occurrence identity, unsupported

@@ -31,8 +31,10 @@ never live persistence, Qt presentation, plugin discovery, or workflow execution
   deterministic JSON-compatible values and reject non-finite numbers. A metadata edit need not invalidate connection
   testing. Equal fingerprints do not imply equal profile IDs: independently stored profiles may describe identical
   connections. A fingerprint also cannot distinguish an old request from a newer request for the same document;
-  workflow generation/cancellation remains the caller's responsibility. Do not merge metadata, ownership, or
-  selection merely to deduplicate execution work.
+  workflow generation/cancellation remains the caller's responsibility. Fingerprints are connection comparisons,
+  not profile IDs, but the importer embeds them in persisted subscription matching keys. An algorithm/input change
+  therefore requires reviewing matching-key compatibility and test-result freshness together. Do not merge metadata, ownership, or selection merely
+  to deduplicate execution work.
 - Subscription membership (`subscriptionSource`) and remote ownership (`subscriptionManaged` plus its matching key)
   are separate. Legacy migration may infer ownership where the flag was absent; current locally grouped profiles
   must remain local. Preserve that distinction through copies, moves, and metadata aliases.

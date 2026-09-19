@@ -23,8 +23,9 @@ place.
 - A `ServerProfile` keeps connection data separate from metadata such as display name, stable profile ID, subscription
   ownership, latency, and speed. Independent stored copies get new identity; runtime copies preserve identity while
   isolating mutable connection preparation.
-- Profile ID, subscription source/key, connection fingerprint, display text, object identity, and row position are
-  distinct. Pick the identity required by the operation and reject stale async work before write-back.
+- Keep identity checks at the boundary that can still reject the operation: the repository for stored identity,
+  the workflow for request freshness, and the presenter for current model mapping. A valid profile ID does not
+  authorize an old callback to mutate a replacement operation. Models defines the individual identity/copy contracts.
 - Repository collections are live compatibility views owned once by `Storage`; do not wrap them in a competing
   authoritative collection. Prefer named repository mutations for new behavior so validation and commit points remain
   explicit.

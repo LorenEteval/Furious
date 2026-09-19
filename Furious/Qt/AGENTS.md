@@ -57,7 +57,8 @@ behavior, and lifetime primitives; pages and services consume them without creat
   are runtime contracts, so renames must update registrations and tests. Weak dispatch itself does not marshal
   arbitrary worker calls to the GUI thread; choose an explicit queued owner-thread delivery boundary. A surviving
   Python wrapper can already be natively invalid, so callback freshness and `shiboken6.isValid()` address different
-  failure modes. Neither replaces the strong owner required while asynchronous UI remains active. For independent
+  failure modes. Weak dispatch neither cancels execution nor checks workflow generations; those remain with the
+  workflow owner. None of these checks replaces the strong owner required while asynchronous UI remains active. For independent
   sender/receiver trees, test both destruction orders: receiver cleanup must disconnect its edge, and sender cleanup
   must retire receiver-side tracking without keeping a signal wrapper or sender alive.
 - `AppQAction.callback` is strong by design, so its owner must not outlive the captured receiver; construction alone

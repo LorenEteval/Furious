@@ -33,7 +33,9 @@ implementations can satisfy without importing application composition or concret
   from process codes and readiness timeouts. Bounded stop/dispose is a requirement to verify at each implementation,
   not a guarantee supplied by the base class. `Disposed` describes terminal API state; prove release using the
   implementation's actual resources, without assuming every runtime owns a subprocess. Define how incomplete
-  cleanup remains observable to its owner and report violations separately from the required contract.
+  cleanup remains observable to its owner and report violations separately from the required contract. Do not
+  impose a Boolean release convention on `CoreRuntime.stop()` or `dispose()` merely because the service lease
+  returns a Boolean: the lease combines exceptions and passive liveness into its own release outcome.
 - Verify cheap/import-independent contracts plus representative runtime, storage, editor, application-exit,
   encoding, and configuration implementations. Update this guide when a contract intentionally changes, together
   with all implementers and compatibility tests. Start with `tests/test_interface.py` and
