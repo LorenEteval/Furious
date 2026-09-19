@@ -21,13 +21,25 @@ from __future__ import annotations
 
 from Furious.Backends import OFFICIAL_PLUGIN_TYPES
 from Furious.Backends.Xray.RoutingWindow import RoutingRulesDialog
+from Furious.Backends.Xray.AssetListView import XrayAssetListView
+import Furious.Backends.Xray.AssetListView as assetModule
 from Furious.Plugins import blankProfile, initializePluginRegistry
-from Furious.Qt import AppQDialog, AppQMessageBox, ThemeTransition, connectWeakly
+from Furious.Qt import (
+    AppQAction,
+    AppQMenu,
+    AppQDialog,
+    AppQMessageBox,
+    ThemeTransition,
+    connectWeakly,
+)
+from Furious.Qt.HttpGetManager import HttpGetManager
+from Furious.Service.EndpointInfoService import ProxyEndpointHttpClient
 from Furious.Widget.ServerTableView import ServerTableView
 
 import PySide6
 
 from PySide6 import QtCore
+from PySide6.QtNetwork import QNetworkReply
 from PySide6.QtWidgets import QWidget
 
 from shiboken6 import isValid
@@ -44,6 +56,8 @@ from collections import Counter
 import argparse
 import json
 import weakref
+from pathlib import Path
+import tempfile
 
 PROTOCOL_PATTERNS = {
     'alternating': ('hysteria2', 'vless'),
@@ -236,6 +250,78 @@ class _SignalEndpoint(QtCore.QObject):
         self.calls += 1
 
 
+class _PendingReply(QNetworkReply):
+    """Exercise request destruction without external network traffic."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.open(QtCore.QIODevice.OpenModeFlag.ReadOnly)
+
+    def abort(self):
+        self.setFinished(True)
+        self.finished.emit()
+
+    def readData(self, maximumLength):
+        return b''
+
+
+class _RequestPayload:
+    """Expose whether pending request context still owns plain operation data."""
+
+
+def runNetworkProbe(iterations=100):
+    """Verify native teardown releases both reply registries under compilation."""
+    application()
+    result = {}
+
+    for managerType, contextAttribute in (
+        (HttpGetManager, '_replyContexts'),
+        (ProxyEndpointHttpClient, '_pendingRequests'),
+    ):
+        for terminal in ('finished', 'replyDestroyed', 'managerDestroyed'):
+            references = []
+            destroyed = []
+
+            for _ in range(iterations):
+                manager = managerType()
+                payload = _RequestPayload()
+                reply = _PendingReply(manager)
+                references.extend((weakref.ref(payload), weakref.ref(reply)))
+                reply.destroyed.connect(lambda *_args: destroyed.append(True))
+                manager.get = lambda _request: reply
+
+                if isinstance(manager, HttpGetManager):
+                    manager.webGET('https://invalid.test', payload=payload)
+                else:
+                    manager.request('https://invalid.test', payload)
+
+                del manager.get
+                del payload
+
+                if terminal == 'finished':
+                    reply.finished.emit()
+                elif terminal == 'replyDestroyed':
+                    reply.deleteLater()
+                else:
+                    manager.deleteLater()
+
+                processQtEvents()
+                assert not isValid(reply)
+                assert not getattr(manager, contextAttribute)
+
+                if isValid(manager):
+                    manager.deleteLater()
+                    processQtEvents()
+
+                del reply, manager
+
+            assert len(destroyed) == iterations
+            assert all(reference() is None for reference in references)
+            result[managerType.__name__ + ':' + terminal] = iterations
+
+    return result
+
+
 def runInfrastructureProbe(iterations=100):
     """Check signal, mask, and animation ownership under real Qt destruction."""
     application()
@@ -385,6 +471,75 @@ def runInfrastructureProbe(iterations=100):
     return result
 
 
+def runConfirmationProbe(iterations=100):
+    """Check native menu ownership and representative view-owned prompts."""
+    application()
+    result = {}
+
+    for explicitOwner in (False, True):
+        references = []
+        destroyed = []
+        for _ in range(iterations):
+            owner = QWidget()
+            menu = AppQMenu(parent=owner if explicitOwner else None)
+            action = AppQAction('Menu fixture', menu=menu, parent=owner)
+            references.append(weakref.ref(menu))
+            menu.destroyed.connect(lambda *_args: destroyed.append(True))
+            action.deleteLater()
+            processQtEvents()
+            assert not isValid(action)
+            assert isValid(menu) == explicitOwner
+            owner.deleteLater()
+            processQtEvents()
+            del action, menu, owner
+
+        assert len(destroyed) == iterations
+        assert all(reference() is None for reference in references)
+        result['widgetOwnedMenu' if explicitOwner else 'actionOwnedMenu'] = iterations
+
+    originalAssetDirectory = assetModule.XRAY_ASSET_DIR
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            assetModule.XRAY_ASSET_DIR = Path(directory)
+            asset = Path(directory) / 'fixture.dat'
+            asset.write_bytes(b'keep')
+            for overwrite in (False, True):
+                references = []
+                destroyed = []
+                for _ in range(iterations):
+                    owner = QWidget()
+                    view = XrayAssetListView(parent=owner)
+                    view.setCurrentIndex(view.model().index(0, 0))
+                    if overwrite:
+                        view.appendNewItem(str(asset))
+                    else:
+                        view.deleteSelectedItem()
+                    confirmation = next(iter(AppQDialog._openDialogs.values()))
+                    references.append(weakref.ref(confirmation))
+                    confirmation.destroyed.connect(
+                        lambda *_args: destroyed.append(True)
+                    )
+                    view.deleteLater()
+                    processQtEvents()
+                    assert not isValid(view) and not isValid(confirmation)
+                    assert isValid(owner)
+                    assert asset.read_bytes() == b'keep'
+                    owner.deleteLater()
+                    processQtEvents()
+                    del confirmation, view, owner
+
+                assert len(destroyed) == iterations
+                assert all(reference() is None for reference in references)
+                assert not AppQDialog._openDialogs
+                result[
+                    'assetOverwriteOwnerFirst' if overwrite else 'assetDeleteOwnerFirst'
+                ] = iterations
+    finally:
+        assetModule.XRAY_ASSET_DIR = originalAssetDirectory
+
+    return result
+
+
 def main():
     """Run the probe as a standalone source or Nuitka executable."""
     parser = argparse.ArgumentParser()
@@ -395,6 +550,8 @@ def main():
     parser.add_argument('--close-method', choices=CLOSE_METHODS, default='reject')
     arguments = parser.parse_args()
 
+    print(json.dumps(runConfirmationProbe(arguments.iterations), sort_keys=True))
+    print(json.dumps(runNetworkProbe(arguments.iterations), sort_keys=True))
     print(json.dumps(runInfrastructureProbe(arguments.iterations), sort_keys=True))
 
     print(

@@ -223,6 +223,15 @@ A null protected-list count means Nuitka does not expose that diagnostic; inspec
 installed package configuration and require zero live wrappers and registry entries
 instead.
 
+The same standalone fixture also checks both HTTP clients across normal completion, early reply deletion, and
+manager-first deletion, retaining invalid wrappers deliberately to prove request context is released. It also
+checks action-owned versus explicitly widget-owned menus and representative asset delete/overwrite confirmations
+whose views are destroyed while their containing widget remains valid. Keep this harness self-contained so its
+compiled import graph does not pull in the full unittest modules.
+`test_qt_lifetime.py` covers 20 cycles for each of five confirmation workflows under each mocked Windows/Linux/macOS
+branch, plus 30 action/menu cycles for each ownership model. `test_service_runtime.py` additionally rejects duplicate
+HTTP completion and checks 30 early-deletion cycles per client without per-cycle garbage collection.
+
 ### Evolution regressions and CI
 
 `test_repository_contracts.py` verifies all-or-nothing hydration and preservation of
