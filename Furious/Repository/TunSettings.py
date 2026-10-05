@@ -29,6 +29,8 @@ __all__ = ['UserTUNSettings']
 
 logger = logging.getLogger(__name__)
 
+# Preserve the legacy tun2socks key and Base64/JSON format used by 0.8.2.
+# These values remain tun2socks-specific; sing-tun owns a separate document.
 registerAppSettings('CustomTUNSettings')
 
 

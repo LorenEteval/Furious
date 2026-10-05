@@ -22,6 +22,7 @@ from __future__ import annotations
 from .MultiprocessingRuntime import MultiprocessingRuntime, ProcessLaunchSpec
 from .ProcessOutput import MsgQueue, ProcessOutputRedirector
 from .Tun2socks import Tun2socks
+from .SingTUN import SingTUN
 
 __all__ = [
     'MultiprocessingRuntime',
@@ -29,4 +30,5 @@ __all__ = [
     'ProcessLaunchSpec',
     'ProcessOutputRedirector',
     'Tun2socks',
+    'SingTUN',
 ]

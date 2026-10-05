@@ -34,6 +34,7 @@ from Furious.Backends.SocksURI import (
     parseSocksURI,
     serializeSocksURI,
 )
+from Furious.Frozenlib.SocksProxy import socksURL
 
 from typing import Union, Tuple
 
@@ -1575,6 +1576,49 @@ class ConfigXray(CoreConfiguration):
 
             return ''
 
+    def applicationTUNProxy(self) -> str:
+        """Validate Xray's selected listener and carry its optional SOCKS auth."""
+        endpoint = socksURL(self.socksProxy())
+
+        for inbound in self.get('inbounds', []):
+            if inbound.get('protocol') != 'socks':
+                continue
+
+            settings = inbound.get('settings', {})
+
+            if settings.get('udp', False) is not True:
+                raise ValueError(
+                    'Application TUN requires SOCKS UDP on the selected Xray listener'
+                )
+
+            auth = settings.get('auth', 'noauth')
+
+            if auth == 'noauth':
+                return endpoint
+            if auth != 'password':
+                raise ValueError('Unsupported Xray SOCKS authentication')
+
+            accounts = settings.get('accounts', [])
+
+            if not accounts or not isinstance(accounts[0], dict):
+                raise ValueError('Xray SOCKS authentication requires an account')
+
+            user, password = accounts[0].get('user', ''), accounts[0].get('pass', '')
+
+            if not isinstance(user, str) or not isinstance(password, str):
+                raise ValueError('Invalid Xray SOCKS authentication')
+
+            return socksURL(
+                'socks5://'
+                + quote(user, safe='')
+                + ':'
+                + quote(password, safe='')
+                + '@'
+                + endpoint.removeprefix('socks5://')
+            )
+
+        raise ValueError('A SOCKS listener is required for application TUN')
+
     def setHttpProxy(self, endpoint: str) -> bool:
         """Set the local HTTP proxy endpoint."""
         try:
@@ -1924,6 +1968,32 @@ class ConfigHysteria1(CoreConfiguration):
             # Any non-exit exceptions
 
             return ''
+
+    def applicationTUNProxy(self) -> str:
+        """Validate the selected Hysteria SOCKS transit listener."""
+        listener = self.get('socks5', {})
+
+        if listener.get('disable_udp', False) is not False:
+            raise ValueError('Application TUN requires SOCKS UDP forwarding')
+
+        endpoint = socksURL(self.socksProxy())
+
+        user, password = listener.get('user', ''), listener.get('password', '')
+
+        if not user and not password:
+            return endpoint
+
+        if not isinstance(user, str) or not isinstance(password, str):
+            raise ValueError('Invalid SOCKS authentication')
+
+        return socksURL(
+            'socks5://'
+            + quote(user, safe='')
+            + ':'
+            + quote(password, safe='')
+            + '@'
+            + endpoint.removeprefix('socks5://')
+        )
 
     def setHttpProxy(self, endpoint: str) -> bool:
         """Set the local HTTP proxy endpoint."""
@@ -2284,6 +2354,32 @@ class ConfigHysteria2(CoreConfiguration):
             # Any non-exit exceptions
 
             return ''
+
+    def applicationTUNProxy(self) -> str:
+        """Validate the selected Hysteria SOCKS transit listener."""
+        listener = self.get('socks5', {})
+
+        if listener.get('disableUDP', False) is not False:
+            raise ValueError('Application TUN requires SOCKS UDP forwarding')
+
+        endpoint = socksURL(self.socksProxy())
+
+        user, password = listener.get('username', ''), listener.get('password', '')
+
+        if not user and not password:
+            return endpoint
+
+        if not isinstance(user, str) or not isinstance(password, str):
+            raise ValueError('Invalid SOCKS authentication')
+
+        return socksURL(
+            'socks5://'
+            + quote(user, safe='')
+            + ':'
+            + quote(password, safe='')
+            + '@'
+            + endpoint.removeprefix('socks5://')
+        )
 
     def setHttpProxy(self, endpoint: str) -> bool:
         """Set the local HTTP proxy endpoint."""

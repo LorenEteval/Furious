@@ -277,6 +277,10 @@ class ServerProfile(MutableMapping[str, Any]):
         """Return the connection's SOCKS proxy endpoint."""
         return self.connection.socksProxy()
 
+    def applicationTUNProxy(self) -> str:
+        """Delegate SOCKS transit policy to the selected backend document."""
+        return self.connection.applicationTUNProxy()
+
     def remoteAddress(self) -> str:
         """Return the connection's operational remote host."""
         return self.connection.remoteAddress()

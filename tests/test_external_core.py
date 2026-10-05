@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from Furious.Backends.ExternalCore import ConfigExternalCore, ExternalCoreProcess
+from Furious.Frozenlib import AppSettings
 from Furious.Backends.ExternalCore.Plugin import (
     ExternalCorePlugin,
     ExternalCoreRuntimeFactory,
@@ -41,7 +42,7 @@ from Furious.Service.SubscriptionImporter import (
 
 from PySide6 import QtCore
 
-from tests.support import application, waitFor as waitForQt
+from tests.support import application, isolatedSettings, waitFor as waitForQt
 
 import os
 import sys
@@ -522,7 +523,10 @@ class ExternalCoreProcessTest(unittest.TestCase):
                 """Return one successful process-free fixture launch."""
                 return None, True
 
-        with tempfile.TemporaryDirectory(dir=Path.cwd()) as directory:
+        with tempfile.TemporaryDirectory(
+            dir=Path.cwd()
+        ) as directory, isolatedSettings():
+            AppSettings.set('ApplicationTUNBackend', 'tun2socks')
             config = self.configuration([], directory)
             config['useApplicationTun2socks'] = True
             config['tunRemoteAddress'] = 'actual-server.example.com'
@@ -551,28 +555,11 @@ class ExternalCoreProcessTest(unittest.TestCase):
                     return_value=registry,
                 ),
                 mock.patch(
-                    'Furious.Service.ConnectionManager.userDefaultPrimaryGatewayIP',
-                    return_value='192.168.50.1',
-                ),
-                mock.patch(
-                    'Furious.Service.ConnectionManager.userPrimaryAdapterInterfaceIP',
-                    return_value='192.168.50.20',
-                ),
-                mock.patch(
-                    'Furious.Service.ConnectionManager.userTcpSendBufferSize',
-                    return_value=1,
-                ),
-                mock.patch(
-                    'Furious.Service.ConnectionManager.userTcpReceiveBufferSize',
-                    return_value=1,
-                ),
-                mock.patch(
-                    'Furious.Service.ConnectionManager.userTcpAutoTuning',
-                    return_value='False',
-                ),
-                mock.patch(
-                    'Furious.Service.ConnectionManager.userBypassTUNAdapterInterfaceIP',
-                    return_value='',
+                    'Furious.Service.ConnectionManager.Storage.UserTUNSettings',
+                    return_value={
+                        'defaultPrimaryGatewayIP': '192.168.50.1',
+                        'primaryAdapterInterfaceIP': '192.168.50.20',
+                    },
                 ),
                 mock.patch(
                     'Furious.Service.ConnectionManager.SystemRoutingTable.delete'

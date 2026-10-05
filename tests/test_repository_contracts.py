@@ -58,6 +58,7 @@ class RepositoryContractTest(unittest.TestCase):
             '_UserServersStorage',
             '_UserSubsStorage',
             '_UserTUNSettingsStorage',
+            '_UserSingTUNSettingsStorage',
             '_UserRoutingsStorage',
         ):
             getattr(Storage, name).cache_clear()

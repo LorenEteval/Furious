@@ -1,10 +1,10 @@
 # Embedded runtime guidance
 
 Inherit `Furious/AGENTS.md` and its root ancestor. Consult Interface for runtime contracts and Service for
-connection ownership. This scope owns reusable embedded execution machinery and application tun2socks;
+connection ownership. This scope owns reusable embedded execution machinery and application TUN engines;
 connection policy remains outside it.
 
-- `Core` supplies shared multiprocessing runtime machinery, bounded output transport, and application tun2socks. External
+- `Core` supplies shared multiprocessing runtime machinery, bounded output transport, and application tun2socks/sing-tun. External
   Core owns its separate direct `subprocess.Popen`; neither layer owns controller, repository, UI, or protocol policy.
 - A launch spec describes prepared child construction, never semantic connection readiness. Serialization and launch
   arguments are prepared before execution starts; constructors may create owned timers/queues that still need
@@ -42,3 +42,10 @@ connection policy remains outside it.
   queues, or callbacks. Start with `tests/test_runtime_lifecycle.py` and `tests/test_connection_startup_async.py`;
   output/process stress lives in the tiers documented by `tests/README.md`. Review output admission and draining
   together when changing backpressure.
+- `SingTUN` imports the Go binding only in a spawned child. Its bounded status pipe establishes native readiness
+  and the actual device name independently of diagnostic output and process liveness. Cooperative stop is followed
+  by exact-child reap and attempt-local host recovery; retain the lease when either fails. Never infer Go cleanup
+  from forced termination. Its `SingTUNHostPlan` remains attached through host-worker drain and restoration; tests
+  in `tests/test_sing_tun.py` cover startup cancellation, validated status with binding-provided failure reasons,
+  and cleanup refusal/retry. Privileged
+  platform smoke tests remain separate from harmless source/compiled lifetime checks.

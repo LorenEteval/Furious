@@ -20,10 +20,12 @@
 from __future__ import annotations
 
 from Furious.Frozenlib import *
+from Furious.Frozenlib.SocksProxy import socksURL
 
 from PySide6.QtNetwork import *
 
 from typing import Union
+from urllib.parse import urlsplit, unquote
 
 import weakref
 import functools
@@ -85,3 +87,20 @@ class AppQNetworkAccessManager(QNetworkAccessManager):
             self.setProxy(QNetworkProxy.ProxyType.NoProxy)
 
         return useProxy
+
+    def configureSocksProxy(self, endpoint: str):
+        """Use validated SOCKS transit without a direct-network fallback."""
+
+        proxy = urlsplit(socksURL(endpoint))
+
+        self.setProxy(
+            QNetworkProxy(
+                QNetworkProxy.ProxyType.Socks5Proxy,
+                proxy.hostname,
+                proxy.port,
+                unquote(proxy.username or ''),
+                unquote(proxy.password or ''),
+            )
+        )
+
+        return True

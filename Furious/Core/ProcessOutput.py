@@ -52,14 +52,13 @@ class MsgQueue(multiprocessing.queues.Queue):
 
     def __init__(self, **kwargs):
         """Initialize the bounded queue and its GUI-thread drain timer."""
-        callback = kwargs.pop('msgCallback', None)
-        maximum = kwargs.pop('maximumPendingMessages', self.MAXIMUM_PENDING_MESSAGES)
-
-        super().__init__(
-            maxsize=maximum,
-            **kwargs,
-            ctx=multiprocessing.get_context(),
+        callback, maximum, context = (
+            kwargs.pop('msgCallback', None),
+            kwargs.pop('maximumPendingMessages', self.MAXIMUM_PENDING_MESSAGES),
+            kwargs.pop('context', None) or multiprocessing.get_context(),
         )
+
+        super().__init__(maxsize=maximum, **kwargs, ctx=context)
 
         self.timer = QtCore.QTimer()
         self._timerConnection = connectWeakly(

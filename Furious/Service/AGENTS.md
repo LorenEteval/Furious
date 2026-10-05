@@ -25,13 +25,26 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
 ## Connection and network workflows
 
 - GUI connection startup is a generation-checked transaction over a runtime copy: prepare TUN policy, launch and
-  observe the primary runtime, acquire optional tun2socks/DNS resources, and mutate host networking in platform
-  order before commit. Preserve Windows runtime-before-device, Linux device-before-runtime, and macOS
+  observe the primary runtime, acquire optional application TUN/DNS resources, and mutate host networking in platform
+  order before commit. The tun2socks path preserves Windows runtime-before-device, Linux device-before-runtime, and macOS
   survival-before-DNS ordering. Failure/cancellation releases attempt-owned runtimes and registered host cleanup.
   The synchronous start path remains a compatibility boundary. Review GUI responsiveness at each stage, including
   factory preparation, host commands, and reverse cleanup: a scheduled start only defers the first call. Readiness
   timers and asynchronous DNS cannot preempt synchronous work. Keep cancellation checks at reentrant stage boundaries
   before acquiring the next resource, and audit shared route bookkeeping separately from attempt-local leases.
+- Native proxy-core TUN policy precedes application-engine selection. The legacy plugin opt-in
+  `usesApplicationTun2socks` still means application-TUN eligibility; it must not force the selected engine.
+  Snapshot the engine and relevant customization once per attempt; bind each backend's named settings callers to
+  that snapshot, preserving proxy-only and explicit native TUN
+  behavior. Each application engine reads only its own persisted document: sing-tun's `host_options` belong to
+  `CustomSingTUNSettings`, while tun2socks uses `CustomTUNSettings`; edits and missing defaults must never import
+  preferences from the other engine. Their repository/host policies remain independent while orchestration,
+  leases and general utilities may be reused. For sing-tun, resolve automatic and manual remote exclusions before native auto-routing, then require
+  native readiness and checked DNS application before commit. `SingTUNHostPlan` owns only its assigned identifiers
+  and DNS snapshots, independently of legacy `SystemRoutingTable.managedRoutes`; refuse ambiguous recovery and
+  retain ownership for retry. Host preparation/DNS commands run in its owned worker, while synchronous compatibility
+  startup and bounded cleanup joins remain explicit responsiveness limits. Consult `tests/test_sing_tun.py` and
+  `tests/test_native_tun_semantics.py`; mocked host tests do not establish privileged OS behavior.
 - Construct a runtime event router before asking a plugin to create its runtime. One lease owns the runtime/router from
   acquisition through attempt ownership, commit, and reverse-order release; commit changes logical delivery without
   replacing the runtime callback. Worker-thread exits are queued to the router's Qt thread, delivered at most once, and
@@ -74,6 +87,10 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
 - Log cursors are opaque and filter-specific. A generation change requires a reset; retention-only eviction supplies
   a new first-retained sequence so presenters can prune their prefix without rebuilding history. Capture entries and
   the next cursor atomically, and coalesce notifications without losing producer updates.
+- Application TUN logs share an engine-neutral runtime category. Bind each producer's source to the connection
+  attempt's captured engine selection rather than a later preference read; proxy-core native TUN output stays with
+  the Core category. Preserve batching, export/rendering labels, and runtime clearing together. Tests in
+  `test_sing_tun.py`, `test_log_manager_generation.py`, and `test_ui_behavior.py` cover these boundaries.
 - Metrics sampling owns its worker/future generation and rejects results after disconnect, disablement, replacement,
   or shutdown. Normalize cumulative-counter resets before history aggregation; clearing usage must not erase speed
   history.

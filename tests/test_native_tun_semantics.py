@@ -178,11 +178,13 @@ class XrayNativeTUNTest(unittest.TestCase):
                 return_value=registry,
             ),
             mock.patch('Furious.Service.ConnectionManager.Tun2socks') as tun2socks,
+            mock.patch('Furious.Service.ConnectionManager.SingTUN') as singTUN,
         ):
             self.assertTrue(manager.start(original, 'Global'))
 
         registry.usesApplicationTun2socks.assert_not_called()
         tun2socks.assert_not_called()
+        singTUN.assert_not_called()
 
         self.assertEqual(manager.runtimeConfiguration, original)
 
@@ -205,6 +207,7 @@ class XrayNativeTUNTest(unittest.TestCase):
                 return_value=registry,
             ),
             mock.patch('Furious.Service.ConnectionManager.Tun2socks') as tun2socks,
+            mock.patch('Furious.Service.ConnectionManager.SingTUN') as singTUN,
         ):
             self.assertFalse(manager.start(original, 'Global'))
 
@@ -212,6 +215,7 @@ class XrayNativeTUNTest(unittest.TestCase):
 
         registry.usesApplicationTun2socks.assert_not_called()
         tun2socks.assert_not_called()
+        singTUN.assert_not_called()
 
         self.assertFalse(hasattr(manager, 'runtimeConfiguration'))
 
@@ -407,11 +411,13 @@ class Hysteria2NativeTUNTest(unittest.TestCase):
                 return_value=registry,
             ),
             mock.patch('Furious.Service.ConnectionManager.Tun2socks') as tun2socks,
+            mock.patch('Furious.Service.ConnectionManager.SingTUN') as singTUN,
         ):
             self.assertTrue(manager.start(original, 'Global'))
 
         registry.usesApplicationTun2socks.assert_not_called()
         tun2socks.assert_not_called()
+        singTUN.assert_not_called()
 
         self.assertEqual(manager.runtimeConfiguration, original)
 

@@ -24,7 +24,7 @@ from Furious.Application.DesktopApplication import (
     _ExistingInstanceResult,
     _SingletonStartupResult,
 )
-from Furious.Frozenlib import AppBuiltinCommand, PySide6Legacy
+from Furious.Frozenlib import AppBuiltinCommand, PySide6Legacy, AppSettings
 from Furious.Interface import ApplicationRunner, CoreRuntime
 from Furious.Qt import AppQMessageBox
 from Furious.Qt.AppStyleSheet import AppStyleSheet
@@ -33,6 +33,8 @@ from Furious.Service.RuntimeLease import RuntimeEventRouter, RuntimeLease
 
 from PySide6 import QtCore
 from PySide6.QtNetwork import QLocalServer
+
+from tests.support import isolatedSettings
 
 from types import SimpleNamespace
 from unittest import TestCase, mock
@@ -1550,6 +1552,15 @@ class ApplicationLifecycleTransactionTest(TestCase):
 
 class ConnectionStartupTransactionTest(TestCase):
     """Verify one failed attempt releases only its own exact runtimes."""
+
+    def setUp(self):
+        # These fixtures explicitly replace the legacy tun2socks host stage.
+        self._settings = isolatedSettings()
+        self._settings.__enter__()
+        AppSettings.set('ApplicationTUNBackend', 'tun2socks')
+
+    def tearDown(self):
+        self._settings.__exit__(None, None, None)
 
     @staticmethod
     def _commitExistingRuntime(manager, runtime):

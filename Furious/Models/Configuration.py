@@ -219,6 +219,10 @@ class CoreConfiguration(dict):
 
         return ''
 
+    def applicationTUNProxy(self) -> str:
+        """Return the SOCKS transit endpoint; backends validate listener policy."""
+        return self.socksProxy()
+
     def remoteAddress(self) -> str:
         """Return the remote host that must remain reachable outside TUN."""
         return str(getattr(self, 'itemAddress', ''))

@@ -442,6 +442,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         self._userServers = None
         self._userSubs = None
         self._userTUNSettings = None
+        self._userSingTUNSettings = None
 
         # ThreadPool
         self.threadPool = QtCore.QThreadPool(self)
@@ -624,6 +625,7 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
         self._userServers = Storage.UserServers()
         self._userSubs = Storage.UserSubs()
         self._userTUNSettings = Storage.UserTUNSettings()
+        self._userSingTUNSettings = Storage.UserSingTUNSettings()
 
     def _initializeControllers(self):
         """Create the process-lifetime application state authorities."""

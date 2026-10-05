@@ -76,7 +76,9 @@ class MultiprocessingRuntime(CoreRuntime):
 
     StopJoinTimeout = 3
 
-    def __init__(self, launchFactory, *, exitCallback=None, msgCallback=None):
+    def __init__(
+        self, launchFactory, *, exitCallback=None, msgCallback=None, processContext=None
+    ):
         """Prepare an immutable launch specification around an owned queue."""
         super().__init__(exitCallback)
 
@@ -84,7 +86,8 @@ class MultiprocessingRuntime(CoreRuntime):
         self._lastExit = None
         self._stopRequested = False
         self._exitPublished = False
-        self._output = MsgQueue(msgCallback=msgCallback)
+        self._processContext = processContext
+        self._output = MsgQueue(msgCallback=msgCallback, context=processContext)
 
         try:
             launch = launchFactory(self._output)
@@ -144,7 +147,12 @@ class MultiprocessingRuntime(CoreRuntime):
         self.setState(RuntimeState.Starting)
 
         try:
-            process = multiprocessing.Process(**self._launch.processKeywordArguments())
+            if self._processContext is not None:
+                factory = self._processContext.Process
+            else:
+                factory = multiprocessing.Process
+
+            process = factory(**self._launch.processKeywordArguments())
 
             self._process = process
 

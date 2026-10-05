@@ -22,20 +22,18 @@ from __future__ import annotations
 from Furious.Interface import CoreRuntime, RuntimeState
 from Furious.Plugins import PreparedRuntime, CoreRuntimeStartup
 from Furious.Qt.Signals import singleShotWeakly
-from Furious.Service.ConnectionManager import (
-    ConnectionManager,
-    ConnectionStartStage,
-)
+from Furious.Service.ConnectionManager import ConnectionManager, ConnectionStartStage
 from Furious.Service.DnsResolver import DnsResolutionOperation, DnsResolver
+from Furious.Frozenlib import AppSettings
 
 from PySide6 import QtCore, QtNetwork
 
 from tests.support import application, processQtEvents, waitFor
 
+from unittest import TestCase, mock
+
 import importlib
 import unittest
-
-from unittest import TestCase, mock
 
 
 class _Configuration:
@@ -205,6 +203,8 @@ class ConnectionStartupAsyncTest(TestCase):
     def setUp(self):
         """Ensure a Qt application exists for real timer/socket delivery."""
         self.app = application()
+        self._previousTUNBackend = AppSettings.get('ApplicationTUNBackend')
+        AppSettings.set('ApplicationTUNBackend', 'tun2socks')
         self.servers = []
         self.managers = []
 
@@ -218,6 +218,8 @@ class ConnectionStartupAsyncTest(TestCase):
             server.deleteLater()
 
         processQtEvents()
+
+        AppSettings.set('ApplicationTUNBackend', self._previousTUNBackend)
 
     def _manager(self):
         """Return a manager with host TUN disabled at the test boundary."""

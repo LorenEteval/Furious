@@ -26,10 +26,16 @@ from Furious.Repository.Routings import UserRoutings
 from Furious.Repository.Servers import UserServers
 from Furious.Repository.Subscriptions import SubscriptionGroup, UserSubs
 from Furious.Repository.TunSettings import UserTUNSettings
+from Furious.Repository.SingTUNSettings import UserSingTUNSettings
+from Furious.Models.SingTUN import prepareSingTUNSettings
+
+from PySide6 import QtCore
 
 from typing import Union
 
 import functools
+import copy
+import json
 
 __all__ = ['Storage']
 
@@ -60,6 +66,44 @@ class Storage:
         assert APP() is not None
 
         return UserTUNSettings()
+
+    @staticmethod
+    @functools.lru_cache(None)
+    def _UserSingTUNSettingsStorage() -> UserSingTUNSettings:
+        """Return the single sing-tun customization repository."""
+        assert APP() is not None
+
+        return UserSingTUNSettings()
+
+    @staticmethod
+    def UserSingTUNSettings() -> dict:
+        """Expose the compatibility live view of sing-tun settings."""
+        return Storage._UserSingTUNSettingsStorage().data()
+
+    @staticmethod
+    def replaceSingTUNSettings(singSettings):
+        """Commit sing-tun's validated document, then report its flush result."""
+
+        prepareSingTUNSettings(singSettings)
+
+        # Serialization is a fallible pre-commit stage.
+        json.dumps(singSettings, allow_nan=False)
+
+        singCandidate = copy.deepcopy(singSettings)
+
+        sing = Storage._UserSingTUNSettingsStorage()
+        sing.data().clear()
+        sing.data().update(singCandidate)
+
+        sing.sync()
+
+        settings = QtCore.QSettings()
+        settings.sync()
+
+        if settings.status() != QtCore.QSettings.Status.NoError:
+            raise OSError(
+                'sing-tun settings committed in memory, but could not be flushed to disk'
+            )
 
     @staticmethod
     @functools.lru_cache(None)

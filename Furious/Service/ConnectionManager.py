@@ -25,6 +25,8 @@ from Furious.Frozenlib import (
     APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS,
     APPLICATION_TUN2SOCKS_IP_ADDRESS,
     APPLICATION_TUN2SOCKS_NETWORK_INTERFACE_NAME,
+    APPLICATION_TUN_BACKEND,
+    AppSettings,
     Mixins,
     PLATFORM,
     PySide6Legacy,
@@ -45,17 +47,25 @@ from Furious.Plugins import (
 from Furious.Qt.Signals import connectWeakly, singleShotWeakly
 from Furious.Service.DnsResolver import DnsResolver
 from Furious.Core.Tun2socks import Tun2socks
+from Furious.Core.SingTUN import SingTUN
+from Furious.Models.SingTUN import SingTUNHostSettingsCallers, prepareSingTUNSettings
+from Furious.Frozenlib.SocksProxy import socksURL
+from Furious.Service.SingTUNHost import SingTUNHostPlan
 from Furious.Service.RuntimeLease import RuntimeEventRouter, RuntimeLease
+
+from PySide6 import QtCore, QtNetwork
 
 from typing import Callable, Tuple, Union
 from dataclasses import dataclass, field
 from enum import Enum
 
-from PySide6 import QtCore, QtNetwork
 import os
 import logging
 import tempfile
 import functools
+import copy
+import time
+import ipaddress
 
 __all__ = ['ConnectionManager', 'ConnectionStartOperation', 'ConnectionStartStage']
 
@@ -72,6 +82,37 @@ class _ConnectionStartAttempt:
     nativeTUNHandled: bool = False
     applicationTun2socks: bool = False
     committed: bool = False
+    tunBackend: str = field(
+        default_factory=lambda: AppSettings.get(APPLICATION_TUN_BACKEND)
+    )
+    singSettings: dict = field(default_factory=dict)
+    tun2socksSettings: dict = field(default_factory=dict)
+    singHostSettingsCallers: SingTUNHostSettingsCallers | None = field(
+        default=None, init=False, repr=False
+    )
+    tun2socksSettingsCallers: _Tun2socksSettingsCallers | None = field(
+        default=None, init=False, repr=False
+    )
+
+    def applicationTUNLogCallback(self, callback):
+        """Bind the engine captured by this attempt, preserving plain callbacks."""
+        copyWithSource = getattr(callback, 'copyWithSource', None)
+
+        return copyWithSource(self.tunBackend) if callable(copyWithSource) else callback
+
+    def snapshotApplicationTUN(self):
+        """Read engine settings only when the plugin requires application TUN."""
+        if self.applicationTun2socks:
+            if self.tunBackend == 'sing-tun':
+                self.singSettings = copy.deepcopy(Storage.UserSingTUNSettings())
+                self.singHostSettingsCallers = SingTUNHostSettingsCallers(
+                    self.singSettings.get('host_options', {})
+                )
+            else:
+                self.tun2socksSettings = copy.deepcopy(Storage.UserTUNSettings())
+                self.tun2socksSettingsCallers = _Tun2socksSettingsCallers(
+                    self.tun2socksSettings
+                )
 
     @property
     def runtimes(self):
@@ -120,32 +161,33 @@ class _ConnectionStartAttempt:
         self.committed = True
 
 
-def getUserTUNSettings(*args, **kwargs):
-    """Return one user-defined TUN setting or its fallback value."""
-    return Storage.UserTUNSettings().get(*args, **kwargs)
+class _Tun2socksSettingsCallers:
+    """Bind named tun2socks settings callers to one attempt's captured document."""
 
-
-(
-    userPrimaryAdapterInterfaceName,
-    userPrimaryAdapterInterfaceIP,
-    userDefaultPrimaryGatewayIP,
-    userTunAdapterInterfaceDNS,
-    userBypassTUNAdapterInterfaceIP,
-    userDisablePrimaryAdapterInterfaceDNS,
-    userTcpSendBufferSize,
-    userTcpReceiveBufferSize,
-    userTcpAutoTuning,
-) = (
-    functools.partial(getUserTUNSettings, 'primaryAdapterInterfaceName', ''),
-    functools.partial(getUserTUNSettings, 'primaryAdapterInterfaceIP', ''),
-    functools.partial(getUserTUNSettings, 'defaultPrimaryGatewayIP', ''),
-    functools.partial(getUserTUNSettings, 'tunAdapterInterfaceDNS', ''),
-    functools.partial(getUserTUNSettings, 'bypassTUNAdapterInterfaceIP', ''),
-    functools.partial(getUserTUNSettings, 'disablePrimaryAdapterInterfaceDNS', 'True'),
-    functools.partial(getUserTUNSettings, 'tcpSendBufferSize', 1),
-    functools.partial(getUserTUNSettings, 'tcpReceiveBufferSize', 1),
-    functools.partial(getUserTUNSettings, 'tcpAutoTuning', 'False'),
-)
+    def __init__(self, settings):
+        (
+            self.userPrimaryAdapterInterfaceName,
+            self.userPrimaryAdapterInterfaceIP,
+            self.userDefaultPrimaryGatewayIP,
+            self.userTunAdapterInterfaceDNS,
+            self.userBypassTUNAdapterInterfaceIP,
+            self.userDisablePrimaryAdapterInterfaceDNS,
+            self.userTcpSendBufferSize,
+            self.userTcpReceiveBufferSize,
+            self.userTcpAutoTuning,
+        ) = (
+            functools.partial(settings.get, 'primaryAdapterInterfaceName', ''),
+            functools.partial(settings.get, 'primaryAdapterInterfaceIP', ''),
+            functools.partial(settings.get, 'defaultPrimaryGatewayIP', ''),
+            functools.partial(settings.get, 'tunAdapterInterfaceDNS', ''),
+            functools.partial(settings.get, 'bypassTUNAdapterInterfaceIP', ''),
+            functools.partial(
+                settings.get, 'disablePrimaryAdapterInterfaceDNS', 'True'
+            ),
+            functools.partial(settings.get, 'tcpSendBufferSize', 1),
+            functools.partial(settings.get, 'tcpReceiveBufferSize', 1),
+            functools.partial(settings.get, 'tcpAutoTuning', 'False'),
+        )
 
 
 class ConnectionStartStage(Enum):
@@ -221,10 +263,21 @@ class _RuntimeReadinessProbe(QtCore.QObject):
         if self._terminal:
             return
 
+        if isinstance(self._runtime, SingTUN):
+            if self._runtime.startupError:
+                self._finishFailed(self._runtime.startupError)
+
+                return
+
+            if self._runtime.ready:
+                self._finishReady()
+
+                return
+
         timeout = max(int(self._startup.timeout), 1)
 
         if self._elapsed.isValid() and self._elapsed.elapsed() >= timeout:
-            if self._startup.endpoint:
+            if self._startup.endpoint or isinstance(self._runtime, SingTUN):
                 self._finishFailed('core readiness check timed out')
             else:
                 self._finishReady()
@@ -377,7 +430,6 @@ class ConnectionStartOperation(QtCore.QObject):
         self.routing = routing
         self.exitCallback = exitCallback
         self.msgCallbackCore = msgCallbackCore
-        self.msgCallbackTUN_ = msgCallbackTUN_
         self.proxyModeOnly = proxyModeOnly
         self.log = log
         self.options = dict(options or {})
@@ -385,6 +437,7 @@ class ConnectionStartOperation(QtCore.QObject):
         self.attempt = _ConnectionStartAttempt(
             manager, manager._runtimeConfiguration(config, deepcopy)
         )
+        self.msgCallbackTUN_ = self.attempt.applicationTUNLogCallback(msgCallbackTUN_)
 
         self.stage = ConnectionStartStage.Pending
 
@@ -392,6 +445,7 @@ class ConnectionStartOperation(QtCore.QObject):
         self._readinessProbe = None
         self._conditionProbe = None
         self._conditionContinuation = ''
+        self._conditionFailureMessage = 'TUN device did not become ready'
         self._dnsOperation = None
         self._tun = None
         self._startTUN = None
@@ -443,6 +497,8 @@ class ConnectionStartOperation(QtCore.QObject):
                 self.attempt.nativeTUNHandled,
                 self.attempt.applicationTun2socks,
             ) = self.manager._prepareTUNPolicy(configcopy, self.proxyModeOnly)
+
+            self.attempt.snapshotApplicationTUN()
         except TUNPreparationError as ex:
             self.manager._lastStartError = str(ex)
 
@@ -608,6 +664,11 @@ class ConnectionStartOperation(QtCore.QObject):
         if not self._isCurrent():
             return
 
+        if self.attempt.tunBackend == 'sing-tun':
+            self._resume('_beginSingTUN')
+
+            return
+
         self._setStage(ConnectionStartStage.PreparingTUN)
 
         if not self._isCurrent():
@@ -621,8 +682,9 @@ class ConnectionStartOperation(QtCore.QObject):
                 APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS,
             )
 
-        userGateway = userDefaultPrimaryGatewayIP()
-        userInterfaceIP = userPrimaryAdapterInterfaceIP()
+        settings = self.attempt.tun2socksSettingsCallers
+        userGateway = settings.userDefaultPrimaryGatewayIP()
+        userInterfaceIP = settings.userPrimaryAdapterInterfaceIP()
 
         if userGateway and userInterfaceIP:
             logger.info(
@@ -663,9 +725,9 @@ class ConnectionStartOperation(QtCore.QObject):
 
                 return
 
-        tcpSendBufferSize = userTcpSendBufferSize()
-        tcpReceiveBufferSize = userTcpReceiveBufferSize()
-        tcpAutoTuning = userTcpAutoTuning() == 'True'
+        tcpSendBufferSize = settings.userTcpSendBufferSize()
+        tcpReceiveBufferSize = settings.userTcpReceiveBufferSize()
+        tcpAutoTuning = settings.userTcpAutoTuning() == 'True'
         interfaceArg = (
             APPLICATION_TUN2SOCKS_NETWORK_INTERFACE_NAME
             if PLATFORM != 'Linux'
@@ -715,12 +777,132 @@ class ConnectionStartOperation(QtCore.QObject):
         else:
             self._resume('_prepareTunBypass')
 
+    def _beginSingTUN(self):
+        """Validate before activation, then resolve remote exclusions via the core."""
+        self._setStage(ConnectionStartStage.PreparingTUN)
+
+        if not self._isCurrent():
+            return
+
+        router = RuntimeEventRouter()
+
+        try:
+            self._tun = self.manager._createSingTUN(
+                self.attempt, router.publish, self.msgCallbackTUN_
+            )
+        except BaseException:
+            router.finishRelease()
+            router.deleteLater()
+
+            raise
+
+        router.attach(self._tun, self)
+
+        self.attempt.ownRuntime(self._tun, router)
+
+        address = self.attempt.runtimeConfiguration.remoteAddress()
+
+        if isValidIPAddress(address):
+            self._singAddressesResolved(False, [address])
+
+            return
+        if not address:
+            raise ValueError('A remote destination is required for sing-tun bypass')
+
+        resolver = self.manager._connectionDnsResolver()
+
+        self.manager._configureTunResolver(resolver, self.attempt.runtimeConfiguration)
+
+        self._setStage(ConnectionStartStage.ResolvingTUNAddress)
+
+        if not self._isCurrent():
+            return
+
+        operation = resolver.resolveAsync(address, parent=self)
+
+        self._dnsOperation = operation
+
+        connectWeakly(operation.finished, self, '_singAddressesResolved')
+
+        operation.start()
+
+    def _singAddressesResolved(self, error, addresses):
+        if not self._isCurrent():
+            return
+
+        operation, self._dnsOperation = self._dnsOperation, None
+
+        if operation is not None:
+            operation.deleteLater()
+
+        if error or not addresses:
+            self._fail(
+                'Failed to prepare sing-tun', 'Remote bypass DNS resolution failed'
+            )
+
+            return
+
+        try:
+            addresses = self.manager._singBypassAddresses(self.attempt, addresses)
+
+            self._tun._hostPlan.begin('prepare', addresses)
+            self._waitSingHost('_startSingTUN')
+        except Exception as ex:
+            self._fail('Failed to prepare sing-tun', str(ex))
+
+    def _waitSingHost(self, continuation):
+        if not self._isCurrent():
+            return
+
+        self._observeCondition(
+            self._tun._hostPlan.workCompleted,
+            'sing-tun host preparation',
+            continuation,
+            self.stage,
+            'sing-tun host preparation timed out',
+        )
+
+    def _startSingTUN(self):
+        if self._tun._hostPlan.error:
+            raise RuntimeStartError(self._tun._hostPlan.error)
+
+        self._setStage(ConnectionStartStage.StartingTUNRuntime)
+
+        if not self._isCurrent():
+            return
+
+        self._tun.start()
+
+        self._observeRuntime(
+            self._tun,
+            CoreRuntimeStartup(timeout=15000),
+            '_applySingDNS',
+            ConnectionStartStage.WaitingTUNRuntime,
+        )
+
+    def _applySingDNS(self):
+        self._setStage(ConnectionStartStage.ApplyingHostNetwork)
+
+        if not self._isCurrent():
+            return
+
+        self._tun._hostPlan.begin('applyDNS', self._tun.deviceName)
+        self._waitSingHost('_singHostReady')
+
+    def _singHostReady(self):
+        if self._tun._hostPlan.error:
+            raise RuntimeStartError(self._tun._hostPlan.error)
+
+        self._commit()
+
     def _prepareTunBypass(self):
         """Prepare remote-server bypass routes without blocking for DNS."""
         if not self._isCurrent():
             return
 
-        bypassTUN = userBypassTUNAdapterInterfaceIP()
+        bypassTUN = (
+            self.attempt.tun2socksSettingsCallers.userBypassTUNAdapterInterfaceIP()
+        )
 
         if bypassTUN:
             for bypass in bypassTUN.split(','):
@@ -814,19 +996,32 @@ class ConnectionStartOperation(QtCore.QObject):
 
     def _waitForTunDevice(self, predicate, continuation):
         """Wait for one platform TUN device through a Qt timer."""
+        self._observeCondition(
+            predicate,
+            f'TUN device {APPLICATION_TUN2SOCKS_DEVICE_NAME!r}',
+            continuation,
+            ConnectionStartStage.WaitingTUNDevice,
+            'TUN device did not become ready',
+        )
+
+    def _observeCondition(
+        self, predicate, description, continuation, stage, failureMessage
+    ):
+        """Observe an owned worker or device without inventing device readiness."""
         if not self._isCurrent():
             return
 
-        self._setStage(ConnectionStartStage.WaitingTUNDevice)
+        self._setStage(stage)
 
         if not self._isCurrent():
             return
 
         self._conditionContinuation = continuation
+        self._conditionFailureMessage = failureMessage
 
         probe = _ConditionProbe(
             predicate,
-            f'TUN device {APPLICATION_TUN2SOCKS_DEVICE_NAME!r}',
+            description,
             parent=self,
         )
 
@@ -850,7 +1045,7 @@ class ConnectionStartOperation(QtCore.QObject):
         probe.deleteLater()
 
         if not success:
-            self._fail('', 'TUN device did not become ready')
+            self._fail('', self._conditionFailureMessage)
 
             return
 
@@ -863,7 +1058,8 @@ class ConnectionStartOperation(QtCore.QObject):
 
         self._setStage(ConnectionStartStage.ApplyingHostNetwork)
 
-        userInterfaceName = userPrimaryAdapterInterfaceName()
+        settings = self.attempt.tun2socksSettingsCallers
+        userInterfaceName = settings.userPrimaryAdapterInterfaceName()
         alias = (
             userInterfaceName
             if userInterfaceName
@@ -878,7 +1074,7 @@ class ConnectionStartOperation(QtCore.QObject):
 
             self._tun.cleanup = functools.partial(_windowsCleanup, alias)
 
-            if userDisablePrimaryAdapterInterfaceDNS() != 'False':
+            if settings.userDisablePrimaryAdapterInterfaceDNS() != 'False':
                 SystemRoutingTable.WIN32SetInterfaceDNS(
                     alias,
                     '127.0.0.1',
@@ -886,7 +1082,8 @@ class ConnectionStartOperation(QtCore.QObject):
                 )
 
         interfaceDNS = (
-            userTunAdapterInterfaceDNS() or APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS
+            settings.userTunAdapterInterfaceDNS()
+            or APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS
         )
 
         SystemRoutingTable.addRelations()
@@ -928,7 +1125,8 @@ class ConnectionStartOperation(QtCore.QObject):
         self._tun.cleanup = functools.partial(_darwinCleanup, servers)
 
         interfaceDNS = (
-            userTunAdapterInterfaceDNS() or APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS
+            self.attempt.tun2socksSettingsCallers.userTunAdapterInterfaceDNS()
+            or APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS
         )
 
         for service, _dnsserver in servers:
@@ -1199,12 +1397,12 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
         if useAppTun2socks:
             logger.info(
-                f'application-managed tun2socks selected. Remote '
+                f'application-managed TUN selected. Remote '
                 f'address: {config.remoteAddress()!r}'
             )
         else:
             logger.info(
-                'application-managed tun2socks skipped by the active '
+                'application-managed TUN skipped by the active '
                 'core runtime configuration'
             )
 
@@ -1389,6 +1587,10 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
         tunModeRequested = not proxyModeOnly and SystemRuntime.isTUNMode()
 
+        attempt.snapshotApplicationTUN()
+
+        msgCallbackTUN_ = attempt.applicationTUNLogCallback(msgCallbackTUN_)
+
         if not self._startPrimaryRuntime(
             attempt,
             routing,
@@ -1401,14 +1603,109 @@ class ConnectionManager(Mixins.CleanupOnExit):
             return abortStart()
 
         if tunModeRequested and attempt.applicationTun2socks:
-            if not self._startApplicationTun2socks(
-                attempt, exitCallback, msgCallbackTUN_
-            ):
+            startApplicationTUN = (
+                self._startApplicationSingTUN
+                if attempt.tunBackend == 'sing-tun'
+                else self._startApplicationTun2socks
+            )
+
+            if not startApplicationTUN(attempt, exitCallback, msgCallbackTUN_):
                 return False
 
         attempt.commit()
 
         return True
+
+    @staticmethod
+    def _singBypassAddresses(attempt, addresses):
+        result = list(addresses)
+        manual = attempt.singHostSettingsCallers.userBypassTUNAdapterInterfaceIP()
+
+        if manual:
+            result.extend(value.strip() for value in manual.split(','))
+
+        try:
+            return list(
+                dict.fromkeys(str(ipaddress.ip_address(value)) for value in result)
+            )
+        except ValueError:
+            raise ValueError('Invalid application TUN bypass IP address') from None
+
+    @staticmethod
+    def _configureTunResolver(resolver, configuration):
+        # SOCKS transit carries the prepared listener's authentication policy.
+        # Never require HTTP or fall back to a direct bootstrap request.
+        getter = getattr(configuration, 'applicationTUNProxy', None)
+
+        resolver.configureSocksProxy(
+            getter() if callable(getter) else socksURL(configuration.socksProxy())
+        )
+
+    @staticmethod
+    def _createSingTUN(attempt, exitCallback, messageCallback):
+        configuration = prepareSingTUNSettings(attempt.singSettings, platform=PLATFORM)
+        getter = getattr(attempt.runtimeConfiguration, 'applicationTUNProxy', None)
+
+        configuration['proxy'] = socksURL(
+            getter() if callable(getter) else attempt.runtimeConfiguration.socksProxy()
+        )
+
+        plan = SingTUNHostPlan(configuration)
+
+        return SingTUN(
+            plan.configuration,
+            hostPlan=plan,
+            exitCallback=exitCallback,
+            msgCallback=messageCallback,
+        )
+
+    def _startApplicationSingTUN(self, attempt, exitCallback, messageCallback):
+        """Compatibility startup shares configuration, bypass and host ownership."""
+        try:
+            runtime = self._createSingTUN(attempt, exitCallback, messageCallback)
+
+            attempt.ownRuntime(runtime)
+
+            address = attempt.runtimeConfiguration.remoteAddress()
+
+            if isValidIPAddress(address):
+                addresses = [address]
+            else:
+                resolver = self._connectionDnsResolver()
+
+                self._configureTunResolver(resolver, attempt.runtimeConfiguration)
+
+                error, addresses = resolver.resolve(address)
+
+                if error or not addresses:
+                    raise ValueError('Remote bypass DNS resolution failed')
+
+            plan = runtime._hostPlan
+            plan.prepare(self._singBypassAddresses(attempt, addresses))
+
+            runtime.start()
+
+            deadline = time.monotonic() + 15
+
+            while not runtime.ready:
+                if (
+                    runtime.startupError
+                    or not runtime.isRunning()
+                    or time.monotonic() >= deadline
+                ):
+                    raise RuntimeStartError(
+                        runtime.startupError or 'sing-tun readiness timed out'
+                    )
+
+                time.sleep(0.02)
+
+            plan.applyDNS(runtime.deviceName)
+
+            return True
+        except Exception as ex:
+            self._lastStartError = str(ex)
+
+            return attempt.rollback('sing-tun startup failed: ' + self._lastStartError)
 
     def _startApplicationTun2socks(
         self,
@@ -1427,9 +1724,10 @@ class ConnectionManager(Mixins.CleanupOnExit):
             SystemRoutingTable.delete('0.0.0.0', APPLICATION_TUN2SOCKS_GATEWAY_ADDRESS)
 
         # Handle user defined settings
+        settings = attempt.tun2socksSettingsCallers
         userGateway, userInterfaceIP = (
-            userDefaultPrimaryGatewayIP(),
-            userPrimaryAdapterInterfaceIP(),
+            settings.userDefaultPrimaryGatewayIP(),
+            settings.userPrimaryAdapterInterfaceIP(),
         )
 
         if userGateway and userInterfaceIP:
@@ -1470,9 +1768,9 @@ class ConnectionManager(Mixins.CleanupOnExit):
                 return abortStart(f'unrecognized platform: {PLATFORM}')
 
         tcpSendBufferSize, tcpReceiveBufferSize, tcpAutoTuning = (
-            userTcpSendBufferSize(),
-            userTcpReceiveBufferSize(),
-            userTcpAutoTuning(),
+            settings.userTcpSendBufferSize(),
+            settings.userTcpReceiveBufferSize(),
+            settings.userTcpAutoTuning(),
         )
 
         if tcpSendBufferSize != 1:
@@ -1526,7 +1824,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
                 return abortStart(f'core {Tun2socks.name()} start failed')
 
         # Handle user defined settings
-        bypassTUN = userBypassTUNAdapterInterfaceIP()
+        bypassTUN = settings.userBypassTUNAdapterInterfaceIP()
 
         if bypassTUN:
             try:
@@ -1589,7 +1887,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
                 return abortStart()
 
             # Handle user defined settings
-            userInterfaceName = userPrimaryAdapterInterfaceName()
+            userInterfaceName = settings.userPrimaryAdapterInterfaceName()
 
             if userInterfaceName:
                 logger.info(
@@ -1616,7 +1914,9 @@ class ConnectionManager(Mixins.CleanupOnExit):
                 tun.cleanup = functools.partial(_windowsCleanup, alias)
 
                 # Handle user defined settings
-                userDisableInterfaceDNS = userDisablePrimaryAdapterInterfaceDNS()
+                userDisableInterfaceDNS = (
+                    settings.userDisablePrimaryAdapterInterfaceDNS()
+                )
 
                 logger.info(f'DisablePrimaryInterfaceDNS: {userDisableInterfaceDNS}')
 
@@ -1624,7 +1924,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
                     SystemRoutingTable.WIN32SetInterfaceDNS(alias, '127.0.0.1', False)
 
             # Handle user defined settings
-            userTunInterfaceDNS = userTunAdapterInterfaceDNS()
+            userTunInterfaceDNS = settings.userTunAdapterInterfaceDNS()
 
             if userTunInterfaceDNS == '':
                 userTunInterfaceDNS = APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS
@@ -1667,7 +1967,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
             tun.cleanup = functools.partial(_darwinCleanup, servers)
 
             # Handle user defined settings
-            userTunInterfaceDNS = userTunAdapterInterfaceDNS()
+            userTunInterfaceDNS = settings.userTunAdapterInterfaceDNS()
 
             if userTunInterfaceDNS == '':
                 userTunInterfaceDNS = APPLICATION_TUN2SOCKS_INTERFACE_DNS_ADDRESS

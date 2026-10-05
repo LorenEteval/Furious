@@ -50,6 +50,12 @@ SYSTEM_PROXY_MODE_OPTIONS = (
 )
 
 registerAppSettings('VPNMode', isBinary=True)
+# A missing preference, including upgrades from 0.8.2, deliberately selects
+# sing-tun. VPNMode remains independent: choosing an engine does not enable TUN.
+# 0.8.2 ignores this key and continues using application-managed tun2socks.
+registerAppSettings(
+    APPLICATION_TUN_BACKEND, validRange=list(TUN_BACKENDS), default='sing-tun'
+)
 registerAppSettings(
     APPLICATION_THEME_SETTING,
     validRange=[theme.value for theme in ApplicationTheme],
@@ -145,6 +151,7 @@ class SettingsController(QtCore.QObject):
     """Apply application settings independently from their presentation."""
 
     tunModeChanged = QtCore.Signal(bool)
+    tunBackendChanged = QtCore.Signal(str)
     systemProxyModeChanged = QtCore.Signal(str)
 
     def __init__(self, parent=None):
@@ -181,6 +188,20 @@ class SettingsController(QtCore.QObject):
 
         self._setBinary('VPNMode', enabled)
         self.tunModeChanged.emit(enabled)
+
+        showMBoxNewChangesNextTime()
+
+    def setTUNBackend(self, backend: str):
+        """Select the application TUN implementation for the next connection."""
+        if backend not in TUN_BACKENDS:
+            raise ValueError('Unknown application TUN backend')
+
+        if AppSettings.get(APPLICATION_TUN_BACKEND) == backend:
+            return
+
+        AppSettings.set(APPLICATION_TUN_BACKEND, backend)
+
+        self.tunBackendChanged.emit(backend)
 
         showMBoxNewChangesNextTime()
 
