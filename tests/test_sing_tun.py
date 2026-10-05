@@ -207,7 +207,9 @@ class SingTUNConfigurationTest(unittest.TestCase):
         self.assertEqual(plan.hostSettings['tunAdapterInterfaceDNS'], '9.9.9.9')
         self.assertTrue(plan.hostSettings['disablePrimaryAdapterInterfaceDNS'])
         self.assertNotIn('host_options', plan.configuration)
+
         plan.hostSettings['tunAdapterInterfaceDNS'] = '1.0.0.1'
+
         self.assertEqual(
             stored, {'host_options': {'tunAdapterInterfaceDNS': '9.9.9.9'}}
         )
@@ -390,6 +392,7 @@ class SingTUNConfigurationTest(unittest.TestCase):
             configuration = prepareSingTUNSettings(settings)
             configuration['proxy'] = 'socks5://127.0.0.1:1080'
             configuration = SingTUNHostPlan(configuration).configuration
+
             with tempfile.TemporaryDirectory() as directory:
                 result = subprocess.run(
                     [
@@ -408,6 +411,7 @@ class SingTUNConfigurationTest(unittest.TestCase):
                     cwd=directory,
                     timeout=20,
                 )
+
             self.assertEqual(
                 result.returncode, 0, result.stderr.decode(errors='replace')
             )
@@ -420,14 +424,17 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
 
     def testTwoChoiceSelectorRetranslatesWithoutChangingStablePreference(self):
         module = importlib.import_module('Furious.Window.SettingsPage')
+
         with isolatedSettings(), mock.patch(
             'Furious.Controllers.SettingsController.showMBoxNewChangesNextTime'
         ):
             controller = SettingsController()
+
             with mock.patch.object(
                 module, 'AppSettingsController', return_value=controller
             ):
                 card = module._TUNBackendSettingsCard()
+
                 self.assertEqual(
                     [
                         card.comboBox.itemData(index)
@@ -445,6 +452,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                     card.titleLabel.retranslate()
                     card.descriptionLabel.retranslate()
                     card.comboBox.retranslate()
+
                     self.assertEqual(
                         card.titleLabel.text(), _('Application TUN Engine', language)
                     )
@@ -458,9 +466,12 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
     def testIndependentRoundTripAndMalformedPreservation(self):
         with isolatedSettings():
             AppSettings.set('CustomSingTUNSettings', 'malformed')
+
             with self.assertLogs('Furious.Repository.SingTUNSettings', level='ERROR'):
                 repository = UserSingTUNSettings()
+
             repository.cleanup()
+
             self.assertEqual(AppSettings.get('CustomSingTUNSettings'), 'malformed')
 
             repository.data()['unknown'] = {'future': 1}
@@ -485,24 +496,29 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
             baseline = copy.deepcopy(saved)
             dialog = self._dialog(saved)
             expected = 'go' if stack is None else stack
+
             self.assertEqual(dialog.fields['stack'].currentData(), expected)
             self.assertEqual(dialog.document()['stack'], expected)
             self.assertEqual(saved, baseline)
+
             dialog.reject()
             processQtEvents()
 
         saved = {'stack_options': {'TCPCongestionControl': 'bbr'}}
         dialog = self._dialog(saved)
+
         self.assertEqual(dialog.fields['TCPCongestionControl'].currentData(), 'bbr')
         self.assertEqual(
             dialog.document()['stack_options']['TCPCongestionControl'], 'bbr'
         )
         self.assertNotIn('TCPCongestionControl', dialog.advanced.toPlainText())
+
         for language in ('ZH', 'RU'):
             self.assertNotEqual(
                 _('TCP Congestion Control (Go stack)', language),
                 'TCP Congestion Control (Go stack)',
             )
+
         dialog.reject()
         processQtEvents()
 
@@ -529,6 +545,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         dialog = self._dialog(sing)
         dialog.fields['MTU'].setValue(1400)
         dialog.fields['bypassTUNAdapterInterfaceIP'].setText('192.0.2.4,2001:db8::4')
+
         document = dialog.document()
 
         self.assertEqual(document['tun_options']['MTU'], 1400)
@@ -551,6 +568,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         sing = {'max_sessions': 512}
         singRepository = mock.Mock()
         singRepository.data.return_value = sing
+
         with isolatedSettings(), mock.patch.object(
             Storage, '_UserSingTUNSettingsStorage', return_value=singRepository
         ), mock.patch.object(
@@ -589,6 +607,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
             QtCore, 'QSettings', return_value=settings
         ) as factory:
             factory.Status = status
+
             with self.assertRaisesRegex(OSError, 'committed in memory'):
                 Storage.replaceSingTUNSettings({'max_sessions': 256})
 
@@ -604,9 +623,12 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         ):
             with self.subTest(language=language), isolatedSettings():
                 AppSettings.set('Language', language)
+
                 dialog = self._dialog({})
+
                 with mock.patch.object(Storage, 'UserTUNSettings', return_value={}):
                     legacy = TunSettingsDialog()
+
                 self.assertEqual(_('Host Settings'), title)
                 self.assertIn(
                     title,
@@ -615,8 +637,10 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                         for index in range(dialog.tabs.count())
                     ],
                 )
+
                 form = dialog.disableDNS.parentWidget().layout()
                 legacyLabels = {label.text() for label in legacy.findChildren(QLabel)}
+
                 for key, source in (
                     ('primaryAdapterInterfaceName', 'Primary Adapter Interface Name'),
                     ('primaryAdapterInterfaceIP', 'Primary Adapter Interface IP'),
@@ -648,6 +672,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                 )
                 self.assertIn(dnsLabel, legacyLabels)
                 self.assertEqual(form.rowCount(), 5)
+
                 legacy.reject()
                 legacy.deleteLater()
                 dialog.reject()
@@ -677,11 +702,15 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
             ):
                 dialog = SingTUNSettingsDialog()
                 dialog.open()
+
                 self.assertEqual(dialog.fields['tunAdapterInterfaceDNS'].text(), '')
+
                 dialog.fields['tunAdapterInterfaceDNS'].setText('9.9.9.9')
                 dialog.fields['bypassTUNAdapterInterfaceIP'].setText('2001:db8::1')
+
                 dialog.accept()
                 processQtEvents()
+
                 self.assertFalse(isValid(dialog))
 
             self.assertEqual(tun2socks.data(), legacyBefore)
@@ -690,6 +719,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                 UserSingTUNSettings().data()['host_options']['tunAdapterInterfaceDNS'],
                 '9.9.9.9',
             )
+
             singBefore = copy.deepcopy(sing.data())
             singRaw = AppSettings.get('CustomSingTUNSettings')
 
@@ -703,6 +733,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
     def testRepeatedOpenAndOwnerFirstDestruction(self):
         for _ in range(5):
             owner = QWidget()
+
             with mock.patch.object(
                 Storage, 'UserSingTUNSettings', return_value={}
             ), mock.patch.object(
@@ -715,6 +746,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
             dialog.open()
             owner.deleteLater()
             processQtEvents()
+
             self.assertFalse(isValid(dialog))
 
     def testPreferenceDefaultInvalidAndSignal(self):
@@ -745,9 +777,12 @@ class SingTUNChildTest(unittest.TestCase):
 
     def testSpawnReadyCooperativeStopAndFinalHandleDisposal(self):
         runtime = _ChildRuntime({})
+
         try:
             self.assertEqual(runtime._processContext.get_start_method(), 'spawn')
+
             runtime.start()
+
             self.assertTrue(waitFor(lambda: runtime.ready, timeout=10))
             self.assertEqual(runtime.deviceName, 'utun101')
 
@@ -759,6 +794,7 @@ class SingTUNChildTest(unittest.TestCase):
             self.assertTrue(child._closed)
 
             runtime.dispose()
+
             self.assertTrue(runtime._control.closed)
         finally:
             runtime.dispose()
@@ -873,11 +909,13 @@ class SingTUNChildTest(unittest.TestCase):
         runtime = _ChildRuntime({})
         plan = mock.Mock()
         runtime._hostPlan = plan
+
         try:
             runtime.start()
             self.assertTrue(waitFor(lambda: runtime.ready, timeout=10))
 
             child = runtime.process
+
             with mock.patch.object(
                 child, 'close', side_effect=OSError('retained handle')
             ):
@@ -890,6 +928,7 @@ class SingTUNChildTest(unittest.TestCase):
             self.assertFalse(runtime._control.closed)
 
             runtime.stop()
+
             self.assertTrue(child._closed)
         finally:
             runtime.dispose()
@@ -899,6 +938,7 @@ class SingTUNChildTest(unittest.TestCase):
         plan, child = mock.Mock(), mock.Mock()
         runtime._hostPlan, runtime._process = plan, child
         child.is_alive.return_value = True
+
         try:
             with mock.patch.object(
                 MultiprocessingRuntime,
@@ -921,6 +961,7 @@ class SingTUNHostTest(unittest.TestCase):
     def testLinuxResolverPrerequisiteFailsBeforeNativeActivation(self):
         module = importlib.import_module('Furious.Service.SingTUNHost')
         plan = SingTUNHostPlan(prepareSingTUNSettings({}), platform='Linux')
+
         with mock.patch.object(
             module.os, 'geteuid', return_value=0, create=True
         ), mock.patch.object(
@@ -932,7 +973,9 @@ class SingTUNHostTest(unittest.TestCase):
         ) as command:
             with self.assertRaisesRegex(RuntimeError, 'systemd-resolved'):
                 plan.prepare([])
+
             command.assert_not_called()
+
         self.assertFalse(plan._activated)
 
     def testUnsupportedOwnershipCombinationsFailBeforeHostCommands(self):
@@ -1012,6 +1055,7 @@ class SingTUNHostTest(unittest.TestCase):
                 'DNS': ['2606:4700:4700::1111', '8.8.8.8'],
             }
         ]
+
         with mock.patch.object(
             module, '_powershell', return_value=json.dumps(snapshot)
         ), mock.patch.object(
@@ -1054,6 +1098,7 @@ class SingTUNHostTest(unittest.TestCase):
     def testLinuxAssignedIdentifiersAndDualStackExclusions(self):
         module = importlib.import_module('Furious.Service.SingTUNHost')
         plan = SingTUNHostPlan(prepareSingTUNSettings({}), platform='Linux')
+
         with mock.patch.object(
             module.os, 'geteuid', return_value=0, create=True
         ), mock.patch.object(
@@ -1068,6 +1113,7 @@ class SingTUNHostTest(unittest.TestCase):
             plan.prepare(['192.0.2.1', '2001:db8::1'])
 
         tun = plan.configuration['tun_options']
+
         self.assertGreater(tun['IPRoute2TableIndex'], 100000)
         self.assertGreater(tun['IPRoute2RuleIndex'], 999)
         self.assertEqual(tun['Inet6RouteExcludeAddress'], ['2001:db8::1/128'])
@@ -1082,6 +1128,7 @@ class SingTUNHostTest(unittest.TestCase):
         }
         plan._dnsRestore = [('Windows', snapshot)]
         plan._activated = True
+
         with mock.patch.object(plan, '_windowsDNS') as restore, mock.patch.object(
             plan, '_recoverNative', side_effect=RuntimeError('retained')
         ):
@@ -1128,8 +1175,10 @@ class SingTUNStartupTest(unittest.TestCase):
     def testBothStartupPathsKeepCapturedTUNLogSourceAfterPreferenceChanges(self):
         """Changing the next engine cannot relabel a previously captured attempt."""
         module = importlib.import_module('Furious.Service.ConnectionManager')
+
         for backend in ('sing-tun', 'tun2socks'):
             other = 'tun2socks' if backend == 'sing-tun' else 'sing-tun'
+
             for asynchronous in (True, False):
                 with self.subTest(backend=backend, asynchronous=asynchronous):
                     with isolatedSettings():
@@ -1240,9 +1289,12 @@ class SingTUNStartupTest(unittest.TestCase):
 
                 selected.assert_called_once_with()
                 other.assert_not_called()
+
                 expected = copy.deepcopy(stored)
                 stored.clear()
+
                 self.assertEqual(getattr(attempt, field), expected)
+
                 if backend == 'sing-tun':
                     callers = attempt.singHostSettingsCallers
                     self.assertIsNone(attempt.tun2socksSettingsCallers)
@@ -1272,6 +1324,7 @@ class SingTUNStartupTest(unittest.TestCase):
     def testBothStartupPathsUseNamedCallersBoundBeforePrimaryLaunch(self):
         """Settings edited during core launch only affect the next attempt."""
         module = importlib.import_module('Furious.Service.ConnectionManager')
+
         for backend in ('tun2socks', 'sing-tun'):
             for asynchronous in (True, False):
                 with self.subTest(backend=backend, asynchronous=asynchronous):
@@ -1380,6 +1433,7 @@ class SingTUNStartupTest(unittest.TestCase):
                                 self.assertEqual(
                                     host['tunAdapterInterfaceDNS'], '1.0.0.1'
                                 )
+
                                 nextAttempt = _ConnectionStartAttempt(
                                     manager,
                                     _Configuration(),
@@ -1388,6 +1442,7 @@ class SingTUNStartupTest(unittest.TestCase):
                                 )
                                 nextAttempt.snapshotApplicationTUN()
                                 observeSettings(nextAttempt)
+
                                 self.assertEqual(observed, ['9.9.9.9', '1.0.0.1'])
                                 self.assertEqual(selected.call_count, 2)
                         finally:
@@ -1397,6 +1452,7 @@ class SingTUNStartupTest(unittest.TestCase):
 
     def testBothPreferencesPreserveNativePriorityAndTypedFailure(self):
         module = importlib.import_module('Furious.Service.ConnectionManager')
+
         for backend in ('sing-tun', 'tun2socks'):
             for failure in (False, True):
                 with self.subTest(backend=backend, failure=failure), isolatedSettings():
@@ -1410,6 +1466,7 @@ class SingTUNStartupTest(unittest.TestCase):
                         ),
                     )
                     registry.usesApplicationTun2socks = mock.Mock()
+
                     with mock.patch.object(
                         module.SystemRuntime, 'isTUNMode', return_value=True
                     ), mock.patch.object(
@@ -1433,6 +1490,7 @@ class SingTUNStartupTest(unittest.TestCase):
                         self.assertEqual(primary.isRunning(), not failure)
 
                         manager.cleanup()
+
                 processQtEvents()
 
     def testInvalidSettingsReleaseDetachedRouterAndPrimaryRuntime(self):
@@ -1440,6 +1498,7 @@ class SingTUNStartupTest(unittest.TestCase):
         primaryRouter, router = RuntimeEventRouter(), RuntimeEventRouter()
         primary = _Runtime()
         manager = ConnectionManager()
+
         with isolatedSettings(), mock.patch.object(
             Storage,
             'UserTUNSettings',
@@ -1454,6 +1513,7 @@ class SingTUNStartupTest(unittest.TestCase):
             return_value=_Registry([PreparedRuntime(primary)]),
         ):
             operation = manager.startAsync(_Configuration(), 'Global', deepcopy=False)
+
             with mock.patch.object(
                 module, 'RuntimeEventRouter', side_effect=[primaryRouter, router]
             ):
@@ -1463,7 +1523,9 @@ class SingTUNStartupTest(unittest.TestCase):
                 self.assertEqual(manager.runtimes, [])
 
             manager.cleanup()
+
         processQtEvents()
+
         self.assertFalse(isValid(router))
 
     def testAliveDoesNotCommitUntilAuthoritativeNativeReadyAndDNSComplete(self):
@@ -1502,9 +1564,11 @@ class SingTUNStartupTest(unittest.TestCase):
             succeeded = []
             operation = manager.startAsync(_Configuration(), 'Global', deepcopy=False)
             operation.succeeded.connect(succeeded.append)
+
             self.assertTrue(
                 waitFor(lambda: operation._tun is not None and operation._tun.alive)
             )
+
             runtime = operation._tun
             self.assertFalse(succeeded)
             self.assertEqual(manager.runtimes, [])
@@ -1512,6 +1576,7 @@ class SingTUNStartupTest(unittest.TestCase):
             AppSettings.set('ApplicationTUNBackend', 'tun2socks')
             customized['host_options']['bypassTUNAdapterInterfaceIP'] = '192.0.2.99'
             customized['tun_options']['MTU'] = 1300
+
             self.assertEqual(operation.attempt.tunBackend, 'sing-tun')
             self.assertEqual(runtime._configuration['tun_options']['MTU'], 1400)
 
@@ -1521,12 +1586,14 @@ class SingTUNStartupTest(unittest.TestCase):
             self.assertEqual(runtime._hostPlan.addresses, ['192.0.2.1', '2001:db8::1'])
 
             manager.cleanup()
+
         processQtEvents()
 
     def testCancellationBeforeNativeReadyReleasesBothOwners(self):
         module = importlib.import_module('Furious.Service.ConnectionManager')
         manager = ConnectionManager()
         primary = _Runtime()
+
         with isolatedSettings(), mock.patch.object(
             Storage,
             'UserTUNSettings',
@@ -1557,6 +1624,7 @@ class SingTUNStartupTest(unittest.TestCase):
             self.assertEqual(manager.runtimes, [])
 
             manager.cleanup()
+
         processQtEvents()
 
     def testSynchronousCompatibilityPathSelectsSingAndCommitsAfterHostDNS(self):
@@ -1564,6 +1632,7 @@ class SingTUNStartupTest(unittest.TestCase):
         manager = ConnectionManager()
         primary = _Runtime()
         primary.start()
+
         with isolatedSettings(), mock.patch.object(
             Storage,
             'UserTUNSettings',

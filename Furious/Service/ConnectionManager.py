@@ -806,6 +806,7 @@ class ConnectionStartOperation(QtCore.QObject):
             self._singAddressesResolved(False, [address])
 
             return
+
         if not address:
             raise ValueError('A remote destination is required for sing-tun bypass')
 
@@ -846,6 +847,7 @@ class ConnectionStartOperation(QtCore.QObject):
             addresses = self.manager._singBypassAddresses(self.attempt, addresses)
 
             self._tun._hostPlan.begin('prepare', addresses)
+
             self._waitSingHost('_startSingTUN')
         except Exception as ex:
             self._fail('Failed to prepare sing-tun', str(ex))
@@ -887,6 +889,7 @@ class ConnectionStartOperation(QtCore.QObject):
             return
 
         self._tun._hostPlan.begin('applyDNS', self._tun.deviceName)
+
         self._waitSingHost('_singHostReady')
 
     def _singHostReady(self):

@@ -450,11 +450,13 @@ class SettingsPageOrganizationTest(unittest.TestCase):
         ]
 
         self.assertEqual(page.generalSection.cards, expectedGeneralCards)
+
         expectedTUNCards = [
             page.tunBackendCard,
             page.singTunSettingsCard,
             page.tunSettingsCard,
         ]
+
         self.assertEqual(page.tunSection.titleLabel.text(), 'TUN')
         self.assertEqual(page.tunSection.cards, expectedTUNCards)
         self.assertFalse(page.tunSection.isHidden())
@@ -1752,7 +1754,9 @@ class UnifiedLogPageTest(unittest.TestCase):
             manager.append('core output', CORE_LOG_CATEGORY)
 
             index = page.filterComboBox.findData(TUN_LOG_CATEGORY)
+
             self.assertEqual(page.filterComboBox.itemText(index), 'TUN')
+
             page.filterComboBox.setCurrentIndex(index)
             page.show()
             self.assertRendered(page)

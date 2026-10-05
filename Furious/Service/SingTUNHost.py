@@ -336,6 +336,7 @@ class SingTUNHostPlan:
             raise RuntimeError('sing-tun requires networking administrator privileges')
 
         self.configuration = addSingTUNExclusions(self.configuration, addresses)
+
         self.captureEgress()
 
         tun = self.configuration['tun_options']
@@ -440,6 +441,7 @@ class SingTUNHostPlan:
         if self.platform == 'Windows':
             primaryName = self.hostSettingsCallers.userPrimaryAdapterInterfaceName()
             primaryIP = self.hostSettingsCallers.userPrimaryAdapterInterfaceIP()
+
             snapshot = json.loads(
                 _powershell(
                     '$ErrorActionPreference="Stop"; '

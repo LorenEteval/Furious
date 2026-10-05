@@ -66,6 +66,7 @@ class SingTUNSettingsDialog(AppQTransientDialog):
         super().__init__(parent)
 
         self.setWindowTitle(_('Customize sing-tun Settings'))
+
         self._original = copy.deepcopy(Storage.UserSingTUNSettings())
         self.fields = {}
 
@@ -199,6 +200,7 @@ class SingTUNSettingsDialog(AppQTransientDialog):
             _('Native UDP NAT Limit (0 for default)'),
             stack.get('UDPNATMax', 0),
         )
+
         for key, label in (
             ('UDPMapping', _('UDP Mapping')),
             ('UDPFiltering', _('UDP Filtering')),
@@ -284,9 +286,13 @@ class SingTUNSettingsDialog(AppQTransientDialog):
         self.advanced.setPlainText(json.dumps(extra, indent=2, ensure_ascii=False))
 
         advanced.addRow(self.advanced)
+
         instructions = AppQLabel(
             _(
-                'Use exact native JSON field names. Supported: route address/exclusion lists, StrictRoute, InterfaceScope, ForwarderBindInterface and IncludeAllNetworks. AutoRoute, external configuration and DNS ownership are managed. Unsupported fields are rejected.'
+                'Use exact native JSON field names. Supported: route address/exclusion '
+                'lists, StrictRoute, InterfaceScope, ForwarderBindInterface and '
+                'IncludeAllNetworks. AutoRoute, external configuration and DNS '
+                'ownership are managed. Unsupported fields are rejected.'
             )
         )
         instructions.setWordWrap(True)
@@ -301,6 +307,7 @@ class SingTUNSettingsDialog(AppQTransientDialog):
             AppQDialogButtonBox.StandardButton.Ok
             | AppQDialogButtonBox.StandardButton.Cancel
         )
+
         connectWeakly(buttons.accepted, self, 'accept')
         connectWeakly(buttons.rejected, self, 'reject')
 

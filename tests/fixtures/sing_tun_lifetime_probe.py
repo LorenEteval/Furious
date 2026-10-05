@@ -39,6 +39,7 @@ import importlib
 
 def run(iterations, method):
     application()
+
     destroyed = []
     references = []
     errors = []
@@ -47,6 +48,7 @@ def run(iterations, method):
     sys.excepthook = lambda kind, error, traceback: errors.append(
         (kind.__name__, str(error))
     )
+
     singGetter, replace = (
         Storage.UserSingTUNSettings,
         Storage.replaceSingTUNSettings,
@@ -55,6 +57,7 @@ def run(iterations, method):
 
     Storage.UserSingTUNSettings = staticmethod(lambda: copy.deepcopy(sing))
     Storage.replaceSingTUNSettings = staticmethod(lambda document: None)
+
     baseline = len(AppQDialog._openDialogs)
 
     try:
@@ -66,17 +69,21 @@ def run(iterations, method):
                 references.append(weakref.ref(dialog))
 
                 dialog.open()
+
                 if method == 'owner':
                     owner.deleteLater()
                 else:
                     getattr(dialog, method)()
+
                 processQtEvents()
 
                 assert not isValid(dialog), index
 
                 if isValid(owner):
                     owner.deleteLater()
+
                 processQtEvents()
+
                 del dialog, owner
 
             gc.collect()
@@ -113,4 +120,5 @@ if __name__ == '__main__':
         '--method', choices=('accept', 'reject', 'close', 'owner'), default='reject'
     )
     arguments = parser.parse_args()
+
     print(json.dumps(run(arguments.iterations, arguments.method)))

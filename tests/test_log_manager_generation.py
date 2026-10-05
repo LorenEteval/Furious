@@ -793,12 +793,14 @@ class GenerationLogManagerContractTest(unittest.TestCase):
         route = manager.callback(TUN_LOG_CATEGORY, severity='error')
         sing = route.copyWithSource('sing-tun')
         tun2socks = route.copyWithSource('tun2socks')
+
         manager.append('application', APPLICATION_LOG_CATEGORY)
 
         sing.appendMany(('first', 'second'))
         tun2socks('third')
 
         entries = manager.entries(TUN_LOG_CATEGORY)
+
         self.assertEqual(manager.category(TUN_LOG_CATEGORY).displayName, 'TUN')
         self.assertEqual(route.source, '')
         self.assertEqual(
@@ -815,6 +817,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
         )
 
         manager.clear(runtimeOnly=True)
+
         self.assertEqual(manager.entries(TUN_LOG_CATEGORY), ())
         self.assertEqual(manager.plainText(), 'application')
         _assertManagerInvariants(self, manager)
