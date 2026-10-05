@@ -22,7 +22,7 @@ from __future__ import annotations
 from Furious.Service.LogManager import (
     APPLICATION_LOG_CATEGORY,
     CORE_LOG_CATEGORY,
-    TUN2SOCKS_LOG_CATEGORY,
+    TUN_LOG_CATEGORY,
     LogManager,
 )
 
@@ -122,7 +122,7 @@ def run(entries=50_000):
         for index in range(threshold):
             manager.append(str(index), CORE_LOG_CATEGORY)
         for index in range(threshold):
-            manager.append(str(index), TUN2SOCKS_LOG_CATEGORY)
+            manager.append(str(index), TUN_LOG_CATEGORY)
 
         started = time.perf_counter_ns()
         manager.append('trigger', CORE_LOG_CATEGORY)

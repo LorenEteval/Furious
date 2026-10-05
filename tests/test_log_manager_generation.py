@@ -28,7 +28,7 @@ from Furious.Models import LogCategory
 from Furious.Service.LogManager import (
     APPLICATION_LOG_CATEGORY,
     CORE_LOG_CATEGORY,
-    TUN2SOCKS_LOG_CATEGORY,
+    TUN_LOG_CATEGORY,
     LogManager,
     formatLogEntry,
 )
@@ -376,7 +376,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             ('r', 'runtime.extra'),
             ('o', 'other.extra'),
             ('c1', CORE_LOG_CATEGORY),
-            ('t', TUN2SOCKS_LOG_CATEGORY),
+            ('t', TUN_LOG_CATEGORY),
             ('c2', CORE_LOG_CATEGORY),
         )
 
@@ -787,6 +787,38 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             )
         )
 
+    def testTUNRoutesKeepIndependentEngineLabelsAndRuntimeClearing(self):
+        """Group both engines while retaining their producer identity and batches."""
+        manager = self.makeManager(autoClearEnabled=False)
+        route = manager.callback(TUN_LOG_CATEGORY, severity='error')
+        sing = route.copyWithSource('sing-tun')
+        tun2socks = route.copyWithSource('tun2socks')
+        manager.append('application', APPLICATION_LOG_CATEGORY)
+
+        sing.appendMany(('first', 'second'))
+        tun2socks('third')
+
+        entries = manager.entries(TUN_LOG_CATEGORY)
+        self.assertEqual(manager.category(TUN_LOG_CATEGORY).displayName, 'TUN')
+        self.assertEqual(route.source, '')
+        self.assertEqual(
+            [(entry.source, entry.message, entry.severity) for entry in entries],
+            [
+                ('sing-tun', 'first', 'error'),
+                ('sing-tun', 'second', 'error'),
+                ('tun2socks', 'third', 'error'),
+            ],
+        )
+        self.assertEqual(
+            manager.plainText(TUN_LOG_CATEGORY),
+            '[sing-tun] first\n[sing-tun] second\n[tun2socks] third',
+        )
+
+        manager.clear(runtimeOnly=True)
+        self.assertEqual(manager.entries(TUN_LOG_CATEGORY), ())
+        self.assertEqual(manager.plainText(), 'application')
+        _assertManagerInvariants(self, manager)
+
     def testMultilineEntryEvictionRemovesItsExactDocumentBlocks(self):
         """Never let paragraph retention silently retain a fragment of an entry."""
         with isolatedSettings():
@@ -877,7 +909,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             self.assertPageMatchesManager(page, manager, CORE_LOG_CATEGORY)
 
             manager.append('runtime\ncore', CORE_LOG_CATEGORY)
-            manager.append('runtime\rcomponent', TUN2SOCKS_LOG_CATEGORY)
+            manager.append('runtime\rcomponent', TUN_LOG_CATEGORY)
             self.assertTrue(waitFor(lambda: not page._entriesDirty))
             self.assertPageMatchesManager(page, manager, CORE_LOG_CATEGORY)
 
@@ -1366,7 +1398,7 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                                 (
                                     APPLICATION_LOG_CATEGORY,
                                     CORE_LOG_CATEGORY,
-                                    TUN2SOCKS_LOG_CATEGORY,
+                                    TUN_LOG_CATEGORY,
                                     'runtime.extra',
                                     'other.extra',
                                 )
@@ -1645,7 +1677,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
 
                 for index in range(size):
                     manager.append(str(index), CORE_LOG_CATEGORY)
-                manager.append('shared', TUN2SOCKS_LOG_CATEGORY)
+                manager.append('shared', TUN_LOG_CATEGORY)
 
                 samples['shared_category_clear'].append(
                     elapsed(lambda: manager.clear(CORE_LOG_CATEGORY))
@@ -1659,7 +1691,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                         (
                             APPLICATION_LOG_CATEGORY,
                             CORE_LOG_CATEGORY,
-                            TUN2SOCKS_LOG_CATEGORY,
+                            TUN_LOG_CATEGORY,
                         )[index % 3],
                     )
 
@@ -1674,7 +1706,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
                         (
                             APPLICATION_LOG_CATEGORY,
                             CORE_LOG_CATEGORY,
-                            TUN2SOCKS_LOG_CATEGORY,
+                            TUN_LOG_CATEGORY,
                         )[index % 3],
                     )
 
@@ -1882,7 +1914,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
         categories = (
             APPLICATION_LOG_CATEGORY,
             CORE_LOG_CATEGORY,
-            TUN2SOCKS_LOG_CATEGORY,
+            TUN_LOG_CATEGORY,
             'soak.runtime',
             'soak.other',
         )
@@ -1968,7 +2000,7 @@ class VeryHeavyGenerationLogManagerTest(unittest.TestCase):
         categories = (
             APPLICATION_LOG_CATEGORY,
             CORE_LOG_CATEGORY,
-            TUN2SOCKS_LOG_CATEGORY,
+            TUN_LOG_CATEGORY,
         )
 
         for index in range(count):

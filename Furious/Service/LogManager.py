@@ -36,7 +36,7 @@ __all__ = [
     'ALL_LOGS_FILTER',
     'APPLICATION_LOG_CATEGORY',
     'CORE_LOG_CATEGORY',
-    'TUN2SOCKS_LOG_CATEGORY',
+    'TUN_LOG_CATEGORY',
     'ApplicationLogHandler',
     'LogCursor',
     'LogEntryBatch',
@@ -47,7 +47,7 @@ __all__ = [
 ALL_LOGS_FILTER = 'all'
 APPLICATION_LOG_CATEGORY = 'application'
 CORE_LOG_CATEGORY = 'core'
-TUN2SOCKS_LOG_CATEGORY = 'component.tun2socks'
+TUN_LOG_CATEGORY = 'component.tun'
 
 
 @dataclass(frozen=True)
@@ -77,7 +77,10 @@ class LogEntryBatch:
 
 
 def formatLogEntry(entry: LogEntry) -> str:
-    """Return the producer-formatted text stored by one structured entry."""
+    """Identify application TUN engines while preserving stored producer text."""
+    if entry.categoryId == TUN_LOG_CATEGORY and entry.source:
+        return f'[{entry.source}] {entry.message}'
+
     return entry.message
 
 
@@ -92,6 +95,10 @@ class _LogCallback:
         self.categoryId = categoryId
         self.source = source
         self.severity = severity
+
+    def copyWithSource(self, source: str):
+        """Copy this callback with a new source, preserving its other log settings."""
+        return _LogCallback(self.manager, self.categoryId, source, self.severity)
 
     def __call__(self, line):
         """Append one line safely and return its entry, or ``None`` on failure."""
@@ -384,8 +391,8 @@ class LogManager(QtCore.QObject):
         )
         self.registerCategory(
             LogCategory(
-                TUN2SOCKS_LOG_CATEGORY,
-                'Tun2socks',
+                TUN_LOG_CATEGORY,
+                'TUN',
                 runtime=True,
             )
         )

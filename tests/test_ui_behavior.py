@@ -105,7 +105,7 @@ from Furious.Service.LogManager import ALL_LOGS_FILTER
 from Furious.Service import (
     APPLICATION_LOG_CATEGORY,
     CORE_LOG_CATEGORY,
-    TUN2SOCKS_LOG_CATEGORY,
+    TUN_LOG_CATEGORY,
     LogManager,
 )
 from Furious.Window.LogPage import LogPage
@@ -1711,6 +1711,30 @@ class UnifiedLogPageTest(unittest.TestCase):
 
             self.disposePage(page)
 
+    def testTUNFilterDisplaysBothEngineLabels(self):
+        """Render one generic filter with the engine source on each entry."""
+        with isolatedSettings():
+            manager = LogManager(maximumEntries=5)
+            page = LogPage(manager=manager)
+            self.addCleanup(self.disposePage, page)
+
+            route = manager.callback(TUN_LOG_CATEGORY)
+            route.copyWithSource('sing-tun')('native failure')
+            route.copyWithSource('tun2socks').appendMany(('legacy failure',))
+            manager.append('core output', CORE_LOG_CATEGORY)
+
+            index = page.filterComboBox.findData(TUN_LOG_CATEGORY)
+            self.assertEqual(page.filterComboBox.itemText(index), 'TUN')
+            page.filterComboBox.setCurrentIndex(index)
+            page.show()
+            self.assertRendered(page)
+
+            self.assertEqual(
+                page.plainText().splitlines(),
+                ['[sing-tun] native failure', '[tun2socks] legacy failure'],
+            )
+            self.assertEqual(page.plainText(), manager.plainText(TUN_LOG_CATEGORY))
+
     def testHiddenPageRendersOneOrderedSnapshotWhenShown(self):
         """Do not mutate the document while hidden; catch up exactly once."""
         with isolatedSettings():
@@ -2234,7 +2258,7 @@ class UnifiedLogPageTest(unittest.TestCase):
             for index in range(3):
                 manager.append(f'old core {index}', CORE_LOG_CATEGORY)
 
-            manager.append('old tun2socks', TUN2SOCKS_LOG_CATEGORY)
+            manager.append('old tun2socks', TUN_LOG_CATEGORY)
 
             processQtEvents()
 
@@ -2246,7 +2270,7 @@ class UnifiedLogPageTest(unittest.TestCase):
                 tuple(entry.message for entry in manager.entries(CORE_LOG_CATEGORY)),
                 ('new core after clear',),
             )
-            self.assertEqual(manager.entries(TUN2SOCKS_LOG_CATEGORY), tuple())
+            self.assertEqual(manager.entries(TUN_LOG_CATEGORY), tuple())
 
             page.show()
 

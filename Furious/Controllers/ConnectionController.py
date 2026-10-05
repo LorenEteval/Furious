@@ -28,7 +28,7 @@ from Furious.Qt.Signals import connectWeakly
 from Furious.Repository import Storage
 from Furious.Service import (
     CORE_LOG_CATEGORY,
-    TUN2SOCKS_LOG_CATEGORY,
+    TUN_LOG_CATEGORY,
     ConnectionManager,
     UpdateManager,
 )
@@ -343,10 +343,7 @@ class ConnectionController(QtCore.QObject):
                     routing=AppSettings.get('Routing'),
                     exitCallback=self.coreExitCallback,
                     msgCallbackCore=logManager.callback(CORE_LOG_CATEGORY),
-                    msgCallbackTUN_=logManager.callback(
-                        TUN2SOCKS_LOG_CATEGORY,
-                        source='Tun2socks',
-                    ),
+                    msgCallbackTUN_=logManager.callback(TUN_LOG_CATEGORY),
                 )
             except Exception as ex:
                 # Any non-exit exceptions
@@ -394,10 +391,7 @@ class ConnectionController(QtCore.QObject):
                 routing=AppSettings.get('Routing'),
                 exitCallback=self.coreExitCallback,
                 msgCallbackCore=logManager.callback(CORE_LOG_CATEGORY),
-                msgCallbackTUN_=logManager.callback(
-                    TUN2SOCKS_LOG_CATEGORY,
-                    source='Tun2socks',
-                ),
+                msgCallbackTUN_=logManager.callback(TUN_LOG_CATEGORY),
             )
         except Exception as ex:
             # Any non-exit exceptions

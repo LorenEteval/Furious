@@ -40,7 +40,7 @@ from Furious.Repository.Subscriptions import SubscriptionGroup, UserSubs
 from Furious.Service.LogManager import (
     APPLICATION_LOG_CATEGORY,
     CORE_LOG_CATEGORY,
-    TUN2SOCKS_LOG_CATEGORY,
+    TUN_LOG_CATEGORY,
     LogManager,
 )
 from Furious.Service.MetricsHistory import (
@@ -563,7 +563,7 @@ class LogManagerTest(unittest.TestCase):
         for index in range(3):
             manager.append(f'old core {index}', CORE_LOG_CATEGORY)
 
-        manager.append('old tun2socks', TUN2SOCKS_LOG_CATEGORY)
+        manager.append('old tun2socks', TUN_LOG_CATEGORY)
         manager.append('old component', componentCategory.id)
 
         manager.append('new core after clear', CORE_LOG_CATEGORY)
@@ -573,7 +573,7 @@ class LogManagerTest(unittest.TestCase):
             ('application retained', 'new core after clear'),
         )
         self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 1)
-        self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 0)
+        self.assertEqual(manager.entryCount(TUN_LOG_CATEGORY), 0)
         self.assertEqual(manager.entryCount(componentCategory.id), 0)
         self.assertEqual(manager.entryCount(APPLICATION_LOG_CATEGORY), 1)
         self.assertEqual(
@@ -582,7 +582,7 @@ class LogManagerTest(unittest.TestCase):
                 frozenset(
                     {
                         CORE_LOG_CATEGORY,
-                        TUN2SOCKS_LOG_CATEGORY,
+                        TUN_LOG_CATEGORY,
                         componentCategory.id,
                     }
                 )
@@ -600,7 +600,7 @@ class LogManagerTest(unittest.TestCase):
 
         for index in range(3):
             manager.append(f'core {index}', CORE_LOG_CATEGORY)
-            manager.append(f'tun2socks {index}', TUN2SOCKS_LOG_CATEGORY)
+            manager.append(f'tun2socks {index}', TUN_LOG_CATEGORY)
 
         self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 3)
 
@@ -608,7 +608,7 @@ class LogManagerTest(unittest.TestCase):
 
         self.assertTrue(manager.autoClearEnabled)
         self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 0)
-        self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 0)
+        self.assertEqual(manager.entryCount(TUN_LOG_CATEGORY), 0)
         self.assertEqual(manager.entryCount(APPLICATION_LOG_CATEGORY), 1)
 
     def testCharacterBudgetsRemainHardWhenAutoClearIsDisabled(self):
@@ -669,7 +669,7 @@ class LogManagerTest(unittest.TestCase):
                     manager.append(f'core {index}', CORE_LOG_CATEGORY)
 
                 for index in range(tunCount):
-                    manager.append(f'tun2socks {index}', TUN2SOCKS_LOG_CATEGORY)
+                    manager.append(f'tun2socks {index}', TUN_LOG_CATEGORY)
 
                 applicationGeneration = manager._applicationGeneration
                 runtimeGeneration = manager._runtimeGeneration
@@ -726,7 +726,7 @@ class LogManagerTest(unittest.TestCase):
                     applicationCount,
                 )
                 self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 1)
-                self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 0)
+                self.assertEqual(manager.entryCount(TUN_LOG_CATEGORY), 0)
                 self.assertEqual(
                     tuple(entry.message for entry in manager.entries()),
                     tuple(f'application {index}' for index in range(applicationCount))
@@ -803,7 +803,7 @@ class LogManagerTest(unittest.TestCase):
 
         manager.append('application', APPLICATION_LOG_CATEGORY)
         manager.append('core', CORE_LOG_CATEGORY)
-        manager.append('tun2socks', TUN2SOCKS_LOG_CATEGORY)
+        manager.append('tun2socks', TUN_LOG_CATEGORY)
 
         retiredGeneration = manager._runtimeGeneration
         observedGlobal = _ObservedEntryIndex(retiredGeneration.entries)
@@ -835,7 +835,7 @@ class LogManagerTest(unittest.TestCase):
             manager.append(f'core {index}', CORE_LOG_CATEGORY)
 
         for index in range(10):
-            manager.append(f'tun2socks {index}', TUN2SOCKS_LOG_CATEGORY)
+            manager.append(f'tun2socks {index}', TUN_LOG_CATEGORY)
 
         runtimeGeneration = manager._runtimeGeneration
         observedGlobal = _ObservedEntryIndex(runtimeGeneration.entries)
@@ -852,13 +852,13 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(len(observedGlobal.deletedKeys), 100)
         self.assertEqual(observedGlobal.oldestRemovals, 0)
         self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 0)
-        self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 10)
+        self.assertEqual(manager.entryCount(TUN_LOG_CATEGORY), 10)
         self.assertEqual(manager.retiredEntryCount, 100)
 
         observedGlobal.iterationRequests = 0
         observedGlobal.deletedKeys.clear()
 
-        manager.clear(TUN2SOCKS_LOG_CATEGORY)
+        manager.clear(TUN_LOG_CATEGORY)
 
         self.assertIsNot(manager._runtimeGeneration, runtimeGeneration)
         self.assertEqual(observedGlobal.iterationRequests, 0)
@@ -1039,7 +1039,7 @@ class LogManagerTest(unittest.TestCase):
         categoryIds = (
             APPLICATION_LOG_CATEGORY,
             CORE_LOG_CATEGORY,
-            TUN2SOCKS_LOG_CATEGORY,
+            TUN_LOG_CATEGORY,
         )
 
         for index in range(3):
@@ -1081,7 +1081,7 @@ class LogManagerTest(unittest.TestCase):
         manager.append('application 1', APPLICATION_LOG_CATEGORY)
         manager.append('old core', CORE_LOG_CATEGORY)
         manager.append('application 2', APPLICATION_LOG_CATEGORY)
-        manager.append('old tun2socks', TUN2SOCKS_LOG_CATEGORY)
+        manager.append('old tun2socks', TUN_LOG_CATEGORY)
 
         manager.clear(runtimeOnly=True)
 
@@ -1093,7 +1093,7 @@ class LogManagerTest(unittest.TestCase):
 
         manager.append('new core', CORE_LOG_CATEGORY)
         manager.append('application 3', APPLICATION_LOG_CATEGORY)
-        manager.append('new tun2socks', TUN2SOCKS_LOG_CATEGORY)
+        manager.append('new tun2socks', TUN_LOG_CATEGORY)
 
         self.assertEqual(
             tuple(entry.message for entry in manager.entries()),
@@ -1107,7 +1107,7 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(manager.retiredEntryCount, 0)
         self.assertEqual(manager.entryCount(APPLICATION_LOG_CATEGORY), 2)
         self.assertEqual(manager.entryCount(CORE_LOG_CATEGORY), 1)
-        self.assertEqual(manager.entryCount(TUN2SOCKS_LOG_CATEGORY), 1)
+        self.assertEqual(manager.entryCount(TUN_LOG_CATEGORY), 1)
         self._assertIndexesConsistent(manager)
 
     def testRegisteredCategoryClearAndClearAllPreserveSignals(self):
@@ -1138,7 +1138,7 @@ class LogManagerTest(unittest.TestCase):
         )
         self.assertEqual(
             cleared,
-            [frozenset({CORE_LOG_CATEGORY, TUN2SOCKS_LOG_CATEGORY})],
+            [frozenset({CORE_LOG_CATEGORY, TUN_LOG_CATEGORY})],
         )
 
         manager.clear(category.id)
@@ -1150,7 +1150,7 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(
             cleared,
             [
-                frozenset({CORE_LOG_CATEGORY, TUN2SOCKS_LOG_CATEGORY}),
+                frozenset({CORE_LOG_CATEGORY, TUN_LOG_CATEGORY}),
                 frozenset({category.id}),
             ],
         )
@@ -1163,7 +1163,7 @@ class LogManagerTest(unittest.TestCase):
         self.assertEqual(
             cleared,
             [
-                frozenset({CORE_LOG_CATEGORY, TUN2SOCKS_LOG_CATEGORY}),
+                frozenset({CORE_LOG_CATEGORY, TUN_LOG_CATEGORY}),
                 frozenset({category.id}),
                 None,
             ],
