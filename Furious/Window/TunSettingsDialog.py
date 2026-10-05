@@ -264,11 +264,11 @@ class GuiTUNSettingsGroupBoxBasic(GuiEditorWidgetQGroupBox):
                 key='defaultPrimaryGatewayIP',
             ),
             GuiTUNSettingsItemXXX(
-                title=_('Tun2socks Adapter Interface DNS'),
+                title=_('TUN Adapter Interface DNS'),
                 key='tunAdapterInterfaceDNS',
             ),
             GuiTUNSettingsItemXXX(
-                title=_('Bypass Tun2socks Adapter Interface IP (separated by commas)'),
+                title=_('Bypass TUN Adapter Interface IP (separated by commas)'),
                 key='bypassTUNAdapterInterfaceIP',
             ),
             GuiTUNSettingsItemSwitchXXX(

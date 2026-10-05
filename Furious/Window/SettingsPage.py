@@ -39,6 +39,7 @@ from Furious.Service.TrafficStatsManager import (
     METRICS_COLLECTION_SETTING,
 )
 from Furious.Window.TunSettingsDialog import tunModeTitle
+from Furious.Qt.Signals import connectWeakly
 
 from PySide6 import QtCore
 from PySide6.QtWidgets import *
@@ -555,6 +556,44 @@ class _SystemProxySettingsCard(_SettingsCard):
             AppSettingsController().setSystemProxyMode(mode)
 
 
+class _TUNBackendSettingsCard(_SettingsCard):
+    """Select an application fallback without changing native-core policy."""
+
+    def __init__(self):
+        self.comboBox = AppQComboBox()
+        self.comboBox.setObjectName('SettingsComboBox')
+        self.comboBox.addItem('sing-tun', 'sing-tun')
+        self.comboBox.addItem('tun2socks', 'tun2socks')
+
+        super().__init__(
+            'diagram-3.svg',
+            self.comboBox,
+            _('Application TUN Engine'),
+            _(
+                'Native proxy-core TUN takes priority. This engine is used when Furious provides application TUN. Changes apply to the next connection.'
+            ),
+        )
+
+        self.sync()
+
+        connectWeakly(self.comboBox.currentIndexChanged, self, '_selectionChanged')
+        connectWeakly(AppSettingsController().tunBackendChanged, self, 'sync')
+
+    def sync(self, backend=None):
+        blocker = QtCore.QSignalBlocker(self.comboBox)
+        value = (
+            backend
+            if isinstance(backend, str)
+            else AppSettings.get(APPLICATION_TUN_BACKEND)
+        )
+
+        self.comboBox.setCurrentIndex(max(self.comboBox.findData(value), 0))
+        del blocker
+
+    def _selectionChanged(self, _index):
+        AppSettingsController().setTUNBackend(self.comboBox.currentData())
+
+
 class _SettingsSection(QWidget):
     """Group a translated heading and a stack of settings cards."""
 
@@ -601,6 +640,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self,
         *,
         tunSettingsDialogFactory,
+        singTunSettingsDialogFactory=None,
         proxyBypassDialog,
         networkTestDialog,
         checkForUpdates,
@@ -613,6 +653,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         super().__init__(parent)
 
         self.setObjectName('SettingsPage')
+        self._singTunSettingsDialogFactory = singTunSettingsDialogFactory
 
         (
             self._tunSettingsDialogFactory,
@@ -636,6 +677,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.pageTitleLabel.setObjectName('SettingsPageTitle')
 
         self.generalSection = _SettingsSection(_('General'))
+        self.tunSection = _SettingsSection('TUN', translatable=False)
         self.connectionSection = _SettingsSection(_('Connection and Interface'))
         self.applicationSection = _SettingsSection(_('Application'))
         self.pluginSettingsTitleLabel = AppQLabel(_('Plugin Settings'))
@@ -644,6 +686,14 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self._pluginActions = []
 
         self._tunModeAvailable = AppSettingsController().tunModeAvailable()
+        self.tunBackendCard = _TUNBackendSettingsCard()
+        self.singTunSettingsCard = _ActionSettingsCard(
+            None,
+            self._openSingTUNSettings,
+            _('Customize sing-tun Settings...'),
+            _('Configure sing-tun interface, stack, SOCKS transit and host settings.'),
+            _('Open'),
+        )
 
         self.tunModeCard = _ToggleSettingsCard(
             'shield-check.svg',
@@ -729,7 +779,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             self.editorWhitespaceCard,
         ) = (
             _ActionSettingsCard(
-                'diagram-3.svg',
+                None,
                 self._openTUNSettings,
                 _('Customize Tun2socks Settings...'),
                 _('Configure the external Tun2socks network interface and routing.'),
@@ -802,8 +852,10 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
             self.systemProxyCard.sync
         )
 
-        if not SystemRuntime.flatpakID():
-            self.connectionSection.addCard(self.tunSettingsCard)
+        self.tunSection.addCard(self.tunBackendCard)
+        self.tunSection.addCard(self.singTunSettingsCard)
+        self.tunSection.addCard(self.tunSettingsCard)
+        self.tunSection.setVisible(not SystemRuntime.flatpakID())
 
         self.connectionSection.addCard(self.systemProxyCard)
         self.connectionSection.addCard(self.proxyBypassCard)
@@ -884,6 +936,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         contentLayout.setSpacing(22)
         contentLayout.addWidget(self.pageTitleLabel)
         contentLayout.addWidget(self.generalSection)
+        contentLayout.addWidget(self.tunSection)
         contentLayout.addWidget(self.connectionSection)
 
         if self.pluginSections:
@@ -1124,10 +1177,19 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         """Show the end-user disclosure for the active endpoint providers."""
         _endpointPrivacyMessageBox(self).open()
 
+    def _openSingTUNSettings(self):
+        if self._singTunSettingsDialogFactory is not None:
+            self._singTunSettingsDialogFactory(parent=self).open()
+
     def setConnectionControlsEnabled(self, enabled: bool):
         """Disable connection-sensitive settings during a transition."""
         self.tunModeCard.setEnabled(bool(enabled) and self._tunModeAvailable)
         self.systemProxyCard.comboBox.setEnabled(bool(enabled))
+        self.tunBackendCard.setEnabled(bool(enabled) and not SystemRuntime.flatpakID())
+        self.tunSettingsCard.setEnabled(bool(enabled))
+        self.singTunSettingsCard.setEnabled(
+            bool(enabled) and self._singTunSettingsDialogFactory is not None
+        )
 
     def showEvent(self, event):
         """Synchronize controls in case a legacy action changed a setting."""
@@ -1135,6 +1197,7 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
 
         for section in (
             self.generalSection,
+            self.tunSection,
             self.connectionSection,
             self.applicationSection,
             *self.pluginSections,

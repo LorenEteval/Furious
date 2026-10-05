@@ -426,6 +426,7 @@ class SettingsPageOrganizationTest(unittest.TestCase):
             )
             page = SettingsPage(
                 tunSettingsDialogFactory=mock.Mock(),
+                singTunSettingsDialogFactory=mock.Mock(),
                 proxyBypassDialog=proxyBypassDialog,
                 networkTestDialog=networkTestDialog,
                 **callbacks,
@@ -449,6 +450,20 @@ class SettingsPageOrganizationTest(unittest.TestCase):
         ]
 
         self.assertEqual(page.generalSection.cards, expectedGeneralCards)
+        expectedTUNCards = [
+            page.tunBackendCard,
+            page.singTunSettingsCard,
+            page.tunSettingsCard,
+        ]
+        self.assertEqual(page.tunSection.titleLabel.text(), 'TUN')
+        self.assertEqual(page.tunSection.cards, expectedTUNCards)
+        self.assertFalse(page.tunSection.isHidden())
+        self.assertTrue(
+            all(card.parent() is page.tunSection for card in expectedTUNCards)
+        )
+        self.assertTrue(
+            all(card not in page.connectionSection.cards for card in expectedTUNCards)
+        )
         self.assertEqual(
             page.applicationSection.cards,
             [page.updateCard, page.aboutCard],
@@ -473,11 +488,17 @@ class SettingsPageOrganizationTest(unittest.TestCase):
 
         page.restartCard.button.click()
         page.openFolderCard.button.click()
+        page.tunSettingsCard.button.click()
+        page.singTunSettingsCard.button.click()
 
         callbacks['restartAsAdmin'].assert_called_once_with()
         callbacks['openApplicationFolder'].assert_called_once_with()
         callbacks['checkForUpdates'].assert_not_called()
         callbacks['openAboutPage'].assert_not_called()
+        page._tunSettingsDialogFactory.assert_called_once_with(parent=page)
+        page._tunSettingsDialogFactory.return_value.open.assert_called_once_with()
+        page._singTunSettingsDialogFactory.assert_called_once_with(parent=page)
+        page._singTunSettingsDialogFactory.return_value.open.assert_called_once_with()
 
         page.close()
         page.deleteLater()
@@ -494,6 +515,13 @@ class SettingsPageOrganizationTest(unittest.TestCase):
 
                 self.assertIn(page.tunModeCard, page.generalSection.cards)
                 self.assertFalse(page.tunModeCard.checkBox.isEnabled())
+                self.assertTrue(page.tunSection.isHidden())
+                self.assertTrue(
+                    all(
+                        card.parent() is page.tunSection
+                        for card in page.tunSection.cards
+                    )
+                )
 
                 page.setConnectionControlsEnabled(True)
                 self.assertFalse(page.tunModeCard.checkBox.isEnabled())

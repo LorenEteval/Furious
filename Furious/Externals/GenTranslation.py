@@ -1425,6 +1425,7 @@ TRANSLATION = {
     },
     "Primary Adapter Interface Name": {
         "source": [
+            "Furious.Window.SingTUNSettingsDialog",
             "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Имя основного сетевого адаптера",
@@ -1433,6 +1434,7 @@ TRANSLATION = {
     },
     "Primary Adapter Interface IP": {
         "source": [
+            "Furious.Window.SingTUNSettingsDialog",
             "Furious.Window.TunSettingsDialog"
         ],
         "RU": "IP-адрес основного сетевого адаптера",
@@ -1447,24 +1449,9 @@ TRANSLATION = {
         "ZH": "默认主网关IP",
         "isReviewed": "True"
     },
-    "Tun2socks Adapter Interface DNS": {
-        "source": [
-            "Furious.Window.TunSettingsDialog"
-        ],
-        "RU": "DNS-адрес интерфейса адаптера Tun2socks",
-        "ZH": "Tun2socks适配器接口DNS",
-        "isReviewed": "True"
-    },
-    "Bypass Tun2socks Adapter Interface IP (separated by commas)": {
-        "source": [
-            "Furious.Window.TunSettingsDialog"
-        ],
-        "RU": "Обход IP-адреса интерфейса адаптера Tun2socks (через запятую)",
-        "ZH": "绕过Tun2socks适配器接口IP（以逗号分隔）",
-        "isReviewed": "True"
-    },
     "Disable Primary Adapter Interface DNS (Mitigating DNS leaks on Windows)": {
         "source": [
+            "Furious.Window.SingTUNSettingsDialog",
             "Furious.Window.TunSettingsDialog"
         ],
         "RU": "Отключить DNS основного сетевого адаптера (для предотвращения утечек DNS в Windows)",
@@ -2760,14 +2747,6 @@ TRANSLATION = {
         "ZH": "SOCKS代理",
         "isReviewed": "True"
     },
-    "Use Application Tun2socks": {
-        "source": [
-            "Furious.Backends.ExternalCore.Editor"
-        ],
-        "RU": "Использовать Tun2socks приложения",
-        "ZH": "使用应用程序的Tun2socks",
-        "isReviewed": "True"
-    },
     "TUN Remote Address": {
         "source": [
             "Furious.Backends.ExternalCore.Editor"
@@ -2934,14 +2913,6 @@ TRANSLATION = {
         ],
         "RU": "Информация о выходном узле прокси и конфиденциальность",
         "ZH": "代理出口信息与隐私",
-        "isReviewed": "True"
-    },
-    "TUN remote address is required when application tun2socks is enabled": {
-        "source": [
-            "Furious.Backends.ExternalCore.Editor"
-        ],
-        "RU": "При включённом Tun2socks приложения необходимо указать удалённый адрес TUN",
-        "ZH": "启用应用程序的Tun2socks时必须填写TUN远程地址",
         "isReviewed": "True"
     },
     "Data usage": {
@@ -3374,6 +3345,288 @@ TRANSLATION = {
         ],
         "RU": "Тесты",
         "ZH": "测试",
+        "isReviewed": "True"
+    },
+    "Application TUN Engine": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Движок TUN приложения",
+        "ZH": "应用 TUN 引擎",
+        "isReviewed": "True"
+    },
+    "Native proxy-core TUN takes priority. This engine is used when Furious provides application TUN. Changes apply to the next connection.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Встроенный TUN прокси-ядра имеет приоритет. Этот движок используется, когда TUN предоставляет Furious. Изменения применяются при следующем подключении.",
+        "ZH": "代理内核的原生 TUN 优先。由 Furious 提供应用 TUN 时才使用此引擎。更改将在下次连接时生效。",
+        "isReviewed": "True"
+    },
+    "Customize sing-tun Settings...": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Настроить sing-tun...",
+        "ZH": "自定义 sing-tun 设置...",
+        "isReviewed": "True"
+    },
+    "Customize sing-tun Settings": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Настройка sing-tun",
+        "ZH": "自定义 sing-tun 设置",
+        "isReviewed": "True"
+    },
+    "SOCKS Transit": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Передача через SOCKS",
+        "ZH": "SOCKS 转发",
+        "isReviewed": "True"
+    },
+    "Stack": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Сетевой стек",
+        "ZH": "网络协议栈",
+        "isReviewed": "True"
+    },
+    "Log Level": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Уровень журналирования",
+        "ZH": "日志级别",
+        "isReviewed": "True"
+    },
+    "SOCKS Interface Binding (empty for automatic)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Интерфейс SOCKS (пусто — автоматически)",
+        "ZH": "SOCKS 绑定接口（留空自动选择）",
+        "isReviewed": "True"
+    },
+    "Maximum Sessions": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Максимум сеансов",
+        "ZH": "最大会话数",
+        "isReviewed": "True"
+    },
+    "Interface and Stack": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Интерфейс и сетевой стек",
+        "ZH": "接口与协议栈",
+        "isReviewed": "True"
+    },
+    "Device Name (empty for automatic)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Имя устройства (пусто — автоматически)",
+        "ZH": "设备名称（留空自动选择）",
+        "isReviewed": "True"
+    },
+    "MTU (bytes)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "MTU (байты)",
+        "ZH": "MTU（字节）",
+        "isReviewed": "True"
+    },
+    "IPv4 Address Prefixes (comma separated)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Префиксы IPv4 (через запятую)",
+        "ZH": "IPv4 地址前缀（以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "IPv6 Address Prefixes (comma separated)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Префиксы IPv6 (через запятую)",
+        "ZH": "IPv6 地址前缀（以逗号分隔）",
+        "isReviewed": "True"
+    },
+    "Native UDP Timeout (Go duration, e.g. 1m)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Тайм-аут UDP стека (длительность Go, например 1m)",
+        "ZH": "原生 UDP 超时（Go 时长，例如 1m）",
+        "isReviewed": "True"
+    },
+    "Native ICMP Timeout (Go duration, 0 for default)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Тайм-аут ICMP стека (длительность Go, 0 — по умолчанию)",
+        "ZH": "原生 ICMP 超时（Go 时长，0 使用默认值）",
+        "isReviewed": "True"
+    },
+    "Native UDP NAT Limit (0 for default)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Лимит UDP NAT стека (0 — по умолчанию)",
+        "ZH": "原生 UDP NAT 上限（0 使用默认值）",
+        "isReviewed": "True"
+    },
+    "Advanced Options": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Дополнительные параметры",
+        "ZH": "高级选项",
+        "isReviewed": "True"
+    },
+    "Use exact native JSON field names. Supported: route address/exclusion lists, StrictRoute, InterfaceScope, ForwarderBindInterface and IncludeAllNetworks. AutoRoute, external configuration and DNS ownership are managed. Unsupported fields are rejected.": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Используйте точные имена полей JSON. Поддерживаются списки маршрутов и исключений, StrictRoute, InterfaceScope, ForwarderBindInterface и IncludeAllNetworks. AutoRoute, внешняя настройка и управление DNS контролируются приложением. Неподдерживаемые поля отклоняются.",
+        "ZH": "请使用准确的原生 JSON 字段名。支持路由地址及排除列表、StrictRoute、InterfaceScope、ForwarderBindInterface 和 IncludeAllNetworks。AutoRoute、外部配置模式和 DNS 归属由应用管理。不支持的字段会被拒绝。",
+        "isReviewed": "True"
+    },
+    "Connect Timeout (seconds)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Тайм-аут подключения (секунды)",
+        "ZH": "连接超时（秒）",
+        "isReviewed": "True"
+    },
+    "SOCKS UDP Timeout (seconds)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Тайм-аут UDP SOCKS (секунды)",
+        "ZH": "SOCKS UDP 超时（秒）",
+        "isReviewed": "True"
+    },
+    "TCP Idle Timeout (seconds)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Тайм-аут простоя TCP (секунды)",
+        "ZH": "TCP 空闲超时（秒）",
+        "isReviewed": "True"
+    },
+    "UDP Mapping": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Сопоставление UDP",
+        "ZH": "UDP 映射方式",
+        "isReviewed": "True"
+    },
+    "UDP Filtering": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Фильтрация UDP",
+        "ZH": "UDP 过滤方式",
+        "isReviewed": "True"
+    },
+    "Automatic": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Автоматический выбор",
+        "ZH": "自动选择",
+        "isReviewed": "True"
+    },
+    "Endpoint Independent": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Независимо от конечной точки",
+        "ZH": "与端点无关",
+        "isReviewed": "True"
+    },
+    "Address Dependent": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Зависит от адреса",
+        "ZH": "依赖地址",
+        "isReviewed": "True"
+    },
+    "Address and Port Dependent": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Зависит от адреса и порта",
+        "ZH": "依赖地址和端口",
+        "isReviewed": "True"
+    },
+    "TUN remote address is required when application TUN is enabled": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "При включённом TUN приложения требуется адрес удалённого сервера",
+        "ZH": "启用应用程序 TUN 时必须填写 TUN 远程地址",
+        "isReviewed": "True"
+    },
+    "Use Application TUN": {
+        "source": [
+            "Furious.Backends.ExternalCore.Editor"
+        ],
+        "RU": "Использовать TUN приложения",
+        "ZH": "使用应用程序 TUN",
+        "isReviewed": "True"
+    },
+    "Configure sing-tun interface, stack, SOCKS transit and host settings.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Настройте интерфейс, стек, SOCKS-передачу и параметры хоста sing-tun.",
+        "ZH": "配置 sing-tun 的接口、协议栈、SOCKS 转发和主机设置。",
+        "isReviewed": "True"
+    },
+    "Host Settings": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Настройки хоста",
+        "ZH": "主机设置",
+        "isReviewed": "True"
+    },
+    "TCP Congestion Control (Go stack)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Управление перегрузкой TCP (стек Go)",
+        "ZH": "TCP 拥塞控制（Go 协议栈）",
+        "isReviewed": "True"
+    },
+    "TUN Adapter Interface DNS": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog",
+            "Furious.Window.TunSettingsDialog"
+        ],
+        "RU": "DNS-адрес интерфейса адаптера TUN",
+        "ZH": "TUN适配器接口DNS",
+        "isReviewed": "True"
+    },
+    "Bypass TUN Adapter Interface IP (separated by commas)": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog",
+            "Furious.Window.TunSettingsDialog"
+        ],
+        "RU": "IP-адреса в обход интерфейса TUN (через запятую)",
+        "ZH": "绕过TUN适配器接口的IP地址（以逗号分隔）",
         "isReviewed": "True"
     }
 }

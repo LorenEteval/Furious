@@ -49,6 +49,7 @@ from Furious.Window.ProxyBypassDialog import *
 from Furious.Window.QRCodeWindow import QRCodeWindow
 from Furious.Window.TextEditorWindow import TextEditorWindow
 from Furious.Window.TunSettingsDialog import *
+from Furious.Window.SingTUNSettingsDialog import SingTUNSettingsDialog
 
 from PySide6 import QtCore
 from PySide6.QtGui import *
@@ -1129,6 +1130,10 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         """Check for updates."""
         self.updatesManager.configureHttpProxy(Storage.Extras.UserHttpProxy())
         self.updatesManager.checkForUpdates(**kwargs)
+
+    def getGuiSingTUNSettings(self, **kwargs):
+        """Transfer a fresh managed transient editor to the Settings page."""
+        return SingTUNSettingsDialog(parent=kwargs.pop('parent', self), **kwargs)
 
     def resetNetworkState(self):
         """Reset network state."""

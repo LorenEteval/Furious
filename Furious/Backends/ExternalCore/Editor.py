@@ -309,7 +309,7 @@ class ExternalCoreApplicationTun2socksInput(GuiEditorItemTextSwitch):
 
     def __init__(self):
         """Initialize the application tun2socks opt-in control."""
-        super().__init__(title=_('Use Application Tun2socks'))
+        super().__init__(title=_('Use Application TUN'))
 
     def connectToggled(self, receiver, methodName: str):
         """Connect a field-state callback without retaining its binding."""
@@ -536,7 +536,7 @@ class ExternalCoreEditor(GuiEditorWidgetQDialog):
             and not self._tunRemoteAddressInput.text()
         ):
             validationMessage = _(
-                'TUN remote address is required when application tun2socks is enabled'
+                'TUN remote address is required when application TUN is enabled'
             )
 
         if validationMessage:

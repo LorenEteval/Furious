@@ -94,6 +94,7 @@ class MainWindow(AppQMainWindow):
         self.logPage = AppLogPage()
         self.settingsPage = SettingsPage(
             tunSettingsDialogFactory=self.homePage.getGuiTUNSettings,
+            singTunSettingsDialogFactory=self.homePage.getGuiSingTUNSettings,
             proxyBypassDialog=self.homePage.customizeProxyBypassDialog,
             networkTestDialog=self.homePage.customizeNetworkTestDialog,
             checkForUpdates=self.homePage.checkForUpdates,
