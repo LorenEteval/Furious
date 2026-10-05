@@ -258,6 +258,7 @@ jobs:
               'hysteria',
               'hysteria2',
               'tun2socks',
+              'sing-tun',
           }
 
           requirements = []
@@ -386,6 +387,7 @@ jobs:
           CGO_ENABLED: "1"
           CMAKE_BUILD_PARALLEL_LEVEL: "2"
           GOPROXY: https://proxy.golang.org,direct
+          GOTOOLCHAIN: local
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
@@ -408,7 +410,7 @@ jobs:
           python -m pip install `
             "setuptools>=68" `
             wheel `
-            "cmake>=3.15" `
+            "cmake>=3.18" `
             "pybind11>=3.0.1,<3.1"
 
           $wheelDirectory = Join-Path $temporaryDirectory 'wheels'
@@ -418,6 +420,7 @@ jobs:
             'Xray-core'
             'hysteria2'
             'tun2socks'
+            'sing-tun==0.9.7.dev0'
           )
 
           foreach ($binding in $bindings) {
@@ -442,8 +445,8 @@ jobs:
 
           $unexpectedWheels = @($wheels | Where-Object Name -NotLike '*win_amd64.whl')
 
-          if ($wheels.Count -ne 3 -or $unexpectedWheels.Count -ne 0) {
-            throw 'Expected exactly three locally built win_amd64 wheels'
+          if ($wheels.Count -ne 4 -or $unexpectedWheels.Count -ne 0) {
+            throw 'Expected exactly four locally built win_amd64 wheels'
           }
 
           $wheelPaths = @($wheels.FullName)
@@ -464,7 +467,7 @@ jobs:
       - name: Install supported binding wheels
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            binary_policy="--only-binary=Xray-core,hysteria,hysteria2,tun2socks"
+            binary_policy="--only-binary=Xray-core,hysteria,hysteria2,tun2socks,sing-tun"
           else
             binary_policy=""
           fi
@@ -476,14 +479,38 @@ jobs:
             Xray-core \
             hysteria \
             hysteria2 \
-            tun2socks
+            tun2socks \
+            sing-tun==0.9.7.dev0
         if: matrix.id != 'windows7-amd64' && matrix.id != 'windows10-amd64'
+      - name: Verify sing-tun binding API without host networking
+        run: |
+          python - <<'PY'
+          from sing_tun import Config, Engine, capabilities
+
+          import importlib.metadata
+
+          assert importlib.metadata.version('sing-tun') == '0.9.7.dev0'
+          assert Config(proxy='socks5://127.0.0.1:1080').stack == 'go'
+          assert capabilities()['stacks'] == ('go', 'gvisor', 'system', 'mixed')
+          for stack in ('', 'go', 'gvisor', 'system', 'mixed'):
+              options = {'TCPCongestionControl': 'cubic'} if stack in ('', 'go') else {}
+              engine = Engine(Config(
+                  proxy='socks5://127.0.0.1:1080',
+                  stack=stack,
+                  stack_options=options,
+              ))
+              try:
+                  assert not engine.ready
+              finally:
+                  engine.close(5)
+          print('sing-tun API verified; no TUN started')
+          PY
       - name: Verify Windows native and UI imports
         run: |
           python - <<'PY'
           import importlib
 
-          for name in ('xray', 'hysteria', 'hysteria2', 'tun2socks'):
+          for name in ('xray', 'hysteria', 'hysteria2', 'tun2socks', 'sing_tun'):
               module = importlib.import_module(name)
               print(f'{name}: {module.__file__}')
 

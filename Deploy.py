@@ -62,6 +62,9 @@ NUITKA_BINARY_VERSION_OPTION = (
 )
 
 NUITKA_PACKAGE_DATA_OPTIONS = (
+    '--include-package=sing_tun '
+    '--include-package-data=sing_tun '
+    '--include-distribution-metadata=sing-tun '
     f'--include-package-data=Furious:Data/** '
     f'--noinclude-data-files=Furious/Data/*.md '
     f'--noinclude-data-files=Furious/Data/**/*.md '

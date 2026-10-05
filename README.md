@@ -42,6 +42,7 @@ when something goes wrong.
 - [Xray-core](https://github.com/XTLS/Xray-core)
 - [Hysteria](https://github.com/apernet/hysteria)
 - [tun2socks](https://github.com/xjasonlyu/tun2socks)
+- [sing-tun](https://github.com/SagerNet/sing-tun)
 
 ## License
 

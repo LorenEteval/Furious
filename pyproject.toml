@@ -26,6 +26,7 @@ dependencies = [
     "hysteria",
     "hysteria2",
     "tun2socks",
+    "sing-tun==0.9.7.dev0",
     "sysproxy; sys_platform == 'win32'",
     "win32session; sys_platform == 'win32'",
     "darkdetect; sys_platform != 'darwin'",
