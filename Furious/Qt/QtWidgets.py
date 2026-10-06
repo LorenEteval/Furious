@@ -36,6 +36,7 @@ from shiboken6 import isValid
 
 from typing import Union
 
+import weakref
 import functools
 
 __all__ = [
@@ -2193,6 +2194,14 @@ class AppQPushButton(Mixins.QTranslatable, Mixins.ThemeAware, QPushButton):
         self.setToolTip(_(self.toolTip()))
 
 
+def _releasePopupMenuReference(reference, *_args):
+    """End borrowing even if compiled callbacks retain the dead button wrapper."""
+    button = reference()
+
+    if button is not None:
+        button._popupMenu = None
+
+
 class AppQMenuPushButton(AppQPushButton):
     """Open a popup menu from a regular Fluent-style push button."""
 
@@ -2201,6 +2210,11 @@ class AppQMenuPushButton(AppQPushButton):
         super().__init__(*args, **kwargs)
 
         self._popupMenu = None
+        self._popupMenuConnections = []
+
+        self.destroyed.connect(
+            functools.partial(_releasePopupMenuReference, weakref.ref(self))
+        )
         self.setPopupMenu(popupMenu)
 
         connectWeakly(self.clicked, self, 'showPopupMenu')
@@ -2214,7 +2228,31 @@ class AppQMenuPushButton(AppQPushButton):
         if menu is not None and not isinstance(menu, QMenu):
             raise TypeError('popupMenu must be a QMenu or None')
 
+        if menu is not None and not isValid(menu):
+            raise ValueError('popupMenu must be a valid QMenu')
+
+        if menu is self._popupMenu:
+            return
+
+        # Retire dispatch and both endpoint hooks before replacing a borrowed menu.
+        for connection in self._popupMenuConnections:
+            QtCore.QObject.disconnect(connection)
+
+        self._popupMenuConnections.clear()
         self._popupMenu = menu
+
+        if menu is not None:
+            connectWeakly(
+                menu.destroyed,
+                self,
+                '_clearPopupMenu',
+                sender=menu,
+                connectionHandles=self._popupMenuConnections,
+            )
+
+    def _clearPopupMenu(self, *_args):
+        """Release the borrowed menu and its lifecycle registrations."""
+        self.setPopupMenu(None)
 
     @QtCore.Slot()
     def showPopupMenu(self):

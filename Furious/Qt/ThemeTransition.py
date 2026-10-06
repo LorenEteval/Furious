@@ -28,7 +28,15 @@ from shiboken6 import isValid
 
 from collections.abc import Callable, Iterable
 
+import functools
+
 __all__ = ['ThemeTransition']
+
+
+def _clearTransitionState(animations, animationsByWindow, *_args):
+    """Release plain bookkeeping even when the coordinator wrapper is retained."""
+    animations.clear()
+    animationsByWindow.clear()
 
 
 class _ThemeSnapshotOverlay(QWidget):
@@ -97,6 +105,12 @@ class ThemeTransition(QtCore.QObject):
         self._animations = {}
         self._animationsByWindow = {}
 
+        self.destroyed.connect(
+            functools.partial(
+                _clearTransitionState, self._animations, self._animationsByWindow
+            )
+        )
+
     def isRunning(self) -> bool:
         """Return whether any window snapshot is currently fading."""
         return bool(self._animations)
@@ -163,11 +177,20 @@ class ThemeTransition(QtCore.QObject):
         if animate and self._styleAllowsAnimations():
             captures = self._captureWindows()
 
+        if not isValid(self):
+            return
+
         # Capturing first preserves the user's current composite appearance when a
         # rapid second switch interrupts an in-progress transition.
         self.stop()
 
+        if not isValid(self):
+            return
+
         applyTheme()
+
+        if not isValid(self):
+            return
 
         for window, snapshot in captures:
             if not self._canCapture(window):
@@ -218,8 +241,12 @@ class ThemeTransition(QtCore.QObject):
 
         self.transitionStarted.emit()
 
+        if not isValid(self):
+            return
+
         for animation in tuple(self._animations):
-            animation.start()
+            if isValid(animation):
+                animation.start()
 
     def _releaseDestroyedOverlays(self):
         """Native target destruction stops animations without emitting finished."""
@@ -271,7 +298,9 @@ class ThemeTransition(QtCore.QObject):
         ):
             self._releaseAnimation(self._animationsByWindow.get(watched))
 
-        return super().eventFilter(watched, event)
+        # Completion listeners can destroy this filter or the watched window.
+        # Consume the event only if continuing native delivery would be unsafe.
+        return not isValid(watched)
 
     def stop(self):
         """Stop and dispose every active transition without leaving an overlay."""

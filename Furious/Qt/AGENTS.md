@@ -62,6 +62,9 @@ behavior, and lifetime primitives; pages and services consume them without creat
   workflow owner. None replaces the strong owner required while asynchronous UI remains active. For independent
   sender/receiver trees, test both destruction orders: receiver cleanup must disconnect its edge, and sender cleanup
   must retire receiver-side tracking without keeping a signal wrapper or sender alive.
+  Replacing a borrowed sender retires the whole registration, including both lifecycle hooks. `connectWeakly()` can
+  collect these opaque handles in a fresh per-connection list for explicit retirement; its ordinary return remains
+  the main Qt connection. Borrowers clear references on either native teardown without stealing a shared Qt owner.
 - `AppQAction.callback` is strong by design, so its owner must not outlive the captured receiver; construction alone
   does not enforce that requirement. An action also owns a submenu supplied without a QWidget parent and schedules
   its native deletion when the action dies;

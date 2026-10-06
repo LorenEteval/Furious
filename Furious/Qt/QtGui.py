@@ -26,6 +26,8 @@ from Furious.Qt.Signals import connectWeakly
 from PySide6 import QtCore
 from PySide6.QtGui import *
 
+from shiboken6 import isValid
+
 import logging
 import functools
 
@@ -147,6 +149,8 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
             # Create reference
             self._menu = menu
 
+            connectWeakly(menu.destroyed, self, '_clearMenu', sender=menu)
+
             if menu.parent() is None:
                 # setMenu() associates a submenu without giving it a Qt parent.
                 # This action owns otherwise unparented menus; explicit widget
@@ -203,7 +207,12 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
         if callable(self.callback):
             self.callback()
 
-        self.triggeredCallback(paramChecked)
+        if isValid(self):
+            self.triggeredCallback(paramChecked)
+
+    def _clearMenu(self, *_args):
+        """Drop a borrowed submenu wrapper when its native owner destroys it."""
+        self._menu = None
 
     def addAction(self, action):
         """Add action."""

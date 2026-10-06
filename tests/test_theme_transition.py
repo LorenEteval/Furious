@@ -19,21 +19,133 @@
 
 from __future__ import annotations
 
-import unittest
+from Furious.Qt import ThemeTransition
 
 from PySide6 import QtCore
 from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QWidget
 
-from shiboken6 import isValid
+from shiboken6 import isValid, delete as deleteQObject
 
-from Furious.Qt import ThemeTransition
+from tests.support import (
+    application,
+    assertChildSucceeded,
+    processQtEvents,
+    runPythonChild,
+    waitFor,
+)
 
-from tests.support import application, processQtEvents, waitFor
+from unittest import mock
+
+import unittest
+import weakref
 
 
 class ThemeTransitionTest(unittest.TestCase):
     """Exercise cross-fades through the real Qt event loop."""
+
+    def testCompletionCanDestroyTheWatchedWindowDuringResizeDelivery(self):
+        """Consume the active event when completion deletes its native target."""
+        # Unsafe native event delivery can crash rather than raise a Python error.
+        # Keep that failure inside an exact, bounded offscreen child process.
+        result = runPythonChild(
+            '''
+from tests.support import application, processQtEvents
+from Furious.Qt import ThemeTransition
+from PySide6.QtTest import QSignalSpy
+from PySide6.QtWidgets import QWidget
+from shiboken6 import isValid, delete as deleteQObject
+from unittest import mock
+import weakref
+
+application()
+
+for _ in range(30):
+    window = QWidget()
+    window.resize(160, 100)
+    window.show()
+    processQtEvents()
+    transition = ThemeTransition(
+        duration=100000,
+        windowProvider=lambda: (window,),
+        animationsEnabled=lambda: True,
+    )
+    transition.apply(lambda: None)
+    animation = next(iter(transition._animations))
+    overlay = transition._animations[animation][1]
+    references = [weakref.ref(item) for item in (window, animation, overlay)]
+    destroyed = QSignalSpy(window.destroyed)
+    finished = QSignalSpy(transition.transitionFinished)
+    transition.transitionFinished.connect(lambda: deleteQObject(window))
+
+    with mock.patch('sys.excepthook') as exceptionHook:
+        window.resize(170, 110)
+        processQtEvents()
+        exceptionHook.assert_not_called()
+
+    assert destroyed.count() == 1
+    assert finished.count() == 1
+    assert not isValid(window)
+    assert not isValid(animation)
+    assert not isValid(overlay)
+    assert isValid(transition)
+    assert not transition._animations
+    assert not transition._animationsByWindow
+
+    del destroyed, finished, window, animation, overlay
+    assert all(reference() is None for reference in references)
+    deleteQObject(transition)
+    del transition
+    processQtEvents()
+''',
+            timeout=30,
+        )
+        assertChildSucceeded(self, result, 'window deletion during resize delivery')
+
+    def testReentrantCoordinatorDestructionClearsStateAndCancelsContinuation(self):
+        """Callbacks may delete the coordinator before animation acquisition/start."""
+        application()
+
+        for boundary in ('theme', 'started', 'finished'):
+            for _ in range(20):
+                window = QWidget()
+                window.resize(160, 100)
+                window.show()
+                processQtEvents()
+                transition = ThemeTransition(
+                    duration=100000,
+                    windowProvider=lambda: (window,),
+                    animationsEnabled=lambda: True,
+                )
+                reference = weakref.ref(transition)
+
+                with mock.patch('sys.excepthook') as exceptionHook:
+                    if boundary == 'theme':
+                        transition.apply(lambda: deleteQObject(transition))
+                    elif boundary == 'started':
+                        transition.transitionStarted.connect(
+                            lambda: deleteQObject(transition)
+                        )
+                        transition.apply(lambda: None)
+                    else:
+                        transition.apply(lambda: None)
+                        transition.transitionFinished.connect(
+                            lambda: deleteQObject(transition)
+                        )
+                        window.resize(170, 110)
+
+                    processQtEvents()
+                    exceptionHook.assert_not_called()
+
+                self.assertFalse(isValid(transition))
+                self.assertFalse(transition._animations)
+                self.assertFalse(transition._animationsByWindow)
+                self.assertFalse(self.overlays(window))
+
+                del transition
+                self.assertIsNone(reference())
+                deleteQObject(window)
+                processQtEvents()
 
     def setUp(self):
         """Create per-test windows while retaining one process-wide application."""

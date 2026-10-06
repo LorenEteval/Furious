@@ -55,6 +55,7 @@ from Furious.Qt import (
     AppQDialog,
     AppQMainWindow,
     AppQMenu,
+    AppQMenuPushButton,
     AppQMessageBox,
     AppQSwitch,
     AppQSeparator,
@@ -158,6 +159,136 @@ class DelayedReceiver(QtCore.QObject):
 
 class QtLifetimeTest(unittest.TestCase):
     """Stress direct destruction evidence without relying on process RSS alone."""
+
+    def testActionCallbackCanDestroyItsOwnerBeforeTheVirtualHook(self):
+        """Native deletion during a callback cancels the remaining activation hook."""
+        application()
+
+        class NativeAction(AppQAction):
+            def triggeredCallback(self, checked):
+                calls.append('hook')
+                self.setChecked(checked)
+
+        for destroyOwner in (False, True):
+            for _ in range(30):
+                calls = []
+                owner = QtCore.QObject()
+                action = NativeAction('Reentrant', parent=owner)
+                reference = weakref.ref(action)
+
+                def activate():
+                    calls.append('callback')
+                    if destroyOwner:
+                        deleteQObject(owner)
+
+                action.callback = activate
+
+                with mock.patch('sys.excepthook') as exceptionHook:
+                    action.trigger()
+                    processQtEvents()
+                    exceptionHook.assert_not_called()
+
+                self.assertEqual(
+                    calls, ['callback'] if destroyOwner else ['callback', 'hook']
+                )
+
+                if isValid(owner):
+                    deleteQObject(owner)
+
+                self.assertFalse(isValid(action))
+                del action
+                self.assertIsNone(reference())
+
+    def testBorrowedMenuDestructionClearsActionAndButtonReferences(self):
+        """Destroying a menu's owner must leave independent borrowers usable."""
+        application()
+
+        for _ in range(30):
+            owner = QWidget()
+            menu = AppQMenu(parent=owner)
+            reference = weakref.ref(menu)
+            action = AppQAction('Borrower', menu=menu)
+            button = AppQMenuPushButton('Popup', popupMenu=menu)
+
+            deleteQObject(owner)
+
+            self.assertIsNone(action._menu)
+            self.assertIsNone(button.popupMenu())
+            self.assertFalse(button._popupMenuConnections)
+            self.assertFalse(isValid(menu))
+
+            del menu
+            self.assertIsNone(reference())
+
+            child = AppQAction('Child', parent=action)
+            action.addAction(child)
+            action.removeAction(child)
+            button.showPopupMenu()
+            deleteQObject(action)
+            deleteQObject(button)
+
+    def testPopupMenuReplacementRetiresBothEndpointHooks(self):
+        """Repeated replacement keeps live menus and borrower tracking bounded."""
+        application()
+        owner = QWidget()
+        menus = [AppQMenu(parent=owner), AppQMenu(parent=owner)]
+        button = AppQMenuPushButton('Popup')
+        destroyedSignal = QtCore.SIGNAL('destroyed(QObject*)')
+        baselines = [menu.receivers(destroyedSignal) for menu in menus]
+        buttonBaseline = button.receivers(destroyedSignal)
+
+        for index in range(100):
+            active = index % 2
+            button.setPopupMenu(menus[active])
+
+            self.assertEqual(len(button._popupMenuConnections), 3)
+            self.assertEqual(button.receivers(destroyedSignal), buttonBaseline + 1)
+
+            for menuIndex, menu in enumerate(menus):
+                self.assertEqual(
+                    menu.receivers(destroyedSignal),
+                    baselines[menuIndex] + (2 if menuIndex == active else 0),
+                )
+
+        deleteQObject(menus[0])
+        self.assertIs(button.popupMenu(), menus[1])
+
+        with self.assertRaises(ValueError):
+            button.setPopupMenu(menus[0])
+
+        self.assertIs(button.popupMenu(), menus[1])
+        deleteQObject(button)
+        self.assertTrue(isValid(menus[1]))
+        self.assertEqual(menus[1].receivers(destroyedSignal), baselines[1])
+        deleteQObject(owner)
+
+    def testDestroyedPopupButtonReleasesItsMenuBorrow(self):
+        """A retained dead borrower cannot own an otherwise unreferenced menu."""
+        application()
+
+        for keepExternalOwner in (False, True):
+            for _ in range(30):
+                menu = AppQMenu()
+                reference = weakref.ref(menu)
+                destroyed = []
+                menu.destroyed.connect(lambda *_args: destroyed.append(True))
+                button = AppQMenuPushButton('Popup', popupMenu=menu)
+
+                if not keepExternalOwner:
+                    del menu
+
+                deleteQObject(button)
+
+                self.assertIsNone(button.popupMenu())
+
+                if keepExternalOwner:
+                    self.assertTrue(isValid(menu))
+                    self.assertFalse(destroyed)
+                    deleteQObject(menu)
+                    del menu
+
+                self.assertEqual(destroyed, [True])
+                self.assertIsNone(reference())
 
     def testSingletonSocketsReleaseTheirCallbackAndNativeOwner(self):
         """Repeated IPC registration must release completed socket wrappers."""

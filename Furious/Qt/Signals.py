@@ -123,8 +123,14 @@ def connectWeakly(
     sender=None,
     forwardSender: bool = False,
     connectionType=None,
+    connectionHandles=None,
 ):
-    """Connect without strongly owning a transient receiver or sender."""
+    """Connect weakly, optionally collecting handles for explicit retirement."""
+    if connectionHandles is not None and (
+        not isinstance(connectionHandles, list) or connectionHandles
+    ):
+        raise ValueError('connectionHandles must be an empty list')
+
     # A plain dispatcher is intentional. Nuitka's PySide6 compatibility layer
     # process-globally protects compiled bound methods passed directly to connect().
     invoke = _weakMethodInvoker(
@@ -140,13 +146,16 @@ def connectWeakly(
         else signal.connect(invoke, connectionType)
     )
 
+    if connectionHandles is not None:
+        connectionHandles.append(connection)
+
     if (
         isinstance(receiver, QtCore.QObject)
         and isinstance(sender, QtCore.QObject)
         and not _ownsQObject(receiver, sender)
     ):
 
-        connections = [connection]
+        connections = [connection] if connectionHandles is None else connectionHandles
 
         def disconnect(*_args):
             """Release dispatch and both cleanup hooks when either endpoint dies."""
