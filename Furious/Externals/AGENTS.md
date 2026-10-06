@@ -16,6 +16,8 @@ structure and human-reviewed translations.
   `source` contains deduplicated fully qualified modules and is rebuilt by extraction rather than manually curated.
   Changing a source literal changes catalog identity: extraction may remove the old reviewed entry and introduce a
   new unreviewed one. Review wording changes as translation migrations, including reused keys in other modules.
+  For newly added or intentionally edited entries, keep fields in the preferred `source`, `RU`, `ZH`, `isReviewed`
+  order. This is a local editing convention, not permission to reorder untouched catalog entries or sort source keys.
 - Inspect the full diff. Preserve deliberate translations/review flags, HTML/newline semantics, and natural RU/ZH
   meaning. Curated, verified translations need `isReviewed` set to the string `'True'`, as the generator compares that
   literal; a Python Boolean is not equivalent. Review applies to the entry, so inspect its other language values too.
@@ -44,9 +46,9 @@ structure and human-reviewed translations.
 - Run extraction for every affected language, inspect collision/unreviewed diagnostics and the complete catalog
   diff, then run it again to check stability. Idempotent output proves generator stability, not translation quality
   or runtime reachability; verify the changed keys through their controls or lookup paths. Collision and write
-  failures are logged rather than guaranteed to produce a nonzero process exit; exit status alone is not validation. Exercise runtime lookup and UI retranslation
-  under explicit locales; `tests/test_models_and_services.py` and `tests/test_ui_behavior.py` cover extraction/UI
-  consumers.
+  failures are logged rather than guaranteed to produce a nonzero process exit; exit status alone is not validation.
+  Exercise runtime lookup and UI retranslation under explicit locales; `tests/test_models_and_services.py` and
+  `tests/test_ui_behavior.py` cover extraction/UI consumers.
 - Translation generation is a scoped repository mutation: do not run it as an incidental formatter, and do not
   accept broad catalog churn without tracing each changed source literal or intentional stale-key removal. Update
   this guide when extraction or review semantics change; do not generalize generator-managed membership into a ban

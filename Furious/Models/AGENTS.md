@@ -5,8 +5,9 @@ never live persistence, Qt presentation, plugin discovery, or workflow execution
 
 ## Domain shape and identity
 
-- Models are core-neutral Python data and transformations. Do not import Qt, globals, repositories, services,
-  controllers, plugin registries, or concrete backends into this layer.
+- Models are Python values and pure transformations. Proxy profiles are core-neutral; application-engine settings
+  may describe that engine's native option schema without importing its binding. Do not import Qt, globals,
+  repositories, services, controllers, plugin registries, or concrete backends into this layer.
 - `CoreConfiguration` is a dict-like connection document whose construction is deliberately non-throwing: unsupported
   or malformed input becomes an empty object with `constructionError()`. Keep construction and serialization errors
   distinct and preserve useful context through callers. Successful generic mapping construction is not protocol
@@ -33,11 +34,15 @@ never live persistence, Qt presentation, plugin discovery, or workflow execution
   connections. A fingerprint also cannot distinguish an old request from a newer request for the same document;
   workflow generation/cancellation remains the caller's responsibility. Fingerprints are connection comparisons,
   not profile IDs, but the importer embeds them in persisted subscription matching keys. An algorithm/input change
-  therefore requires reviewing matching-key compatibility and test-result freshness together. Do not merge metadata, ownership, or selection merely
-  to deduplicate execution work.
+  therefore requires reviewing matching-key compatibility and test-result freshness together. Do not merge metadata,
+  ownership, or selection merely to deduplicate execution work.
 - Subscription membership (`subscriptionSource`) and remote ownership (`subscriptionManaged` plus its matching key)
   are separate. Legacy migration may infer ownership where the flag was absent; current locally grouped profiles
   must remain local. Preserve that distinction through copies, moves, and metadata aliases.
+- `SingTUN.py` settings preparation validates an independent copy and overlays defaults without normalizing storage.
+  Its closed option schema deliberately differs from open core documents: unsupported keys and overrides of
+  application-owned routing/DNS fields are rejected. Host options remain sing-tun's own data and never fall back to
+  tun2socks settings. Check the preparer and `tests/test_sing_tun.py` together when the binding contract changes.
 
 ## Compatibility and verification
 

@@ -26,6 +26,8 @@ implementations can satisfy without importing application composition or concret
   value into one generic failure.
 - Model encoders may raise, while configuration construction deliberately captures diagnostics. Callers must inspect
   the contract they consume; successful construction alone proves neither serialization nor backend acceptance.
+  Preserve `RuntimeStartError`'s reason/code/details and `RuntimeExit`'s typed meaning across adapters; exception text
+  and a raw process code are diagnostics, not replacement protocols or evidence that readiness was reached.
 - Runtime liveness is observational: querying it must not consume an exit, transfer ownership, or dispatch
   callbacks. A zero process exit can still be an unexpected connection failure; requested stop and raw exit success
   are different facts. Preserve both in terminal events so orchestration can interpret the exit in its current

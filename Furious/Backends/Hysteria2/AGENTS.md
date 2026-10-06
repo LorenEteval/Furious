@@ -16,9 +16,9 @@ owns Hysteria 2's nested upstream document, native-TUN capability, statistics, a
 ## TUN, statistics, and lifecycle
 
 - Managed native TUN replaces only the runtime copy’s `tun`. Disabled management preserves any explicit `tun`,
-  including malformed data for the core to reject; only absence permits application tun2socks. Linux native TUN
-  requires the backend’s privilege and server-route-exclusion guarantees. The application's Linux privilege-helper
-  path does not grant an embedded native-TUN core the same privileges. Test these availability decisions separately.
+  including malformed data for the core to reject; only absence permits the selected application TUN engine.
+  Linux native TUN requires the backend's privilege and server-route-exclusion guarantees. The application's Linux
+  privilege-helper path does not grant an embedded native-TUN core the same privileges. Test availability separately.
   Failure to establish required managed server-route exclusions is terminal: use `TUNPreparationError` so registry
   dispatch cannot interpret it as permission to fall back to another TUN path. Probe/download copies always remove
   native TUN. Managed preparation currently resolves server addresses synchronously; asynchronous readiness does not

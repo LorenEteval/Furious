@@ -32,6 +32,9 @@ exceptions; it does not define the source test suite or imply that every package
   newer matrix rows cannot prove that floor. Likewise, successful Qt imports do not prove event-loop or binding-call
   compatibility. Default-to-newest dependencies/assets still need recorded provenance and deterministic assertions
   at ABI/feature boundaries; pin or checksum external build tools where the workflow establishes that boundary.
+  Audit evaluated generic bases and import-time standard-library APIs as well as syntax and wheel availability.
+  `from __future__ import annotations` does not defer class-base evaluation; test cold imports on a claimed minimum
+  interpreter before treating metadata classifiers or a newer CI row as evidence for that minimum.
 - Resolve the effective shell at the step, including workflow/job defaults and explicit overrides. Matrix and
   publication workflows default to Bash, while native Windows dependency/architecture steps explicitly use PowerShell;
   source tests use runner defaults. Syntax and environment assignment must match that effective shell. Keep
@@ -52,8 +55,12 @@ exceptions; it does not define the source test suite or imply that every package
   floors beyond their matrix. Do not call an artifact build a regression-test pass; use `tests/README.md` for
   source verification. The source suite's offscreen Qt environment exercises widgets and event delivery, not native
   tray integration, privilege prompts, or an installed application's host effects. Follow actual `needs` and tag gates
-  back to required checks; upload success alone does not establish release eligibility. A diagnostic Nuitka build that changes compiler/runtime flags is separate evidence
-  from the ordinary release configuration; record and exercise the latter before claiming a packaged defect resolved.
+  back to required checks; upload success alone does not establish release eligibility. A diagnostic Nuitka build
+  with different compiler/runtime flags is separate evidence from the ordinary release configuration; exercise the
+  latter before claiming a packaged defect resolved.
+  Binary jobs can produce/upload artifacts independently of source-test completion; follow the publication job's
+  actual prerequisites rather than assuming every uploaded artifact already passed the source suite. Native-binding
+  API checks must avoid creating host interfaces and stay distinct from privileged TUN smoke tests.
 - Revalidate version/architecture claims against the current matrix instead of duplicating all pins here. Record
   which workflow invocation and effective dependency set produced an artifact; a passing standalone binary job
   does not inherit source-test evidence from a different invocation. When topology changes, follow every consumer

@@ -8,7 +8,7 @@ place.
 
 - `Application` is the composition root. Elsewhere depend on the narrowest model, repository, service, controller, or
   plugin capability that owns the decision; do not add a second cache or state path to avoid an existing boundary.
-- Domain shape, identity, and core-neutral transformations belong in `Models`; restoration, migration, ordering, and
+- Domain shape, identity, and pure configuration transformations belong in `Models`; restoration, migration, ordering, and
   durable mutation in `Repository`; temporary work/external resources in `Service`; shared transitions in
   `Controllers`; backend variation in plugin contracts/implementations; host mutation in `Frozenlib` or a runtime;
   presentation in `Qt`, `Widget`, `Window`, or `Actions`.
@@ -53,10 +53,14 @@ place.
 - Keep GUI work bounded, cross worker results through the owning Qt thread, and define cancellation/supersession for
   every asynchronous workflow. Page visibility may control rendering, never ownership of collection or draining.
 - Preserve unknown/forward-compatible fields through model, repository, backend editor, and serialization changes.
+  Apply that rule to open profile/core documents; closed application-owned option schemas reject unsupported fields.
   Compatibility normalization must be narrow, intentional, and tested separately from observational loading.
   Choose the representation required by the next boundary: profile for identity/metadata, connection document for
   backend preparation, repository record for persistence. Consult Models/Repository for their copying and encoding
   contracts; converting between these representations does not itself validate, isolate, or commit data.
+- Application TUN configuration is not a proxy-core protocol or part of a stored server's connection document.
+  Do not add engine identifiers/options to protocol dispatch merely to reach host orchestration. Keep closed
+  customization schemas separate from open backend documents and from profile identity/metadata.
 - Import, clipboard, share-link, file, and QR paths reuse the owning plugin codecs and validation. QR is a presentation
   transport, not a second protocol parser. Decoding a transport envelope, validating a protocol, and committing a
   profile are separate boundaries: a recognized envelope is not permission to clear a group or import an unsupported

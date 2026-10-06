@@ -33,6 +33,9 @@ provenance; it is not an application-data or settings directory.
   tile permissions, and external attribution navigation form one boundary. Validate both the renderer payload and
   host-side acceptance when that bridge changes; editing bundled JavaScript alone cannot establish host behavior.
   A CSP change alone does not establish that arbitrary navigation or remote executable code is allowed by the host.
+  Endpoint lookup and map tile/glyph loading are separate network paths. The map receives a validated presentation
+  payload, not a profile document or credential-bearing URI; renderer/network failure must not replace authoritative
+  endpoint state. Preserve the narrow WebChannel callbacks and host-side attribution allowlist with bridge changes.
 
 ## Verification
 

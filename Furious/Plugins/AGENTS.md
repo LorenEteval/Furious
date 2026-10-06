@@ -52,6 +52,8 @@ remains in each implementation.
   log and return an unhandled result; required TUN rejection must use the typed error rather than assume all
   exceptions stop fallback. Optional capabilities may be absent; an External Core need not implement statistics or
   download probes.
+  The legacy `usesApplicationTun2socks()` name declares eligibility for application TUN, not an engine choice.
+  Runtime factories declare native ownership; host settings policy selects the application engine only when needed.
 - Frozen request/result envelopes are not recursively immutable: embedded configuration/metadata mappings still
   require copy isolation before mutation or worker handoff. `createCoreRuntime()` dispatches preparation to a factory;
   it does not protect live configuration from that factory's mutations. Routing normalization chooses a supported

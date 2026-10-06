@@ -25,17 +25,18 @@ owned commands and presentation without becoming a workflow authority.
 - `AppQAction.callback` is a deliberate strong reference. The action owner must not outlive a captured receiver, and a
   transient/repeated receiver uses the weak named-method facilities required by `Furious/Qt/AGENTS.md`.
 - Clipboard text, files, QR images, share links, and plugin results may contain credentials. A character limit is
-  not redaction: avoid echoing secret-bearing input in failure dialogs as well as logs. Inspect existing error
-  presentation when changing import validation; the short-input clipboard error path currently includes its input.
+  not redaction: avoid echoing secret-bearing input in failure dialogs as well as logs. Inspect error presentation
+  independently from parser diagnostics; controlled validation failure must not disclose the rejected payload.
 - Screen capture and QR decoding currently run synchronously; batching the resulting imports does not make capture
   interruptible. If moved to workers, transfer data through an owned GUI-thread continuation without retaining
   transient windows. Each screen-capture action owns a separate native capture handle, including separate tray/page
   instances; type-deduplicated cleanup must not leave one open. QR export generation belongs to its result window,
   not a parallel action-owned exporter.
 - Native action destruction also releases its screen-capture handle through the same idempotent cleanup path as
-  application shutdown. Destruction callbacks retain plain resource state, not the action; failed close remains
-  owned and diagnosed for retry. A top-level progress widget borrowed by an action needs explicit native deletion
-  when that action dies. Verify native teardown while intentionally retaining action wrappers/bound methods.
+  application shutdown. Destruction callbacks retain plain resource state, not the action. Failed close is diagnosed
+  and retains the handle while that state has a surviving owner; native destruction does not provide a retry scheduler.
+  A top-level progress widget borrowed by an action needs explicit native deletion when that action dies.
+  Verify native teardown while intentionally retaining action wrappers/bound methods.
 - Small profile imports use the direct bulk path; large imports yield between bounded batches. One operation owns
   captured input and its continuation through completion/cancellation; teardown rejects deferred calls. A parser call
   itself is not preempted by a batch. Keep preparation and insertion distinct so a failed batch cannot publish a

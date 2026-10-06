@@ -26,6 +26,8 @@
   overrides; record each scope, nearest ancestor guide, tracking status, and initial content. At handoff compare
   exact path sets and Git status/diff; separately compare ignored/untracked guides that Git's ordinary diff omits.
   No original path may disappear or become a rename. Default to exact equality and improve redundant scopes in place.
+  Distinguish maintained source guides from copied build artifacts and independent checkouts. Preserve all inventoried
+  paths, but do not refresh generated copies or rewrite another project's guidance as an incidental source audit.
 - Inheritance follows directory ancestry. Name the nearest governing guide when clarifying a scope; a sibling guide
   identifies a contract to consult, not another parent. Verification and self-evolution here apply to every descendant
   scope without repeating the same maintenance checklist in each file. Ignored comparison checkouts retain their own
@@ -44,6 +46,9 @@
 - Official proxy backends are Xray, Hysteria 1, Hysteria 2, and External Core. Shared orchestration asks plugin
   capabilities; backend-specific parsing, runtime preparation, routing, TUN, statistics, and exit interpretation stay
   behind those capabilities.
+- Proxy-core native TUN takes precedence over application TUN. Application tun2socks and sing-tun are separate engines
+  with independent settings and host policies; selecting one does not change the selected proxy core. Service owns
+  attempt snapshots and orchestration, Core owns execution, and Models/Repository own configuration and persistence.
 
 ## Project-wide invariants
 
@@ -85,6 +90,9 @@
 - Preserve GPL headers, `from __future__` placement, import grouping, and established naming. Search consumers before
   changing public exports, plugin APIs, persisted keys/schemas, IDs, aliases, migrations, package data, or semantic exit
   codes.
+  Prefer module-scope imports, grouped as Furious, PySide6, built-in `from` imports, then bare imports; use `ex` for
+  caught exception variables. Preserve verified deferred-import boundaries for lazy discovery, import cycles, and
+  child-only native bindings. Separate logical code phases with blank lines without splitting one cohesive operation.
 - Generated and curated artifacts have separate sources of truth: never hand-edit
   `Furious/Frozenlib/AppResources.py`; update `Resources.qrc`/resource inputs and regenerate it. Follow
   `Furious/Externals/AGENTS.md` for the translation catalog and `Furious/Data/AGENTS.md` for bundled assets.
@@ -108,6 +116,8 @@
   replace behavioral tests; record untested targets and compatibility gaps explicitly. Match verification to the
   changed contract: guidance-only work checks claims, references, scope, and path preservation; formatting-only work
   checks the promised structural equivalence. Neither warrants unrelated code changes or generated-file refreshes.
+  Review evaluated type bases, import-time APIs, native wheels, and Qt bindings when assessing compatibility floors;
+  postponed annotations and successful syntax compilation do not establish cold-import compatibility.
 - Use real Qt semantics when focus, selection, keyboard modifiers, proxy mapping, event delivery, queued callbacks,
   geometry, or QObject destruction matters. Prefer semantic state and destroyed/resource counts; use targeted
   rendering assertions when pixels are the defect, without relying on whole-window snapshots or arbitrary sleeps.
@@ -125,6 +135,8 @@
   it. Anchor non-obvious rules to owning implementations and focused tests; label untested assumptions or known gaps
   rather than promoting them into guarantees. Remove obsolete content inside files, distinguish preferred architecture
   from compatibility paths, and preserve every established path. A guidance audit must not turn a defect into a design.
+  Each scope should identify its owner, input/commit boundary, lifecycle, and a relevant implementation/test anchor.
+  These are decision aids, not a requirement to retain today's class layout or duplicate the root maintenance rules.
 - After significant architectural work, re-read the applicable hierarchy as a fresh agent: can it identify the
   owner, invariant, failure boundary, and relevant tests without relying on conversation history? Challenge rules
   likely to become stale, circular references, and wording that freezes incidental structure.

@@ -17,6 +17,8 @@ is bundled.
   Preserve useful names/upstream IDs and never log a complete payload or link. Standard plain/Base64 decoding
   materializes input before per-item import can be cancelled; linear parsing is not a size or responsiveness bound.
   Review decoded size and work limits at this boundary before adding richer formats.
+  Keep envelope normalization separate from protocol interpretation: trimming comments/outer Base64 whitespace and
+  decoding UTF-8 must not rewrite credential-bearing share-link contents or infer backend configuration defaults.
 - Worker safety is a property of the whole preparation path. Standard decoders opt in, but the selected protocol
   handlers must also opt in after their shared state, caches, and Qt use are audited. Preserve the GUI compatibility
   fallback for unclassified capabilities; a safe envelope decoder cannot authorize an unsafe downstream parser.

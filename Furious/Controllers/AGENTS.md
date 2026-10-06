@@ -15,7 +15,7 @@ compatibility paths.
   the active profile. Disconnect/reconnect cancels the exact in-flight generation and ignores stale completion.
 - Preserve state and signal ordering, interaction gating, the exact selected `ServerProfile`, runtime snapshots,
   reconnect preference, and rollback after validation, runtime, TUN, System Proxy exceptions, cancellation, or unexpected-exit
-  failure. Worker/native callbacks cross to the controller’s Qt thread before transition. Signal listeners and queued
+  failure. Worker/native callbacks cross to the controller's Qt thread before transition. Signal listeners and queued
   actions can synchronously disconnect or replace a start. Required invariant: revalidate current state/operation
   after invoking them before acquiring a runtime, completing the connection, or applying further host effects.
   This includes the initial profile/state/progress notifications, before a start operation exists to cancel.
@@ -39,6 +39,9 @@ compatibility paths.
 - `SettingsController` is the shared policy path used by Home, Settings, tray, and platform integration. Startup
   registration persists only after host success; other preferences may apply immediately or on the next connection.
   Preserve each setting's actual application timing instead of imposing one transaction order on all preferences.
+  TUN mode, application-engine preference, and the active runtime's captured choice are separate values. A preference
+  change affects a subsequent attempt; it neither replaces a live engine nor overrides proxy-core native TUN.
+  Registration/defaults and selection signals belong here, while customization storage and host work keep their owners.
 - A completed disconnect restores usable UI state even if runtime cleanup failed. `Disconnected` and an empty
   active-runtime snapshot therefore do not prove physical release: the service retains failed leases and blocks
   new acquisition while they remain. Final controller shutdown surfaces unresolved cleanup and preserves the

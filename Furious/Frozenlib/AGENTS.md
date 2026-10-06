@@ -14,6 +14,9 @@ boundaries, not a license for unrelated application orchestration to accumulate 
   success is persisted only after its helper reports success. Settings storage and cached
   repository objects are distinct lifetimes: changing a QSettings identity does not reconstruct `Storage` backends.
   Tests that replace settings must isolate both boundaries before exercising cleanup or restoration.
+  Application-engine identifiers are shared constants, selection/default policy belongs to SettingsController,
+  and each engine's customization belongs to its own repository. SOCKS endpoint helpers format/validate transit
+  addresses without selecting an engine, launching a runtime, or applying host networking.
 - Keep proxy, DNS, routing, TUN, startup registration, session callbacks, external commands, and platform detection here
   or behind a runtime boundary so tests can replace them completely. Windows, macOS, Linux, Flatpak, AppImage, and older
   platform paths are distinct capabilities; never generalize from the current host.

@@ -19,8 +19,9 @@ owns Xray's full JSON preservation, routing/assets/statistics, and protocol/tran
 
 - Logging paths, selected routing, statistics API, local test endpoints, and TUN are prepared on an independent
   runtime copy. Managed native TUN replaces runtime TUN inbounds; disabled management preserves explicit valid or
-  malformed TUN and suppresses tun2socks. Proxy/download preparation replaces inbounds with its test surface. Verify
-  the prepared document rather than assuming `proxyModeOnly` alone removes user TUN from every factory input.
+  malformed TUN and suppresses both application TUN engines. Proxy/download preparation replaces inbounds with its
+  test surface. Verify the prepared document rather than assuming `proxyModeOnly` alone removes user TUN from every
+  factory input.
 - Xray owns routing profiles/options, geo assets, API statistics, and the `XRAY_LOCATION_ASSET` environment contract.
   Action providers retain reusable routing/asset windows through the created action owner and create transient
   settings dialogs per request; the capability registry does not become a transient-window owner.

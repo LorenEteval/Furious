@@ -8,10 +8,7 @@ exists to preserve Hysteria 1's legacy flat schema and lifecycle without importi
 - Preserve tolerated legacy types, upstream field names, absent defaults, and unknown combo values through mapping
   and untouched-editor round trips. URI round trips cover supported share-link fields only. Explicit user edits may
   normalize the represented field; runtime validation may reject values that observational loading must preserve.
-- Preserve the distinction between Hysteria 1's ACL/MMDB launch inputs and its flat connection mapping. A routing
-  change must be checked through both the serialized document and the extra prepared launch inputs; a JSON-only
-  assertion cannot establish which routing the child received. URI parsing remains in this backend's handler.
-- This backend participates in application tun2socks through the shared startup workflow; its factory does not own
+- This backend participates in the selected application TUN engine through shared startup; its factory does not own
   host routing or connection commit. Keep the factory's unsupported routing/TUN combination rejection before
   execution acquisition; do not silently substitute Global routing or borrow native TUN from Hysteria 2.
   Keep MMDB/ACL launch preparation here and application-TUN acquisition/rollback with that workflow. The existing
@@ -22,6 +19,8 @@ exists to preserve Hysteria 1's legacy flat schema and lifecycle without importi
   preparation responsiveness review. The child receives prepared ACL/MMDB inputs; editing an asset or stored
   routing preference does not reconfigure an existing execution. A prepared runtime advertises its local HTTP
   readiness endpoint separately from child liveness.
+  Verify a routing change through both the serialized document and the extra launch inputs; JSON-only assertions
+  cannot establish which ACL/MMDB the child received. URI parsing remains with this backend's handler.
 - Capability absence is deliberate: this factory supplies neither native TUN nor a statistics provider. Shared UI
   must not infer either from Hysteria 2 support. Download preparation replaces the HTTP listener and removes SOCKS
   on a copy; test traffic must use its owned endpoint without applying ordinary connection host effects.

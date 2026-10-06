@@ -17,6 +17,10 @@ state.
   Apply availability and interaction gating to both a control and its associated label, on initial composition and
   later state changes. Disabling presentation does not clear a stored preference or authorize a duplicate host side
   effect; preserve the controller's platform/capability policy.
+  Application-engine customization is independent of proxy-core native TUN. The sing-tun dialog edits a copied
+  option projection; Models validates its closed native schema and Repository commits it. Advanced JSON is not a
+  full core document or permission to override application-owned routing/DNS. Present effective defaults without
+  silently normalizing storage, importing tun2socks preferences, or launching a native engine just to open settings.
 - The current page composition shares one subscription workflow between server and subscription presentation, records
   traffic into one history, and derives metrics/endpoint presentation from owned services. These exact locations may
   evolve, but a refactor retains one durable owner, one scheduler/request path, and one signal path.
@@ -60,5 +64,6 @@ state.
 
 - Verify initial/plugin navigation, shared Home/Settings/tray state, service ownership, lazy rendering versus
   continuous collection, async continuation cleanup, unsaved-close behavior, translation/theme changes, geometry
-  migration, and repeated open/show/hide/destroy stability with real Qt input where semantics depend on it. Anchors include `tests/test_ui_behavior.py`,
-  `tests/test_qr_export_scalability.py`, `tests/test_metrics_behavior.py`, and `tests/test_main_window_geometry.py`.
+  migration, and repeated open/show/hide/destroy stability with real Qt input where semantics depend on it.
+  Anchors include `tests/test_ui_behavior.py`, `tests/test_qr_export_scalability.py`, `tests/test_metrics_behavior.py`,
+  and `tests/test_main_window_geometry.py`.

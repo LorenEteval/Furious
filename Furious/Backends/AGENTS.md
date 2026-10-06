@@ -31,10 +31,12 @@ generic default.
 
 ## TUN and runtime policy
 
-- Global TUN asks the selected runtime factory about native ownership and application tun2socks. For backends
+- Global TUN asks the selected runtime factory about native ownership and application-TUN eligibility. For backends
   exposing native TUN, managed mode replaces that backend's TUN projection on the runtime copy; disabled management
-  preserves explicit user TUN, even malformed for runtime rejection. External Core instead declares host-tun2socks
+  preserves explicit user TUN, even malformed for runtime rejection. External Core instead declares application-TUN
   opt-in; do not infer its executable's private document format or impose Xray/Hysteria2-native rules on it.
+  The legacy `usesApplicationTun2socks()` capability does not select an engine: shared settings/orchestration choose
+  tun2socks or sing-tun after native ownership is resolved. Keep that compatibility name distinct from its policy.
 - Supported proxy/download-test preparation explicitly strips native TUN from the copied document. The generic
   `proxyModeOnly` request does not sanitize arbitrary plugin configuration by itself. Required managed-native-TUN
   rejection raises `TUNPreparationError`; do not silently switch implementations.

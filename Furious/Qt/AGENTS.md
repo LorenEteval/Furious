@@ -42,7 +42,8 @@ behavior, and lifetime primitives; pages and services consume them without creat
 - Only the GUI thread mutates widgets/live GUI models. Slots do not sleep or perform unbounded file, host, process, or
   network work; split work into bounded event-loop units or an owned worker and reject stale results on return.
 - Native and Nuitka PySide6 can retain Python callbacks differently. Avoid protected compiled bound methods for
-  transient/repeated receivers. Use `connectWeakly()` with a static method name and `sender=` for a sender outside
+  transient/repeated receivers or registrations repeated across short-lived senders, even with a persistent receiver.
+  Use `connectWeakly()` with a static method name and `sender=` for a sender outside
   the receiver's QObject subtree; use `forwardSender=True` instead of relying on `QObject.sender()` and
   `singleShotWeakly()` for deferred named-method delivery. A closure/partial that captures the receiver does not
   substitute for weak dispatch. Bounded dialog-completion closures may intentionally capture context; verify their
@@ -58,7 +59,7 @@ behavior, and lifetime primitives; pages and services consume them without creat
   arbitrary worker calls to the GUI thread; choose an explicit queued owner-thread delivery boundary. A surviving
   Python wrapper can already be natively invalid, so callback freshness and `shiboken6.isValid()` address different
   failure modes. Weak dispatch neither cancels execution nor checks workflow generations; those remain with the
-  workflow owner. None of these checks replaces the strong owner required while asynchronous UI remains active. For independent
+  workflow owner. None replaces the strong owner required while asynchronous UI remains active. For independent
   sender/receiver trees, test both destruction orders: receiver cleanup must disconnect its edge, and sender cleanup
   must retire receiver-side tracking without keeping a signal wrapper or sender alive.
 - `AppQAction.callback` is strong by design, so its owner must not outlive the captured receiver; construction alone
@@ -98,6 +99,8 @@ behavior, and lifetime primitives; pages and services consume them without creat
   representative Nuitka probe when compiled callback retention or packaged-only behavior is part of the defect.
   Retained Python wrappers may already be invalid: count native destruction independently, including owner-first
   teardown. A pass under diagnostic compiler flags does not establish behavior under ordinary release flags.
+  If a toolchain exposes a private callback-protection counter, verify it with a bounded positive control before
+  interpreting zero growth. A missing counter or a counter that never observes compiled callbacks is unknown evidence.
   Start with `tests/test_qt_lifetime.py`, `tests/test_dialog_geometry.py`, and `tests/test_main_window_geometry.py`;
   use the `tests/fixtures/editor_lifetime_probe.py` fixture for compiled investigation. Treat unrun packaged probes
   as unverified, and update these rules when measured ownership or the toolchain changes.

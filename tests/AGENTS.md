@@ -57,6 +57,7 @@ and test-tier selection; test convenience never weakens a production invariant.
   unittest and report opt-ins, platform skips, and standalone measurements separately. Discovery is an inventory,
   not execution evidence: record the actual runner result, opt-in state, and skips. Standalone benchmarks and
   compiled fixture entrypoints need separate invocations; a full discovered-suite pass does not run them.
+  Run child scripts and standalone probes without `python -O`: plain assertions are part of their verification.
 - Source-only tests and an offscreen platform do not prove a packaged Qt runtime. Compiler-sensitive changes need
   native lifecycle tests and the compiled fixture documented in `tests/README.md`, including accept/reject/close
   and owner-first teardown. An unavailable private Nuitka counter is unknown, not measured zero; combine toolchain
@@ -64,6 +65,9 @@ and test-tier selection; test convenience never weakens a production invariant.
   target, and relevant build flags with results: diagnostic flags can change the failing behavior and are not a
   substitute for the ordinary release build. Report skipped/unavailable targets and distinguish commented test
   examples from discovered tests. Release artifact checks do not execute this source behavioral suite.
+  Validate an exposed private callback-protection counter with a bounded compiled direct-connection control before
+  treating zero growth as a result. Include the harness configuration and actual package data in standalone probes;
+  import success without `tests/fixtures/offscreen.json` does not establish a runnable isolated fixture.
 - Separate deterministic correctness/scale assertions from performance measurements. Opt-in stress tests may gate
   relative scaling or resource bounds; document the measured contract and environment rather than treating one
   machine's absolute timing as a portable product requirement.

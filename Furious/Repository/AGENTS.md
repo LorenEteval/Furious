@@ -33,6 +33,10 @@ outside it.
   transaction. Preserve explicit flush/cleanup behavior and report failures at the boundary that actually failed.
   Batched UI commands may commit several live mutations; cancellation prevents later batches without restoring
   already committed ones. Do not impose whole-command atomicity without changing callers and failure semantics.
+- Engine settings have separate repository keys and owners. `replaceSingTUNSettings()` validates and serializes a
+  candidate before changing its live document; a later QSettings flush failure reports an in-memory commit, not a
+  rollback. Empty persisted customizations and effective model defaults are distinct; reading defaults must not
+  populate either engine's repository or modify the other's key. `tests/test_sing_tun.py` covers this boundary.
 - Moving a profile to another subscription makes it a local member and clears its remote matching key; unchanged
   membership does not demote an already-managed profile. Removing a group definition alone does not delete profiles,
   cancel requests, or stop timers. Callers coordinate those effects through existing workflow boundaries; do not hide

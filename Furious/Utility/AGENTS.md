@@ -18,6 +18,8 @@ protocol and is not a general-purpose utility bucket.
   therefore keep the parent join pending; there is no general shutdown watchdog here. Do not turn a test timeout
   into an undocumented production kill policy. Never discover or terminate processes by name, and keep
   normal/source/packaged command-line entry points equivalent.
+  Application-child shutdown and each proxy/TUN runtime's release are separate boundaries. The outer join cannot
+  establish that an inner service completed cleanup; trace its exact resource owner before changing supervision.
 - Shared crash status is a synchronized Boolean plus the child's semantic exit result; set the flag only after the
   diagnostic file is written successfully. Text may include retained logs plus a traceback, so the Boolean channel
   does not bound the crash file's size or sanitize its contents. Keep crash-write failure separate from the primary

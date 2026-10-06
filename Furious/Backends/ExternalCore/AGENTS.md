@@ -7,7 +7,7 @@ preserves the intentionally different direct-subprocess scope for user-selected 
 
 - External Core represents one user-selected local executable, not an embedded protocol binding. Keep executable path,
   optional working directory, argument vector, environment overrides, HTTP/SOCKS endpoints, shutdown timeout, remote
-  TUN address, and application-tun2socks opt-in distinct while preserving unknown top-level fields.
+  TUN address, and application-TUN opt-in distinct while preserving unknown top-level fields.
 - Loading is observational: do not silently absolutize or rewrite relative paths. Validation before spawn owns path
   existence/type, argument and environment types/NULs, endpoint requirements, and a finite bounded shutdown timeout.
   Reject NaN, infinities, Booleans, and integer-to-float overflow before process wait APIs. The current negated
@@ -27,9 +27,11 @@ preserves the intentionally different direct-subprocess scope for user-selected 
   including pipes with no reader. Disposal is terminal and must reject new process acquisition.
 - Keep execution liveness, configured proxy endpoints, and semantic readiness distinct. An immediate or later exit is
   interpreted once at this runtime boundary and retains actionable code/reason context for the shared startup workflow.
-- Application tun2socks is an explicit profile capability. It requires a usable SOCKS endpoint and a separate remote
+- Application TUN is an explicit profile capability. It requires a usable SOCKS endpoint and a separate remote
   server address for bypass routing; an executable path is never a network destination, and this backend never invents
   native core TUN support. Subscription decoding must continue to reject executable profiles.
+  The stored/API opt-in retains its tun2socks name for compatibility, but the application preference chooses the
+  engine. Validate its SOCKS transit specification for either engine without importing the executable's private schema.
 - The embedded backends' JSON serialization helper is not this launch boundary: External Core passes a structured
   executable/argument/environment specification to `Popen`. Validate through `validateProcess()` and the launch path,
   including non-finite timeout rejection, rather than assuming a serializable mapping is safe or executable.

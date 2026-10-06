@@ -33,14 +33,16 @@ boundary between the outer child-process supervisor and the inner application ev
 - Each singleton IPC connection creates a short-lived socket sender. Use weak named dispatch with sender forwarding
   to the application; repeatedly connecting a compiled application bound method can grow Nuitka's protection list
   even after the native sockets die. The server owns sockets through their one-command completion/disconnection.
-  Tray actions have an explicit QObject owner, while the borrowed top-level tray menu needs a native destruction
-  boundary independent of the tray wrapper's Python lifetime. The lifetime probe covers both contracts.
+  Verify completed socket destruction and repeated callback registrations independently; a persistent application
+  receiver does not make an unbounded sequence of compiled registrations safe.
 - Native session callbacks cross to the GUI thread before touching Qt-owned state. Tray, dock, System Proxy daemon,
   Flatpak/AppImage, and no-tray behavior are explicit platform capabilities.
 - The application owns the top-level window/tray wrappers; `MainWindow` owns the persistent page tree. Cleanup order
   follows dependencies: consumers stop while the plugins, repositories, and Qt objects they need are still valid.
   A registered cleanup callback establishes responsibility, not proof that its menus, sockets, snapshots, or workers
   were released. Verify partial composition as well as a fully constructed application.
+  Tray actions have an explicit QObject owner; the borrowed top-level tray menu needs native deletion independent
+  of the tray wrapper's Python lifetime. Use the shared Qt ownership rules and the lifetime probe for this boundary.
 - Verify each acquisition failure, reverse/repeated cleanup, singleton races/commands, queued session shutdown,
   tray-present/absent close policy, restored connection, and exact child/thread-pool ownership with host effects
   mocked. Start with `tests/test_architecture_refactors.py`, `tests/test_application_process.py`, and

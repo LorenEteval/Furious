@@ -35,11 +35,12 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
 - Native proxy-core TUN policy precedes application-engine selection. The legacy plugin opt-in
   `usesApplicationTun2socks` still means application-TUN eligibility; it must not force the selected engine.
   Snapshot the engine and relevant customization once per attempt; bind each backend's named settings callers to
-  that snapshot, preserving proxy-only and explicit native TUN
-  behavior. Each application engine reads only its own persisted document: sing-tun's `host_options` belong to
+  that snapshot, preserving proxy-only and explicit native TUN behavior.
+- Each application engine reads only its own persisted document: sing-tun's `host_options` belong to
   `CustomSingTUNSettings`, while tun2socks uses `CustomTUNSettings`; edits and missing defaults must never import
   preferences from the other engine. Their repository/host policies remain independent while orchestration,
-  leases and general utilities may be reused. For sing-tun, resolve automatic and manual remote exclusions before native auto-routing, then require
+  leases and general utilities may be reused.
+- For sing-tun, resolve automatic and manual remote exclusions before native auto-routing, then require
   native readiness and checked DNS application before commit. `SingTUNHostPlan` owns only its assigned identifiers
   and DNS snapshots, independently of legacy `SystemRoutingTable.managedRoutes`; refuse ambiguous recovery and
   retain ownership for retry. Host preparation/DNS commands run in its owned worker, while synchronous compatibility
@@ -56,6 +57,9 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   Verify runtime liveness and actual handle/thread release separately from the lease's logical state.
 - `HttpGetManager` owns reply/error/timeout cleanup. DNS recursion and external-input caches are bounded. Update,
   connectivity, endpoint, subscription, and asset requests own their exact reply and reject stale generations.
+  Workflow-specific reply indexes must also release on native destruction without `finished`. Abort hooks can
+  synchronously destroy the manager, remaining replies, and child pools; recheck validity before using captured Qt
+  resources during cancellation/shutdown. `tests/test_service_runtime.py` exercises those failure boundaries.
 - Subscription stages remain separate: decoders return neutral items; import constructs profiles/metadata;
   synchronization prepares one group reconciliation; the manager owns request/schedule generations and commits it.
   Worker-safe payload import and reconciliation preparation run in the manager's bounded pool over copied data;
