@@ -65,6 +65,10 @@ behavior, and lifetime primitives; pages and services consume them without creat
   does not enforce that requirement. An action also owns a submenu supplied without a QWidget parent and schedules
   its native deletion when the action dies;
   `QAction.setMenu()` alone does not establish parent ownership. Explicitly parented menus retain their chosen owner.
+- `AppQMenu` adopts constructor actions/separator placeholders that lack a QObject parent; explicitly owned actions
+  remain borrowed. Adding an action to a menu or action group does not itself transfer QObject ownership. Dynamic
+  groups must parent their generated actions so retiring the group releases native actions even when compiled
+  callbacks keep Python wrappers alive. `tests/test_qt_lifetime.py` exercises both borrowed and owned cases.
 - Every `QNetworkReply` has one manager/context owner, one freshness rule, and one terminal deletion path. Request
   context must also be released when native destruction skips `finished`, including manager-first teardown with
   retained Python wrappers. Use the shared network-manager tracking boundary; cleanup must not capture a reply

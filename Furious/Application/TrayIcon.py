@@ -54,13 +54,13 @@ class TrayIcon(
         super().__init__(*args, **kwargs)
 
         actions = [
-            ConnectAction(isTrayAction=True),
-            RoutingAction(isTrayAction=True),
-            ImportAction(isTrayAction=True),
+            ConnectAction(isTrayAction=True, parent=self),
+            RoutingAction(isTrayAction=True, parent=self),
+            ImportAction(isTrayAction=True, parent=self),
             AppQSeparator(),
-            ShowHomePageAction(isTrayAction=True),
+            ShowHomePageAction(isTrayAction=True, parent=self),
             AppQSeparator(),
-            ExitAction(isTrayAction=True),
+            ExitAction(isTrayAction=True, parent=self),
         ]
 
         self._actions = actions
@@ -96,7 +96,11 @@ class TrayIcon(
                     if action._menu is None:
                         self._menu.addAction(action)
                     else:
-                        menu = AppQMenu(*action._menu._actions, title=action.text())
+                        menu = AppQMenu(
+                            *action._menu._actions,
+                            title=action.text(),
+                            parent=self._menu,
+                        )
                         menu.setIcon(action.icon())
 
                         self._refs.append(menu)
@@ -106,6 +110,10 @@ class TrayIcon(
                     self._menu.addSeparator()
 
             self.setContextMenu(self._menu)
+
+        # QSystemTrayIcon.setContextMenu() borrows a QWidget; it cannot parent
+        # the menu. End its native lifetime even if a compiled slot retains us.
+        self.destroyed.connect(self._menu.deleteLater)
 
         self._menu.setMenuRole('tray', recursive=True)
         self._menu.aboutToShow.connect(self.rebuildDynamicMenus)

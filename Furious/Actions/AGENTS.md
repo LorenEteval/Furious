@@ -32,6 +32,10 @@ owned commands and presentation without becoming a workflow authority.
   transient windows. Each screen-capture action owns a separate native capture handle, including separate tray/page
   instances; type-deduplicated cleanup must not leave one open. QR export generation belongs to its result window,
   not a parallel action-owned exporter.
+- Native action destruction also releases its screen-capture handle through the same idempotent cleanup path as
+  application shutdown. Destruction callbacks retain plain resource state, not the action; failed close remains
+  owned and diagnosed for retry. A top-level progress widget borrowed by an action needs explicit native deletion
+  when that action dies. Verify native teardown while intentionally retaining action wrappers/bound methods.
 - Small profile imports use the direct bulk path; large imports yield between bounded batches. One operation owns
   captured input and its continuation through completion/cancellation; teardown rejects deferred calls. A parser call
   itself is not preempted by a batch. Keep preparation and insertion distinct so a failed batch cannot publish a

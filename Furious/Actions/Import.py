@@ -483,6 +483,23 @@ class ImportJSONFromClipboardAction(AppQAction):
         importURIFromClipboard(clipboard)
 
 
+def _closeScreenCapture(captureState, *_args):
+    """Release a non-Qt resource without retaining its QAction owner."""
+    capture = captureState[0]
+
+    if capture is None:
+        return
+
+    try:
+        capture.close()
+    except Exception:
+        # Any non-exit exceptions
+
+        logger.exception('failed to close screen-capture handle')
+    else:
+        captureState[0] = None
+
+
 class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
     """Handle the import QR code on the screen action."""
 
@@ -497,14 +514,23 @@ class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
             **kwargs,
         )
 
+        self._captureState = [None]
+
+        self.destroyed.connect(
+            functools.partial(_closeScreenCapture, self._captureState)
+        )
+
         try:
-            self.sct = mss.mss()
+            self._captureState[0] = mss.mss()
         except Exception as ex:
             # Any non-exit exceptions
 
             logger.error(f'\'{classname(self)}\' is not supported on this platform')
 
-            self.sct = None
+    @property
+    def sct(self):
+        """Return the capture handle until either cleanup boundary releases it."""
+        return self._captureState[0]
 
     def _importFromQRCode(self):
         """Handle import from QR code for the import QR code on the screen action."""
@@ -544,13 +570,7 @@ class ImportQRCodeOnTheScreenAction(Mixins.CleanupOnExit, AppQAction):
 
     def cleanup(self):
         """Release resources owned by the import QR code on the screen action."""
-        try:
-            if self.sct is not None:
-                self.sct.close()
-        except Exception:
-            # Any non-exit exceptions
-
-            pass
+        _closeScreenCapture(self._captureState)
 
 
 class ImportAction(AppQAction):

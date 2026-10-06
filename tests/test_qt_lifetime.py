@@ -37,9 +37,16 @@ from Furious.Backends.Xray.TrojanEditor import TrojanEditor
 from Furious.Backends.Xray.TunSettingsDialog import XrayTunSettingsDialog
 from Furious.Backends.Xray.VlessEditor import VlessEditor
 from Furious.Backends.Xray.VmessEditor import VmessEditor
-from Furious.Actions.Import import ImportURIsProgressDialog
+from Furious.Actions.Import import (
+    ImportURIsProgressDialog,
+    ImportQRCodeOnTheScreenAction,
+)
+from Furious.Actions.Routing import RoutingAction
+from Furious.Application.TrayIcon import TrayIcon
+from Furious.Controllers import ConnectionController, RoutingController
 from Furious.Frozenlib import Mixins
 from Furious.Models import CoreConfiguration, ServerProfile
+from Furious.Plugins import RoutingOption
 from Furious.Repository import Storage
 from Furious.Widget.ServerTableView import ServerTableView
 from Furious.Widget.SubscriptionTableView import SubscriptionTableView
@@ -50,6 +57,7 @@ from Furious.Qt import (
     AppQMenu,
     AppQMessageBox,
     AppQSwitch,
+    AppQSeparator,
     AppQTransientDialog,
     connectWeakly,
     singleShotWeakly,
@@ -78,6 +86,7 @@ from tests.support import (
 )
 
 import gc
+import builtins
 from pathlib import Path
 import tempfile
 import unittest
@@ -148,6 +157,153 @@ class DelayedReceiver(QtCore.QObject):
 
 class QtLifetimeTest(unittest.TestCase):
     """Stress direct destruction evidence without relying on process RSS alone."""
+
+    def testMenuOwnsOnlyPreviouslyUnparentedConstructorActions(self):
+        """Native menu deletion releases owned actions even with held wrappers."""
+        application()
+
+        for _ in range(20):
+            owner = QtCore.QObject()
+            borrowed = AppQAction('Borrowed', parent=owner)
+            owned = AppQAction('Owned')
+            menu = AppQMenu(owned, borrowed)
+
+            self.assertIs(owned.parent(), menu)
+            self.assertIs(borrowed.parent(), owner)
+            deleteQObject(menu)
+
+            self.assertFalse(isValid(owned))
+            self.assertTrue(isValid(borrowed))
+            deleteQObject(owner)
+            self.assertFalse(isValid(borrowed))
+
+    def testRoutingRebuildDestroysRetiredActionsWithHeldWrappers(self):
+        """Each retired group releases its actions independently of Python GC."""
+        application()
+
+        with isolatedSettings(), mock.patch.object(
+            RoutingController, 'currentProfileForRouting', return_value=None
+        ):
+            controller = RoutingController()
+            with mock.patch(
+                'Furious.Actions.Routing.AppRoutingController', return_value=controller
+            ):
+                action = RoutingAction()
+                options = (RoutingOption('one', 'One'), RoutingOption('two', 'Two'))
+                retired = []
+                destroyed = []
+
+                for _ in range(30):
+                    previous = tuple(action._menu.actions())
+                    action._applyState(options, 'one')
+                    processQtEvents()
+                    self.assertTrue(all(not isValid(ob) for ob in previous))
+                    retired.extend(previous)
+
+                    for child in action._menu.actions():
+                        self.assertIs(child.parent(), action._actionGroup)
+                        child.destroyed.connect(lambda *_args: destroyed.append(True))
+
+                current = tuple(action._menu.actions())
+                deleteQObject(action)
+                processQtEvents()
+                self.assertTrue(all(not isValid(ob) for ob in (*retired, *current)))
+                self.assertEqual(len(destroyed), 60)
+
+            controller.deleteLater()
+            processQtEvents()
+
+    def testTrayDestructionReleasesMenusActionsAndRunningProgress(self):
+        """Compiled callback retention must not keep the tray's native UI alive."""
+        app = application()
+
+        with isolatedSettings():
+            connection = ConnectionController()
+            with mock.patch.object(
+                RoutingController, 'currentProfileForRouting', return_value=None
+            ):
+                routing = RoutingController()
+
+            with (
+                mock.patch.object(app, 'connectionController', connection),
+                mock.patch.object(app, 'routingController', routing),
+                mock.patch('Furious.Actions.Import.mss.mss'),
+            ):
+                for legacyMenu in (False, True):
+                    with mock.patch(
+                        'Furious.Application.TrayIcon.hasattr',
+                        side_effect=lambda ob, name: (
+                            False
+                            if legacyMenu and ob is AppQAction and name == 'setMenu'
+                            else builtins.hasattr(ob, name)
+                        ),
+                        create=True,
+                    ):
+                        for _ in range(20):
+                            tray = TrayIcon()
+                            action = tray.ConnectAction
+                            progress = action.progressWidget
+                            progress.start(50)
+                            resources = (
+                                tray._menu,
+                                *tray._actions,
+                                progress,
+                                progress._widget.timer,
+                                *getattr(tray, '_refs', ()),
+                            )
+                            resources = tuple(
+                                ob
+                                for ob in resources
+                                if not isinstance(ob, AppQSeparator)
+                            )
+                            # Model the retained wrappers, independently of Qt parents.
+                            protected = [
+                                tray.rebuildDynamicMenus,
+                                action.syncPresentation,
+                            ]
+                            deleteQObject(tray)
+                            processQtEvents()
+
+                            self.assertFalse(isValid(tray))
+                            self.assertTrue(all(not isValid(ob) for ob in resources))
+                            self.assertFalse(isValid(progress._widget.timer))
+                            del protected
+
+            connection.shutdown()
+            connection.deleteLater()
+            routing.deleteLater()
+            processQtEvents()
+
+    def testScreenCaptureClosesOnActionDestructionOrApplicationCleanup(self):
+        """Both terminal paths release the exact capture handle only once."""
+        application()
+
+        for explicitCleanup in (False, True):
+            for _ in range(20):
+                capture = mock.Mock()
+                with mock.patch('Furious.Actions.Import.mss.mss', return_value=capture):
+                    action = ImportQRCodeOnTheScreenAction()
+
+                if explicitCleanup:
+                    action.cleanup()
+                    action.cleanup()
+
+                deleteQObject(action)
+                self.assertIsNone(action.sct)
+                capture.close.assert_called_once_with()
+
+        capture = mock.Mock()
+        capture.close.side_effect = [RuntimeError('capture still in use'), None]
+        with mock.patch('Furious.Actions.Import.mss.mss', return_value=capture):
+            action = ImportQRCodeOnTheScreenAction()
+
+        with self.assertLogs('Furious.Actions.Import', level='ERROR'):
+            action.cleanup()
+        self.assertIs(action.sct, capture)
+        action.cleanup()
+        self.assertIsNone(action.sct)
+        deleteQObject(action)
+        self.assertEqual(capture.close.call_count, 2)
 
     def testRemovedMessageBoxButtonDisconnectsAndCanBeReused(self):
         """Detaching a button ends only the box-owned signal and role lifetime."""

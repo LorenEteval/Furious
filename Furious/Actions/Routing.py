@@ -107,6 +107,9 @@ class RoutingAction(AppQAction):
         actions = self.routingActions(options, routing)
 
         for action in actions:
+            # Adding an existing QAction to a group does not transfer ownership.
+            action.setParent(self._actionGroup)
+
             if isinstance(action, AppQSeparator):
                 self._menu._actions.append(action)
                 self._menu.addSeparator()
