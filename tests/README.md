@@ -118,7 +118,7 @@ worker. Choose tests by the changed contract rather than by filename alone.
 | [test_qt_interactions.py](test_qt_interactions.py) | Real keyboard/mouse/focus and proxy mapping, scoped shortcuts, sorting/selection, stable subscription deletion confirmations, debounced Home search, Tests-menu selection color, shared settings, batched profile mutation and cancellation. |
 | [test_qr_export_scalability.py](test_qr_export_scalability.py) | Production capture cap, immediate single export, incremental yielding, failure/cancel/close paths, immutable snapshots, window-owned state destruction. |
 | [test_stylesheet_states.py](test_stylesheet_states.py) | Targeted rendering/alpha/geometry assertions for table/list insets, popup corners, clear buttons, focus/disabled states, and stylesheet composition. |
-| [test_theme_transition.py](test_theme_transition.py) | Real cross-fades, immediate theme activation, interruption, per-window resize/destruction, coordinator teardown, animation policy. |
+| [test_theme_transition.py](test_theme_transition.py) | Real cross-fades, immediate theme activation, interruption, per-window resize/destruction, coordinator teardown, animation policy, completion callbacks deleting the watched window during native event delivery in an isolated child. |
 | [test_qt_lifetime.py](test_qt_lifetime.py) | Native destruction and weak-wrapper/registry evidence across dialogs, menus, actions, timers, signals, message-box buttons/masks, owner-first confirmations, reusable editors, simulated compiled-method retention. |
 
 ### Repeated stress and release confidence
@@ -331,6 +331,8 @@ settings-controller receivers, tray/actions/progress teardown, TCPing owner-firs
 shutdown and engine destruction affinity, button ownership, signal endpoints,
 masks, reopen generations, animations, menus, and view-owned confirmations. It records
 JSON diagnostics and asserts captured Qt callback exceptions are absent.
+It also checks destruction during action/theme/startup callbacks, clearing borrowed
+menus in either destruction order, and bounded sender replacement registrations.
 
 For compiler-sensitive work, compile this fixture separately with Nuitka's
 PySide6 plugin, its imported support code, and required data, then repeat the

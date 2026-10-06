@@ -33,6 +33,7 @@ from Furious.Plugins import blankProfile, initializePluginRegistry
 from Furious.Qt import (
     AppQAction,
     AppQMenu,
+    AppQMenuPushButton,
     AppQDialog,
     AppQMessageBox,
     ThemeTransition,
@@ -42,6 +43,11 @@ from Furious.Qt.HttpGetManager import HttpGetManager
 from Furious.Service.EndpointInfoService import ProxyEndpointHttpClient
 from Furious.Service.SubscriptionManager import SubscriptionManager
 from Furious.Service.ProfileTesting import _LatencyScheduler
+from Furious.Service.ConnectionManager import (
+    ConnectionManager,
+    ConnectionStartOperation,
+)
+from Furious.Models import CoreConfiguration
 from Furious.Controllers.SettingsController import SettingsController
 from Furious.Repository import Storage
 from Furious.Window.SettingsPage import _TUNBackendSettingsCard
@@ -89,6 +95,155 @@ PROTOCOL_PATTERNS = {
     ),
 }
 CLOSE_METHODS = ('accept', 'close', 'reject')
+
+
+class _ReentrantAction(AppQAction):
+    """Make stale activation visible as a forbidden native operation."""
+
+    def triggeredCallback(self, checked):
+        self.setChecked(checked)
+        self.hookCalls += 1
+
+
+def runReentrantLifetimeProbe(iterations=100):
+    """Exercise callback deletion and borrowed menu retirement under compilation."""
+    application()
+    references = []
+    protectedMethods = getattr(
+        sys.modules.get('PySide6-postLoad', PySide6), '_protected', None
+    )
+    protectedBefore = len(protectedMethods) if protectedMethods is not None else None
+
+    for _ in range(iterations):
+        owner = QtCore.QObject()
+        action = _ReentrantAction('Callback', parent=owner)
+        action.hookCalls = 0
+        action.callback = lambda: deleteQObject(owner)
+        references.append(weakref.ref(action))
+
+        action.trigger()
+        assert not isValid(action) and action.hookCalls == 0
+        del action, owner
+
+        owner = QWidget()
+        menu = AppQMenu(parent=owner)
+        action = AppQAction('Borrower', menu=menu)
+        button = AppQMenuPushButton('Popup', popupMenu=menu)
+        references.append(weakref.ref(menu))
+
+        deleteQObject(owner)
+        assert action._menu is None and button.popupMenu() is None
+        assert not button._popupMenuConnections
+        del menu
+        button.showPopupMenu()
+        deleteQObject(action)
+        deleteQObject(button)
+
+        menu = AppQMenu()
+        reference = weakref.ref(menu)
+        button = AppQMenuPushButton('Release', popupMenu=menu)
+        del menu
+        deleteQObject(button)
+        assert button.popupMenu() is None and reference() is None
+
+    owner = QWidget()
+    menus = [AppQMenu(parent=owner), AppQMenu(parent=owner)]
+    button = AppQMenuPushButton('Replace')
+    signal = QtCore.SIGNAL('destroyed(QObject*)')
+    counts = [menu.receivers(signal) for menu in menus]
+    buttonCount = button.receivers(signal)
+
+    for index in range(iterations):
+        active = index % 2
+        button.setPopupMenu(menus[active])
+        assert button.receivers(signal) == buttonCount + 1
+        assert all(
+            menu.receivers(signal) == counts[number] + (2 if number == active else 0)
+            for number, menu in enumerate(menus)
+        )
+
+    deleteQObject(button)
+    assert all(
+        menu.receivers(signal) == counts[number] for number, menu in enumerate(menus)
+    )
+    deleteQObject(owner)
+
+    for boundary in ('theme', 'started', 'finished'):
+        for _ in range(iterations):
+            window = QWidget()
+            window.resize(160, 100)
+            window.show()
+            processQtEvents()
+            transition = ThemeTransition(
+                duration=100000,
+                windowProvider=lambda: (window,),
+                animationsEnabled=lambda: True,
+            )
+            references.append(weakref.ref(transition))
+
+            if boundary == 'theme':
+                transition.apply(lambda: deleteQObject(transition))
+            elif boundary == 'started':
+                transition.transitionStarted.connect(lambda: deleteQObject(transition))
+                transition.apply(lambda: None)
+            else:
+                transition.apply(lambda: None)
+                transition.transitionFinished.connect(lambda: deleteQObject(transition))
+                window.resize(170, 110)
+
+            processQtEvents()
+            assert not isValid(transition)
+            assert not transition._animations and not transition._animationsByWindow
+            assert not window.findChildren(QWidget, ThemeTransition.OverlayObjectName)
+            del transition
+            deleteQObject(window)
+
+    with isolatedSettings():
+        for method, signalName in (
+            ('cancel', 'cancelled'),
+            ('_fail', 'failed'),
+            ('_commit', 'succeeded'),
+        ):
+            for _ in range(iterations):
+                manager = SimpleNamespace(
+                    _runtimeConfiguration=lambda config, copied: config,
+                    _leases=[],
+                    _pendingReleases=[],
+                    _startGeneration=1,
+                    _activeStartOperation=None,
+                )
+                manager._finishStartOperation = (
+                    lambda operation: ConnectionManager._finishStartOperation(
+                        manager, operation
+                    )
+                )
+                owner = QtCore.QObject()
+                operation = ConnectionStartOperation(
+                    manager, 1, CoreConfiguration({}), '', parent=owner
+                )
+                manager._activeStartOperation = operation
+                references.append(weakref.ref(operation))
+                getattr(operation, signalName).connect(
+                    lambda *_args: deleteQObject(owner)
+                )
+
+                getattr(operation, method)()
+                assert not isValid(operation) and manager._activeStartOperation is None
+                del operation, owner
+
+    assert all(reference() is None for reference in references)
+    growth = (
+        len(protectedMethods) - protectedBefore if protectedBefore is not None else None
+    )
+    assert growth in (None, 0), growth
+    return {
+        'reentrantActions': iterations,
+        'borrowedMenus': iterations,
+        'menuReplacements': iterations,
+        'reentrantTransitions': iterations * 3,
+        'reentrantStartOperations': iterations * 3,
+        'protectedMethodGrowth': growth,
+    }
 
 
 class _SingletonReceiver(QtCore.QObject):
@@ -1010,6 +1165,7 @@ def main():
     )
 
     try:
+        print(json.dumps(runReentrantLifetimeProbe(arguments.iterations)))
         print(json.dumps(runSingletonIPCProbe(arguments.iterations)))
         print(json.dumps(runThreadOwnershipProbe(arguments.iterations)))
         print(json.dumps(runTrayOwnershipProbe(arguments.iterations)))
