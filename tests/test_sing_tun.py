@@ -819,11 +819,13 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
             ):
                 AppSettings.turnON_('VPNMode')
                 AppSettings.set('ApplicationTUNBackend', 'tun2socks')
+
                 manager = ConnectionManager()
                 connection = ConnectionController(
                     coreManager=manager, updatesManager=mock.Mock()
                 )
                 settings = SettingsController()
+
                 previousConnection = self.app.connectionController
                 self.app.connectionController = connection
                 card = None
@@ -831,13 +833,17 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                 try:
                     primary = _Runtime()
                     primary.start()
+
                     attempt = _ConnectionStartAttempt(
                         manager, configuration, nativeTUNHandled=True
                     )
                     attempt.ownRuntime(primary)
+
                     attempt.commit()
+
                     connection._activeProfile = configuration
                     connection._state = ConnectionState.Connected
+
                     changes = []
                     settings.tunBackendChanged.connect(changes.append)
 
@@ -868,8 +874,10 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                         card.deleteLater()
 
                     manager.cleanup()
+
                     connection.deleteLater()
                     settings.deleteLater()
+
                     processQtEvents()
 
                 callbackExceptionHook.assert_not_called()
@@ -885,13 +893,16 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                 ) as notice,
             ):
                 AppSettings.set('ApplicationTUNBackend', backend)
+
                 manager = ConnectionManager()
                 connection = ConnectionController(
                     coreManager=manager, updatesManager=mock.Mock()
                 )
                 settings = SettingsController()
+
                 previousConnection = self.app.connectionController
                 self.app.connectionController = connection
+
                 configuration = ConfigXray({'inbounds': []})
                 attempt = _ConnectionStartAttempt(
                     manager, configuration, applicationTun2socks=True
@@ -901,19 +912,23 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                     primary, engine = _Runtime(), _Runtime()
                     primary.start()
                     engine.start()
+
                     attempt.ownRuntime(primary)
                     attempt.ownRuntime(engine, applicationTUN=True)
 
                     self.assertFalse(manager.usesApplicationTUN())
 
                     attempt.commit()
+
                     connection._activeProfile = configuration
                     connection._state = ConnectionState.Connected
+
                     configuration['inbounds'].append({'protocol': 'tun'})
 
                     self.assertTrue(connection.usesApplicationTUN())
 
                     other = 'sing-tun' if backend == 'tun2socks' else 'tun2socks'
+
                     settings.setTUNBackend(other)
                     settings.setTUNBackend(other)
 
@@ -925,14 +940,19 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
 
                     notice.reset_mock()
                     connection._state = ConnectionState.Disconnected
+
                     settings.setTUNBackend(backend)
+
                     notice.assert_not_called()
                 finally:
                     self.app.connectionController = previousConnection
+
                     attempt.rollback()
                     manager.cleanup()
+
                     connection.deleteLater()
                     settings.deleteLater()
+
                     processQtEvents()
 
                 self.assertFalse(manager.usesApplicationTUN())
@@ -951,6 +971,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
 
             controller.setTUNBackend('sing-tun')
             controller.setTUNBackend('sing-tun')
+
             with self.assertRaises(ValueError):
                 controller.setTUNBackend('invalid')
 
@@ -1776,6 +1797,7 @@ class SingTUNStartupTest(unittest.TestCase):
             self.assertEqual(runtime._configuration['tun_options']['MTU'], 1400)
 
             runtime.nativeReady = True
+
             self.assertTrue(waitFor(lambda: bool(succeeded)))
             self.assertTrue(manager.usesApplicationTUN())
             self.assertEqual(runtime._hostPlan.applied, ['utun101'])
