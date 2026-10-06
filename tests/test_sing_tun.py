@@ -70,6 +70,7 @@ import threading
 import tempfile
 import unittest
 import ipaddress
+import weakref
 
 
 class _Engine:
@@ -421,6 +422,42 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = application()
+
+    def testSelectorDestructionDisconnectsTheIndependentController(self):
+        """Repeated cards release dispatchers while the controller remains alive."""
+        module = importlib.import_module('Furious.Window.SettingsPage')
+
+        with isolatedSettings():
+            controller = SettingsController()
+            signal = QtCore.SIGNAL('tunBackendChanged(QString)')
+            baseline = controller.receivers(signal)
+
+            with mock.patch.object(
+                module, 'AppSettingsController', return_value=controller
+            ):
+                for _ in range(20):
+                    card = module._TUNBackendSettingsCard()
+                    reference = weakref.ref(card)
+                    controller.tunBackendChanged.emit('tun2socks')
+                    self.assertEqual(card.comboBox.currentData(), 'tun2socks')
+                    self.assertEqual(controller.receivers(signal), baseline + 1)
+
+                    card.deleteLater()
+                    processQtEvents()
+                    self.assertFalse(isValid(card))
+                    del card
+
+                    self.assertIsNone(reference())
+                    self.assertEqual(controller.receivers(signal), baseline)
+                    controller.tunBackendChanged.emit('sing-tun')
+
+                card = module._TUNBackendSettingsCard()
+                controller.deleteLater()
+                processQtEvents()
+                self.assertTrue(isValid(card))
+                card.deleteLater()
+                processQtEvents()
+                self.assertFalse(isValid(card))
 
     def testTwoChoiceSelectorRetranslatesWithoutChangingStablePreference(self):
         module = importlib.import_module('Furious.Window.SettingsPage')

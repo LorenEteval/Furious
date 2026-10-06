@@ -58,7 +58,7 @@ from Furious.Controllers import (
 )
 from Furious.Extensions import BUNDLED_EXTENSION_TYPES
 from Furious.Plugins import initializePluginRegistry
-from Furious.Qt import AppQMessageBox, AppStyleSheet, ThemeTransition
+from Furious.Qt import AppQMessageBox, AppStyleSheet, ThemeTransition, connectWeakly
 from Furious.Qt.TextEditorTheme import configureEditorLogMetadata
 from Furious.Qt import gettext as _
 from Furious.Repository import Storage
@@ -72,13 +72,13 @@ from PySide6.QtGui import QFontDatabase, QPalette
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication
 
+from enum import Enum
+
 import os
 import sys
 import logging
 import platform
 import traceback
-from enum import Enum
-
 import darkdetect
 
 logger = logging.getLogger(__name__)
@@ -471,17 +471,21 @@ class DesktopApplication(ApplicationRunner, SingletonApplication):
             if socket is None:
                 continue
 
-            # QLocalServer owns pending sockets until they are explicitly
-            # released.  Use sender() instead of a partial that retains each
-            # socket and dispose it after the one-command protocol completes.
-            socket.readyRead.connect(self.handleNewData)
+            # Every launch creates a new sender. Weak dispatch avoids adding a
+            # protected compiled application method for each completed socket.
+            connectWeakly(
+                socket.readyRead,
+                self,
+                'handleNewData',
+                sender=socket,
+                forwardSender=True,
+            )
+
             socket.disconnected.connect(socket.deleteLater)
 
-    @QtCore.Slot()
-    def handleNewData(self):
+    @QtCore.Slot(QtCore.QObject)
+    def handleNewData(self, socket):
         """Handle new data."""
-        socket = self.sender()
-
         if not isinstance(socket, QLocalSocket):
             return
 

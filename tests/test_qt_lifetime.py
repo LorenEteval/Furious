@@ -84,6 +84,7 @@ from tests.support import (
     runPythonChild,
     waitFor,
 )
+from tests.fixtures.editor_lifetime_probe import runSingletonIPCProbe
 
 import gc
 import builtins
@@ -157,6 +158,12 @@ class DelayedReceiver(QtCore.QObject):
 
 class QtLifetimeTest(unittest.TestCase):
     """Stress direct destruction evidence without relying on process RSS alone."""
+
+    def testSingletonSocketsReleaseTheirCallbackAndNativeOwner(self):
+        """Repeated IPC registration must release completed socket wrappers."""
+        result = runSingletonIPCProbe(30)
+        self.assertEqual(result['singletonSocketsDestroyed'], 30)
+        self.assertIn(result['singletonProtectedMethodGrowth'], (None, 0))
 
     def testMenuOwnsOnlyPreviouslyUnparentedConstructorActions(self):
         """Native menu deletion releases owned actions even with held wrappers."""

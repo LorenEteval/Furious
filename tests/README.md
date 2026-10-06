@@ -326,15 +326,21 @@ python -m tests.fixtures.editor_lifetime_probe --iterations 100 --pattern repres
 Patterns also include `alternating`, `reverse`, `hysteria2`, and `vless`. The
 representative pattern cycles through Hysteria2, VLESS, VMess, Trojan, SOCKS,
 Hysteria1, and External Core. Each invocation additionally probes HTTP completion
-and owner/reply-first destruction, button ownership, signal endpoints, masks,
-reopen generations, animations, menus, and view-owned confirmations. It records
+and owner/reply-first destruction, subscription tracking, singleton IPC callbacks,
+settings-controller receivers, tray/actions/progress teardown, TCPing owner-first
+shutdown and engine destruction affinity, button ownership, signal endpoints,
+masks, reopen generations, animations, menus, and view-owned confirmations. It records
 JSON diagnostics and asserts captured Qt callback exceptions are absent.
 
 For compiler-sensitive work, compile this fixture separately with Nuitka's
 PySide6 plugin, its imported support code, and required data, then repeat the
 close/accept/reject checks. Record the Python/PySide6/Nuitka versions, target, and
-build flags. A missing private protected-method counter is unknown, not zero;
-combine available diagnostics with native destruction, weak-wrapper, and registry
+build flags. Include the harness configuration with
+`--include-data-files=tests/fixtures/offscreen.json=tests/fixtures/offscreen.json`
+and Furious package data. The private callback counter is toolchain-specific; a
+missing counter is unknown, not zero. The IPC probe includes a bounded direct
+connection control to validate an available counter. Combine available
+diagnostics with native destruction, weak-wrapper, and registry
 evidence. A diagnostic build passing does not establish that an ordinary release
 build has the same behavior.
 

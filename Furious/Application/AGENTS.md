@@ -30,6 +30,11 @@ boundary between the outer child-process supervisor and the inner application ev
   endpoint, and fails closed when ownership is uncertain, including privilege handoff. A successful Windows
   local-server listen alone does not establish exclusivity; command delivery and endpoint ownership are separate
   observations.
+- Each singleton IPC connection creates a short-lived socket sender. Use weak named dispatch with sender forwarding
+  to the application; repeatedly connecting a compiled application bound method can grow Nuitka's protection list
+  even after the native sockets die. The server owns sockets through their one-command completion/disconnection.
+  Tray actions have an explicit QObject owner, while the borrowed top-level tray menu needs a native destruction
+  boundary independent of the tray wrapper's Python lifetime. The lifetime probe covers both contracts.
 - Native session callbacks cross to the GUI thread before touching Qt-owned state. Tray, dock, System Proxy daemon,
   Flatpak/AppImage, and no-tray behavior are explicit platform capabilities.
 - The application owns the top-level window/tray wrappers; `MainWindow` owns the persistent page tree. Cleanup order

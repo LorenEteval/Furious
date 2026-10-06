@@ -577,7 +577,10 @@ class _TUNBackendSettingsCard(_SettingsCard):
         self.sync()
 
         connectWeakly(self.comboBox.currentIndexChanged, self, '_selectionChanged')
-        connectWeakly(AppSettingsController().tunBackendChanged, self, 'sync')
+
+        controller = AppSettingsController()
+
+        connectWeakly(controller.tunBackendChanged, self, 'sync', sender=controller)
 
     def sync(self, backend=None):
         blocker = QtCore.QSignalBlocker(self.comboBox)

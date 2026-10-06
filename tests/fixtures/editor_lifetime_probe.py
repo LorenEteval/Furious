@@ -23,6 +23,12 @@ from Furious.Backends import OFFICIAL_PLUGIN_TYPES
 from Furious.Backends.Xray.RoutingWindow import RoutingRulesDialog
 from Furious.Backends.Xray.AssetListView import XrayAssetListView
 import Furious.Backends.Xray.AssetListView as assetModule
+import Furious.Actions.Import as importModule
+from Furious.Actions.Routing import RoutingAction
+from Furious.Application.TrayIcon import TrayIcon
+from Furious.Application.DesktopApplication import DesktopApplication
+from Furious.Controllers import ConnectionController, RoutingController
+from Furious.Plugins import RoutingOption
 from Furious.Plugins import blankProfile, initializePluginRegistry
 from Furious.Qt import (
     AppQAction,
@@ -34,12 +40,17 @@ from Furious.Qt import (
 )
 from Furious.Qt.HttpGetManager import HttpGetManager
 from Furious.Service.EndpointInfoService import ProxyEndpointHttpClient
+from Furious.Service.SubscriptionManager import SubscriptionManager
+from Furious.Service.ProfileTesting import _LatencyScheduler
+from Furious.Controllers.SettingsController import SettingsController
+from Furious.Repository import Storage
+from Furious.Window.SettingsPage import _TUNBackendSettingsCard
 from Furious.Widget.ServerTableView import ServerTableView
 
 import PySide6
 
 from PySide6 import QtCore
-from PySide6.QtNetwork import QNetworkReply
+from PySide6.QtNetwork import QLocalSocket, QNetworkReply
 from PySide6.QtWidgets import QPushButton, QWidget
 
 from shiboken6 import isValid, delete as deleteQObject
@@ -49,9 +60,11 @@ from tests.support import (
     collectAtBoundary,
     isolatedSettings,
     processQtEvents,
+    waitFor,
 )
 
 from collections import Counter
+from types import SimpleNamespace
 
 import argparse
 import json
@@ -76,6 +89,74 @@ PROTOCOL_PATTERNS = {
     ),
 }
 CLOSE_METHODS = ('accept', 'close', 'reject')
+
+
+class _SingletonReceiver(QtCore.QObject):
+    """Exercise the real IPC methods without application startup or endpoints."""
+
+    handleNewData = DesktopApplication.handleNewData
+
+    def __init__(self):
+        super().__init__()
+        self.pending = []
+        self.systemTray = None
+        self.server = SimpleNamespace(
+            hasPendingConnections=lambda _pending=self.pending: bool(_pending),
+            nextPendingConnection=lambda _pending=self.pending: _pending.pop(0),
+        )
+
+
+def runSingletonIPCProbe(iterations: int = 100) -> dict[str, object]:
+    """Destroy completed IPC sockets and bound compiled callback growth."""
+    application()
+    protectedMethods = getattr(
+        sys.modules.get('PySide6-postLoad', PySide6), '_protected', None
+    )
+    directGrowth = None
+
+    if protectedMethods is not None:
+        # Positive control: native sender destruction does not retire this
+        # toolchain's protected compiled bound method. Keep the diagnostic bounded.
+        control = _SingletonReceiver()
+        socket = QLocalSocket(control)
+        before = len(protectedMethods)
+        socket.readyRead.connect(control.handleNewData)
+        deleteQObject(control)
+        directGrowth = len(protectedMethods) - before
+        assert directGrowth == 1, directGrowth
+        del socket, control
+
+    receiver = _SingletonReceiver()
+    receiverReference = weakref.ref(receiver)
+    before = len(protectedMethods) if protectedMethods is not None else None
+    references = []
+    destroyed = []
+
+    for _ in range(iterations):
+        socket = QLocalSocket(receiver)
+        references.append(weakref.ref(socket))
+        socket.destroyed.connect(lambda *_args: destroyed.append(True))
+        receiver.pending.append(socket)
+        # Bypass the launch rate limit, preserving the actual connection logic.
+        DesktopApplication.handleNewConnection.__wrapped__(receiver)
+        socket.readyRead.emit()
+        processQtEvents()
+        assert not isValid(socket)
+        del socket
+
+    growth = len(protectedMethods) - before if before is not None else None
+    assert growth in (None, 0), growth
+    assert len(destroyed) == iterations
+    assert all(reference() is None for reference in references)
+    deleteQObject(receiver)
+    del receiver
+    assert receiverReference() is None
+
+    return {
+        'singletonSocketsDestroyed': len(destroyed),
+        'singletonProtectedMethodGrowth': growth,
+        'directConnectionControlGrowth': directGrowth,
+    }
 
 
 def runProbe(
@@ -109,7 +190,11 @@ def runProbe(
             importActionsFactory=tuple,
         )
 
-        protectedMethods = getattr(PySide6, '_protected', None)
+        # Nuitka 4.2.1 keeps this private list in its synthetic post-load module.
+        # Other toolchains may expose it on PySide6 or not expose it at all.
+        protectedMethods = getattr(
+            sys.modules.get('PySide6-postLoad', PySide6), '_protected', None
+        )
         protectedMethodsBefore = (
             len(protectedMethods) if isinstance(protectedMethods, list) else None
         )
@@ -345,6 +430,189 @@ def runNetworkProbe(iterations=100):
             result[managerType.__name__ + ':' + terminal] = iterations
 
     return result
+
+
+def runSettingsAndSubscriptionProbe(iterations=100):
+    """Verify independent controller edges and early subscription reply deletion."""
+    app = application()
+    previousController = app.settingsController
+    controller = SettingsController()
+    app.settingsController = controller
+    references = []
+    signal = QtCore.SIGNAL('tunBackendChanged(QString)')
+    baseline = controller.receivers(signal)
+    subsGetter = Storage.UserSubs
+    Storage.UserSubs = staticmethod(dict)
+    manager = SubscriptionManager()
+
+    try:
+        with isolatedSettings():
+            for index in range(iterations):
+                card = _TUNBackendSettingsCard()
+                references.append(weakref.ref(card))
+                controller.tunBackendChanged.emit('tun2socks')
+                assert card.comboBox.currentData() == 'tun2socks'
+                assert controller.receivers(signal) == baseline + 1
+
+                deleteQObject(card)
+                del card
+                assert controller.receivers(signal) == baseline
+                controller.tunBackendChanged.emit('sing-tun')
+
+                reply = _PendingReply(manager)
+                references.append(weakref.ref(reply))
+                manager.get = lambda _request: reply
+                manager.updateSubsByWebGET(
+                    webURL='https://invalid.test', unique=str(index)
+                )
+                del manager.get
+                deleteQObject(reply)
+                del reply
+
+                assert not manager._replyContexts
+                assert not manager._activeReplies
+                assert not manager._replySubscriptions
+                manager.cancelUpdates()
+
+            replies = [_PendingReply(manager), _PendingReply(manager)]
+            for index, reply in enumerate(replies):
+                manager.get = lambda _request: reply
+                manager.updateSubsByWebGET(
+                    webURL='https://invalid.test', unique=str(index)
+                )
+                del manager.get
+
+            replies[0].abort = lambda: deleteQObject(manager)
+            manager.cancelUpdates()
+            assert not isValid(manager)
+            assert all(not isValid(reply) for reply in replies)
+            assert not manager._activeReplies and not manager._replySubscriptions
+
+            deleteQObject(controller)
+            collectAtBoundary()
+            assert all(reference() is None for reference in references)
+    finally:
+        app.settingsController = previousController
+        Storage.UserSubs = staticmethod(subsGetter)
+        if isValid(controller):
+            deleteQObject(controller)
+        if isValid(manager):
+            manager.shutdown()
+            deleteQObject(manager)
+
+    return {'selectorCycles': iterations, 'subscriptionReplyCycles': iterations}
+
+
+class _CaptureHandle:
+    """Stand in for desktop capture without acquiring a host handle."""
+
+    def __init__(self):
+        self.closeCount = 0
+
+    def close(self):
+        self.closeCount += 1
+
+
+def runTrayOwnershipProbe(iterations=100):
+    """Prove native teardown even if compiled callbacks retain Python wrappers."""
+    app = application()
+    previousConnection, previousRouting = (
+        app.connectionController,
+        app.routingController,
+    )
+    captureFactory = importModule.mss.mss
+    importModule.mss.mss = _CaptureHandle
+    connection, routing = ConnectionController(), RoutingController()
+    app.connectionController, app.routingController = connection, routing
+    options = (RoutingOption('one', 'One'), RoutingOption('two', 'Two'))
+
+    try:
+        for _ in range(iterations):
+            tray = TrayIcon()
+            action = tray.ConnectAction
+            progress = action.progressWidget
+            captureAction = next(
+                child
+                for child in tray.ImportAction._menu._actions
+                if isinstance(child, importModule.ImportQRCodeOnTheScreenAction)
+            )
+            capture = captureAction.sct
+            progress.start(50)
+
+            tray.RoutingAction._applyState(options, 'one')
+            retired = tuple(tray.RoutingAction._menu.actions())
+            tray.RoutingAction._applyState(options, 'two')
+            processQtEvents()
+            assert all(not isValid(child) for child in retired)
+            current = tuple(tray.RoutingAction._menu.actions())
+            resources = (
+                tray._menu,
+                action,
+                tray.ImportAction,
+                tray.ImportAction._menu,
+                captureAction,
+                progress,
+                progress._widget.timer,
+                *current,
+            )
+
+            deleteQObject(tray)
+            processQtEvents()
+            assert all(not isValid(ob) for ob in resources)
+            assert capture.closeCount == 1 and captureAction.sct is None
+
+    finally:
+        app.connectionController, app.routingController = (
+            previousConnection,
+            previousRouting,
+        )
+        importModule.mss.mss = captureFactory
+        connection.shutdown()
+        deleteQObject(connection)
+        deleteQObject(routing)
+
+    return {'trayOwnershipCycles': iterations, 'routingRebuildCycles': iterations}
+
+
+def runThreadOwnershipProbe(iterations=100):
+    """Stop the native thread before Qt deletes a scheduler or its parent."""
+    application()
+    destroyed = []
+    references = []
+
+    for parentFirst in (False, True):
+        for _ in range(iterations):
+            owner = QtCore.QObject()
+            scheduler = _LatencyScheduler(
+                lambda target: None,
+                lambda target, result: False,
+                pingConcurrency=1,
+                tcpingConcurrency=1,
+                parent=owner,
+            )
+            engine = scheduler.ensureTcpingEngine()
+            thread = scheduler.tcpingThread
+            references.extend((weakref.ref(engine), weakref.ref(thread)))
+            engine.destroyed.connect(
+                lambda *_args: destroyed.append(
+                    QtCore.QThread.currentThread() is thread
+                ),
+                QtCore.Qt.ConnectionType.DirectConnection,
+            )
+            assert waitFor(thread.isRunning)
+            deleteQObject(owner if parentFirst else scheduler)
+            assert all(not isValid(ob) for ob in (scheduler, thread, engine))
+            if isValid(owner):
+                deleteQObject(owner)
+            del engine, thread, scheduler, owner
+            processQtEvents()
+
+    assert len(destroyed) == iterations * 2 and all(destroyed)
+    assert all(reference() is None for reference in references)
+    return {
+        'threadOwnerFirstCycles': iterations * 2,
+        'destroyedInWorkerThread': len(destroyed),
+    }
 
 
 def runButtonOwnershipProbe(iterations=100):
@@ -703,6 +971,10 @@ def main():
     )
 
     try:
+        print(json.dumps(runSingletonIPCProbe(arguments.iterations)))
+        print(json.dumps(runThreadOwnershipProbe(arguments.iterations)))
+        print(json.dumps(runTrayOwnershipProbe(arguments.iterations)))
+        print(json.dumps(runSettingsAndSubscriptionProbe(arguments.iterations)))
         print(json.dumps(runButtonOwnershipProbe(arguments.iterations), sort_keys=True))
         print(json.dumps(runConfirmationProbe(arguments.iterations), sort_keys=True))
         print(json.dumps(runNetworkProbe(arguments.iterations), sort_keys=True))
