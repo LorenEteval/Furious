@@ -616,6 +616,96 @@ class ConnectionStartupAsyncTest(TestCase):
         self.assertEqual(runtime.startOptions, [{}])
         self.assertEqual(manager.runtimes, [runtime])
 
+    def testDnsStartRespectsCancellationAndDestructionDuringRequestCreation(self):
+        """Request hooks cannot restart a cancelled or destroyed observer's timer."""
+        for action in ('cancel', 'destroy'):
+            with self.subTest(action=action):
+                for _ in range(20):
+                    resolver = mock.Mock()
+                    resolver._newResultMap = DnsResolver._newResultMap
+                    operation = DnsResolutionOperation(resolver, 'example.test')
+                    results = []
+                    destroyed = []
+                    operation.finished.connect(lambda *_args: results.append(True))
+                    operation.destroyed.connect(lambda *_args: destroyed.append(True))
+
+                    def beginResolve(resultMap):
+                        resultMap['depth'] = 1
+
+                        if action == 'cancel':
+                            operation.cancel()
+                        else:
+                            deleteQObject(operation)
+
+                    resolver._beginResolve.side_effect = beginResolve
+
+                    try:
+                        with mock.patch('sys.excepthook') as qtErrors:
+                            operation.start()
+                            processQtEvents()
+
+                            qtErrors.assert_not_called()
+
+                        self.assertFalse(results)
+
+                        if action == 'cancel':
+                            self.assertTrue(isValid(operation))
+                            self.assertFalse(operation._timer.isActive())
+                        else:
+                            self.assertFalse(isValid(operation))
+                            self.assertFalse(isValid(operation._timer))
+                            self.assertEqual(destroyed, [True])
+                    finally:
+                        if isValid(operation):
+                            deleteQObject(operation)
+
+    def testDnsTimeoutAbortCanDestroyItsObserver(self):
+        """Abort listeners may destroy the observer before terminal publication."""
+
+        class PendingReply(QtNetwork.QNetworkReply):
+            def abort(self):
+                self.setFinished(True)
+                self.finished.emit()
+
+            def readData(self, _maximumLength):
+                return bytes()
+
+        for _ in range(20):
+            resolver = mock.Mock()
+            resolver._newResultMap = DnsResolver._newResultMap
+            operation = DnsResolutionOperation(resolver, 'example.test', timeout=1)
+            reply = PendingReply()
+            results = []
+            destroyed = []
+            operation.finished.connect(lambda *_args: results.append(True))
+            operation.destroyed.connect(lambda *_args: destroyed.append(True))
+            operation._resultMap['depth'] = 1
+            operation._resultMap['reference'].append(reply)
+            operation._elapsed = mock.Mock()
+            operation._elapsed.elapsed.return_value = 1
+            reply.finished.connect(lambda: deleteQObject(operation))
+
+            try:
+                with (
+                    self.assertLogs('Furious.Service.DnsResolver', level='ERROR'),
+                    mock.patch('sys.excepthook') as qtErrors,
+                ):
+                    operation._poll()
+                    processQtEvents()
+
+                    qtErrors.assert_not_called()
+
+                self.assertTrue(reply.isFinished())
+                self.assertFalse(results)
+                self.assertEqual(destroyed, [True])
+                self.assertFalse(isValid(operation))
+                self.assertFalse(isValid(operation._timer))
+            finally:
+                if isValid(operation):
+                    deleteQObject(operation)
+
+                deleteQObject(reply)
+
     def testDnsCancellationAndTimeoutIgnoreAlreadyDestroyedReplies(self):
         """Earlier recursive replies may be deleted before later requests stop."""
 

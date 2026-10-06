@@ -92,7 +92,7 @@ worker. Choose tests by the changed contract rather than by filename alone.
 | [test_controllers.py](test_controllers.py) | Connection state/error/reconnect transitions, reentrant cancellation/replacement before launch and during completion, startup restoration, shared settings, routing fallback persistence and tray/selector agreement after custom-routing disable/re-enable. |
 | [test_runtime_lifecycle.py](test_runtime_lifecycle.py) | Qt-thread exit dispatch, commit/exit races, duplicate and late exits, idempotent release and retained failure/retry ownership, failed reap/handle close, spawn failure, queue/timer disposal on preparation failure. |
 | [test_external_core.py](test_external_core.py) | Harmless real process launch/output/shutdown, partial thread-start rollback, non-finite timeout rejection, failed reap/thread-join retry, readiness/TUN metadata, Windows paths with spaces, subscription rejection of executable profiles, bounded DNS references. |
-| [test_frozenlib.py](test_frozenlib.py) | Nested state guards, cleanup isolation, bounded caches/throttling, dual-stack probe selection, mocked proxy/DNS/routes/startup/session boundaries and failure handling. |
+| [test_frozenlib.py](test_frozenlib.py) | Nested state guards, cleanup isolation, native peer destruction during connection/theme/translation/cleanup notifications, bounded caches/throttling, dual-stack probe selection, mocked proxy/DNS/routes/startup/session boundaries and failure handling. |
 | [test_native_tun_semantics.py](test_native_tun_semantics.py) | Xray/Hysteria2 runtime-copy TUN preservation/replacement, managed-TUN failures, download-test stripping, prevention of a second tun2socks owner. |
 | [test_sing_tun.py](test_sing_tun.py) | Engine choice/Go default, development-stack and congestion-control compatibility, independent backend settings and host defaults, selected-only snapshots, captured TUN log sources in both startup paths, staged settings and malformed storage, SOCKS authentication/UDP, harmless real spawn/status/stop, native readiness, cancellation, synchronous compatibility, mocked DNS/routing ownership including development IPv6 rule ordering and refused cleanup. |
 | [test_subscription_sync.py](test_subscription_sync.py) | Group-local preparation/commit, stable duplicate identity, atomic failure, preservation of newer local metadata, rejection of changed source state. |
@@ -335,6 +335,11 @@ It also checks destruction during action/theme/startup callbacks, clearing borro
 menus in either destruction order, and bounded sender replacement registrations.
 Connection recovery dialogs exercise Copy Error without dismissal and Open Logs
 through native destruction, with weak-wrapper and compiled callback-retention checks.
+Pool notifications skip peers destroyed by earlier callbacks. DNS observers cover
+reentrant cancellation/destruction during request creation and timeout aborts;
+statistics publication covers native manager destruction between emitted signals.
+Endpoint lookup covers service destruction/disablement during state and result
+notifications, without admitting the next request from the abandoned stage.
 
 For compiler-sensitive work, compile this fixture separately with Nuitka's
 PySide6 plugin, its imported support code, and required data, then repeat the

@@ -43,6 +43,9 @@ boundaries, not a license for unrelated application orchestration to accumulate 
   stage. Membership neither keeps active objects alive nor proves every instance drained. When a callback keeps
   resources after failure, inspect the containing shutdown caller as well as the registry; registry iteration is
   not an automatic retry scheduler.
+  Notification/cleanup snapshots must recheck each recipient's native validity immediately before delivery:
+  an earlier callback can destroy a later recipient after the initial pool prune. The peer-destruction cases
+  in `tests/test_frozenlib.py` cover connection, theme, translation, and cleanup dispatch.
 - `AppResources.py` is generated from `Resources.qrc` and referenced assets. Change the manifest/input files and
   regenerate with the compatible PySide6 resource compiler; never hand-edit generated resource code.
 - Verify every affected OS branch with mocked host calls, plus persistence-on-failure, bounded cleanup, import-time

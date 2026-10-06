@@ -146,6 +146,9 @@ class Mixins:
             Mixins.ConnectionAware.ObjectsPool.prune(Mixins.qObjectIsValid)
 
             for ob in list(Mixins.ConnectionAware.ObjectsPool):
+                if not Mixins.qObjectIsValid(ob):
+                    continue
+
                 assert isinstance(ob, Mixins.ConnectionAware)
 
                 ob.connectedCallback()
@@ -156,6 +159,9 @@ class Mixins:
             Mixins.ConnectionAware.ObjectsPool.prune(Mixins.qObjectIsValid)
 
             for ob in list(Mixins.ConnectionAware.ObjectsPool):
+                if not Mixins.qObjectIsValid(ob):
+                    continue
+
                 assert isinstance(ob, Mixins.ConnectionAware)
 
                 ob.disconnectedCallback()
@@ -181,6 +187,9 @@ class Mixins:
             Mixins.ThemeAware.ObjectsPool.prune(Mixins.qObjectIsValid)
 
             for ob in list(Mixins.ThemeAware.ObjectsPool):
+                if not Mixins.qObjectIsValid(ob):
+                    continue
+
                 assert isinstance(ob, Mixins.ThemeAware)
 
                 ob.themeChangedCallback(theme)
@@ -217,6 +226,9 @@ class Mixins:
 
             try:
                 for ob in list(Mixins.CleanupOnExit.ObjectsPool):
+                    if not Mixins.qObjectIsValid(ob):
+                        continue
+
                     assert isinstance(ob, Mixins.CleanupOnExit)
 
                     if ob.uniqueCleanup:
@@ -332,6 +344,9 @@ class Mixins:
             Mixins.QTranslatable.pruneObjectsPool()
 
             for ob in list(Mixins.QTranslatable.ObjectsPool):
+                if not Mixins.qObjectIsValid(ob):
+                    continue
+
                 assert isinstance(ob, Mixins.QTranslatable)
 
                 if ob.translatable:

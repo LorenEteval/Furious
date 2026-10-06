@@ -316,37 +316,64 @@ class EndpointInfoService(QtCore.QObject):
             return
 
         self._enabled = enabled
+
+        generation = self._generation
+
         self.enabledChanged.emit(enabled)
 
+        if not self._isCurrentGeneration(generation) or self._enabled != enabled:
+            return
+
         if not enabled:
-            self._invalidate()
+            if not self._invalidate():
+                return
+
             self._setState(EndpointInfoState.Disabled)
 
             return
 
         self._syncConnectionState()
 
-    def _setState(self, state: EndpointInfoState):
-        """Publish state only when it changes."""
+    def _isCurrentGeneration(self, generation) -> bool:
+        """Return whether callbacks left this owner and its session intact."""
+        return isValid(self) and generation == self._generation
+
+    def _setState(self, state: EndpointInfoState) -> bool:
+        """Publish changed state and report whether its stage may continue."""
         if state is self.state:
-            return
+            return isValid(self)
+
+        generation = self._generation
 
         self.state = state
         self.stateChanged.emit(state)
 
-    def _publishResult(self, result: EndpointInfo):
-        """Publish immutable endpoint data."""
+        return self._isCurrentGeneration(generation)
+
+    def _publishResult(self, result: EndpointInfo) -> bool:
+        """Publish immutable data and reject continuation after invalidation."""
+        generation = self._generation
+
         self.result = result
         self.resultChanged.emit(result)
+
+        return self._isCurrentGeneration(generation)
 
     def _invalidate(self):
         """Invalidate the old connection's cache and pending work."""
         self._generation += 1
+
+        generation = self._generation
+
         self._cached = False
         self._requestInFlight = False
         self._countryHint = ''
         self.httpClient.cancelAll()
-        self._publishResult(EndpointInfo())
+
+        if not self._isCurrentGeneration(generation):
+            return False
+
+        return self._publishResult(EndpointInfo())
 
     def _syncConnectionState(self):
         """Reflect the controller and begin lazy work only while visible."""
@@ -356,7 +383,8 @@ class EndpointInfoService(QtCore.QObject):
             return
 
         if self.controller.isConnected():
-            self._setState(EndpointInfoState.Loading)
+            if not self._setState(EndpointInfoState.Loading):
+                return
 
             if self._pageVisible:
                 self.requestIfNeeded()
@@ -370,13 +398,17 @@ class EndpointInfoService(QtCore.QObject):
     @QtCore.Slot(object)
     def _connectionStateChanged(self, _state):
         """Invalidate results whenever the runtime connection changes state."""
-        self._invalidate()
+        if not self._invalidate():
+            return
+
         self._syncConnectionState()
 
     @QtCore.Slot(object)
     def _activeProfileChanged(self, _profile):
         """Reject late data when the active profile identity changes."""
-        self._invalidate()
+        if not self._invalidate():
+            return
+
         self._syncConnectionState()
 
     def setPageVisible(self, visible: bool):
@@ -393,14 +425,23 @@ class EndpointInfoService(QtCore.QObject):
             return
 
         self._generation += 1
+
+        generation = self._generation
+
         self._cached = False
         self._requestInFlight = False
         self._countryHint = ''
 
         self.httpClient.cancelAll()
 
-        self._setState(EndpointInfoState.Loading)
-        self._publishResult(EndpointInfo())
+        if not self._isCurrentGeneration(generation):
+            return
+
+        if not self._setState(EndpointInfoState.Loading):
+            return
+
+        if not self._publishResult(EndpointInfo()):
+            return
 
         self._startLookup()
 
@@ -419,10 +460,20 @@ class EndpointInfoService(QtCore.QObject):
 
     def _startLookup(self):
         """Configure the active local HTTP proxy before issuing any request."""
+        generation = self._generation
         proxy = self.proxyResolver()
 
-        if not proxy or not self.httpClient.configureHttpProxy(proxy):
+        if not self._isCurrentGeneration(generation):
+            return
+
+        configured = proxy and self.httpClient.configureHttpProxy(proxy)
+
+        if not self._isCurrentGeneration(generation):
+            return
+
+        if not configured:
             logger.error('endpoint lookup refused because no active HTTP proxy exists')
+
             self._setState(EndpointInfoState.Failed)
 
             return
@@ -431,7 +482,10 @@ class EndpointInfoService(QtCore.QObject):
         self._family = 4
         self._providerIndex = 0
         self._countryHint = ''
-        self._setState(EndpointInfoState.Loading)
+
+        if not self._setState(EndpointInfoState.Loading):
+            return
+
         self._requestIPProvider()
 
     def _providers(self):
@@ -505,9 +559,12 @@ class EndpointInfoService(QtCore.QObject):
             self._countryHint = countryCode
 
         if family == 4:
-            self._publishResult(replace(self.result, ipv4=address, ipv4Resolved=True))
+            result = replace(self.result, ipv4=address, ipv4Resolved=True)
         else:
-            self._publishResult(replace(self.result, ipv6=address, ipv6Resolved=True))
+            result = replace(self.result, ipv6=address, ipv6Resolved=True)
+
+        if not self._publishResult(result):
+            return
 
         self._finishFamily()
 
@@ -515,7 +572,8 @@ class EndpointInfoService(QtCore.QObject):
         """Advance from IPv4 to IPv6, then enrich the observed result."""
         if self._family == 4:
             if not self.result.ipv4Resolved:
-                self._publishResult(replace(self.result, ipv4Resolved=True))
+                if not self._publishResult(replace(self.result, ipv4Resolved=True)):
+                    return
 
             self._family = 6
             self._providerIndex = 0
@@ -525,7 +583,8 @@ class EndpointInfoService(QtCore.QObject):
             return
 
         if not self.result.ipv6Resolved:
-            self._publishResult(replace(self.result, ipv6Resolved=True))
+            if not self._publishResult(replace(self.result, ipv6Resolved=True)):
+                return
 
         address = self.result.primaryAddress
 
@@ -593,15 +652,18 @@ class EndpointInfoService(QtCore.QObject):
 
             logger.warning(f'approximate endpoint geolocation failed: {ex}')
 
-        self._publishResult(
+        if not self._publishResult(
             replace(self.result, location=location, locationResolved=True)
-        )
+        ):
+            return
+
         self._finishLookup(EndpointInfoState.Ready)
 
     def _finishLookup(self, state: EndpointInfoState):
         """Cache the completed connection result and publish final state."""
         if not self.result.locationResolved:
-            self._publishResult(replace(self.result, locationResolved=True))
+            if not self._publishResult(replace(self.result, locationResolved=True)):
+                return
 
         self._requestInFlight = False
         self._cached = True

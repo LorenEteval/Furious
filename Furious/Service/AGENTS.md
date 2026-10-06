@@ -102,6 +102,9 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
 - Metrics sampling owns its worker/future generation and rejects results after disconnect, disablement, replacement,
   or shutdown. Normalize cumulative-counter resets before history aggregation; clearing usage must not erase speed
   history.
+  Statistics preparation and grouped sample notifications recheck native ownership and generation after callbacks.
+  Endpoint state/result notifications likewise stop the current lookup stage when a listener destroys, disables,
+  or replaces its session. `tests/test_service_runtime.py` and `tests/test_endpoint_info.py` cover these boundaries.
   History contains finite values for registered metrics on a monotonic timeline. A missing metric sample is not a
   measured zero; preserve that distinction when adding providers or aggregating sparse series. Closing executor
   admission or cancelling a future does not terminate a query already inside plugin code; test stale-result suppression

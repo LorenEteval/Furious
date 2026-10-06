@@ -44,7 +44,7 @@ from shiboken6 import isValid, delete as deleteQObject
 from tests.support import processQtEvents, application, collectAtBoundary, waitFor
 
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import json
 import unittest
@@ -597,7 +597,142 @@ class ConnectivityManagerTest(unittest.TestCase):
 
 
 class TrafficStatsManagerTest(unittest.TestCase):
-    """Verify a blocked provider cannot retain its Qt manager on cleanup."""
+    """Verify blocked queries and reentrant notifications respect manager lifetime."""
+
+    def testReconnectPreparationStopsAfterResetOrProviderEndsItsOwner(self):
+        """Do not reactivate statistics after reentrant disconnect or destruction."""
+        application()
+
+        for boundary in ('reset', 'provider'):
+            for action in ('destroy', 'disconnect'):
+                with self.subTest(boundary=boundary, action=action):
+                    for _ in range(20):
+                        manager = TrafficStatsManager()
+                        manager._hasConnected = True
+                        manager._collectionEnabled = True
+
+                        def endConnection(*_args):
+                            if action == 'destroy':
+                                deleteQObject(manager)
+                            else:
+                                manager.disconnectedCallback()
+
+                        registry = SimpleNamespace(
+                            trafficStatsMonitorForRuntimes=Mock(return_value=None)
+                        )
+
+                        if boundary == 'reset':
+                            manager.usageHistoryReset.connect(endConnection)
+                        else:
+                            monitor = TrafficStatsMonitor(
+                                query=lambda _target: TrafficCounters(1, 2), target=None
+                            )
+
+                            def resolveMonitor(_runtimes):
+                                endConnection()
+
+                                return monitor
+
+                            registry.trafficStatsMonitorForRuntimes.side_effect = (
+                                resolveMonitor
+                            )
+
+                        try:
+                            with (
+                                patch.object(
+                                    manager,
+                                    '_clearUsageOnReconnectEnabled',
+                                    return_value=True,
+                                ),
+                                patch(
+                                    'Furious.Service.TrafficStatsManager.getPluginRegistry',
+                                    return_value=registry,
+                                ),
+                                patch('sys.excepthook') as qtErrors,
+                            ):
+                                manager.connectedCallback()
+                                processQtEvents()
+                                qtErrors.assert_not_called()
+
+                            if boundary == 'reset':
+                                registry.trafficStatsMonitorForRuntimes.assert_not_called()
+
+                            if action == 'destroy':
+                                self.assertFalse(isValid(manager))
+                            else:
+                                self.assertFalse(manager._connected)
+                                self.assertFalse(manager._sampleTimer.isActive())
+                                self.assertIsNone(manager._monitor)
+                                self.assertIsNone(manager._executor)
+                        finally:
+                            if isValid(manager):
+                                manager.cleanup()
+                                deleteQObject(manager)
+
+    def testSamplePublicationStopsWhenAnObserverDestroysOrDisconnectsManager(self):
+        """A signal listener can end this sample before later signals are emitted."""
+        application()
+
+        signalNames = (
+            'usageHistoryReset',
+            'usageChanged',
+            'speedChanged',
+            'sampleChanged',
+        )
+
+        for signalName in signalNames[:-1]:
+            for action in ('destroy', 'disconnect'):
+                with self.subTest(signal=signalName, action=action):
+                    for _ in range(20):
+                        manager = TrafficStatsManager()
+                        delivered = []
+
+                        with patch.object(
+                            manager, '_clearUsageOnReconnectEnabled', return_value=True
+                        ):
+                            manager._consumeResult(
+                                manager._generation, TrafficCounters(100, 100), 1.0
+                            )
+
+                            for name in signalNames:
+                                getattr(manager, name).connect(
+                                    lambda *_args, _name=name: delivered.append(_name)
+                                )
+
+                            def endSample(*_args):
+                                if action == 'destroy':
+                                    deleteQObject(manager)
+                                else:
+                                    manager.disconnectedCallback()
+
+                            getattr(manager, signalName).connect(endSample)
+
+                            try:
+                                with patch('sys.excepthook') as qtErrors:
+                                    manager._sampleReady.emit(
+                                        manager._generation,
+                                        TrafficCounters(10, 10),
+                                        2.0,
+                                    )
+                                    processQtEvents()
+
+                                    qtErrors.assert_not_called()
+
+                                expected = signalNames[
+                                    : signalNames.index(signalName) + 1
+                                ]
+                                self.assertEqual(delivered, list(expected))
+
+                                if action == 'destroy':
+                                    self.assertFalse(isValid(manager))
+                                    self.assertFalse(isValid(manager._sampleTimer))
+                                else:
+                                    self.assertIsNone(manager._previousCounters)
+                                    self.assertFalse(manager._sampleTimer.isActive())
+                            finally:
+                                if isValid(manager):
+                                    manager.cleanup()
+                                    deleteQObject(manager)
 
     @classmethod
     def setUpClass(cls):

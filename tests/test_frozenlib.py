@@ -26,6 +26,8 @@ from Furious.Window.SettingsPage import _ToggleSettingsCard
 from PySide6 import QtCore
 from PySide6.QtWidgets import QPushButton
 
+from shiboken6 import delete as deleteQObject, isValid
+
 from unittest import mock
 
 import importlib
@@ -162,6 +164,76 @@ class CleanupOnExitTest(unittest.TestCase):
             self.assertEqual(len(Mixins.CleanupOnExit.ObjectsPool), 0)
             self.assertEqual(Mixins.CleanupOnExit.VisitedType, {})
             self.assertEqual(len(participants), 3)
+
+
+class MixinNotificationLifetimeTest(unittest.TestCase):
+    """Keep pool notifications safe when an earlier callback destroys a peer."""
+
+    @classmethod
+    def setUpClass(cls):
+        application()
+
+    def testDestroyedPeerIsSkippedWithoutStoppingSurvivingCallbacks(self):
+        cases = (
+            (Mixins.ConnectionAware, 'callConnectedCallback', ()),
+            (Mixins.ConnectionAware, 'callDisconnectedCallback', ()),
+            (Mixins.ThemeAware, 'callThemeChangedCallbackUnchecked', ('Dark',)),
+            (Mixins.QTranslatable, 'retranslateAll', ()),
+            (Mixins.CleanupOnExit, 'cleanupAll', ()),
+        )
+
+        for mixin, methodName, arguments in cases:
+            with self.subTest(method=methodName):
+                calls = []
+                destroyed = []
+                pool = type(mixin.ObjectsPool)()
+
+                class Participant(mixin, QtCore.QObject):
+                    def __init__(self, name):
+                        kwargs = (
+                            {'uniqueCleanup': False}
+                            if mixin is Mixins.CleanupOnExit
+                            else {}
+                        )
+                        super().__init__(**kwargs)
+
+                        self.setObjectName(name)
+                        self.victim = None
+
+                    def notify(self, *_args):
+                        calls.append(self.objectName())
+
+                        if self.victim is not None:
+                            deleteQObject(self.victim)
+
+                    connectedCallback = notify
+                    disconnectedCallback = notify
+                    themeChangedCallback = notify
+                    retranslate = notify
+                    cleanup = notify
+
+                with mock.patch.object(mixin, 'ObjectsPool', pool):
+                    first = Participant('first')
+                    victim = Participant('victim')
+                    last = Participant('last')
+                    first.victim = victim
+                    victim.destroyed.connect(lambda *_args: destroyed.append(True))
+
+                    try:
+                        with self.assertNoLogs('Furious.Frozenlib.Mixins'):
+                            getattr(mixin, methodName)(*arguments)
+
+                        self.assertEqual(calls, ['first', 'last'])
+                        self.assertEqual(destroyed, [True])
+                        self.assertFalse(isValid(victim))
+                        self.assertTrue(isValid(first))
+                        self.assertTrue(isValid(last))
+                    finally:
+                        for participant in (first, victim, last):
+                            if isValid(participant):
+                                deleteQObject(participant)
+
+                    self.assertEqual(len(pool), 0)
 
 
 class FrozenlibUtilityTest(unittest.TestCase):

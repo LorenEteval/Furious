@@ -43,9 +43,17 @@ from Furious.Qt import (
     connectWeakly,
 )
 from Furious.Qt.HttpGetManager import HttpGetManager
-from Furious.Service.EndpointInfoService import ProxyEndpointHttpClient
+from Furious.Service.EndpointInfoService import (
+    EndpointInfoService,
+    EndpointInfoState,
+    ProxyEndpointHttpClient,
+)
 from Furious.Service.SubscriptionManager import SubscriptionManager
 from Furious.Service.ProfileTesting import _LatencyScheduler
+from Furious.Service.DnsResolver import DnsResolutionOperation, DnsResolver
+from Furious.Service.TrafficStatsManager import TrafficStatsManager
+from Furious.Frozenlib import Mixins
+from Furious.Plugins import TrafficCounters
 from Furious.Service.ConnectionManager import (
     ConnectionManager,
     ConnectionStartOperation,
@@ -74,6 +82,7 @@ from tests.support import (
 
 from collections import Counter
 from types import SimpleNamespace
+from unittest import mock
 
 import argparse
 import json
@@ -98,6 +107,201 @@ PROTOCOL_PATTERNS = {
     ),
 }
 CLOSE_METHODS = ('accept', 'close', 'reject')
+
+
+def runNotificationAndDnsProbe(iterations=100):
+    """Exercise native destruction during pool, DNS, and statistics callbacks."""
+    application()
+
+    cases = (
+        (Mixins.ConnectionAware, 'callConnectedCallback', ()),
+        (Mixins.ConnectionAware, 'callDisconnectedCallback', ()),
+        (Mixins.ThemeAware, 'callThemeChangedCallbackUnchecked', ('Dark',)),
+        (Mixins.QTranslatable, 'retranslateAll', ()),
+        (Mixins.CleanupOnExit, 'cleanupAll', ()),
+    )
+    poolNotifications = 0
+
+    for mixin, methodName, arguments in cases:
+
+        class Participant(mixin, QtCore.QObject):
+            def __init__(self, name):
+                kwargs = (
+                    {'uniqueCleanup': False} if mixin is Mixins.CleanupOnExit else {}
+                )
+                super().__init__(**kwargs)
+
+                self.setObjectName(name)
+                self.victim = None
+
+            def notify(self, *_args):
+                calls.append(self.objectName())
+
+                if self.victim is not None:
+                    deleteQObject(self.victim)
+
+            connectedCallback = notify
+            disconnectedCallback = notify
+            themeChangedCallback = notify
+            retranslate = notify
+            cleanup = notify
+
+        for _ in range(iterations):
+            calls = []
+            pool = type(mixin.ObjectsPool)()
+
+            with mock.patch.object(mixin, 'ObjectsPool', pool):
+                first, victim, last = (
+                    Participant('first'),
+                    Participant('victim'),
+                    Participant('last'),
+                )
+                first.victim = victim
+
+                getattr(mixin, methodName)(*arguments)
+
+                assert calls == ['first', 'last']
+                assert not isValid(victim)
+                deleteQObject(first)
+                deleteQObject(last)
+                assert not len(pool)
+
+            poolNotifications += 1
+
+    class PendingReply(QNetworkReply):
+        def abort(self):
+            self.setFinished(True)
+            self.finished.emit()
+
+        def readData(self, _maximumLength):
+            return bytes()
+
+    for boundary in ('cancel-start', 'destroy-start', 'destroy-timeout'):
+        for _ in range(iterations):
+            resolver = SimpleNamespace(_newResultMap=DnsResolver._newResultMap)
+            operation = DnsResolutionOperation(resolver, 'example.test')
+            results = []
+            operation.finished.connect(lambda *_args: results.append(True))
+
+            def beginResolve(resultMap):
+                resultMap['depth'] = 1
+
+                if boundary == 'cancel-start':
+                    operation.cancel()
+                elif boundary == 'destroy-start':
+                    deleteQObject(operation)
+
+            resolver._beginResolve = beginResolve
+            operation.start()
+
+            if boundary == 'cancel-start':
+                assert not operation._timer.isActive()
+                deleteQObject(operation)
+            elif boundary == 'destroy-timeout':
+                reply = PendingReply()
+                operation._resultMap['reference'].append(reply)
+                reply.finished.connect(lambda: deleteQObject(operation))
+                operation._timeout = 0
+                operation._poll()
+                assert reply.isFinished()
+                deleteQObject(reply)
+
+            assert not results
+            assert not isValid(operation)
+            assert not isValid(operation._timer)
+
+    # These managers are process-lifetime receivers in the application. Probe
+    # each emission boundary once, rather than treating their persistent direct
+    # slots as transient callback-retention candidates.
+    for signalName in ('usageHistoryReset', 'usageChanged', 'speedChanged'):
+        manager = TrafficStatsManager()
+
+        with mock.patch.object(
+            manager, '_clearUsageOnReconnectEnabled', return_value=True
+        ):
+            manager._consumeResult(manager._generation, TrafficCounters(100, 100), 1.0)
+            getattr(manager, signalName).connect(lambda *_args: deleteQObject(manager))
+            manager._sampleReady.emit(manager._generation, TrafficCounters(10, 10), 2.0)
+
+        assert not isValid(manager)
+        assert not isValid(manager._sampleTimer)
+
+    class EndpointClient(QtCore.QObject):
+        completed = QtCore.Signal(object, object, str)
+
+        def __init__(self):
+            super().__init__()
+
+            self.requests = []
+
+        def configureHttpProxy(self, _proxy):
+            return True
+
+        def cancelAll(self):
+            pass
+
+        def request(self, url, context):
+            self.requests.append((url, context))
+
+    for boundary in ('loading', 'refresh-result', 'ip-result'):
+        for action in ('destroy', 'disable'):
+            client = EndpointClient()
+            service = EndpointInfoService(
+                controller=SimpleNamespace(isConnected=lambda: True),
+                httpClient=client,
+                proxyResolver=lambda: '127.0.0.1:10809',
+                enabled=True,
+            )
+
+            if boundary == 'ip-result':
+                service.setPageVisible(True)
+            else:
+                service._setState(EndpointInfoState.Ready)
+
+            requestCount = len(client.requests)
+            interrupted = []
+
+            def interruptLookup(*_args):
+                if interrupted:
+                    return
+
+                interrupted.append(True)
+
+                if action == 'destroy':
+                    deleteQObject(service)
+                else:
+                    service.setEnabled(False)
+
+            signal = (
+                service.stateChanged if boundary == 'loading' else service.resultChanged
+            )
+            signal.connect(interruptLookup)
+
+            if boundary == 'ip-result':
+                client.completed.emit(
+                    client.requests[-1][1], b'ip=192.0.2.10\nloc=US\n', ''
+                )
+            else:
+                service.refresh()
+
+            assert interrupted == [True]
+            assert len(client.requests) == requestCount
+
+            if isValid(service):
+                assert service.state is EndpointInfoState.Disabled
+                assert not service._requestInFlight
+                deleteQObject(service)
+
+            deleteQObject(client)
+
+    processQtEvents()
+
+    return {
+        'poolNotificationCycles': poolNotifications,
+        'dnsReentrantCycles': iterations * 3,
+        'statsDestructionBoundaries': 3,
+        'endpointInterruptionBoundaries': 6,
+    }
 
 
 def runConnectionRecoveryProbe(iterations=100):
@@ -1266,6 +1470,7 @@ def main():
     )
 
     try:
+        print(json.dumps(runNotificationAndDnsProbe(arguments.iterations)))
         print(json.dumps(runConnectionRecoveryProbe(arguments.iterations)))
         print(json.dumps(runReentrantLifetimeProbe(arguments.iterations)))
         print(json.dumps(runSingletonIPCProbe(arguments.iterations)))

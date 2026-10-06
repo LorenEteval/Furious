@@ -43,7 +43,7 @@ from PySide6.QtNetwork import QNetworkReply
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QFrame, QWidget
 
-from shiboken6 import isValid
+from shiboken6 import isValid, delete as deleteQObject
 
 from tests.support import (
     application,
@@ -299,6 +299,89 @@ class EndpointInfoServiceTest(unittest.TestCase):
         )
 
         return service, controller, client
+
+    def testNotificationListenersCanEndLookupBeforeAnotherRequestStarts(self):
+        """Stop the old stage when notification deletes or disables its owner."""
+        for boundary in ('loading', 'refresh-result', 'ip-result'):
+            for action in ('destroy', 'disable'):
+                with self.subTest(boundary=boundary, action=action):
+                    for _ in range(20):
+                        service, controller, client = self._service()
+
+                        if boundary == 'ip-result':
+                            service.setPageVisible(True)
+                        else:
+                            service._setState(EndpointInfoState.Ready)
+
+                        initialRequests = len(client.requests)
+                        triggered = []
+
+                        def endLookup(*_args):
+                            if triggered:
+                                return
+
+                            triggered.append(True)
+
+                            if action == 'destroy':
+                                deleteQObject(service)
+                            else:
+                                service.setEnabled(False)
+
+                        signal = (
+                            service.stateChanged
+                            if boundary == 'loading'
+                            else service.resultChanged
+                        )
+                        signal.connect(endLookup)
+
+                        try:
+                            with patch('sys.excepthook') as qtErrors:
+                                if boundary == 'ip-result':
+                                    client.completeLatest(b'ip=192.0.2.10\nloc=US\n')
+                                else:
+                                    service.refresh()
+
+                                processQtEvents()
+                                qtErrors.assert_not_called()
+
+                            self.assertEqual(triggered, [True])
+                            self.assertEqual(len(client.requests), initialRequests)
+
+                            if action == 'destroy':
+                                self.assertFalse(isValid(service))
+                            else:
+                                self.assertEqual(
+                                    service.state, EndpointInfoState.Disabled
+                                )
+                                self.assertEqual(service.result, EndpointInfo())
+                                self.assertFalse(service._requestInFlight)
+                                self.assertFalse(service._cached)
+                        finally:
+                            for owner in (service, controller, client):
+                                if isValid(owner):
+                                    deleteQObject(owner)
+
+    def testEnableListenerCanReverseDisableWithoutCancellingCurrentLookup(self):
+        """The latest preference wins even when a listener reverses the transition."""
+        service, controller, client = self._service()
+        service.setPageVisible(True)
+        generation = service._generation
+        service.enabledChanged.connect(
+            lambda enabled: service.setEnabled(True) if not enabled else None
+        )
+
+        try:
+            service.setEnabled(False)
+
+            self.assertTrue(service.enabled)
+            self.assertEqual(service.state, EndpointInfoState.Loading)
+            self.assertEqual(service._generation, generation)
+            self.assertTrue(service._requestInFlight)
+            self.assertEqual(client.cancelCount, 0)
+            self.assertEqual(len(client.requests), 1)
+        finally:
+            for owner in (service, controller, client):
+                deleteQObject(owner)
 
     def testInspectionDefaultsOffAndNeverIssuesProviderRequests(self):
         """Require an explicit opt-in before any endpoint provider is contacted."""

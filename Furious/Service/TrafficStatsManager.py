@@ -31,6 +31,8 @@ from Furious.Plugins import TrafficCounters, getPluginRegistry
 
 from PySide6 import QtCore
 
+from shiboken6 import isValid
+
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -415,6 +417,8 @@ class TrafficStatsManager(
 
     def _updateSpeeds(self, counters: TrafficCounters, sampledAt: float):
         """Calculate and emit rates from one cumulative counter sample."""
+        generation = self._generation
+
         sessionCounters, usageWasReset = self._usageAccumulator.update(
             counters,
             clearOnReset=self._clearUsageOnReconnectEnabled(),
@@ -423,7 +427,13 @@ class TrafficStatsManager(
         if usageWasReset:
             self.usageHistoryReset.emit()
 
+            if not isValid(self) or generation != self._generation:
+                return
+
         self.usageChanged.emit(sessionCounters.uplink, sessionCounters.downlink)
+
+        if not isValid(self) or generation != self._generation:
+            return
 
         previousCounters = self._previousCounters
         previousSampleTime = self._previousSampleTime
@@ -445,6 +455,10 @@ class TrafficStatsManager(
                 downloadSpeed = downlinkDelta / elapsed
 
         self.speedChanged.emit(uploadSpeed, downloadSpeed)
+
+        if not isValid(self) or generation != self._generation:
+            return
+
         self.sampleChanged.emit(
             TrafficStatsSample(
                 sampledAt=sampledAt,
@@ -502,8 +516,13 @@ class TrafficStatsManager(
 
     def connectedCallback(self):
         """Discover and activate statistics for the connected runtime."""
+        generation = self._generation
+
         if self._hasConnected and self._clearUsageOnReconnectEnabled():
             self._clearSessionUsage()
+
+        if not isValid(self) or generation != self._generation:
+            return
 
         self._hasConnected = True
         self._connected = True
@@ -516,6 +535,9 @@ class TrafficStatsManager(
         monitor = getPluginRegistry().trafficStatsMonitorForRuntimes(
             self._activeRuntimes()
         )
+
+        if not isValid(self) or generation != self._generation:
+            return
 
         self._activateMonitor(monitor)
 

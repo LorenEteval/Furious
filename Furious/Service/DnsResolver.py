@@ -77,6 +77,9 @@ class DnsResolutionOperation(QtCore.QObject):
 
             return
 
+        if self._terminal or not isValid(self):
+            return
+
         self._elapsed.start()
         self._timer.start()
         self._poll()
@@ -113,7 +116,7 @@ class DnsResolutionOperation(QtCore.QObject):
 
     def _finish(self):
         """Publish exactly one terminal result."""
-        if self._terminal:
+        if self._terminal or not isValid(self):
             return
 
         self._terminal = True

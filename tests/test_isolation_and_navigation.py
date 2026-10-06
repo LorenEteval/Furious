@@ -32,10 +32,12 @@ import tests.support as SupportModule
 
 from tests.support import (
     application,
+    assertChildSucceeded,
     assertIsolatedSettings,
     collectAtBoundary,
     isolatedSettings,
     processQtEvents,
+    runPythonChild,
     settingsSandboxPath,
 )
 
@@ -203,6 +205,69 @@ class NavigationBehaviorTest(unittest.TestCase):
         self.assertEqual(clicks, [True])
         self.assertFalse(self.navigation.isExpanded())
         self.assertFalse(self.navigation._outsideClickFilterInstalled)
+
+    def testCollapseObserverCanDestroyTheOutsideClickTarget(self):
+        """Keep native event delivery safe when collapse destroys its target."""
+        result = runPythonChild(
+            '''
+from tests.support import application, processQtEvents
+from Furious.Widget.NavigationView import NavigationView
+from PySide6 import QtCore, QtGui
+from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
+from shiboken6 import isValid, delete as deleteQObject
+from unittest import mock
+
+application()
+
+for destroyOwner in (False, True):
+    for _ in range(20):
+        navigation = NavigationView()
+        navigation.resize(900, 600)
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        target = QPushButton('Outside target', page)
+        layout.addWidget(target)
+        navigation.addPage('home', page, 'Home', 'house-door.svg')
+        navigation.show()
+        navigation.setExpanded(True, animated=False)
+        processQtEvents()
+        destroyed = []
+        target.destroyed.connect(lambda *_args: destroyed.append(True))
+        navigation.expandedChanged.connect(
+            lambda expanded: deleteQObject(navigation if destroyOwner else target)
+            if not expanded else None
+        )
+        localPosition = target.rect().center()
+        event = QtGui.QMouseEvent(
+            QtCore.QEvent.Type.MouseButtonPress,
+            QtCore.QPointF(localPosition),
+            QtCore.QPointF(target.mapToGlobal(localPosition)),
+            QtCore.Qt.MouseButton.LeftButton,
+            QtCore.Qt.MouseButton.LeftButton,
+            QtCore.Qt.KeyboardModifier.NoModifier,
+        )
+
+        with mock.patch('sys.excepthook') as exceptionHook:
+            application().sendEvent(target, event)
+            processQtEvents()
+            exceptionHook.assert_not_called()
+
+        assert destroyed == [True]
+        assert not isValid(target)
+
+        if isValid(navigation):
+            assert not navigation.isExpanded()
+            assert not navigation._outsideClickFilterInstalled
+            deleteQObject(navigation)
+
+        processQtEvents()
+''',
+            timeout=30,
+        )
+
+        assertChildSucceeded(
+            self, result, 'target deletion during outside-click delivery'
+        )
 
     def testInsideNavigationClickKeepsOverlayExpandedAndSwitchesPage(self):
         """Allow normal navigation interaction without flyout dismissal."""
