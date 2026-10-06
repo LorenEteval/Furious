@@ -3628,5 +3628,21 @@ TRANSLATION = {
         "RU": "IP-адреса в обход интерфейса TUN (через запятую)",
         "ZH": "绕过TUN适配器接口的IP地址（以逗号分隔）",
         "isReviewed": "True"
+    },
+    "Copy Error": {
+        "source": [
+            "Furious.Actions.Connection"
+        ],
+        "RU": "Скопировать ошибку",
+        "ZH": "复制错误信息",
+        "isReviewed": "True"
+    },
+    "Open Logs": {
+        "source": [
+            "Furious.Actions.Connection"
+        ],
+        "RU": "Открыть журнал",
+        "ZH": "打开日志",
+        "isReviewed": "True"
     }
 }

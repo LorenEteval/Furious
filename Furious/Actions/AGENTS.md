@@ -25,8 +25,13 @@ owned commands and presentation without becoming a workflow authority.
 - `AppQAction.callback` is a deliberate strong reference. The action owner must not outlive a captured receiver, and a
   transient/repeated receiver uses the weak named-method facilities required by `Furious/Qt/AGENTS.md`.
 - Clipboard text, files, QR images, share links, and plugin results may contain credentials. A character limit is
-  not redaction: avoid echoing secret-bearing input in failure dialogs as well as logs. Inspect error presentation
-  independently from parser diagnostics; controlled validation failure must not disclose the rejected payload.
+  not redaction: never log rejected payloads. Clipboard import-error dialogs retain their existing length-limited
+  preview by explicit product choice; do not change that preview policy without a request. Inspect other error
+  presentation independently from parser diagnostics.
+  Connection-error diagnostics retain only the displayed failure text for explicit copying; copying leaves the dialog
+  open. Open Logs resolves the current application window and rechecks native validity after dialog completion and
+  navigation. It opens the existing log page without retrying a stale connection or acquiring another workflow owner.
+  `DialogBehaviorTest` in `tests/test_ui_behavior.py` and the compiled lifetime fixture verify these actions.
 - Screen capture and QR decoding currently run synchronously; batching the resulting imports does not make capture
   interruptible. If moved to workers, transfer data through an owned GUI-thread continuation without retaining
   transient windows. Each screen-capture action owns a separate native capture handle, including separate tray/page

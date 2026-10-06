@@ -24,17 +24,21 @@ from Furious.Controllers.ConnectionController import (
     ConnectionState,
 )
 from Furious.Frozenlib import (
+    APP,
     AppConnectionController,
     AppSettings,
     AppSystemTray,
 )
-from Furious.Qt import AppQAction, AppQMessageBox, bootstrapIcon
+from Furious.Qt import AppQAction, AppQMessageBox, bootstrapIcon, connectWeakly
 from Furious.Qt import gettext as _
 from Furious.Widget.ConnectionProgressWidget import ConnectionProgressWidget
 
 from PySide6 import QtCore
+from PySide6.QtWidgets import QApplication
 
-__all__ = ['ConnectAction']
+from shiboken6 import isValid
+
+__all__ = ['ConnectAction', 'ConnectionErrorMessageBox']
 
 _TRANSLATABLE_CONNECTION_STATES = (
     _('Connect'),
@@ -42,6 +46,73 @@ _TRANSLATABLE_CONNECTION_STATES = (
     _('Disconnect'),
     _('Disconnecting'),
 )
+
+
+class ConnectionErrorMessageBox(AppQMessageBox):
+    """Present one captured connection failure with copy and log-navigation actions."""
+
+    def __init__(self, error: ConnectionError):
+        super().__init__(
+            icon=self.Icon.Critical,
+            heading=error.title,
+            text=error.message,
+            buttons=self.StandardButton.Close,
+        )
+
+        self.setInformativeText(error.details)
+
+        self.textLabel.setTextFormat(QtCore.Qt.TextFormat.PlainText)
+        self.informativeLabel.setTextFormat(QtCore.Qt.TextFormat.PlainText)
+
+        self._errorText = '\n\n'.join(
+            text for text in (error.title, error.message, error.details) if text
+        )
+
+        self.copyErrorButton = self.addButton(
+            _('Copy Error'), self.ButtonRole.ActionRole, closeOnClick=False
+        )
+        self.openLogsButton = self.addButton(_('Open Logs'), self.ButtonRole.ActionRole)
+
+        connectWeakly(self.copyErrorButton.clicked, self, '_copyError')
+        connectWeakly(self.openLogsButton.clicked, self, '_openLogs')
+
+        window = getattr(APP(), 'mainWindow', None)
+
+        self.openLogsButton.setEnabled(window is not None and isValid(window))
+
+        self.setDefaultButton(self.StandardButton.Close)
+        self.setEscapeButton(self.StandardButton.Close)
+
+    @QtCore.Slot(bool)
+    def _copyError(self, _checked=False):
+        """Copy the original failure while keeping its dialog open."""
+        QApplication.clipboard().setText(self._errorText)
+
+    @QtCore.Slot(bool)
+    def _openLogs(self, _checked=False):
+        """Resolve the application window after the error dialog has completed."""
+        window = getattr(APP(), 'mainWindow', None)
+
+        if window is None or not isValid(window):
+            return
+
+        if window.isMinimized():
+            window.showNormal()
+        else:
+            window.show()
+
+        if not isValid(window):
+            return
+
+        window.showLogPage()
+
+        if not isValid(window):
+            return
+
+        window.raise_()
+
+        if isValid(window):
+            window.activateWindow()
 
 
 class ConnectAction(AppQAction):
@@ -130,14 +201,7 @@ class ConnectAction(AppQAction):
         if not isinstance(error, ConnectionError):
             return
 
-        mbox = AppQMessageBox(icon=AppQMessageBox.Icon.Critical)
-        mbox.setHeading(error.title)
-        mbox.setText(error.message)
-
-        if error.details:
-            mbox.setInformativeText(error.details)
-
-        mbox.open()
+        ConnectionErrorMessageBox(error).open()
 
     def triggeredCallback(self, checked):
         """Delegate the requested operation to the shared controller."""

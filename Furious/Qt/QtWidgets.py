@@ -1514,14 +1514,16 @@ class AppQMessageBox(AppQTransientDialog):
         """Return the currently displayed icon pixmap."""
         return self.iconLabel.pixmap()
 
-    def addButton(self, button, role=None):
-        """Add a standard button or a custom text/role button."""
+    def addButton(self, button, role=None, *, closeOnClick=True):
+        """Add a button, optionally keeping the dialog open for inline actions."""
         if isinstance(button, self.StandardButton):
             standardButton = button
 
             existing = self._standardButtonMap.get(standardButton)
 
             if existing is not None:
+                existing.setProperty('messageBoxCloseOnClick', bool(closeOnClick))
+
                 return existing
 
             standardRole = {
@@ -1547,11 +1549,14 @@ class AppQMessageBox(AppQTransientDialog):
 
             self._standardButtons |= standardButton
 
-            return self._createButton(
+            createdButton = self._createButton(
                 self._standardButtonText(standardButton),
                 standardRole,
                 standardButton,
             )
+            createdButton.setProperty('messageBoxCloseOnClick', bool(closeOnClick))
+
+            return createdButton
 
         if isinstance(button, QAbstractButton):
             customButton = button
@@ -1561,12 +1566,17 @@ class AppQMessageBox(AppQTransientDialog):
             self._registerButton(customButton, role)
             self._rebuildButtonLayout()
 
+            customButton.setProperty('messageBoxCloseOnClick', bool(closeOnClick))
+
             return customButton
 
         if role is None:
             raise TypeError('a custom button requires a QMessageBox.ButtonRole')
 
-        return self._createButton(button, role)
+        createdButton = self._createButton(button, role)
+        createdButton.setProperty('messageBoxCloseOnClick', bool(closeOnClick))
+
+        return createdButton
 
     @QtCore.Slot(object, bool)
     def _handleButtonClicked(self, button, _checked=False):
@@ -1686,6 +1696,9 @@ class AppQMessageBox(AppQTransientDialog):
 
         # A button listener may synchronously destroy this box or its parent.
         if not isValid(self):
+            return
+
+        if isValid(button) and button.property('messageBoxCloseOnClick') is False:
             return
 
         standardButton = self.standardButton(button)

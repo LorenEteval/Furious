@@ -65,7 +65,7 @@ from Furious.Backends.Xray.VmessEditor import (
     GuiVMessGroupBoxBasic,
     VmessEditor,
 )
-from Furious.Actions.Connection import ConnectAction
+from Furious.Actions.Connection import ConnectAction, ConnectionErrorMessageBox
 from Furious.Controllers.ConnectionController import (
     ConnectionError,
     ConnectionController,
@@ -139,6 +139,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from shiboken6 import isValid, delete as deleteQObject
 
 from tests.support import (
     application,
@@ -3563,6 +3565,128 @@ class DialogBehaviorTest(unittest.TestCase):
 
         messageBox.close()
         messageBox.deleteLater()
+
+    def testInlineMessageBoxButtonsPublishClicksWithoutChangingDefaultDismissal(self):
+        for kind in ('text', 'standard', 'widget'):
+            with self.subTest(kind=kind):
+                messageBox = AppQMessageBox(buttons=AppQMessageBox.StandardButton.Close)
+
+                if kind == 'standard':
+                    button = messageBox.addButton(
+                        AppQMessageBox.StandardButton.Help, closeOnClick=False
+                    )
+                elif kind == 'widget':
+                    button = messageBox.addButton(
+                        QToolButton(),
+                        AppQMessageBox.ButtonRole.ActionRole,
+                        closeOnClick=False,
+                    )
+                else:
+                    button = messageBox.addButton(
+                        'Inline action',
+                        AppQMessageBox.ButtonRole.ActionRole,
+                        closeOnClick=False,
+                    )
+
+                clicked = QSignalSpy(messageBox.buttonClicked)
+                finished = QSignalSpy(messageBox.finished)
+                destroyed = QSignalSpy(messageBox.destroyed)
+                messageBox.open()
+                processQtEvents()
+
+                button.click()
+                self.assertEqual(clicked.count(), 1)
+                self.assertEqual(finished.count(), 0)
+                self.assertTrue(messageBox.isVisible())
+
+                messageBox.button(AppQMessageBox.StandardButton.Close).click()
+                processQtEvents()
+                self.assertEqual(finished.count(), 1)
+                self.assertEqual(destroyed.count(), 1)
+
+    def testConnectionErrorCopyKeepsDialogOpenAndNavigationReleasesIt(self):
+        app = application()
+        originalClipboard = app.clipboard().text()
+        window = QWidget()
+        window.showLogPage = mock.Mock()
+        error = ConnectionError(
+            'Unable to connect', 'Failed to start', 'Native detail <tag>'
+        )
+
+        try:
+            with mock.patch.object(app, 'mainWindow', window, create=True):
+                for _index in range(30):
+                    messageBox = ConnectionErrorMessageBox(error)
+                    reference = weakref.ref(messageBox)
+                    destroyed = QSignalSpy(messageBox.destroyed)
+                    messageBox.open()
+                    processQtEvents()
+
+                    messageBox.copyErrorButton.click()
+                    self.assertEqual(
+                        app.clipboard().text(),
+                        '\n\n'.join((error.title, error.message, error.details)),
+                    )
+                    self.assertTrue(messageBox.isVisible())
+                    self.assertEqual(messageBox.informativeText(), error.details)
+                    self.assertEqual(
+                        messageBox.informativeLabel.textFormat(), QtCore.Qt.PlainText
+                    )
+
+                    messageBox.openLogsButton.click()
+                    processQtEvents()
+
+                    self.assertEqual(destroyed.count(), 1)
+                    self.assertTrue(window.isVisible())
+                    del destroyed, messageBox
+                    self.assertIsNone(reference())
+
+                self.assertEqual(window.showLogPage.call_count, 30)
+        finally:
+            app.clipboard().setText(originalClipboard)
+            window.close()
+            window.deleteLater()
+
+    def testConnectionErrorWithoutWindowStillCopiesAndClosesNormally(self):
+        app = application()
+        originalClipboard = app.clipboard().text()
+
+        try:
+            with mock.patch.object(app, 'mainWindow', None, create=True):
+                messageBox = ConnectionErrorMessageBox(
+                    ConnectionError('Error', 'Failed')
+                )
+                messageBox.open()
+                processQtEvents()
+
+                self.assertFalse(messageBox.openLogsButton.isEnabled())
+                messageBox.copyErrorButton.click()
+                self.assertEqual(app.clipboard().text(), 'Error\n\nFailed')
+                self.assertTrue(messageBox.isVisible())
+
+                QTest.keyClick(messageBox, QtCore.Qt.Key.Key_Escape)
+                processQtEvents()
+        finally:
+            app.clipboard().setText(originalClipboard)
+
+    def testOpeningLogsToleratesWindowDestructionDuringDialogCompletion(self):
+        app = application()
+        window = QWidget()
+        window.showLogPage = mock.Mock()
+
+        with mock.patch.object(app, 'mainWindow', window, create=True):
+            messageBox = ConnectionErrorMessageBox(ConnectionError('Error', 'Failed'))
+            messageBox.finished.connect(lambda _result: deleteQObject(window))
+            messageBox.open()
+            processQtEvents()
+
+            with mock.patch('sys.excepthook') as exceptionHook:
+                messageBox.openLogsButton.click()
+                processQtEvents()
+                exceptionHook.assert_not_called()
+
+            self.assertFalse(isValid(window))
+            window.showLogPage.assert_not_called()
 
     def testMessageBoxHeadingSupportsLongContentIconsAndThemes(self):
         """Keep the semantic stack responsive across themes and icon variants."""

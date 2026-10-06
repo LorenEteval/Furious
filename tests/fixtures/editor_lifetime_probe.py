@@ -25,9 +25,11 @@ from Furious.Backends.Xray.AssetListView import XrayAssetListView
 import Furious.Backends.Xray.AssetListView as assetModule
 import Furious.Actions.Import as importModule
 from Furious.Actions.Routing import RoutingAction
+from Furious.Actions.Connection import ConnectionErrorMessageBox
 from Furious.Application.TrayIcon import TrayIcon
 from Furious.Application.DesktopApplication import DesktopApplication
 from Furious.Controllers import ConnectionController, RoutingController
+from Furious.Controllers.ConnectionController import ConnectionError
 from Furious.Plugins import RoutingOption
 from Furious.Plugins import blankProfile, initializePluginRegistry
 from Furious.Qt import (
@@ -36,6 +38,7 @@ from Furious.Qt import (
     AppQMenuPushButton,
     AppQDialog,
     AppQMessageBox,
+    AppQMainWindow,
     ThemeTransition,
     connectWeakly,
 )
@@ -95,6 +98,73 @@ PROTOCOL_PATTERNS = {
     ),
 }
 CLOSE_METHODS = ('accept', 'close', 'reject')
+
+
+def runConnectionRecoveryProbe(iterations=100):
+    """Check compiled diagnostic-button dispatch and transient destruction."""
+    app = application()
+    hadWindow = hasattr(app, 'mainWindow')
+    previousWindow = getattr(app, 'mainWindow', None)
+    previousClipboard = app.clipboard().text()
+    window = AppQMainWindow()
+    logPageOpens = []
+    window.showLogPage = lambda: logPageOpens.append(True)
+    app.mainWindow = window
+    references = []
+    destroyed = []
+    protectedMethods = getattr(
+        sys.modules.get('PySide6-postLoad', PySide6), '_protected', None
+    )
+    protectedBefore = len(protectedMethods) if protectedMethods is not None else None
+
+    try:
+        for _ in range(iterations):
+            box = ConnectionErrorMessageBox(
+                ConnectionError('Unable to connect', 'Fixture failure', 'Native detail')
+            )
+            references.append(weakref.ref(box))
+            box.destroyed.connect(lambda *_args: destroyed.append(True))
+            box.open()
+            processQtEvents()
+
+            box.copyErrorButton.click()
+            assert box.isVisible()
+            assert (
+                app.clipboard().text()
+                == 'Unable to connect\n\nFixture failure\n\nNative detail'
+            )
+
+            box.openLogsButton.click()
+            processQtEvents()
+
+            assert not isValid(box)
+            del box
+
+        assert len(logPageOpens) == iterations
+        assert len(destroyed) == iterations
+        assert all(reference() is None for reference in references)
+        assert not AppQDialog._openDialogs
+        growth = (
+            len(protectedMethods) - protectedBefore
+            if protectedBefore is not None
+            else None
+        )
+        assert growth in (None, 0), growth
+
+        return {
+            'connectionRecoveryDialogs': iterations,
+            'protectedMethodGrowth': growth,
+        }
+    finally:
+        app.clipboard().setText(previousClipboard)
+
+        if hadWindow:
+            app.mainWindow = previousWindow
+        else:
+            del app.mainWindow
+
+        deleteQObject(window)
+        processQtEvents()
 
 
 class _ReentrantAction(AppQAction):
@@ -1191,6 +1261,7 @@ def main():
     )
 
     try:
+        print(json.dumps(runConnectionRecoveryProbe(arguments.iterations)))
         print(json.dumps(runReentrantLifetimeProbe(arguments.iterations)))
         print(json.dumps(runSingletonIPCProbe(arguments.iterations)))
         print(json.dumps(runThreadOwnershipProbe(arguments.iterations)))

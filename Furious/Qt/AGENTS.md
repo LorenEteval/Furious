@@ -36,6 +36,10 @@ behavior, and lifetime primitives; pages and services consume them without creat
   an unparented wrapper; `AppQMainWindow.show()` adds its own visible-window retention until accepted close. Do not
   solve ambiguity by global retention, indiscriminate delete-on-close, routine `gc.collect()`, or broad
   deleted-wrapper suppression.
+- Message-box inline actions may use `addButton(..., closeOnClick=False)` to publish the existing click signal while
+  leaving the dialog open. Ordinary buttons retain their existing result/dismissal behavior. Keep callbacks owned by
+  the button's native lifetime and capture only required plain context, not the transient box; connection-error copy
+  and normal close/navigation cases in `tests/test_ui_behavior.py` exercise this contract.
 
 ## Signals, threads, and async Qt work
 
