@@ -449,6 +449,70 @@ class SettingsPageOrganizationTest(unittest.TestCase):
 
         return page, callbacks
 
+    def testConstructionDoesNotShowTopLevelSettingsWidgets(self):
+        """Never expose a section as a separate window before layout adoption."""
+
+        class ShowObserver(QtCore.QObject):
+            def __init__(self, parent):
+                super().__init__(parent)
+
+                self.shownWindows = []
+
+            def eventFilter(self, watched, event):
+                if (
+                    event.type() == QtCore.QEvent.Type.Show
+                    and isinstance(watched, QWidget)
+                    and watched.isWindow()
+                ):
+                    self.shownWindows.append(type(watched).__name__)
+
+                return False
+
+        cases = (
+            ('Windows', ''),
+            ('Darwin', ''),
+            ('Linux', ''),
+            ('Linux', 'io.github.LorenEteval.Furious'),
+        )
+        app = application()
+
+        for platform, flatpakID in cases:
+            with self.subTest(platform=platform, flatpakID=flatpakID):
+                observer = ShowObserver(app)
+                page = None
+                app.installEventFilter(observer)
+
+                with mock.patch('sys.excepthook') as callbackExceptionHook:
+                    try:
+                        page, _callbacks = self.buildPage(
+                            platform=platform, flatpakID=flatpakID
+                        )
+
+                        self.assertEqual(observer.shownWindows, [])
+                        self.assertFalse(page.isVisible())
+                        self.assertFalse(page.tunSection.isWindow())
+                        self.assertEqual(page.tunSection.isHidden(), bool(flatpakID))
+                        self.assertEqual(
+                            page.tunSection in page._searchSections, not flatpakID
+                        )
+
+                        page.show()
+                        processQtEvents()
+
+                        self.assertTrue(page.isVisible())
+                        self.assertEqual(page.tunSection.isVisible(), not flatpakID)
+                    finally:
+                        app.removeEventFilter(observer)
+
+                        if page is not None:
+                            page.close()
+                            page.deleteLater()
+
+                        observer.deleteLater()
+                        processQtEvents()
+
+                    callbackExceptionHook.assert_not_called()
+
     def testSearchMatchesDescriptionsAndSectionsWithoutApplyingSettings(self):
         with isolatedSettings():
             AppSettings.set('Language', 'EN')

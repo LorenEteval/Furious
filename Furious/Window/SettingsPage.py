@@ -777,7 +777,8 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.addAction(self.findAction)
 
         self.generalSection = _SettingsSection(_('General'))
-        self.tunSection = _SettingsSection('TUN', translatable=False)
+        # Visibility is set before layout adoption; keep the section a child.
+        self.tunSection = _SettingsSection('TUN', translatable=False, parent=self)
         self.connectionSection = _SettingsSection(_('Connection and Interface'))
         self.applicationSection = _SettingsSection(_('Application'))
         self.pluginSettingsTitleLabel = AppQLabel(_('Plugin Settings'))
