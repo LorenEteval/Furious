@@ -346,6 +346,7 @@ class EndpointInfoService(QtCore.QObject):
         generation = self._generation
 
         self.state = state
+
         self.stateChanged.emit(state)
 
         return self._isCurrentGeneration(generation)
@@ -355,6 +356,7 @@ class EndpointInfoService(QtCore.QObject):
         generation = self._generation
 
         self.result = result
+
         self.resultChanged.emit(result)
 
         return self._isCurrentGeneration(generation)
@@ -368,6 +370,7 @@ class EndpointInfoService(QtCore.QObject):
         self._cached = False
         self._requestInFlight = False
         self._countryHint = ''
+
         self.httpClient.cancelAll()
 
         if not self._isCurrentGeneration(generation):

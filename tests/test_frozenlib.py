@@ -217,6 +217,7 @@ class MixinNotificationLifetimeTest(unittest.TestCase):
                     victim = Participant('victim')
                     last = Participant('last')
                     first.victim = victim
+
                     victim.destroyed.connect(lambda *_args: destroyed.append(True))
 
                     try:

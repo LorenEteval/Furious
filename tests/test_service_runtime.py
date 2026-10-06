@@ -652,6 +652,7 @@ class TrafficStatsManagerTest(unittest.TestCase):
                             ):
                                 manager.connectedCallback()
                                 processQtEvents()
+
                                 qtErrors.assert_not_called()
 
                             if boundary == 'reset':
@@ -721,6 +722,7 @@ class TrafficStatsManagerTest(unittest.TestCase):
                                 expected = signalNames[
                                     : signalNames.index(signalName) + 1
                                 ]
+
                                 self.assertEqual(delivered, list(expected))
 
                                 if action == 'destroy':

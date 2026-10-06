@@ -623,9 +623,11 @@ class ConnectionStartupAsyncTest(TestCase):
                 for _ in range(20):
                     resolver = mock.Mock()
                     resolver._newResultMap = DnsResolver._newResultMap
+
                     operation = DnsResolutionOperation(resolver, 'example.test')
                     results = []
                     destroyed = []
+
                     operation.finished.connect(lambda *_args: results.append(True))
                     operation.destroyed.connect(lambda *_args: destroyed.append(True))
 
@@ -665,6 +667,7 @@ class ConnectionStartupAsyncTest(TestCase):
         class PendingReply(QtNetwork.QNetworkReply):
             def abort(self):
                 self.setFinished(True)
+
                 self.finished.emit()
 
             def readData(self, _maximumLength):
@@ -673,10 +676,12 @@ class ConnectionStartupAsyncTest(TestCase):
         for _ in range(20):
             resolver = mock.Mock()
             resolver._newResultMap = DnsResolver._newResultMap
+
             operation = DnsResolutionOperation(resolver, 'example.test', timeout=1)
             reply = PendingReply()
             results = []
             destroyed = []
+
             operation.finished.connect(lambda *_args: results.append(True))
             operation.destroyed.connect(lambda *_args: destroyed.append(True))
             operation._resultMap['depth'] = 1

@@ -342,6 +342,7 @@ class EndpointInfoServiceTest(unittest.TestCase):
                                     service.refresh()
 
                                 processQtEvents()
+
                                 qtErrors.assert_not_called()
 
                             self.assertEqual(triggered, [True])
@@ -365,7 +366,9 @@ class EndpointInfoServiceTest(unittest.TestCase):
         """The latest preference wins even when a listener reverses the transition."""
         service, controller, client = self._service()
         service.setPageVisible(True)
+
         generation = service._generation
+
         service.enabledChanged.connect(
             lambda enabled: service.setEnabled(True) if not enabled else None
         )

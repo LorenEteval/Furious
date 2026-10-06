@@ -162,8 +162,10 @@ def runNotificationAndDnsProbe(iterations=100):
 
                 assert calls == ['first', 'last']
                 assert not isValid(victim)
+
                 deleteQObject(first)
                 deleteQObject(last)
+
                 assert not len(pool)
 
             poolNotifications += 1
@@ -171,6 +173,7 @@ def runNotificationAndDnsProbe(iterations=100):
     class PendingReply(QNetworkReply):
         def abort(self):
             self.setFinished(True)
+
             self.finished.emit()
 
         def readData(self, _maximumLength):
@@ -181,6 +184,7 @@ def runNotificationAndDnsProbe(iterations=100):
             resolver = SimpleNamespace(_newResultMap=DnsResolver._newResultMap)
             operation = DnsResolutionOperation(resolver, 'example.test')
             results = []
+
             operation.finished.connect(lambda *_args: results.append(True))
 
             def beginResolve(resultMap):
@@ -192,6 +196,7 @@ def runNotificationAndDnsProbe(iterations=100):
                     deleteQObject(operation)
 
             resolver._beginResolve = beginResolve
+
             operation.start()
 
             if boundary == 'cancel-start':
@@ -202,8 +207,11 @@ def runNotificationAndDnsProbe(iterations=100):
                 operation._resultMap['reference'].append(reply)
                 reply.finished.connect(lambda: deleteQObject(operation))
                 operation._timeout = 0
+
                 operation._poll()
+
                 assert reply.isFinished()
+
                 deleteQObject(reply)
 
             assert not results
@@ -220,7 +228,9 @@ def runNotificationAndDnsProbe(iterations=100):
             manager, '_clearUsageOnReconnectEnabled', return_value=True
         ):
             manager._consumeResult(manager._generation, TrafficCounters(100, 100), 1.0)
+
             getattr(manager, signalName).connect(lambda *_args: deleteQObject(manager))
+
             manager._sampleReady.emit(manager._generation, TrafficCounters(10, 10), 2.0)
 
         assert not isValid(manager)
@@ -290,6 +300,7 @@ def runNotificationAndDnsProbe(iterations=100):
             if isValid(service):
                 assert service.state is EndpointInfoState.Disabled
                 assert not service._requestInFlight
+
                 deleteQObject(service)
 
             deleteQObject(client)
