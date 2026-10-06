@@ -3356,12 +3356,12 @@ TRANSLATION = {
         "ZH": "应用 TUN 引擎",
         "isReviewed": "True"
     },
-    "Native proxy-core TUN takes priority. This engine is used when Furious provides application TUN. Changes apply to the next connection.": {
+    "Choose the TUN engine used when native core TUN is not in use.": {
         "source": [
             "Furious.Window.SettingsPage"
         ],
-        "RU": "Встроенный TUN прокси-ядра имеет приоритет. Этот движок используется, когда TUN предоставляет Furious. Изменения применяются при следующем подключении.",
-        "ZH": "代理内核的原生 TUN 优先。由 Furious 提供应用 TUN 时才使用此引擎。更改将在下次连接时生效。",
+        "RU": "Выберите движок TUN, если ядро прокси не использует свой TUN.",
+        "ZH": "选择未使用内核原生TUN时采用的TUN引擎。",
         "isReviewed": "True"
     },
     "Customize sing-tun Settings...": {

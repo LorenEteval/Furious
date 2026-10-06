@@ -570,9 +570,7 @@ class _TUNBackendSettingsCard(_SettingsCard):
             'diagram-3.svg',
             self.comboBox,
             _('Application TUN Engine'),
-            _(
-                'Native proxy-core TUN takes priority. This engine is used when Furious provides application TUN. Changes apply to the next connection.'
-            ),
+            _('Choose the TUN engine used when native core TUN is not in use.'),
         )
 
         self.sync()
