@@ -343,6 +343,18 @@ class TcpingThread(QtCore.QThread):
 
         self.engine = engine
 
+        if parent is not None:
+            # destroyed is emitted before QObject deletes its children. Stop
+            # this still-valid child before the parent's native teardown.
+            connectWeakly(parent.destroyed, self, 'stopAndWait', sender=parent)
+
+    def stopAndWait(self, *_args):
+        """Join the event loop whose finally block releases thread-owned QObjects."""
+        self.quit()
+
+        if not self.wait(3000):
+            raise RuntimeError('TCPing networking thread did not stop')
+
     def run(self):
         """Run the event loop, then synchronously destroy its stopped engine."""
         try:

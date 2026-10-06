@@ -672,15 +672,7 @@ class _LatencyScheduler(QtCore.QObject):
             return
 
         if thread.isRunning():
-            if not QtCore.QMetaObject.invokeMethod(
-                engine, 'shutdown', QtCore.Qt.ConnectionType.BlockingQueuedConnection
-            ):
-                raise RuntimeError('failed to invoke TCPing engine shutdown')
-
-            thread.quit()
-
-            if not thread.wait(3000):
-                raise RuntimeError('TCPing networking thread did not stop')
+            thread.stopAndWait()
 
         self.tcpingEngine = None
         self.tcpingThread = None

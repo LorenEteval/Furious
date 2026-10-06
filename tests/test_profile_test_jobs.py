@@ -51,6 +51,8 @@ from tests.support import (
     isolatedSettings,
     processQtEvents,
     waitFor,
+    runPythonChild,
+    assertChildSucceeded,
 )
 
 import threading
@@ -1159,6 +1161,51 @@ class ProfileTestServiceTest(unittest.TestCase):
 
             self.assertFalse(isValid(engine))
             self.assertFalse(isValid(thread))
+
+    def testNativeOwnerDestructionStopsTcpingBeforeDeletingItsThread(self):
+        """Early parent or scheduler destruction cannot abort the whole process."""
+        result = runPythonChild(
+            '''
+from tests.support import application, processQtEvents, waitFor
+from Furious.Service.ProfileTesting import _LatencyScheduler
+from PySide6 import QtCore
+from shiboken6 import delete, isValid
+import sys
+import weakref
+
+application()
+errors = []
+sys.excepthook = lambda kind, value, traceback: errors.append(str(value))
+references = []
+destroyed = []
+for parentFirst in (False, True):
+    for _ in range(20):
+        parent = QtCore.QObject()
+        scheduler = _LatencyScheduler(
+            lambda target: None, lambda target, result: False,
+            pingConcurrency=1, tcpingConcurrency=1, parent=parent,
+        )
+        engine = scheduler.ensureTcpingEngine()
+        thread = scheduler.tcpingThread
+        references.extend((weakref.ref(engine), weakref.ref(thread)))
+        engine.destroyed.connect(
+            lambda *_args: destroyed.append(QtCore.QThread.currentThread() is thread),
+            QtCore.Qt.ConnectionType.DirectConnection,
+        )
+        assert waitFor(thread.isRunning)
+        delete(parent if parentFirst else scheduler)
+        assert not isValid(scheduler) and not isValid(thread) and not isValid(engine)
+        if isValid(parent):
+            delete(parent)
+        del engine, thread, scheduler, parent
+        processQtEvents()
+assert len(destroyed) == 40 and all(destroyed), destroyed
+assert all(reference() is None for reference in references)
+assert not errors, errors
+''',
+            timeout=30,
+        )
+        assertChildSucceeded(self, result, 'TCPing native owner destruction')
 
     def testSubscriptionInvalidationCannotDeleteWorkerDuringStart(self):
         """Defer terminal deletion until a reentrant start call unwinds."""

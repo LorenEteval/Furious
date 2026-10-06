@@ -113,6 +113,10 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   work untouched.
 - Blocking Ping uses a private bounded pool. TCPing owns sockets/deadlines in one dedicated Qt networking thread,
   deduplicates equal endpoint/policy requests, adapts within a fixed bound, and fans results into bounded GUI batches.
+- A QObject owner must stop and join its running TCPing thread before native child deletion. The parent's `destroyed`
+  boundary still permits that child cleanup; the thread's `run()` finalizer releases its engine/sockets on the
+  networking thread. Explicit shutdown and owner-first destruction share the bounded stop/join path. Verify actual
+  thread exit and engine destruction affinity in `tests/test_profile_test_jobs.py`, including held wrappers.
 - Download jobs own a temporary proxy-only runtime, readiness timer, port, network reply, and cancellation path. Serial
   and concurrent admission share scheduler semantics; startup never blocks admission on a grace wait. Reentrant
   cancellation defers terminal deletion until the active start frame unwinds.
