@@ -55,6 +55,10 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   retry and refuses new startup while release remains incomplete. A failed attempt transfers unreleased leases
   back to that durable owner; deleting the attempt must not abandon them. Independent DNS cleanup still runs.
   Verify runtime liveness and actual handle/thread release separately from the lease's logical state.
+  Native startup-operation destruction cancels child observers and rolls back an uncommitted attempt before child
+  deletion. Terminal observers may destroy the operation synchronously; retire manager ownership without a later
+  call into the dead QObject. Failed release still transfers to the manager, and a committed lease remains its
+  responsibility. Test native destruction during stages/results as well as ordinary cancellation.
 - `HttpGetManager` owns reply/error/timeout cleanup. DNS recursion and external-input caches are bounded. Update,
   connectivity, endpoint, subscription, and asset requests own their exact reply and reject stale generations.
   Workflow-specific reply indexes must also release on native destruction without `finished`. Abort hooks can

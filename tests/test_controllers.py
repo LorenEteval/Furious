@@ -32,6 +32,8 @@ from Furious.Service.LogManager import LogManager
 
 from PySide6 import QtCore
 
+from shiboken6 import isValid, delete as deleteQObject
+
 from tests.support import application, isolatedSettings, processQtEvents
 
 import unittest
@@ -157,6 +159,52 @@ class FixtureUpdatesManager:
 
 class ConnectionControllerTest(unittest.TestCase):
     """Verify state and cleanup while all host mutations are patched out."""
+
+    def testUnexpectedOperationDestructionDoesNotStrandConnectingOrResources(self):
+        """A dead current operation cancels once; a retired operation cannot cancel its replacement."""
+        with isolatedSettings():
+            core = FixtureAsyncCoreManager()
+            controller = ConnectionController(
+                coreManager=core, updatesManager=FixtureUpdatesManager()
+            )
+
+            with mock.patch(
+                'Furious.Controllers.ConnectionController.SystemProxy.off'
+            ), mock.patch('sys.excepthook') as qtErrors:
+                for _ in range(20):
+                    self.assertTrue(controller.startConnection(self.profile))
+                    operation = core.operations[-1][0]
+                    core.runtimes.append(object())
+
+                    deleteQObject(operation)
+                    processQtEvents()
+
+                    self.assertEqual(controller.state, ConnectionState.Disconnected)
+                    self.assertIsNone(controller._startOperation)
+                    self.assertIsNone(controller.activeProfile)
+                    self.assertFalse(core.runtimes)
+                    self.assertTrue(isValid(controller))
+
+                self.assertEqual(core.stopCalls, 20)
+                self.assertFalse(core.cancelCalls)
+
+                self.assertTrue(controller.startConnection(self.profile))
+                retired = core.operations[-1][0]
+                controller.startDisconnection()
+                self.assertTrue(controller.startConnection(self.profile))
+                current = core.operations[-1][0]
+                stops = core.stopCalls
+
+                deleteQObject(retired)
+                self.assertIs(controller._startOperation, current)
+                self.assertEqual(controller.state, ConnectionState.Connecting)
+                self.assertEqual(core.stopCalls, stops)
+
+                deleteQObject(current)
+                processQtEvents()
+                qtErrors.assert_not_called()
+
+            controller.deleteLater()
 
     def setUp(self):
         """Install a fresh structured log manager on the test application."""

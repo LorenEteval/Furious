@@ -55,6 +55,8 @@ from Furious.Service.RuntimeLease import RuntimeEventRouter, RuntimeLease
 
 from PySide6 import QtCore, QtNetwork
 
+from shiboken6 import isValid
+
 from typing import Callable, Tuple, Union
 from dataclasses import dataclass, field
 from enum import Enum
@@ -66,6 +68,7 @@ import functools
 import copy
 import time
 import ipaddress
+import weakref
 
 __all__ = ['ConnectionManager', 'ConnectionStartOperation', 'ConnectionStartStage']
 
@@ -370,6 +373,9 @@ class _ConditionProbe(QtCore.QObject):
 
             ready = False
 
+        if not isValid(self) or self._terminal:
+            return
+
         if ready:
             logger.info(f'find {self._description} success')
 
@@ -396,6 +402,28 @@ class _ConditionProbe(QtCore.QObject):
 
         self._terminal = True
         self._timer.stop()
+
+
+def _cleanupDestroyedStartOperation(reference, *_args):
+    """Release an unfinished attempt before native child observers are deleted."""
+    operation = reference()
+
+    if operation is None:
+        return
+
+    if not operation._terminal:
+        operation.stage = ConnectionStartStage.Cancelled
+
+    operation._terminal = True
+
+    try:
+        operation._cancelObservers()
+    finally:
+        try:
+            operation.attempt.rollback()
+        finally:
+            if operation.manager._activeStartOperation is operation:
+                operation.manager._finishStartOperation(operation)
 
 
 class ConnectionStartOperation(QtCore.QObject):
@@ -452,10 +480,15 @@ class ConnectionStartOperation(QtCore.QObject):
         self._gateway = None
         self._interface = None
 
+        self.destroyed.connect(
+            functools.partial(_cleanupDestroyedStartOperation, weakref.ref(self))
+        )
+
     def _isCurrent(self):
         """Return whether this generation still owns manager startup."""
         return (
-            not self._terminal
+            isValid(self)
+            and not self._terminal
             and self.manager._activeStartOperation is self
             and self.manager._startGeneration == self.generation
         )
@@ -1257,25 +1290,32 @@ class ConnectionStartOperation(QtCore.QObject):
         self.attempt.commit(self.exitCallback)
         self._terminal = True
 
-        self._setStage(ConnectionStartStage.Succeeded)
-        self.succeeded.emit(self)
+        self._publishTerminal(ConnectionStartStage.Succeeded, 'succeeded', self)
 
-        self.manager._finishStartOperation(self)
-        self.deleteLater()
+    def _publishTerminal(self, stage, signalName, *args):
+        """Publish once and retire ownership across reentrant native destruction."""
+        try:
+            if isValid(self):
+                self._setStage(stage)
+
+            if isValid(self):
+                getattr(self, signalName).emit(*args)
+        finally:
+            if self.manager._activeStartOperation is self:
+                self.manager._finishStartOperation(self)
+
+            if isValid(self):
+                self.deleteLater()
 
     def _cancelObservers(self):
         """Cancel every child observer owned by this operation."""
-        if self._readinessProbe is not None:
-            self._readinessProbe.cancel()
-            self._readinessProbe = None
+        for attribute in ('_readinessProbe', '_conditionProbe', '_dnsOperation'):
+            observer = getattr(self, attribute)
 
-        if self._conditionProbe is not None:
-            self._conditionProbe.cancel()
-            self._conditionProbe = None
+            setattr(self, attribute, None)
 
-        if self._dnsOperation is not None:
-            self._dnsOperation.cancel()
-            self._dnsOperation = None
+            if observer is not None and isValid(observer):
+                observer.cancel()
 
         self._conditionContinuation = ''
 
@@ -1295,11 +1335,9 @@ class ConnectionStartOperation(QtCore.QObject):
 
         self.attempt.rollback(f'connection startup failed: {details or concise}')
 
-        self._setStage(ConnectionStartStage.Failed)
-        self.failed.emit(self, concise, str(details or ''))
-
-        self.manager._finishStartOperation(self)
-        self.deleteLater()
+        self._publishTerminal(
+            ConnectionStartStage.Failed, 'failed', self, concise, str(details or '')
+        )
 
     def cancel(self):
         """Cancel this generation and roll back only its acquired resources."""
@@ -1312,11 +1350,7 @@ class ConnectionStartOperation(QtCore.QObject):
 
         self.attempt.rollback('connection startup cancelled')
 
-        self._setStage(ConnectionStartStage.Cancelled)
-        self.cancelled.emit(self)
-
-        self.manager._finishStartOperation(self)
-        self.deleteLater()
+        self._publishTerminal(ConnectionStartStage.Cancelled, 'cancelled', self)
 
         return True
 

@@ -393,4 +393,5 @@ class DnsResolver(HttpGetManager):
 
         self._replyContexts.clear()
 
-        self.deleteLater()
+        if isValid(self):
+            self.deleteLater()

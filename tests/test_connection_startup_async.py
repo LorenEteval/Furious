@@ -19,14 +19,21 @@
 
 from __future__ import annotations
 
+from Furious.Controllers.SettingsController import SettingsController
 from Furious.Interface import CoreRuntime, RuntimeState
 from Furious.Plugins import PreparedRuntime, CoreRuntimeStartup
 from Furious.Qt.Signals import singleShotWeakly
-from Furious.Service.ConnectionManager import ConnectionManager, ConnectionStartStage
+from Furious.Service.ConnectionManager import (
+    ConnectionManager,
+    ConnectionStartStage,
+    _ConditionProbe,
+)
 from Furious.Service.DnsResolver import DnsResolutionOperation, DnsResolver
 from Furious.Frozenlib import AppSettings
 
 from PySide6 import QtCore, QtNetwork
+
+from shiboken6 import isValid, delete as deleteQObject
 
 from tests.support import application, processQtEvents, waitFor
 
@@ -156,6 +163,101 @@ class _ResolverFixture(QtCore.QObject):
 class ConnectionStartupAsyncTest(TestCase):
     """Verify readiness, cancellation, rollback, and compatibility."""
 
+    def testConditionCallbackCanDestroyItsProbe(self):
+        """In-flight predicate delivery cannot use a deleted child timer."""
+        for _ in range(30):
+            probe = _ConditionProbe(lambda: True, 'fixture')
+            probe._predicate = lambda: (deleteQObject(probe), True)[1]
+            probe.start()
+
+            self.assertFalse(isValid(probe))
+            self.assertFalse(isValid(probe._timer))
+
+    def testNativeDestructionDuringStagesReleasesUncommittedRuntime(self):
+        """Qt destruction ends acquisition and rolls back before child deletion."""
+        for stage in (ConnectionStartStage.Preparing, ConnectionStartStage.Committing):
+            for _ in range(20):
+                manager = self._manager()
+                runtime = _Runtime()
+                registry = _Registry([PreparedRuntime(runtime)])
+
+                with mock.patch(
+                    'Furious.Service.ConnectionManager.getPluginRegistry',
+                    return_value=registry,
+                ), mock.patch('sys.excepthook') as qtErrors:
+                    operation = manager.startAsync(_Configuration(), '', deepcopy=False)
+                    operation.stageChanged.connect(
+                        lambda current: (
+                            deleteQObject(operation) if current is stage else None
+                        )
+                    )
+                    operation.start()
+                    processQtEvents()
+                    qtErrors.assert_not_called()
+
+                self.assertFalse(isValid(operation))
+                self.assertIsNone(manager._activeStartOperation)
+                self.assertFalse(operation.attempt.leases)
+                self.assertFalse(manager.runtimes)
+
+                if stage is ConnectionStartStage.Committing:
+                    self.assertFalse(runtime.alive)
+                    self.assertEqual(runtime.disposeCount, 1)
+                else:
+                    self.assertFalse(runtime.startOptions)
+
+    def testTerminalObserversCanDestroyStartupOperation(self):
+        """All terminal paths retire manager ownership after native deletion."""
+        for method, signalName in (
+            ('cancel', 'cancelled'),
+            ('_fail', 'failed'),
+            ('_commit', 'succeeded'),
+        ):
+            for _ in range(20):
+                manager = self._manager()
+                operation = manager.startAsync(_Configuration(), '', deepcopy=False)
+                getattr(operation, signalName).connect(
+                    lambda *_args: deleteQObject(operation)
+                )
+
+                with mock.patch('sys.excepthook') as qtErrors:
+                    getattr(operation, method)()
+                    processQtEvents()
+                    qtErrors.assert_not_called()
+
+                self.assertFalse(isValid(operation))
+                self.assertIsNone(manager._activeStartOperation)
+
+    def testNativeOperationDestructionRetainsARefusedRuntimeRelease(self):
+        """Incomplete cleanup transfers to the surviving manager for retry."""
+        manager = self._manager()
+        runtime = _Runtime()
+        operation = manager.startAsync(_Configuration(), '', deepcopy=False)
+        lease = operation.attempt.ownRuntime(runtime)
+        runtime.start()
+        stop = runtime.stop
+        runtime.stop = mock.Mock(side_effect=RuntimeError('fixture refuses stop'))
+
+        with mock.patch('sys.excepthook') as qtErrors:
+            deleteQObject(operation)
+            processQtEvents()
+            qtErrors.assert_not_called()
+
+        self.assertFalse(isValid(operation))
+        self.assertIsNone(manager._activeStartOperation)
+        self.assertFalse(operation.attempt.leases)
+        self.assertEqual(manager._pendingReleases, [lease])
+        self.assertTrue(runtime.alive)
+        self.assertTrue(isValid(lease.router))
+
+        runtime.stop = stop
+        manager.stopAll()
+        processQtEvents()
+
+        self.assertFalse(runtime.alive)
+        self.assertFalse(manager._pendingReleases)
+        self.assertFalse(isValid(lease.router))
+
     def testStageListenerCancellationStopsNextAcquisitionOrCommit(self):
         """Cancel through real Qt stage signals before the next ownership boundary."""
         for stage in (
@@ -203,6 +305,7 @@ class ConnectionStartupAsyncTest(TestCase):
     def setUp(self):
         """Ensure a Qt application exists for real timer/socket delivery."""
         self.app = application()
+        # SettingsController owns TUN preference registration, including focused runs.
         self._previousTUNBackend = AppSettings.get('ApplicationTUNBackend')
         AppSettings.set('ApplicationTUNBackend', 'tun2socks')
         self.servers = []

@@ -35,6 +35,8 @@ from Furious.Service import (
 
 from PySide6 import QtCore
 
+from shiboken6 import isValid
+
 from dataclasses import dataclass
 from enum import Enum
 
@@ -214,7 +216,11 @@ class ConnectionController(QtCore.QObject):
 
     def _isCurrentConnection(self, generation):
         """Reject continuations from an earlier, synchronously replaced lifecycle."""
-        return generation == self._connectionGeneration and not self._shuttingDown
+        return (
+            isValid(self)
+            and generation == self._connectionGeneration
+            and not self._shuttingDown
+        )
 
     def _startConnecting(self):
         """Enter the connecting state and request progress presentation."""
@@ -378,6 +384,12 @@ class ConnectionController(QtCore.QObject):
                 operation.cancelled,
                 self,
                 '_connectionStartCancelled',
+                sender=operation,
+            )
+            connectWeakly(
+                operation.destroyed,
+                self,
+                '_connectionStartDestroyed',
                 sender=operation,
             )
 
@@ -545,6 +557,13 @@ class ConnectionController(QtCore.QObject):
 
         self._reset()
 
+    def _connectionStartDestroyed(self, *_args):
+        """Release committed resources if an active operation dies without a result."""
+        operation = self._startOperation
+
+        if operation is not None and not isValid(operation):
+            self.startDisconnection()
+
     def startDisconnection(self, notification: str = '') -> bool:
         """Stop the active runtime and optionally request a notification."""
         if self.isDisconnecting() or (
@@ -566,7 +585,7 @@ class ConnectionController(QtCore.QObject):
         self._setState(ConnectionState.Disconnecting)
         self._actionTimer.stop()
 
-        if operation is not None:
+        if operation is not None and isValid(operation):
             cancelStart = getattr(self._coreManager, 'cancelStart', None)
 
             if callable(cancelStart):

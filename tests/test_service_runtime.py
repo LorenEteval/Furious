@@ -30,6 +30,7 @@ from Furious.Service.EndpointInfoService import ProxyEndpointHttpClient
 from Furious.Qt.HttpGetManager import HttpGetManager
 from Furious.Service.PluginUIManager import PluginNavigationManager
 from Furious.Service.SubscriptionManager import SubscriptionManager
+from Furious.Service.DnsResolver import DnsResolver
 from Furious.Repository import Storage
 from Furious.Service.TrafficStatsManager import TrafficStatsManager
 from Furious.Service.UpdateManager import UpdateManager
@@ -151,6 +152,26 @@ class _CapturingHttpGetManager(HttpGetManager):
 
 class HttpGetManagerLifetimeTest(unittest.TestCase):
     """Verify every request receives a timeout and releases exact context."""
+
+    def testDnsDisposalToleratesNativeDestructionDuringAbort(self):
+        """Reply abort may destroy the resolver before its deferred delete."""
+        application()
+
+        for _ in range(30):
+            resolver = DnsResolver()
+            reply = _ManagedReply(resolver)
+            reference = weakref.ref(reply)
+            resolver._trackReplyContext(reply, resolver._replyContexts, {})
+            reply.abort = lambda: deleteQObject(resolver)
+
+            resolver.dispose()
+
+            self.assertFalse(isValid(resolver))
+            self.assertFalse(isValid(reply))
+            self.assertFalse(resolver._replyContexts)
+
+            del reply
+            self.assertIsNone(reference())
 
     @classmethod
     def setUpClass(cls):
