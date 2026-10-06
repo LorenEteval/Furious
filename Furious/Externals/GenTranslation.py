@@ -3496,8 +3496,8 @@ TRANSLATION = {
         "source": [
             "Furious.Window.SingTUNSettingsDialog"
         ],
-        "RU": "Используйте точные имена полей JSON. Поддерживаются списки маршрутов и исключений, StrictRoute, InterfaceScope, ForwarderBindInterface и IncludeAllNetworks. AutoRoute, внешняя настройка и управление DNS контролируются приложением. Неподдерживаемые поля отклоняются.",
-        "ZH": "请使用准确的原生 JSON 字段名。支持路由地址及排除列表、StrictRoute、InterfaceScope、ForwarderBindInterface 和 IncludeAllNetworks。AutoRoute、外部配置模式和 DNS 归属由应用管理。不支持的字段会被拒绝。",
+        "RU": "Используйте точные имена полей JSON. Поддерживаются списки маршрутов и исключений, StrictRoute, InterfaceScope, ForwarderBindInterface и IncludeAllNetworks. AutoRoute, режим внешней конфигурации и настройки DNS управляются приложением. Неподдерживаемые поля отклоняются.",
+        "ZH": "请使用准确的原生 JSON 字段名。支持路由地址及排除列表、StrictRoute、InterfaceScope、ForwarderBindInterface 和 IncludeAllNetworks。AutoRoute、外部配置模式和 DNS 配置均由应用统一管理。不支持的字段会被拒绝。",
         "isReviewed": "True"
     },
     "Connect Timeout (seconds)": {
