@@ -173,6 +173,7 @@ class ConnectionControllerTest(unittest.TestCase):
             ), mock.patch('sys.excepthook') as qtErrors:
                 for _ in range(20):
                     self.assertTrue(controller.startConnection(self.profile))
+
                     operation = core.operations[-1][0]
                     core.runtimes.append(object())
 
@@ -190,18 +191,22 @@ class ConnectionControllerTest(unittest.TestCase):
 
                 self.assertTrue(controller.startConnection(self.profile))
                 retired = core.operations[-1][0]
+
                 controller.startDisconnection()
+
                 self.assertTrue(controller.startConnection(self.profile))
                 current = core.operations[-1][0]
                 stops = core.stopCalls
 
                 deleteQObject(retired)
+
                 self.assertIs(controller._startOperation, current)
                 self.assertEqual(controller.state, ConnectionState.Connecting)
                 self.assertEqual(core.stopCalls, stops)
 
                 deleteQObject(current)
                 processQtEvents()
+
                 qtErrors.assert_not_called()
 
             controller.deleteLater()

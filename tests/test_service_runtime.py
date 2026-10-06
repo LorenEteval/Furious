@@ -161,6 +161,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
             resolver = DnsResolver()
             reply = _ManagedReply(resolver)
             reference = weakref.ref(reply)
+
             resolver._trackReplyContext(reply, resolver._replyContexts, {})
             reply.abort = lambda: deleteQObject(resolver)
 
@@ -171,6 +172,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
             self.assertFalse(resolver._replyContexts)
 
             del reply
+
             self.assertIsNone(reference())
 
     @classmethod

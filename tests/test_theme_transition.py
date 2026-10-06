@@ -100,6 +100,7 @@ for _ in range(30):
 ''',
             timeout=30,
         )
+
         assertChildSucceeded(self, result, 'window deletion during resize delivery')
 
     def testReentrantCoordinatorDestructionClearsStateAndCancelsContinuation(self):
@@ -112,6 +113,7 @@ for _ in range(30):
                 window.resize(160, 100)
                 window.show()
                 processQtEvents()
+
                 transition = ThemeTransition(
                     duration=100000,
                     windowProvider=lambda: (window,),
@@ -126,15 +128,18 @@ for _ in range(30):
                         transition.transitionStarted.connect(
                             lambda: deleteQObject(transition)
                         )
+
                         transition.apply(lambda: None)
                     else:
                         transition.apply(lambda: None)
                         transition.transitionFinished.connect(
                             lambda: deleteQObject(transition)
                         )
+
                         window.resize(170, 110)
 
                     processQtEvents()
+
                     exceptionHook.assert_not_called()
 
                 self.assertFalse(isValid(transition))
@@ -143,7 +148,9 @@ for _ in range(30):
                 self.assertFalse(self.overlays(window))
 
                 del transition
+
                 self.assertIsNone(reference())
+
                 deleteQObject(window)
                 processQtEvents()
 

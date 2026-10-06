@@ -2215,6 +2215,7 @@ class AppQMenuPushButton(AppQPushButton):
         self.destroyed.connect(
             functools.partial(_releasePopupMenuReference, weakref.ref(self))
         )
+
         self.setPopupMenu(popupMenu)
 
         connectWeakly(self.clicked, self, 'showPopupMenu')

@@ -108,6 +108,7 @@ class _ReentrantAction(AppQAction):
 def runReentrantLifetimeProbe(iterations=100):
     """Exercise callback deletion and borrowed menu retirement under compilation."""
     application()
+
     references = []
     protectedMethods = getattr(
         sys.modules.get('PySide6-postLoad', PySide6), '_protected', None
@@ -122,7 +123,9 @@ def runReentrantLifetimeProbe(iterations=100):
         references.append(weakref.ref(action))
 
         action.trigger()
+
         assert not isValid(action) and action.hookCalls == 0
+
         del action, owner
 
         owner = QWidget()
@@ -132,30 +135,39 @@ def runReentrantLifetimeProbe(iterations=100):
         references.append(weakref.ref(menu))
 
         deleteQObject(owner)
+
         assert action._menu is None and button.popupMenu() is None
         assert not button._popupMenuConnections
+
         del menu
+
         button.showPopupMenu()
+
         deleteQObject(action)
         deleteQObject(button)
 
         menu = AppQMenu()
         reference = weakref.ref(menu)
         button = AppQMenuPushButton('Release', popupMenu=menu)
+
         del menu
         deleteQObject(button)
+
         assert button.popupMenu() is None and reference() is None
 
     owner = QWidget()
     menus = [AppQMenu(parent=owner), AppQMenu(parent=owner)]
     button = AppQMenuPushButton('Replace')
+
     signal = QtCore.SIGNAL('destroyed(QObject*)')
     counts = [menu.receivers(signal) for menu in menus]
     buttonCount = button.receivers(signal)
 
     for index in range(iterations):
         active = index % 2
+
         button.setPopupMenu(menus[active])
+
         assert button.receivers(signal) == buttonCount + 1
         assert all(
             menu.receivers(signal) == counts[number] + (2 if number == active else 0)
@@ -163,9 +175,11 @@ def runReentrantLifetimeProbe(iterations=100):
         )
 
     deleteQObject(button)
+
     assert all(
         menu.receivers(signal) == counts[number] for number, menu in enumerate(menus)
     )
+
     deleteQObject(owner)
 
     for boundary in ('theme', 'started', 'finished'):
@@ -174,6 +188,7 @@ def runReentrantLifetimeProbe(iterations=100):
             window.resize(160, 100)
             window.show()
             processQtEvents()
+
             transition = ThemeTransition(
                 duration=100000,
                 windowProvider=lambda: (window,),
@@ -185,16 +200,20 @@ def runReentrantLifetimeProbe(iterations=100):
                 transition.apply(lambda: deleteQObject(transition))
             elif boundary == 'started':
                 transition.transitionStarted.connect(lambda: deleteQObject(transition))
+
                 transition.apply(lambda: None)
             else:
                 transition.apply(lambda: None)
                 transition.transitionFinished.connect(lambda: deleteQObject(transition))
+
                 window.resize(170, 110)
 
             processQtEvents()
+
             assert not isValid(transition)
             assert not transition._animations and not transition._animationsByWindow
             assert not window.findChildren(QWidget, ThemeTransition.OverlayObjectName)
+
             del transition
             deleteQObject(window)
 
@@ -217,25 +236,32 @@ def runReentrantLifetimeProbe(iterations=100):
                         manager, operation
                     )
                 )
+
                 owner = QtCore.QObject()
                 operation = ConnectionStartOperation(
                     manager, 1, CoreConfiguration({}), '', parent=owner
                 )
                 manager._activeStartOperation = operation
                 references.append(weakref.ref(operation))
+
                 getattr(operation, signalName).connect(
                     lambda *_args: deleteQObject(owner)
                 )
 
                 getattr(operation, method)()
+
                 assert not isValid(operation) and manager._activeStartOperation is None
+
                 del operation, owner
 
     assert all(reference() is None for reference in references)
+
     growth = (
         len(protectedMethods) - protectedBefore if protectedBefore is not None else None
     )
+
     assert growth in (None, 0), growth
+
     return {
         'reentrantActions': iterations,
         'borrowedMenus': iterations,

@@ -178,6 +178,7 @@ class QtLifetimeTest(unittest.TestCase):
 
                 def activate():
                     calls.append('callback')
+
                     if destroyOwner:
                         deleteQObject(owner)
 
@@ -186,6 +187,7 @@ class QtLifetimeTest(unittest.TestCase):
                 with mock.patch('sys.excepthook') as exceptionHook:
                     action.trigger()
                     processQtEvents()
+
                     exceptionHook.assert_not_called()
 
                 self.assertEqual(
@@ -196,7 +198,9 @@ class QtLifetimeTest(unittest.TestCase):
                     deleteQObject(owner)
 
                 self.assertFalse(isValid(action))
+
                 del action
+
                 self.assertIsNone(reference())
 
     def testBorrowedMenuDestructionClearsActionAndButtonReferences(self):
@@ -218,27 +222,32 @@ class QtLifetimeTest(unittest.TestCase):
             self.assertFalse(isValid(menu))
 
             del menu
+
             self.assertIsNone(reference())
 
             child = AppQAction('Child', parent=action)
             action.addAction(child)
             action.removeAction(child)
             button.showPopupMenu()
+
             deleteQObject(action)
             deleteQObject(button)
 
     def testPopupMenuReplacementRetiresBothEndpointHooks(self):
         """Repeated replacement keeps live menus and borrower tracking bounded."""
         application()
+
         owner = QWidget()
         menus = [AppQMenu(parent=owner), AppQMenu(parent=owner)]
         button = AppQMenuPushButton('Popup')
+
         destroyedSignal = QtCore.SIGNAL('destroyed(QObject*)')
         baselines = [menu.receivers(destroyedSignal) for menu in menus]
         buttonBaseline = button.receivers(destroyedSignal)
 
         for index in range(100):
             active = index % 2
+
             button.setPopupMenu(menus[active])
 
             self.assertEqual(len(button._popupMenuConnections), 3)
@@ -251,15 +260,19 @@ class QtLifetimeTest(unittest.TestCase):
                 )
 
         deleteQObject(menus[0])
+
         self.assertIs(button.popupMenu(), menus[1])
 
         with self.assertRaises(ValueError):
             button.setPopupMenu(menus[0])
 
         self.assertIs(button.popupMenu(), menus[1])
+
         deleteQObject(button)
+
         self.assertTrue(isValid(menus[1]))
         self.assertEqual(menus[1].receivers(destroyedSignal), baselines[1])
+
         deleteQObject(owner)
 
     def testDestroyedPopupButtonReleasesItsMenuBorrow(self):
@@ -284,6 +297,7 @@ class QtLifetimeTest(unittest.TestCase):
                 if keepExternalOwner:
                     self.assertTrue(isValid(menu))
                     self.assertFalse(destroyed)
+
                     deleteQObject(menu)
                     del menu
 

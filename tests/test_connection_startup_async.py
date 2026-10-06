@@ -168,6 +168,7 @@ class ConnectionStartupAsyncTest(TestCase):
         for _ in range(30):
             probe = _ConditionProbe(lambda: True, 'fixture')
             probe._predicate = lambda: (deleteQObject(probe), True)[1]
+
             probe.start()
 
             self.assertFalse(isValid(probe))
@@ -191,8 +192,10 @@ class ConnectionStartupAsyncTest(TestCase):
                             deleteQObject(operation) if current is stage else None
                         )
                     )
+
                     operation.start()
                     processQtEvents()
+
                     qtErrors.assert_not_called()
 
                 self.assertFalse(isValid(operation))
@@ -223,6 +226,7 @@ class ConnectionStartupAsyncTest(TestCase):
                 with mock.patch('sys.excepthook') as qtErrors:
                     getattr(operation, method)()
                     processQtEvents()
+
                     qtErrors.assert_not_called()
 
                 self.assertFalse(isValid(operation))
@@ -234,13 +238,16 @@ class ConnectionStartupAsyncTest(TestCase):
         runtime = _Runtime()
         operation = manager.startAsync(_Configuration(), '', deepcopy=False)
         lease = operation.attempt.ownRuntime(runtime)
+
         runtime.start()
+
         stop = runtime.stop
         runtime.stop = mock.Mock(side_effect=RuntimeError('fixture refuses stop'))
 
         with mock.patch('sys.excepthook') as qtErrors:
             deleteQObject(operation)
             processQtEvents()
+
             qtErrors.assert_not_called()
 
         self.assertFalse(isValid(operation))
@@ -251,6 +258,7 @@ class ConnectionStartupAsyncTest(TestCase):
         self.assertTrue(isValid(lease.router))
 
         runtime.stop = stop
+
         manager.stopAll()
         processQtEvents()
 
@@ -305,6 +313,7 @@ class ConnectionStartupAsyncTest(TestCase):
     def setUp(self):
         """Ensure a Qt application exists for real timer/socket delivery."""
         self.app = application()
+
         # SettingsController owns TUN preference registration, including focused runs.
         self._previousTUNBackend = AppSettings.get('ApplicationTUNBackend')
         AppSettings.set('ApplicationTUNBackend', 'tun2socks')
