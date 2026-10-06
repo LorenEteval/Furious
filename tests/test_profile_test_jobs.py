@@ -1205,6 +1205,7 @@ assert not errors, errors
 ''',
             timeout=30,
         )
+
         assertChildSucceeded(self, result, 'TCPing native owner destruction')
 
     def testSubscriptionInvalidationCannotDeleteWorkerDuringStart(self):

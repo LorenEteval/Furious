@@ -98,6 +98,7 @@ class _SingletonReceiver(QtCore.QObject):
 
     def __init__(self):
         super().__init__()
+
         self.pending = []
         self.systemTray = None
         self.server = SimpleNamespace(
@@ -109,6 +110,7 @@ class _SingletonReceiver(QtCore.QObject):
 def runSingletonIPCProbe(iterations: int = 100) -> dict[str, object]:
     """Destroy completed IPC sockets and bound compiled callback growth."""
     application()
+
     protectedMethods = getattr(
         sys.modules.get('PySide6-postLoad', PySide6), '_protected', None
     )
@@ -120,10 +122,13 @@ def runSingletonIPCProbe(iterations: int = 100) -> dict[str, object]:
         control = _SingletonReceiver()
         socket = QLocalSocket(control)
         before = len(protectedMethods)
+
         socket.readyRead.connect(control.handleNewData)
         deleteQObject(control)
+
         directGrowth = len(protectedMethods) - before
         assert directGrowth == 1, directGrowth
+
         del socket, control
 
     receiver = _SingletonReceiver()
@@ -137,19 +142,24 @@ def runSingletonIPCProbe(iterations: int = 100) -> dict[str, object]:
         references.append(weakref.ref(socket))
         socket.destroyed.connect(lambda *_args: destroyed.append(True))
         receiver.pending.append(socket)
+
         # Bypass the launch rate limit, preserving the actual connection logic.
         DesktopApplication.handleNewConnection.__wrapped__(receiver)
         socket.readyRead.emit()
         processQtEvents()
+
         assert not isValid(socket)
         del socket
 
     growth = len(protectedMethods) - before if before is not None else None
+
     assert growth in (None, 0), growth
     assert len(destroyed) == iterations
     assert all(reference() is None for reference in references)
+
     deleteQObject(receiver)
     del receiver
+
     assert receiverReference() is None
 
     return {
@@ -438,9 +448,11 @@ def runSettingsAndSubscriptionProbe(iterations=100):
     previousController = app.settingsController
     controller = SettingsController()
     app.settingsController = controller
+
     references = []
     signal = QtCore.SIGNAL('tunBackendChanged(QString)')
     baseline = controller.receivers(signal)
+
     subsGetter = Storage.UserSubs
     Storage.UserSubs = staticmethod(dict)
     manager = SubscriptionManager()
@@ -450,31 +462,39 @@ def runSettingsAndSubscriptionProbe(iterations=100):
             for index in range(iterations):
                 card = _TUNBackendSettingsCard()
                 references.append(weakref.ref(card))
+
                 controller.tunBackendChanged.emit('tun2socks')
+
                 assert card.comboBox.currentData() == 'tun2socks'
                 assert controller.receivers(signal) == baseline + 1
 
                 deleteQObject(card)
                 del card
+
                 assert controller.receivers(signal) == baseline
+
                 controller.tunBackendChanged.emit('sing-tun')
 
                 reply = _PendingReply(manager)
                 references.append(weakref.ref(reply))
                 manager.get = lambda _request: reply
+
                 manager.updateSubsByWebGET(
                     webURL='https://invalid.test', unique=str(index)
                 )
                 del manager.get
+
                 deleteQObject(reply)
                 del reply
 
                 assert not manager._replyContexts
                 assert not manager._activeReplies
                 assert not manager._replySubscriptions
+
                 manager.cancelUpdates()
 
             replies = [_PendingReply(manager), _PendingReply(manager)]
+
             for index, reply in enumerate(replies):
                 manager.get = lambda _request: reply
                 manager.updateSubsByWebGET(
@@ -484,18 +504,22 @@ def runSettingsAndSubscriptionProbe(iterations=100):
 
             replies[0].abort = lambda: deleteQObject(manager)
             manager.cancelUpdates()
+
             assert not isValid(manager)
             assert all(not isValid(reply) for reply in replies)
             assert not manager._activeReplies and not manager._replySubscriptions
 
             deleteQObject(controller)
             collectAtBoundary()
+
             assert all(reference() is None for reference in references)
     finally:
         app.settingsController = previousController
         Storage.UserSubs = staticmethod(subsGetter)
+
         if isValid(controller):
             deleteQObject(controller)
+
         if isValid(manager):
             manager.shutdown()
             deleteQObject(manager)
@@ -520,8 +544,10 @@ def runTrayOwnershipProbe(iterations=100):
         app.connectionController,
         app.routingController,
     )
+
     captureFactory = importModule.mss.mss
     importModule.mss.mss = _CaptureHandle
+
     connection, routing = ConnectionController(), RoutingController()
     app.connectionController, app.routingController = connection, routing
     options = (RoutingOption('one', 'One'), RoutingOption('two', 'Two'))
@@ -537,13 +563,16 @@ def runTrayOwnershipProbe(iterations=100):
                 if isinstance(child, importModule.ImportQRCodeOnTheScreenAction)
             )
             capture = captureAction.sct
+
             progress.start(50)
 
             tray.RoutingAction._applyState(options, 'one')
             retired = tuple(tray.RoutingAction._menu.actions())
             tray.RoutingAction._applyState(options, 'two')
             processQtEvents()
+
             assert all(not isValid(child) for child in retired)
+
             current = tuple(tray.RoutingAction._menu.actions())
             resources = (
                 tray._menu,
@@ -558,6 +587,7 @@ def runTrayOwnershipProbe(iterations=100):
 
             deleteQObject(tray)
             processQtEvents()
+
             assert all(not isValid(ob) for ob in resources)
             assert capture.closeCount == 1 and captureAction.sct is None
 
@@ -567,6 +597,7 @@ def runTrayOwnershipProbe(iterations=100):
             previousRouting,
         )
         importModule.mss.mss = captureFactory
+
         connection.shutdown()
         deleteQObject(connection)
         deleteQObject(routing)
@@ -577,6 +608,7 @@ def runTrayOwnershipProbe(iterations=100):
 def runThreadOwnershipProbe(iterations=100):
     """Stop the native thread before Qt deletes a scheduler or its parent."""
     application()
+
     destroyed = []
     references = []
 
@@ -590,6 +622,7 @@ def runThreadOwnershipProbe(iterations=100):
                 tcpingConcurrency=1,
                 parent=owner,
             )
+
             engine = scheduler.ensureTcpingEngine()
             thread = scheduler.tcpingThread
             references.extend((weakref.ref(engine), weakref.ref(thread)))
@@ -599,16 +632,22 @@ def runThreadOwnershipProbe(iterations=100):
                 ),
                 QtCore.Qt.ConnectionType.DirectConnection,
             )
+
             assert waitFor(thread.isRunning)
+
             deleteQObject(owner if parentFirst else scheduler)
+
             assert all(not isValid(ob) for ob in (scheduler, thread, engine))
+
             if isValid(owner):
                 deleteQObject(owner)
+
             del engine, thread, scheduler, owner
             processQtEvents()
 
     assert len(destroyed) == iterations * 2 and all(destroyed)
     assert all(reference() is None for reference in references)
+
     return {
         'threadOwnerFirstCycles': iterations * 2,
         'destroyedInWorkerThread': len(destroyed),

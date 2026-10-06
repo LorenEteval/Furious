@@ -246,18 +246,23 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
                         )
 
                     self.assertIn(reply, manager._activeReplies)
+
                     reply.deleteLater()
                     processQtEvents()
+
                     self.assertFalse(isValid(reply))
                     del reply
 
                     self.assertFalse(manager._replyContexts)
                     self.assertFalse(manager._activeReplies)
                     self.assertFalse(manager._replySubscriptions)
+
                     manager.cancelUpdates()
 
                 self.assertEqual(len(destroyed), 30)
+
                 collectAtBoundary()
+
                 self.assertTrue(all(reference() is None for reference in references))
             finally:
                 manager.shutdown()
@@ -283,6 +288,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
                     )
 
             replies[0].abort = lambda: deleteQObject(manager)
+
             getattr(manager, method)()
 
             self.assertFalse(isValid(manager))

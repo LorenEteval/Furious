@@ -59,6 +59,7 @@ class ConnectAction(AppQAction):
         )
 
         self.progressWidget = ConnectionProgressWidget()
+
         # The reusable top-level widget cannot have a QAction as QWidget parent.
         self.destroyed.connect(self.progressWidget.deleteLater)
 

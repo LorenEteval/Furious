@@ -162,6 +162,7 @@ class QtLifetimeTest(unittest.TestCase):
     def testSingletonSocketsReleaseTheirCallbackAndNativeOwner(self):
         """Repeated IPC registration must release completed socket wrappers."""
         result = runSingletonIPCProbe(30)
+
         self.assertEqual(result['singletonSocketsDestroyed'], 30)
         self.assertIn(result['singletonProtectedMethodGrowth'], (None, 0))
 
@@ -177,11 +178,14 @@ class QtLifetimeTest(unittest.TestCase):
 
             self.assertIs(owned.parent(), menu)
             self.assertIs(borrowed.parent(), owner)
+
             deleteQObject(menu)
 
             self.assertFalse(isValid(owned))
             self.assertTrue(isValid(borrowed))
+
             deleteQObject(owner)
+
             self.assertFalse(isValid(borrowed))
 
     def testRoutingRebuildDestroysRetiredActionsWithHeldWrappers(self):
@@ -204,6 +208,7 @@ class QtLifetimeTest(unittest.TestCase):
                     previous = tuple(action._menu.actions())
                     action._applyState(options, 'one')
                     processQtEvents()
+
                     self.assertTrue(all(not isValid(ob) for ob in previous))
                     retired.extend(previous)
 
@@ -214,6 +219,7 @@ class QtLifetimeTest(unittest.TestCase):
                 current = tuple(action._menu.actions())
                 deleteQObject(action)
                 processQtEvents()
+
                 self.assertTrue(all(not isValid(ob) for ob in (*retired, *current)))
                 self.assertEqual(len(destroyed), 60)
 
@@ -250,7 +256,9 @@ class QtLifetimeTest(unittest.TestCase):
                             tray = TrayIcon()
                             action = tray.ConnectAction
                             progress = action.progressWidget
+
                             progress.start(50)
+
                             resources = (
                                 tray._menu,
                                 *tray._actions,
@@ -268,12 +276,14 @@ class QtLifetimeTest(unittest.TestCase):
                                 tray.rebuildDynamicMenus,
                                 action.syncPresentation,
                             ]
+
                             deleteQObject(tray)
                             processQtEvents()
 
                             self.assertFalse(isValid(tray))
                             self.assertTrue(all(not isValid(ob) for ob in resources))
                             self.assertFalse(isValid(progress._widget.timer))
+
                             del protected
 
             connection.shutdown()
@@ -296,6 +306,7 @@ class QtLifetimeTest(unittest.TestCase):
                     action.cleanup()
 
                 deleteQObject(action)
+
                 self.assertIsNone(action.sct)
                 capture.close.assert_called_once_with()
 
@@ -306,10 +317,15 @@ class QtLifetimeTest(unittest.TestCase):
 
         with self.assertLogs('Furious.Actions.Import', level='ERROR'):
             action.cleanup()
+
         self.assertIs(action.sct, capture)
+
         action.cleanup()
+
         self.assertIsNone(action.sct)
+
         deleteQObject(action)
+
         self.assertEqual(capture.close.call_count, 2)
 
     def testRemovedMessageBoxButtonDisconnectsAndCanBeReused(self):

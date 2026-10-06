@@ -438,25 +438,32 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                 for _ in range(20):
                     card = module._TUNBackendSettingsCard()
                     reference = weakref.ref(card)
+
                     controller.tunBackendChanged.emit('tun2socks')
+
                     self.assertEqual(card.comboBox.currentData(), 'tun2socks')
                     self.assertEqual(controller.receivers(signal), baseline + 1)
 
                     card.deleteLater()
                     processQtEvents()
+
                     self.assertFalse(isValid(card))
                     del card
 
                     self.assertIsNone(reference())
                     self.assertEqual(controller.receivers(signal), baseline)
+
                     controller.tunBackendChanged.emit('sing-tun')
 
                 card = module._TUNBackendSettingsCard()
                 controller.deleteLater()
                 processQtEvents()
+
                 self.assertTrue(isValid(card))
+
                 card.deleteLater()
                 processQtEvents()
+
                 self.assertFalse(isValid(card))
 
     def testTwoChoiceSelectorRetranslatesWithoutChangingStablePreference(self):
