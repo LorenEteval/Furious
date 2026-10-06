@@ -164,13 +164,20 @@ class RuntimeEventRouter(QtCore.QObject):
 class RuntimeLease:
     """Own one runtime and its stable event router through transfer and release."""
 
-    def __init__(self, runtime: CoreRuntime, router: RuntimeEventRouter):
+    def __init__(
+        self,
+        runtime: CoreRuntime,
+        router: RuntimeEventRouter,
+        *,
+        applicationTUN: bool = False,
+    ):
         """Take exact ownership of one attached runtime."""
         if not isinstance(runtime, CoreRuntime):
             raise TypeError('runtime lease requires a CoreRuntime')
 
         self.runtime = runtime
         self.router = router
+        self.applicationTUN = applicationTUN
         self._releaseInProgress = False
 
     @property

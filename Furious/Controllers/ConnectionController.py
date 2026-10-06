@@ -149,6 +149,10 @@ class ConnectionController(QtCore.QObject):
         """Return whether the connection is established."""
         return self.state is ConnectionState.Connected
 
+    def usesApplicationTUN(self) -> bool:
+        """Read application TUN ownership from the committed runtime manager."""
+        return self._coreManager.usesApplicationTUN()
+
     def isConnecting(self) -> bool:
         """Return whether the connection is starting."""
         return self.state is ConnectionState.Connecting

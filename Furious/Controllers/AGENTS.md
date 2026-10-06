@@ -44,6 +44,9 @@ compatibility paths.
   TUN mode, application-engine preference, and the active runtime's captured choice are separate values. A preference
   change affects a subsequent attempt; it neither replaces a live engine nor overrides proxy-core native TUN.
   Registration/defaults and selection signals belong here, while customization storage and host work keep their owners.
+  Application-engine reconnect notices consult committed application-TUN ownership. Native-TUN and proxy-only
+  connections still save and publish the engine preference without requesting reconnection; see the preference-notice
+  cases in `tests/test_sing_tun.py`.
 - A completed disconnect restores usable UI state even if runtime cleanup failed. `Disconnected` and an empty
   active-runtime snapshot therefore do not prove physical release: the service retains failed leases and blocks
   new acquisition while they remain. Final controller shutdown surfaces unresolved cleanup and preserves the

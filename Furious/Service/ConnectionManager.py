@@ -122,13 +122,15 @@ class _ConnectionStartAttempt:
         """Return an ordered execution-resource snapshot for this attempt."""
         return [lease.runtime for lease in self.leases]
 
-    def ownRuntime(self, runtime: CoreRuntime | None, router=None):
+    def ownRuntime(
+        self, runtime: CoreRuntime | None, router=None, *, applicationTUN=False
+    ):
         """Retain one exact runtime lease until the attempt commits."""
         if runtime is None:
             return None
 
         router = router or RuntimeEventRouter()
-        lease = RuntimeLease(runtime, router)
+        lease = RuntimeLease(runtime, router, applicationTUN=applicationTUN)
 
         self.leases.append(lease)
 
@@ -784,7 +786,7 @@ class ConnectionStartOperation(QtCore.QObject):
         router.attach(tun, self)
 
         self._tun = tun
-        self.attempt.ownRuntime(tun, router)
+        self.attempt.ownRuntime(tun, router, applicationTUN=True)
         self._startTUN = tun.start
 
         if PLATFORM != 'Linux':
@@ -831,7 +833,7 @@ class ConnectionStartOperation(QtCore.QObject):
 
         router.attach(self._tun, self)
 
-        self.attempt.ownRuntime(self._tun, router)
+        self.attempt.ownRuntime(self._tun, router, applicationTUN=True)
 
         address = self.attempt.runtimeConfiguration.remoteAddress()
 
@@ -1376,6 +1378,10 @@ class ConnectionManager(Mixins.CleanupOnExit):
         """Return committed runtimes without exposing the mutable owner list."""
         return [lease.runtime for lease in self._leases]
 
+    def usesApplicationTUN(self) -> bool:
+        """Return whether the committed connection owns an application TUN engine."""
+        return any(lease.applicationTUN for lease in self._leases)
+
     def _connectionDnsResolver(self) -> DnsResolver:
         """Return the resolver owned by this connection-manager lifecycle."""
         if self._dnsResolver is None:
@@ -1701,7 +1707,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
         try:
             runtime = self._createSingTUN(attempt, exitCallback, messageCallback)
 
-            attempt.ownRuntime(runtime)
+            attempt.ownRuntime(runtime, applicationTUN=True)
 
             address = attempt.runtimeConfiguration.remoteAddress()
 
@@ -1849,7 +1855,7 @@ class ConnectionManager(Mixins.CleanupOnExit):
             msgCallback=msgCallbackTUN_,
         )
 
-        attempt.ownRuntime(tun)
+        attempt.ownRuntime(tun, applicationTUN=True)
 
         startTUN = tun.start
 

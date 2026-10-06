@@ -203,7 +203,14 @@ class SettingsController(QtCore.QObject):
 
         self.tunBackendChanged.emit(backend)
 
-        showMBoxNewChangesNextTime()
+        connection = AppConnectionController()
+
+        if (
+            connection is not None
+            and connection.isConnected()
+            and connection.usesApplicationTUN()
+        ):
+            showMBoxNewChangesNextTime()
 
     @staticmethod
     def setApplicationTheme(theme: ApplicationTheme | str):

@@ -39,6 +39,8 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   `usesApplicationTun2socks` still means application-TUN eligibility; it must not force the selected engine.
   Snapshot the engine and relevant customization once per attempt; bind each backend's named settings callers to
   that snapshot, preserving proxy-only and explicit native TUN behavior.
+  Committed application-TUN usage is derived from the runtime leases marked at acquisition, not from mutable profile
+  documents or next-start settings. Settings presentation must not run TUN preparation to decide whether to reconnect.
 - Each application engine reads only its own persisted document: sing-tun's `host_options` belong to
   `CustomSingTUNSettings`, while tun2socks uses `CustomTUNSettings`; edits and missing defaults must never import
   preferences from the other engine. Their repository/host policies remain independent while orchestration,

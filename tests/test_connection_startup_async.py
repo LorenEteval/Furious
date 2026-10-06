@@ -922,6 +922,7 @@ class ConnectionStartupAsyncTest(TestCase):
             ['find-device', 'script', 'find-device', 'tun-start'],
         )
         self.assertEqual(manager.runtimes, [primary, tun])
+        self.assertTrue(manager.usesApplicationTUN())
         self.assertEqual(tun.startOptions[0], {})
 
     def testWindowsTunStartsRuntimeBeforeObservingAndMutatingDevice(self):
@@ -1047,6 +1048,7 @@ class ConnectionStartupAsyncTest(TestCase):
             ['tun-start', 'find-device', 'add-relations'],
         )
         self.assertEqual(manager.runtimes, [primary, tun])
+        self.assertTrue(manager.usesApplicationTUN())
 
     def testDarwinTunSurvivalPrecedesDnsAndRouteMutation(self):
         """Observe tun2socks survival before applying macOS host networking."""
@@ -1157,6 +1159,7 @@ class ConnectionStartupAsyncTest(TestCase):
 
         self.assertEqual(events, ['tun-start', 'read-dns'])
         self.assertEqual(manager.runtimes, [primary, tun])
+        self.assertTrue(manager.usesApplicationTUN())
 
     def testRepeatedCancellationReleasesOperationTimersAndRuntimes(self):
         """Keep repeated startup cancellation bounded and independently owned."""

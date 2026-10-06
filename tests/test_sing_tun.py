@@ -47,6 +47,10 @@ from Furious.Window.SingTUNSettingsDialog import SingTUNSettingsDialog
 from Furious.Window.TunSettingsDialog import TunSettingsDialog
 from Furious.Backends.Configuration import ConfigXray, ConfigHysteria1, ConfigHysteria2
 from Furious.Controllers.SettingsController import SettingsController
+from Furious.Controllers.ConnectionController import (
+    ConnectionController,
+    ConnectionState,
+)
 from Furious.Qt import gettext as _
 from Furious.Service.RuntimeLease import RuntimeEventRouter, RuntimeLeaseState
 from Furious.Service.LogManager import LogManager, TUN_LOG_CATEGORY
@@ -794,6 +798,145 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
 
             self.assertFalse(isValid(dialog))
 
+    def testNativeTUNBackendSelectionPersistsWithoutReconnectNotice(self):
+        """Application-engine preferences do not affect an active native TUN."""
+        module = importlib.import_module('Furious.Window.SettingsPage')
+        configurations = (
+            ConfigXray({'inbounds': []}),
+            ConfigXray({'inbounds': [{'protocol': 'tun'}]}),
+            ConfigHysteria2({}),
+            ConfigHysteria2({'tun': {}}),
+        )
+
+        for configuration in configurations:
+            with (
+                self.subTest(configuration=dict(configuration)),
+                isolatedSettings(),
+                mock.patch(
+                    'Furious.Controllers.SettingsController.showMBoxNewChangesNextTime'
+                ) as notice,
+                mock.patch('sys.excepthook') as callbackExceptionHook,
+            ):
+                AppSettings.turnON_('VPNMode')
+                AppSettings.set('ApplicationTUNBackend', 'tun2socks')
+                manager = ConnectionManager()
+                connection = ConnectionController(
+                    coreManager=manager, updatesManager=mock.Mock()
+                )
+                settings = SettingsController()
+                previousConnection = self.app.connectionController
+                self.app.connectionController = connection
+                card = None
+
+                try:
+                    primary = _Runtime()
+                    primary.start()
+                    attempt = _ConnectionStartAttempt(
+                        manager, configuration, nativeTUNHandled=True
+                    )
+                    attempt.ownRuntime(primary)
+                    attempt.commit()
+                    connection._activeProfile = configuration
+                    connection._state = ConnectionState.Connected
+                    changes = []
+                    settings.tunBackendChanged.connect(changes.append)
+
+                    with mock.patch.object(
+                        module, 'AppSettingsController', return_value=settings
+                    ):
+                        card = module._TUNBackendSettingsCard()
+
+                        for backend in ('sing-tun', 'tun2socks'):
+                            card.comboBox.setCurrentIndex(
+                                card.comboBox.findData(backend)
+                            )
+
+                            self.assertEqual(
+                                AppSettings.get('ApplicationTUNBackend'), backend
+                            )
+                            self.assertEqual(card.comboBox.currentData(), backend)
+                            self.assertTrue(connection.isConnected())
+                            self.assertTrue(primary.isRunning())
+                            self.assertEqual(manager.runtimes, [primary])
+                            notice.assert_not_called()
+
+                    self.assertEqual(changes, ['sing-tun', 'tun2socks'])
+                finally:
+                    self.app.connectionController = previousConnection
+
+                    if card is not None:
+                        card.deleteLater()
+
+                    manager.cleanup()
+                    connection.deleteLater()
+                    settings.deleteLater()
+                    processQtEvents()
+
+                callbackExceptionHook.assert_not_called()
+
+    def testApplicationTUNBackendSelectionStillOffersReconnect(self):
+        """Use committed engine ownership even if the profile is edited later."""
+        for backend in ('tun2socks', 'sing-tun'):
+            with (
+                self.subTest(backend=backend),
+                isolatedSettings(),
+                mock.patch(
+                    'Furious.Controllers.SettingsController.showMBoxNewChangesNextTime'
+                ) as notice,
+            ):
+                AppSettings.set('ApplicationTUNBackend', backend)
+                manager = ConnectionManager()
+                connection = ConnectionController(
+                    coreManager=manager, updatesManager=mock.Mock()
+                )
+                settings = SettingsController()
+                previousConnection = self.app.connectionController
+                self.app.connectionController = connection
+                configuration = ConfigXray({'inbounds': []})
+                attempt = _ConnectionStartAttempt(
+                    manager, configuration, applicationTun2socks=True
+                )
+
+                try:
+                    primary, engine = _Runtime(), _Runtime()
+                    primary.start()
+                    engine.start()
+                    attempt.ownRuntime(primary)
+                    attempt.ownRuntime(engine, applicationTUN=True)
+
+                    self.assertFalse(manager.usesApplicationTUN())
+
+                    attempt.commit()
+                    connection._activeProfile = configuration
+                    connection._state = ConnectionState.Connected
+                    configuration['inbounds'].append({'protocol': 'tun'})
+
+                    self.assertTrue(connection.usesApplicationTUN())
+
+                    other = 'sing-tun' if backend == 'tun2socks' else 'tun2socks'
+                    settings.setTUNBackend(other)
+                    settings.setTUNBackend(other)
+
+                    notice.assert_called_once_with()
+                    self.assertEqual(AppSettings.get('ApplicationTUNBackend'), other)
+                    self.assertEqual(manager.runtimes, [primary, engine])
+                    self.assertTrue(primary.isRunning())
+                    self.assertTrue(engine.isRunning())
+
+                    notice.reset_mock()
+                    connection._state = ConnectionState.Disconnected
+                    settings.setTUNBackend(backend)
+                    notice.assert_not_called()
+                finally:
+                    self.app.connectionController = previousConnection
+                    attempt.rollback()
+                    manager.cleanup()
+                    connection.deleteLater()
+                    settings.deleteLater()
+                    processQtEvents()
+
+                self.assertFalse(manager.usesApplicationTUN())
+
     def testPreferenceDefaultInvalidAndSignal(self):
         with isolatedSettings(), mock.patch(
             'Furious.Controllers.SettingsController.showMBoxNewChangesNextTime'
@@ -1534,6 +1677,7 @@ class SingTUNStartupTest(unittest.TestCase):
                         stored.assert_not_called()
                         registry.usesApplicationTun2socks.assert_not_called()
                         self.assertEqual(primary.isRunning(), not failure)
+                        self.assertFalse(manager.usesApplicationTUN())
 
                         manager.cleanup()
 
@@ -1622,6 +1766,7 @@ class SingTUNStartupTest(unittest.TestCase):
             runtime = operation._tun
             self.assertFalse(succeeded)
             self.assertEqual(manager.runtimes, [])
+            self.assertFalse(manager.usesApplicationTUN())
 
             AppSettings.set('ApplicationTUNBackend', 'tun2socks')
             customized['host_options']['bypassTUNAdapterInterfaceIP'] = '192.0.2.99'
@@ -1632,10 +1777,13 @@ class SingTUNStartupTest(unittest.TestCase):
 
             runtime.nativeReady = True
             self.assertTrue(waitFor(lambda: bool(succeeded)))
+            self.assertTrue(manager.usesApplicationTUN())
             self.assertEqual(runtime._hostPlan.applied, ['utun101'])
             self.assertEqual(runtime._hostPlan.addresses, ['192.0.2.1', '2001:db8::1'])
 
             manager.cleanup()
+
+            self.assertFalse(manager.usesApplicationTUN())
 
         processQtEvents()
 
@@ -1708,8 +1856,11 @@ class SingTUNStartupTest(unittest.TestCase):
 
             self.assertTrue(manager.start(_Configuration(), 'Global', deepcopy=False))
             self.assertEqual(manager.runtimes[1]._hostPlan.applied, ['utun101'])
+            self.assertTrue(manager.usesApplicationTUN())
 
             manager.cleanup()
+
+            self.assertFalse(manager.usesApplicationTUN())
 
     def testSocksOnlyResolverHasNoHTTPOrDirectFallback(self):
         resolver = mock.Mock()
