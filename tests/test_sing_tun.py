@@ -484,8 +484,9 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                         card.comboBox.itemData(index)
                         for index in range(card.comboBox.count())
                     ],
-                    ['sing-tun', 'tun2socks'],
+                    ['tun2socks', 'sing-tun'],
                 )
+                self.assertEqual(card.comboBox.currentData(), 'tun2socks')
 
                 for backend in ('tun2socks', 'sing-tun', 'tun2socks'):
                     card.comboBox.setCurrentIndex(card.comboBox.findData(backend))
@@ -797,20 +798,21 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         with isolatedSettings(), mock.patch(
             'Furious.Controllers.SettingsController.showMBoxNewChangesNextTime'
         ):
-            self.assertEqual(AppSettings.get('ApplicationTUNBackend'), 'sing-tun')
+            self.assertEqual(AppSettings.get('ApplicationTUNBackend'), 'tun2socks')
             QtCore.QSettings().setValue('ApplicationTUNBackend', 'invalid')
-            self.assertEqual(AppSettings.get('ApplicationTUNBackend'), 'sing-tun')
+            self.assertEqual(AppSettings.get('ApplicationTUNBackend'), 'tun2socks')
 
             controller = SettingsController()
             changes = []
             controller.tunBackendChanged.connect(changes.append)
 
-            controller.setTUNBackend('tun2socks')
-            controller.setTUNBackend('tun2socks')
+            controller.setTUNBackend('sing-tun')
+            controller.setTUNBackend('sing-tun')
             with self.assertRaises(ValueError):
                 controller.setTUNBackend('invalid')
 
-            self.assertEqual(changes, ['tun2socks'])
+            self.assertEqual(changes, ['sing-tun'])
+            self.assertEqual(AppSettings.get('ApplicationTUNBackend'), 'sing-tun')
             self.assertFalse(AppSettings.isStateON_('VPNMode'))
 
 
@@ -1556,6 +1558,8 @@ class SingTUNStartupTest(unittest.TestCase):
             'getPluginRegistry',
             return_value=_Registry([PreparedRuntime(primary)]),
         ):
+            AppSettings.set('ApplicationTUNBackend', 'sing-tun')
+
             operation = manager.startAsync(_Configuration(), 'Global', deepcopy=False)
 
             with mock.patch.object(
@@ -1605,6 +1609,8 @@ class SingTUNStartupTest(unittest.TestCase):
         ), mock.patch.object(
             manager, '_createSingTUN', wraps=manager._createSingTUN
         ):
+            AppSettings.set('ApplicationTUNBackend', 'sing-tun')
+
             succeeded = []
             operation = manager.startAsync(_Configuration(), 'Global', deepcopy=False)
             operation.succeeded.connect(succeeded.append)
@@ -1655,6 +1661,8 @@ class SingTUNStartupTest(unittest.TestCase):
         ), mock.patch.object(
             module, 'SingTUNHostPlan', _Plan
         ):
+            AppSettings.set('ApplicationTUNBackend', 'sing-tun')
+
             operation = manager.startAsync(_Configuration(), 'Global', deepcopy=False)
             self.assertTrue(
                 waitFor(lambda: operation._tun is not None and operation._tun.alive)
@@ -1696,6 +1704,8 @@ class SingTUNStartupTest(unittest.TestCase):
         ), mock.patch.object(
             _PreparedSing, 'ready', new_callable=mock.PropertyMock, return_value=True
         ):
+            AppSettings.set('ApplicationTUNBackend', 'sing-tun')
+
             self.assertTrue(manager.start(_Configuration(), 'Global', deepcopy=False))
             self.assertEqual(manager.runtimes[1]._hostPlan.applied, ['utun101'])
 

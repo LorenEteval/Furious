@@ -667,12 +667,19 @@ class SettingsPageOrganizationTest(unittest.TestCase):
 
         expectedTUNCards = [
             page.tunBackendCard,
-            page.singTunSettingsCard,
             page.tunSettingsCard,
+            page.singTunSettingsCard,
         ]
 
         self.assertEqual(page.tunSection.titleLabel.text(), 'TUN')
         self.assertEqual(page.tunSection.cards, expectedTUNCards)
+        self.assertEqual(
+            [
+                page.tunSection.layout.itemAt(index + 1).widget()
+                for index in range(len(expectedTUNCards))
+            ],
+            expectedTUNCards,
+        )
         self.assertFalse(page.tunSection.isHidden())
         self.assertTrue(
             all(card.parent() is page.tunSection for card in expectedTUNCards)

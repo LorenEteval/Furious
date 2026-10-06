@@ -50,11 +50,11 @@ SYSTEM_PROXY_MODE_OPTIONS = (
 )
 
 registerAppSettings('VPNMode', isBinary=True)
-# A missing preference, including upgrades from 0.8.2, deliberately selects
-# sing-tun. VPNMode remains independent: choosing an engine does not enable TUN.
+# A missing preference, including upgrades from 0.8.2, selects tun2socks.
+# VPNMode remains independent: choosing an engine does not enable TUN.
 # 0.8.2 ignores this key and continues using application-managed tun2socks.
 registerAppSettings(
-    APPLICATION_TUN_BACKEND, validRange=list(TUN_BACKENDS), default='sing-tun'
+    APPLICATION_TUN_BACKEND, validRange=list(TUN_BACKENDS), default='tun2socks'
 )
 registerAppSettings(
     APPLICATION_THEME_SETTING,

@@ -141,7 +141,7 @@ if PLATFORM == 'Windows':
 CORE_CHECK_ALIVE_INTERVAL = 2500
 
 APPLICATION_TUN_BACKEND = 'ApplicationTUNBackend'
-TUN_BACKENDS = ('sing-tun', 'tun2socks')
+TUN_BACKENDS = ('tun2socks', 'sing-tun')
 
 if PLATFORM == 'Windows':
     APPLICATION_TUN2SOCKS_DEVICE_NAME = APPLICATION_NAME

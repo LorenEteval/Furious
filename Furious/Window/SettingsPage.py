@@ -563,8 +563,8 @@ class _TUNBackendSettingsCard(_SettingsCard):
     def __init__(self):
         self.comboBox = AppQComboBox()
         self.comboBox.setObjectName('SettingsComboBox')
-        self.comboBox.addItem('sing-tun', 'sing-tun')
         self.comboBox.addItem('tun2socks', 'tun2socks')
+        self.comboBox.addItem('sing-tun', 'sing-tun')
 
         super().__init__(
             'diagram-3.svg',
@@ -954,8 +954,8 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         )
 
         self.tunSection.addCard(self.tunBackendCard)
-        self.tunSection.addCard(self.singTunSettingsCard)
         self.tunSection.addCard(self.tunSettingsCard)
+        self.tunSection.addCard(self.singTunSettingsCard)
         self.tunSection.setVisible(not SystemRuntime.flatpakID())
 
         self.connectionSection.addCard(self.systemProxyCard)
