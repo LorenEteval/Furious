@@ -42,6 +42,8 @@ from Furious.Service.SubscriptionSync import SubscriptionSynchronizer
 from PySide6 import QtCore
 from PySide6.QtNetwork import QNetworkRequest
 
+from shiboken6 import isValid
+
 from dataclasses import dataclass
 
 import re
@@ -420,7 +422,10 @@ class SubscriptionManager(HttpGetManager):
 
         for reply in tuple(self._activeReplies):
             if unique is None or self._replySubscriptions.get(reply) == unique:
-                reply.abort()
+                # Aborting another reply can synchronously destroy this manager
+                # and every remaining reply in the snapshot.
+                if isValid(reply):
+                    reply.abort()
 
         for job in tuple(self._preparationJobs.values()):
             if unique is None or job.context.get('unique') == unique:
@@ -480,18 +485,22 @@ class SubscriptionManager(HttpGetManager):
             timer.stop()
 
         self.cancelUpdates()
-        self._preparationPool.clear()
 
-        # The timeout is diagnostic, not permission to destroy running workers.
-        # Keep the relay/pool alive until every worker has actually finished.
-        if not self._preparationPool.waitForDone(self.ShutdownWarningMilliseconds):
-            logger.warning(
-                'subscription preparation has not stopped after %s ms; '
-                'waiting for running workers to finish',
-                self.ShutdownWarningMilliseconds,
-            )
+        # Reply abort hooks can destroy the manager and its child pool. Native
+        # pool destruction already waits for its workers; do not use that wrapper.
+        if isValid(self._preparationPool):
+            self._preparationPool.clear()
 
-            self._preparationPool.waitForDone()
+            # The timeout is diagnostic, not permission to destroy running workers.
+            # Keep the relay/pool alive until every worker has actually finished.
+            if not self._preparationPool.waitForDone(self.ShutdownWarningMilliseconds):
+                logger.warning(
+                    'subscription preparation has not stopped after %s ms; '
+                    'waiting for running workers to finish',
+                    self.ShutdownWarningMilliseconds,
+                )
+
+                self._preparationPool.waitForDone()
 
         self._preparationJobs.clear()
         self._preparationPayloads.clear()
@@ -1201,8 +1210,10 @@ class SubscriptionManager(HttpGetManager):
 
         reply = self.webGET(request, logActionMessage=logActionMessage, **kwargs)
 
-        self._activeReplies[reply] = reply
-        self._replySubscriptions[reply] = str(kwargs.get('unique', ''))
+        self._trackReplyContext(reply, self._activeReplies, reply)
+        self._trackReplyContext(
+            reply, self._replySubscriptions, str(kwargs.get('unique', ''))
+        )
 
         connectWeakly(
             reply.finished,

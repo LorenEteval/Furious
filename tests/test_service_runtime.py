@@ -29,6 +29,8 @@ from Furious.Service.ConnectivityManager import ConnectivityManager
 from Furious.Service.EndpointInfoService import ProxyEndpointHttpClient
 from Furious.Qt.HttpGetManager import HttpGetManager
 from Furious.Service.PluginUIManager import PluginNavigationManager
+from Furious.Service.SubscriptionManager import SubscriptionManager
+from Furious.Repository import Storage
 from Furious.Service.TrafficStatsManager import TrafficStatsManager
 from Furious.Service.UpdateManager import UpdateManager
 
@@ -224,6 +226,70 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
         self.assertFalse(isValid(manager))
         self.assertTrue(all(not isValid(reply) for reply in replies))
         self.assertEqual(manager._pendingRequests, {})
+
+    def testSubscriptionRepliesReleaseTrackingOnNativeDestruction(self):
+        """Early deletion releases all reply keys before later cancellation."""
+        with patch.object(Storage, 'UserSubs', return_value={}):
+            manager = SubscriptionManager()
+            references = []
+            destroyed = []
+
+            try:
+                for index in range(30):
+                    reply = _ManagedReply(manager)
+                    references.append(weakref.ref(reply))
+                    reply.destroyed.connect(lambda *_args: destroyed.append(True))
+
+                    with patch.object(manager, 'get', return_value=reply):
+                        manager.updateSubsByWebGET(
+                            webURL='https://invalid.test', unique=str(index)
+                        )
+
+                    self.assertIn(reply, manager._activeReplies)
+                    reply.deleteLater()
+                    processQtEvents()
+                    self.assertFalse(isValid(reply))
+                    del reply
+
+                    self.assertFalse(manager._replyContexts)
+                    self.assertFalse(manager._activeReplies)
+                    self.assertFalse(manager._replySubscriptions)
+                    manager.cancelUpdates()
+
+                self.assertEqual(len(destroyed), 30)
+                collectAtBoundary()
+                self.assertTrue(all(reference() is None for reference in references))
+            finally:
+                manager.shutdown()
+                manager.deleteLater()
+                processQtEvents()
+
+    def testSubscriptionCancellationToleratesOwnerDestructionDuringAbort(self):
+        """Reentrant destruction invalidates every remaining snapshot reply."""
+        for method in ('cancelUpdates', 'shutdown'):
+            with self.subTest(method=method):
+                self._cancelSubscriptionWithReentrantDestruction(method)
+
+    def _cancelSubscriptionWithReentrantDestruction(self, method):
+        """Keep both public teardown entry points on the real native boundary."""
+        with patch.object(Storage, 'UserSubs', return_value={}):
+            manager = SubscriptionManager()
+            replies = [_ManagedReply(manager), _ManagedReply(manager)]
+
+            for index, reply in enumerate(replies):
+                with patch.object(manager, 'get', return_value=reply):
+                    manager.updateSubsByWebGET(
+                        webURL='https://invalid.test', unique=str(index)
+                    )
+
+            replies[0].abort = lambda: deleteQObject(manager)
+            getattr(manager, method)()
+
+            self.assertFalse(isValid(manager))
+            self.assertTrue(all(not isValid(reply) for reply in replies))
+            self.assertFalse(manager._replyContexts)
+            self.assertFalse(manager._activeReplies)
+            self.assertFalse(manager._replySubscriptions)
 
     def testRequestHasFiniteTimeoutAndTerminalPathDropsContext(self):
         manager = _CapturingHttpGetManager()
