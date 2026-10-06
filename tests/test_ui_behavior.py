@@ -89,7 +89,12 @@ from Furious.Models import (
     Protocol,
     ServerProfile,
 )
-from Furious.Plugins.API import RoutingOption
+from Furious.Plugins.API import (
+    PluginSettingControl,
+    PluginSettingDescriptor,
+    PluginSettingsSection,
+    RoutingOption,
+)
 from Furious.Repository import Storage
 from Furious.Repository.Routings import UserRoutings
 from Furious.Qt import (
@@ -388,7 +393,9 @@ class SettingsPageOrganizationTest(unittest.TestCase):
         """Finish deferred Settings-page deletion between tests."""
         collectAtBoundary()
 
-    def buildPage(self, *, platform='Windows', flatpakID='', isAdmin=False):
+    def buildPage(
+        self, *, platform='Windows', flatpakID='', isAdmin=False, pluginSections=()
+    ):
         """Build one isolated Settings page for the requested platform state."""
         callbacks = {
             'checkForUpdates': mock.Mock(),
@@ -398,6 +405,10 @@ class SettingsPageOrganizationTest(unittest.TestCase):
         }
         proxyBypassDialog = mock.Mock()
         networkTestDialog = mock.Mock()
+
+        def buildPluginSections(page):
+            for section in pluginSections:
+                page._addPluginDescriptorSection(section)
 
         with (
             isolatedSettings(),
@@ -418,7 +429,9 @@ class SettingsPageOrganizationTest(unittest.TestCase):
                 'Furious.Window.SettingsPage.AppSettings.isStateON_',
                 return_value=False,
             ),
-            mock.patch.object(SettingsPage, '_buildPluginSections'),
+            mock.patch.object(
+                SettingsPage, '_buildPluginSections', buildPluginSections
+            ),
             mock.patch(
                 'Furious.Window.SettingsPage.AppSettingsController'
             ) as controllerFactory,
@@ -435,6 +448,125 @@ class SettingsPageOrganizationTest(unittest.TestCase):
             )
 
         return page, callbacks
+
+    def testSearchMatchesDescriptionsAndSectionsWithoutApplyingSettings(self):
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            page, callbacks = self.buildPage()
+            page.show()
+            page.setConnectionControlsEnabled(False)
+            processQtEvents()
+
+            page.searchLineEdit.setText('OPERATING system')
+            QTest.keyClick(page.searchLineEdit, QtCore.Qt.Key.Key_Return)
+            processQtEvents()
+
+            self.assertFalse(page.systemProxyCard.isHidden())
+            self.assertTrue(page.generalSection.isHidden())
+            self.assertTrue(page.tunSection.isHidden())
+            self.assertFalse(page.systemProxyCard.comboBox.isEnabled())
+            self.assertFalse(page.emptySearchLabel.isVisible())
+            self.assertTrue(
+                all(callback.call_count == 0 for callback in callbacks.values())
+            )
+
+            page.searchLineEdit.setText('TUN')
+            page.searchLineEdit.applySearch()
+            self.assertTrue(all(not card.isHidden() for card in page.tunSection.cards))
+            self.assertFalse(page.tunBackendCard.isEnabled())
+
+            page.searchLineEdit.setText('[')
+            page.searchLineEdit.applySearch()
+            self.assertTrue(page.emptySearchLabel.isVisible())
+
+            page.searchLineEdit.clear()
+            self.assertFalse(page.emptySearchLabel.isVisible())
+            self.assertTrue(
+                all(not section.isHidden() for section in page._searchSections)
+            )
+
+            page.close()
+            page.deleteLater()
+
+    def testSearchIncludesPluginMetadataButNotControlValuesOrUnavailableSections(self):
+        callback = mock.Mock()
+        descriptor = PluginSettingsSection(
+            'fixture',
+            'Vendor [Example]',
+            (
+                PluginSettingDescriptor(
+                    'diagnostics',
+                    'Inspect endpoint',
+                    description='Collect local diagnostics',
+                    control=PluginSettingControl.Action,
+                    callback=callback,
+                    buttonText='private-control-value',
+                ),
+            ),
+        )
+        page, _callbacks = self.buildPage(
+            platform='Linux',
+            flatpakID='io.github.LorenEteval.Furious',
+            pluginSections=(descriptor,),
+        )
+        page.show()
+        processQtEvents()
+
+        page.searchLineEdit.setText('vendor [example]')
+        page.searchLineEdit.applySearch()
+        self.assertTrue(page.pluginSettingsTitleLabel.isVisible())
+        self.assertTrue(page.pluginSections[0].isVisible())
+        self.assertTrue(page.tunSection.isHidden())
+
+        page.searchLineEdit.setText('private-control-value')
+        page.searchLineEdit.applySearch()
+        self.assertTrue(page.emptySearchLabel.isVisible())
+        callback.assert_not_called()
+
+        page.searchLineEdit.clear()
+        self.assertTrue(page.tunSection.isHidden())
+        self.assertTrue(page.pluginSections[0].isVisible())
+
+        page.close()
+        page.deleteLater()
+
+    def testSearchFindShortcutLanguageSwitchAndHiddenDebounce(self):
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            page, _callbacks = self.buildPage()
+            page.show()
+            page.activateWindow()
+            page.aboutCard.button.setFocus()
+            processQtEvents()
+
+            QTest.keySequence(page.aboutCard.button, page.findAction.shortcut())
+            self.assertTrue(page.searchLineEdit.hasFocus())
+
+            QTest.keyClicks(page.searchLineEdit, 'metrics')
+            self.assertTrue(page.searchLineEdit._searchTimer.isActive())
+            page.hide()
+            self.assertFalse(page.searchLineEdit._searchTimer.isActive())
+            page.show()
+            processQtEvents()
+            self.assertTrue(page.metricsCollectionCard.isVisible())
+            self.assertTrue(page.generalSection.isHidden())
+
+            AppSettings.set('Language', 'ZH')
+            Mixins.QTranslatable.retranslateAll()
+            processQtEvents()
+            page.searchLineEdit.setText(_('Enable Metrics Collection'))
+            page.searchLineEdit.applySearch()
+            self.assertTrue(page.metricsCollectionCard.isVisible())
+
+            page.searchLineEdit.setText('Enable Metrics Collection')
+            page.searchLineEdit.applySearch()
+            self.assertTrue(page.metricsCollectionCard.isVisible())
+
+            page.close()
+            page.deleteLater()
+
+            AppSettings.set('Language', 'EN')
+            Mixins.QTranslatable.retranslateAll()
 
     def testGeneralEndsWithSystemAndEnvironmentActions(self):
         """Keep preferences first and Application focused on maintenance/about."""

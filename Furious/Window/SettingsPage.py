@@ -39,9 +39,10 @@ from Furious.Service.TrafficStatsManager import (
     METRICS_COLLECTION_SETTING,
 )
 from Furious.Window.TunSettingsDialog import tunModeTitle
-from Furious.Qt.Signals import connectWeakly
+from Furious.Qt.Signals import connectWeakly, singleShotWeakly
 
 from PySide6 import QtCore
+from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import *
 
 from collections import Counter
@@ -636,6 +637,93 @@ class _SettingsSection(QWidget):
                 card.setIconFileName(None)
 
 
+class _SettingsSearchLineEdit(AppQLineEdit):
+    """Own settings filtering and debounce within the persistent search control."""
+
+    def __init__(self):
+        super().__init__()
+
+        self.setClearButtonEnabled(True)
+        self.setPlaceholderText(_('Search settings...'))
+        self.setMinimumWidth(180)
+        self.setMaximumWidth(600)
+
+        self._sections = []
+        self._pluginSections = []
+        self._pluginHeading = None
+        self._emptyLabel = None
+
+        self._searchTimer = QtCore.QTimer(self)
+        self._searchTimer.setSingleShot(True)
+        self._searchTimer.setInterval(180)
+
+        connectWeakly(self._searchTimer.timeout, self, 'applySearch')
+        connectWeakly(self.textChanged, self, '_scheduleSearch')
+        connectWeakly(self.returnPressed, self, 'applySearch')
+
+    def configureSections(self, sections, pluginSections, pluginHeading, emptyLabel):
+        self._sections = sections
+        self._pluginSections = pluginSections
+        self._pluginHeading = pluginHeading
+        self._emptyLabel = emptyLabel
+
+    @QtCore.Slot(str)
+    def _scheduleSearch(self, text):
+        """Debounce typing while making clear immediately restore the cards."""
+        if not text.strip():
+            self.applySearch()
+        elif self.isVisible():
+            self._searchTimer.start()
+
+    @QtCore.Slot()
+    def applySearch(self):
+        """Filter descriptive card text without reading or changing setting values."""
+        self._searchTimer.stop()
+
+        if self._emptyLabel is None:
+            return
+
+        terms = self.text().casefold().split()
+        matched = False
+        pluginMatched = False
+
+        for section in self._sections:
+            sectionMatched = False
+
+            for card in section.cards:
+                labels = (section.titleLabel, card.titleLabel, card.descriptionLabel)
+                texts = [label.text() for label in labels]
+                texts.extend(
+                    _(label.text(), locale='EN')
+                    for label in labels
+                    if label.translatable
+                )
+                searchableText = ' '.join(texts).casefold()
+                visible = all(term in searchableText for term in terms)
+
+                card.setVisible(visible)
+                sectionMatched |= visible
+
+            section.setVisible(sectionMatched)
+            matched |= sectionMatched
+
+            if section in self._pluginSections:
+                pluginMatched |= sectionMatched
+
+        self._pluginHeading.setVisible(pluginMatched)
+        self._emptyLabel.setVisible(not matched)
+
+    @QtCore.Slot()
+    def focusSearch(self):
+        self.setFocus(QtCore.Qt.ShortcutFocusReason)
+        self.selectAll()
+
+    def hideEvent(self, event):
+        self._searchTimer.stop()
+
+        super().hideEvent(event)
+
+
 class SettingsPage(Mixins.QTranslatable, QMainWindow):
     """Compose application settings without owning their operational logic."""
 
@@ -678,6 +766,17 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
 
         self.pageTitleLabel = AppQLabel(_('Settings'))
         self.pageTitleLabel.setObjectName('SettingsPageTitle')
+
+        self.searchLineEdit = _SettingsSearchLineEdit()
+
+        self.findAction = AppQAction(
+            _('Search'),
+            parent=self.searchLineEdit,
+            callback=self.searchLineEdit.focusSearch,
+            shortcut=QKeySequence.StandardKey.Find,
+        )
+        self.findAction.setShortcutContext(QtCore.Qt.WidgetWithChildrenShortcut)
+        self.addAction(self.findAction)
 
         self.generalSection = _SettingsSection(_('General'))
         self.tunSection = _SettingsSection('TUN', translatable=False)
@@ -937,7 +1036,31 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         contentLayout = QVBoxLayout(contentWidget)
         contentLayout.setContentsMargins(20, 18, 20, 24)
         contentLayout.setSpacing(22)
-        contentLayout.addWidget(self.pageTitleLabel)
+
+        headerLayout = QHBoxLayout()
+        headerLayout.setContentsMargins(0, 0, 0, 0)
+        headerLayout.addWidget(self.pageTitleLabel)
+        headerLayout.addStretch(1)
+        headerLayout.addWidget(self.searchLineEdit, 3)
+        contentLayout.addLayout(headerLayout)
+
+        self.emptySearchLabel = AppQLabel(_('No settings match your search.'))
+        self.emptySearchLabel.setWordWrap(True)
+        self.emptySearchLabel.hide()
+
+        contentLayout.addWidget(self.emptySearchLabel)
+
+        # Register only platform-available sections; filtering must not reveal
+        # controls deliberately omitted from this installation.
+        self._searchSections = [self.generalSection]
+
+        if not self.tunSection.isHidden():
+            self._searchSections.append(self.tunSection)
+
+        self._searchSections.extend(
+            [self.connectionSection, *self.pluginSections, self.applicationSection]
+        )
+
         contentLayout.addWidget(self.generalSection)
         contentLayout.addWidget(self.tunSection)
         contentLayout.addWidget(self.connectionSection)
@@ -957,6 +1080,13 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
         self.scrollArea.setFrameShape(QFrame.Shape.NoFrame)
         self.scrollArea.setWidget(contentWidget)
         self.setCentralWidget(self.scrollArea)
+
+        self.searchLineEdit.configureSections(
+            self._searchSections,
+            self.pluginSections,
+            self.pluginSettingsTitleLabel,
+            self.emptySearchLabel,
+        )
 
         self.retranslate()
 
@@ -1213,6 +1343,13 @@ class SettingsPage(Mixins.QTranslatable, QMainWindow):
 
         self.languageCard.sync()
 
+        self.searchLineEdit.applySearch()
+
     def retranslate(self):
         """Synchronize page-level dynamic state after a language change."""
         self.languageCard.sync()
+
+        # The page is registered before its labels in the translation pool.
+        # Filter after the whole language switch has updated descriptive text.
+        if self.isVisible():
+            singleShotWeakly(0, self.searchLineEdit, 'applySearch')

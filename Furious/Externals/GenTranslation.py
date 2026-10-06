@@ -1606,7 +1606,8 @@ TRANSLATION = {
     "Search": {
         "source": [
             "Furious.Window.HomePage",
-            "Furious.Window.LogPage"
+            "Furious.Window.LogPage",
+            "Furious.Window.SettingsPage"
         ],
         "RU": "Поиск",
         "ZH": "查找",
@@ -3643,6 +3644,22 @@ TRANSLATION = {
         ],
         "RU": "Открыть журнал",
         "ZH": "打开日志",
+        "isReviewed": "True"
+    },
+    "Search settings...": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Поиск настроек...",
+        "ZH": "搜索设置...",
+        "isReviewed": "True"
+    },
+    "No settings match your search.": {
+        "source": [
+            "Furious.Window.SettingsPage"
+        ],
+        "RU": "Нет настроек, соответствующих поиску.",
+        "ZH": "没有与搜索条件匹配的设置。",
         "isReviewed": "True"
     }
 }

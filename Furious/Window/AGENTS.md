@@ -51,6 +51,11 @@ state.
   secret-bearing QR content. Reuse plugin export semantics and never log the encoded URI.
 - Search debounce belongs to the persistent page: clear/submit cancels pending work, hide stops it, and show applies
   only the current query. Find shortcuts are page-scoped; document editing shortcuts stay with their document widget.
+  Settings search matches section headings and card titles/descriptions, including plugin metadata and English/current
+  locale text. It filters presentation only: never search control values, apply preferences, enable disabled cards, or
+  reveal platform-unavailable sections. The search control owns debounce and its Find action; the page supplies its
+  existing cards/sections. Refilter after all translated labels update. The Settings organization cases
+  in `tests/test_ui_behavior.py` cover these boundaries with real input and navigation.
 - Log freezing is currently commented out. Its restoration notes and commented cases in
   `tests/test_ui_behavior.py` are design references, not executed coverage. If restored, keep freezing a
   presentation policy and verify filtering/catch-up after clear, eviction, and navigation against the live
