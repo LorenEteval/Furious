@@ -10,9 +10,9 @@ preserves the intentionally different direct-subprocess scope for user-selected 
   TUN address, and application-TUN opt-in distinct while preserving unknown top-level fields.
 - Loading is observational: do not silently absolutize or rewrite relative paths. Validation before spawn owns path
   existence/type, argument and environment types/NULs, endpoint requirements, and a finite bounded shutdown timeout.
-  Reject NaN, infinities, Booleans, and integer-to-float overflow before process wait APIs. The current negated
-  chained range check rejects NaN; separate lower/upper rejection comparisons would not. Preserve the accepted
-  finite interval rather than prescribing one validation syntax. Check `shutdownTimeout()` and the launch boundary
+  Reject NaN, infinities, Booleans, and integer-to-float overflow before process wait APIs. Preserve the accepted
+  finite interval and prove rejection behavior directly; equivalent-looking comparisons are not a substitute
+  for non-finite and overflow regression cases. Check `shutdownTimeout()` and the launch boundary
   with `tests/test_external_core.py`; serializability does not prove a value is a usable timeout.
 - Execute an argument vector with `shell=False`. Environment overrides apply to a copy of the inherited process
   environment; preparation must not mutate the host's `os.environ`. Never concatenate a shell command, search or

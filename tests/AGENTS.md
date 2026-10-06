@@ -75,6 +75,9 @@ and test-tier selection; test convenience never weakens a production invariant.
   Expected negative-path logs do not themselves mean failure. However, an exception raised inside a Qt-dispatched
   callback may reach `sys.excepthook` without failing the surrounding unittest. Reentrant/lifetime tests must also
   capture and assert callback exceptions, restoring the hook afterward; a successful runner exit alone is insufficient.
+  For each meaningful defect fix, retain a focused behavioral regression and establish the before/after failure
+  where practical. Keep native destruction, logical cancellation, stale-result rejection, and wrapper retention as
+  distinct assertions.
 - Review new tests for production-state mutation, live network dependence, process-name cleanup, unbounded waits,
   shared mutable fixtures, order dependence, timing-only assertions, and storage assertions where runtime output is
   the contract. For guidance-only changes, verify path preservation, changed-file scope, referenced commands/tests,

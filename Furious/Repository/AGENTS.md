@@ -9,7 +9,9 @@ outside it.
   serialization: trace its mutation and `sync()`/cleanup calls to locate the actual persistence boundary.
 - `Storage` owns one application-lifetime backend per collection and exposes live mutable collections for compatibility.
   Do not add a second cache/snapshot authority. Prefer named repository mutations so validation and commit boundaries
-  can move behind the repository over time.
+  can move behind the repository over time. Cached backends retain their restored collections independently of
+  the current QSettings identity; tests or migrations that change namespaces must also account for those owners
+  before reading, flushing, or cleaning up a collection.
 - Preserve stable profile/subscription IDs, subscription ownership/key, ordering, unknown fields, and legacy schemas.
   Active row/index and display text are compatibility/presentation state, not identity. Record-shape dispatch and
   metadata precedence are migration behavior: legacy `UserServer` aliases override nested metadata, and explicit

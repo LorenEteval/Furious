@@ -42,7 +42,9 @@ never live persistence, Qt presentation, plugin discovery, or workflow execution
 - `SingTUN.py` settings preparation validates an independent copy and overlays defaults without normalizing storage.
   Its closed option schema deliberately differs from open core documents: unsupported keys and overrides of
   application-owned routing/DNS fields are rejected. Host options remain sing-tun's own data and never fall back to
-  tun2socks settings. Check the preparer and `tests/test_sing_tun.py` together when the binding contract changes.
+  tun2socks settings. Cross-field constraints belong in this pure preparer, including stack-dependent native
+  options; a syntactically valid JSON object is not necessarily an executable configuration. Check the preparer
+  and `tests/test_sing_tun.py` together when the binding contract changes.
 
 ## Compatibility and verification
 

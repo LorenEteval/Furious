@@ -32,6 +32,8 @@ provenance; it is not an application-data or settings directory.
   Audit map assets together with `Furious/Widget/EndpointInfoWidget.py`: local loading, the WebChannel bridge, remote
   tile permissions, and external attribution navigation form one boundary. Validate both the renderer payload and
   host-side acceptance when that bridge changes; editing bundled JavaScript alone cannot establish host behavior.
+  Map-renderer readiness, tile availability, and a successful proxy egress lookup are separate observations;
+  missing remote map detail must not erase the validated endpoint result or trigger direct endpoint requests.
   A CSP change alone does not establish that arbitrary navigation or remote executable code is allowed by the host.
   Endpoint lookup and map tile/glyph loading are separate network paths. The map receives a validated presentation
   payload, not a profile document or credential-bearing URI; renderer/network failure must not replace authoritative

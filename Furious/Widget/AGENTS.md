@@ -60,4 +60,7 @@ view an independent workflow authority.
   nested shortcuts, subscription/test cancellation, hidden-page rendering, exact cell updates, optional WebEngine
   fallback, and repeated cleanup to baseline. Update this guide when ownership moves; never move service
   orchestration back into a widget just to preserve historical wording. Start with `tests/test_qt_interactions.py`,
-  `tests/test_profile_test_jobs.py`, and `tests/test_endpoint_info.py`.
+  `tests/test_profile_test_jobs.py`, and `tests/test_endpoint_info.py`. When an event-filter callback destroys its
+  watched target or owner, exercise actual native event delivery in an isolated child; calling the Python
+  filter method directly cannot establish safe Qt delivery. Navigation cases live in
+  `tests/test_isolation_and_navigation.py`.

@@ -15,7 +15,8 @@ exists to preserve Hysteria 1's legacy flat schema and lifecycle without importi
   rejection prompt is a compatibility path, not a requirement that runtime factories own UI.
 - Routing ACL/MMDB launch inputs remain distinct from the stored connection JSON. Optional files are read into
   launch data before the child starts; a missing/unreadable file is logged and falls back to empty input. Preserve
-  that observable fallback unless deliberately changing the contract, and include this synchronous file work in
+  that observable fallback unless deliberately changing the contract. The serialized client document and these
+  extra launch inputs form the complete prepared execution snapshot; include this synchronous file work in
   preparation responsiveness review. The child receives prepared ACL/MMDB inputs; editing an asset or stored
   routing preference does not reconfigure an existing execution. A prepared runtime advertises its local HTTP
   readiness endpoint separately from child liveness.

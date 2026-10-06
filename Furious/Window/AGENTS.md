@@ -21,6 +21,8 @@ state.
   option projection; Models validates its closed native schema and Repository commits it. Advanced JSON is not a
   full core document or permission to override application-owned routing/DNS. Present effective defaults without
   silently normalizing storage, importing tun2socks preferences, or launching a native engine just to open settings.
+  The application JSON editor is another view of that same candidate, not a second configuration authority.
+  Validate the merged candidate at acceptance; editor syntax checking does not replace model validation.
 - The current page composition shares one subscription workflow between server and subscription presentation, records
   traffic into one history, and derives metrics/endpoint presentation from owned services. These exact locations may
   evolve, but a refactor retains one durable owner, one scheduler/request path, and one signal path.

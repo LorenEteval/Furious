@@ -31,6 +31,8 @@ owned commands and presentation without becoming a workflow authority.
   Connection-error diagnostics retain only the displayed failure text for explicit copying; copying leaves the dialog
   open. Open Logs resolves the current application window and rechecks native validity after dialog completion and
   navigation. It opens the existing log page without retrying a stale connection or acquiring another workflow owner.
+  Recovery actions keep the displayed failure snapshot and resolve their live navigation target when triggered;
+  a later connection or settings change must not retarget the captured text. Render diagnostic text plainly.
   `DialogBehaviorTest` in `tests/test_ui_behavior.py` and the compiled lifetime fixture verify these actions.
 - Screen capture and QR decoding currently run synchronously; batching the resulting imports does not make capture
   interruptible. If moved to workers, transfer data through an owned GUI-thread continuation without retaining

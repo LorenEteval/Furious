@@ -38,8 +38,11 @@ structure and human-reviewed translations.
 - Keep runtime interpolation outside the translatable expression. Translate UI language, not identifiers, protocol
   values, user-defined names, persisted values, paths, or diagnostic payloads.
 - When a control stores source text for later retranslation, update that source instead of manually translating one
-  rendered instance. State-driven controls may deliberately reapply semantic state rather than call a generic base
-  retranslator; preserve user-defined values in either path.
+  rendered instance. Adjacent static literals and multiline literals still form one source key; preserve their
+  exact whitespace/newlines when changing layout or formatting. Verify extraction and rendered retranslation
+  separately instead of assuming a visually similar string has the same catalog identity. State-driven controls may
+  deliberately reapply semantic state rather than call a generic base retranslator; preserve user-defined values in
+  either path.
 
 ## Verification
 

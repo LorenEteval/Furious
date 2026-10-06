@@ -38,6 +38,8 @@ connection policy remains outside it.
 - Parentless timers are acceptable only with a durable runtime owner and explicit disposal. Leaving the manager pool
   must not leave timers, callbacks, queues, or process handles alive. Stopping execution is not QObject destruction:
   disposal must also release monitors and output infrastructure, including for a runtime that was never started.
+  These timers belong to their constructing Qt thread even though the runtime owner is a Python object;
+  child execution and process-watch threads must publish through the owned delivery boundary.
 - Verify invalid target/serialization, failed spawn, early exit, readiness compatibility, burst output
   bounds/backoff, normal and forced stop, repeated disposal, and absence of residual children, handles, timers,
   queues, or callbacks. Start with `tests/test_runtime_lifecycle.py` and `tests/test_connection_startup_async.py`;

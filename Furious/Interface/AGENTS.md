@@ -17,7 +17,9 @@ implementations can satisfy without importing application composition or concret
   stop/dispose. Preparation, serialization, readiness, and startup transactions belong outside this contract. Bind its
   event sink once before start; the callback may originate on a worker thread, so the receiving owner supplies explicit
   thread-safe delivery. Concrete runtimes own once-only terminal publication; the base publisher forwards events and
-  does not deduplicate them. Process/child terminology belongs only to implementations that own one.
+  does not deduplicate them. Process/child terminology belongs only to implementations that own one. A weak
+  callback reference does not supply thread affinity, cancellation, or an execution owner; consumers establish
+  those independently of the runtime's event envelope.
 - `StorageBackend.data()` deliberately exposes a live mutable collection for compatibility. Do not reinterpret it as a
   snapshot or introduce a second authoritative cache. Editor bindings map input to configuration and back; they do not
   decide runtime, persistence, or host policy.

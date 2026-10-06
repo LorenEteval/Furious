@@ -35,7 +35,9 @@ compatibility paths.
   If reconnect is declined, selected/persisted routing may differ from the running document. Menu checkmarks prove
   selection only; exercise fallback persistence separately from reconnect acceptance and runtime preparation.
   `RoutingControllerTest` in `tests/test_controllers.py` anchors explicit invalidation versus observational refresh.
-  User-defined routing labels are not translatable UI literals.
+  User-defined routing labels are not translatable UI literals. Selecting a preference, requesting reconnect,
+  and committing a runtime are separate events; verify the active runtime document when a test claims that
+  routing or TUN changed, rather than inferring it from a selected control or persisted setting.
 - `SettingsController` is the shared policy path used by Home, Settings, tray, and platform integration. Startup
   registration persists only after host success; other preferences may apply immediately or on the next connection.
   Preserve each setting's actual application timing instead of imposing one transaction order on all preferences.

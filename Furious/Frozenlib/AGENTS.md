@@ -45,7 +45,9 @@ boundaries, not a license for unrelated application orchestration to accumulate 
   not an automatic retry scheduler.
   Notification/cleanup snapshots must recheck each recipient's native validity immediately before delivery:
   an earlier callback can destroy a later recipient after the initial pool prune. The peer-destruction cases
-  in `tests/test_frozenlib.py` cover connection, theme, translation, and cleanup dispatch.
+  in `tests/test_frozenlib.py` cover connection, theme, translation, and cleanup dispatch. Removing native-dead
+  pool members does not cancel an operation or invalidate a still-live generation; those decisions remain with
+  the controller/service that owns the work.
 - `AppResources.py` is generated from `Resources.qrc` and referenced assets. Change the manifest/input files and
   regenerate with the compatible PySide6 resource compiler; never hand-edit generated resource code.
 - Verify every affected OS branch with mocked host calls, plus persistence-on-failure, bounded cleanup, import-time

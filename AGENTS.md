@@ -27,7 +27,9 @@
   exact path sets and Git status/diff; separately compare ignored/untracked guides that Git's ordinary diff omits.
   No original path may disappear or become a rename. Default to exact equality and improve redundant scopes in place.
   Distinguish maintained source guides from copied build artifacts and independent checkouts. Preserve all inventoried
-  paths, but do not refresh generated copies or rewrite another project's guidance as an incidental source audit.
+  paths. An explicit audit of copied/independent scopes may improve their guidance in place; an ordinary source
+  change must not refresh them incidentally. Resolve each claim against that checkout or artifact, not the
+  containing repository's newer implementation. Copied prose cannot establish a binary's provenance or behavior.
 - Inheritance follows directory ancestry. Name the nearest governing guide when clarifying a scope; a sibling guide
   identifies a contract to consult, not another parent. Verification and self-evolution here apply to every descendant
   scope without repeating the same maintenance checklist in each file. Ignored comparison checkouts retain their own

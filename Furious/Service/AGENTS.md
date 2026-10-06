@@ -21,6 +21,9 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   and release contexts only when execution no longer needs them. Late delivery must not revive a shut-down manager
   or mutate live state. A terminal result ends an operation's publication contract, not necessarily its execution:
   a replacement may be admitted only under the scheduler's resource bounds while cancelled work still occupies a slot.
+  Provider calls, reply aborts, and grouped notifications are reentrancy boundaries too. Recheck native ownership
+  and the captured generation before continuing a stage, restarting a timer, admitting another request, or
+  publishing the next result; a check at callback entry alone cannot establish freshness afterward.
 
 ## Connection and network workflows
 
@@ -102,9 +105,8 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
 - Metrics sampling owns its worker/future generation and rejects results after disconnect, disablement, replacement,
   or shutdown. Normalize cumulative-counter resets before history aggregation; clearing usage must not erase speed
   history.
-  Statistics preparation and grouped sample notifications recheck native ownership and generation after callbacks.
-  Endpoint state/result notifications likewise stop the current lookup stage when a listener destroys, disables,
-  or replaces its session. `tests/test_service_runtime.py` and `tests/test_endpoint_info.py` cover these boundaries.
+  Statistics preparation/publication and endpoint lookup use the workflow reentrancy rules above; exercise them
+  through `tests/test_service_runtime.py` and `tests/test_endpoint_info.py` rather than inferring safety from entry checks.
   History contains finite values for registered metrics on a monotonic timeline. A missing metric sample is not a
   measured zero; preserve that distinction when adding providers or aggregating sparse series. Closing executor
   admission or cancelling a future does not terminate a query already inside plugin code; test stale-result suppression

@@ -27,4 +27,6 @@ resource-manifest contract; it does not govern general UI layout.
 - Deployment icons have direct filesystem consumers in `Deploy.py` outside the Qt resource namespace. Check those
   installer/application inputs separately from aliases before removing a PNG. Verify control/tray rendering under
   both themes, high DPI, relevant sizes, and disabled/selected states; resource generation does not prove themed
-  rendering or inclusion in an installer.
+  rendering or inclusion in an installer. Resource generation validates the manifest's input relationship, while
+  consumer rendering validates meaning and visibility; neither proves the other. Keep asset-only checks separate
+  from changes to the action's lifetime or command target.

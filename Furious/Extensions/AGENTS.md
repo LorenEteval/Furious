@@ -27,7 +27,9 @@ is bundled.
   cancel tests, reconnect, or publish UI state; those decisions remain at the import/manager commit boundaries.
   Preserve duplicate item order through decoding: the importer assigns occurrence keys when upstream IDs or
   connection fingerprints repeat. Deduplicating at the envelope layer can change which stored profile keeps local
-  metadata. Test recognized-empty, wholly unsupported, mixed-validity, and duplicate payloads separately so
+  metadata. Keep per-item acceptance/rejection explicit: decoding success must not erase the importer's rejected
+  item count or the protocol descriptor's subscription eligibility. Test recognized-empty, wholly unsupported,
+  mixed-validity, and duplicate payloads separately so
   decoder matching is not confused with successful import or authorization to clear an existing group. The standard
   share-link decoder treats blank/comment-only content as a mismatch; an empty result from a different decoder needs its own
   import/reconciliation policy, not an assumption borrowed from this format.

@@ -57,7 +57,9 @@ exceptions; it does not define the source test suite or imply that every package
   tray integration, privilege prompts, or an installed application's host effects. Follow actual `needs` and tag gates
   back to required checks; upload success alone does not establish release eligibility. A diagnostic Nuitka build
   with different compiler/runtime flags is separate evidence from the ordinary release configuration; exercise the
-  latter before claiming a packaged defect resolved.
+  latter before claiming a packaged defect resolved. Run artifact checks with paths and working directories
+  that cannot accidentally import the source checkout or development environment; the selected distribution
+  must supply the modules, native libraries, metadata, and resources being verified.
   Binary jobs can produce/upload artifacts independently of source-test completion; follow the publication job's
   actual prerequisites rather than assuming every uploaded artifact already passed the source suite. Native-binding
   API checks must avoid creating host interfaces and stay distinct from privileged TUN smoke tests.

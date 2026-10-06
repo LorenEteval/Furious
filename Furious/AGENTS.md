@@ -17,6 +17,8 @@ place.
 - Package `__init__.py` files are curated compatibility surfaces, not mirrors. Import-time settings registration and
   lazy capability imports are distinct from application construction or plugin discovery. Preserve that distinction
   when changing exports; trace transitive imports and public-import/packaging tests, not just the edited module.
+  Wildcard exports can force lazy attributes to load, so check ordinary, wildcard, and cold-process imports
+  separately. Importability means preserving the actual side-effect boundary, not merely avoiding a syntax error.
 
 ## State, data, and ownership
 

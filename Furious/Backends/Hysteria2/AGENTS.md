@@ -41,7 +41,9 @@ owns Hysteria 2's nested upstream document, native-TUN capability, statistics, a
   projection preservation, every native/application-TUN and resolution case, probe stripping, readiness/exit cleanup,
   statistics cancellation, and repeated transient editor/settings-dialog destruction. Check the configured
   statistics target independently from the HTTP proxy readiness endpoint: the former queries the server API,
-  while the latter only observes the local client listener. Keep this guide synchronized with
-  verified upstream schema changes rather than treating current field lists as permanent. Start with
+  while the latter only observes the local client listener. A monitor target is captured execution data;
+  current UI credentials or an edited profile must not silently replace a running connection's statistics target.
+  Keep this guide synchronized with verified upstream schema changes rather than treating current field lists as
+  permanent. Start with
   `tests/test_hysteria2_compatibility.py`, `tests/test_native_tun_semantics.py`, and
   `tests/test_backend_editor_contract.py`.

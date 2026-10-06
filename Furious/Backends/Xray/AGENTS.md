@@ -31,7 +31,9 @@ owns Xray's full JSON preservation, routing/assets/statistics, and protocol/tran
   Replacement is atomic per asset file, not across GeoIP/geosite. Test sibling failure without assuming a
   successfully replaced asset rolls back. Digest matching checks downloaded bytes against the supplied digest;
   it does not independently establish the publisher's authenticity. `Deploy.py --download` uses a different
-  download path and does not inherit runtime staging or checksum guarantees.
+  download path and does not inherit runtime staging or checksum guarantees. Hash jobs receive copied bytes
+  and return through the updater's Qt-thread boundary; closing the updater must release request and hash-callback
+  contexts independently, including native destruction without a normal reply completion.
 - Routing selection IDs, user routing documents, and translated built-in labels are different contracts. Preserve
   custom document content and named-profile identity while composing runtime routing/API statistics. Trace the
   selected repository routing document separately from the connection's own routing branch; neither may be mutated
