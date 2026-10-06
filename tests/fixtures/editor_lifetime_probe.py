@@ -106,10 +106,12 @@ def runConnectionRecoveryProbe(iterations=100):
     hadWindow = hasattr(app, 'mainWindow')
     previousWindow = getattr(app, 'mainWindow', None)
     previousClipboard = app.clipboard().text()
+
     window = AppQMainWindow()
     logPageOpens = []
     window.showLogPage = lambda: logPageOpens.append(True)
     app.mainWindow = window
+
     references = []
     destroyed = []
     protectedMethods = getattr(
@@ -124,6 +126,7 @@ def runConnectionRecoveryProbe(iterations=100):
             )
             references.append(weakref.ref(box))
             box.destroyed.connect(lambda *_args: destroyed.append(True))
+
             box.open()
             processQtEvents()
 
@@ -144,11 +147,13 @@ def runConnectionRecoveryProbe(iterations=100):
         assert len(destroyed) == iterations
         assert all(reference() is None for reference in references)
         assert not AppQDialog._openDialogs
+
         growth = (
             len(protectedMethods) - protectedBefore
             if protectedBefore is not None
             else None
         )
+
         assert growth in (None, 0), growth
 
         return {

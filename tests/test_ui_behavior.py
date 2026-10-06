@@ -452,6 +452,7 @@ class SettingsPageOrganizationTest(unittest.TestCase):
     def testSearchMatchesDescriptionsAndSectionsWithoutApplyingSettings(self):
         with isolatedSettings():
             AppSettings.set('Language', 'EN')
+
             page, callbacks = self.buildPage()
             page.show()
             page.setConnectionControlsEnabled(False)
@@ -472,14 +473,17 @@ class SettingsPageOrganizationTest(unittest.TestCase):
 
             page.searchLineEdit.setText('TUN')
             page.searchLineEdit.applySearch()
+
             self.assertTrue(all(not card.isHidden() for card in page.tunSection.cards))
             self.assertFalse(page.tunBackendCard.isEnabled())
 
             page.searchLineEdit.setText('[')
             page.searchLineEdit.applySearch()
+
             self.assertTrue(page.emptySearchLabel.isVisible())
 
             page.searchLineEdit.clear()
+
             self.assertFalse(page.emptySearchLabel.isVisible())
             self.assertTrue(
                 all(not section.isHidden() for section in page._searchSections)
@@ -504,6 +508,7 @@ class SettingsPageOrganizationTest(unittest.TestCase):
                 ),
             ),
         )
+
         page, _callbacks = self.buildPage(
             platform='Linux',
             flatpakID='io.github.LorenEteval.Furious',
@@ -514,16 +519,19 @@ class SettingsPageOrganizationTest(unittest.TestCase):
 
         page.searchLineEdit.setText('vendor [example]')
         page.searchLineEdit.applySearch()
+
         self.assertTrue(page.pluginSettingsTitleLabel.isVisible())
         self.assertTrue(page.pluginSections[0].isVisible())
         self.assertTrue(page.tunSection.isHidden())
 
         page.searchLineEdit.setText('private-control-value')
         page.searchLineEdit.applySearch()
+
         self.assertTrue(page.emptySearchLabel.isVisible())
         callback.assert_not_called()
 
         page.searchLineEdit.clear()
+
         self.assertTrue(page.tunSection.isHidden())
         self.assertTrue(page.pluginSections[0].isVisible())
 
@@ -533,6 +541,7 @@ class SettingsPageOrganizationTest(unittest.TestCase):
     def testSearchFindShortcutLanguageSwitchAndHiddenDebounce(self):
         with isolatedSettings():
             AppSettings.set('Language', 'EN')
+
             page, _callbacks = self.buildPage()
             page.show()
             page.activateWindow()
@@ -540,26 +549,33 @@ class SettingsPageOrganizationTest(unittest.TestCase):
             processQtEvents()
 
             QTest.keySequence(page.aboutCard.button, page.findAction.shortcut())
+
             self.assertTrue(page.searchLineEdit.hasFocus())
 
             QTest.keyClicks(page.searchLineEdit, 'metrics')
             self.assertTrue(page.searchLineEdit._searchTimer.isActive())
+
             page.hide()
             self.assertFalse(page.searchLineEdit._searchTimer.isActive())
+
             page.show()
             processQtEvents()
+
             self.assertTrue(page.metricsCollectionCard.isVisible())
             self.assertTrue(page.generalSection.isHidden())
 
             AppSettings.set('Language', 'ZH')
             Mixins.QTranslatable.retranslateAll()
             processQtEvents()
+
             page.searchLineEdit.setText(_('Enable Metrics Collection'))
             page.searchLineEdit.applySearch()
+
             self.assertTrue(page.metricsCollectionCard.isVisible())
 
             page.searchLineEdit.setText('Enable Metrics Collection')
             page.searchLineEdit.applySearch()
+
             self.assertTrue(page.metricsCollectionCard.isVisible())
 
             page.close()
@@ -3723,24 +3739,29 @@ class DialogBehaviorTest(unittest.TestCase):
                 clicked = QSignalSpy(messageBox.buttonClicked)
                 finished = QSignalSpy(messageBox.finished)
                 destroyed = QSignalSpy(messageBox.destroyed)
+
                 messageBox.open()
                 processQtEvents()
 
                 button.click()
+
                 self.assertEqual(clicked.count(), 1)
                 self.assertEqual(finished.count(), 0)
                 self.assertTrue(messageBox.isVisible())
 
                 messageBox.button(AppQMessageBox.StandardButton.Close).click()
                 processQtEvents()
+
                 self.assertEqual(finished.count(), 1)
                 self.assertEqual(destroyed.count(), 1)
 
     def testConnectionErrorCopyKeepsDialogOpenAndNavigationReleasesIt(self):
         app = application()
         originalClipboard = app.clipboard().text()
+
         window = QWidget()
         window.showLogPage = mock.Mock()
+
         error = ConnectionError(
             'Unable to connect', 'Failed to start', 'Native detail <tag>'
         )
@@ -3751,10 +3772,12 @@ class DialogBehaviorTest(unittest.TestCase):
                     messageBox = ConnectionErrorMessageBox(error)
                     reference = weakref.ref(messageBox)
                     destroyed = QSignalSpy(messageBox.destroyed)
+
                     messageBox.open()
                     processQtEvents()
 
                     messageBox.copyErrorButton.click()
+
                     self.assertEqual(
                         app.clipboard().text(),
                         '\n\n'.join((error.title, error.message, error.details)),
@@ -3770,12 +3793,14 @@ class DialogBehaviorTest(unittest.TestCase):
 
                     self.assertEqual(destroyed.count(), 1)
                     self.assertTrue(window.isVisible())
+
                     del destroyed, messageBox
                     self.assertIsNone(reference())
 
                 self.assertEqual(window.showLogPage.call_count, 30)
         finally:
             app.clipboard().setText(originalClipboard)
+
             window.close()
             window.deleteLater()
 
@@ -3792,7 +3817,9 @@ class DialogBehaviorTest(unittest.TestCase):
                 processQtEvents()
 
                 self.assertFalse(messageBox.openLogsButton.isEnabled())
+
                 messageBox.copyErrorButton.click()
+
                 self.assertEqual(app.clipboard().text(), 'Error\n\nFailed')
                 self.assertTrue(messageBox.isVisible())
 
@@ -3809,12 +3836,14 @@ class DialogBehaviorTest(unittest.TestCase):
         with mock.patch.object(app, 'mainWindow', window, create=True):
             messageBox = ConnectionErrorMessageBox(ConnectionError('Error', 'Failed'))
             messageBox.finished.connect(lambda _result: deleteQObject(window))
+
             messageBox.open()
             processQtEvents()
 
             with mock.patch('sys.excepthook') as exceptionHook:
                 messageBox.openLogsButton.click()
                 processQtEvents()
+
                 exceptionHook.assert_not_called()
 
             self.assertFalse(isValid(window))
