@@ -1705,41 +1705,91 @@ class SingTUNStartupTest(unittest.TestCase):
                 processQtEvents()
 
     def testInvalidSettingsReleaseDetachedRouterAndPrimaryRuntime(self):
+        """Reject settings before host/native setup, independently of privileges."""
         module = importlib.import_module('Furious.Service.ConnectionManager')
-        primaryRouter, router = RuntimeEventRouter(), RuntimeEventRouter()
-        primary = _Runtime()
-        manager = ConnectionManager()
 
-        with isolatedSettings(), mock.patch.object(
-            Storage,
-            'UserTUNSettings',
-            side_effect=AssertionError('inactive tun2socks backend'),
-        ), mock.patch.object(
-            Storage, 'UserSingTUNSettings', return_value={'stack': 'go'}
-        ), mock.patch.object(
-            manager, '_prepareTUNPolicy', return_value=(False, True)
-        ), mock.patch.object(
-            module,
-            'getPluginRegistry',
-            return_value=_Registry([PreparedRuntime(primary)]),
-        ):
-            AppSettings.set('ApplicationTUNBackend', 'sing-tun')
+        for platform in ('Windows', 'Darwin', 'Linux'):
+            for isAdmin in (False, True):
+                with self.subTest(
+                    platform=platform, isAdmin=isAdmin
+                ), isolatedSettings():
+                    primaryRouter, router = RuntimeEventRouter(), RuntimeEventRouter()
+                    primary = _Runtime()
+                    manager = ConnectionManager()
 
-            operation = manager.startAsync(_Configuration(), 'Global', deepcopy=False)
+                    with (
+                        mock.patch.object(module, 'PLATFORM', platform),
+                        mock.patch.object(
+                            module.SystemRuntime, 'isAdmin', return_value=isAdmin
+                        ),
+                        mock.patch.object(
+                            Storage,
+                            'UserTUNSettings',
+                            side_effect=AssertionError('inactive tun2socks backend'),
+                        ),
+                        mock.patch.object(
+                            Storage,
+                            'UserSingTUNSettings',
+                            return_value={'stack': 'unsupported-stack'},
+                        ),
+                        mock.patch.object(
+                            manager, '_prepareTUNPolicy', return_value=(False, True)
+                        ),
+                        mock.patch.object(
+                            module,
+                            'getPluginRegistry',
+                            return_value=_Registry([PreparedRuntime(primary)]),
+                        ),
+                        mock.patch.object(
+                            module,
+                            'SingTUNHostPlan',
+                            side_effect=AssertionError('unexpected host construction'),
+                        ) as hostPlan,
+                        mock.patch.object(
+                            module,
+                            'SingTUN',
+                            side_effect=AssertionError(
+                                'unexpected native construction'
+                            ),
+                        ) as nativeRuntime,
+                    ):
+                        AppSettings.set('ApplicationTUNBackend', 'sing-tun')
+                        failures = []
 
-            with mock.patch.object(
-                module, 'RuntimeEventRouter', side_effect=[primaryRouter, router]
-            ):
-                self.assertTrue(waitFor(lambda: operation._terminal))
-                self.assertEqual(router.state, RuntimeLeaseState.Released)
-                self.assertFalse(primary.isRunning())
-                self.assertEqual(manager.runtimes, [])
+                        try:
+                            operation = manager.startAsync(
+                                _Configuration(), 'Global', deepcopy=False
+                            )
+                            operation.failed.connect(
+                                lambda _operation, message, details: failures.append(
+                                    (message, details)
+                                )
+                            )
 
-            manager.cleanup()
+                            with mock.patch.object(
+                                module,
+                                'RuntimeEventRouter',
+                                side_effect=[primaryRouter, router],
+                            ):
+                                self.assertTrue(waitFor(lambda: operation._terminal))
+                                self.assertEqual(
+                                    operation.stage, ConnectionStartStage.Failed
+                                )
+                                self.assertEqual(
+                                    failures, [('', 'Unsupported sing-tun stack')]
+                                )
+                                self.assertEqual(
+                                    router.state, RuntimeLeaseState.Released
+                                )
+                                self.assertFalse(primary.isRunning())
+                                self.assertEqual(manager.runtimes, [])
+                                hostPlan.assert_not_called()
+                                nativeRuntime.assert_not_called()
+                        finally:
+                            manager.cleanup()
+                            processQtEvents()
 
-        processQtEvents()
-
-        self.assertFalse(isValid(router))
+                    self.assertFalse(isValid(router))
 
     def testAliveDoesNotCommitUntilAuthoritativeNativeReadyAndDNSComplete(self):
         module = importlib.import_module('Furious.Service.ConnectionManager')
