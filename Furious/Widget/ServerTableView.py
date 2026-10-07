@@ -1102,11 +1102,11 @@ class ServerTableView(
             ),
             AppQSeparator(),
             AppQAction(
-                _('Add to Favorites'),
+                _('Add To Favorites'),
                 callback=functools.partial(self.setSelectedProfilesFavorite, True),
             ),
             AppQAction(
-                _('Remove from Favorites'),
+                _('Remove From Favorites'),
                 callback=functools.partial(self.setSelectedProfilesFavorite, False),
             ),
             AppQSeparator(),

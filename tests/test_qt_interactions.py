@@ -2127,7 +2127,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                     action
                     for action in table.contextMenu.actions()
                     if not action.isSeparator()
-                    and action.textCompare('Add to Favorites')
+                    and action.textCompare('Add To Favorites')
                 )
 
                 add.trigger()
@@ -2152,7 +2152,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                     action
                     for action in table.contextMenu.actions()
                     if not action.isSeparator()
-                    and action.textCompare('Remove from Favorites')
+                    and action.textCompare('Remove From Favorites')
                 )
                 remove.trigger()
 

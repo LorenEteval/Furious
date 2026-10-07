@@ -569,7 +569,7 @@ class _TUNBackendSettingsCard(_SettingsCard):
         super().__init__(
             'diagram-3.svg',
             self.comboBox,
-            _('Application TUN Engine'),
+            _('TUN Engine'),
             _('Choose the TUN engine used when native core TUN is not in use.'),
         )
 

@@ -3348,12 +3348,12 @@ TRANSLATION = {
         "ZH": "测试",
         "isReviewed": "True"
     },
-    "Application TUN Engine": {
+    "TUN Engine": {
         "source": [
             "Furious.Window.SettingsPage"
         ],
-        "RU": "Движок TUN приложения",
-        "ZH": "应用 TUN 引擎",
+        "RU": "Движок TUN",
+        "ZH": "TUN引擎",
         "isReviewed": "True"
     },
     "Choose the TUN engine used when native core TUN is not in use.": {
@@ -3521,7 +3521,7 @@ TRANSLATION = {
             "Furious.Backends.ExternalCore.Editor"
         ],
         "RU": "Использовать TUN приложения",
-        "ZH": "使用应用程序 TUN",
+        "ZH": "使用应用程序TUN",
         "isReviewed": "True"
     },
     "Configure sing-tun interface, stack, SOCKS transit and host settings.": {
@@ -3529,7 +3529,7 @@ TRANSLATION = {
             "Furious.Window.SettingsPage"
         ],
         "RU": "Настройте интерфейс, стек, передачу через SOCKS и параметры хоста sing-tun.",
-        "ZH": "配置 sing-tun 的接口、协议栈、SOCKS 转发和主机设置。",
+        "ZH": "配置sing-tun的接口、协议栈、SOCKS转发和主机设置。",
         "isReviewed": "True"
     },
     "Host Settings": {
@@ -3598,7 +3598,7 @@ TRANSLATION = {
         "ZH": "正在创建副本",
         "isReviewed": "True"
     },
-    "Add to Favorites": {
+    "Add To Favorites": {
         "source": [
             "Furious.Widget.ServerTableView"
         ],
@@ -3606,7 +3606,7 @@ TRANSLATION = {
         "ZH": "添加到收藏",
         "isReviewed": "True"
     },
-    "Remove from Favorites": {
+    "Remove From Favorites": {
         "source": [
             "Furious.Widget.ServerTableView"
         ],
@@ -3699,7 +3699,7 @@ TRANSLATION = {
             "Furious.Window.SingTUNSettingsDialog"
         ],
         "RU": "пусто — автоматически",
-        "ZH": "留空自动配置",
+        "ZH": "留空则自动配置",
         "isReviewed": "True"
     },
     "separated by commas": {

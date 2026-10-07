@@ -507,9 +507,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                     card.descriptionLabel.retranslate()
                     card.comboBox.retranslate()
 
-                    self.assertEqual(
-                        card.titleLabel.text(), _('Application TUN Engine', language)
-                    )
+                    self.assertEqual(card.titleLabel.text(), _('TUN Engine', language))
                     self.assertEqual(card.comboBox.currentData(), 'tun2socks')
 
                 self.assertFalse(AppSettings.isStateON_('VPNMode'))
