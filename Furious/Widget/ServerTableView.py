@@ -122,15 +122,10 @@ class MBoxUpdateSubsInfo(AppQMessageBox):
                 * self.fontMetrics().averageCharWidth(),
             )
 
-    def retranslate(self):
+    def _retranslateContent(self):
         """Refresh translated text for the m box update subs info."""
-        self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
         self.setColumnMinWidth()
-
-        # Ignore informative text, buttons
-
-        self.moveToCenter()
 
 
 class DeleteServersProgressDialog(AppQTransientDialog):
@@ -279,8 +274,8 @@ class DeleteServersProgressDialog(AppQTransientDialog):
 
     def retranslate(self):
         """Refresh translated text for the delete servers progress dialog."""
-        self.setWindowTitle(_(self.windowTitle()))
-        self.cancelButton.setText(_(self.cancelButton.text()))
+        super().retranslate()
+
         self.updateStatus()
 
 
@@ -320,6 +315,7 @@ class DuplicateServersProgressDialog(AppQTransientDialog):
 
     def open(self):
         result = super().open()
+
         singleShotWeakly(0, self, 'duplicateNext')
 
         return result
@@ -1501,6 +1497,7 @@ class ServerTableView(
             for row, profile in enumerate(Storage.UserServers())
             if profile.metadata.profileId in changed
         ]
+
         self.sourceModel.dataChanged.emit(
             self.sourceModel.index(rows[0], 0),
             self.sourceModel.index(rows[-1], self.sourceModel.columnCount() - 1),

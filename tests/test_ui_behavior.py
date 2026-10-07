@@ -66,6 +66,7 @@ from Furious.Backends.Xray.VmessEditor import (
     VmessEditor,
 )
 from Furious.Actions.Connection import ConnectAction, ConnectionErrorMessageBox
+from Furious.Actions.Import import MBoxImportError
 from Furious.Controllers.ConnectionController import (
     ConnectionError,
     ConnectionController,
@@ -99,9 +100,13 @@ from Furious.Repository import Storage
 from Furious.Repository.Routings import UserRoutings
 from Furious.Qt import (
     AppHue,
+    AppQAction,
     AppQComboBox,
     AppQDialog,
+    AppQDialogButtonBox,
     AppQMessageBox,
+    AppQMenu,
+    AppQPushButton,
     AppQSwitch,
     AppStyleSheet,
     gettext as _,
@@ -130,9 +135,10 @@ from Furious.Widget.RoutingSelector import RoutingSelector
 from Furious.Widget.ServerTableView import ServerTableView
 
 from PySide6 import QtCore
-from PySide6.QtGui import QImage
+from PySide6.QtGui import QAction, QImage
 from PySide6.QtTest import QAbstractItemModelTester, QSignalSpy, QTest
 from PySide6.QtWidgets import (
+    QPushButton,
     QStackedWidget,
     QToolButton,
     QComboBox,
@@ -2971,6 +2977,119 @@ class DialogBehaviorTest(unittest.TestCase):
     def tearDown(self):
         """Finish every deferred transient deletion between tests."""
         collectAtBoundary()
+
+    def testCustomMessageRetranslationKeepsPayloadAndUpdatesDialogControls(self):
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            box = MBoxImportError()
+            box.setWindowTitle(_('Duplicate'))
+            box.setHeading(_('Delete'))
+            box.setText(_('Invalid data'))
+            box.setInformativeText('Save')
+            button = box.addButton('Cancel', box.ButtonRole.RejectRole)
+
+            try:
+                for locale in ('RU', 'ZH', 'EN'):
+                    AppSettings.set('Language', locale)
+                    Mixins.QTranslatable.retranslateAll()
+                    self.assertEqual(box.windowTitle(), _('Duplicate'))
+                    self.assertEqual(box.heading(), _('Delete'))
+                    self.assertEqual(box.text(), _('Invalid data'))
+                    self.assertEqual(box.informativeText(), 'Save')
+                    self.assertEqual(button.text(), _('Cancel'))
+            finally:
+                box.deleteLater()
+                processQtEvents()
+
+    def testButtonContainersRespectManagedTranslationAndPlainQtFallback(self):
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+
+            for containerType in (AppQMessageBox, AppQDialogButtonBox):
+                with self.subTest(container=containerType.__name__):
+                    owner = containerType()
+                    protected = AppQPushButton('Cancel', translatable=False)
+                    managed = AppQPushButton('Save')
+                    plain = QPushButton('Cancel')
+
+                    for button in (protected, managed, plain):
+                        owner.addButton(button, owner.ButtonRole.ActionRole)
+
+                    try:
+                        for locale in ('RU', 'ZH', 'EN'):
+                            AppSettings.set('Language', locale)
+                            with mock.patch.object(
+                                managed, 'retranslate', wraps=managed.retranslate
+                            ) as translate:
+                                Mixins.QTranslatable.retranslateAll()
+                                self.assertEqual(translate.call_count, 1)
+                            self.assertEqual(protected.text(), 'Cancel')
+                            self.assertEqual(managed.text(), _('Save'))
+                            self.assertEqual(plain.text(), _('Cancel'))
+                    finally:
+                        owner.deleteLater()
+                        processQtEvents()
+
+    def testActionRetranslationLeavesManagedChildrenToTheirOwnPass(self):
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            owner = QWidget()
+            menu = AppQMenu(parent=owner)
+            managed = AppQAction('Save', parent=menu)
+            protected = AppQAction('Cancel', parent=menu, translatable=False)
+            menu.addActions([managed, protected])
+            parent = AppQAction('Server', parent=owner, menu=menu)
+
+            try:
+                for locale in ('RU', 'ZH', 'EN'):
+                    AppSettings.set('Language', locale)
+                    with mock.patch.object(
+                        managed, 'setText', wraps=managed.setText
+                    ) as update:
+                        Mixins.QTranslatable.retranslateAll()
+                        self.assertEqual(update.call_count, 1)
+                    self.assertEqual(parent.text(), _('Server'))
+                    self.assertEqual(managed.text(), _('Save'))
+                    self.assertEqual(protected.text(), 'Cancel')
+
+                plain = QAction('Cancel', menu)
+                menu.addAction(plain)
+                AppSettings.set('Language', 'ZH')
+                Mixins.QTranslatable.retranslateAll()
+                self.assertEqual(plain.text(), _('Cancel'))
+            finally:
+                owner.deleteLater()
+                processQtEvents()
+
+    def testMessageGeometryRefreshesAfterManagedButtonTranslation(self):
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            box = AppQMessageBox()
+            button = AppQPushButton(_('Copy Error'))
+            box.addButton(button, box.ButtonRole.ActionRole)
+            box.open()
+            processQtEvents()
+
+            try:
+                for locale in ('RU', 'ZH', 'EN'):
+                    AppSettings.set('Language', locale)
+                    Mixins.QTranslatable.retranslateAll()
+                    processQtEvents()
+                    self.assertEqual(button.text(), _('Copy Error'))
+                    self.assertGreaterEqual(
+                        button.width(), box._preferredButtonWidth(button)
+                    )
+                    self.assertEqual(box.surface.size(), box.size())
+
+                AppSettings.set('Language', 'RU')
+                Mixins.QTranslatable.retranslateAll()
+                deleteQObject(box)
+                processQtEvents()
+                self.assertFalse(isValid(box))
+            finally:
+                if isValid(box):
+                    box.close()
+                processQtEvents()
 
     def testThemeFallbackWorksBeforeConnectionControllerExists(self):
         """Allow startup error dialogs to use the disconnected theme safely."""

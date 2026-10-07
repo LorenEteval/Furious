@@ -72,13 +72,9 @@ class MBoxJSONDecodeError(AppQMessageBox):
             + f'\n\n{self.error}'
         )
 
-    def retranslate(self):
+    def _retranslateContent(self):
         """Refresh translated text for the m box JSON decode error."""
         self.setText(self.customText())
-
-        # Ignore informative text, buttons
-
-        self.moveToCenter()
 
 
 class TextEditorWindow(AppQMainWindow):

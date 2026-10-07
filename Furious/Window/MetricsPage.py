@@ -458,7 +458,5 @@ class MetricsPage(Mixins.QTranslatable, Mixins.ThemeAware, QMainWindow):
             _('Upload Speed'),
             _('Upload Traffic Usage'),
         )
-        self.endpointInfoWidget.retranslate()
-
         self._dirty = True
         self._scheduleRender()

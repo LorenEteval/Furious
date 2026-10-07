@@ -304,11 +304,17 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
 
         def recursiveTranslate(action, memo):
             """Handle recursive translate for the app q action."""
-            if action not in memo and not action.isSeparator() and action.translatable:
-                action.setText(_(action.text()))
-                action.setStatusTip(_(action.statusTip()))
+            if action in memo:
+                return
 
             memo[action] = True
+
+            if action is not self and isinstance(action, Mixins.QTranslatable):
+                return
+
+            if not action.isSeparator() and getattr(action, 'translatable', True):
+                action.setText(_(action.text()))
+                action.setStatusTip(_(action.statusTip()))
 
             # Some old version PySide6 does not have menu() method
             # for QAction. Protect it

@@ -522,7 +522,9 @@ class AppQDialogButtonBox(Mixins.QTranslatable, QDialogButtonBox):
     def retranslate(self):
         """Refresh translated text for the app Qt dialog button box."""
         for button in self.buttons():
-            button.setText(_(button.text()))
+            if not isinstance(button, Mixins.QTranslatable):
+                # Manage the translation explicitly
+                button.setText(_(button.text()))
 
 
 class AppQGroupBox(Mixins.QTranslatable, QGroupBox):
@@ -1995,7 +1997,7 @@ class AppQMessageBox(AppQTransientDialog):
 
     def retranslate(self):
         """Refresh translated text for the app q message box."""
-        self.setWindowTitle(_(self.windowTitle()))
+        super().retranslate()
 
         try:
             self.setHeading(_(self.heading()))
@@ -2003,6 +2005,32 @@ class AppQMessageBox(AppQTransientDialog):
             # Runtime headings may already be localized by their owning layer.
             pass
 
+        self._retranslateContent()
+
+        for button in self.buttons():
+            if isinstance(button, Mixins.QTranslatable):
+                continue
+
+            if button.text().find('OK') != -1:
+                # &OK...
+                pass
+            else:
+                button.setText(_(button.text()))
+
+        if self.isVisible():
+            # Registered child buttons finish translating later in the global pass.
+            singleShotWeakly(0, self, '_refreshTranslatedGeometry')
+        else:
+            self.moveToCenter()
+
+    def _refreshTranslatedGeometry(self):
+        """Fit current translated controls after the registered children update."""
+        if self.isVisible():
+            self._updateDialogSize()
+            self.moveToCenter()
+
+    def _retranslateContent(self):
+        """Translate ordinary content; subclasses own composite or diagnostic text."""
         self.setText(_(self.text()))
 
         try:
@@ -2010,15 +2038,6 @@ class AppQMessageBox(AppQTransientDialog):
         except KeyError:
             # Any translatable informative text
             pass
-
-        for button in self.buttons():
-            if button.text().find('OK') != -1:
-                # &OK...
-                pass
-            else:
-                button.setText(_(button.text()))
-
-        self.moveToCenter()
 
     def disconnectedCallback(self):
         """Update the app q message box for a disconnected state."""
@@ -2466,13 +2485,9 @@ class MBoxQuestionDelete(AppQMessageBox):
         else:
             return _('Delete this item?') + f'\n\n{self.possibleRemark}'
 
-    def retranslate(self):
+    def _retranslateContent(self):
         """Refresh translated text for the m box question delete."""
         self.setText(self.customText())
-
-        # Ignore informative text, buttons
-
-        self.moveToCenter()
 
 
 class MBoxNewChangesNextTime(AppQMessageBox):
@@ -2496,14 +2511,9 @@ class MBoxNewChangesNextTime(AppQMessageBox):
             _('New changes will take effect next time') + '\n\n' + _('Reconnect now?')
         )
 
-    def retranslate(self):
+    def _retranslateContent(self):
         """Refresh translated text for the m box new changes next time."""
-        self.setWindowTitle(_(self.windowTitle()))
         self.setText(self.customText())
-
-        # Ignore informative text, buttons
-
-        self.moveToCenter()
 
 
 def showMBoxNewChangesNextTime(**kwargs):
@@ -2565,14 +2575,9 @@ class MBoxDirectRulesNotAllowed(AppQMessageBox):
             + _('Switch to global and reconnect?')
         )
 
-    def retranslate(self):
+    def _retranslateContent(self):
         """Refresh translated text for the m box direct rules not allowed."""
-        self.setHeading(_(self.heading()))
         self.setText(self.customText())
-
-        # Ignore informative text, buttons
-
-        self.moveToCenter()
 
 
 def showMBoxDirectRulesNotAllowed(**kwargs):

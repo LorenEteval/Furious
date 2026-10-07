@@ -54,15 +54,10 @@ class MBoxQuestionUpdate(AppQMessageBox):
         """Return the user-facing message text for the m box question update."""
         return _('New version available') + f': {self.version}'
 
-    def retranslate(self):
+    def _retranslateContent(self):
         """Refresh translated text for the m box question update."""
         self.setText(self.customText())
-        self.setWindowTitle(_(self.windowTitle()))
         self.setInformativeText(_(self.informativeText()))
-
-        # Ignore button text
-
-        self.moveToCenter()
 
 
 class UpdateManager(HttpGetManager):

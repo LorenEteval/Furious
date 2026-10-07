@@ -15,6 +15,14 @@ behavior, and lifetime primitives; pages and services consume them without creat
   object-name rule even when the widget's enabled state is correct.
 - Controls that retranslate retain source text; semantic/user-defined values stay untranslated. Preserve keyboard focus,
   shortcut scope, accessibility, translated-text growth, responsive layout, high-DPI behavior, and both themes.
+  Extend a concrete base retranslator when its standard fields still apply; retain intentional state/content
+  overrides instead of calling the abstract mixin. Registered child controls translate themselves, including their
+  opt-out flags; owners translate plain Qt controls that have no registration. Message boxes customize
+  `_retranslateContent()` for composite text or preserved diagnostics, leaving title, heading, buttons and geometry
+  with the shared retranslator. The locale-switch cases in `tests/test_ui_behavior.py` cover both button policies
+  and diagnostic preservation; progress and metrics cases cover one child refresh per global pass.
+  Visible message boxes refit after registered children finish translating, through a weak continuation that
+  ignores hidden or destroyed dialogs. Preserve their bounded button widths and transient destruction policy.
 - Application-owned theme transitions commit destination state immediately; snapshots are non-interactive presentation
   objects that are interrupted/disposed on replacement, geometry change, window destruction, or application cleanup.
   Geometry/destruction event filters retire snapshots immediately but defer completion observers through an owned

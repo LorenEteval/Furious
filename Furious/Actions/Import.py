@@ -304,8 +304,8 @@ class ImportURIsProgressDialog(AppQTransientDialog):
 
     def retranslate(self):
         """Refresh translated text for the import ur is progress dialog."""
-        self.setWindowTitle(_(self.windowTitle()))
-        self.cancelButton.setText(_(self.cancelButton.text()))
+        super().retranslate()
+
         self.updateStatus()
 
 
@@ -316,13 +316,9 @@ class MBoxImportError(AppQMessageBox):
         """Initialize the MBoxImportError."""
         super().__init__(*args, **kwargs)
 
-    def retranslate(self):
+    def _retranslateContent(self):
         """Refresh translated text for the m box import error."""
         self.setText(_(self.text()))
-
-        # Ignore informative text, buttons
-
-        self.moveToCenter()
 
 
 class MBoxImportMultiSuccess(AppQMessageBox):
@@ -358,13 +354,9 @@ class MBoxImportMultiSuccess(AppQMessageBox):
             # Limited
             return _('Import share link success') + f'\n\n...'
 
-    def retranslate(self):
+    def _retranslateContent(self):
         """Refresh translated text for the m box import multi success."""
         self.setText(self.customText())
-
-        # Ignore informative text, buttons
-
-        self.moveToCenter()
 
 
 class MBoxImportSuccess(AppQMessageBox):
@@ -383,13 +375,9 @@ class MBoxImportSuccess(AppQMessageBox):
         else:
             return _('Import success')
 
-    def retranslate(self):
+    def _retranslateContent(self):
         """Refresh translated text for the m box import success."""
         self.setText(self.customText())
-
-        # Ignore informative text, buttons
-
-        self.moveToCenter()
 
 
 class ImportFromFileAction(AppQAction):

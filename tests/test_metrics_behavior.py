@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib import AppSettings, Mixins
 from Furious.Qt import gettext as _
 from Furious.Service.MetricsHistory import (
     DOWNLOAD_SPEED_METRIC,
@@ -33,7 +34,15 @@ from Furious.Window.MetricsPage import MetricsPage
 
 from PySide6 import QtCore
 
-from tests.support import application, collectAtBoundary, processQtEvents, waitFor
+from tests.support import (
+    application,
+    collectAtBoundary,
+    isolatedSettings,
+    processQtEvents,
+    waitFor,
+)
+
+from unittest import mock
 
 import math
 import time
@@ -189,6 +198,39 @@ class MetricsPageAndGraphTest(unittest.TestCase):
     def tearDown(self):
         """Drain deferred widget destruction after every UI case."""
         collectAtBoundary()
+
+    def testGlobalRetranslationRefreshesEndpointOnceWithoutChangingHistory(self):
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            manager = MetricsHistory()
+            page = MetricsPage(manager)
+            manager.recordSample({DOWNLOAD_SPEED_METRIC: 32})
+            samples = manager.rawSamples()
+
+            try:
+                for locale in ('RU', 'ZH', 'EN'):
+                    AppSettings.set('Language', locale)
+                    with mock.patch.object(
+                        page.endpointInfoWidget,
+                        'retranslate',
+                        wraps=page.endpointInfoWidget.retranslate,
+                    ) as translate:
+                        Mixins.QTranslatable.retranslateAll()
+                        self.assertEqual(translate.call_count, 1)
+                    self.assertEqual(
+                        page.metricsCard.downloadTitleLabel.text(), _('Download')
+                    )
+                    self.assertEqual(
+                        page.endpointInfoWidget.titleLabel.text(),
+                        _('Proxy Endpoint Information'),
+                    )
+                    self.assertEqual(manager.rawSamples(), samples)
+                    self.assertEqual(page._renderRevision, 0)
+            finally:
+                page.close()
+                page.deleteLater()
+                manager.deleteLater()
+                processQtEvents()
 
     def testTrafficGraphsAndSelectorsShareOneCard(self):
         """Keep the page title separate while grouping all metrics controls."""

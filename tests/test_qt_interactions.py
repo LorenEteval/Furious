@@ -2343,6 +2343,59 @@ class ProfileMutationBatchTest(unittest.TestCase):
             self.assertFalse(isValid(dialog))
             self.assertEqual(len(Storage.UserServers()), 1000)
 
+    def testProgressDialogsUseSharedRetranslationWithoutLosingProgress(self):
+        with self.table(10) as (table, controller):
+            AppSettings.set('Language', 'EN')
+            dialogs = (
+                (
+                    ImportURIsProgressDialog(('fixture',) * 10, parent=table),
+                    'Import',
+                    'Importing',
+                    'currentIndex',
+                ),
+                (
+                    DeleteServersProgressDialog(table, range(10), parent=table),
+                    'Delete',
+                    'Deleting',
+                    'deletedCount',
+                ),
+                (
+                    DuplicateServersProgressDialog(table, table._visibleProfileIds()),
+                    'Duplicate',
+                    'Duplicating',
+                    'copiedCount',
+                ),
+            )
+
+            for dialog, title, status, counter in dialogs:
+                setattr(dialog, counter, 7)
+
+            for locale in ('RU', 'ZH', 'EN'):
+                AppSettings.set('Language', locale)
+                with ExitStack() as stack:
+                    translations = [
+                        stack.enter_context(
+                            mock.patch.object(
+                                dialog.cancelButton,
+                                'retranslate',
+                                wraps=dialog.cancelButton.retranslate,
+                            )
+                        )
+                        for dialog, *_fields in dialogs
+                    ]
+                    Mixins.QTranslatable.retranslateAll()
+
+                for (dialog, title, status, counter), translated in zip(
+                    dialogs, translations
+                ):
+                    self.assertEqual(translated.call_count, 1)
+                    self.assertEqual(dialog.windowTitle(), gettext(title))
+                    self.assertEqual(dialog.cancelButton.text(), gettext('Cancel'))
+                    self.assertEqual(
+                        dialog.statusLabel.text(), gettext(status) + '... 7/10'
+                    )
+                    self.assertEqual(getattr(dialog, counter), 7)
+
     def testImportCoalescesRowsAndProgressWithoutLosingInvalidInputPositions(self):
         profiles = [self.profile(str(index)) for index in range(600)]
         invalid = mock.Mock()

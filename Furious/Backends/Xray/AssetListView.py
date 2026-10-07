@@ -49,13 +49,9 @@ class MBoxAssetExists(AppQMessageBox):
             AppQMessageBox.StandardButton.Yes | AppQMessageBox.StandardButton.No
         )
 
-    def retranslate(self):
+    def _retranslateContent(self):
         """Refresh translated text for the m box asset exists."""
         self.setText(_(self.text()))
-
-        # Ignore informative text, buttons
-
-        self.moveToCenter()
 
 
 class XrayAssetListView(Mixins.ThemeAware, AppQListView):
