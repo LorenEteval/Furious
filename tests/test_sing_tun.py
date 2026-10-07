@@ -630,8 +630,10 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         for language in ('EN', 'RU', 'ZH'):
             with self.subTest(language=language), isolatedSettings():
                 AppSettings.set('Language', language)
+
                 dialog = self._dialog({})
                 original = dialog.document()
+
                 dialog.open()
                 dialog.activateWindow()
                 processQtEvents()
@@ -665,6 +667,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                             )
 
                         ordered = [dialog.fields[key] for key in keys]
+
                         ordered[0].setFocus()
                         processQtEvents()
 
@@ -706,8 +709,10 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
     def testDurationInputsFitTranslatedPlaceholdersWithoutChangingValues(self):
         with isolatedSettings():
             AppSettings.set('Language', 'EN')
+
             dialog = self._dialog({})
             original = dialog.document()
+
             dialog.tabs.setCurrentIndex(1)
             dialog.open()
             processQtEvents()
@@ -722,11 +727,13 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                         field = dialog.fields[key]
                         option = QStyleOptionFrame()
                         field.initStyleOption(option)
+
                         content = field.style().subElementRect(
                             QStyle.SubElement.SE_LineEditContents, option, field
                         )
                         margins = field.textMargins()
                         available = content.width() - margins.left() - margins.right()
+
                         self.assertGreaterEqual(
                             available,
                             field.fontMetrics().horizontalAdvance(
@@ -884,7 +891,9 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                 processQtEvents()
                 name = dialog.fields['primaryAdapterInterfaceName']
                 address = dialog.fields['primaryAdapterInterfaceIP']
+
                 self.assertLess(name.geometry().bottom(), address.geometry().top())
+
                 for key, width in (
                     ('primaryAdapterInterfaceName', 360),
                     ('primaryAdapterInterfaceIP', 360),
@@ -903,6 +912,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                     )
                 ]
                 ordered[0].setFocus()
+
                 for current, following in zip(ordered, ordered[1:]):
                     QTest.keyClick(current, QtCore.Qt.Key_Tab)
                     self.assertTrue(following.hasFocus())

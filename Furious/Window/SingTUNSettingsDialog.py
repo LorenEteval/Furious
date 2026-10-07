@@ -359,6 +359,7 @@ class SingTUNSettingsDialog(AppQTransientDialog):
 
             option = QStyleOptionFrame()
             widget.initStyleOption(option)
+
             margins = widget.textMargins()
             textWidth = widget.fontMetrics().horizontalAdvance(widget.placeholderText())
             size = widget.style().sizeFromContents(
@@ -371,6 +372,7 @@ class SingTUNSettingsDialog(AppQTransientDialog):
                 widget,
             )
             width = max(180, size.width() + 80)
+
             widget.setMinimumWidth(width)
             widget.setMaximumWidth(width)
 
