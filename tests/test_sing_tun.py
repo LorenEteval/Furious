@@ -68,6 +68,7 @@ from tests.support import application, isolatedSettings, processQtEvents, waitFo
 from tests.test_connection_startup_async import _Configuration, _Registry, _Runtime
 
 from unittest import mock
+from pathlib import Path
 
 import copy
 import importlib
@@ -1294,6 +1295,50 @@ class SingTUNChildTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         application()
+
+    def testProductionSpawnImportsBindingAndStopsCooperatively(self):
+        """Exercise the production importer without opening a native TUN."""
+        with tempfile.TemporaryDirectory() as directory:
+            Path(directory, 'sing_tun.py').write_text(
+                'from tests.test_sing_tun import _Engine\n'
+                '\n'
+                'def Config(**configuration):\n'
+                "    assert configuration == {'stack': 'go'}\n"
+                '    return configuration\n'
+                '\n'
+                'Engine = _Engine\n',
+                encoding='utf-8',
+            )
+
+            # Spawn copies sys.path, so the production entry point imports this
+            # harmless binding instead of the installed native package.
+            with mock.patch.object(sys, 'path', [directory, *sys.path]):
+                runtime = SingTUN({'stack': 'go'})
+
+                try:
+                    runtime.start()
+
+                    self.assertTrue(
+                        waitFor(
+                            lambda: runtime.ready or bool(runtime.startupError),
+                            timeout=10,
+                        )
+                    )
+                    self.assertEqual(runtime.startupError, '')
+                    self.assertTrue(runtime.ready)
+                    self.assertEqual(runtime.deviceName, 'utun101')
+
+                    child = runtime.process
+                    runtime.stop()
+
+                    self.assertEqual(runtime._status['state'], 'stopped')
+                    self.assertIsNone(runtime.process)
+                    self.assertTrue(child._closed)
+                finally:
+                    runtime.dispose()
+
+                self.assertTrue(runtime._control.closed)
+                self.assertTrue(runtime._childControl.closed)
 
     def testSpawnReadyCooperativeStopAndFinalHandleDisposal(self):
         runtime = _ChildRuntime({})

@@ -28,6 +28,7 @@ from Furious.Frozenlib.PythonCompatibility import PythonCompatibility
 from Furious.Interface import RuntimeExit, RuntimeExitReason, RuntimeStartError
 
 import copy
+import importlib
 import json
 import multiprocessing
 import threading
