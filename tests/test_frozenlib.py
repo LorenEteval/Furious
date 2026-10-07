@@ -65,6 +65,7 @@ class FrozenlibQtContextTest(unittest.TestCase):
         first = QtCore.QObject()
         second = QtCore.QObject()
         destroyed = QtCore.QObject()
+
         deleteQObject(destroyed)
 
         try:

@@ -1846,10 +1846,12 @@ def runConfirmationProbe(iterations=100):
 def runToolbarOwnershipProbe(iterations=100):
     """Toolbar teardown releases owned actions while preserving borrowed owners."""
     application()
+
     protected = getattr(
         sys.modules.get('PySide6-postLoad', PySide6), '_protected', None
     )
     protectedBefore = len(protected) if protected is not None else None
+
     references = []
     destroyed = []
 
@@ -1868,6 +1870,7 @@ def runToolbarOwnershipProbe(iterations=100):
                 toolbar = AppQToolBar(action, separator, parent=owner)
                 references.append(weakref.ref(toolbar))
                 toolbar.destroyed.connect(lambda *_args: destroyed.append(True))
+
                 toolbar.actionTriggered.emit(action)
 
                 deleteQObject(toolbar)
@@ -1902,8 +1905,10 @@ def runToolbarOwnershipProbe(iterations=100):
 def runModalPickerProbe(iterations=100):
     """Exercise modal owner-first teardown with actual native widget deletion."""
     application()
+
     references = []
     destroyed = []
+
     textModule = importlib.import_module('Furious.Window.TextEditorWindow')
     assetWindowModule = importlib.import_module('Furious.Backends.Xray.AssetWindow')
     pathModule = importlib.import_module('Furious.Backends.ExternalCore.Editor')
@@ -1916,6 +1921,7 @@ def runModalPickerProbe(iterations=100):
             loop.quit()
 
         QtCore.QTimer.singleShot(0, finish)
+
         loop.exec()
 
     def record(object_):
@@ -1924,8 +1930,10 @@ def runModalPickerProbe(iterations=100):
 
     with isolatedSettings(), tempfile.TemporaryDirectory() as directory:
         filename = Path(directory) / 'fixture.json'
+
         for _ in range(iterations):
             filename.write_text('keep', encoding='utf-8')
+
             parent = QWidget()
             editor = TextEditorWindow(parent)
             editor.jsonEditor.setPlainText('{"fixture": true}')
@@ -1942,6 +1950,7 @@ def runModalPickerProbe(iterations=100):
 
             assert not isValid(editor)
             assert filename.read_text(encoding='utf-8') == 'keep'
+
             del editor, parent
 
             for directoryMode in (False, True):
@@ -1956,12 +1965,14 @@ def runModalPickerProbe(iterations=100):
                     return str(filename) if directoryMode else (str(filename), '')
 
                 method = 'getExistingDirectory' if directoryMode else 'getOpenFileName'
+
                 with mock.patch.object(
                     pathModule.QFileDialog, method, side_effect=pathSelection
                 ):
                     binding.browse()
 
                 assert not isValid(binding._input)
+
                 deleteQObject(binding._title)
                 del binding, container
 
@@ -1982,8 +1993,11 @@ def runModalPickerProbe(iterations=100):
                     window.xrayAssetListView, 'appendNewItem'
                 ) as append:
                     window.appendNewItem()
+
                     append.assert_not_called()
+
             assert not isValid(window)
+
             del window, parent
 
             action = importModule.ImportFromFileAction()
@@ -1998,14 +2012,19 @@ def runModalPickerProbe(iterations=100):
             ):
                 with mock.patch.object(importModule, 'profileFromAny') as parse:
                     action.triggeredCallback(False)
+
                     parse.assert_not_called()
+
             assert not isValid(action)
+
             del action
 
             processQtEvents()
 
         assert len(destroyed) == iterations * 5
+
         collectAtBoundary()
+
         assert all(reference() is None for reference in references)
         assert not AppQDialog._openDialogs
 

@@ -121,6 +121,7 @@ class ToolbarLifetimeTest(unittest.TestCase):
 
                     if borrowed:
                         separator.setParent(owner)
+
                     toolbar = AppQToolBar(action, separator, parent=owner)
 
                     try:
@@ -128,6 +129,7 @@ class ToolbarLifetimeTest(unittest.TestCase):
                         self.assertIs(
                             separator.parent(), owner if borrowed else toolbar
                         )
+
                         toolbar.actionTriggered.emit(action)
 
                         deleteQObject(toolbar)
@@ -155,6 +157,7 @@ class ModalPickerLifetimeTest(unittest.TestCase):
             loop.quit()
 
         QtCore.QTimer.singleShot(0, finish)
+
         loop.exec()
 
     def testTextSaveDoesNotTruncateFileAfterWindowDestruction(self):
@@ -165,6 +168,7 @@ class ModalPickerLifetimeTest(unittest.TestCase):
         with isolatedSettings(), tempfile.TemporaryDirectory() as directory:
             filename = Path(directory) / 'existing.json'
             filename.write_text('keep original bytes', encoding='utf-8')
+
             parent = QWidget()
             editor = TextEditorWindow(parent)
             editor.jsonEditor.setPlainText('{"updated": true}')
@@ -238,6 +242,7 @@ with isolatedSettings():
                     editor = TextEditorWindow(parent)
                     editor.currentIndex = 0
                     editor.jsonEditor.setPlainText('{"server": "after"}')
+
                     rows = [
                         ServerProfile.fromConfiguration(
                             CoreConfiguration({'server': 'before'})
@@ -309,6 +314,7 @@ with isolatedSettings():
                     method = (
                         'getExistingDirectory' if directoryMode else 'getOpenFileName'
                     )
+
                     try:
                         with mock.patch.object(
                             module.QFileDialog, method, side_effect=select
@@ -342,6 +348,7 @@ with isolatedSettings():
                     window.xrayAssetListView, 'appendNewItem'
                 ) as append:
                     window.appendNewItem()
+
                     append.assert_not_called()
 
             self.assertFalse(isValid(window))
@@ -354,6 +361,7 @@ with isolatedSettings():
         with isolatedSettings(), tempfile.TemporaryDirectory() as directory:
             filename = Path(directory) / 'input.json'
             filename.write_text('{}', encoding='utf-8')
+
             action = ImportFromFileAction()
             mainWindow = mock.Mock()
 
@@ -370,6 +378,7 @@ with isolatedSettings():
                     with mock.patch.object(module, 'profileFromAny') as parse:
                         with mock.patch.object(module, 'MBoxImportSuccess'):
                             action.triggeredCallback(False)
+
                             parse.assert_not_called()
                             mainWindow.appendNewItemByFactory.assert_not_called()
 
