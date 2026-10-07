@@ -20,6 +20,8 @@ tree's root.
   new unreviewed one. Review wording changes as translation migrations, including reused keys in other modules.
   For newly added or intentionally edited entries, keep fields in the preferred `source`, `RU`, `ZH`, `isReviewed`
   order. This is a local editing convention, not permission to reorder untouched catalog entries or sort source keys.
+  A deliberate source-key rename migrates the reviewed language values as well as the English key. Preserve their
+  order and verify both languages before retaining review status; extraction still owns the rebuilt source list.
 - Inspect the full diff. Preserve deliberate translations/review flags, HTML/newline semantics, and natural RU/ZH
   meaning. Curated, verified translations need `isReviewed` set to the string `'True'`, as the generator compares that
   literal; a Python Boolean is not equivalent. Review applies to the entry, so inspect its other language values too.

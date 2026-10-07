@@ -21,6 +21,9 @@ Read `Furious/Actions/Import.py` with `tests/test_qt_interactions.py`; paths are
 - Existing import actions still combine capture/file/clipboard presentation with incremental repository insertion. Treat
   that as a compatibility path, not a service template. Reuse plugin protocol parsing, construct a complete valid result
   before each mutation, and keep batched GUI work cancellable and bounded per event-loop turn.
+  A surviving main window does not authorize a file import after its initiating action dies during selection.
+  Apply the shared Qt continuation rule before reading/parsing the chosen file; the modal cases in `test_qt_lifetime.py`
+  exercise the action boundary separately from the window boundary.
 
 ## Lifetime, input, and verification
 

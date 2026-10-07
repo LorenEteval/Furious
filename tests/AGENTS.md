@@ -30,6 +30,8 @@ Read `tests/support.py` with `tests/README.md`; paths are relative to this sourc
 - Small workflow tests compose real shared controllers, models, and signals across the relevant UI surfaces;
   mock the external effect instead of replacing the authority whose consistency is under test. A mocked reconnect
   proves a request was issued, not which document a real runtime launched.
+  A directly invoked exception hook does not prove that a spawned process routes factory/run exceptions through it.
+  For supervision claims, retain the real child exit/crash-result boundary and bound/reap that exact test process.
 - For staged changes, fail immediately before commit and prove live plus persisted state is unchanged. Test a
   post-commit side-effect failure separately. Keep persisted-profile assertions distinct from runtime-copy output.
 - Use stable profile/subscription identities in reconciliation and async tests. Exercise supersession, removal/reorder,

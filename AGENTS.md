@@ -7,6 +7,8 @@
 - If `.codegraph/` exists, use CodeGraph before broad text searches for structural questions; use `rg` for exact
   follow-up. Inspect callers, tests, persisted formats, platform branches, and packaging consumers before changing a
   contract.
+  For nested checkouts or snapshots, confirm that returned source paths belong to the target tree. A placeholder
+  index directory or an enclosing repository's graph does not establish coverage; inspect local files when needed.
 - For substantial work, use this loop: understand the intended owner and invariant; form a hypothesis; trace the real
   call/runtime path; implement at the owning boundary; test real behavior; then re-evaluate the architectural model.
 - When guidance says A and code appears to do B, inspect the call path and tests. Decide whether B is intentional
@@ -107,6 +109,8 @@
   `setup.py`, `requirements.txt`, `Deploy.py`, and the release workflow. Review every applicable surface rather than
   assuming one declaration is canonical. Networked `Deploy.py --download` and destructive build cleanup run only when
   explicitly in scope.
+  For native dependency updates, distinguish distribution metadata, loaded native revision, supported API, and
+  privileged host behavior. Each claim needs evidence from its own boundary and the selected artifact.
 
 ## Verification
 

@@ -23,6 +23,8 @@ relative to this source tree's root.
 - Worker safety is a property of the whole preparation path. Standard decoders opt in, but the selected protocol
   handlers must also opt in after their shared state, caches, and Qt use are audited. Preserve the GUI compatibility
   fallback for unclassified capabilities; a safe envelope decoder cannot authorize an unsafe downstream parser.
+  Decoding and per-item import retain separate failure counts: a matched envelope may contain rejected protocols.
+  Preserve those outcomes through reconciliation so partial acceptance is not mistaken for an unchanged remote set.
 - Decoder output is descriptive, not a repository transaction. Supplied names and upstream IDs are input to
   profile construction, not permission to overwrite local identity or grant remote ownership. It cannot mutate
   a group, cancel tests, reconnect, or publish UI state; those decisions remain at the import/manager commit

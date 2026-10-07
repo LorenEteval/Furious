@@ -31,6 +31,8 @@ tree's root.
 - `Furious/Plugins/Runtime.py` checks that serialization yields nonempty text and carries structured diagnostics on failure;
   it does not parse pre-serialized strings or validate a backend's complete schema. Keep serialization success,
   backend configuration acceptance, execution start, and readiness as separate evidence.
+  A serializer or editor accepting a document cannot establish that the native core accepts its unknown fields.
+  Preserve the document while reporting rejection at the actual backend boundary.
 
 ## TUN and runtime policy
 

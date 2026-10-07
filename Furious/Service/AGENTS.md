@@ -11,10 +11,9 @@ source tree's root.
   collections, and UI owns presentation. Prefer outcome signals/callbacks for new service APIs. `UpdateManager`
   still creates update dialogs as a compatibility path; preserve its public behavior until presentation is
   deliberately moved to a UI owner.
-- Give each QObject service, worker, reply, timer, pool, thread, runtime, process, cache, and callback context one durable
-  owner and explicit idempotent cleanup. Cancellation can suppress a result without stopping the underlying work;
-  distinguish deadline-bounded teardown from cooperative drains, and retain resources until their users finish.
-  Construct Qt services only after an application exists.
+- A workflow keeps its execution resources and callback context owned until their users finish. Cancellation may
+  suppress publication while execution continues; distinguish bounded teardown from cooperative drains and keep
+  cancelled work inside admission/resource limits. Construct Qt services only after an application exists.
 - Native owner destruction requires a final cleanup attempt for Python-owned resources; it does not terminate
   running Python work. At `destroyed`, the owner's wrapper is invalid
   but its QObject children have not yet been deleted; a plain weak-reference callback may release Python state

@@ -47,6 +47,8 @@ Read `Furious/Window/MainWindow.py` with `tests/test_ui_behavior.py`; paths are 
   windows and retained settings dialogs need an explicit owner and reopen policy. Classify a plugin-created page or
   dialog by the lifetime transferred to its caller, not by the registry's process lifetime. A settings label or Qt
   parent does not determine lifetime: inspect the base class and close/accept/reject path before changing deletion policy.
+  A successful save is a data outcome, not proof that its window or confirmation prompt remains valid. Apply the Qt
+  continuation rule in both the saving method and its close caller; window destruction does not roll back a committed save.
 - Empty-state presentation distinguishes an empty repository from a filtered view with no matches. Recovery changes
   view filters only; reuse existing import/edit/test actions instead of creating page-specific workflow owners.
 - Use normal layouts and `AppQ*` controls. Restore top-level geometry only after persistent composition and through the

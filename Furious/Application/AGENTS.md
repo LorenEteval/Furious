@@ -33,6 +33,8 @@ relative to this source tree's root.
   endpoint, and fails closed when ownership is uncertain, including privilege handoff. A successful Windows
   local-server listen alone does not establish exclusivity; command delivery and endpoint ownership are separate
   observations.
+  A forwarded or unresolved launch must unwind its initial owners without restoring a connection or bootstrapping
+  ordinary UI. Constructing a Qt application for election or fallback reporting does not grant primary ownership.
 - Each singleton IPC connection creates a short-lived socket sender. Use weak named dispatch with sender forwarding
   to the application; repeatedly connecting a compiled application bound method can grow Nuitka's protection list
   even after the native sockets die. The server owns sockets through their one-command completion/disconnection.

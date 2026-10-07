@@ -34,6 +34,7 @@ source tree's root.
   native core TUN support. Subscription decoding must continue to reject executable profiles.
   The stored/API opt-in retains its tun2socks name for compatibility, but the application preference chooses the
   engine. Validate its SOCKS transit specification for either engine without importing the executable's private schema.
+  Changing its presentation label must not rename the stored opt-in, infer native TUN, or select an application engine.
 - The embedded backends' JSON serialization helper is not this launch boundary: External Core passes a structured
   executable/argument/environment specification to `Popen`. Validate through `validateProcess()` and the launch path,
   including non-finite timeout rejection, rather than assuming a serializable mapping is safe or executable.

@@ -20,6 +20,8 @@ Read `Furious/__init__.py` with `tests/test_public_api.py`; paths are relative t
   when changing exports; trace transitive imports and public-import/packaging tests, not just the edited module.
   Wildcard exports can force lazy attributes to load, so check ordinary, wildcard, and cold-process imports
   separately. Importability means preserving the actual side-effect boundary, not merely avoiding a syntax error.
+  Python export aliases, distribution names, native-module names, and persisted identifiers serve different consumers;
+  inspect each affected surface before renaming one. An import alias does not migrate stored data or transfer ownership.
 
 ## State, data, and ownership
 

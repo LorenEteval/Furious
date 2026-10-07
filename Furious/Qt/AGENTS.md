@@ -104,6 +104,8 @@ Use the `manage-qt-pyside6-lifetimes` skill for source lifetime work when availa
   follow-up UI. A pure Python editor binding can survive its destroyed Qt field tree. Publication after a data
   commit may also destroy the presenter: retain the committed outcome while stopping stale UI work, including
   the close-confirmation caller. `ModalPickerLifetimeTest` in `tests/test_qt_lifetime.py` challenges these boundaries.
+  Capture required editor data before opening an existing file for writing. Opening it can truncate it immediately;
+  accessing a stale widget afterward cannot be repaired by catching the resulting exception.
 - Queued delivery never transfers ownership implicitly. The sender may finish before delivery, so callbacks resolve a
   still-valid receiver and current generation in the receiver's Qt thread before touching widgets, models, or wrappers.
   A zero-delay timer yields work but does not establish ordering against an unrelated Qt event. Express required

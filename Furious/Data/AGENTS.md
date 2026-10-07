@@ -15,6 +15,8 @@ tree's root.
   tests, setuptools package data, and Nuitka. Do not incidentally reformat generated ACLs or replace binary assets.
 - Markdown files in this directory are repository metadata, not runtime data. Keep top-level and nested Markdown files
   excluded consistently from setuptools package data and Nuitka inclusion while preserving them in the source tree.
+  Native binding resources, including an engine's embedded driver, have their own package/native owner. Their inclusion
+  is checked through that dependency and the release artifact, not by copying them into this data directory.
 - `Deploy.py --download` performs a networked refresh and may rewrite large, time-varying assets. Run it only when that
   mutation is explicitly in scope; inspect integrity checks, provenance, exact changed files, and user modifications.
   Validate each downloaded file and the consumer's expected format. Build downloads currently write destination

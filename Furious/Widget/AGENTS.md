@@ -32,9 +32,9 @@ source tree's root.
 - `ServerTableView` owns selection and cell repaint for profile tests, while `ProfileTestManager` owns scheduling,
   concurrency, temporary runtimes, cancellation, stable-target validation, and latency/speed mutation. Repository or
   subscription changes are forwarded as invalidation boundaries; stale results never write by row.
-- Models, delegates, headers, menus, actions, animations, spinners, WebEngine/map objects, timers, workers, and replies
-  each need one owner. Persistent widgets connect once and refresh state; visibility may pause rendering/animation, not
-  application-level log draining, traffic collection, or other service ownership.
+- Persistent widgets reuse their model, delegates and signal paths during refresh; replacement needs explicit
+  retirement of the former owned tree. Visibility may pause rendering/animation, not application-level log draining,
+  traffic collection, or other service ownership.
   A view may borrow a model, delegate, or controller; installing one is not a transfer of QObject ownership.
   Parent newly created presentation objects to their intended owner and retire replacements at the creating
   boundary, while preserving explicitly shared owners. Test native owner-first teardown with wrappers retained.

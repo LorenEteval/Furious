@@ -13,6 +13,8 @@ this source tree's root.
 - Preserve upstream names, optional-group absence, unknown siblings, and future string values. Effective defaults such
   as `realm.ipMode` are presented without materializing them during an untouched save; editing one leaf changes only
   that leaf.
+  A share URI is a projection of this document. Features omitted by its codec must survive JSON/editor round trips;
+  URI equality alone cannot prove that a nested client configuration was preserved.
 - `obfs.type` selects tagged subtype data. Unknown types remain visible and survive untouched. An explicit switch to a
   known type may remove incompatible subtype branches, but never unrelated document branches.
 

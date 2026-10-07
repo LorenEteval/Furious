@@ -28,6 +28,8 @@ source tree's root.
 - Capability absence is deliberate: this factory supplies neither native TUN nor a statistics provider. Shared UI
   must not infer either from Hysteria 2 support. Download preparation replaces the HTTP listener and removes SOCKS
   on a copy; test traffic must use its owned endpoint without applying ordinary connection host effects.
+  Listener readiness does not validate the prepared ACL/MMDB contents. Test file preparation and native startup
+  failure separately instead of treating TCP acceptance as acceptance of every launch input.
 - Verify legacy/current URI and mapping compatibility, unknown/tolerated values, stored-copy isolation, MMDB/ACL
   absence or malformed paths, asynchronous readiness and rollback, core-exit translation, application-TUN policy,
   and repeated editor/runtime cleanup. Use `tests/test_hysteria1_protocol.py`,

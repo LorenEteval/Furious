@@ -18,6 +18,9 @@ Read `Furious/Frozenlib/AppSettings.py` with `tests/test_frozenlib.py`; paths ar
   strict legacy API shapes and real blocked/queued workers.
 - `Globals` exposes only deliberate application-lifetime owners. Accessors may be absent during partial startup,
   isolated tests, or teardown; do not add fallback global owners that create competing lifecycles.
+- `Mixins.qObjectIsValid` checks native QObject validity and deliberately accepts non-QObjects, including `None`.
+  Check required presence and plain resource state separately; a Python editor binding needs checks of its Qt fields.
+  Neither one-object nor grouped validity checks provide ownership, thread affinity, or generation freshness.
 - `AppSettings` keys include preferences and encoded repository blobs. Preserve names, defaults, string/binary
   encodings, migrations, and import-time registration. `AppSettings.get()` can persist a default or repair an
   invalid preference; it is not an observational reader like a copied customization projection. Distinguish

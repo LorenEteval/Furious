@@ -58,3 +58,5 @@ relative to this source tree's root.
   Binding-provided failure text is diagnostic input, not a stable enumerated protocol: preserve useful reasons rather
   than accepting only exact known strings. Changing binding versions requires coordinated model validation,
   distribution metadata/native-library inclusion, and workflow API checks; a successful import does not exercise TUN.
+  Where the binding exposes native provenance, verify it alongside the distribution version. Metadata from an
+  updated installation alone cannot prove that a spawned or compiled runtime loaded the intended native revision.

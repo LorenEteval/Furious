@@ -23,6 +23,8 @@ tree's root.
 - Failure policy belongs to the dispatch operation. Automatic subscription detection tries decoders by priority; an
   explicitly selected decoder restricts candidates. URI dispatch selects the registered scheme owner rather than
   probing unrelated handlers after failure. Keep required-operation failures observable without secret payloads.
+  Plugin/capability IDs and type ownership define dispatch; display names and translated labels do not. A presentation
+  rename must not change registration identity or silently migrate a saved provider choice.
 
 ## Ownership and compatibility
 

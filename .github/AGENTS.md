@@ -37,6 +37,9 @@ Read `.github/workflows/deploy-pypi.yml` with `tests/README.md`; paths are relat
   Audit evaluated generic bases and import-time standard-library APIs as well as syntax and wheel availability.
   `from __future__ import annotations` does not defer class-base evaluation; test cold imports on a claimed minimum
   interpreter before treating metadata classifiers or a newer CI row as evidence for that minimum.
+- Coordinate explicit native pins across manifests, source-build/wheel-install steps, and API assertions. When native
+  provenance is exported, compare it with the intended upstream revision as well as distribution metadata.
+  Constructing and closing an engine validates a different boundary from starting a privileged TUN interface.
 - Interpreter compatibility jobs install dependency versions that actually support each interpreter, then exercise
   cold imports and real behavior. Grammar checks or newer-interpreter simulations do not substitute for those jobs.
   Keep the full cross-platform regression suite distinct from focused version checks, and make required version

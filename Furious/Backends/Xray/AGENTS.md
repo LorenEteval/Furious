@@ -27,6 +27,8 @@ source tree's root.
 - Xray owns routing profiles/options, geo assets, API statistics, and the `XRAY_LOCATION_ASSET` environment contract.
   Action providers retain reusable routing/asset windows through the created action owner and create transient
   settings dialogs per request; the capability registry does not become a transient-window owner.
+  A file chooser result is not an asset commit. Asset-window import follows the shared Qt modal-continuation rule;
+  `ModalPickerLifetimeTest` checks that a dead asset view receives no selected filename.
 - Runtime asset updates stage bytes and digest verification before atomic replacement. Failure preserves the prior
   usable file. Network reply and checksum worker have separate lifetimes: cancellation/shutdown must suppress late
   hash publication as well as abort requests. The plugin capability owns its lazy updater through shutdown.

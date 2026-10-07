@@ -27,6 +27,8 @@ root.
   Replacing a connection preserves the logical profile's metadata/ID but may create a new wrapper. Consumers must
   choose explicitly between logical identity and exact-object ownership; neither copying nor equal IDs transfers
   a live repository or runtime reference automatically.
+  Independent copies retain local metadata such as favorites and annotations while resetting remote ownership.
+  Keep that policy in the domain copy operation; reconstructing only connection JSON loses the metadata contract.
 - Treat serialized and plugin-provided mappings as untrusted values. Normalize only documented compatibility aliases,
   retain unknown forward-compatible fields, and keep construction diagnostics available without mutating repositories
   or invoking a backend runtime.

@@ -25,6 +25,8 @@ Read `Furious/Interface/Runtime.py` with `tests/test_interface.py`; paths are re
 - `StorageBackend.data()` deliberately exposes a live mutable collection for compatibility. Do not reinterpret it as a
   snapshot or introduce a second authoritative cache. Editor bindings map input to configuration and back; they do not
   decide runtime, persistence, or host policy.
+  The interface supplies no atomic disk-flush or malformed-input recovery guarantee. Those belong to the concrete
+  repository and must be established through its restore/commit failure paths.
 - `ApplicationRunner.ExitCode` is the outer application process protocol; it is not interchangeable with a core's
   raw exit code or `RuntimeExitReason`. Preserve the meaning at each boundary instead of translating every nonzero
   value into one generic failure.

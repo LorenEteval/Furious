@@ -26,6 +26,8 @@ Read `Resources.qrc` with `tests/test_public_api.py`; paths are relative to this
 - Resource identity is prefix plus alias: default and white collections intentionally repeat aliases under
   different prefixes. Check duplicate full paths and missing inputs, then exercise a compiled-resource consumer;
   a source file on disk and successful `pyside6-rcc` execution do not prove the expected alias resolves.
+  Preserve the prefix at consumers when changing a glyph; equal filenames in different collections are not the same
+  themed resource. Test the helper-selected variant rather than loading an arbitrary SVG path for comparison.
 - Deployment icons have direct filesystem consumers in `Deploy.py` outside the Qt resource namespace. Check those
   installer/application inputs separately from aliases before removing a PNG. Verify control/tray rendering under
   both themes, high DPI, relevant sizes, and disabled/selected states; resource generation does not prove themed
