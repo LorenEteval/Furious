@@ -3757,5 +3757,37 @@ TRANSLATION = {
         "RU": "Доступно, если для «Стек» выбрано go или «Автоматически».",
         "ZH": "协议栈设为go或自动时可用。",
         "isReviewed": "True"
+    },
+    "Unsupported sing-tun settings fields": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Неподдерживаемые поля настроек sing-tun",
+        "ZH": "不支持的sing-tun设置字段",
+        "isReviewed": "True"
+    },
+    "Unsupported sing-tun stack": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Неподдерживаемый сетевой стек sing-tun",
+        "ZH": "不支持的sing-tun协议栈",
+        "isReviewed": "True"
+    },
+    "Unsupported or application-owned native option": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Неподдерживаемый или управляемый приложением нативный параметр",
+        "ZH": "不支持的原生选项或由应用管理的选项",
+        "isReviewed": "True"
+    },
+    "Unsupported sing-tun host options": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Неподдерживаемые параметры хоста sing-tun",
+        "ZH": "不支持的sing-tun主机选项",
+        "isReviewed": "True"
     }
 }

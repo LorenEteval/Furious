@@ -26,7 +26,11 @@ from Furious.Core.MultiprocessingRuntime import (
 )
 from Furious.Interface import CoreRuntime, RuntimeState, RuntimeExitReason
 from Furious.Frozenlib import AppSettings, Mixins
-from Furious.Models.SingTUN import prepareSingTUNSettings, addSingTUNExclusions
+from Furious.Models.SingTUN import (
+    prepareSingTUNSettings,
+    addSingTUNExclusions,
+    SingTUNUnsupportedSettingsError,
+)
 from Furious.Frozenlib.SocksProxy import socksURL
 from Furious.Repository import Storage
 from Furious.Repository.SingTUNSettings import UserSingTUNSettings
@@ -593,6 +597,105 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         dialog.reject()
         processQtEvents()
         self.assertFalse(isValid(dialog))
+
+    def testUnsupportedSettingsMessagesAreLocalizedAndRetranslatable(self):
+        """Reject unknown options with localized text without committing settings."""
+        cases = (
+            ({'unknown': 1}, 'Unsupported sing-tun settings fields'),
+            (
+                {'tun_options': {'unknown': True}},
+                'Unsupported or application-owned native option',
+            ),
+            (
+                {'stack_options': {'unknown': True}},
+                'Unsupported or application-owned native option',
+            ),
+            ({'host_options': {'sadfasfd': 1}}, 'Unsupported sing-tun host options'),
+            ({}, 'Unsupported sing-tun stack'),
+        )
+
+        for advanced, source in cases:
+            with self.subTest(source=source, advanced=advanced), isolatedSettings():
+                AppSettings.set('Language', 'ZH')
+                dialog = self._dialog({})
+                dialog.advanced.setPlainText(json.dumps(advanced))
+
+                if source == 'Unsupported sing-tun stack':
+                    dialog.fields['stack'].addItem('unknown', 'unknown')
+                    dialog.fields['stack'].setCurrentIndex(
+                        dialog.fields['stack'].count() - 1
+                    )
+
+                dialog.open()
+
+                try:
+                    with mock.patch.object(Storage, 'replaceSingTUNSettings') as commit:
+                        dialog.accept()
+
+                    commit.assert_not_called()
+                    self.assertTrue(dialog.isVisible())
+                    self.assertEqual(dialog.errorLabel.text(), _(source, 'ZH'))
+
+                    for language in ('ZH', 'RU', 'EN', 'ZH'):
+                        AppSettings.set('Language', language)
+                        Mixins.QTranslatable.retranslateAll()
+                        processQtEvents()
+
+                        expected = _(source, language)
+                        self.assertEqual(dialog.errorLabel.text(), expected)
+
+                        if language != 'EN':
+                            self.assertNotEqual(expected, source)
+                finally:
+                    dialog.reject()
+                    processQtEvents()
+
+    def testUnsupportedErrorCategoryDoesNotDependOnDiagnosticWording(self):
+        """Keep UI language keyed to the category rather than an English match."""
+        with isolatedSettings():
+            AppSettings.set('Language', 'ZH')
+            dialog = self._dialog({})
+            error = SingTUNUnsupportedSettingsError(
+                SingTUNUnsupportedSettingsError.Reason.HostOptions
+            )
+            error.args = ('changed diagnostic wording',)
+
+            try:
+                with mock.patch.object(dialog, 'document', side_effect=error):
+                    dialog.accept()
+
+                self.assertEqual(
+                    dialog.errorLabel.text(),
+                    _('Unsupported sing-tun host options', 'ZH'),
+                )
+            finally:
+                dialog.reject()
+                processQtEvents()
+
+    def testOtherErrorsKeepTheirDiagnosticsAcrossLanguageChanges(self):
+        """Binding and persistence diagnostics do not become category whitelists."""
+        for error in (
+            ValueError('Unsupported sing-tun host options'),
+            TypeError('arbitrary diagnostic detail'),
+            OSError('unable to save settings'),
+        ):
+            with self.subTest(error=error), isolatedSettings():
+                AppSettings.set('Language', 'ZH')
+                dialog = self._dialog({})
+
+                try:
+                    with mock.patch.object(dialog, 'document', side_effect=error):
+                        dialog.accept()
+
+                    for language in ('ZH', 'RU', 'EN'):
+                        AppSettings.set('Language', language)
+                        Mixins.QTranslatable.retranslateAll()
+                        processQtEvents()
+
+                        self.assertEqual(dialog.errorLabel.text(), str(error))
+                finally:
+                    dialog.reject()
+                    processQtEvents()
 
     def testSelectiveRowsKeepInputsBoundedAndPreserveKeyboardOrderAndValues(self):
         pages = (

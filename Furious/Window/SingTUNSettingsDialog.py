@@ -22,6 +22,7 @@ from __future__ import annotations
 from Furious.Models.SingTUN import (
     SING_TUN_DEFAULTS,
     SING_TUN_HOST_DEFAULTS,
+    SingTUNUnsupportedSettingsError,
     prepareSingTUNSettings,
 )
 from Furious.Repository import Storage
@@ -53,6 +54,18 @@ from PySide6.QtWidgets import (
 
 import copy
 import json
+
+
+def _unsupportedSettingsErrorText(error: SingTUNUnsupportedSettingsError):
+    """Translate application validation categories at the presentation boundary."""
+    reason = SingTUNUnsupportedSettingsError.Reason
+
+    return {
+        reason.SettingsFields: _('Unsupported sing-tun settings fields'),
+        reason.Stack: _('Unsupported sing-tun stack'),
+        reason.NativeOption: _('Unsupported or application-owned native option'),
+        reason.HostOptions: _('Unsupported sing-tun host options'),
+    }[error.reason]
 
 
 class SingTUNSettingsDialog(AppQTransientDialog):
@@ -337,7 +350,7 @@ class SingTUNSettingsDialog(AppQTransientDialog):
         instructions.setWordWrap(True)
         advanced.addRow(instructions)
 
-        self.errorLabel = AppQLabel('')
+        self.errorLabel = AppQLabel('', translatable=False)
         self.errorLabel.setWordWrap(True)
 
         layout.addWidget(self.errorLabel)
@@ -505,7 +518,14 @@ class SingTUNSettingsDialog(AppQTransientDialog):
 
             Storage.replaceSingTUNSettings(document)
         except (ValueError, TypeError, OSError) as ex:
-            self.errorLabel.setText(str(ex))
+            self.errorLabel.translatable = isinstance(
+                ex, SingTUNUnsupportedSettingsError
+            )
+            self.errorLabel.setText(
+                _unsupportedSettingsErrorText(ex)
+                if self.errorLabel.translatable
+                else str(ex)
+            )
 
             return
 

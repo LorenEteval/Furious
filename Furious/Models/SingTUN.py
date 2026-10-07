@@ -19,6 +19,8 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
 import copy
 import functools
 import ipaddress
@@ -79,6 +81,21 @@ _STACK_FIELDS = {
     'IncludeAllNetworks',
     'TCPCongestionControl',
 }
+
+
+class SingTUNUnsupportedSettingsError(ValueError):
+    """Identify unsupported settings independently of their diagnostic wording."""
+
+    class Reason(Enum):
+        SettingsFields = 'Unsupported sing-tun settings fields'
+        Stack = 'Unsupported sing-tun stack'
+        NativeOption = 'Unsupported or application-owned native option'
+        HostOptions = 'Unsupported sing-tun host options'
+
+    def __init__(self, reason: Reason):
+        self.reason = reason
+
+        super().__init__(reason.value)
 
 
 class SingTUNHostSettingsCallers:
@@ -156,7 +173,9 @@ def prepareSingTUNSettings(document, *, platform=None):
         raise ValueError('sing-tun settings must be an object')
 
     if set(document) - set(SING_TUN_DEFAULTS):
-        raise ValueError('Unsupported sing-tun settings fields')
+        raise SingTUNUnsupportedSettingsError(
+            SingTUNUnsupportedSettingsError.Reason.SettingsFields
+        )
 
     result = copy.deepcopy(SING_TUN_DEFAULTS)
 
@@ -170,7 +189,9 @@ def prepareSingTUNSettings(document, *, platform=None):
             result[key] = copy.deepcopy(value)
 
     if result['stack'] not in ('', 'go', 'gvisor', 'system', 'mixed'):
-        raise ValueError('Unsupported sing-tun stack')
+        raise SingTUNUnsupportedSettingsError(
+            SingTUNUnsupportedSettingsError.Reason.Stack
+        )
 
     if result['log_level'] not in ('trace', 'debug', 'info', 'warn', 'error', 'silent'):
         raise ValueError('Invalid sing-tun log level')
@@ -201,7 +222,9 @@ def prepareSingTUNSettings(document, *, platform=None):
     tun, stack = result['tun_options'], result['stack_options']
 
     if set(tun) - _TUN_FIELDS or set(stack) - _STACK_FIELDS:
-        raise ValueError('Unsupported or application-owned native option')
+        raise SingTUNUnsupportedSettingsError(
+            SingTUNUnsupportedSettingsError.Reason.NativeOption
+        )
 
     for key, expected in _OWNED.items():
         if type(tun[key]) is not type(expected) or tun[key] != expected:
@@ -303,7 +326,9 @@ def prepareSingHostSettings(document):
         raise ValueError('sing-tun host options must be an object')
 
     if set(document) - set(SING_TUN_HOST_DEFAULTS):
-        raise ValueError('Unsupported sing-tun host options')
+        raise SingTUNUnsupportedSettingsError(
+            SingTUNUnsupportedSettingsError.Reason.HostOptions
+        )
 
     result = copy.deepcopy(SING_TUN_HOST_DEFAULTS)
     result.update(copy.deepcopy(document))
