@@ -34,6 +34,7 @@ from Furious.Service.DnsResolver import DnsResolver
 from Furious.Repository import Storage
 from Furious.Service.TrafficStatsManager import TrafficStatsManager
 from Furious.Service.UpdateManager import UpdateManager
+from Furious.Controllers.ConnectionController import ConnectionController
 
 from PySide6 import QtCore
 from PySide6.QtNetwork import QNetworkReply
@@ -122,6 +123,48 @@ class UpdateManagerTest(unittest.TestCase):
         manager.deleteLater()
         parent.deleteLater()
 
+    def testDefaultUpdateManagerDiesWithItsController(self):
+        """An invalid controller wrapper cannot keep its update request alive."""
+        controller = ConnectionController(coreManager=SimpleNamespace(runtimes=[]))
+        manager = controller._updatesManager
+        reply = _ManagedReply(manager)
+        payload = _ResponseBody(b'fixture')
+        reference = weakref.ref(payload)
+
+        try:
+            with patch.object(manager, 'get', lambda _request: reply):
+                manager.webGET('https://invalid.test', payload=payload)
+
+            del payload
+            deleteQObject(controller)
+
+            self.assertFalse(isValid(manager))
+            self.assertFalse(isValid(reply))
+            self.assertFalse(manager._replyContexts)
+            self.assertIsNone(reference())
+        finally:
+            if isValid(manager):
+                deleteQObject(manager)
+
+            if isValid(controller):
+                deleteQObject(controller)
+
+    def testInjectedUpdateManagerKeepsItsExistingOwner(self):
+        """Controller composition must not steal a borrowed network manager."""
+        owner = QtCore.QObject()
+        manager = UpdateManager(owner)
+        controller = ConnectionController(
+            coreManager=SimpleNamespace(runtimes=[]), updatesManager=manager
+        )
+
+        try:
+            deleteQObject(controller)
+
+            self.assertTrue(isValid(manager))
+            self.assertIs(manager.parent(), owner)
+        finally:
+            deleteQObject(owner)
+
 
 class _ManagedReply(QNetworkReply):
     """Provide a hermetic reply object with real Qt lifecycle signals."""
@@ -152,6 +195,54 @@ class _CapturingHttpGetManager(HttpGetManager):
 
 class HttpGetManagerLifetimeTest(unittest.TestCase):
     """Verify every request receives a timeout and releases exact context."""
+
+    def testDnsOperationOwnerDestructionAbortsItsRequest(self):
+        """A resolver outliving a request must not outlive that request's owner."""
+        application()
+        resolver = DnsResolver()
+        self.addCleanup(resolver.dispose)
+
+        for _ in range(30):
+            parent = QtCore.QObject()
+            reply = _ManagedReply(resolver)
+            operation = resolver.resolveAsync('example.test', parent=parent)
+            results, errors = [], []
+            operation.finished.connect(lambda *_args: results.append(True))
+
+            def abort():
+                reply.setError(
+                    QNetworkReply.NetworkError.OperationCanceledError, 'cancelled'
+                )
+                reply.setFinished(True)
+                reply.finished.emit()
+
+            reply.abort = abort
+
+            try:
+                with (
+                    patch.object(resolver, 'get', lambda _request: reply),
+                    patch('Furious.Service.DnsResolver.logger.error'),
+                    patch('sys.excepthook', lambda *args: errors.append(args)),
+                ):
+                    operation.start()
+                    deleteQObject(parent)
+
+                self.assertFalse(isValid(operation))
+                self.assertFalse(isValid(operation._timer))
+                self.assertTrue(reply.isFinished())
+                self.assertFalse(resolver._replyContexts)
+                self.assertFalse(results)
+                self.assertFalse(errors)
+
+                processQtEvents()
+
+                self.assertFalse(isValid(reply))
+            finally:
+                if isValid(reply):
+                    reply.abort()
+
+                if isValid(parent):
+                    deleteQObject(parent)
 
     def testDnsDisposalToleratesNativeDestructionDuringAbort(self):
         """Reply abort may destroy the resolver before its deferred delete."""
@@ -566,10 +657,97 @@ class ConnectivityManagerTest(unittest.TestCase):
         """Create the process-wide headless QApplication."""
         application()
 
+    def testDestroyedActiveReplyReleasesProbeAndAllowsAnotherRequest(self):
+        """Native deletion without finished must not strand the probe scheduler."""
+        manager = ConnectivityManager()
+        self.addCleanup(manager.deleteLater)
+        references = []
+        destroyed = []
+
+        with patch(
+            'Furious.Service.ConnectivityManager.AppSettings.get', return_value=None
+        ):
+            for _ in range(30):
+                manager._testingEnabled = True
+                reply = _ManagedReply(manager)
+                references.append(weakref.ref(reply))
+                reply.destroyed.connect(lambda *_args: destroyed.append(True))
+                requests = []
+
+                def get(request):
+                    requests.append(request)
+
+                    return reply
+
+                with patch.object(manager, 'get', get):
+                    manager.startSingleTest()
+                    manager.startSingleTest()
+
+                self.assertEqual(len(requests), 1)
+
+                deleteQObject(reply)
+
+                self.assertIsNone(manager._activeReply)
+                self.assertFalse(manager._replyContexts)
+                self.assertFalse(manager.jobTimeoutTimer.isActive())
+                self.assertTrue(manager.jobArrangeTimer.isActive())
+
+                manager.stopTest()
+                del reply
+
+        self.assertEqual(len(destroyed), 30)
+        self.assertTrue(all(reference() is None for reference in references))
+
+    def testOlderReplyDestructionDoesNotRetireTheCurrentProbe(self):
+        """A deferred delete from a completed request cannot clear its replacement."""
+        manager = ConnectivityManager()
+        self.addCleanup(manager.deleteLater)
+        manager._testingEnabled = True
+        oldReply = _ManagedReply(manager)
+        currentReply = _ManagedReply(manager)
+
+        with (
+            patch.object(manager, 'get', side_effect=[oldReply, currentReply]),
+            patch(
+                'Furious.Service.ConnectivityManager.AppSettings.get', return_value=None
+            ),
+        ):
+            manager.startSingleTest()
+            oldReply.finished.emit()
+            manager.startSingleTest()
+            deleteQObject(oldReply)
+
+        self.assertIs(manager._activeReply, currentReply)
+        self.assertTrue(manager.jobTimeoutTimer.isActive())
+
+        manager.stopTest()
+
+    def testStopAfterNativeReplyDestructionDoesNotAccessDeletedWrapper(self):
+        """Disconnect after reply deletion is harmless even with a retained wrapper."""
+        manager = ConnectivityManager()
+        self.addCleanup(manager.deleteLater)
+        manager._testingEnabled = True
+        reply = _ManagedReply(manager)
+
+        with (
+            patch.object(manager, 'get', return_value=reply),
+            patch(
+                'Furious.Service.ConnectivityManager.AppSettings.get', return_value=None
+            ),
+        ):
+            manager.startSingleTest()
+
+        deleteQObject(reply)
+        manager.stopTest()
+
+        self.assertIsNone(manager._activeReply)
+        self.assertFalse(manager.jobTimeoutTimer.isActive())
+        self.assertFalse(manager.jobArrangeTimer.isActive())
+
     def testRapidStartsReuseOneActiveRequest(self):
         """Do not accumulate probes or timeout timers during rapid calls."""
         manager = ConnectivityManager()
-        reply = object()
+        reply = _ManagedReply(manager)
         manager._testingEnabled = True
 
         with (
@@ -598,6 +776,110 @@ class ConnectivityManagerTest(unittest.TestCase):
 
 class TrafficStatsManagerTest(unittest.TestCase):
     """Verify blocked queries and reentrant notifications respect manager lifetime."""
+
+    def testCollectionEnableDoesNotResumeAfterProviderEndsItsOwner(self):
+        """Monitor discovery may destroy, disconnect, or disable its requester."""
+        for action in ('destroy', 'disconnect', 'disable'):
+            with self.subTest(action=action):
+                manager = TrafficStatsManager()
+                manager._connected = True
+                manager._collectionEnabled = False
+                monitor = TrafficStatsMonitor(
+                    query=lambda _target: TrafficCounters(1, 2), target=None
+                )
+
+                def resolveMonitor(_runtimes):
+                    if action == 'destroy':
+                        deleteQObject(manager)
+                    elif action == 'disconnect':
+                        manager.disconnectedCallback()
+                    else:
+                        manager.setCollectionEnabled(False)
+
+                    return monitor
+
+                registry = SimpleNamespace(
+                    trafficStatsMonitorForRuntimes=resolveMonitor
+                )
+
+                try:
+                    with patch(
+                        'Furious.Service.TrafficStatsManager.getPluginRegistry',
+                        return_value=registry,
+                    ):
+                        manager.setCollectionEnabled(True)
+
+                    self.assertIsNone(manager._monitor)
+                    self.assertIsNone(manager._executor)
+
+                    if isValid(manager):
+                        self.assertFalse(manager._sampleTimer.isActive())
+                finally:
+                    if isValid(manager):
+                        manager.cleanup()
+                        deleteQObject(manager)
+
+    def testNativeOwnerDestructionClosesStatisticsExecutor(self):
+        """Retaining an invalid wrapper must not leave its worker thread running."""
+        for blocked in (False, True):
+            with self.subTest(blocked=blocked):
+                for _ in range(20):
+                    parent = QtCore.QObject()
+                    manager = TrafficStatsManager(parent)
+                    started = threading.Event()
+                    release = threading.Event()
+                    updates = []
+                    callbackErrors = []
+
+                    def query(_target):
+                        started.set()
+
+                        if blocked:
+                            release.wait(3)
+
+                        return TrafficCounters(1, 2)
+
+                    manager.sampleChanged.connect(updates.append)
+                    manager._activateMonitor(
+                        TrafficStatsMonitor(query=query, target=None)
+                    )
+                    executor = manager._executor
+
+                    try:
+                        self.assertTrue(started.wait(1))
+                        threads = tuple(executor._threads)
+                        updates.clear()
+
+                        with patch(
+                            'sys.excepthook', lambda *args: callbackErrors.append(args)
+                        ):
+                            deleteQObject(parent)
+
+                            self.assertFalse(isValid(manager))
+                            self.assertFalse(isValid(manager._sampleTimer))
+                            self.assertIsNone(manager._executor)
+                            self.assertIsNone(manager._future)
+                            self.assertIsNone(manager._monitor)
+                            self.assertTrue(executor._shutdown)
+
+                            release.set()
+
+                            for thread in threads:
+                                thread.join(2)
+
+                            processQtEvents()
+
+                        self.assertFalse(callbackErrors)
+                        self.assertFalse(updates)
+                        self.assertTrue(
+                            all(not thread.is_alive() for thread in threads)
+                        )
+                    finally:
+                        release.set()
+                        executor.shutdown(wait=True, cancel_futures=True)
+
+                        if isValid(parent):
+                            deleteQObject(parent)
 
     def testReconnectPreparationStopsAfterResetOrProviderEndsItsOwner(self):
         """Do not reactivate statistics after reentrant disconnect or destruction."""

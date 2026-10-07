@@ -200,6 +200,19 @@ def _forwardTrafficQueryResult(managerReference, generation, future):
         manager._futureCompleted(generation, future)
 
 
+def _closeDestroyedStatisticsManager(managerReference, *_args):
+    """Close Python worker admission after Qt destroys the native manager."""
+    manager = managerReference()
+
+    if manager is not None:
+        # Native teardown has already invalidated this wrapper. Release only
+        # Python state here; the QObject tree stops and deletes the sample timer.
+        manager._generation += 1
+        manager._connected = False
+        manager._monitor = None
+        manager._closeExecutor()
+
+
 class TrafficStatsManager(
     Mixins.ConnectionAware,
     Mixins.CleanupOnExit,
@@ -237,6 +250,10 @@ class TrafficStatsManager(
         self._sampleTimer.timeout.connect(self._requestSample)
 
         self._sampleReady.connect(self._consumeResult)
+
+        self.destroyed.connect(
+            functools.partial(_closeDestroyedStatisticsManager, weakref.ref(self))
+        )
 
     def _resumeSampling(self):
         """Resume polling whenever a statistics monitor is available."""
@@ -378,9 +395,14 @@ class TrafficStatsManager(
             return
 
         if self._connected:
+            generation = self._generation
+
             monitor = getPluginRegistry().trafficStatsMonitorForRuntimes(
                 self._activeRuntimes()
             )
+
+            if not isValid(self) or generation != self._generation:
+                return
 
             self._activateMonitor(monitor)
 

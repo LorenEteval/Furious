@@ -43,7 +43,7 @@ from Furious.Widget.ServerTableView import ServerTableView
 from PySide6 import QtCore, QtNetwork
 from PySide6.QtWidgets import QWidget
 
-from shiboken6 import isValid
+from shiboken6 import isValid, delete as deleteQObject
 
 from tests.support import (
     application,
@@ -279,6 +279,17 @@ class _CancelDuringStartDownloadWorker(_DownloadSpeedWorker):
         return True
 
 
+class _PendingDownloadReply(QtNetwork.QNetworkReply):
+    """Own a real Qt reply without opening a network connection."""
+
+    def abort(self):
+        self.setFinished(True)
+        self.finished.emit()
+
+    def readData(self, _maximumLength):
+        return bytes()
+
+
 class ProfileTestServiceTest(unittest.TestCase):
     """Exercise the self-contained profile-test subsystem."""
 
@@ -404,6 +415,40 @@ class ProfileTestServiceTest(unittest.TestCase):
                 manager.shutdown()
 
                 processQtEvents()
+
+    def testDeletedDownloadReplyDoesNotPreventCancellationOrTimeoutCleanup(self):
+        """Retained invalid replies cannot strand a worker's runtime and port."""
+        for boundary in ('cancel', 'timeout'):
+            with self.subTest(boundary=boundary):
+                profile = self._profile('profile', 'example.test')
+
+                with self._runtimeDownloads((profile,), failure=None) as (
+                    manager,
+                    workers,
+                    runtimes,
+                ):
+                    manager.testDownloadSpeed((profile,), concurrent=False)
+                    processQtEvents()
+                    worker, runtime = workers[0], runtimes[0]
+                    reply = _PendingDownloadReply(worker)
+
+                    with mock.patch.object(worker, 'get', return_value=reply):
+                        worker.startDownload()
+
+                    deleteQObject(reply)
+
+                    if boundary == 'cancel':
+                        manager.cancelAll()
+                    else:
+                        worker.timeoutTimer.timeout.emit()
+
+                    processQtEvents()
+
+                    self.assertFalse(runtime.isRunning())
+                    self.assertFalse(runtime.resourceOwned)
+                    self.assertFalse(isValid(worker))
+                    self.assertFalse(manager._serialDownloadScheduler.activePorts)
+                    self.assertFalse(manager._serialDownloadScheduler.activeJobs)
 
     def testDownloadWorkerRetainsFailedLeaseUntilReleaseSucceeds(self):
         """A failed stop or dispose must leave the worker's exact lease reachable."""
@@ -537,6 +582,132 @@ class ProfileTestServiceTest(unittest.TestCase):
             self.assertFalse(runtimes[0].resourceOwned)
             self.assertFalse(manager._serialDownloadScheduler._pendingReleases)
             self.assertFalse(manager._serialDownloadScheduler.activePorts)
+
+    def testNativeManagerDestructionReleasesDownloadRuntimesBeforeWorkers(self):
+        """Qt owner teardown must release active and retained execution leases."""
+        for pendingRelease in (False, True):
+            with self.subTest(pendingRelease=pendingRelease):
+                for _ in range(20):
+                    profile = self._profile('profile', 'example.test')
+                    parent = QtCore.QObject()
+                    manager = ProfileTestManager(
+                        parent,
+                        profilesProvider=lambda: (profile,),
+                        downloadConcurrency=1,
+                    )
+                    workers, runtimes, routers, destroyed = [], [], [], []
+                    results, errors = [], []
+
+                    def workerFactory(*args, **kwargs):
+                        worker = _DownloadSpeedWorker(*args, **kwargs)
+                        worker.CoreStartupGraceMilliseconds = 60_000
+                        worker.destroyed.connect(lambda *_args: destroyed.append(True))
+                        workers.append(worker)
+
+                        return worker
+
+                    def createRuntime(*_args, **kwargs):
+                        runtime = _CleanupRefusingRuntime(
+                            None, exitCallback=kwargs['exitCallback']
+                        )
+                        runtimes.append(runtime)
+
+                        return PreparedRuntime(runtime)
+
+                    schedulers = (
+                        manager._serialDownloadScheduler,
+                        manager._concurrentDownloadScheduler,
+                    )
+
+                    for scheduler in schedulers:
+                        scheduler.workerFactory = workerFactory
+
+                    registry = SimpleNamespace(
+                        prepareDownloadTest=lambda profile, _port: profile,
+                        createCoreRuntime=createRuntime,
+                    )
+                    manager.resultApplied.connect(lambda *_args: results.append(True))
+
+                    try:
+                        with (
+                            mock.patch(
+                                'Furious.Service.ProfileTesting.getPluginRegistry',
+                                return_value=registry,
+                            ),
+                            mock.patch('Furious.Service.ProfileTesting.AppLogManager'),
+                            mock.patch(
+                                'sys.excepthook', lambda *args: errors.append(args)
+                            ),
+                        ):
+                            manager.testDownloadSpeed((profile,), concurrent=False)
+                            manager.testDownloadSpeed((profile,), concurrent=True)
+                            processQtEvents()
+
+                            self.assertEqual(len(workers), 2)
+                            routers.extend(
+                                worker._runtimeLease.router for worker in workers
+                            )
+                            self.assertTrue(
+                                all(runtime.isRunning() for runtime in runtimes)
+                            )
+
+                            if pendingRelease:
+                                for runtime, worker in zip(runtimes, workers):
+                                    runtime.failure = 'stop'
+
+                                    with self.assertLogs(
+                                        'Furious.Service.RuntimeLease', level='ERROR'
+                                    ):
+                                        worker.runCompletionCallback()
+
+                                with self.assertLogs(
+                                    'Furious.Service.RuntimeLease', level='ERROR'
+                                ):
+                                    processQtEvents()
+
+                                self.assertTrue(
+                                    all(
+                                        scheduler._pendingReleases
+                                        for scheduler in schedulers
+                                    )
+                                )
+
+                                for runtime in runtimes:
+                                    runtime.failure = None
+
+                            results.clear()
+                            deleteQObject(parent)
+                            processQtEvents()
+
+                        self.assertFalse(errors)
+                        self.assertFalse(results)
+                        self.assertTrue(
+                            all(not runtime.isRunning() for runtime in runtimes)
+                        )
+                        self.assertTrue(
+                            all(not runtime.resourceOwned for runtime in runtimes)
+                        )
+                        self.assertTrue(manager._shuttingDown)
+                        self.assertTrue(all(not isValid(worker) for worker in workers))
+                        self.assertTrue(all(not isValid(router) for router in routers))
+                        self.assertEqual(len(destroyed), 2)
+
+                        for scheduler in schedulers:
+                            self.assertFalse(scheduler.activeJobs)
+                            self.assertFalse(scheduler.activePorts)
+                            self.assertFalse(scheduler._pendingReleases)
+                    finally:
+                        for runtime in runtimes:
+                            runtime.failure = None
+                            runtime.dispose()
+
+                        if isValid(manager):
+                            manager.shutdown()
+
+                        if isValid(parent):
+                            deleteQObject(parent)
+
+                        processQtEvents()
 
     def testCancelAllPreservesResultsRejectsLatePingAndAllowsNewTests(self):
         """Cancel active and queued work across all schedulers without shutting down."""

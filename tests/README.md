@@ -338,6 +338,11 @@ through native destruction, with weak-wrapper and compiled callback-retention ch
 Pool notifications skip peers destroyed by earlier callbacks. DNS observers cover
 reentrant cancellation/destruction during request creation and timeout aborts;
 statistics publication covers native manager destruction between emitted signals.
+Service teardown additionally covers connectivity replies destroyed without `finished`, DNS-operation owner
+destruction, statistics executor/thread release with an invalid wrapper retained, and download-runtime lease
+release before native child-worker deletion. Controller-owned update requests die with their controller;
+injected services retain their existing owner. Source regressions also exercise reentrant metrics enablement,
+download cancellation with a deleted reply, and disposal during an output-drain callback.
 Endpoint lookup covers service destruction/disablement during state and result
 notifications, without admitting the next request from the abandoned stage.
 

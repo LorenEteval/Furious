@@ -9,6 +9,9 @@ compatibility paths.
 - Controllers own process-lifetime shared state and transition policy. They coordinate injected repositories/services
   and publish structured Qt signals. New behavior delegates presentation and execution resources to their owners;
   existing host-setting prompts do not justify moving network replies, core processes, or pools into controllers.
+  A default QObject service created by a controller is its native child; an injected service keeps its supplied
+  owner. `ConnectionController` update-manager teardown and borrowed-owner cases in `tests/test_service_runtime.py`
+  verify that a retained invalid controller wrapper cannot keep its default network requests alive.
 - `ConnectionController` is the sole connection state machine. A GUI start remains `Connecting` while one
   generation-checked `ConnectionManager` transaction acquires readiness/TUN resources. The selected live profile is
   exposed during `Connecting`; successful runtime commit precedes System Proxy setup and `Connected`. Failure resets

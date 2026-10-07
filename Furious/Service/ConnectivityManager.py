@@ -21,9 +21,12 @@ from __future__ import annotations
 
 from Furious.Frozenlib import *
 from Furious.Qt.HttpGetManager import *
+from Furious.Qt.Signals import connectWeakly
 
 from PySide6 import QtCore
 from PySide6.QtNetwork import *
+
+from shiboken6 import isValid
 
 import logging
 
@@ -60,8 +63,22 @@ class ConnectivityManager(Mixins.ConnectionAware, HttpGetManager):
     @QtCore.Slot()
     def _abortActiveReply(self):
         """Abort the one currently active connectivity request."""
-        if isinstance(self._activeReply, QNetworkReply):
+        if isinstance(self._activeReply, QNetworkReply) and isValid(self._activeReply):
             self._activeReply.abort()
+
+    @QtCore.Slot()
+    def _activeReplyDestroyed(self):
+        """Release a probe whose native reply disappeared without finishing."""
+        if self._activeReply is None or isValid(self._activeReply):
+            return
+
+        # A completed reply may be deleted after another probe has started.
+        # Only the invalid active reply owns this timeout and admission slot.
+        self._activeReply = None
+        self.jobTimeoutTimer.stop()
+
+        if self._testingEnabled:
+            self.jobArrangeTimer.start(self.recalculateJobInterval(jobStatus=False))
 
     def recalculateJobInterval(self, jobStatus: bool) -> int:
         """Return the recalculate job interval value used by the network connectivity manager."""
@@ -114,6 +131,14 @@ class ConnectivityManager(Mixins.ConnectionAware, HttpGetManager):
             url = NETWORK_CONNECTIVITY_TEST_URL
 
         self._activeReply = self.webGET(url)
+
+        connectWeakly(
+            self._activeReply.destroyed,
+            self,
+            '_activeReplyDestroyed',
+            sender=self._activeReply,
+        )
+
         self.jobTimeoutTimer.start(ConnectivityManager.MIN_JOB_INTERVAL - 500)
 
     def stopTest(self):

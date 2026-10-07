@@ -31,11 +31,21 @@ from shiboken6 import isValid
 
 from typing import Tuple
 
+import weakref
 import logging
+import functools
 
 __all__ = ['DnsResolutionOperation', 'DnsResolver']
 
 logger = logging.getLogger(__name__)
+
+
+def _cancelDestroyedDnsOperation(operationReference, *_args):
+    """Abort operation-owned requests before Qt deletes its observer timer."""
+    operation = operationReference()
+
+    if operation is not None:
+        operation.cancel()
 
 
 class DnsResolutionOperation(QtCore.QObject):
@@ -58,6 +68,10 @@ class DnsResolutionOperation(QtCore.QObject):
         self._timer.setInterval(20)
 
         connectWeakly(self._timer.timeout, self, '_poll')
+
+        self.destroyed.connect(
+            functools.partial(_cancelDestroyedDnsOperation, weakref.ref(self))
+        )
 
     def start(self):
         """Start the DNS request and its event-driven completion observer."""

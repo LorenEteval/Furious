@@ -50,6 +50,8 @@ from Furious.Service.TcpingService import (
 from PySide6 import QtCore
 from PySide6.QtNetwork import QNetworkReply
 
+from shiboken6 import isValid
+
 from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Callable, Iterable
@@ -58,6 +60,7 @@ import icmplib
 import logging
 import weakref
 import collections
+import functools
 
 logger = logging.getLogger(__name__)
 
@@ -823,14 +826,14 @@ class _DownloadSpeedWorker(HttpGetManager):
 
     def isFinished(self) -> bool:
         """Return whether the HTTP operation has no active reply."""
-        if isinstance(self.networkReply, QNetworkReply):
+        if isinstance(self.networkReply, QNetworkReply) and isValid(self.networkReply):
             return self.networkReply.isFinished()
 
         return True
 
     def abort(self):
         """Abort the exact active HTTP reply if one exists."""
-        if isinstance(self.networkReply, QNetworkReply):
+        if isinstance(self.networkReply, QNetworkReply) and isValid(self.networkReply):
             self.networkReply.abort()
 
     def cancel(self):
@@ -1325,6 +1328,16 @@ class _DownloadSpeedScheduler(QtCore.QObject):
         self.scheduleDrain()
 
 
+def _shutdownDestroyedProfileTestManager(managerReference, *_args):
+    """Release execution before Qt deletes the manager's child schedulers."""
+    manager = managerReference()
+
+    if manager is not None:
+        # destroyed invalidates the manager, but its children are still valid.
+        # shutdown uses those children and Python state, never the manager's Qt API.
+        manager.shutdown()
+
+
 class ProfileTestManager(QtCore.QObject):
     """Own profile-test identity, execution, cancellation, and write-back."""
 
@@ -1384,6 +1397,10 @@ class ProfileTestManager(QtCore.QObject):
         )
 
         self._shuttingDown = False
+
+        self.destroyed.connect(
+            functools.partial(_shutdownDestroyedProfileTestManager, weakref.ref(self))
+        )
 
     def resolveTarget(self, target: ProfileTestTarget):
         """Resolve a captured target through the mutation-refreshed identity map."""

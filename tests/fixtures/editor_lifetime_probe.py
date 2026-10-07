@@ -50,10 +50,17 @@ from Furious.Service.EndpointInfoService import (
 )
 from Furious.Service.SubscriptionManager import SubscriptionManager
 from Furious.Service.ProfileTesting import _LatencyScheduler
+from Furious.Service.ProfileTesting import (
+    DownloadSpeedTestOptions,
+    ProfileTestManager,
+    ProfileTestJobState,
+    _DownloadSpeedWorker,
+)
+from Furious.Service.ConnectivityManager import ConnectivityManager
 from Furious.Service.DnsResolver import DnsResolutionOperation, DnsResolver
 from Furious.Service.TrafficStatsManager import TrafficStatsManager
 from Furious.Frozenlib import Mixins
-from Furious.Plugins import TrafficCounters
+from Furious.Plugins import TrafficCounters, TrafficStatsMonitor
 from Furious.Service.ConnectionManager import (
     ConnectionManager,
     ConnectionStartOperation,
@@ -88,6 +95,7 @@ import argparse
 import json
 import sys
 import weakref
+import threading
 from pathlib import Path
 import tempfile
 
@@ -836,6 +844,165 @@ class _RequestPayload:
     """Expose whether pending request context still owns plain operation data."""
 
 
+def runServiceTeardownProbe(iterations=100):
+    """Exercise reply loss, executor teardown, and child runtime release compiled."""
+    controller = ConnectionController(coreManager=SimpleNamespace(runtimes=[]))
+    updater = controller._updatesManager
+    reply = _PendingReply(updater)
+
+    with mock.patch.object(updater, 'get', lambda _request: reply):
+        updater.webGET('https://invalid.test', marker='fixture')
+
+    deleteQObject(controller)
+
+    assert not isValid(updater) and not isValid(reply)
+    assert not updater._replyContexts
+
+    manager = ConnectivityManager()
+    references = []
+
+    try:
+        manager._testingEnabled = True
+
+        with mock.patch(
+            'Furious.Service.ConnectivityManager.AppSettings.get', return_value=None
+        ):
+            for _ in range(iterations):
+                reply = _PendingReply(manager)
+                references.append(weakref.ref(reply))
+
+                with mock.patch.object(manager, 'get', lambda _request: reply):
+                    manager.startSingleTest()
+
+                assert manager._activeReply is reply
+
+                deleteQObject(reply)
+
+                assert manager._activeReply is None
+                assert not manager._replyContexts
+                assert not manager.jobTimeoutTimer.isActive()
+
+                del reply
+
+        assert all(reference() is None for reference in references)
+    finally:
+        manager.stopTest()
+        deleteQObject(manager)
+
+    resolver = DnsResolver()
+
+    try:
+        with mock.patch('Furious.Service.DnsResolver.logger.error'):
+            for _ in range(iterations):
+                parent = QtCore.QObject()
+                operation = resolver.resolveAsync('example.test', parent=parent)
+                reply = _PendingReply(resolver)
+
+                with mock.patch.object(resolver, 'get', lambda _request: reply):
+                    operation.start()
+
+                deleteQObject(parent)
+
+                assert not isValid(operation)
+                assert reply.isFinished()
+                assert not resolver._replyContexts
+
+                processQtEvents()
+
+                assert not isValid(reply)
+    finally:
+        resolver.dispose()
+
+    parent = QtCore.QObject()
+    stats = TrafficStatsManager(parent)
+    started, release = threading.Event(), threading.Event()
+
+    def query(_target):
+        started.set()
+        release.wait(5)
+
+        return TrafficCounters(1, 2)
+
+    stats._activateMonitor(TrafficStatsMonitor(query=query, target=None))
+    executor = stats._executor
+
+    try:
+        assert started.wait(2)
+        threads = tuple(executor._threads)
+
+        deleteQObject(parent)
+
+        assert stats._executor is None and stats._future is None
+        assert stats._monitor is None and executor._shutdown
+
+        release.set()
+
+        for thread in threads:
+            thread.join(3)
+
+        assert all(not thread.is_alive() for thread in threads)
+    finally:
+        release.set()
+        executor.shutdown(wait=True, cancel_futures=True)
+
+        if isValid(parent):
+            deleteQObject(parent)
+
+    class Lease:
+        def __init__(self):
+            self.resourceOwned = True
+
+        def release(self):
+            self.resourceOwned = False
+
+            return True
+
+    runtimeReleases = 0
+
+    for _ in range(iterations):
+        parent = QtCore.QObject()
+        tests = ProfileTestManager(parent, profilesProvider=tuple)
+        workers, leases = [], []
+
+        for scheduler in (
+            tests._serialDownloadScheduler,
+            tests._concurrentDownloadScheduler,
+        ):
+            worker = _DownloadSpeedWorker(
+                None,
+                scheduler.portRange.start,
+                DownloadSpeedTestOptions(5000, 'https://invalid.test'),
+                parent=scheduler,
+            )
+            lease = Lease()
+            worker._runtimeLease = lease
+            job = SimpleNamespace(state=ProfileTestJobState.Running)
+            scheduler.activeJobs[id(worker)] = (worker, job, worker.port)
+            scheduler.activePorts.add(worker.port)
+            connectWeakly(
+                worker.finished, scheduler, 'handleWorkerFinished', sender=worker
+            )
+            workers.append(worker)
+            leases.append(lease)
+
+        deleteQObject(parent)
+        processQtEvents()
+
+        assert all(not lease.resourceOwned for lease in leases)
+        assert all(not isValid(worker) for worker in workers)
+        assert not tests._serialDownloadScheduler.activePorts
+        assert not tests._concurrentDownloadScheduler.activePorts
+        runtimeReleases += len(leases)
+
+    return {
+        'connectivityReplyDestructions': iterations,
+        'controllerOwnedUpdateRequestsReleased': 1,
+        'dnsRequestsAbortedOnOwnerDestruction': iterations,
+        'statisticsThreadsStopped': len(threads),
+        'downloadLeaseReleases': runtimeReleases,
+    }
+
+
 def runNetworkProbe(iterations=100):
     """Verify native teardown releases both reply registries under compilation."""
     application()
@@ -1491,6 +1658,7 @@ def main():
         print(json.dumps(runButtonOwnershipProbe(arguments.iterations), sort_keys=True))
         print(json.dumps(runConfirmationProbe(arguments.iterations), sort_keys=True))
         print(json.dumps(runNetworkProbe(arguments.iterations), sort_keys=True))
+        print(json.dumps(runServiceTeardownProbe(arguments.iterations), sort_keys=True))
         print(json.dumps(runInfrastructureProbe(arguments.iterations), sort_keys=True))
 
         print(

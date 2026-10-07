@@ -13,6 +13,13 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   owner and explicit idempotent cleanup. Cancellation can suppress a result without stopping the underlying work;
   distinguish deadline-bounded teardown from cooperative drains, and retain resources until their users finish.
   Construct Qt services only after an application exists.
+- Native owner destruction also ends Python execution ownership. At `destroyed`, the owner's wrapper is invalid
+  but its QObject children have not yet been deleted; a plain weak-reference callback may release Python state
+  and shut down still-valid child schedulers without calling the destroyed owner's Qt API. Statistics executors,
+  profile-test runtime leases and DNS-operation replies exercise this boundary in `test_service_runtime.py` and
+  `test_profile_test_jobs.py`. This final attempt does not guarantee release of a resource that refuses cleanup:
+  explicit shutdown must retain retry ownership before native deletion. Cancellation of a running provider remains
+  cooperative, and executor admission closure is distinct from actual worker termination.
 - Inject repositories/providers/clients/runtime factories where practical. Stage results, prove freshness, and commit
   through the owning repository/controller rather than creating a parallel authoritative collection.
 - Every async workflow defines supersession and one terminal publication path. Generation/version or exact target
