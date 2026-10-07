@@ -27,6 +27,8 @@ structure and human-reviewed translations.
   retranslation under explicit locales rather than treating collision diagnostics as cosmetic. A collision-free
   extraction report does not prove reverse lookup is unambiguous across every language; inspect the runtime index
   and language-switch behavior when two source keys share translated text.
+  In Chinese UI text, do not insert spaces between Chinese characters and Latin abbreviations or numerals.
+  Preserve spaces within English names or phrases.
 
 ## Extractable source text
 

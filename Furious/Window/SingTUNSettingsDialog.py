@@ -37,7 +37,7 @@ from Furious.Qt import (
     AppQDialogButtonBox,
     DraculaJSONTextEditor,
 )
-from Furious.Qt.Signals import connectWeakly
+from Furious.Qt.Signals import connectWeakly, singleShotWeakly
 from Furious.Qt import gettext as _
 
 from PySide6 import QtCore
@@ -47,6 +47,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QScrollArea,
+    QStyle,
+    QStyleOptionFrame,
 )
 
 import copy
@@ -113,8 +115,10 @@ class SingTUNSettingsDialog(AppQTransientDialog):
         self._text(
             bridge,
             'network_interface',
-            _('SOCKS Interface Binding (empty for automatic)'),
+            _('SOCKS Interface Binding'),
             common.get('network_interface'),
+            placeholder=_('empty for automatic'),
+            maximumWidth=360,
         )
         self._number(
             bridge,
@@ -125,12 +129,27 @@ class SingTUNSettingsDialog(AppQTransientDialog):
             16384,
         )
 
-        for key, label in (
-            ('connect_timeout', _('Connect Timeout (seconds)')),
-            ('udp_timeout', _('SOCKS UDP Timeout (seconds)')),
-            ('tcp_idle_timeout', _('TCP Idle Timeout (seconds)')),
-        ):
-            self._text(bridge, key, label, common.get(key))
+        self._text(
+            bridge,
+            'connect_timeout',
+            _('Connect Timeout (seconds)'),
+            common.get('connect_timeout'),
+            maximumWidth=160,
+        )
+        self._text(
+            bridge,
+            'udp_timeout',
+            _('SOCKS UDP Timeout (seconds)'),
+            common.get('udp_timeout'),
+            maximumWidth=160,
+        )
+        self._text(
+            bridge,
+            'tcp_idle_timeout',
+            _('TCP Idle Timeout (seconds)'),
+            common.get('tcp_idle_timeout'),
+            maximumWidth=160,
+        )
 
         native = self._page(_('Interface and Stack'))
         tun = (
@@ -140,28 +159,37 @@ class SingTUNSettingsDialog(AppQTransientDialog):
         )
 
         self._text(
-            native, 'Name', _('Device Name (empty for automatic)'), tun.get('Name', '')
+            native,
+            'Name',
+            _('Device Name'),
+            tun.get('Name', ''),
+            placeholder=_('empty for automatic'),
+            maximumWidth=360,
         )
-        self._number(native, 'MTU', _('MTU (bytes)'), tun.get('MTU', 1500), 68, 65535)
+        self._number(native, 'MTU', _('MTU'), tun.get('MTU', 1500), 68, 65535)
         self._text(
             native,
             'Inet4Address',
-            _('IPv4 Address Prefixes (comma separated)'),
+            _('IPv4 Address Prefixes'),
             (
                 ', '.join(str(value) for value in tun.get('Inet4Address', []))
                 if isinstance(tun.get('Inet4Address'), list)
                 else ''
             ),
+            placeholder=_('separated by commas'),
+            maximumWidth=600,
         )
         self._text(
             native,
             'Inet6Address',
-            _('IPv6 Address Prefixes (comma separated)'),
+            _('IPv6 Address Prefixes'),
             (
                 ', '.join(str(value) for value in tun.get('Inet6Address', []))
                 if isinstance(tun.get('Inet6Address'), list)
                 else ''
             ),
+            placeholder=_('separated by commas'),
+            maximumWidth=600,
         )
 
         stack = (
@@ -173,7 +201,7 @@ class SingTUNSettingsDialog(AppQTransientDialog):
         self._choice(
             native,
             'TCPCongestionControl',
-            _('TCP Congestion Control (Go stack)'),
+            _('TCP Congestion Control'),
             [
                 (_('Automatic'), ''),
                 ('cubic', 'cubic'),
@@ -182,23 +210,33 @@ class SingTUNSettingsDialog(AppQTransientDialog):
             ],
             stack.get('TCPCongestionControl', ''),
         )
+        self.fields['TCPCongestionControl'].setToolTip(
+            _('Available when Stack is set to go or Automatic.')
+        )
+
+        self._text(
+            native,
+            'UDPNATMax',
+            _('Native UDP NAT Limit'),
+            stack.get('UDPNATMax', 0),
+            placeholder=_('0 for default'),
+            maximumWidth=200,
+        )
         self._text(
             native,
             'UDPTimeout',
-            _('Native UDP Timeout (Go duration, e.g. 1m)'),
+            _('Native UDP Timeout'),
             stack.get('UDPTimeout', '1m'),
+            placeholder=_('duration with units, e.g. 1m'),
+            maximumWidth=180,
         )
         self._text(
             native,
             'ICMPTimeout',
-            _('Native ICMP Timeout (Go duration, 0 for default)'),
+            _('Native ICMP Timeout'),
             stack.get('ICMPTimeout', '0'),
-        )
-        self._text(
-            native,
-            'UDPNATMax',
-            _('Native UDP NAT Limit (0 for default)'),
-            stack.get('UDPNATMax', 0),
+            placeholder=_('duration with units, or 0 for default'),
+            maximumWidth=180,
         )
 
         for key, label in (
@@ -224,16 +262,17 @@ class SingTUNSettingsDialog(AppQTransientDialog):
         )
         hostForm = self._page(_('Host Settings'))
 
-        for key, label in (
-            ('primaryAdapterInterfaceName', _('Primary Adapter Interface Name')),
-            ('primaryAdapterInterfaceIP', _('Primary Adapter Interface IP')),
-            ('tunAdapterInterfaceDNS', _('TUN Adapter Interface DNS')),
+        for key, label, width in (
+            ('primaryAdapterInterfaceName', _('Primary Adapter Interface Name'), 360),
+            ('primaryAdapterInterfaceIP', _('Primary Adapter Interface IP'), 360),
+            ('tunAdapterInterfaceDNS', _('TUN Adapter Interface DNS'), 360),
             (
                 'bypassTUNAdapterInterfaceIP',
                 _('Bypass TUN Adapter Interface IP (separated by commas)'),
+                600,
             ),
         ):
-            self._text(hostForm, key, label, host.get(key, ''))
+            self._text(hostForm, key, label, host.get(key, ''), maximumWidth=width)
 
         self.disableDNS = AppQSwitch()
         self.disableDNS.setChecked(
@@ -313,6 +352,38 @@ class SingTUNSettingsDialog(AppQTransientDialog):
 
         layout.addWidget(buttons)
 
+    def _fitDurationInputs(self):
+        for key in ('UDPTimeout', 'ICMPTimeout'):
+            widget = self.fields[key]
+            widget.ensurePolished()
+
+            option = QStyleOptionFrame()
+            widget.initStyleOption(option)
+            margins = widget.textMargins()
+            textWidth = widget.fontMetrics().horizontalAdvance(widget.placeholderText())
+            size = widget.style().sizeFromContents(
+                QStyle.ContentsType.CT_LineEdit,
+                option,
+                QtCore.QSize(
+                    textWidth + margins.left() + margins.right() + 4,
+                    widget.sizeHint().height(),
+                ),
+                widget,
+            )
+            width = max(180, size.width() + 80)
+            widget.setMinimumWidth(width)
+            widget.setMaximumWidth(width)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+
+        self._fitDurationInputs()
+
+    def retranslate(self):
+        super().retranslate()
+
+        singleShotWeakly(0, self, '_fitDurationInputs')
+
     def _page(self, title):
         page = QWidget()
 
@@ -327,22 +398,30 @@ class SingTUNSettingsDialog(AppQTransientDialog):
 
         return form
 
-    def _text(self, form, key, label, value):
+    def _addField(self, form, label, widget):
+        form.addRow(AppQLabel(label), widget)
+
+    def _text(self, form, key, label, value, *, placeholder='', maximumWidth=None):
         widget = AppQLineEdit()
         widget.setText(str(value) if value is not None else '')
+        widget.setPlaceholderText(placeholder)
+
+        if maximumWidth is not None:
+            widget.setMaximumWidth(maximumWidth)
 
         self.fields[key] = widget
 
-        form.addRow(AppQLabel(label), widget)
+        self._addField(form, label, widget)
 
     def _number(self, form, key, label, value, minimum, maximum):
         widget = AppQSpinBox()
         widget.setRange(minimum, maximum)
         widget.setValue(value if type(value) is int else minimum)
+        widget.setMaximumWidth(135)
 
         self.fields[key] = widget
 
-        form.addRow(AppQLabel(label), widget)
+        self._addField(form, label, widget)
 
     def _choice(self, form, key, label, choices, value):
         widget = AppQComboBox()
@@ -354,7 +433,7 @@ class SingTUNSettingsDialog(AppQTransientDialog):
 
         self.fields[key] = widget
 
-        form.addRow(AppQLabel(label), widget)
+        self._addField(form, label, widget)
 
     def document(self):
         """Prepare sing-tun's complete candidate before its live collection changes."""

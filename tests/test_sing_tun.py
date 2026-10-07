@@ -25,7 +25,7 @@ from Furious.Core.MultiprocessingRuntime import (
     MultiprocessingRuntime,
 )
 from Furious.Interface import CoreRuntime, RuntimeState, RuntimeExitReason
-from Furious.Frozenlib import AppSettings
+from Furious.Frozenlib import AppSettings, Mixins
 from Furious.Models.SingTUN import prepareSingTUNSettings, addSingTUNExclusions
 from Furious.Frozenlib.SocksProxy import socksURL
 from Furious.Repository import Storage
@@ -56,7 +56,8 @@ from Furious.Service.RuntimeLease import RuntimeEventRouter, RuntimeLeaseState
 from Furious.Service.LogManager import LogManager, TUN_LOG_CATEGORY
 
 from PySide6 import QtCore
-from PySide6.QtWidgets import QLabel, QWidget
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QLabel, QStyle, QStyleOptionFrame, QWidget
 from shiboken6 import isValid
 
 from tests.support import application, isolatedSettings, processQtEvents, waitFor
@@ -564,8 +565,12 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
 
         for language in ('ZH', 'RU'):
             self.assertNotEqual(
-                _('TCP Congestion Control (Go stack)', language),
-                'TCP Congestion Control (Go stack)',
+                _('TCP Congestion Control', language),
+                'TCP Congestion Control',
+            )
+            self.assertNotEqual(
+                _('Available when Stack is set to go or Automatic.', language),
+                'Available when Stack is set to go or Automatic.',
             )
 
         dialog.reject()
@@ -588,6 +593,153 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         dialog.reject()
         processQtEvents()
         self.assertFalse(isValid(dialog))
+
+    def testSelectiveRowsKeepInputsBoundedAndPreserveKeyboardOrderAndValues(self):
+        pages = (
+            (
+                0,
+                (),
+                (
+                    'stack',
+                    'log_level',
+                    'network_interface',
+                    'max_sessions',
+                    'connect_timeout',
+                    'udp_timeout',
+                    'tcp_idle_timeout',
+                ),
+            ),
+            (
+                1,
+                (),
+                (
+                    'Name',
+                    'MTU',
+                    'Inet4Address',
+                    'Inet6Address',
+                    'TCPCongestionControl',
+                    'UDPNATMax',
+                    'UDPTimeout',
+                    'ICMPTimeout',
+                    'UDPMapping',
+                    'UDPFiltering',
+                ),
+            ),
+        )
+
+        for language in ('EN', 'RU', 'ZH'):
+            with self.subTest(language=language), isolatedSettings():
+                AppSettings.set('Language', language)
+                dialog = self._dialog({})
+                original = dialog.document()
+                dialog.open()
+                dialog.activateWindow()
+                processQtEvents()
+
+                try:
+                    for tab, pairs, keys in pages:
+                        dialog.tabs.setCurrentIndex(tab)
+                        processQtEvents()
+
+                        if tab == 0:
+                            self.assertLess(
+                                dialog.fields['stack'].geometry().bottom(),
+                                dialog.fields['log_level'].geometry().top(),
+                            )
+                            self.assertLess(
+                                dialog.fields['connect_timeout'].geometry().bottom(),
+                                dialog.fields['udp_timeout'].geometry().top(),
+                            )
+
+                        for left, right in pairs:
+                            first, second = dialog.fields[left], dialog.fields[right]
+                            self.assertLessEqual(
+                                abs(
+                                    first.geometry().center().y()
+                                    - second.geometry().center().y()
+                                ),
+                                2,
+                            )
+                            self.assertLess(
+                                first.geometry().right(), second.geometry().left()
+                            )
+
+                        ordered = [dialog.fields[key] for key in keys]
+                        ordered[0].setFocus()
+                        processQtEvents()
+
+                        for current, following in zip(ordered, ordered[1:]):
+                            QTest.keyClick(current, QtCore.Qt.Key_Tab)
+                            self.assertTrue(following.hasFocus())
+
+                    for first, second in (
+                        ('Name', 'MTU'),
+                        ('Inet4Address', 'Inet6Address'),
+                        ('TCPCongestionControl', 'UDPNATMax'),
+                        ('UDPTimeout', 'ICMPTimeout'),
+                        ('UDPMapping', 'UDPFiltering'),
+                    ):
+                        self.assertLess(
+                            dialog.fields[first].geometry().bottom(),
+                            dialog.fields[second].geometry().top(),
+                        )
+
+                    for key, width in (
+                        ('Name', 360),
+                        ('network_interface', 360),
+                        ('UDPNATMax', 200),
+                        ('connect_timeout', 160),
+                        ('udp_timeout', 160),
+                        ('tcp_idle_timeout', 160),
+                    ):
+                        self.assertLessEqual(dialog.fields[key].width(), width)
+
+                    for key in ('Inet4Address', 'Inet6Address'):
+                        self.assertLessEqual(dialog.fields[key].width(), 600)
+                        self.assertEqual(dialog.fields[key].maximumWidth(), 600)
+
+                    self.assertEqual(dialog.document(), original)
+                finally:
+                    dialog.reject()
+                    processQtEvents()
+
+    def testDurationInputsFitTranslatedPlaceholdersWithoutChangingValues(self):
+        with isolatedSettings():
+            AppSettings.set('Language', 'EN')
+            dialog = self._dialog({})
+            original = dialog.document()
+            dialog.tabs.setCurrentIndex(1)
+            dialog.open()
+            processQtEvents()
+
+            try:
+                for language in ('RU', 'ZH', 'EN'):
+                    AppSettings.set('Language', language)
+                    Mixins.QTranslatable.retranslateAll()
+                    processQtEvents()
+
+                    for key in ('UDPTimeout', 'ICMPTimeout'):
+                        field = dialog.fields[key]
+                        option = QStyleOptionFrame()
+                        field.initStyleOption(option)
+                        content = field.style().subElementRect(
+                            QStyle.SubElement.SE_LineEditContents, option, field
+                        )
+                        margins = field.textMargins()
+                        available = content.width() - margins.left() - margins.right()
+                        self.assertGreaterEqual(
+                            available,
+                            field.fontMetrics().horizontalAdvance(
+                                field.placeholderText()
+                            )
+                            + 80,
+                        )
+                        self.assertLess(field.width(), dialog.width())
+
+                    self.assertEqual(dialog.document(), original)
+            finally:
+                dialog.reject()
+                processQtEvents()
 
     def testDialogPreparesNativeAndHostOptionsInOneIndependentDocument(self):
         sing = {'host_options': {'tunAdapterInterfaceDNS': '9.9.9.9'}}
@@ -689,6 +841,10 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
 
                 form = dialog.disableDNS.parentWidget().layout()
                 legacyLabels = {label.text() for label in legacy.findChildren(QLabel)}
+                singLabels = {
+                    label.text()
+                    for label in dialog.disableDNS.parentWidget().findChildren(QLabel)
+                }
 
                 for key, source in (
                     ('primaryAdapterInterfaceName', 'Primary Adapter Interface Name'),
@@ -700,6 +856,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                     ),
                 ):
                     expected = _(source)
+                    self.assertIn(expected, singLabels)
                     self.assertEqual(
                         form.labelForField(dialog.fields[key]).text(), expected
                     )
@@ -721,6 +878,42 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
                 )
                 self.assertIn(dnsLabel, legacyLabels)
                 self.assertEqual(form.rowCount(), 5)
+
+                dialog.tabs.setCurrentIndex(2)
+                dialog.open()
+                processQtEvents()
+                name = dialog.fields['primaryAdapterInterfaceName']
+                address = dialog.fields['primaryAdapterInterfaceIP']
+                self.assertLess(name.geometry().bottom(), address.geometry().top())
+                for key, width in (
+                    ('primaryAdapterInterfaceName', 360),
+                    ('primaryAdapterInterfaceIP', 360),
+                    ('tunAdapterInterfaceDNS', 360),
+                    ('bypassTUNAdapterInterfaceIP', 600),
+                ):
+                    self.assertLessEqual(dialog.fields[key].width(), width)
+
+                ordered = [
+                    dialog.fields[key]
+                    for key in (
+                        'primaryAdapterInterfaceName',
+                        'primaryAdapterInterfaceIP',
+                        'tunAdapterInterfaceDNS',
+                        'bypassTUNAdapterInterfaceIP',
+                    )
+                ]
+                ordered[0].setFocus()
+                for current, following in zip(ordered, ordered[1:]):
+                    QTest.keyClick(current, QtCore.Qt.Key_Tab)
+                    self.assertTrue(following.hasFocus())
+
+                if language == 'ZH':
+                    self.assertEqual(
+                        _('Customize sing-tun Settings'), '自定义sing-tun设置'
+                    )
+                    self.assertEqual(
+                        _('Customize sing-tun Settings...'), '自定义sing-tun设置...'
+                    )
 
                 legacy.reject()
                 legacy.deleteLater()

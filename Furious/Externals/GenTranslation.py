@@ -3368,8 +3368,8 @@ TRANSLATION = {
         "source": [
             "Furious.Window.SettingsPage"
         ],
-        "RU": "Настроить sing-tun...",
-        "ZH": "自定义 sing-tun 设置...",
+        "RU": "Настроить параметры sing-tun...",
+        "ZH": "自定义sing-tun设置...",
         "isReviewed": "True"
     },
     "Customize sing-tun Settings": {
@@ -3377,7 +3377,7 @@ TRANSLATION = {
             "Furious.Window.SingTUNSettingsDialog"
         ],
         "RU": "Настройка sing-tun",
-        "ZH": "自定义 sing-tun 设置",
+        "ZH": "自定义sing-tun设置",
         "isReviewed": "True"
     },
     "SOCKS Transit": {
@@ -3385,7 +3385,7 @@ TRANSLATION = {
             "Furious.Window.SingTUNSettingsDialog"
         ],
         "RU": "Передача через SOCKS",
-        "ZH": "SOCKS 转发",
+        "ZH": "SOCKS转发",
         "isReviewed": "True"
     },
     "Stack": {
@@ -3404,14 +3404,6 @@ TRANSLATION = {
         "ZH": "日志级别",
         "isReviewed": "True"
     },
-    "SOCKS Interface Binding (empty for automatic)": {
-        "source": [
-            "Furious.Window.SingTUNSettingsDialog"
-        ],
-        "RU": "Интерфейс SOCKS (пусто — автоматически)",
-        "ZH": "SOCKS 绑定接口（留空自动选择）",
-        "isReviewed": "True"
-    },
     "Maximum Sessions": {
         "source": [
             "Furious.Window.SingTUNSettingsDialog"
@@ -3428,62 +3420,6 @@ TRANSLATION = {
         "ZH": "接口与协议栈",
         "isReviewed": "True"
     },
-    "Device Name (empty for automatic)": {
-        "source": [
-            "Furious.Window.SingTUNSettingsDialog"
-        ],
-        "RU": "Имя устройства (пусто — автоматически)",
-        "ZH": "设备名称（留空自动选择）",
-        "isReviewed": "True"
-    },
-    "MTU (bytes)": {
-        "source": [
-            "Furious.Window.SingTUNSettingsDialog"
-        ],
-        "RU": "MTU (байты)",
-        "ZH": "MTU（字节）",
-        "isReviewed": "True"
-    },
-    "IPv4 Address Prefixes (comma separated)": {
-        "source": [
-            "Furious.Window.SingTUNSettingsDialog"
-        ],
-        "RU": "Префиксы IPv4 (через запятую)",
-        "ZH": "IPv4 地址前缀（以逗号分隔）",
-        "isReviewed": "True"
-    },
-    "IPv6 Address Prefixes (comma separated)": {
-        "source": [
-            "Furious.Window.SingTUNSettingsDialog"
-        ],
-        "RU": "Префиксы IPv6 (через запятую)",
-        "ZH": "IPv6 地址前缀（以逗号分隔）",
-        "isReviewed": "True"
-    },
-    "Native UDP Timeout (Go duration, e.g. 1m)": {
-        "source": [
-            "Furious.Window.SingTUNSettingsDialog"
-        ],
-        "RU": "Тайм-аут UDP стека (длительность Go, например 1m)",
-        "ZH": "原生 UDP 超时（Go 时长，例如 1m）",
-        "isReviewed": "True"
-    },
-    "Native ICMP Timeout (Go duration, 0 for default)": {
-        "source": [
-            "Furious.Window.SingTUNSettingsDialog"
-        ],
-        "RU": "Тайм-аут ICMP стека (длительность Go, 0 — по умолчанию)",
-        "ZH": "原生 ICMP 超时（Go 时长，0 使用默认值）",
-        "isReviewed": "True"
-    },
-    "Native UDP NAT Limit (0 for default)": {
-        "source": [
-            "Furious.Window.SingTUNSettingsDialog"
-        ],
-        "RU": "Лимит UDP NAT стека (0 — по умолчанию)",
-        "ZH": "原生 UDP NAT 上限（0 使用默认值）",
-        "isReviewed": "True"
-    },
     "Advanced Options": {
         "source": [
             "Furious.Window.SingTUNSettingsDialog"
@@ -3497,7 +3433,7 @@ TRANSLATION = {
             "Furious.Window.SingTUNSettingsDialog"
         ],
         "RU": "Используйте точные имена полей JSON. Поддерживаются списки маршрутов и исключений, StrictRoute, InterfaceScope, ForwarderBindInterface и IncludeAllNetworks. AutoRoute, режим внешней конфигурации и настройки DNS управляются приложением. Неподдерживаемые поля отклоняются.",
-        "ZH": "请使用准确的原生 JSON 字段名。支持路由地址及排除列表、StrictRoute、InterfaceScope、ForwarderBindInterface 和 IncludeAllNetworks。AutoRoute、外部配置模式和 DNS 配置均由应用统一管理。不支持的字段会被拒绝。",
+        "ZH": "请使用准确的原生JSON字段名。支持路由地址及排除列表、StrictRoute、InterfaceScope、ForwarderBindInterface和IncludeAllNetworks。AutoRoute、外部配置模式和DNS配置均由应用统一管理。不支持的字段会被拒绝。",
         "isReviewed": "True"
     },
     "Connect Timeout (seconds)": {
@@ -3513,7 +3449,7 @@ TRANSLATION = {
             "Furious.Window.SingTUNSettingsDialog"
         ],
         "RU": "Тайм-аут UDP SOCKS (секунды)",
-        "ZH": "SOCKS UDP 超时（秒）",
+        "ZH": "SOCKS UDP超时（秒）",
         "isReviewed": "True"
     },
     "TCP Idle Timeout (seconds)": {
@@ -3521,7 +3457,7 @@ TRANSLATION = {
             "Furious.Window.SingTUNSettingsDialog"
         ],
         "RU": "Тайм-аут простоя TCP (секунды)",
-        "ZH": "TCP 空闲超时（秒）",
+        "ZH": "TCP空闲超时（秒）",
         "isReviewed": "True"
     },
     "UDP Mapping": {
@@ -3529,7 +3465,7 @@ TRANSLATION = {
             "Furious.Window.SingTUNSettingsDialog"
         ],
         "RU": "Сопоставление UDP",
-        "ZH": "UDP 映射方式",
+        "ZH": "UDP映射方式",
         "isReviewed": "True"
     },
     "UDP Filtering": {
@@ -3537,7 +3473,7 @@ TRANSLATION = {
             "Furious.Window.SingTUNSettingsDialog"
         ],
         "RU": "Фильтрация UDP",
-        "ZH": "UDP 过滤方式",
+        "ZH": "UDP过滤方式",
         "isReviewed": "True"
     },
     "Automatic": {
@@ -3592,7 +3528,7 @@ TRANSLATION = {
         "source": [
             "Furious.Window.SettingsPage"
         ],
-        "RU": "Настройте интерфейс, стек, SOCKS-передачу и параметры хоста sing-tun.",
+        "RU": "Настройте интерфейс, стек, передачу через SOCKS и параметры хоста sing-tun.",
         "ZH": "配置 sing-tun 的接口、协议栈、SOCKS 转发和主机设置。",
         "isReviewed": "True"
     },
@@ -3602,14 +3538,6 @@ TRANSLATION = {
         ],
         "RU": "Настройки хоста",
         "ZH": "主机设置",
-        "isReviewed": "True"
-    },
-    "TCP Congestion Control (Go stack)": {
-        "source": [
-            "Furious.Window.SingTUNSettingsDialog"
-        ],
-        "RU": "Управление перегрузкой TCP (стек Go)",
-        "ZH": "TCP 拥塞控制（Go 协议栈）",
         "isReviewed": "True"
     },
     "TUN Adapter Interface DNS": {
@@ -3708,6 +3636,126 @@ TRANSLATION = {
         ],
         "RU": "Показывать только избранные профили",
         "ZH": "仅显示已收藏的配置",
+        "isReviewed": "True"
+    },
+    "SOCKS Interface Binding": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Интерфейс SOCKS",
+        "ZH": "SOCKS绑定接口",
+        "isReviewed": "True"
+    },
+    "Device Name": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Имя устройства",
+        "ZH": "设备名称",
+        "isReviewed": "True"
+    },
+    "IPv4 Address Prefixes": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Префиксы IPv4",
+        "ZH": "IPv4地址前缀",
+        "isReviewed": "True"
+    },
+    "IPv6 Address Prefixes": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Префиксы IPv6",
+        "ZH": "IPv6地址前缀",
+        "isReviewed": "True"
+    },
+    "Native UDP Timeout": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Тайм-аут UDP стека",
+        "ZH": "原生UDP超时",
+        "isReviewed": "True"
+    },
+    "Native ICMP Timeout": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Тайм-аут ICMP стека",
+        "ZH": "原生ICMP超时",
+        "isReviewed": "True"
+    },
+    "Native UDP NAT Limit": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Лимит UDP NAT стека",
+        "ZH": "原生UDP NAT上限",
+        "isReviewed": "True"
+    },
+    "empty for automatic": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "пусто — автоматически",
+        "ZH": "留空自动配置",
+        "isReviewed": "True"
+    },
+    "separated by commas": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "через запятую",
+        "ZH": "以逗号分隔",
+        "isReviewed": "True"
+    },
+    "duration with units, e.g. 1m": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "длительность с единицей измерения, например 1m",
+        "ZH": "带单位的时长，例如1m",
+        "isReviewed": "True"
+    },
+    "duration with units, or 0 for default": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "длительность с единицей измерения; 0 — по умолчанию",
+        "ZH": "带单位的时长，或填0使用默认值",
+        "isReviewed": "True"
+    },
+    "0 for default": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "0 — по умолчанию",
+        "ZH": "0使用默认值",
+        "isReviewed": "True"
+    },
+    "MTU": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "MTU",
+        "ZH": "MTU",
+        "isReviewed": "True"
+    },
+    "TCP Congestion Control": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Управление перегрузкой TCP",
+        "ZH": "TCP拥塞控制",
+        "isReviewed": "True"
+    },
+    "Available when Stack is set to go or Automatic.": {
+        "source": [
+            "Furious.Window.SingTUNSettingsDialog"
+        ],
+        "RU": "Доступно, если для «Стек» выбрано go или «Автоматически».",
+        "ZH": "协议栈设为go或自动时可用。",
         "isReviewed": "True"
     }
 }
