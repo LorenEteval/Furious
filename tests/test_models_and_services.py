@@ -1196,6 +1196,8 @@ class LogManagerTest(unittest.TestCase):
                         categoryIds[index % len(categoryIds)],
                     )
             except Exception as error:
+                # Any non-exit exceptions
+
                 failures.append(error)
             finally:
                 finished.set()
@@ -1214,6 +1216,8 @@ class LogManagerTest(unittest.TestCase):
                     if finished.wait(0.0001):
                         break
             except Exception as error:
+                # Any non-exit exceptions
+
                 failures.append(error)
 
         observer = threading.Thread(target=observeAndClear)

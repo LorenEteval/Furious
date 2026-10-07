@@ -283,6 +283,8 @@ class SingTUNHostPlan:
                 if not self._cancel.is_set():
                     getattr(self, method)(*args)
             except Exception as ex:
+                # Any non-exit exceptions
+
                 self.error = str(ex)
             finally:
                 self._done.set()
@@ -643,6 +645,8 @@ class SingTUNHostPlan:
 
                 self._dnsRestore.remove((platform, snapshot))
             except Exception as ex:
+                # Any non-exit exceptions
+
                 errors.append(str(ex))
 
         if errors:
@@ -655,12 +659,16 @@ class SingTUNHostPlan:
         try:
             self.restoreDNS()
         except Exception as ex:
+            # Any non-exit exceptions
+
             errors.append(str(ex))
 
         if self._activated:
             try:
                 self._recoverNative()
             except Exception as ex:
+                # Any non-exit exceptions
+
                 errors.append(str(ex))
 
         if errors:

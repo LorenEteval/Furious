@@ -885,6 +885,8 @@ class ConnectionStartOperation(QtCore.QObject):
 
             self._waitSingHost('_startSingTUN')
         except Exception as ex:
+            # Any non-exit exceptions
+
             self._fail('Failed to prepare sing-tun', str(ex))
 
     def _waitSingHost(self, continuation):
@@ -1746,6 +1748,8 @@ class ConnectionManager(Mixins.CleanupOnExit):
 
             return True
         except Exception as ex:
+            # Any non-exit exceptions
+
             self._lastStartError = str(ex)
 
             return attempt.rollback('sing-tun startup failed: ' + self._lastStartError)

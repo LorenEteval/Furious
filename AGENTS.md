@@ -93,7 +93,8 @@
   changing public exports, plugin APIs, persisted keys/schemas, IDs, aliases, migrations, package data, or semantic exit
   codes.
   Prefer module-scope imports, grouped as Furious, PySide6, built-in `from` imports, then bare imports; use `ex` for
-  caught exception variables. Preserve verified deferred-import boundaries for lazy discovery, import cycles, and
+  caught exception variables. Put `# Any non-exit exceptions` directly below every `except Exception` handler.
+  Preserve verified deferred-import boundaries for lazy discovery, import cycles, and
   child-only native bindings. Separate logical code phases with blank lines without splitting one cohesive operation.
 - Generated and curated artifacts have separate sources of truth: never hand-edit
   `Furious/Frozenlib/AppResources.py`; update `Resources.qrc`/resource inputs and regenerate it. Follow

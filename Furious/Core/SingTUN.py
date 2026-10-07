@@ -342,6 +342,8 @@ class SingTUN(MultiprocessingRuntime):
         try:
             super().stop()
         except Exception as ex:
+            # Any non-exit exceptions
+
             errors.append(str(ex))
 
         # A stopped process is not proof of host restoration. Failure keeps the
@@ -355,12 +357,16 @@ class SingTUN(MultiprocessingRuntime):
                     # DNS snapshots can be restored independently.
                     self._hostPlan.finishDNSCleanup()
             except Exception as ex:
+                # Any non-exit exceptions
+
                 errors.append(str(ex))
 
         if callable(self.cleanup):
             try:
                 self.cleanup()
             except Exception as ex:
+                # Any non-exit exceptions
+
                 errors.append(str(ex))
 
         if errors:

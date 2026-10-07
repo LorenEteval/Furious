@@ -461,6 +461,8 @@ class GenerationLogManagerContractTest(unittest.TestCase):
 
                         _assertManagerInvariants(self, manager, model)
                     except Exception as error:
+                        # Any non-exit exceptions
+
                         self.fail(
                             f'seed={seed} operation={operationIndex} error={error!r} '
                             f'history={history!r}'
@@ -1349,6 +1351,8 @@ class GenerationLogManagerContractTest(unittest.TestCase):
             try:
                 manager.append('racing', CORE_LOG_CATEGORY)
             except Exception as error:
+                # Any non-exit exceptions
+
                 errors.append(error)
 
         producer = threading.Thread(target=append)
@@ -1411,6 +1415,8 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                             with sequenceLock:
                                 returnedSequences.append(entry.sequence)
                     except Exception as error:
+                        # Any non-exit exceptions
+
                         errors.append(error)
 
                 def reader():
@@ -1444,6 +1450,8 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                             cursor = batch.cursor
                             manager.entryCount(CORE_LOG_CATEGORY)
                     except Exception as error:
+                        # Any non-exit exceptions
+
                         errors.append(error)
 
                 def mutator():
@@ -1464,6 +1472,8 @@ class GenerationLogManagerContractTest(unittest.TestCase):
                             else:
                                 manager.snapshot(CORE_LOG_CATEGORY)
                     except Exception as error:
+                        # Any non-exit exceptions
+
                         errors.append(error)
 
                 threads = [

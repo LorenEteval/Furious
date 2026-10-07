@@ -58,6 +58,8 @@ class UserSingTUNSettings(Mixins.CleanupOnExit, StorageBackend):
 
             self._data = data
         except Exception:
+            # Any non-exit exceptions
+
             self._restoreFailed = True
 
             logger.exception('failed to restore persisted sing-tun settings')
