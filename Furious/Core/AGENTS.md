@@ -35,6 +35,8 @@ connection policy remains outside it.
   typed exit delivery independently of log transport and rendering. The output callback runs at the GUI drain
   boundary, so bounding queue admission alone is insufficient: preserve bounded drain batches and a bounded consumer
   such as the shared log model. Test producer pressure and hidden-page draining independently.
+  Consumer callbacks may synchronously dispose the output transport. End that drain turn before another queue read,
+  callback or timer adjustment; the reentrant-disposal case in `tests/test_architecture_refactors.py` covers this path.
 - Parentless timers are acceptable only with a durable runtime owner and explicit disposal. Leaving the manager pool
   must not leave timers, callbacks, queues, or process handles alive. Stopping execution is not QObject destruction:
   disposal must also release monitors and output infrastructure, including for a runtime that was never started.

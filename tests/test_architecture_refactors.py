@@ -34,7 +34,7 @@ from Furious.Service.RuntimeLease import RuntimeEventRouter, RuntimeLease
 from PySide6 import QtCore
 from PySide6.QtNetwork import QLocalServer
 
-from tests.support import isolatedSettings
+from tests.support import isolatedSettings, processQtEvents, application
 
 from types import SimpleNamespace
 from unittest import TestCase, mock
@@ -1420,6 +1420,38 @@ class ApplicationLifecycleTransactionTest(TestCase):
         finally:
             messageQueue.dispose()
             self.assertIsNone(messageQueue._timerConnection)
+
+    def testCoreLogDrainStopsWhenItsCallbackDisposesTheQueue(self):
+        """A runtime shutdown during delivery retires the rest of this drain turn."""
+        application()
+        received = []
+        messageQueue = None
+
+        def receive(message):
+            received.append(message)
+            messageQueue.dispose()
+
+        messageQueue = ProcessOutputModule.MsgQueue(msgCallback=receive)
+        timerDestroyed = []
+        messageQueue.timer.destroyed.connect(lambda *_args: timerDestroyed.append(True))
+
+        try:
+            with mock.patch.object(
+                messageQueue, 'getNoWait', side_effect=('first', 'second', '')
+            ) as get:
+                messageQueue.processMsg()
+
+            self.assertEqual(received, ['first'])
+            self.assertEqual(get.call_count, 1)
+            self.assertIsNone(messageQueue.callback)
+            self.assertIsNone(messageQueue._timerConnection)
+
+            processQtEvents()
+
+            self.assertEqual(timerDestroyed, [True])
+            messageQueue.processMsg()
+        finally:
+            messageQueue.dispose()
 
     def testFailuresAtMeaningfulStagesRollBackOnlyEarlierStages(self):
         expected = {

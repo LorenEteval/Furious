@@ -137,7 +137,7 @@ class MsgQueue(multiprocessing.queues.Queue):
 
     def processMsg(self):
         """Drain one bounded batch and adapt polling to recent activity."""
-        if not callable(self.callback):
+        if self._disposed or not callable(self.callback):
             return
 
         hasMessages = False
@@ -155,11 +155,17 @@ class MsgQueue(multiprocessing.queues.Queue):
             if not message.isspace():
                 if messages is None:
                     self.callback(message)
+
+                    if self._disposed:
+                        return
                 else:
                     messages.append(message)
 
         if messages:
             appendMany(messages)
+
+            if self._disposed:
+                return
 
         nextTimeout = (
             self.ACTIVE_DRAIN_INTERVAL
