@@ -57,7 +57,9 @@ def getAppSourceCodePath(path):
 
 @functools.lru_cache(None)
 def getMagicNameFromPath(path):
-    return os.path.relpath(path, ROOT_DIR).removesuffix('.py').replace(os.sep, '.')
+    return PythonCompatibility.removeSuffix(
+        os.path.relpath(path, ROOT_DIR), '.py'
+    ).replace(os.sep, '.')
 
 
 @functools.lru_cache(None)

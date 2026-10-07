@@ -89,6 +89,7 @@ from .Globals import (
     AppTrafficStatsManager,
 )
 from .Mixins import Mixins
+from .PythonCompatibility import PythonCompatibility
 from .PySide6Legacy import PySide6Legacy
 from .StartupOnBoot import StartupOnBoot
 from .SystemProxy import SystemProxy
@@ -164,6 +165,7 @@ __all__ = [
     'PLATFORM_RELEASE',
     'PROXY_SERVER_BYPASS',
     'PYSIDE6_VERSION',
+    'PythonCompatibility',
     'PySide6Legacy',
     'ROOT_DIR',
     'SYSTEM_LANGUAGE',

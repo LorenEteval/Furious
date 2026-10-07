@@ -25,6 +25,7 @@ from Furious.Frozenlib import (
     AppBinarySettings,
     AppSettings,
     Mixins,
+    PythonCompatibility,
     registerAppSettings,
 )
 from Furious.Plugins import TrafficCounters, getPluginRegistry
@@ -280,12 +281,17 @@ class TrafficStatsManager(
     def _closeExecutor(self):
         """Cancel queued work and release the background query executor."""
         executor = self._executor
+        future = self._future
 
         self._cancelCurrentQuery()
         self._executor = None
 
         if executor is not None:
-            executor.shutdown(wait=False, cancel_futures=True)
+            PythonCompatibility.shutdownExecutor(
+                executor,
+                (future,) if future is not None else (),
+                wait=False,
+            )
 
     def _cancelCurrentQuery(self):
         """Forget the active generation and cancel it when still queued."""

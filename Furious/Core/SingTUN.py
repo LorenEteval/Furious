@@ -24,10 +24,10 @@ from Furious.Core.MultiprocessingRuntime import (
     ProcessLaunchSpec,
 )
 from Furious.Core.ProcessOutput import ProcessOutputRedirector
+from Furious.Frozenlib.PythonCompatibility import PythonCompatibility
 from Furious.Interface import RuntimeExit, RuntimeExitReason, RuntimeStartError
 
 import copy
-import importlib.metadata
 import json
 import multiprocessing
 import threading
@@ -197,8 +197,8 @@ class SingTUN(MultiprocessingRuntime):
     @staticmethod
     def version():
         try:
-            return importlib.metadata.version('sing-tun')
-        except importlib.metadata.PackageNotFoundError:
+            return PythonCompatibility.distributionVersion('sing-tun')
+        except PythonCompatibility.PackageNotFoundError:
             return 'unavailable'
 
     def start(self):

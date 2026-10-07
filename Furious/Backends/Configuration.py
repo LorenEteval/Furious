@@ -34,6 +34,7 @@ from Furious.Backends.SocksURI import (
     parseSocksURI,
     serializeSocksURI,
 )
+from Furious.Frozenlib.PythonCompatibility import PythonCompatibility
 from Furious.Frozenlib.SocksProxy import socksURL
 
 from typing import Union, Tuple
@@ -1614,7 +1615,7 @@ class ConfigXray(CoreConfiguration):
                 + ':'
                 + quote(password, safe='')
                 + '@'
-                + endpoint.removeprefix('socks5://')
+                + PythonCompatibility.removePrefix(endpoint, 'socks5://')
             )
 
         raise ValueError('A SOCKS listener is required for application TUN')
@@ -1992,7 +1993,7 @@ class ConfigHysteria1(CoreConfiguration):
             + ':'
             + quote(password, safe='')
             + '@'
-            + endpoint.removeprefix('socks5://')
+            + PythonCompatibility.removePrefix(endpoint, 'socks5://')
         )
 
     def setHttpProxy(self, endpoint: str) -> bool:
@@ -2378,7 +2379,7 @@ class ConfigHysteria2(CoreConfiguration):
             + ':'
             + quote(password, safe='')
             + '@'
-            + endpoint.removeprefix('socks5://')
+            + PythonCompatibility.removePrefix(endpoint, 'socks5://')
         )
 
     def setHttpProxy(self, endpoint: str) -> bool:

@@ -19,9 +19,10 @@
 
 from __future__ import annotations
 
+from Furious.Frozenlib.PythonCompatibility import PythonCompatibility
+
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from importlib import metadata
 from typing import Optional
 from urllib.parse import urlsplit
 
@@ -1293,12 +1294,7 @@ class PluginRegistry:
     def discover(self):
         """Load trusted third-party plugins exposed through entry points."""
         try:
-            entryPoints = metadata.entry_points()
-
-            if hasattr(entryPoints, 'select'):
-                entryPoints = entryPoints.select(group=PLUGIN_ENTRY_POINT_GROUP)
-            else:
-                entryPoints = entryPoints.get(PLUGIN_ENTRY_POINT_GROUP, tuple())
+            entryPoints = PythonCompatibility.entryPoints(PLUGIN_ENTRY_POINT_GROUP)
         except Exception as ex:
             # Any non-exit exceptions
 
