@@ -114,6 +114,7 @@ for _ in range(30):
                 window = self.createWindow()
                 transition = self.createTransition([window], duration=100000)
                 finished = QSignalSpy(transition.transitionFinished)
+
                 transition.apply(lambda: None)
 
                 window.resize(330, 190)
@@ -150,6 +151,7 @@ for _ in range(30):
         )
         finished = QSignalSpy(transition.transitionFinished)
         timer = transition._completionTimer
+
         transition.apply(lambda: None)
 
         window.resize(330, 190)

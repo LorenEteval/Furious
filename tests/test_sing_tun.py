@@ -1760,6 +1760,7 @@ class SingTUNStartupTest(unittest.TestCase):
                             operation = manager.startAsync(
                                 _Configuration(), 'Global', deepcopy=False
                             )
+
                             operation.failed.connect(
                                 lambda _operation, message, details: failures.append(
                                     (message, details)
@@ -1778,11 +1779,13 @@ class SingTUNStartupTest(unittest.TestCase):
                                 self.assertEqual(
                                     failures, [('', 'Unsupported sing-tun stack')]
                                 )
+
                                 self.assertEqual(
                                     router.state, RuntimeLeaseState.Released
                                 )
                                 self.assertFalse(primary.isRunning())
                                 self.assertEqual(manager.runtimes, [])
+
                                 hostPlan.assert_not_called()
                                 nativeRuntime.assert_not_called()
                         finally:
