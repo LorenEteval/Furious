@@ -210,6 +210,7 @@ class UpdateManagerTest(unittest.TestCase):
                 manager = UpdateManager()
                 parent = QWidget()
                 deleteQObject(parent)
+
                 baseline = set(AppQDialog._openDialogs)
 
                 try:
@@ -268,12 +269,14 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
             manager = HttpGetManager()
             replies = [_ManagedReply(manager), _ManagedReply(manager)]
             resource = QtCore.QTimer(manager)
+
             completed, errors = [], []
             destroyed = []
             resource.destroyed.connect(lambda *_args: destroyed.append(True))
 
             def complete(**context):
                 completed.append(context['marker'])
+
                 resource.stop()
                 deleteQObject(resource)
 
@@ -297,6 +300,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
                 self.assertEqual(completed, ['first'])
                 callbackError.assert_not_called()
                 self.assertFalse(errors)
+
                 self.assertEqual(destroyed, [True])
                 self.assertFalse(isValid(resource))
                 self.assertTrue(all(not isValid(reply) for reply in replies))
@@ -311,11 +315,13 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
         manager = HttpGetManager(completionRunsOnce=False)
         replies = [_ManagedReply(manager), _ManagedReply(manager)]
         resources = {marker: QtCore.QTimer(manager) for marker in ('first', 'second')}
+
         completed, errors = [], []
 
         def complete(**context):
             marker = context['marker']
             completed.append(marker)
+
             deleteQObject(resources[marker])
 
             if marker == 'first':
@@ -334,6 +340,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
 
             self.assertEqual(completed, ['first', 'second'])
             self.assertFalse(errors)
+
             self.assertTrue(all(not isValid(item) for item in resources.values()))
             self.assertTrue(all(not isValid(reply) for reply in replies))
             self.assertFalse(manager._replyContexts)
@@ -831,6 +838,7 @@ class ConnectivityManagerTest(unittest.TestCase):
                     page = _ConnectivityHomePage()
                     manager = AppConnectivityManager(page)
                     reply = _ManagedReply(manager)
+
                     destroyed, errors = [], []
                     manager.destroyed.connect(lambda *_args: destroyed.append(True))
                     page.statusPublished.connect(lambda: deleteQObject(page))
@@ -864,6 +872,7 @@ class ConnectivityManagerTest(unittest.TestCase):
                             processQtEvents()
 
                         self.assertFalse(errors)
+
                         self.assertEqual(destroyed, [True])
                         self.assertFalse(isValid(page))
                         self.assertFalse(isValid(manager))

@@ -184,6 +184,7 @@ class AppQMainWindowLifecycleTest(unittest.TestCase):
             baseline = set(AppQMainWindow._openWindows)
             destroyed = []
             window.destroyed.connect(lambda *_args: destroyed.append(True))
+
             QtCore.QTimer.singleShot(0, lambda: deleteQObject(window))
 
             try:

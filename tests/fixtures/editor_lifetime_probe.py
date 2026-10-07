@@ -1015,6 +1015,7 @@ def runServiceTeardownProbe(iterations=100):
 def runPublicationTeardownProbe(iterations=100):
     """Verify callback and event-flush teardown in native and compiled Qt."""
     application()
+
     httpCompletions = 0
 
     for once in (True, False):
@@ -1025,11 +1026,13 @@ def runPublicationTeardownProbe(iterations=100):
                 key: QtCore.QTimer(manager)
                 for key in (('shared',) if once else ('first', 'second'))
             }
+
             completed = []
 
             def complete(**context):
                 marker = context['marker']
                 completed.append(marker)
+
                 resource = resources['shared' if once else marker]
                 resource.stop()
                 deleteQObject(resource)
@@ -1050,7 +1053,9 @@ def runPublicationTeardownProbe(iterations=100):
             assert not manager._replyContexts
             assert all(not isValid(reply) for reply in replies)
             assert all(not isValid(resource) for resource in resources.values())
+
             httpCompletions += len(completed)
+
             deleteQObject(manager)
 
     windowsDestroyed = 0
@@ -1065,6 +1070,7 @@ def runPublicationTeardownProbe(iterations=100):
 
         assert not isValid(window)
         assert set(AppQMainWindow._openWindows) == before
+
         windowsDestroyed += 1
 
     profile = SimpleNamespace()
@@ -1093,12 +1099,14 @@ def runPublicationTeardownProbe(iterations=100):
                 assert not isValid(window) and not isValid(window._exportTimer)
             else:
                 assert not window.isExporting() and not window._exportTimer.isActive()
+
                 window.close()
 
             processQtEvents()
             del window
 
             assert reference() is None
+
             qrPresentations += 1
 
     response = SimpleNamespace(
@@ -1143,7 +1151,9 @@ def runPublicationTeardownProbe(iterations=100):
         parent = QWidget()
         badge = NetworkStateBadge(parent)
         badge.layoutRequirementChanged.connect(lambda: deleteQObject(parent))
+
         badge.setStatus('success', 'fixture')
+
         assert not isValid(badge)
 
     deleteQObject(controller)

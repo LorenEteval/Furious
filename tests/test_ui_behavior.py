@@ -4215,6 +4215,7 @@ class SharedConnectionPresentationTest(unittest.TestCase):
                         for _ in range(30):
                             parent = QWidget()
                             badge = module.NetworkStateBadge(parent)
+
                             destroyed = []
                             badge.destroyed.connect(
                                 lambda *_args: destroyed.append(True)
