@@ -57,6 +57,7 @@ from Furious.Service.ProfileTesting import (
     _DownloadSpeedWorker,
 )
 from Furious.Service.ConnectivityManager import ConnectivityManager
+from Furious.Service.UpdateManager import UpdateManager
 from Furious.Service.DnsResolver import DnsResolutionOperation, DnsResolver
 from Furious.Service.TrafficStatsManager import TrafficStatsManager
 from Furious.Frozenlib import Mixins
@@ -69,13 +70,15 @@ from Furious.Models import CoreConfiguration
 from Furious.Controllers.SettingsController import SettingsController
 from Furious.Repository import Storage
 from Furious.Window.SettingsPage import _TUNBackendSettingsCard
+from Furious.Window.HomePage import HomePage, NetworkStateBadge, AppConnectivityManager
+from Furious.Window.QRCodeWindow import QRCodeWindow
 from Furious.Widget.ServerTableView import ServerTableView
 
 import PySide6
 
 from PySide6 import QtCore
 from PySide6.QtNetwork import QLocalSocket, QNetworkReply
-from PySide6.QtWidgets import QPushButton, QWidget
+from PySide6.QtWidgets import QPushButton, QWidget, QMainWindow
 
 from shiboken6 import isValid, delete as deleteQObject
 
@@ -1009,6 +1012,194 @@ def runServiceTeardownProbe(iterations=100):
     }
 
 
+def runPublicationTeardownProbe(iterations=100):
+    """Verify callback and event-flush teardown in native and compiled Qt."""
+    application()
+    httpCompletions = 0
+
+    for once in (True, False):
+        for _ in range(iterations):
+            manager = HttpGetManager(completionRunsOnce=once)
+            replies = [_PendingReply(manager), _PendingReply(manager)]
+            resources = {
+                key: QtCore.QTimer(manager)
+                for key in (('shared',) if once else ('first', 'second'))
+            }
+            completed = []
+
+            def complete(**context):
+                marker = context['marker']
+                completed.append(marker)
+                resource = resources['shared' if once else marker]
+                resource.stop()
+                deleteQObject(resource)
+
+                if marker == 'first':
+                    replies[1].finished.emit()
+
+            manager.completionCallback = complete
+
+            with mock.patch.object(manager, 'get', side_effect=replies):
+                manager.webGET('https://invalid.test/first', marker='first')
+                manager.webGET('https://invalid.test/second', marker='second')
+
+            replies[0].finished.emit()
+            processQtEvents()
+
+            assert completed == (['first'] if once else ['first', 'second'])
+            assert not manager._replyContexts
+            assert all(not isValid(reply) for reply in replies)
+            assert all(not isValid(resource) for resource in resources.values())
+            httpCompletions += len(completed)
+            deleteQObject(manager)
+
+    windowsDestroyed = 0
+
+    for _ in range(iterations):
+        window = AppQMainWindow()
+        before = set(AppQMainWindow._openWindows)
+        QtCore.QTimer.singleShot(0, lambda: deleteQObject(window))
+
+        with mock.patch('Furious.Qt.QtWidgets.PLATFORM', 'Darwin'):
+            window.show()
+
+        assert not isValid(window)
+        assert set(AppQMainWindow._openWindows) == before
+        windowsDestroyed += 1
+
+    profile = SimpleNamespace()
+    qrPresentations = 0
+
+    for destroy in (False, True):
+        for _ in range(iterations):
+            window = QRCodeWindow()
+            reference = weakref.ref(window)
+
+            def endExport():
+                if destroy:
+                    deleteQObject(window)
+                else:
+                    window.cancelExport()
+
+            QtCore.QTimer.singleShot(0, endExport)
+
+            with mock.patch(
+                'Furious.Window.QRCodeWindow.captureQRCodeExportItems',
+                return_value=(profile, profile),
+            ):
+                window.startExportByIndex([0, 1])
+
+            if destroy:
+                assert not isValid(window) and not isValid(window._exportTimer)
+            else:
+                assert not window.isExporting() and not window._exportTimer.isActive()
+                window.close()
+
+            processQtEvents()
+            del window
+
+            assert reference() is None
+            qrPresentations += 1
+
+    response = SimpleNamespace(
+        readAll=lambda: QtCore.QByteArray(
+            json.dumps(
+                {
+                    'tag_name': '999.0.0',
+                    'html_url': 'https://github.com/LorenEteval/Furious/releases',
+                }
+            ).encode()
+        )
+    )
+
+    for target in ('manager', 'parent'):
+        for _ in range(iterations):
+            manager = UpdateManager()
+            parent = QWidget()
+            before = set(AppQDialog._openDialogs)
+
+            def notified(_version):
+                deleteQObject(manager if target == 'manager' else parent)
+
+            manager.successCallback(
+                response, parent=parent, hasNewVersionCallback=notified
+            )
+
+            assert set(AppQDialog._openDialogs) == before
+
+            if isValid(manager):
+                deleteQObject(manager)
+
+            if isValid(parent):
+                deleteQObject(parent)
+
+    # Home badges/services are persistent application receivers. Exercise each
+    # native teardown boundary once; their direct connections are not transient.
+    controller = ConnectionController(coreManager=SimpleNamespace(runtimes=[]))
+
+    with mock.patch(
+        'Furious.Window.HomePage.AppConnectionController', return_value=controller
+    ):
+        parent = QWidget()
+        badge = NetworkStateBadge(parent)
+        badge.layoutRequirementChanged.connect(lambda: deleteQObject(parent))
+        badge.setStatus('success', 'fixture')
+        assert not isValid(badge)
+
+    deleteQObject(controller)
+
+    class StatusOwner(HomePage):
+        statusPublished = QtCore.Signal()
+
+        def __init__(self):
+            QMainWindow.__init__(self)
+
+        def setNetworkState(self, _success, **_kwargs):
+            self.statusPublished.emit()
+
+        def resetNetworkState(self):
+            self.statusPublished.emit()
+
+    for boundary in ('success', 'failure', 'start', 'disconnect'):
+        parent = StatusOwner()
+        manager = AppConnectivityManager(parent)
+        reply = _PendingReply(manager)
+        parent.statusPublished.connect(lambda: deleteQObject(parent))
+
+        if boundary in ('success', 'failure'):
+            with mock.patch.object(manager, 'get', lambda _request: reply):
+                manager.webGET('https://invalid.test')
+
+            if boundary == 'failure':
+                reply.setError(
+                    QNetworkReply.NetworkError.UnknownNetworkError, 'fixture'
+                )
+
+            reply.finished.emit()
+        elif boundary == 'start':
+            with mock.patch(
+                'Furious.Window.HomePage.AppConnectionController',
+                return_value=SimpleNamespace(isConnected=lambda: False),
+            ):
+                manager.jobArrangeTimer.timeout.emit()
+        else:
+            manager.disconnectedCallback()
+
+        assert not isValid(manager) and not isValid(reply)
+        assert not isValid(manager.jobTimeoutTimer)
+        assert not isValid(manager.jobArrangeTimer)
+
+    processQtEvents()
+
+    return {
+        'httpTerminalCompletions': httpCompletions,
+        'showFlushWindowsDestroyed': windowsDestroyed,
+        'qrPresentationsEnded': qrPresentations,
+        'updateOwnershipBoundaries': iterations * 2,
+        'homeStatusDestructionBoundaries': 5,
+    }
+
+
 def runNetworkProbe(iterations=100):
     """Verify native teardown releases both reply registries under compilation."""
     application()
@@ -1665,6 +1856,11 @@ def main():
         print(json.dumps(runConfirmationProbe(arguments.iterations), sort_keys=True))
         print(json.dumps(runNetworkProbe(arguments.iterations), sort_keys=True))
         print(json.dumps(runServiceTeardownProbe(arguments.iterations), sort_keys=True))
+        print(
+            json.dumps(
+                runPublicationTeardownProbe(arguments.iterations), sort_keys=True
+            )
+        )
         print(json.dumps(runInfrastructureProbe(arguments.iterations), sort_keys=True))
 
         print(

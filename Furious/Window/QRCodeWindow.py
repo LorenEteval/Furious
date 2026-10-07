@@ -34,6 +34,8 @@ from PySide6 import QtCore
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
+from shiboken6 import isValid
+
 import segno
 import logging
 
@@ -386,7 +388,9 @@ class QRCodeWindow(AppQMainWindow):
         self._exporting = True
 
         self.show()
-        self._exportTimer.start(0)
+
+        if isValid(self) and self._exporting:
+            self._exportTimer.start(0)
 
         return self
 

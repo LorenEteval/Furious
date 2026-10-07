@@ -96,6 +96,9 @@ behavior, and lifetime primitives; pages and services consume them without creat
   strongly. User hooks and signal delivery can synchronously destroy the reply or manager; recheck native validity
   before subsequent hooks or Qt cleanup. `test_service_runtime.py` covers completion and abort reentrancy.
   Do not attach ad-hoc attributes to third-party Qt objects or multiply timers/connections across show/hide cycles.
+  Once-only HTTP completion also guards an in-progress callback: a second reply may finish synchronously inside
+  the first callback before the terminal flag is set. Preserve per-request completion mode and the existing final
+  flag timing; `tests/test_service_runtime.py` exercises real nested finished delivery and native resource teardown.
 - Queued delivery never transfers ownership implicitly. The sender may finish before delivery, so callbacks resolve a
   still-valid receiver and current generation in the receiver's Qt thread before touching widgets, models, or wrappers.
   A zero-delay timer yields work but does not establish ordering against an unrelated Qt event. Express required
@@ -107,6 +110,9 @@ behavior, and lifetime primitives; pages and services consume them without creat
 - Top-level windows use canonical first-show preparation. Save geometry/state only after a native presentation; a
   never-shown Qt fallback must not overwrite persisted user geometry. Do not call overridable geometry hooks from
   constructors or manipulate private first-show state.
+  The shared post-show event flush can run cancellation or native destruction before returning. Callers recheck
+  validity and operation state before activating a window or starting further work. The show-flush cases in
+  `tests/test_main_window_geometry.py` and `tests/test_qr_export_scalability.py` cover those continuation boundaries.
 - A stylesheet border radius paints a rounded frame but does not clip child viewports or table headers. Padding
   can protect the corners while introducing a visible inset; assess both effects before changing shared view styles.
   Popup native-window transparency is a separate boundary from in-window child painting.

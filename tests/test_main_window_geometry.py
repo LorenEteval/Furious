@@ -37,6 +37,8 @@ from Furious.Window.TextEditorWindow import TextEditorWindow
 from PySide6 import QtCore
 from PySide6.QtWidgets import QMainWindow, QWidget
 
+from shiboken6 import isValid, delete as deleteQObject
+
 from tests.support import (
     application,
     collectAtBoundary,
@@ -174,6 +176,26 @@ class AppQMainWindowLifecycleTest(unittest.TestCase):
             window.deleteLater()
 
         collectAtBoundary()
+
+    def testEventFlushCanDestroyTheWindowBeforeMacActivation(self):
+        """The synchronous show flush can end native ownership before activation."""
+        for _ in range(30):
+            window = _LifecycleWindow()
+            baseline = set(AppQMainWindow._openWindows)
+            destroyed = []
+            window.destroyed.connect(lambda *_args: destroyed.append(True))
+            QtCore.QTimer.singleShot(0, lambda: deleteQObject(window))
+
+            try:
+                with patch('Furious.Qt.QtWidgets.PLATFORM', 'Darwin'):
+                    window.show()
+
+                self.assertEqual(destroyed, [True])
+                self.assertFalse(isValid(window))
+                self.assertEqual(set(AppQMainWindow._openWindows), baseline)
+            finally:
+                if isValid(window):
+                    deleteQObject(window)
 
     def testPreparationRunsAfterCompositionAndOnlyOnce(self):
         """Never call subclass lifecycle hooks from the base constructor."""

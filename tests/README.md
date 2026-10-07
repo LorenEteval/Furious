@@ -343,6 +343,9 @@ destruction, statistics executor/thread release with an invalid wrapper retained
 release before native child-worker deletion. Controller-owned update requests die with their controller;
 injected services retain their existing owner. Source regressions also exercise reentrant metrics enablement,
 download cancellation with a deleted reply, and disposal during an output-drain callback.
+The publication/teardown probe covers nested once-only and per-request HTTP completion, native destruction during
+Home status publication, update notifications ending manager/parent ownership, and destruction or cancellation
+during the shared post-show event flush. Window/QR probes verify registry and timer cleanup before further work.
 Endpoint lookup covers service destruction/disablement during state and result
 notifications, without admitting the next request from the abandoned stage.
 

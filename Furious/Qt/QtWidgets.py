@@ -915,7 +915,7 @@ class AppQMainWindow(
         # initial geometry and centering above do not depend on this event pump.
         APP().processEvents()
 
-        if PLATFORM == 'Darwin':
+        if PLATFORM == 'Darwin' and isValid(self):
             self.activateWindow()
             self.raise_()
 

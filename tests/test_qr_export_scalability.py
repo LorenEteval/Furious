@@ -29,7 +29,7 @@ from Furious.Window.QRCodeWindow import (
 from PySide6 import QtCore
 from PySide6.QtGui import QImage
 
-from shiboken6 import isValid
+from shiboken6 import isValid, delete as deleteQObject
 
 from unittest import mock
 
@@ -115,6 +115,48 @@ class QRCodeExportScalabilityTest(unittest.TestCase):
                             for profile in profiles[MAXIMUM_QR_EXPORT_PROFILES:]
                         )
                     )
+
+    def testPresentationFlushCanDestroyOrCancelTheIncrementalExport(self):
+        """Do not start a timer after show delivery ends the export's ownership."""
+        profiles = self.profiles(2)
+
+        for destroy in (False, True):
+            with self.subTest(destroy=destroy):
+                for _ in range(20):
+                    window = QRCodeWindow()
+                    reference = weakref.ref(window)
+
+                    def endExport():
+                        if destroy:
+                            deleteQObject(window)
+                        else:
+                            window.cancelExport()
+
+                    QtCore.QTimer.singleShot(0, endExport)
+
+                    try:
+                        with mock.patch(
+                            'Furious.Window.QRCodeWindow.Storage.UserServers',
+                            return_value=profiles,
+                        ):
+                            window.startExportByIndex([0, 1])
+
+                        if destroy:
+                            self.assertFalse(isValid(window))
+                            self.assertFalse(isValid(window._exportTimer))
+                        else:
+                            self.assertFalse(window.isExporting())
+                            self.assertFalse(window._exportTimer.isActive())
+                            self.assertEqual(window.exportProcessedCount(), 0)
+                    finally:
+                        if isValid(window):
+                            window.close()
+
+                        processQtEvents()
+
+                    del window
+
+                    self.assertIsNone(reference())
 
     def testSingleProfileExportRemainsImmediate(self):
         """Keep one-profile export synchronous without scheduling a batch."""
