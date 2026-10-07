@@ -400,6 +400,7 @@ class DuplicateServersProgressDialog(AppQTransientDialog):
 
         self.finishedDuplication = True
         self.profileIds = []
+
         self.accept()
 
     def retranslate(self):
@@ -1487,6 +1488,7 @@ class ServerTableView(
         """Change metadata without replacing profiles or disturbing live runtimes."""
         selected = self._selectedProfileIds()
         current = self._currentProfileId()
+
         changed = set(Storage.setUserServersFavorite(selected, favorite))
 
         if not changed:

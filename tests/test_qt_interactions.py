@@ -2116,6 +2116,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
             profiles[0].metadata.subscriptionManaged = True
             profiles[0].metadata.subscriptionProfileKey = 'remote-key'
             profiles[1].metadata.subscriptionSource = 'group-b'
+
             table.selectAll()
             metadataChanged = QSignalSpy(table.sourceModel.dataChanged)
 
@@ -2128,17 +2129,24 @@ class ProfileMutationBatchTest(unittest.TestCase):
                     if not action.isSeparator()
                     and action.textCompare('Add to Favorites')
                 )
+
                 add.trigger()
+
                 self.assertTrue(all(profile.metadata.favorite for profile in profiles))
                 self.assertEqual(metadataChanged.count(), 1)
+
                 add.trigger()
+
                 self.assertEqual(metadataChanged.count(), 1)
+
                 table.filterFavorites(True)
                 table.filterBySubscription('group-a')
                 table.search('profile-0000')
+
                 self.assertEqual(
                     table._visibleProfileIds(), [profiles[0].metadata.profileId]
                 )
+
                 table.selectAll()
                 remove = next(
                     action
@@ -2147,6 +2155,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                     and action.textCompare('Remove from Favorites')
                 )
                 remove.trigger()
+
                 self.assertEqual(table.proxyModel.rowCount(), 0)
                 self.assertEqual(table._selectedProfileIds(), [])
                 self.assertIs(Storage.UserServers()[0], profiles[0])
@@ -2155,7 +2164,9 @@ class ProfileMutationBatchTest(unittest.TestCase):
                 )
                 self.assertEqual(Storage.UserActivatedItemIndex(), 3)
                 controller.startReconnection.assert_not_called()
+
                 table.filterFavorites(False)
+
                 self.assertEqual(
                     table._visibleProfileIds(), [profiles[0].metadata.profileId]
                 )
@@ -2163,11 +2174,13 @@ class ProfileMutationBatchTest(unittest.TestCase):
     def testSmallDuplicationPublishesOneBatchOfIndependentManualCopies(self):
         with self.table(4) as (table, controller):
             originals = list(Storage.UserServers())
+
             for profile in originals:
                 profile.metadata.subscriptionSource = 'group-a'
                 profile.metadata.subscriptionManaged = True
                 profile.metadata.subscriptionProfileKey = profile.metadata.profileId
             originals[0].metadata.favorite = True
+
             table.sourceModel.sort(0, QtCore.Qt.DescendingOrder)
             table.search('000[01]')
             table.selectAll()
@@ -2238,6 +2251,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
             self.assertEqual(dialog.copiedCount, 3)
             self.assertTrue(dialog.finishedDuplication)
             self.assertEqual(dialog.profileIds, [])
+
             originalIds = {profile.metadata.profileId for profile in originals}
             copies = [
                 profile
@@ -2245,6 +2259,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                 if profile.metadata.profileId not in originalIds
                 and profile.itemRemark != 'newcomer'
             ]
+
             self.assertEqual(
                 sorted(profile.itemRemark for profile in copies),
                 ['profile-0000', 'profile-0001', 'profile-0003'],
@@ -2314,20 +2329,27 @@ class ProfileMutationBatchTest(unittest.TestCase):
             table.selectAll()
             table.duplicateSelectedItem()
             dialog = table.findChild(DuplicateServersProgressDialog)
+
             self.assertIsNotNone(dialog)
             self.assertTrue(waitFor(lambda: dialog.copiedCount > 0))
+
             QTest.mouseClick(dialog.cancelButton, QtCore.Qt.LeftButton)
+
             self.assertTrue(waitFor(lambda: not isValid(dialog)))
             self.assertLess(len(Storage.UserServers()), 2000)
+
             count = len(Storage.UserServers())
             table.duplicateSelectedItem()
             pending = table.findChild(DuplicateServersProgressDialog)
+
             self.assertIsNotNone(pending)
+
             table.deleteLater()
             QtCore.QCoreApplication.sendPostedEvents(
                 table, QtCore.QEvent.DeferredDelete
             )
             processQtEvents()
+
             self.assertFalse(isValid(pending))
             self.assertEqual(len(Storage.UserServers()), count)
 
@@ -2337,6 +2359,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
             table.duplicateSelectedItem()
             dialog = table.findChild(DuplicateServersProgressDialog)
             self.assertIsNotNone(dialog)
+
             table.cleanup()
             processQtEvents()
 
@@ -2346,6 +2369,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
     def testProgressDialogsUseSharedRetranslationWithoutLosingProgress(self):
         with self.table(10) as (table, controller):
             AppSettings.set('Language', 'EN')
+
             dialogs = (
                 (
                     ImportURIsProgressDialog(('fixture',) * 10, parent=table),
@@ -2372,6 +2396,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
 
             for locale in ('RU', 'ZH', 'EN'):
                 AppSettings.set('Language', locale)
+
                 with ExitStack() as stack:
                     translations = [
                         stack.enter_context(
@@ -2383,6 +2408,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                         )
                         for dialog, *_fields in dialogs
                     ]
+
                     Mixins.QTranslatable.retranslateAll()
 
                 for (dialog, title, status, counter), translated in zip(

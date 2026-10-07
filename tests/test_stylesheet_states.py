@@ -77,15 +77,20 @@ class StyleSheetStateRenderingTest(unittest.TestCase):
                 try:
                     button.show()
                     processQtEvents()
+
                     point = (button.width() - 12, button.height() // 2)
                     unchecked = button.grab().toImage().pixelColor(*point)
+
                     button.setChecked(True)
                     checked = button.grab().toImage().pixelColor(*point)
+
                     self.assertNotEqual(checked, unchecked)
                     self.assertEqual(
                         checked, QColor(AppStyleSheet.Palettes[theme]['accent_soft'])
                     )
+
                     button.setChecked(False)
+
                     self.assertEqual(
                         button.grab().toImage().pixelColor(*point), unchecked
                     )

@@ -102,8 +102,10 @@ class RepositoryContractTest(unittest.TestCase):
             self.assertIs(repository.data()[1], profiles[0])
             self.assertEqual(dict(profiles[0].connection), originalConnection)
             self.assertFalse(profiles[1].metadata.favorite)
+
             repository.sync()
             restored = UserServers().data()
+
             self.assertEqual(
                 [profile.metadata.profileId for profile in restored],
                 [profile.metadata.profileId for profile in repository.data()],
@@ -111,6 +113,7 @@ class RepositoryContractTest(unittest.TestCase):
             self.assertEqual(
                 [profile.metadata.favorite for profile in restored], [False, True]
             )
+
             self.assertEqual(repository.setProfilesFavorite([unique], False), [unique])
 
     def testRoutingRepositoryRoundTripPreservesUnknownDocuments(self):

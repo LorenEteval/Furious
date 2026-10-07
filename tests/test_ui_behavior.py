@@ -2981,6 +2981,7 @@ class DialogBehaviorTest(unittest.TestCase):
     def testCustomMessageRetranslationKeepsPayloadAndUpdatesDialogControls(self):
         with isolatedSettings():
             AppSettings.set('Language', 'EN')
+
             box = MBoxImportError()
             box.setWindowTitle(_('Duplicate'))
             box.setHeading(_('Delete'))
@@ -2992,6 +2993,7 @@ class DialogBehaviorTest(unittest.TestCase):
                 for locale in ('RU', 'ZH', 'EN'):
                     AppSettings.set('Language', locale)
                     Mixins.QTranslatable.retranslateAll()
+
                     self.assertEqual(box.windowTitle(), _('Duplicate'))
                     self.assertEqual(box.heading(), _('Delete'))
                     self.assertEqual(box.text(), _('Invalid data'))
@@ -3018,11 +3020,13 @@ class DialogBehaviorTest(unittest.TestCase):
                     try:
                         for locale in ('RU', 'ZH', 'EN'):
                             AppSettings.set('Language', locale)
+
                             with mock.patch.object(
                                 managed, 'retranslate', wraps=managed.retranslate
                             ) as translate:
                                 Mixins.QTranslatable.retranslateAll()
                                 self.assertEqual(translate.call_count, 1)
+
                             self.assertEqual(protected.text(), 'Cancel')
                             self.assertEqual(managed.text(), _('Save'))
                             self.assertEqual(plain.text(), _('Cancel'))
@@ -3033,6 +3037,7 @@ class DialogBehaviorTest(unittest.TestCase):
     def testActionRetranslationLeavesManagedChildrenToTheirOwnPass(self):
         with isolatedSettings():
             AppSettings.set('Language', 'EN')
+
             owner = QWidget()
             menu = AppQMenu(parent=owner)
             managed = AppQAction('Save', parent=menu)
@@ -3043,19 +3048,23 @@ class DialogBehaviorTest(unittest.TestCase):
             try:
                 for locale in ('RU', 'ZH', 'EN'):
                     AppSettings.set('Language', locale)
+
                     with mock.patch.object(
                         managed, 'setText', wraps=managed.setText
                     ) as update:
                         Mixins.QTranslatable.retranslateAll()
                         self.assertEqual(update.call_count, 1)
+
                     self.assertEqual(parent.text(), _('Server'))
                     self.assertEqual(managed.text(), _('Save'))
                     self.assertEqual(protected.text(), 'Cancel')
 
                 plain = QAction('Cancel', menu)
                 menu.addAction(plain)
+
                 AppSettings.set('Language', 'ZH')
                 Mixins.QTranslatable.retranslateAll()
+
                 self.assertEqual(plain.text(), _('Cancel'))
             finally:
                 owner.deleteLater()
@@ -3064,6 +3073,7 @@ class DialogBehaviorTest(unittest.TestCase):
     def testMessageGeometryRefreshesAfterManagedButtonTranslation(self):
         with isolatedSettings():
             AppSettings.set('Language', 'EN')
+
             box = AppQMessageBox()
             button = AppQPushButton(_('Copy Error'))
             box.addButton(button, box.ButtonRole.ActionRole)
@@ -3075,6 +3085,7 @@ class DialogBehaviorTest(unittest.TestCase):
                     AppSettings.set('Language', locale)
                     Mixins.QTranslatable.retranslateAll()
                     processQtEvents()
+
                     self.assertEqual(button.text(), _('Copy Error'))
                     self.assertGreaterEqual(
                         button.width(), box._preferredButtonWidth(button)
@@ -3083,8 +3094,10 @@ class DialogBehaviorTest(unittest.TestCase):
 
                 AppSettings.set('Language', 'RU')
                 Mixins.QTranslatable.retranslateAll()
+
                 deleteQObject(box)
                 processQtEvents()
+
                 self.assertFalse(isValid(box))
             finally:
                 if isValid(box):

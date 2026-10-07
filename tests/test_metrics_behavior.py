@@ -202,14 +202,17 @@ class MetricsPageAndGraphTest(unittest.TestCase):
     def testGlobalRetranslationRefreshesEndpointOnceWithoutChangingHistory(self):
         with isolatedSettings():
             AppSettings.set('Language', 'EN')
+
             manager = MetricsHistory()
             page = MetricsPage(manager)
+
             manager.recordSample({DOWNLOAD_SPEED_METRIC: 32})
             samples = manager.rawSamples()
 
             try:
                 for locale in ('RU', 'ZH', 'EN'):
                     AppSettings.set('Language', locale)
+
                     with mock.patch.object(
                         page.endpointInfoWidget,
                         'retranslate',
@@ -217,6 +220,7 @@ class MetricsPageAndGraphTest(unittest.TestCase):
                     ) as translate:
                         Mixins.QTranslatable.retranslateAll()
                         self.assertEqual(translate.call_count, 1)
+
                     self.assertEqual(
                         page.metricsCard.downloadTitleLabel.text(), _('Download')
                     )
