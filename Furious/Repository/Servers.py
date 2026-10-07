@@ -202,6 +202,20 @@ class UserServers(Mixins.CleanupOnExit, StorageBackend):
         """Return one profile's stable repository identity."""
         return profile.metadata.profileId
 
+    def setProfilesFavorite(self, profileIds, favorite: bool) -> list[str]:
+        """Update local preference metadata for the surviving captured targets."""
+        selected = set(profileIds)
+        changed = []
+
+        for profile in self._list:
+            unique = self._profileId(profile)
+
+            if unique in selected and profile.metadata.favorite != favorite:
+                profile.metadata.favorite = favorite
+                changed.append(unique)
+
+        return changed
+
     def _replaceVisibleOrder(
         self,
         visibleProfileIds: set[str],

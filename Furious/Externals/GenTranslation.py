@@ -3661,5 +3661,53 @@ TRANSLATION = {
         "RU": "Нет настроек, соответствующих поиску.",
         "ZH": "没有与搜索条件匹配的设置。",
         "isReviewed": "True"
+    },
+    "Duplicating": {
+        "source": [
+            "Furious.Widget.ServerTableView"
+        ],
+        "RU": "Создание копий",
+        "ZH": "正在创建副本",
+        "isReviewed": "True"
+    },
+    "Add to Favorites": {
+        "source": [
+            "Furious.Widget.ServerTableView"
+        ],
+        "RU": "Добавить в избранное",
+        "ZH": "添加到收藏",
+        "isReviewed": "True"
+    },
+    "Remove from Favorites": {
+        "source": [
+            "Furious.Widget.ServerTableView"
+        ],
+        "RU": "Удалить из избранного",
+        "ZH": "从收藏中移除",
+        "isReviewed": "True"
+    },
+    "Could not duplicate profiles. Completed batches were kept.": {
+        "source": [
+            "Furious.Widget.ServerTableView"
+        ],
+        "RU": "Не удалось создать копии профилей. Уже созданные копии сохранены.",
+        "ZH": "无法创建配置副本。已完成的副本已保留。",
+        "isReviewed": "True"
+    },
+    "Favorites": {
+        "source": [
+            "Furious.Window.HomePage"
+        ],
+        "RU": "Избранное",
+        "ZH": "收藏",
+        "isReviewed": "True"
+    },
+    "Show favorite profiles only": {
+        "source": [
+            "Furious.Window.HomePage"
+        ],
+        "RU": "Показывать только избранные профили",
+        "ZH": "仅显示已收藏的配置",
+        "isReviewed": "True"
     }
 }

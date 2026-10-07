@@ -44,6 +44,8 @@ from PySide6 import QtCore
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+from shiboken6 import isValid
+
 from typing import Callable, Union
 
 import re
@@ -282,6 +284,134 @@ class DeleteServersProgressDialog(AppQTransientDialog):
         self.updateStatus()
 
 
+class DuplicateServersProgressDialog(AppQTransientDialog):
+    """Copy captured profile identities in cancellable GUI-thread batches."""
+
+    DEFAULT_DIALOG_SIZE = QtCore.QSize(420, 150)
+    SmallOperationLimit = 64
+    BatchSize = 128
+    BatchTimeBudget = 0.008
+    ProgressUpdateInterval = 0.1
+
+    def __init__(self, table, profileIds):
+        super().__init__(table)
+
+        self.table = table
+        self.profileIds = profileIds
+        self.nextIndex = 0
+        self.copiedCount = 0
+        self.canceled = False
+        self.finishedDuplication = False
+        self.lastStatusUpdate = 0.0
+
+        self.setWindowTitle(_('Duplicate'))
+        self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+
+        self.statusLabel = AppQLabel(parent=self)
+        self.cancelButton = AppQPushButton(_('Cancel'), parent=self)
+
+        connectWeakly(self.cancelButton.clicked, self, 'cancel')
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.statusLabel)
+        layout.addWidget(self.cancelButton)
+
+        self.updateStatus()
+
+    def open(self):
+        result = super().open()
+        singleShotWeakly(0, self, 'duplicateNext')
+
+        return result
+
+    def reject(self):
+        self.cancel()
+
+    def cancel(self, *_args):
+        self.canceled = True
+        self.cancelButton.setEnabled(False)
+
+    def updateStatus(self):
+        self.lastStatusUpdate = time.monotonic()
+        self.statusLabel.setText(
+            _('Duplicating') + f'... {self.copiedCount}/{len(self.profileIds)}'
+        )
+
+    def duplicateNext(self):
+        if self.finishedDuplication:
+            return
+
+        if self.canceled or self.nextIndex >= len(self.profileIds):
+            self.finishDuplication()
+
+            return
+
+        profilesById = {
+            profile.metadata.profileId: profile for profile in Storage.UserServers()
+        }
+        stop = min(self.nextIndex + self.BatchSize, len(self.profileIds))
+        deadline = time.monotonic() + self.BatchTimeBudget
+        copies = []
+
+        try:
+            while self.nextIndex < stop:
+                profile = profilesById.get(self.profileIds[self.nextIndex])
+                self.nextIndex += 1
+
+                if profile is not None and profile.isValid():
+                    copies.append(profile.independentCopy())
+
+                if time.monotonic() >= deadline:
+                    break
+
+            self.table.appendNewItemsByFactories(copies)
+        except Exception as ex:
+            # Any non-exit exceptions
+
+            logger.error('profile duplication failed (%s)', type(ex).__name__)
+
+            if not isValid(self):
+                return
+
+            mbox = AppQMessageBox(parent=self.table, icon=AppQMessageBox.Icon.Critical)
+            mbox.setWindowTitle(_('Duplicate'))
+            mbox.setText(
+                _('Could not duplicate profiles. Completed batches were kept.')
+            )
+            mbox.open()
+
+            self.finishDuplication()
+
+            return
+
+        if not isValid(self):
+            return
+
+        self.copiedCount += len(copies)
+
+        if self.nextIndex >= len(self.profileIds):
+            self.updateStatus()
+            self.finishDuplication()
+        else:
+            if time.monotonic() - self.lastStatusUpdate >= self.ProgressUpdateInterval:
+                self.updateStatus()
+
+            singleShotWeakly(0, self, 'duplicateNext')
+
+    def finishDuplication(self):
+        if self.finishedDuplication:
+            return
+
+        self.finishedDuplication = True
+        self.profileIds = []
+        self.accept()
+
+    def retranslate(self):
+        super().retranslate()
+
+        self.updateStatus()
+
+
 class ServerTableHorizontalHeader(AppQHeaderView):
     """Provide the user servers Qt table view horizontal table header."""
 
@@ -388,6 +518,13 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
         server = Storage.UserServers()[row]
         header = self.headers[column]
         text = header(server)
+
+        if (
+            role == QtCore.Qt.ItemDataRole.DisplayRole
+            and str(header) == 'Remark'
+            and server.metadata.favorite
+        ):
+            return '\u2605 ' + text
 
         if (
             role == QtCore.Qt.ItemDataRole.DisplayRole
@@ -589,6 +726,7 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
         self.searchUseRegex = True
         self.searchRegex = None
         self.subscriptionFilter = None
+        self.favoritesOnly = False
         self.sortSuspended = False
 
         self.setSortRole(UserServersTableModel.SortRole)
@@ -667,6 +805,9 @@ class UserServersSortFilterProxyModel(QtCore.QSortFilterProxyModel):
 
         if 0 <= sourceRow < len(Storage.UserServers()):
             profile = Storage.UserServers()[sourceRow]
+
+            if self.favoritesOnly and not profile.metadata.favorite:
+                return False
 
             if self.subscriptionFilter == '':
                 if profile.itemSubscriptionManaged:
@@ -961,6 +1102,15 @@ class ServerTableView(
                     QtCore.Qt.KeyboardModifier.ControlModifier,
                     QtCore.Qt.Key.Key_G,
                 ),
+            ),
+            AppQSeparator(),
+            AppQAction(
+                _('Add to Favorites'),
+                callback=functools.partial(self.setSelectedProfilesFavorite, True),
+            ),
+            AppQAction(
+                _('Remove from Favorites'),
+                callback=functools.partial(self.setSelectedProfilesFavorite, False),
             ),
             AppQSeparator(),
             self.advancedActionRef,
@@ -1332,6 +1482,37 @@ class ServerTableView(
         """Show all, manual, or one subscription group's profiles."""
         self.proxyModel.setSubscriptionFilter(unique)
 
+    def filterFavorites(self, enabled: bool):
+        """Intersect local favorites with the existing search and group filters."""
+        self.proxyModel.favoritesOnly = enabled
+        self.proxyModel.invalidateFilter()
+
+    def setSelectedProfilesFavorite(self, favorite: bool):
+        """Change metadata without replacing profiles or disturbing live runtimes."""
+        selected = self._selectedProfileIds()
+        current = self._currentProfileId()
+        changed = set(Storage.setUserServersFavorite(selected, favorite))
+
+        if not changed:
+            return
+
+        rows = [
+            row
+            for row, profile in enumerate(Storage.UserServers())
+            if profile.metadata.profileId in changed
+        ]
+        self.sourceModel.dataChanged.emit(
+            self.sourceModel.index(rows[0], 0),
+            self.sourceModel.index(rows[-1], self.sourceModel.columnCount() - 1),
+            [QtCore.Qt.ItemDataRole.DisplayRole],
+        )
+
+        if not isValid(self):
+            return
+
+        self.proxyModel.invalidateFilter()
+        self._restoreProfileSelection(selected, current)
+
     def addServerViaGui(self, protocol, **kwargs):
         """Add server via GUI."""
         factory = blankProfile(protocol)
@@ -1670,23 +1851,23 @@ class ServerTableView(
             self._restoreProfileSelection(selectedProfileIds, currentProfileId)
 
     def duplicateSelectedItem(self):
-        """Handle duplicate selected item for the user servers Qt table view."""
-        indexes = self.selectedIndex
+        """Create independent manual copies without per-row reconciliation."""
+        profileIds = self._selectedProfileIds()
 
-        if len(indexes) == 0:
-            # Nothing selected. Do nothing
+        if not profileIds:
             return
 
-        for index in indexes:
-            if 0 <= index < len(Storage.UserServers()):
-                deepcopy = Storage.UserServers()[index].independentCopy()
+        if len(profileIds) > DuplicateServersProgressDialog.SmallOperationLimit:
+            DuplicateServersProgressDialog(self, profileIds).open()
+        else:
+            selected = set(profileIds)
+            copies = [
+                profile.independentCopy()
+                for profile in Storage.UserServers()
+                if profile.metadata.profileId in selected and profile.isValid()
+            ]
 
-                # A duplicate is a new manual profile, not another profile
-                # managed by the source subscription.
-                self.appendNewItem(
-                    remark=deepcopy.itemRemark,
-                    config=deepcopy,
-                )
+            self.appendNewItemsByFactories(copies)
 
     def deleteItemByIndex(
         self, indexes, showTrayMessage=True, showProgress=True
@@ -1924,6 +2105,13 @@ class ServerTableView(
 
     def cleanup(self):
         """Release resources owned by the user servers Qt table view."""
+        for dialog in self.findChildren(DuplicateServersProgressDialog):
+            dialog.canceled = True
+            dialog.finishDuplication()
+
+            if not isValid(self):
+                return
+
         self.subsManager.shutdown()
         self.profileTestManager.shutdown()
         self._clearSubscriptionActions()

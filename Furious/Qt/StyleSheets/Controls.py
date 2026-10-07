@@ -285,6 +285,16 @@ def controlStyleSheet(
                 background-color: {palette['pressed']};
             }}
 
+            QPushButton#HomeFavoritesButton:checked {{
+                border-color: {palette['accent']};
+                background-color: {palette['accent_soft']};
+                color: {palette['text_strong']};
+            }}
+
+            QPushButton#HomeFavoritesButton:checked:hover {{
+                background-color: {palette['accent_soft_hover']};
+            }}
+
             QToolButton:checked {{
                 border-color: {palette['accent']};
                 background-color: {palette['accent_soft']};

@@ -28,6 +28,7 @@ from Furious.Models import CoreConfiguration, ServerProfile
 from Furious.Plugins import PluginRegistry
 from Furious.Plugins.API import RoutingOption
 from Furious.Repository import Storage, SubscriptionGroup
+from Furious.Repository.Servers import UserServers
 from Furious.Service import ProfileTestField, ProfileTestResult
 from Furious.Service.ProfileTesting import ProfileTestTarget
 from Furious.Qt import (
@@ -41,6 +42,7 @@ from Furious.Qt import (
 from Furious.Widget.RoutingSelector import RoutingSelector
 from Furious.Widget.ServerTableView import (
     DeleteServersProgressDialog,
+    DuplicateServersProgressDialog,
     MBoxQuestionDelete,
     ServerTableView,
 )
@@ -1285,6 +1287,45 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                 connection.deleteLater()
                 routing.deleteLater()
 
+    def testHomeFavoritesButtonFiltersWithoutChangingActivation(self):
+        with isolatedSettings():
+            settings = SettingsController()
+            connection = _ConnectionControllerFixture()
+            routing = _RoutingControllerFixture(
+                (RoutingOption('default', 'Default'),), 'default'
+            )
+
+            try:
+                with self._home(settings, connection, routing) as home:
+                    table = home.userServersQTableWidget
+                    profiles = [
+                        ServerTableQtInteractionTest._profile(name)
+                        for name in ('alpha', 'beta')
+                    ]
+                    profiles[1].metadata.favorite = True
+                    table.appendNewItemsByFactories(profiles)
+                    activated = Storage.UserActivatedItemIndex()
+                    home.show()
+                    home.favoritesButton.setFocus()
+                    QTest.keyClick(home.favoritesButton, QtCore.Qt.Key_Space)
+
+                    self.assertTrue(home.favoritesButton.isChecked())
+                    self.assertEqual(
+                        table._visibleProfileIds(), [profiles[1].metadata.profileId]
+                    )
+                    self.assertEqual(Storage.UserActivatedItemIndex(), activated)
+                    table.search('alpha')
+                    self.assertEqual(table.proxyModel.rowCount(), 0)
+                    self.assertTrue(home.emptyState.isVisible())
+                    QTest.keyClick(home.favoritesButton, QtCore.Qt.Key_Space)
+                    self.assertEqual(
+                        table._visibleProfileIds(), [profiles[0].metadata.profileId]
+                    )
+            finally:
+                settings.deleteLater()
+                connection.deleteLater()
+                routing.deleteLater()
+
     def testHomeTestsMenuPreservesSelectionAndHighlight(self):
         """Keep mouse-opened tests tied to visibly selected, mapped profiles."""
         with isolatedSettings():
@@ -2060,10 +2101,247 @@ class ProfileMutationBatchTest(unittest.TestCase):
             try:
                 yield table, controller
             finally:
-                table.cleanup()
-                table.close()
-                table.deleteLater()
+                if isValid(table):
+                    table.cleanup()
+                    table.close()
+                    table.deleteLater()
                 processQtEvents()
+
+    def testFavoriteActionsPreserveIdentityAndComposeFilters(self):
+        with self.table(4) as (table, controller):
+            profiles = list(Storage.UserServers())
+            repository = UserServers()
+            repository.data().extend(profiles)
+            profiles[0].metadata.subscriptionSource = 'group-a'
+            profiles[0].metadata.subscriptionManaged = True
+            profiles[0].metadata.subscriptionProfileKey = 'remote-key'
+            profiles[1].metadata.subscriptionSource = 'group-b'
+            table.selectAll()
+            metadataChanged = QSignalSpy(table.sourceModel.dataChanged)
+
+            with mock.patch.object(
+                Storage, '_UserServersStorage', return_value=repository
+            ):
+                add = next(
+                    action
+                    for action in table.contextMenu.actions()
+                    if not action.isSeparator()
+                    and action.textCompare('Add to Favorites')
+                )
+                add.trigger()
+                self.assertTrue(all(profile.metadata.favorite for profile in profiles))
+                self.assertEqual(metadataChanged.count(), 1)
+                add.trigger()
+                self.assertEqual(metadataChanged.count(), 1)
+                table.filterFavorites(True)
+                table.filterBySubscription('group-a')
+                table.search('profile-0000')
+                self.assertEqual(
+                    table._visibleProfileIds(), [profiles[0].metadata.profileId]
+                )
+                table.selectAll()
+                remove = next(
+                    action
+                    for action in table.contextMenu.actions()
+                    if not action.isSeparator()
+                    and action.textCompare('Remove from Favorites')
+                )
+                remove.trigger()
+                self.assertEqual(table.proxyModel.rowCount(), 0)
+                self.assertEqual(table._selectedProfileIds(), [])
+                self.assertIs(Storage.UserServers()[0], profiles[0])
+                self.assertEqual(
+                    profiles[0].metadata.subscriptionProfileKey, 'remote-key'
+                )
+                self.assertEqual(Storage.UserActivatedItemIndex(), 3)
+                controller.startReconnection.assert_not_called()
+                table.filterFavorites(False)
+                self.assertEqual(
+                    table._visibleProfileIds(), [profiles[0].metadata.profileId]
+                )
+
+    def testSmallDuplicationPublishesOneBatchOfIndependentManualCopies(self):
+        with self.table(4) as (table, controller):
+            originals = list(Storage.UserServers())
+            for profile in originals:
+                profile.metadata.subscriptionSource = 'group-a'
+                profile.metadata.subscriptionManaged = True
+                profile.metadata.subscriptionProfileKey = profile.metadata.profileId
+            originals[0].metadata.favorite = True
+            table.sourceModel.sort(0, QtCore.Qt.DescendingOrder)
+            table.search('000[01]')
+            table.selectAll()
+            selected = table._selectedProfileIds()
+            inserted = QSignalSpy(table.sourceModel.rowsInserted)
+
+            with mock.patch.object(
+                table, 'reconcileProfileTestJobs', wraps=table.reconcileProfileTestJobs
+            ) as reconcile:
+                table.duplicateSelectedItem()
+                self.assertEqual(reconcile.call_count, 1)
+
+            self.assertEqual(inserted.count(), 1)
+            self.assertEqual(inserted.at(0)[1:], [4, 5])
+            copies = Storage.UserServers()[4:]
+            self.assertEqual(
+                {profile.itemRemark for profile in copies},
+                {'profile-0000', 'profile-0001'},
+            )
+            self.assertTrue(
+                all(profile.metadata.profileId not in selected for profile in copies)
+            )
+            self.assertTrue(
+                all(
+                    not profile.itemSubscriptionManaged and not profile.itemSubscription
+                    for profile in copies
+                )
+            )
+            self.assertTrue(
+                all(not profile.metadata.subscriptionProfileKey for profile in copies)
+            )
+            self.assertTrue(
+                next(
+                    profile
+                    for profile in copies
+                    if profile.itemRemark == 'profile-0000'
+                ).metadata.favorite
+            )
+            copies[0].connection['changed'] = True
+            self.assertTrue(
+                all('changed' not in profile.connection for profile in originals)
+            )
+            self.assertEqual(table._selectedProfileIds(), selected)
+            controller.startDisconnection.assert_not_called()
+
+    def testDuplicationKeepsCapturedTargetsAcrossReorderRemovalAndCancel(self):
+        with self.table(7) as (table, controller), mock.patch(
+            'Furious.Widget.ServerTableView.singleShotWeakly'
+        ):
+            originals = list(Storage.UserServers())
+            dialog = DuplicateServersProgressDialog(
+                table, [profile.metadata.profileId for profile in originals]
+            )
+            dialog.BatchSize = 2
+            dialog.BatchTimeBudget = 10
+            dialog.duplicateNext()
+            table.sourceModel.sort(0, QtCore.Qt.DescendingOrder)
+            table.deleteItemByIndex(
+                [Storage.UserServers().index(originals[2])], showProgress=False
+            )
+            table.clearSelection()
+            table.appendNewItemByFactory(self.profile('newcomer'))
+            dialog.duplicateNext()
+            dialog.cancel()
+            dialog.duplicateNext()
+            dialog.duplicateNext()
+
+            self.assertEqual(dialog.copiedCount, 3)
+            self.assertTrue(dialog.finishedDuplication)
+            self.assertEqual(dialog.profileIds, [])
+            originalIds = {profile.metadata.profileId for profile in originals}
+            copies = [
+                profile
+                for profile in Storage.UserServers()
+                if profile.metadata.profileId not in originalIds
+                and profile.itemRemark != 'newcomer'
+            ]
+            self.assertEqual(
+                sorted(profile.itemRemark for profile in copies),
+                ['profile-0000', 'profile-0001', 'profile-0003'],
+            )
+
+    def testLargeDuplicationCoalescesInsertionsAndSkipsInvalidProfiles(self):
+        with self.table(1000) as (table, controller), mock.patch(
+            'Furious.Widget.ServerTableView.singleShotWeakly'
+        ), mock.patch(
+            'Furious.Widget.ServerTableView.time.monotonic', return_value=10.0
+        ), mock.patch.object(
+            table, 'reconcileProfileTestJobs', wraps=table.reconcileProfileTestJobs
+        ) as reconcile:
+            originals = list(Storage.UserServers())
+            originals[500].connection.clear()
+            dialog = DuplicateServersProgressDialog(
+                table, [profile.metadata.profileId for profile in originals]
+            )
+            inserted = QSignalSpy(table.sourceModel.rowsInserted)
+
+            for _batch in range(8):
+                dialog.duplicateNext()
+
+            self.assertEqual(dialog.copiedCount, 999)
+            self.assertEqual(len(Storage.UserServers()), 1999)
+            self.assertEqual(inserted.count(), 8)
+            self.assertEqual(reconcile.call_count, 8)
+            self.assertEqual(
+                len({profile.metadata.profileId for profile in Storage.UserServers()}),
+                1999,
+            )
+            self.assertIs(
+                Storage.UserServers()[Storage.UserActivatedItemIndex()], originals[-1]
+            )
+
+    def testDuplicationPreparationFailureKeepsOnlyCompletedBatches(self):
+        with self.table(5) as (table, controller), mock.patch(
+            'Furious.Widget.ServerTableView.singleShotWeakly'
+        ), mock.patch('Furious.Widget.ServerTableView.AppQMessageBox') as message:
+            originals = list(Storage.UserServers())
+            dialog = DuplicateServersProgressDialog(
+                table, [profile.metadata.profileId for profile in originals]
+            )
+            dialog.BatchSize = 2
+            dialog.BatchTimeBudget = 10
+            dialog.duplicateNext()
+
+            with mock.patch.object(
+                originals[3],
+                'independentCopy',
+                side_effect=ValueError('secret fixture'),
+            ), self.assertLogs(
+                'Furious.Widget.ServerTableView', level='ERROR'
+            ) as logged:
+                dialog.duplicateNext()
+
+            self.assertEqual(len(Storage.UserServers()), 7)
+            self.assertEqual(dialog.copiedCount, 2)
+            self.assertTrue(dialog.finishedDuplication)
+            self.assertNotIn('secret fixture', '\n'.join(logged.output))
+            message.return_value.open.assert_called_once()
+
+    def testLargeDuplicationYieldsToRealCancelAndOwnerDestruction(self):
+        with self.table(1000) as (table, controller), mock.patch.object(
+            DuplicateServersProgressDialog, 'BatchSize', 1
+        ):
+            table.selectAll()
+            table.duplicateSelectedItem()
+            dialog = table.findChild(DuplicateServersProgressDialog)
+            self.assertIsNotNone(dialog)
+            self.assertTrue(waitFor(lambda: dialog.copiedCount > 0))
+            QTest.mouseClick(dialog.cancelButton, QtCore.Qt.LeftButton)
+            self.assertTrue(waitFor(lambda: not isValid(dialog)))
+            self.assertLess(len(Storage.UserServers()), 2000)
+            count = len(Storage.UserServers())
+            table.duplicateSelectedItem()
+            pending = table.findChild(DuplicateServersProgressDialog)
+            self.assertIsNotNone(pending)
+            table.deleteLater()
+            QtCore.QCoreApplication.sendPostedEvents(
+                table, QtCore.QEvent.DeferredDelete
+            )
+            processQtEvents()
+            self.assertFalse(isValid(pending))
+            self.assertEqual(len(Storage.UserServers()), count)
+
+    def testTableCleanupStopsPendingDuplicationBeforeRepositoryShutdown(self):
+        with self.table(1000) as (table, controller):
+            table.selectAll()
+            table.duplicateSelectedItem()
+            dialog = table.findChild(DuplicateServersProgressDialog)
+            self.assertIsNotNone(dialog)
+            table.cleanup()
+            processQtEvents()
+
+            self.assertFalse(isValid(dialog))
+            self.assertEqual(len(Storage.UserServers()), 1000)
 
     def testImportCoalescesRowsAndProgressWithoutLosingInvalidInputPositions(self):
         profiles = [self.profile(str(index)) for index in range(600)]

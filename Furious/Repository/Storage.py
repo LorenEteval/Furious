@@ -129,6 +129,11 @@ class Storage:
         return Storage._UserServersStorage().data()
 
     @staticmethod
+    def setUserServersFavorite(profileIds, favorite: bool) -> list[str]:
+        """Commit favorite metadata through the server repository owner."""
+        return Storage._UserServersStorage().setProfilesFavorite(profileIds, favorite)
+
+    @staticmethod
     def moveUserServers(profileIds, visibleProfileIds, position: str) -> bool:
         """Move selected servers within the caller's visible repository scope."""
         return Storage._UserServersStorage().moveProfiles(

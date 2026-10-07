@@ -53,6 +53,12 @@ view an independent workflow authority.
   observers see completed removal. Forward bulk insert/delete operations through the model instead of replaying a
   single-item notification/reconciliation path for every profile. Small direct operations and deferred large ones
   share these identity rules; batch yields and throttled progress updates serve different responsiveness purposes.
+  Duplication captures selected IDs, resolves surviving sources at each batch, and uses independent manual copies;
+  cancellation preserves completed batches, and explicit table cleanup stops pending copies before service shutdown.
+  Favorite commands use the repository's local metadata mutation and
+  keep connection/remote ownership intact. Favorites, search, and subscription filters intersect in the existing
+  proxy model; a favorite mark is persisted metadata, while the filter is presentation state. The profile mutation
+  and Home workflow cases in `tests/test_qt_interactions.py` cover these boundaries.
 - Endpoint lookup belongs to `EndpointInfoService`; the map renders validated results and has a no-WebEngine
   fallback. Optional WebEngine import failure must not prevent importing the widget/package, and hidden presentation
   must not retarget a queued lookup.

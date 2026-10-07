@@ -82,6 +82,37 @@ class RepositoryContractTest(unittest.TestCase):
             },
         )
 
+    def testFavoriteMutationResolvesIdsAndPersistsLocalMetadata(self):
+        with isolatedSettings():
+            repository = UserServers()
+            profiles = [self._profile(name) for name in ('first', 'second')]
+            repository.data().extend(reversed(profiles))
+            unique = profiles[0].metadata.profileId
+            originalConnection = dict(profiles[0].connection)
+
+            with mock.patch.object(
+                Storage, '_UserServersStorage', return_value=repository
+            ):
+                self.assertEqual(
+                    Storage.setUserServersFavorite([unique, unique, 'missing'], True),
+                    [unique],
+                )
+                self.assertEqual(Storage.setUserServersFavorite([unique], True), [])
+
+            self.assertIs(repository.data()[1], profiles[0])
+            self.assertEqual(dict(profiles[0].connection), originalConnection)
+            self.assertFalse(profiles[1].metadata.favorite)
+            repository.sync()
+            restored = UserServers().data()
+            self.assertEqual(
+                [profile.metadata.profileId for profile in restored],
+                [profile.metadata.profileId for profile in repository.data()],
+            )
+            self.assertEqual(
+                [profile.metadata.favorite for profile in restored], [False, True]
+            )
+            self.assertEqual(repository.setProfilesFavorite([unique], False), [unique])
+
     def testRoutingRepositoryRoundTripPreservesUnknownDocuments(self):
         """Persist arbitrary core-owned routing fields without normalization."""
         with isolatedSettings():

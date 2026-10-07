@@ -24,6 +24,7 @@ from Furious.Qt import (
     AppQLineEdit,
     AppQListView,
     AppQMenu,
+    AppQPushButton,
     AppQTableView,
     AppStyleSheet,
 )
@@ -63,6 +64,34 @@ class StyleSheetStateRenderingTest(unittest.TestCase):
     def tearDown(self):
         """Finish deferred widget deletion between tests."""
         collectAtBoundary()
+
+    def testFavoritesFilterHasVisibleCheckedStateInBothThemes(self):
+        for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
+            with self.subTest(theme=theme):
+                button = AppQPushButton('Favorites')
+                button.setObjectName('HomeFavoritesButton')
+                button.setCheckable(True)
+                button.setStyleSheet(AppStyleSheet.forTheme(theme))
+                button.resize(160, 40)
+
+                try:
+                    button.show()
+                    processQtEvents()
+                    point = (button.width() - 12, button.height() // 2)
+                    unchecked = button.grab().toImage().pixelColor(*point)
+                    button.setChecked(True)
+                    checked = button.grab().toImage().pixelColor(*point)
+                    self.assertNotEqual(checked, unchecked)
+                    self.assertEqual(
+                        checked, QColor(AppStyleSheet.Palettes[theme]['accent_soft'])
+                    )
+                    button.setChecked(False)
+                    self.assertEqual(
+                        button.grab().toImage().pixelColor(*point), unchecked
+                    )
+                finally:
+                    button.close()
+                    button.deleteLater()
 
     @staticmethod
     def focusedEdgeColors(button):

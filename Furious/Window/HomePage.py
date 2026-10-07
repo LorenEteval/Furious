@@ -828,6 +828,16 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             QSizePolicy.Policy.Fixed,
         )
 
+        self.favoritesButton = AppQPushButton(
+            _('Favorites'), icon=bootstrapIcon('star.svg'), parent=self
+        )
+        self.favoritesButton.setObjectName('HomeFavoritesButton')
+        self.favoritesButton.setCheckable(True)
+        self.favoritesButton.setToolTip(_('Show favorite profiles only'))
+        self.favoritesButton.toggled.connect(
+            self.userServersQTableWidget.filterFavorites
+        )
+
         self.headerLayout = QHBoxLayout()
         self.headerLayout.setContentsMargins(0, 0, 0, 0)
         self.headerLayout.setSpacing(8)
@@ -855,6 +865,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
         self.actionLayout.addWidget(self.importButton)
         self.actionLayout.addWidget(self.testButton)
         self.actionLayout.addStretch(1)
+        self.actionLayout.addWidget(self.favoritesButton)
         self.actionLayout.addWidget(self.subscriptionFilterComboBox)
 
         self._layout.addLayout(self.headerLayout)
