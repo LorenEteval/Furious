@@ -15,9 +15,23 @@ below. To reproduce the dependency selection in
 python -m pip install -r requirements.txt "PySide6-Essentials==6.8.3" "PySide6-Addons==6.8.3"
 ```
 
-CI uses Python 3.13. Linux CI also installs `libegl1` and `libopengl0` for Qt.
-Backend Python packages in `requirements.txt` are import dependencies; tests do
-not require separately installed proxy-core executables or a working proxy.
+The full CI source suite uses Python 3.13 on Windows, Linux, and macOS.
+A separate Linux job checks Python 3.8 through 3.14 with compatible Qt pins:
+6.6.3.1 for Python 3.8, 6.8.3 for 3.9–3.13, and 6.10.3 for 3.14. Python 3.8
+also pins zxing-cpp 2.2.0, which has a published wheel for that interpreter.
+The job checks dependency consistency and harmless native-binding imports,
+compiles application source, then runs:
+
+```text
+python -m unittest tests.test_public_api tests.test_python_compatibility -v
+```
+
+These focused checks exercise cold imports, metadata, exact string operations,
+and real executor cancellation. They do not run the entire behavioral suite
+on every interpreter. Python 3.8 runs legacy branches; native-3.9-only cases
+are skipped there and exercised by the newer rows. Linux jobs install
+`libegl1` and `libopengl0` for Qt. Backend packages are import dependencies;
+tests require neither separate proxy-core executables nor a working proxy.
 
 Select the offscreen platform **before starting Python**. Some test modules
 import Qt-backed Furious modules before `tests.support` can set its defensive
@@ -92,7 +106,7 @@ worker. Choose tests by the changed contract rather than by filename alone.
 | [test_controllers.py](test_controllers.py) | Connection state/error/reconnect transitions, reentrant cancellation/replacement before launch and during completion, startup restoration, shared settings, routing fallback persistence and tray/selector agreement after custom-routing disable/re-enable. |
 | [test_runtime_lifecycle.py](test_runtime_lifecycle.py) | Qt-thread exit dispatch, commit/exit races, duplicate and late exits, idempotent release and retained failure/retry ownership, failed reap/handle close, spawn failure, queue/timer disposal on preparation failure. |
 | [test_external_core.py](test_external_core.py) | Harmless real process launch/output/shutdown, partial thread-start rollback, non-finite timeout rejection, failed reap/thread-join retry, readiness/TUN metadata, Windows paths with spaces, subscription rejection of executable profiles, bounded DNS references. |
-| [test_python_compatibility.py](test_python_compatibility.py) | Once-only implementation selection without import-time metadata enumeration, exact affix removal, both metadata entry-point APIs and plugin discovery, distribution-version failures, real modern/legacy executor cancellation and statistics-owner shutdown, and profile import with an unsubscriptable collections ABC. Legacy API shapes are simulated; this does not replace execution on the minimum interpreter. |
+| [test_python_compatibility.py](test_python_compatibility.py) | Once-only implementation selection without import-time metadata enumeration, exact affix removal, both metadata entry-point APIs and plugin discovery, distribution-version failures, real modern/legacy executor cancellation and statistics-owner shutdown, and profile import with an unsubscriptable collections ABC. Runs actual interpreter APIs alongside legacy-shape simulations; native-only cases skip on Python 3.8. The version matrix executes this module with the cold-import checks. |
 | [test_frozenlib.py](test_frozenlib.py) | Nested state guards, cleanup isolation, native peer destruction during connection/theme/translation/cleanup notifications, bounded caches/throttling, dual-stack probe selection, mocked proxy/DNS/routes/startup/session boundaries and failure handling. |
 | [test_native_tun_semantics.py](test_native_tun_semantics.py) | Xray/Hysteria2 runtime-copy TUN preservation/replacement, managed-TUN failures, download-test stripping, prevention of a second tun2socks owner. |
 | [test_sing_tun.py](test_sing_tun.py) | tun2socks engine default, saved engine choices and ownership-aware reconnect notices, sing-tun Go stack default, development-stack and congestion-control compatibility, independent backend settings and host defaults, selected-only snapshots, captured TUN log sources in both startup paths, staged settings and malformed storage, SOCKS authentication/UDP, harmless real spawn/status/stop, native readiness, cancellation, synchronous compatibility, mocked DNS/routing ownership including development IPv6 rule ordering and refused cleanup. |

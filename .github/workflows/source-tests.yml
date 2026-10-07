@@ -31,3 +31,57 @@ jobs:
         run: python -m pip install -r requirements.txt "PySide6-Essentials==6.8.3" "PySide6-Addons==6.8.3"
       - name: Run isolated behavioral and resource tests
         run: python -m unittest discover -s tests -v
+
+  python-compatibility:
+    name: Python ${{ matrix.python }} compatibility
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.8"
+            pyside6: "6.6.3.1"
+          - python: "3.9"
+            pyside6: "6.8.3"
+          - python: "3.10"
+            pyside6: "6.8.3"
+          - python: "3.11"
+            pyside6: "6.8.3"
+          - python: "3.12"
+            pyside6: "6.8.3"
+          - python: "3.13"
+            pyside6: "6.8.3"
+          - python: "3.14"
+            pyside6: "6.10.3"
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Linux Qt runtime libraries
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libopengl0
+      - name: Install interpreter-compatible dependencies
+        run: >-
+          python -m pip install --only-binary=:all: -r requirements.txt
+          "PySide6-Essentials==${{ matrix.pyside6 }}"
+          "PySide6-Addons==${{ matrix.pyside6 }}"
+          "zxing-cpp==2.2.0; python_version == '3.8'"
+      - name: Check installed dependency consistency
+        run: python -m pip check
+      - name: Check native binding imports without starting runtimes
+        run: |
+          python - <<'PY'
+          from importlib import import_module
+
+          for name in ('xray', 'hysteria', 'hysteria2', 'tun2socks', 'sing_tun'):
+              import_module(name)
+          print('Native binding imports passed; no runtime or TUN started')
+          PY
+      - name: Compile application source on this interpreter
+        run: python -m compileall -q Furious Translation.py
+      - name: Check cold imports and compatibility behavior
+        run: python -m unittest tests.test_public_api tests.test_python_compatibility -v

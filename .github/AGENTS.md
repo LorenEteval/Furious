@@ -57,9 +57,12 @@ Read `.github/workflows/deploy-pypi.yml` with `tests/README.md`; paths are relat
 - Validate YAML and every affected expression/shell. Trace each changed matrix row through dependency installation,
   source/native import checks, Nuitka/installer output, packaged architecture/dependency checks, artifact upload, and tag
   gates. When a target cannot run locally, add a narrow CI assertion that fails before publication with a useful reason.
-- `workflows/source-tests.yml` runs isolated source unittest discovery on Windows, Linux, and macOS and is a
-  required dependency of PyPI publication through `workflows/deploy-pypi.yml`. It can also run manually. Hourly binary
-  builds retain their separate artifact scope. Source tests do not establish packaged behavior or Python/Qt
+- `workflows/source-tests.yml` separates full cross-platform source unittest discovery from focused Linux
+  interpreter-version checks. The latter use compatible Qt/native wheel pins, dependency consistency, native-binding
+  imports without starting runtimes, application compilation, cold imports and real compatibility behavior. These
+  checks do not certify the entire suite on every version.
+  The reusable workflow is a required dependency of PyPI publication through `workflows/deploy-pypi.yml`, so its
+  version matrix must also pass. It can run manually. Hourly binary builds retain their separate artifact scope. Source tests do not establish packaged behavior or Python/Qt
   floors beyond their matrix. Do not call an artifact build a regression-test pass; use `tests/README.md` for
   source verification. The source suite's offscreen Qt environment exercises widgets and event delivery, not native
   tray integration, privilege prompts, or an installed application's host effects. Follow actual `needs` and tag gates

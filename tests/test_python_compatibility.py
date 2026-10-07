@@ -27,11 +27,12 @@ from Furious.Service.TrafficStatsManager import TrafficStatsManager
 from shiboken6 import delete as deleteQObject
 
 from concurrent.futures import ThreadPoolExecutor
-from importlib import metadata
+from importlib import import_module, metadata
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
+import sys
 import threading
 import unittest
 
@@ -41,6 +42,9 @@ from tests.support import (
     isolatedSettings,
     runPythonChild,
 )
+
+RegistryModule = import_module('Furious.Plugins.Registry')
+TrafficStatsManagerModule = import_module('Furious.Service.TrafficStatsManager')
 
 
 class _LegacyExecutor:
@@ -70,7 +74,7 @@ class _MetadataProvider:
         if not self.selectable:
             raise AttributeError('legacy metadata has no EntryPoints type')
 
-        return metadata.EntryPoints
+        return object
 
 
 class PythonCompatibilityTest(unittest.TestCase):
@@ -137,6 +141,9 @@ class PythonCompatibilityTest(unittest.TestCase):
         """Repeated calls retain their selected APIs without new capability probes."""
         for modern in (False, True):
             with self.subTest(modern=modern):
+                if modern and sys.version_info < (3, 9):
+                    self.skipTest('native affix methods require Python 3.9')
+
                 version = mock.MagicMock()
                 version.__ge__.return_value = modern
                 fetch = mock.Mock(return_value=() if modern else {})
@@ -209,7 +216,7 @@ class PythonCompatibilityTest(unittest.TestCase):
                         return {'furious.plugins': entries, 'unrelated': ()}
 
                 provider = _MetadataProvider(selectable, mock.Mock(side_effect=fetch))
-                compatibility = self._loadCompatibility((3, 13), provider)[
+                compatibility = self._loadCompatibility(sys.version_info, provider)[
                     'PythonCompatibility'
                 ]
 
@@ -218,9 +225,8 @@ class PythonCompatibilityTest(unittest.TestCase):
 
                 registry = PluginRegistry()
                 try:
-                    with mock.patch(
-                        'Furious.Plugins.Registry.PythonCompatibility',
-                        compatibility,
+                    with mock.patch.object(
+                        RegistryModule, 'PythonCompatibility', compatibility
                     ):
                         registry.discover()
 
@@ -238,23 +244,36 @@ class PythonCompatibilityTest(unittest.TestCase):
 
                 self.assertEqual(provider.probes, 1)
 
+    def testInstalledMetadataUsesTheActualInterpreterAPI(self):
+        """Real metadata lookup works without opening any native TUN engine."""
+        self.assertEqual(
+            PythonCompatibility.entryPoints('furious.tests.nonexistent-entry-points'),
+            (),
+        )
+        self.assertEqual(SingTUN.version(), metadata.version('sing-tun'))
+
     def testDistributionVersionKeepsMissingMetadataBehavior(self):
         """The engine reports unavailable only for missing distribution metadata."""
-        target = 'Furious.Frozenlib.PythonCompatibility.metadata.version'
-
-        with mock.patch(target, return_value='0.9.7.dev0') as version:
+        with mock.patch.object(
+            metadata, 'version', return_value='0.9.7.dev0'
+        ) as version:
             self.assertEqual(SingTUN.version(), '0.9.7.dev0')
             version.assert_called_once_with('sing-tun')
 
-        with mock.patch(
-            target, side_effect=PythonCompatibility.PackageNotFoundError('sing-tun')
+        with mock.patch.object(
+            metadata,
+            'version',
+            side_effect=PythonCompatibility.PackageNotFoundError('sing-tun'),
         ):
             self.assertEqual(SingTUN.version(), 'unavailable')
 
-        with mock.patch(target, side_effect=ValueError('invalid metadata')):
+        with mock.patch.object(
+            metadata, 'version', side_effect=ValueError('invalid metadata')
+        ):
             with self.assertRaisesRegex(ValueError, 'invalid metadata'):
                 SingTUN.version()
 
+    @unittest.skipIf(sys.version_info < (3, 9), 'native shutdown requires Python 3.9')
     def testModernShutdownDoesNotRetryUnrelatedTypeErrors(self):
         """Native shutdown errors propagate without an unsafe fallback retry."""
         executor = mock.Mock()
@@ -273,6 +292,9 @@ class PythonCompatibilityTest(unittest.TestCase):
         """Both APIs reject new work, cancel queued calls, and allow a real drain."""
         for version in ((3, 8), (3, 9)):
             with self.subTest(version=version):
+                if version >= (3, 9) and sys.version_info < (3, 9):
+                    self.skipTest('native shutdown requires Python 3.9')
+
                 started, release, queuedRan = (
                     threading.Event(),
                     threading.Event(),
@@ -344,9 +366,8 @@ class PythonCompatibilityTest(unittest.TestCase):
 
                 compatibility = self._loadCompatibility((3, 8))['PythonCompatibility']
 
-                with mock.patch(
-                    'Furious.Service.TrafficStatsManager.PythonCompatibility',
-                    compatibility,
+                with mock.patch.object(
+                    TrafficStatsManagerModule, 'PythonCompatibility', compatibility
                 ):
                     manager._closeExecutor()
 
