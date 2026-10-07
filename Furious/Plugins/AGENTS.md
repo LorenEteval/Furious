@@ -1,8 +1,9 @@
 # Plugin guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor; consult Interface guidance for runtime/storage contracts.
-This scope owns capability definitions, atomic registration, dispatch, and plugin lifecycle; backend policy
-remains in each implementation.
+Inherit the [nearest parent guide](../AGENTS.md). This scope owns capabilities, registry publication, dispatch
+and plugin lifecycle. Index rollback does not release partial resources owned by factories or plugins. Read
+`Furious/Plugins/Registry.py` with `tests/test_plugin_architecture.py`; paths are relative to this source
+tree's root.
 
 ## Contracts and registry
 
@@ -14,9 +15,11 @@ remains in each implementation.
   rollback of registry publication, not a transaction over arbitrary plugin side effects. Plugins must clean their
   own partial acquisitions even when initialization fails. Duplicate IDs/schemes and invalid versions/descriptors
   must leave existing providers intact.
-- Host plugin types register before external entry-point discovery. Bundled registrations are explicit for source,
-  wheel, and Nuitka inclusion. External entries currently follow metadata enumeration order; do not promise sorted
-  discovery or rely on it for precedence. Registration is atomic per plugin, not across a multi-plugin entry point.
+- Host plugin types register before external entry-point discovery. Bundled registrations are explicit for
+  source, wheel, and Nuitka inclusion. External entries currently follow metadata enumeration order; do not
+  promise sorted discovery or rely on it for precedence. Registration is atomic per plugin, not across a
+  multi-plugin entry point. Discovery order is not a provider priority contract; operation-specific priority
+  and explicit provider selection belong to dispatch.
 - Failure policy belongs to the dispatch operation. Automatic subscription detection tries decoders by priority; an
   explicitly selected decoder restricts candidates. URI dispatch selects the registered scheme owner rather than
   probing unrelated handlers after failure. Keep required-operation failures observable without secret payloads.

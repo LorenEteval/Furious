@@ -1,8 +1,9 @@
 # Embedded runtime guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. Consult Interface for runtime contracts and Service for
-connection ownership. This scope owns reusable embedded execution machinery and application TUN engines;
-connection policy remains outside it.
+Inherit the [nearest parent guide](../AGENTS.md). This scope owns embedded execution, output transport and
+separate application TUN engines. Launch, readiness, terminal publication and disposal are distinct
+boundaries. Read `Furious/Core/MultiprocessingRuntime.py` with `tests/test_runtime_lifecycle.py`; paths are
+relative to this source tree's root.
 
 - `Core` supplies shared multiprocessing runtime machinery, bounded output transport, and independent application
   tun2socks/sing-tun engines. External Core owns its separate direct `subprocess.Popen`; neither layer owns controller,

@@ -96,6 +96,10 @@
   caught exception variables. Put `# Any non-exit exceptions` directly below every `except Exception` handler.
   Preserve verified deferred-import boundaries for lazy discovery, import cycles, and
   child-only native bindings. Separate logical code phases with blank lines without splitting one cohesive operation.
+- Centralize supported standard-library API differences in `Frozenlib.PythonCompatibility`; select implementations
+  once and preserve result/error semantics. Keep pure domain imports independent of the Qt-backed foundation by
+  using minimum-compatible typing/runtime APIs at that boundary. Verify both legacy API shapes and actual supported
+  interpreters; `tests/test_python_compatibility.py` anchors the shared behavior, not a complete minimum-version guarantee.
 - Generated and curated artifacts have separate sources of truth: never hand-edit
   `Furious/Frozenlib/AppResources.py`; update `Resources.qrc`/resource inputs and regenerate it. Follow
   `Furious/Externals/AGENTS.md` for the translation catalog and `Furious/Data/AGENTS.md` for bundled assets.
@@ -119,8 +123,9 @@
   replace behavioral tests; record untested targets and compatibility gaps explicitly. Match verification to the
   changed contract: guidance-only work checks claims, references, scope, and path preservation; formatting-only work
   checks the promised structural equivalence. Neither warrants unrelated code changes or generated-file refreshes.
-  Review evaluated type bases, import-time APIs, native wheels, and Qt bindings when assessing compatibility floors;
-  postponed annotations and successful syntax compilation do not establish cold-import compatibility.
+  Review evaluated type bases, import-time and runtime standard-library APIs, native wheels, and Qt bindings
+  when assessing compatibility floors. Cold imports check only imported paths; exercise supported operations
+  on the claimed minimum too. Postponed annotations and syntax compilation establish neither guarantee.
 - Use real Qt semantics when focus, selection, keyboard modifiers, proxy mapping, event delivery, queued callbacks,
   geometry, or QObject destruction matters. Prefer semantic state and destroyed/resource counts; use targeted
   rendering assertions when pixels are the defect, without relying on whole-window snapshots or arbitrary sleeps.
@@ -139,7 +144,9 @@
   rather than promoting them into guarantees. Remove obsolete content inside files, distinguish preferred architecture
   from compatibility paths, and preserve every established path. A guidance audit must not turn a defect into a design.
   Each scope should identify its owner, input/commit boundary, lifecycle, and a relevant implementation/test anchor.
-  These are decision aids, not a requirement to retain today's class layout or duplicate the root maintenance rules.
+  An anchor identifies where to challenge a claim, not proof that it passed. Inherit cross-cutting rules instead
+  of repeating checklists, and keep local guidance next to the decision it protects. Anchors do not freeze today's
+  class layout; intentional refactors update the contract and evidence together.
 - After significant architectural work, re-read the applicable hierarchy as a fresh agent: can it identify the
   owner, invariant, failure boundary, and relevant tests without relying on conversation history? Challenge rules
   likely to become stale, circular references, and wording that freezes incidental structure.

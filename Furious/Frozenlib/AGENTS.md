@@ -1,22 +1,34 @@
 # Platform and compatibility guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. This scope contains compatibility and host-integration
-boundaries, not a license for unrelated application orchestration to accumulate in a broad helper namespace.
+Inherit the [nearest parent guide](../AGENTS.md).
+This scope owns settings registration, compatibility primitives, resource lookup and host integration.
+Preferences, helper results and observed OS state are distinct.
+Read `Furious/Frozenlib/AppSettings.py` with `tests/test_frozenlib.py`; paths are relative to this source tree's root.
 
 - `Frozenlib` is the low-level settings, platform, compatibility, and broad export surface. Keep imports cheap,
   cross-platform, and free of application/UI construction; preserve curated wildcard exports until consumers and
   public-import tests migrate together.
+- `PythonCompatibility` centralizes the supported standard-library differences in string affixes, installed
+  metadata/entry points, and executor shutdown. Select implementations once at module import, using interpreter
+  version or metadata API capability as appropriate; calls do not repeat those decisions. Fetch installed
+  metadata on demand rather than scanning distributions during import. Its implementation uses only the
+  standard library; Frozenlib still has its existing Qt bootstrap. Executor callers close their own submission
+  path and supply all uncancelled pending futures for the Python 3.8 fallback. Cancelling those futures does not
+  stop an already-running call; retain that distinction in ownership tests. `tests/test_python_compatibility.py` exercises
+  strict legacy API shapes and real blocked/queued workers.
 - `Globals` exposes only deliberate application-lifetime owners. Accessors may be absent during partial startup,
   isolated tests, or teardown; do not add fallback global owners that create competing lifecycles.
 - `AppSettings` keys include preferences and encoded repository blobs. Preserve names, defaults, string/binary
-  encodings, migrations, and import-time registration. Distinguish desired preferences, helper-reported success,
-  and independently observed host state; a Boolean success is not an OS read-back guarantee. Startup-registration
-  success is persisted only after its helper reports success. Settings storage and cached
-  repository objects are distinct lifetimes: changing a QSettings identity does not reconstruct `Storage` backends.
-  Tests that replace settings must isolate both boundaries before exercising cleanup or restoration.
-  Application-engine identifiers are shared constants, selection/default policy belongs to SettingsController,
-  and each engine's customization belongs to its own repository. SOCKS endpoint helpers format/validate transit
-  addresses without selecting an engine, launching a runtime, or applying host networking.
+  encodings, migrations, and import-time registration. `AppSettings.get()` can persist a default or repair an
+  invalid preference; it is not an observational reader like a copied customization projection. Distinguish
+  desired preferences, helper-reported success, and independently observed host state; a Boolean success is
+  not an OS read-back guarantee. Startup-registration success is persisted only after its helper reports
+  success. Settings storage and cached repository objects are distinct lifetimes: changing a QSettings
+  identity does not reconstruct `Storage` backends. Tests that replace settings must isolate both boundaries
+  before exercising cleanup or restoration. Application-engine identifiers are shared constants,
+  selection/default policy belongs to SettingsController, and each engine's customization belongs to its own
+  repository. SOCKS endpoint helpers format/validate transit addresses without selecting an engine, launching
+  a runtime, or applying host networking.
 - Keep proxy, DNS, routing, TUN, startup registration, session callbacks, external commands, and platform detection here
   or behind a runtime boundary so tests can replace them completely. Windows, macOS, Linux, Flatpak, AppImage, and older
   platform paths are distinct capabilities; never generalize from the current host.

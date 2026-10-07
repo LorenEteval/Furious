@@ -1,7 +1,9 @@
 # Xray guidance
 
-Inherit `Furious/Backends/AGENTS.md` and its ancestors; consult Plugins for capability contracts. This scope
-owns Xray's full JSON preservation, routing/assets/statistics, and protocol/transport/TLS projections.
+Inherit the [nearest parent guide](../AGENTS.md). This backend owns full-document preservation and Xray
+routing, TUN, assets and statistics. Editor projections and selected routing are not the running document.
+Read `Furious/Backends/Xray/Plugin.py` with `tests/test_native_tun_semantics.py`; paths are relative to this
+source tree's root.
 
 ## Full-document preservation
 
@@ -34,10 +36,10 @@ owns Xray's full JSON preservation, routing/assets/statistics, and protocol/tran
   download path and does not inherit runtime staging or checksum guarantees. Hash jobs receive copied bytes
   and return through the updater's Qt-thread boundary; closing the updater must release request and hash-callback
   contexts independently, including native destruction without a normal reply completion.
-- Routing selection IDs, user routing documents, and translated built-in labels are different contracts. Preserve
-  custom document content and named-profile identity while composing runtime routing/API statistics. Trace the
-  selected repository routing document separately from the connection's own routing branch; neither may be mutated
-  as a side effect of preparing a launch.
+- Routing selection IDs, user routing documents, and translated built-in labels are different contracts.
+  Preserve custom document content and named-profile identity while composing runtime routing/API statistics.
+  Trace the selected repository routing document separately from the connection's routing branch and prepared
+  execution. Neither stored document may be mutated as a side effect of preparing a launch.
 - Routing-rule row moves mutate the live profile's rule list in matching order, with Qt move notifications preserving
   selection. Internal drag-and-drop, the Move menu, and list-scoped Ctrl+Up/Ctrl+Down shortcuts use this same model
   mutation and preserve selected-row order. Pending rule editors/confirmations use persistent indexes in that exact

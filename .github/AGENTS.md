@@ -1,7 +1,9 @@
 # Release workflow guidance
 
-Inherit repository-wide rules from the root `AGENTS.md`. This scope owns build/publication evidence and target-specific
-exceptions; it does not define the source test suite or imply that every package dependency is pinned.
+Inherit the [nearest parent guide](../AGENTS.md).
+This scope owns build, artifact and publication evidence. Source tests, imports, packaged behavior and
+release eligibility follow their actual jobs and dependencies.
+Read `.github/workflows/deploy-pypi.yml` with `tests/README.md`; paths are relative to this source tree's root.
 
 ## Publication and matrix contract
 
@@ -35,14 +37,20 @@ exceptions; it does not define the source test suite or imply that every package
   Audit evaluated generic bases and import-time standard-library APIs as well as syntax and wheel availability.
   `from __future__ import annotations` does not defer class-base evaluation; test cold imports on a claimed minimum
   interpreter before treating metadata classifiers or a newer CI row as evidence for that minimum.
+- Interpreter compatibility jobs install dependency versions that actually support each interpreter, then exercise
+  cold imports and real behavior. Grammar checks or newer-interpreter simulations do not substitute for those jobs.
+  Keep the full cross-platform regression suite distinct from focused version checks, and make required version
+  jobs part of the publication dependency graph rather than treating artifact imports as equivalent coverage.
 - Resolve the effective shell at the step, including workflow/job defaults and explicit overrides. Matrix and
   publication workflows default to Bash, while native Windows dependency/architecture steps explicitly use PowerShell;
   source tests use runner defaults. Syntax and environment assignment must match that effective shell. Keep
   OS/architecture conditions on the step that owns the difference.
 - Flatpak checks run inside the installed sandbox, inspect the application's required native closure rather than every
   unused Qt plugin, and fail before upload. Do not mask an actually loadable plugin/runtime mismatch with a broad allowlist.
-- Generated helper files, downloaded SDKs/assets, build directories, and local bundles are disposable workflow inputs;
-  do not commit them. Never expose credentials or enable publication from untrusted pull-request code.
+- Generated helper files, downloaded SDKs/assets, build directories, and local bundles are workflow inputs; do
+  not commit them. Regeneration does not authorize removing preserved guidance scopes or user-owned artifacts;
+  deliberate cleanup follows the requested scope and checked target paths. Never expose credentials or enable
+  publication from untrusted pull-request code.
 
 ## Verification
 

@@ -1,7 +1,9 @@
 # Translation catalog guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. This scope preserves the split between extracted catalog
-structure and human-reviewed translations.
+Inherit the [nearest parent guide](../AGENTS.md). Extraction owns catalog membership; curated text and review
+flags own approved language content. Runtime retranslation is a separate consumer. Read
+`Furious/Qt/DynamicTranslate.py` with `tests/test_models_and_services.py`; paths are relative to this source
+tree's root.
 
 ## Source and generation contract
 
@@ -35,7 +37,9 @@ structure and human-reviewed translations.
 - The extractor recognizes direct `_()` and `gettext()` calls with a static first argument. The only supported
   dynamic form is an f-string composed solely of bare names resolved from `Furious.Frozenlib.Constants`; aliased or
   attribute-call translators, runtime expressions, conversions, format specifications, and concatenation helpers
-  are not extractable. Runtime translation alone does not establish discoverability. A static literal containing
+  are not extractable. Runtime translation alone does not establish discoverability. Plugin descriptors can mark static
+  labels with a no-op `_` during discovery and translate them in the UI; extraction recognizes the call shape,
+  without requiring Qt imports or runtime translation at discovery. A static literal containing
   brace placeholders is extractable: translate it first, then interpolate with `.format()` outside `_()`.
 - Keep runtime interpolation outside the translatable expression. Translate UI language, not identifiers, protocol
   values, user-defined names, persisted values, paths, or diagnostic payloads.

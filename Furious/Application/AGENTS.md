@@ -1,7 +1,9 @@
 # Application composition guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. This scope owns process-lifetime Qt composition and the
-boundary between the outer child-process supervisor and the inner application event loop.
+Inherit the [nearest parent guide](../AGENTS.md). Composition owns partial startup acquisitions and
+dependency-ordered teardown. Outer supervision interprets application exit; inner cleanup owns its resources.
+Read `Furious/Application/DesktopApplication.py` with `tests/test_architecture_refactors.py`; paths are
+relative to this source tree's root.
 
 - `Furious.__main__` and `AppMainProcess` own the outer process/crash boundary; `DesktopApplication` owns the inner Qt
   composition. Keep those responsibilities separate and preserve semantic exit codes and original failure context.

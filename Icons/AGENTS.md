@@ -1,7 +1,9 @@
 # Icon source guidance
 
-Inherit repository-wide rules from the root `AGENTS.md`. This top-level scope governs icon source/provenance and the
-resource-manifest contract; it does not govern general UI layout.
+Inherit the [nearest parent guide](../AGENTS.md).
+This scope owns icon provenance and resource identity. Compiled aliases, themed rendering and installer
+inclusion require separate checks; commands remain with consumers.
+Read `Resources.qrc` with `tests/test_public_api.py`; paths are relative to this source tree's root.
 
 - Reuse an existing semantic icon before introducing a new asset. SVG sources stay compact vectors without scripts,
   remote resources, embedded rasters, editor metadata, or hard-coded page backgrounds.

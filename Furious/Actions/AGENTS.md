@@ -1,7 +1,9 @@
 # Action guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor; this scope adds rules for translating user gestures into
-owned commands and presentation without becoming a workflow authority.
+Inherit the [nearest parent guide](../AGENTS.md).
+Actions delegate to workflow owners. Capture command targets before yielding; resolve live navigation
+separately from captured input or diagnostics.
+Read `Furious/Actions/Import.py` with `tests/test_qt_interactions.py`; paths are relative to this source tree's root.
 
 ## Command boundary
 

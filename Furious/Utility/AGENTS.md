@@ -1,7 +1,9 @@
 # Outer process guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. This scope preserves the exact outer child-process/crash
-protocol and is not a general-purpose utility bucket.
+Inherit the [nearest parent guide](../AGENTS.md). This scope owns the outer application-child and crash-result
+protocol, not miscellaneous helpers. Fallback presentation preserves the original application result. Read
+`Furious/Utility/AppMainProcess.py` with `tests/test_application_process.py`; paths are relative to this
+source tree's root.
 
 - `Utility` owns the child-side wrapper used by the outer application process and crash/exit translation. It is not a
   miscellaneous helper namespace and does not own application composition, repositories, runtimes, or UI policy.

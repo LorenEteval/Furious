@@ -1,13 +1,18 @@
 # Model guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. This scope owns dependency-light domain shape and identity,
-never live persistence, Qt presentation, plugin discovery, or workflow execution.
+Inherit the [nearest parent guide](../AGENTS.md). This scope owns pure domain shape and identity/copy
+semantics. Conversion and frozen envelopes do not isolate nested mutable data or validate a backend. Read
+`Furious/Models/Profile.py` with `tests/test_models_and_services.py`; paths are relative to this source tree's
+root.
 
 ## Domain shape and identity
 
 - Models are Python values and pure transformations. Proxy profiles are core-neutral; application-engine settings
   may describe that engine's native option schema without importing its binding. Do not import Qt, globals,
   repositories, services, controllers, plugin registries, or concrete backends into this layer.
+- Runtime-evaluated generic bases must work on the declared minimum interpreter: postponed annotations do not
+  defer base evaluation. Use minimum-compatible typing aliases without importing the Qt-backed Frozenlib package
+  into these pure values. The legacy-ABC cold-import case in `tests/test_python_compatibility.py` anchors this boundary.
 - `CoreConfiguration` is a dict-like connection document whose construction is deliberately non-throwing: unsupported
   or malformed input becomes an empty object with `constructionError()`. Keep construction and serialization errors
   distinct and preserve useful context through callers. Successful generic mapping construction is not protocol
@@ -43,7 +48,9 @@ never live persistence, Qt presentation, plugin discovery, or workflow execution
   Its closed option schema deliberately differs from open core documents: unsupported keys and overrides of
   application-owned routing/DNS fields are rejected. Host options remain sing-tun's own data and never fall back to
   tun2socks settings. Cross-field constraints belong in this pure preparer, including stack-dependent native
-  options; a syntactically valid JSON object is not necessarily an executable configuration. Check the preparer
+  options; a syntactically valid JSON object is not necessarily an executable configuration. Pure validation supplies
+  semantic error categories; presentation translates them without adding Qt/catalog lookup here. Native binding
+  failure text is diagnostic input, distinct from those application-owned categories. Check the preparer
   and `tests/test_sing_tun.py` together when the binding contract changes.
 
 ## Compatibility and verification

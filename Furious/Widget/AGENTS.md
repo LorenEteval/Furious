@@ -1,9 +1,9 @@
 # Reusable widget guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor; consult `Furious/Qt/AGENTS.md` for shared
-lifetime/presentation contracts. This scope covers reusable controls and model/view adapters below page
-composition. Persistent widgets currently host some service owners; that construction detail does not make every
-view an independent workflow authority.
+Inherit the [nearest parent guide](../AGENTS.md). Widgets own controls and model/view adapters, not
+independent workflows. Domain identity survives sorting and deferred commands; indexes remain model-specific.
+Read `Furious/Widget/ServerTableView.py` with `tests/test_qt_interactions.py`; paths are relative to this
+source tree's root.
 
 ## Presentation and identity
 

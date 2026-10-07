@@ -1,8 +1,9 @@
 # Bundled extension guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor; consult Plugins for capability and registration contracts.
-This scope covers host-shipped non-runtime plugins and must not gain private authority merely because the code
-is bundled.
+Inherit the [nearest parent guide](../AGENTS.md). Bundled extensions implement public non-runtime
+capabilities. Decoding recognizes input; protocol import and reconciliation own acceptance and mutation. Read
+`Furious/Extensions/StandardSubscriptions.py` with `tests/test_subscription_scalability.py`; paths are
+relative to this source tree's root.
 
 - `Extensions` contains host-shipped plugins that are not proxy runtimes. They register through the same public API
   and lifecycle as entry-point plugins. New extension contracts must be usable without private
@@ -22,17 +23,17 @@ is bundled.
 - Worker safety is a property of the whole preparation path. Standard decoders opt in, but the selected protocol
   handlers must also opt in after their shared state, caches, and Qt use are audited. Preserve the GUI compatibility
   fallback for unclassified capabilities; a safe envelope decoder cannot authorize an unsafe downstream parser.
-- Decoder output is descriptive, not a repository transaction. Supplied names and upstream IDs are input to profile
-  construction, not permission to overwrite local identity or grant remote ownership. It cannot mutate a group,
-  cancel tests, reconnect, or publish UI state; those decisions remain at the import/manager commit boundaries.
-  Preserve duplicate item order through decoding: the importer assigns occurrence keys when upstream IDs or
-  connection fingerprints repeat. Deduplicating at the envelope layer can change which stored profile keeps local
-  metadata. Keep per-item acceptance/rejection explicit: decoding success must not erase the importer's rejected
-  item count or the protocol descriptor's subscription eligibility. Test recognized-empty, wholly unsupported,
-  mixed-validity, and duplicate payloads separately so
-  decoder matching is not confused with successful import or authorization to clear an existing group. The standard
-  share-link decoder treats blank/comment-only content as a mismatch; an empty result from a different decoder needs its own
-  import/reconciliation policy, not an assumption borrowed from this format.
+- Decoder output is descriptive, not a repository transaction. Supplied names and upstream IDs are input to
+  profile construction, not permission to overwrite local identity or grant remote ownership. It cannot mutate
+  a group, cancel tests, reconnect, or publish UI state; those decisions remain at the import/manager commit
+  boundaries. Preserve duplicate item order through decoding: the importer assigns occurrence keys when
+  upstream IDs or connection fingerprints repeat. Deduplicating at the envelope layer can change which stored
+  profile keeps local metadata. Keep per-item acceptance/rejection explicit: decoding success must not erase
+  the importer's rejected item count or the protocol descriptor's subscription eligibility. Test
+  recognized-empty, wholly unsupported, mixed-validity, and duplicate payloads separately so decoder matching
+  is not confused with successful import or authorization to clear an existing group. The standard share-link
+  decoder treats blank/comment-only content as a mismatch; an empty result from a different decoder needs its
+  own import/reconciliation policy, not an assumption borrowed from this format.
 - Keep bundled registration deterministic, side-effect-light, and discoverable in source, wheel, and Nuitka builds.
   Test format selection/fallback, malformed and secret-bearing input, duplicate occurrence identity, unsupported
   subscription protocols, registration rollback, and absence of repository/UI mutation during decoding. Evolve this

@@ -1,8 +1,9 @@
 # Repository guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. Consult the Interface and Models guides when changing their
-contracts. This scope owns restoration, migration, ordering, and persistence; workflows and presentation remain
-outside it.
+Inherit the [nearest parent guide](../AGENTS.md). This scope owns restoration, migration, ordered collections
+and persistence. Prepared candidates, live mutation, serialization and disk flush have separate failure
+boundaries. Read `Furious/Repository/Storage.py` with `tests/test_repository_contracts.py`; paths are relative
+to this source tree's root.
 
 - Repositories restore, migrate, order, and persist profiles, subscriptions, routings, and TUN settings. They do not own
   network workflows, controller state, test schedulers, or presentation. A repository method name does not imply
@@ -17,13 +18,15 @@ outside it.
   metadata precedence are migration behavior: legacy `UserServer` aliases override nested metadata, and explicit
   top-level current fields then override those aliases. Preserve this order and unknown extras unless a tested
   migration deliberately changes it; do not treat every duplicate key as interchangeable.
-- A restore failure remains observable. Automatic cleanup must not replace unreadable persisted bytes with an empty
-  fallback; only an explicit successful replacement may do so. Root decoding, individual-record hydration, and later
-  serialization are separate failure boundaries. Test malformed records inside a valid root as well as malformed
+- A restore failure remains observable. Automatic cleanup must not replace unreadable persisted bytes with an
+  empty fallback; only an explicit successful replacement may do so. Root decoding, complete-collection
+  hydration, live replacement, and later serialization are separate failure boundaries. Byte preservation does
+  not authorize using a partial collection. Test malformed records inside a valid root as well as malformed
   roots. Profile and subscription hydration publishes only a complete collection; an invalid record must not
-  expose a partially restored prefix that cleanup can serialize over the original document. The restore-failure
-  guard protects automatic cleanup, not an arbitrary explicit `sync()` call. Do not flush an empty fallback merely
-  to inspect or acknowledge a load failure; test the original persisted bytes through the cleanup path.
+  expose a partially restored prefix that cleanup can serialize over the original document. The
+  restore-failure guard protects automatic cleanup, not an arbitrary explicit `sync()` call. Do not flush an
+  empty fallback merely to inspect or acknowledge a load failure; test the original persisted bytes through
+  the cleanup path.
 - Stage fallible decode/migration before live mutation. Subscription reconciliation currently belongs to
   `Furious/Service/SubscriptionSync.py` and commits through the compatibility live collection: matched managed profiles
   retain object/profile identity and local metadata, removed profiles become stale, and unrelated groups remain

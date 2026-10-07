@@ -1,12 +1,15 @@
 # Hysteria 2 guidance
 
-Inherit `Furious/Backends/AGENTS.md` and its ancestors; consult Plugins for capability contracts. This scope
-owns Hysteria 2's nested upstream document, native-TUN capability, statistics, and editor projection.
+Inherit the [nearest parent guide](../AGENTS.md). This backend owns the nested document, native TUN and server
+statistics target. Editing, readiness, TUN and statistics have separate validation boundaries. Read
+`Furious/Backends/Hysteria2/Plugin.py` with `tests/test_hysteria2_compatibility.py`; paths are relative to
+this source tree's root.
 
 ## Native document and editor projection
 
 - The persisted Hysteria 2 client document is authoritative and is submitted to the embedded runtime. The GUI is a
-  partial projection, not an Xray-shaped compiler or a general upstream-schema normalizer.
+  partial projection. Sharing editor controls does not import Xray configuration rules or make represented
+  fields a complete upstream schema.
 - Preserve upstream names, optional-group absence, unknown siblings, and future string values. Effective defaults such
   as `realm.ipMode` are presented without materializing them during an untouched save; editing one leaf changes only
   that leaf.

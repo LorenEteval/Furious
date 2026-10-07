@@ -1,11 +1,13 @@
 # Interface guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. This file preserves dependency-light contracts that multiple
-implementations can satisfy without importing application composition or concrete backends.
+Inherit the [nearest parent guide](../AGENTS.md).
+This scope owns dependency-light, mechanism-neutral contracts. Implementers supply resource guarantees;
+interfaces do not supply execution or readiness.
+Read `Furious/Interface/Runtime.py` with `tests/test_interface.py`; paths are relative to this source tree's root.
 
 - This package defines dependency-light contracts shared across layers. It does not import Qt presentation,
   controllers, services, repositories, plugins, or concrete backends; a contract may depend on a small model/constant
-  only when that does not trigger application construction or registration.
+  only when transitive imports preserve that boundary. Test the cold import, not just a local import list.
 - Contracts specify observable ownership, lifecycle, mutation, serialization, callback, and failure semantics. Search
   every representative implementation and contract test before changing one; an implementation may strengthen a
   guarantee but cannot silently weaken it.

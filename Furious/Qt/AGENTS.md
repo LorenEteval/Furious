@@ -1,10 +1,10 @@
 # Qt foundation guidance
 
-Use the `manage-qt-pyside6-lifetimes` skill for QObject ownership, transient/reusable UI, signal retention, or packaged
-PySide6 lifetime work.
-
-Inherit `Furious/AGENTS.md` and its root ancestor. This scope owns reusable Qt presentation, translation/theme
-behavior, and lifetime primitives; pages and services consume them without creating parallel registries.
+Inherit the [nearest parent guide](../AGENTS.md).
+This scope owns presentation and lifetime primitives. Reachability, native validity, thread affinity,
+workflow freshness and asynchronous UI ownership are independent.
+Read `Furious/Qt/Signals.py` with `tests/test_qt_lifetime.py`; paths are relative to this source tree's root.
+Use the `manage-qt-pyside6-lifetimes` skill for source lifetime work when available in the matching checkout.
 
 ## Canonical presentation
 

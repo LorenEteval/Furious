@@ -1,7 +1,9 @@
 # External Core guidance
 
-Inherit `Furious/Backends/AGENTS.md` and its ancestors; consult Plugins for capability contracts. This file
-preserves the intentionally different direct-subprocess scope for user-selected executables.
+Inherit the [nearest parent guide](../AGENTS.md). This backend owns structured executable input and direct
+subprocess execution. Configured endpoints describe readiness targets without configuring the executable. Read
+`Furious/Backends/ExternalCore/Process.py` with `tests/test_external_core.py`; paths are relative to this
+source tree's root.
 
 ## Structured executable boundary
 

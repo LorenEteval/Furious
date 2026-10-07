@@ -1,7 +1,9 @@
 # Furious test guidance
 
-Inherit repository-wide rules from the root `AGENTS.md`. This scope specializes isolation, evidence, resource ownership,
-and test-tier selection; test convenience never weakens a production invariant.
+Inherit the [nearest parent guide](../AGENTS.md).
+This scope owns isolated verification and the meaning of its evidence. Preserve the production boundary
+under examination while replacing real host/network effects.
+Read `tests/support.py` with `tests/README.md`; paths are relative to this source tree's root.
 
 ## Isolation is a product invariant
 

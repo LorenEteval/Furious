@@ -1,8 +1,9 @@
 # Furious package guidance
 
-Inherit repository-wide rules from the root `AGENTS.md`. This file preserves the package-level boundary between
-domain, persistence, orchestration, platform integration, and presentation; nested guides specialize it in
-place.
+Inherit the [nearest parent guide](../AGENTS.md).
+Package exports expose contracts without transferring state or resource ownership. Domain, persistence,
+workflow and presentation boundaries remain separate.
+Read `Furious/__init__.py` with `tests/test_public_api.py`; paths are relative to this source tree's root.
 
 ## Responsibility boundaries
 

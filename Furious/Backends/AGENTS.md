@@ -1,8 +1,9 @@
 # Backend guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. Consult Plugins/Models/Service for the contracts consumed by
-this scope. This scope adds rules shared by all bundled proxy backends without making the richest backend the
-generic default.
+Inherit the [nearest parent guide](../AGENTS.md). Bundled backends own document projections and launch
+preparation through public capabilities. Capability absence cannot import another backend's policy. Read
+`Furious/Plugins/API.py` with `tests/test_backend_editor_contract.py`; paths are relative to this source
+tree's root.
 
 ## Common backend contract
 

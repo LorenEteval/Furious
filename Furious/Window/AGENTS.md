@@ -1,8 +1,9 @@
 # Window and page guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. Consult Qt/Widget for presentation and Controllers/Service
-for shared owners. This scope owns persistent page composition and top-level presentation, not shared domain
-state.
+Inherit the [nearest parent guide](../AGENTS.md).
+Windows and pages compose presentation around shared owners. Persistent, reusable and transient surfaces
+have different close semantics; visibility does not transfer workflow ownership.
+Read `Furious/Window/MainWindow.py` with `tests/test_ui_behavior.py`; paths are relative to this source tree's root.
 
 ## Composition and shared state
 
@@ -23,6 +24,8 @@ state.
   silently normalizing storage, importing tun2socks preferences, or launching a native engine just to open settings.
   The application JSON editor is another view of that same candidate, not a second configuration authority.
   Validate the merged candidate at acceptance; editor syntax checking does not replace model validation.
+  Translate semantic application validation categories here, preserving technical diagnostics and user JSON keys.
+  Do not classify failures by matching exact English exception text.
 - The current page composition shares one subscription workflow between server and subscription presentation, records
   traffic into one history, and derives metrics/endpoint presentation from owned services. These exact locations may
   evolve, but a refactor retains one durable owner, one scheduler/request path, and one signal path.

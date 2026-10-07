@@ -1,7 +1,9 @@
 # Service guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. Consult Models/Repository for data contracts, Plugins/Core
-for execution, and Qt for lifetime primitives. This scope owns multi-stage workflows and temporary resources.
+Inherit the [nearest parent guide](../AGENTS.md). Services own workflow generations, temporary resources and
+commits. Publication cancellation does not establish physical termination or release cleanup ownership. Read
+`Furious/Service/ConnectionManager.py` with `tests/test_runtime_lifecycle.py`; paths are relative to this
+source tree's root.
 
 ## Workflow ownership
 
@@ -13,7 +15,8 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   owner and explicit idempotent cleanup. Cancellation can suppress a result without stopping the underlying work;
   distinguish deadline-bounded teardown from cooperative drains, and retain resources until their users finish.
   Construct Qt services only after an application exists.
-- Native owner destruction also ends Python execution ownership. At `destroyed`, the owner's wrapper is invalid
+- Native owner destruction requires a final cleanup attempt for Python-owned resources; it does not terminate
+  running Python work. At `destroyed`, the owner's wrapper is invalid
   but its QObject children have not yet been deleted; a plain weak-reference callback may release Python state
   and shut down still-valid child schedulers without calling the destroyed owner's Qt API. Statistics executors,
   profile-test runtime leases and DNS-operation replies exercise this boundary in `test_service_runtime.py` and

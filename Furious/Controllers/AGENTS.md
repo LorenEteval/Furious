@@ -1,8 +1,9 @@
 # Controller guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. This scope preserves controllers as process-lifetime
-authorities for shared transitions. Services own execution resources; existing prompts are presentation
-compatibility paths.
+Inherit the [nearest parent guide](../AGENTS.md). Controllers own shared transitions; services own execution
+and repositories own stored data. Published state, saved preferences and physical outcomes are distinct. Read
+`Furious/Controllers/ConnectionController.py` with `tests/test_controllers.py`; paths are relative to this
+source tree's root.
 
 ## Shared state authorities
 

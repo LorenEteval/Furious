@@ -1,7 +1,9 @@
 # Bundled runtime data guidance
 
-Inherit `Furious/AGENTS.md` and its root ancestor. This scope exists for shipped runtime assets and their
-provenance; it is not an application-data or settings directory.
+Inherit the [nearest parent guide](../AGENTS.md). This scope owns shipped asset provenance, consumer paths and
+the endpoint-map bridge. Inclusion, write access and renderer availability require separate evidence. Read
+`Furious/Widget/EndpointInfoWidget.py` with `tests/test_endpoint_info.py`; paths are relative to this source
+tree's root.
 
 ## Boundary and provenance
 

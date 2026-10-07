@@ -1,13 +1,16 @@
 # Hysteria 1 guidance
 
-Inherit `Furious/Backends/AGENTS.md` and its ancestors; consult Plugins for capability contracts. This scope
-exists to preserve Hysteria 1's legacy flat schema and lifecycle without importing assumptions from Hysteria 2.
+Inherit the [nearest parent guide](../AGENTS.md). This backend owns the flat document, URI codec and ACL/MMDB
+launch inputs. Related upstream names do not imply shared Hysteria 2 capabilities. Read
+`Furious/Backends/Hysteria1/Plugin.py` with `tests/test_hysteria1_protocol.py`; paths are relative to this
+source tree's root.
 
 - Hysteria 1 is the legacy flat client schema and `hysteria://` share-link backend. Do not import Hysteria 2 nested
   documents, obfuscation, statistics, realm, or native-TUN semantics merely because the upstream names are related.
-- Preserve tolerated legacy types, upstream field names, absent defaults, and unknown combo values through mapping
-  and untouched-editor round trips. URI round trips cover supported share-link fields only. Explicit user edits may
-  normalize the represented field; runtime validation may reject values that observational loading must preserve.
+- Preserve tolerated legacy types, upstream field names, absent defaults, and unknown combo values through
+  mapping and untouched-editor round trips. URI round trips cover supported share-link fields only; they do
+  not back up ACL/MMDB launch inputs. Explicit user edits may normalize the represented field; runtime
+  validation may reject values that observational loading must preserve.
 - This backend participates in the selected application TUN engine through shared startup; its factory does not own
   host routing or connection commit. Keep the factory's unsupported routing/TUN combination rejection before
   execution acquisition; do not silently substitute Global routing or borrow native TUN from Hysteria 2.
