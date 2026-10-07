@@ -165,6 +165,7 @@ import copy
 import pathlib
 import tempfile
 import unittest
+import importlib
 import weakref
 
 from unittest import mock
@@ -4199,6 +4200,39 @@ class SharedConnectionPresentationTest(unittest.TestCase):
 
     def tearDown(self):
         collectAtBoundary()
+
+    def testNetworkBadgePublicationCanDestroyItsNativeOwner(self):
+        """Layout observers may end the badge before later icon/style updates."""
+        module = importlib.import_module('Furious.Window.HomePage')
+        controller = ConnectionController()
+
+        try:
+            with mock.patch.object(
+                module, 'AppConnectionController', return_value=controller
+            ):
+                for ownerFirst in (False, True):
+                    with self.subTest(ownerFirst=ownerFirst):
+                        for _ in range(30):
+                            parent = QWidget()
+                            badge = module.NetworkStateBadge(parent)
+                            destroyed = []
+                            badge.destroyed.connect(
+                                lambda *_args: destroyed.append(True)
+                            )
+                            badge.layoutRequirementChanged.connect(
+                                lambda: deleteQObject(parent if ownerFirst else badge)
+                            )
+
+                            try:
+                                badge.setStatus('success', 'fixture')
+
+                                self.assertEqual(destroyed, [True])
+                                self.assertFalse(isValid(badge))
+                            finally:
+                                if isValid(parent):
+                                    deleteQObject(parent)
+        finally:
+            controller.deleteLater()
 
     def testHomeSelectionPolicyAndTrayPresentationShareController(self):
         """Apply selection only to Home while lifecycle text remains identical."""

@@ -76,6 +76,9 @@ for execution, and Qt for lifetime primitives. This scope owns multi-stage workf
   Workflow-specific reply indexes must also release on native destruction without `finished`. Abort hooks can
   synchronously destroy the manager, remaining replies, and child pools; recheck validity before using captured Qt
   resources during cancellation/shutdown. `tests/test_service_runtime.py` exercises those failure boundaries.
+  Update result callbacks may destroy the manager or the requested dialog parent. Presentation requires both still
+  to be valid after notification; do not substitute an unparented dialog for an expired parent. The update-response
+  cases in `tests/test_service_runtime.py` verify completion without stale dialog creation.
 - Subscription stages remain separate: decoders return neutral items; import constructs profiles/metadata;
   synchronization prepares one group reconciliation; the manager owns request/schedule generations and commits it.
   Worker-safe payload import and reconciliation preparation run in the manager's bounded pool over copied data;

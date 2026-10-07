@@ -28,6 +28,8 @@ from Furious.Qt.HttpGetManager import *
 from PySide6 import QtCore
 from PySide6.QtGui import *
 
+from shiboken6 import isValid
+
 from typing import Callable
 
 import logging
@@ -77,6 +79,9 @@ class UpdateManager(HttpGetManager):
     @staticmethod
     def showErrorMessageBox(parent=None):
         """Show error message box."""
+        if not Mixins.qObjectIsValid(parent):
+            return
+
         mbox = AppQMessageBox(parent=parent, icon=AppQMessageBox.Icon.Critical)
         mbox.setWindowTitle(_(APPLICATION_NAME))
         mbox.setText(_('Check for updates failed'))
@@ -135,7 +140,7 @@ class UpdateManager(HttpGetManager):
 
             logger.error(f'bad network reply while checking for updates. {ex}')
 
-            if showMessageBox:
+            if showMessageBox and isValid(self):
                 self.showErrorMessageBox(parent)
         else:
             if versionToValue(tagName) > versionToValue(APPLICATION_VERSION):
@@ -156,7 +161,10 @@ class UpdateManager(HttpGetManager):
                 if callable(hasNewVersionCallback):
                     hasNewVersionCallback(tagName)
 
-                if showMessageBox:
+                if not isValid(self):
+                    return
+
+                if showMessageBox and Mixins.qObjectIsValid(parent):
                     mbox = MBoxQuestionUpdate(
                         parent=parent,
                         icon=AppQMessageBox.Icon.Information,
@@ -169,7 +177,7 @@ class UpdateManager(HttpGetManager):
                     # Show the MessageBox asynchronously
                     mbox.open()
             else:
-                if showMessageBox:
+                if showMessageBox and isValid(self) and Mixins.qObjectIsValid(parent):
                     mbox = AppQMessageBox(
                         parent=parent,
                         icon=AppQMessageBox.Icon.Information,

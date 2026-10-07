@@ -55,6 +55,8 @@ from PySide6 import QtCore
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+from shiboken6 import isValid
+
 from typing import Union
 
 import os
@@ -82,6 +84,9 @@ class AppConnectivityManager(ConnectivityManager):
         if isinstance(parent, HomePage):
             parent.setNetworkState(True)
 
+        if not isValid(self):
+            return
+
         super().successCallback(networkReply, **kwargs)
 
     def failureCallback(self, networkReply, **kwargs):
@@ -90,6 +95,9 @@ class AppConnectivityManager(ConnectivityManager):
 
         if isinstance(parent, HomePage):
             parent.setNetworkState(False, errorString=networkReply.errorString())
+
+        if not isValid(self):
+            return
 
         super().failureCallback(networkReply, **kwargs)
 
@@ -100,6 +108,9 @@ class AppConnectivityManager(ConnectivityManager):
 
             if isinstance(parent, HomePage):
                 parent.resetNetworkState()
+
+            if not isValid(self):
+                return
 
             self.stopTest()
 
@@ -121,6 +132,9 @@ class AppConnectivityManager(ConnectivityManager):
 
         if isinstance(parent, HomePage):
             parent.resetNetworkState()
+
+        if not isValid(self):
+            return
 
         super().disconnectedCallback()
 
@@ -359,6 +373,10 @@ class NetworkStateBadge(Mixins.QTranslatable, Mixins.ThemeAware, QFrame):
         )
 
         self.updateStatusText()
+
+        if not isValid(self):
+            return
+
         self.setIconByTheme(APP().theme())
         self.refreshStyle()
 

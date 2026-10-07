@@ -28,6 +28,7 @@ from Furious.Plugins import (
 from Furious.Service.ConnectivityManager import ConnectivityManager
 from Furious.Service.EndpointInfoService import ProxyEndpointHttpClient
 from Furious.Qt.HttpGetManager import HttpGetManager
+from Furious.Qt import AppQDialog
 from Furious.Service.PluginUIManager import PluginNavigationManager
 from Furious.Service.SubscriptionManager import SubscriptionManager
 from Furious.Service.DnsResolver import DnsResolver
@@ -35,10 +36,11 @@ from Furious.Repository import Storage
 from Furious.Service.TrafficStatsManager import TrafficStatsManager
 from Furious.Service.UpdateManager import UpdateManager
 from Furious.Controllers.ConnectionController import ConnectionController
+from Furious.Window.HomePage import AppConnectivityManager, HomePage
 
 from PySide6 import QtCore
 from PySide6.QtNetwork import QNetworkReply
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget, QMainWindow
 
 from shiboken6 import isValid, delete as deleteQObject
 
@@ -167,6 +169,68 @@ class UpdateManagerTest(unittest.TestCase):
         finally:
             deleteQObject(owner)
 
+    def testReleaseNotificationCanDestroyManagerOrDialogParent(self):
+        """A release callback ending ownership must not create a stale dialog."""
+        for target in ('manager', 'parent'):
+            with self.subTest(target=target):
+                for _ in range(20):
+                    manager = UpdateManager()
+                    parent = QWidget()
+                    baseline = set(AppQDialog._openDialogs)
+
+                    def notified(_version):
+                        deleteQObject(manager if target == 'manager' else parent)
+
+                    try:
+                        manager.successCallback(
+                            _Response(
+                                {
+                                    'tag_name': '999.0.0',
+                                    'html_url': 'https://github.com/LorenEteval/Furious/releases',
+                                }
+                            ),
+                            parent=parent,
+                            hasNewVersionCallback=notified,
+                        )
+
+                        self.assertEqual(set(AppQDialog._openDialogs), baseline)
+                    finally:
+                        if isValid(manager):
+                            deleteQObject(manager)
+
+                        if isValid(parent):
+                            deleteQObject(parent)
+
+                        processQtEvents()
+
+    def testUpdateResponsesDoNotPresentUnderAnAlreadyDestroyedParent(self):
+        """Successful, malformed and failed requests may outlive their UI parent."""
+        for result in ('new', 'current', 'malformed', 'failure'):
+            with self.subTest(result=result):
+                manager = UpdateManager()
+                parent = QWidget()
+                deleteQObject(parent)
+                baseline = set(AppQDialog._openDialogs)
+
+                try:
+                    if result == 'failure':
+                        manager.failureCallback(None, parent=parent)
+                    else:
+                        payload = {
+                            'tag_name': '999.0.0' if result == 'new' else '0.0.0',
+                            'html_url': 'https://github.com/LorenEteval/Furious/releases',
+                        }
+
+                        if result == 'malformed':
+                            payload = {}
+
+                        manager.successCallback(_Response(payload), parent=parent)
+
+                    self.assertEqual(set(AppQDialog._openDialogs), baseline)
+                finally:
+                    deleteQObject(manager)
+                    processQtEvents()
+
 
 class _ManagedReply(QNetworkReply):
     """Provide a hermetic reply object with real Qt lifecycle signals."""
@@ -197,6 +261,85 @@ class _CapturingHttpGetManager(HttpGetManager):
 
 class HttpGetManagerLifetimeTest(unittest.TestCase):
     """Verify every request receives a timeout and releases exact context."""
+
+    def testReentrantReplyCompletionRunsTerminalCleanupOnce(self):
+        """A nested finished signal cannot repeat once-only resource teardown."""
+        for _ in range(30):
+            manager = HttpGetManager()
+            replies = [_ManagedReply(manager), _ManagedReply(manager)]
+            resource = QtCore.QTimer(manager)
+            completed, errors = [], []
+            destroyed = []
+            resource.destroyed.connect(lambda *_args: destroyed.append(True))
+
+            def complete(**context):
+                completed.append(context['marker'])
+                resource.stop()
+                deleteQObject(resource)
+
+                if context['marker'] == 'first':
+                    replies[1].finished.emit()
+
+            manager.completionCallback = complete
+
+            try:
+                with patch.object(manager, 'get', side_effect=replies):
+                    manager.webGET('https://invalid.test/first', marker='first')
+                    manager.webGET('https://invalid.test/second', marker='second')
+
+                with (
+                    patch('sys.excepthook', lambda *args: errors.append(args)),
+                    patch('Furious.Qt.HttpGetManager.logger.error') as callbackError,
+                ):
+                    replies[0].finished.emit()
+                    processQtEvents()
+
+                self.assertEqual(completed, ['first'])
+                callbackError.assert_not_called()
+                self.assertFalse(errors)
+                self.assertEqual(destroyed, [True])
+                self.assertFalse(isValid(resource))
+                self.assertTrue(all(not isValid(reply) for reply in replies))
+                self.assertFalse(manager._replyContexts)
+                self.assertTrue(manager.completionHasRun)
+            finally:
+                if isValid(manager):
+                    deleteQObject(manager)
+
+    def testReentrantPerReplyCompletionKeepsIndependentCleanup(self):
+        """Per-request completion still releases each request's exact resource."""
+        manager = HttpGetManager(completionRunsOnce=False)
+        replies = [_ManagedReply(manager), _ManagedReply(manager)]
+        resources = {marker: QtCore.QTimer(manager) for marker in ('first', 'second')}
+        completed, errors = [], []
+
+        def complete(**context):
+            marker = context['marker']
+            completed.append(marker)
+            deleteQObject(resources[marker])
+
+            if marker == 'first':
+                replies[1].finished.emit()
+
+        manager.completionCallback = complete
+
+        try:
+            with patch.object(manager, 'get', side_effect=replies):
+                manager.webGET('https://invalid.test/first', marker='first')
+                manager.webGET('https://invalid.test/second', marker='second')
+
+            with patch('sys.excepthook', lambda *args: errors.append(args)):
+                replies[0].finished.emit()
+                processQtEvents()
+
+            self.assertEqual(completed, ['first', 'second'])
+            self.assertFalse(errors)
+            self.assertTrue(all(not isValid(item) for item in resources.values()))
+            self.assertTrue(all(not isValid(reply) for reply in replies))
+            self.assertFalse(manager._replyContexts)
+        finally:
+            if isValid(manager):
+                deleteQObject(manager)
 
     def testDnsOperationOwnerDestructionAbortsItsRequest(self):
         """A resolver outliving a request must not outlive that request's owner."""
@@ -657,6 +800,21 @@ class PluginNavigationManagerTest(unittest.TestCase):
         host.deleteLater()
 
 
+class _ConnectivityHomePage(HomePage):
+    """Supply a native Home owner and its status publication without other services."""
+
+    statusPublished = QtCore.Signal()
+
+    def __init__(self):
+        QMainWindow.__init__(self)
+
+    def setNetworkState(self, _success, **_kwargs):
+        self.statusPublished.emit()
+
+    def resetNetworkState(self):
+        self.statusPublished.emit()
+
+
 class ConnectivityManagerTest(unittest.TestCase):
     """Verify one bounded request is active at a time without live networking."""
 
@@ -664,6 +822,57 @@ class ConnectivityManagerTest(unittest.TestCase):
     def setUpClass(cls):
         """Create the process-wide headless QApplication."""
         application()
+
+    def testHomeStatusPublicationCanDestroyTheConnectivityOwner(self):
+        """Status/reset observers may delete the page and all network children."""
+        for boundary in ('success', 'failure', 'start', 'disconnect'):
+            with self.subTest(boundary=boundary):
+                for _ in range(20):
+                    page = _ConnectivityHomePage()
+                    manager = AppConnectivityManager(page)
+                    reply = _ManagedReply(manager)
+                    destroyed, errors = [], []
+                    manager.destroyed.connect(lambda *_args: destroyed.append(True))
+                    page.statusPublished.connect(lambda: deleteQObject(page))
+
+                    try:
+                        with patch('sys.excepthook', lambda *args: errors.append(args)):
+                            if boundary in ('success', 'failure'):
+                                with patch.object(
+                                    manager, 'get', lambda _request: reply
+                                ):
+                                    manager.webGET('https://invalid.test')
+
+                                if boundary == 'failure':
+                                    reply.setError(
+                                        QNetworkReply.NetworkError.UnknownNetworkError,
+                                        'fixture',
+                                    )
+
+                                reply.finished.emit()
+                            elif boundary == 'start':
+                                with patch(
+                                    'Furious.Window.HomePage.AppConnectionController',
+                                    return_value=SimpleNamespace(
+                                        isConnected=lambda: False
+                                    ),
+                                ):
+                                    manager.jobArrangeTimer.timeout.emit()
+                            else:
+                                manager.disconnectedCallback()
+
+                            processQtEvents()
+
+                        self.assertFalse(errors)
+                        self.assertEqual(destroyed, [True])
+                        self.assertFalse(isValid(page))
+                        self.assertFalse(isValid(manager))
+                        self.assertFalse(isValid(reply))
+                        self.assertFalse(isValid(manager.jobTimeoutTimer))
+                        self.assertFalse(isValid(manager.jobArrangeTimer))
+                    finally:
+                        if isValid(page):
+                            deleteQObject(page)
 
     def testDestroyedActiveReplyReleasesProbeAndAllowsAnotherRequest(self):
         """Native deletion without finished must not strand the probe scheduler."""

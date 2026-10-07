@@ -37,6 +37,9 @@ state.
 - A page that creates a service must make its process-lifetime or page-lifetime ownership explicit and expose one
   cleanup path through the containing window/application. Moving a service between pages must not duplicate schedules,
   histories, requests, or controller connections during the transition.
+  Status/layout publication may destroy the page, badge and service synchronously. Check the surviving owner before
+  later child-widget or timer work; Home's badge and connectivity cases in `tests/test_ui_behavior.py` and
+  `tests/test_service_runtime.py` cover both direct and Qt-dispatched delivery.
 - One-shot editors/prompts use managed transient dialogs and weak compiled-safe continuations. Reusable text/editor
   windows and retained settings dialogs need an explicit owner and reopen policy. Classify a plugin-created page or
   dialog by the lifetime transferred to its caller, not by the registry's process lifetime. A settings label or Qt

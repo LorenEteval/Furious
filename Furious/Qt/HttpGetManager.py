@@ -49,6 +49,7 @@ class HttpGetManager(AppQNetworkAccessManager):
 
         self.completionRunsOnce = kwargs.pop('completionRunsOnce', True)
         self.completionHasRun = False
+        self._completionCallbackRunning = False
         self._replyContexts = {}
 
     def successCallback(self, networkReply: QNetworkReply, **kwargs):
@@ -69,22 +70,22 @@ class HttpGetManager(AppQNetworkAccessManager):
 
     def runCompletionCallback(self, **kwargs):
         """Run the completion callback according to its call policy."""
+        if self.completionRunsOnce and (
+            self.completionHasRun or self._completionCallbackRunning
+        ):
+            return
 
-        def call():
-            """Invoke the registered completion callback."""
-            try:
-                self.completionCallback(**kwargs)
-            except Exception as ex:
-                # Any non-exit exceptions
+        self._completionCallbackRunning = True
 
-                logger.error(f'error calling completion callback: {ex}')
-            finally:
-                self.completionHasRun = True
+        try:
+            self.completionCallback(**kwargs)
+        except Exception as ex:
+            # Any non-exit exceptions
 
-        if not self.completionRunsOnce:
-            call()
-        elif not self.completionHasRun:
-            call()
+            logger.error(f'error calling completion callback: {ex}')
+        finally:
+            self.completionHasRun = True
+            self._completionCallbackRunning = False
 
     def handleReadyReadByNetworkReply(self, networkReply: QNetworkReply, **kwargs):
         """Handle ready read by network reply."""
