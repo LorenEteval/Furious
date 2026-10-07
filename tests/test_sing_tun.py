@@ -617,6 +617,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         for advanced, source in cases:
             with self.subTest(source=source, advanced=advanced), isolatedSettings():
                 AppSettings.set('Language', 'ZH')
+
                 dialog = self._dialog({})
                 dialog.advanced.setPlainText(json.dumps(advanced))
 
@@ -654,6 +655,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         """Keep UI language keyed to the category rather than an English match."""
         with isolatedSettings():
             AppSettings.set('Language', 'ZH')
+
             dialog = self._dialog({})
             error = SingTUNUnsupportedSettingsError(
                 SingTUNUnsupportedSettingsError.Reason.HostOptions
@@ -681,6 +683,7 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         ):
             with self.subTest(error=error), isolatedSettings():
                 AppSettings.set('Language', 'ZH')
+
                 dialog = self._dialog({})
 
                 try:
