@@ -128,6 +128,7 @@ class UpdateManagerTest(unittest.TestCase):
         controller = ConnectionController(coreManager=SimpleNamespace(runtimes=[]))
         manager = controller._updatesManager
         reply = _ManagedReply(manager)
+
         payload = _ResponseBody(b'fixture')
         reference = weakref.ref(payload)
 
@@ -136,6 +137,7 @@ class UpdateManagerTest(unittest.TestCase):
                 manager.webGET('https://invalid.test', payload=payload)
 
             del payload
+
             deleteQObject(controller)
 
             self.assertFalse(isValid(manager))
@@ -199,6 +201,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
     def testDnsOperationOwnerDestructionAbortsItsRequest(self):
         """A resolver outliving a request must not outlive that request's owner."""
         application()
+
         resolver = DnsResolver()
         self.addCleanup(resolver.dispose)
 
@@ -206,6 +209,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
             parent = QtCore.QObject()
             reply = _ManagedReply(resolver)
             operation = resolver.resolveAsync('example.test', parent=parent)
+
             results, errors = [], []
             operation.finished.connect(lambda *_args: results.append(True))
 
@@ -214,6 +218,7 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
                     QNetworkReply.NetworkError.OperationCanceledError, 'cancelled'
                 )
                 reply.setFinished(True)
+
                 reply.finished.emit()
 
             reply.abort = abort
@@ -225,12 +230,15 @@ class HttpGetManagerLifetimeTest(unittest.TestCase):
                     patch('sys.excepthook', lambda *args: errors.append(args)),
                 ):
                     operation.start()
+
                     deleteQObject(parent)
 
                 self.assertFalse(isValid(operation))
                 self.assertFalse(isValid(operation._timer))
+
                 self.assertTrue(reply.isFinished())
                 self.assertFalse(resolver._replyContexts)
+
                 self.assertFalse(results)
                 self.assertFalse(errors)
 
@@ -714,7 +722,9 @@ class ConnectivityManagerTest(unittest.TestCase):
         ):
             manager.startSingleTest()
             oldReply.finished.emit()
+
             manager.startSingleTest()
+
             deleteQObject(oldReply)
 
         self.assertIs(manager._activeReply, currentReply)
@@ -826,6 +836,7 @@ class TrafficStatsManagerTest(unittest.TestCase):
                 for _ in range(20):
                     parent = QtCore.QObject()
                     manager = TrafficStatsManager(parent)
+
                     started = threading.Event()
                     release = threading.Event()
                     updates = []
@@ -840,13 +851,16 @@ class TrafficStatsManagerTest(unittest.TestCase):
                         return TrafficCounters(1, 2)
 
                     manager.sampleChanged.connect(updates.append)
+
                     manager._activateMonitor(
                         TrafficStatsMonitor(query=query, target=None)
                     )
+
                     executor = manager._executor
 
                     try:
                         self.assertTrue(started.wait(1))
+
                         threads = tuple(executor._threads)
                         updates.clear()
 
@@ -857,6 +871,7 @@ class TrafficStatsManagerTest(unittest.TestCase):
 
                             self.assertFalse(isValid(manager))
                             self.assertFalse(isValid(manager._sampleTimer))
+
                             self.assertIsNone(manager._executor)
                             self.assertIsNone(manager._future)
                             self.assertIsNone(manager._monitor)
@@ -871,6 +886,7 @@ class TrafficStatsManagerTest(unittest.TestCase):
 
                         self.assertFalse(callbackErrors)
                         self.assertFalse(updates)
+
                         self.assertTrue(
                             all(not thread.is_alive() for thread in threads)
                         )

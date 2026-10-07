@@ -75,6 +75,7 @@ class ConnectivityManager(Mixins.ConnectionAware, HttpGetManager):
         # A completed reply may be deleted after another probe has started.
         # Only the invalid active reply owns this timeout and admission slot.
         self._activeReply = None
+
         self.jobTimeoutTimer.stop()
 
         if self._testingEnabled:

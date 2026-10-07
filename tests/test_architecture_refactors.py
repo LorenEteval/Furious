@@ -1424,6 +1424,7 @@ class ApplicationLifecycleTransactionTest(TestCase):
     def testCoreLogDrainStopsWhenItsCallbackDisposesTheQueue(self):
         """A runtime shutdown during delivery retires the rest of this drain turn."""
         application()
+
         received = []
         messageQueue = None
 
@@ -1432,6 +1433,7 @@ class ApplicationLifecycleTransactionTest(TestCase):
             messageQueue.dispose()
 
         messageQueue = ProcessOutputModule.MsgQueue(msgCallback=receive)
+
         timerDestroyed = []
         messageQueue.timer.destroyed.connect(lambda *_args: timerDestroyed.append(True))
 
@@ -1443,12 +1445,14 @@ class ApplicationLifecycleTransactionTest(TestCase):
 
             self.assertEqual(received, ['first'])
             self.assertEqual(get.call_count, 1)
+
             self.assertIsNone(messageQueue.callback)
             self.assertIsNone(messageQueue._timerConnection)
 
             processQtEvents()
 
             self.assertEqual(timerDestroyed, [True])
+
             messageQueue.processMsg()
         finally:
             messageQueue.dispose()

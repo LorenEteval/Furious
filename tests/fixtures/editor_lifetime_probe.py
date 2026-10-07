@@ -928,6 +928,7 @@ def runServiceTeardownProbe(iterations=100):
 
     try:
         assert started.wait(2)
+
         threads = tuple(executor._threads)
 
         deleteQObject(parent)
@@ -974,14 +975,18 @@ def runServiceTeardownProbe(iterations=100):
                 DownloadSpeedTestOptions(5000, 'https://invalid.test'),
                 parent=scheduler,
             )
+
             lease = Lease()
             worker._runtimeLease = lease
+
             job = SimpleNamespace(state=ProfileTestJobState.Running)
             scheduler.activeJobs[id(worker)] = (worker, job, worker.port)
             scheduler.activePorts.add(worker.port)
+
             connectWeakly(
                 worker.finished, scheduler, 'handleWorkerFinished', sender=worker
             )
+
             workers.append(worker)
             leases.append(lease)
 
@@ -992,6 +997,7 @@ def runServiceTeardownProbe(iterations=100):
         assert all(not isValid(worker) for worker in workers)
         assert not tests._serialDownloadScheduler.activePorts
         assert not tests._concurrentDownloadScheduler.activePorts
+
         runtimeReleases += len(leases)
 
     return {

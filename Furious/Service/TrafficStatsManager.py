@@ -210,6 +210,7 @@ def _closeDestroyedStatisticsManager(managerReference, *_args):
         manager._generation += 1
         manager._connected = False
         manager._monitor = None
+
         manager._closeExecutor()
 
 

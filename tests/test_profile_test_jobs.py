@@ -429,6 +429,7 @@ class ProfileTestServiceTest(unittest.TestCase):
                 ):
                     manager.testDownloadSpeed((profile,), concurrent=False)
                     processQtEvents()
+
                     worker, runtime = workers[0], runtimes[0]
                     reply = _PendingDownloadReply(worker)
 
@@ -595,12 +596,14 @@ class ProfileTestServiceTest(unittest.TestCase):
                         profilesProvider=lambda: (profile,),
                         downloadConcurrency=1,
                     )
+
                     workers, runtimes, routers, destroyed = [], [], [], []
                     results, errors = [], []
 
                     def workerFactory(*args, **kwargs):
                         worker = _DownloadSpeedWorker(*args, **kwargs)
                         worker.CoreStartupGraceMilliseconds = 60_000
+
                         worker.destroyed.connect(lambda *_args: destroyed.append(True))
                         workers.append(worker)
 
@@ -626,6 +629,7 @@ class ProfileTestServiceTest(unittest.TestCase):
                         prepareDownloadTest=lambda profile, _port: profile,
                         createCoreRuntime=createRuntime,
                     )
+
                     manager.resultApplied.connect(lambda *_args: results.append(True))
 
                     try:
@@ -676,11 +680,13 @@ class ProfileTestServiceTest(unittest.TestCase):
                                     runtime.failure = None
 
                             results.clear()
+
                             deleteQObject(parent)
                             processQtEvents()
 
                         self.assertFalse(errors)
                         self.assertFalse(results)
+
                         self.assertTrue(
                             all(not runtime.isRunning() for runtime in runtimes)
                         )
@@ -688,6 +694,7 @@ class ProfileTestServiceTest(unittest.TestCase):
                             all(not runtime.resourceOwned for runtime in runtimes)
                         )
                         self.assertTrue(manager._shuttingDown)
+
                         self.assertTrue(all(not isValid(worker) for worker in workers))
                         self.assertTrue(all(not isValid(router) for router in routers))
                         self.assertEqual(len(destroyed), 2)

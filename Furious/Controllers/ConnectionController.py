@@ -104,6 +104,7 @@ class ConnectionController(QtCore.QObject):
         self._actionQueue = queue.Queue()
         self._coreManager = coreManager or ConnectionManager()
         self._updatesManager = updatesManager or UpdateManager(self)
+
         self._state = ConnectionState.Disconnected
         self._activeProfile = None
         self._lastError = None
