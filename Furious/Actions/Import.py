@@ -399,6 +399,9 @@ class ImportFromFileAction(AppQAction):
             filter=_('Text files (*.json);;All files (*)'),
         )
 
+        if not Mixins.qObjectIsValid(self):
+            return
+
         if filename:
             try:
                 with open(filename, 'r', encoding='utf-8') as file:

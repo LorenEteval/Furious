@@ -132,6 +132,9 @@ class ExternalCorePathInput(EditorWidgetBinding):
                 _('All files (*)'),
             )
 
+        if not Mixins.qObjectIsValid(self._container, self._input):
+            return
+
         if selected:
             self._input.setText(str(Path(selected).resolve(strict=False)))
 

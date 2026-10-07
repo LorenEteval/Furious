@@ -2423,16 +2423,22 @@ class AppQToolBar(Mixins.QTranslatable, QToolBar):
 
         for action in actions:
             if isinstance(action, AppQSeparator):
+                if action.parent() is None:
+                    action.setParent(self)
+
                 self._actions.append(action)
                 self.addSeparator()
             elif isinstance(action, AppQAction):
+                if action.parent() is None:
+                    action.setParent(self)
+
                 self._actions.append(action)
                 self.addAction(action)
             else:
                 # Do nothing
                 pass
 
-        self.actionTriggered.connect(self.showMenuBelow)
+        connectWeakly(self.actionTriggered, self, 'showMenuBelow', sender=self)
 
     @QtCore.Slot(AppQAction)
     def showMenuBelow(self, action: AppQAction):

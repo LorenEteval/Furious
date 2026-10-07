@@ -19,11 +19,15 @@
 
 from __future__ import annotations
 
-from Furious.Backends.ExternalCore.Editor import ExternalCoreEditor
+from Furious.Backends.ExternalCore.Editor import (
+    ExternalCoreEditor,
+    ExternalCorePathInput,
+)
 from Furious.Backends.Hysteria1.Editor import Hysteria1Editor
 from Furious.Backends.Hysteria2.Editor import Hysteria2Editor
 from Furious.Backends.Hysteria2.TunSettingsDialog import Hysteria2TunSettingsDialog
 from Furious.Backends.Xray.AssetListView import XrayAssetListView
+from Furious.Backends.Xray.AssetWindow import XrayAssetWindow
 from Furious.Backends.Xray.RoutingWindow import (
     UserRoutingTableView,
     RoutingDocumentationURL,
@@ -39,6 +43,7 @@ from Furious.Backends.Xray.VlessEditor import VlessEditor
 from Furious.Backends.Xray.VmessEditor import VmessEditor
 from Furious.Actions.Import import (
     ImportURIsProgressDialog,
+    ImportFromFileAction,
     ImportQRCodeOnTheScreenAction,
 )
 from Furious.Actions.Routing import RoutingAction
@@ -60,6 +65,7 @@ from Furious.Qt import (
     AppQSwitch,
     AppQSeparator,
     AppQTransientDialog,
+    AppQToolBar,
     connectWeakly,
     singleShotWeakly,
 )
@@ -88,12 +94,286 @@ from tests.support import (
 from tests.fixtures.editor_lifetime_probe import runSingletonIPCProbe
 
 import gc
+import importlib
 import builtins
 from pathlib import Path
+from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest import mock
 import weakref
+
+
+class ToolbarLifetimeTest(unittest.TestCase):
+    """Constructor actions use the toolbar tree unless an owner was explicit."""
+
+    def testToolbarAdoptsOnlyUnownedActionsAndSeparators(self):
+        application()
+
+        with isolatedSettings():
+            for borrowed in (False, True):
+                with self.subTest(borrowed=borrowed):
+                    owner = QWidget()
+                    action = AppQAction(
+                        'Toolbar fixture', parent=owner if borrowed else None
+                    )
+                    separator = AppQSeparator()
+
+                    if borrowed:
+                        separator.setParent(owner)
+                    toolbar = AppQToolBar(action, separator, parent=owner)
+
+                    try:
+                        self.assertIs(action.parent(), owner if borrowed else toolbar)
+                        self.assertIs(
+                            separator.parent(), owner if borrowed else toolbar
+                        )
+                        toolbar.actionTriggered.emit(action)
+
+                        deleteQObject(toolbar)
+
+                        self.assertEqual(isValid(action), borrowed)
+                        self.assertEqual(isValid(separator), borrowed)
+                    finally:
+                        if isValid(owner):
+                            deleteQObject(owner)
+                        if isValid(action):
+                            deleteQObject(action)
+                        if isValid(separator):
+                            deleteQObject(separator)
+
+
+class ModalPickerLifetimeTest(unittest.TestCase):
+    """A nested chooser can destroy its caller before returning a selection."""
+
+    @staticmethod
+    def _destroyDuringModalLoop(owner):
+        loop = QtCore.QEventLoop()
+
+        def finish():
+            deleteQObject(owner)
+            loop.quit()
+
+        QtCore.QTimer.singleShot(0, finish)
+        loop.exec()
+
+    def testTextSaveDoesNotTruncateFileAfterWindowDestruction(self):
+        """Cancel before opening the destination when the editor no longer exists."""
+        application()
+        module = importlib.import_module('Furious.Window.TextEditorWindow')
+
+        with isolatedSettings(), tempfile.TemporaryDirectory() as directory:
+            filename = Path(directory) / 'existing.json'
+            filename.write_text('keep original bytes', encoding='utf-8')
+            parent = QWidget()
+            editor = TextEditorWindow(parent)
+            editor.jsonEditor.setPlainText('{"updated": true}')
+
+            def select(*_args, **_kwargs):
+                self._destroyDuringModalLoop(parent)
+                return str(filename), ''
+
+            with mock.patch.object(
+                module.QFileDialog, 'getSaveFileName', side_effect=select
+            ):
+                editor.saveAsFile()
+
+            self.assertFalse(isValid(editor))
+            self.assertEqual(
+                filename.read_text(encoding='utf-8'), 'keep original bytes'
+            )
+
+    def testCloseConfirmationStopsAfterSavingDestroysItsOwner(self):
+        """Do not close a deleted prompt or continue its former close event."""
+        script = """
+import importlib
+import sys
+from unittest import mock
+from PySide6 import QtCore
+from PySide6.QtGui import QCloseEvent
+from shiboken6 import delete as deleteQObject, isValid
+from tests.support import application, isolatedSettings, processQtEvents
+from Furious.Window.TextEditorWindow import TextEditorWindow
+
+application()
+module = importlib.import_module('Furious.Window.TextEditorWindow')
+errors = []
+sys.excepthook = lambda *args: errors.append(args)
+
+with isolatedSettings():
+    editor = TextEditorWindow()
+    editor.modified = True
+    originalPrompt = module.MBoxQuestionSave
+
+    class Prompt(originalPrompt):
+        def exec(self):
+            QtCore.QTimer.singleShot(0, self.button0.click)
+            return super().exec()
+
+    def save(*args, **kwargs):
+        deleteQObject(editor)
+        return True
+
+    with mock.patch.object(module, 'MBoxQuestionSave', Prompt):
+        with mock.patch.object(editor, 'save', side_effect=save):
+            editor.closeEvent(QCloseEvent())
+
+    processQtEvents()
+    assert not isValid(editor)
+    assert not errors, [(str(args[0]), str(args[1])) for args in errors]
+"""
+        assertChildSucceeded(
+            self, runPythonChild(script), 'save destroys close-confirmation owner'
+        )
+
+    def testTextSaveCommitSurvivesDestructionDuringItsNotifications(self):
+        """A committed save must not touch the dead editor or open a stale notice."""
+        application()
+        module = importlib.import_module('Furious.Window.TextEditorWindow')
+
+        with isolatedSettings():
+            for boundary in ('row-change', 'reconnect-notice'):
+                with self.subTest(boundary=boundary):
+                    parent = QWidget()
+                    editor = TextEditorWindow(parent)
+                    editor.currentIndex = 0
+                    editor.jsonEditor.setPlainText('{"server": "after"}')
+                    rows = [
+                        ServerProfile.fromConfiguration(
+                            CoreConfiguration({'server': 'before'})
+                        )
+                    ]
+
+                    def flush(*_args):
+                        if boundary == 'row-change':
+                            deleteQObject(parent)
+
+                    def notice(*_args, **_kwargs):
+                        if isValid(parent):
+                            deleteQObject(parent)
+
+                    try:
+                        with mock.patch.object(
+                            module.Storage, 'UserServers', return_value=rows
+                        ):
+                            with mock.patch.object(
+                                module.Storage, 'UserActivatedItemIndex', return_value=0
+                            ):
+                                with mock.patch.object(
+                                    module,
+                                    'AppMainWindow',
+                                    return_value=SimpleNamespace(flushRow=flush),
+                                ):
+                                    with mock.patch.object(
+                                        module,
+                                        'configurationFromMapping',
+                                        side_effect=CoreConfiguration,
+                                    ):
+                                        with mock.patch.object(
+                                            module,
+                                            'showMBoxNewChangesNextTime',
+                                            side_effect=notice,
+                                        ) as showNotice:
+                                            self.assertTrue(
+                                                editor.save(showChangesMethod='exec')
+                                            )
+
+                                            if boundary == 'row-change':
+                                                showNotice.assert_not_called()
+                                            else:
+                                                showNotice.assert_called_once()
+
+                        self.assertFalse(isValid(editor))
+                        self.assertEqual(rows[0]['server'], 'after')
+                    finally:
+                        if isValid(parent):
+                            deleteQObject(parent)
+
+    def testPathBrowseStopsAfterItsFieldTreeIsDestroyed(self):
+        """A pure binding can survive after its native row widgets disappear."""
+        application()
+        module = importlib.import_module('Furious.Backends.ExternalCore.Editor')
+
+        with isolatedSettings():
+            for directoryMode in (False, True):
+                with self.subTest(directory=directoryMode):
+                    binding = ExternalCorePathInput(
+                        'Path', 'executable', directory=directoryMode
+                    )
+                    container = binding._container
+
+                    def select(*_args, **_kwargs):
+                        self._destroyDuringModalLoop(container)
+                        return '/chosen' if directoryMode else ('/chosen', '')
+
+                    method = (
+                        'getExistingDirectory' if directoryMode else 'getOpenFileName'
+                    )
+                    try:
+                        with mock.patch.object(
+                            module.QFileDialog, method, side_effect=select
+                        ):
+                            binding.browse()
+
+                        self.assertFalse(isValid(binding._input))
+                    finally:
+                        if isValid(binding._title):
+                            deleteQObject(binding._title)
+                        if isValid(container):
+                            deleteQObject(container)
+
+    def testAssetImportStopsAfterWindowDestruction(self):
+        """Do not pass a selected filename into a dead asset view."""
+        application()
+        module = importlib.import_module('Furious.Backends.Xray.AssetWindow')
+
+        with isolatedSettings():
+            parent = QWidget()
+            window = XrayAssetWindow(parent)
+
+            def select(*_args, **_kwargs):
+                self._destroyDuringModalLoop(parent)
+                return '/chosen.dat', ''
+
+            with mock.patch.object(
+                module.QFileDialog, 'getOpenFileName', side_effect=select
+            ):
+                with mock.patch.object(
+                    window.xrayAssetListView, 'appendNewItem'
+                ) as append:
+                    window.appendNewItem()
+                    append.assert_not_called()
+
+            self.assertFalse(isValid(window))
+
+    def testFileImportStopsWhenItsActionIsDestroyed(self):
+        """A surviving main window must not receive work from a dead action."""
+        application()
+        module = importlib.import_module('Furious.Actions.Import')
+
+        with isolatedSettings(), tempfile.TemporaryDirectory() as directory:
+            filename = Path(directory) / 'input.json'
+            filename.write_text('{}', encoding='utf-8')
+            action = ImportFromFileAction()
+            mainWindow = mock.Mock()
+
+            def select(*_args, **_kwargs):
+                self._destroyDuringModalLoop(action)
+                return str(filename), ''
+
+            with mock.patch.object(
+                module.QFileDialog, 'getOpenFileName', side_effect=select
+            ):
+                with mock.patch.object(
+                    module, 'AppMainWindow', return_value=mainWindow
+                ):
+                    with mock.patch.object(module, 'profileFromAny') as parse:
+                        with mock.patch.object(module, 'MBoxImportSuccess'):
+                            action.triggeredCallback(False)
+                            parse.assert_not_called()
+                            mainWindow.appendNewItemByFactory.assert_not_called()
+
+            self.assertFalse(isValid(action))
 
 
 class ProbeTransientDialog(AppQTransientDialog):

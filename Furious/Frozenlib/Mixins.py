@@ -111,15 +111,19 @@ class Mixins:
     """Group reusable lifecycle, translation, theme, and Qt context mixins."""
 
     @staticmethod
-    def qObjectIsValid(qobject) -> bool:
-        """Return the q object is valid value used by the mixins."""
-        if not isinstance(qobject, QtCore.QObject):
-            return True
+    def qObjectIsValid(qobject, *qobjects) -> bool:
+        """Require every QObject to be valid; accept non-QObjects as before."""
+        for ob in (qobject, *qobjects):
+            if not isinstance(ob, QtCore.QObject):
+                continue
 
-        try:
-            return isValidQObject(qobject)
-        except RuntimeError:
-            return False
+            try:
+                if not isValidQObject(ob):
+                    return False
+            except RuntimeError:
+                return False
+
+        return True
 
     class ConnectionAware:
         """Represent connection aware."""

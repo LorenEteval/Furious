@@ -20,6 +20,8 @@
 from __future__ import annotations
 
 from Furious.Backends import OFFICIAL_PLUGIN_TYPES
+from Furious.Backends.ExternalCore.Editor import ExternalCorePathInput
+from Furious.Backends.Xray.AssetWindow import XrayAssetWindow
 from Furious.Backends.Xray.RoutingWindow import RoutingRulesDialog
 from Furious.Backends.Xray.AssetListView import XrayAssetListView
 import Furious.Backends.Xray.AssetListView as assetModule
@@ -39,6 +41,8 @@ from Furious.Qt import (
     AppQDialog,
     AppQMessageBox,
     AppQMainWindow,
+    AppQToolBar,
+    AppQSeparator,
     ThemeTransition,
     connectWeakly,
 )
@@ -72,6 +76,7 @@ from Furious.Repository import Storage
 from Furious.Window.SettingsPage import _TUNBackendSettingsCard
 from Furious.Window.HomePage import HomePage, NetworkStateBadge, AppConnectivityManager
 from Furious.Window.QRCodeWindow import QRCodeWindow
+from Furious.Window.TextEditorWindow import TextEditorWindow
 from Furious.Widget.ServerTableView import ServerTableView
 
 import PySide6
@@ -95,6 +100,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 import argparse
+import importlib
 import json
 import sys
 import weakref
@@ -1837,6 +1843,175 @@ def runConfirmationProbe(iterations=100):
     return result
 
 
+def runToolbarOwnershipProbe(iterations=100):
+    """Toolbar teardown releases owned actions while preserving borrowed owners."""
+    application()
+    protected = getattr(
+        sys.modules.get('PySide6-postLoad', PySide6), '_protected', None
+    )
+    protectedBefore = len(protected) if protected is not None else None
+    references = []
+    destroyed = []
+
+    with isolatedSettings():
+        for borrowed in (False, True):
+            for _ in range(iterations):
+                owner = QWidget()
+                action = AppQAction(
+                    'Toolbar fixture', parent=owner if borrowed else None
+                )
+                separator = AppQSeparator()
+
+                if borrowed:
+                    separator.setParent(owner)
+
+                toolbar = AppQToolBar(action, separator, parent=owner)
+                references.append(weakref.ref(toolbar))
+                toolbar.destroyed.connect(lambda *_args: destroyed.append(True))
+                toolbar.actionTriggered.emit(action)
+
+                deleteQObject(toolbar)
+
+                assert isValid(action) == borrowed
+                assert isValid(separator) == borrowed
+
+                deleteQObject(owner)
+
+                assert not isValid(action)
+                assert not isValid(separator)
+
+                del action, separator, toolbar, owner
+
+        collectAtBoundary()
+
+        assert len(destroyed) == iterations * 2
+        assert all(reference() is None for reference in references)
+
+    growth = len(protected) - protectedBefore if protected is not None else None
+
+    if growth is not None:
+        assert growth == 0, growth
+
+    return {
+        'toolbarCycles': iterations * 2,
+        'destroyed': len(destroyed),
+        'protectedGrowth': growth,
+    }
+
+
+def runModalPickerProbe(iterations=100):
+    """Exercise modal owner-first teardown with actual native widget deletion."""
+    application()
+    references = []
+    destroyed = []
+    textModule = importlib.import_module('Furious.Window.TextEditorWindow')
+    assetWindowModule = importlib.import_module('Furious.Backends.Xray.AssetWindow')
+    pathModule = importlib.import_module('Furious.Backends.ExternalCore.Editor')
+
+    def destroyOwner(owner):
+        loop = QtCore.QEventLoop()
+
+        def finish():
+            deleteQObject(owner)
+            loop.quit()
+
+        QtCore.QTimer.singleShot(0, finish)
+        loop.exec()
+
+    def record(object_):
+        references.append(weakref.ref(object_))
+        object_.destroyed.connect(lambda *_args: destroyed.append(True))
+
+    with isolatedSettings(), tempfile.TemporaryDirectory() as directory:
+        filename = Path(directory) / 'fixture.json'
+        for _ in range(iterations):
+            filename.write_text('keep', encoding='utf-8')
+            parent = QWidget()
+            editor = TextEditorWindow(parent)
+            editor.jsonEditor.setPlainText('{"fixture": true}')
+            record(editor)
+
+            def saveSelection(*_args, **_kwargs):
+                destroyOwner(parent)
+                return str(filename), ''
+
+            with mock.patch.object(
+                textModule.QFileDialog, 'getSaveFileName', side_effect=saveSelection
+            ):
+                editor.saveAsFile()
+
+            assert not isValid(editor)
+            assert filename.read_text(encoding='utf-8') == 'keep'
+            del editor, parent
+
+            for directoryMode in (False, True):
+                binding = ExternalCorePathInput(
+                    'Path', 'executable', directory=directoryMode
+                )
+                container = binding._container
+                record(container)
+
+                def pathSelection(*_args, **_kwargs):
+                    destroyOwner(container)
+                    return str(filename) if directoryMode else (str(filename), '')
+
+                method = 'getExistingDirectory' if directoryMode else 'getOpenFileName'
+                with mock.patch.object(
+                    pathModule.QFileDialog, method, side_effect=pathSelection
+                ):
+                    binding.browse()
+
+                assert not isValid(binding._input)
+                deleteQObject(binding._title)
+                del binding, container
+
+            parent = QWidget()
+            window = XrayAssetWindow(parent)
+            record(window)
+
+            def assetSelection(*_args, **_kwargs):
+                destroyOwner(parent)
+                return str(filename), ''
+
+            with mock.patch.object(
+                assetWindowModule.QFileDialog,
+                'getOpenFileName',
+                side_effect=assetSelection,
+            ):
+                with mock.patch.object(
+                    window.xrayAssetListView, 'appendNewItem'
+                ) as append:
+                    window.appendNewItem()
+                    append.assert_not_called()
+            assert not isValid(window)
+            del window, parent
+
+            action = importModule.ImportFromFileAction()
+            record(action)
+
+            def importSelection(*_args, **_kwargs):
+                destroyOwner(action)
+                return str(filename), ''
+
+            with mock.patch.object(
+                importModule.QFileDialog, 'getOpenFileName', side_effect=importSelection
+            ):
+                with mock.patch.object(importModule, 'profileFromAny') as parse:
+                    action.triggeredCallback(False)
+                    parse.assert_not_called()
+            assert not isValid(action)
+            del action
+
+            processQtEvents()
+
+        assert len(destroyed) == iterations * 5
+        collectAtBoundary()
+        assert all(reference() is None for reference in references)
+        assert not AppQDialog._openDialogs
+
+    return {'modalPickerCycles': iterations, 'destroyed': len(destroyed), 'retained': 0}
+
+
 def main():
     """Run the probe as a standalone source or Nuitka executable."""
     parser = argparse.ArgumentParser()
@@ -1855,6 +2030,8 @@ def main():
     )
 
     try:
+        print(json.dumps(runModalPickerProbe(arguments.iterations)))
+        print(json.dumps(runToolbarOwnershipProbe(arguments.iterations)))
         print(json.dumps(runNotificationAndDnsProbe(arguments.iterations)))
         print(json.dumps(runConnectionRecoveryProbe(arguments.iterations)))
         print(json.dumps(runReentrantLifetimeProbe(arguments.iterations)))

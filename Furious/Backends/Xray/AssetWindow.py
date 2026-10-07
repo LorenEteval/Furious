@@ -136,5 +136,8 @@ class XrayAssetWindow(AppQMainWindow):
             None, _('Import File'), filter=_('All files (*)')
         )
 
+        if not Mixins.qObjectIsValid(self, self.xrayAssetListView):
+            return
+
         if filename:
             self.xrayAssetListView.appendNewItem(filename)

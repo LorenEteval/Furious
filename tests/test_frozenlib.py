@@ -60,6 +60,30 @@ class FrozenlibQtContextTest(unittest.TestCase):
         """Create the suite-owned QApplication before constructing widgets."""
         application()
 
+    def testObjectValidityRequiresEveryNativeObjectToBeAlive(self):
+        """Check all arguments while retaining the single-object contract."""
+        first = QtCore.QObject()
+        second = QtCore.QObject()
+        destroyed = QtCore.QObject()
+        deleteQObject(destroyed)
+
+        try:
+            self.assertTrue(Mixins.qObjectIsValid(qobject=first))
+            self.assertTrue(Mixins.qObjectIsValid(None))
+            self.assertTrue(Mixins.qObjectIsValid(first, None, object(), second))
+            self.assertFalse(Mixins.qObjectIsValid(destroyed))
+
+            for arguments in (
+                (destroyed, first, second),
+                (first, destroyed, second),
+                (first, second, destroyed),
+            ):
+                with self.subTest(arguments=arguments):
+                    self.assertFalse(Mixins.qObjectIsValid(*arguments))
+        finally:
+            deleteQObject(first)
+            deleteQObject(second)
+
     def testDisabledContextPreservesPriorAndNestedState(self):
         """Restore both initially enabled and initially disabled widgets."""
         button = QPushButton()

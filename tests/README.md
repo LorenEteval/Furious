@@ -134,7 +134,7 @@ worker. Choose tests by the changed contract rather than by filename alone.
 | [test_qr_export_scalability.py](test_qr_export_scalability.py) | Production capture cap, immediate single export, incremental yielding, failure/cancel/close paths, immutable snapshots, window-owned state destruction. |
 | [test_stylesheet_states.py](test_stylesheet_states.py) | Targeted rendering/alpha/geometry assertions for table/list insets, popup corners, clear buttons, focus/disabled states, and stylesheet composition. |
 | [test_theme_transition.py](test_theme_transition.py) | Real cross-fades, immediate theme activation, interruption, per-window resize/destruction, coordinator teardown, animation policy, native resize/deletion probes, deferred completion delivery, replacement/stop flushing and owner-first cancellation. |
-| [test_qt_lifetime.py](test_qt_lifetime.py) | Native destruction and weak-wrapper/registry evidence across dialogs, menus, actions, timers, signals, message-box buttons/masks, owner-first confirmations, reusable editors, simulated compiled-method retention. |
+| [test_qt_lifetime.py](test_qt_lifetime.py) | Modal chooser/notification continuations after owner teardown, text-export file preservation, toolbar owned/borrowed action teardown, native destruction and weak-wrapper/registry evidence across dialogs, menus, actions, timers, signals, message-box buttons/masks, owner-first confirmations, reusable editors, simulated compiled-method retention. |
 
 ### Repeated stress and release confidence
 
@@ -358,6 +358,9 @@ destruction, statistics executor/thread release with an invalid wrapper retained
 release before native child-worker deletion. Controller-owned update requests die with their controller;
 injected services retain their existing owner. Source regressions also exercise reentrant metrics enablement,
 download cancellation with a deleted reply, and disposal during an output-drain callback.
+The modal-picker probe repeats native owner destruction during file/directory selection and verifies no stale
+UI operation or file truncation. The toolbar probe checks owned versus borrowed native actions and compiled
+callback growth; wrapper collection is checked at the batch boundary, not forced per cycle.
 The publication/teardown probe covers nested once-only and per-request HTTP completion, native destruction during
 Home status publication, update notifications ending manager/parent ownership, and destruction or cancellation
 during the shared post-show event flush. Window/QR probes verify registry and timer cleanup before further work.

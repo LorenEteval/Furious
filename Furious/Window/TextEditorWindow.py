@@ -333,8 +333,14 @@ class TextEditorWindow(AppQMainWindow):
 
                 pass
 
+            if not Mixins.qObjectIsValid(self):
+                return True
+
             if index == Storage.UserActivatedItemIndex():
                 showMBoxNewChangesNextTime(parent=self, method=showChangesMethod)
+
+            if not Mixins.qObjectIsValid(self):
+                return True
 
             self.markAsSaved()
 
@@ -346,10 +352,15 @@ class TextEditorWindow(AppQMainWindow):
             None, _('Save File'), filter=_('Text files (*.json);;All files (*)')
         )
 
+        if not Mixins.qObjectIsValid(self, self.jsonEditor):
+            return
+
         if filename:
             try:
+                content = self.jsonEditor.toPlainText()
+
                 with open(filename, 'w', encoding='utf-8') as file:
-                    file.write(self.jsonEditor.toPlainText())
+                    file.write(content)
             except Exception as ex:
                 # Any non-exit exceptions
 
@@ -437,7 +448,14 @@ class TextEditorWindow(AppQMainWindow):
                 """Handle button clicked."""
                 if button == mbox.button0:
                     # Save
-                    if self.save(showChangesMethod='exec'):
+                    saved = self.save(showChangesMethod='exec')
+
+                    if not Mixins.qObjectIsValid(self, mbox):
+                        event.ignore()
+
+                        return
+
+                    if saved:
                         mbox.close()
 
                         event.accept()
@@ -446,6 +464,11 @@ class TextEditorWindow(AppQMainWindow):
                 elif button == mbox.button1:
                     # Discard
                     self.markAsSaved()
+
+                    if not Mixins.qObjectIsValid(self, mbox):
+                        event.ignore()
+
+                        return
 
                     mbox.close()
 
@@ -458,6 +481,9 @@ class TextEditorWindow(AppQMainWindow):
 
             # Show the MessageBox and wait for the user to close it
             mbox.exec()
+
+            if not Mixins.qObjectIsValid(self):
+                return
 
             if event.isAccepted():
                 super().closeEvent(event)

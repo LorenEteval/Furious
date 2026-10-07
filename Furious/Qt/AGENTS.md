@@ -86,10 +86,10 @@ Use the `manage-qt-pyside6-lifetimes` skill for source lifetime work when availa
   does not enforce that requirement. An action also owns a submenu supplied without a QWidget parent and schedules
   its native deletion when the action dies;
   `QAction.setMenu()` alone does not establish parent ownership. Explicitly parented menus retain their chosen owner.
-- `AppQMenu` adopts constructor actions/separator placeholders that lack a QObject parent; explicitly owned actions
-  remain borrowed. Adding an action to a menu or action group does not itself transfer QObject ownership. Dynamic
-  groups must parent their generated actions so retiring the group releases native actions even when compiled
-  callbacks keep Python wrappers alive. `tests/test_qt_lifetime.py` exercises both borrowed and owned cases.
+- `AppQMenu` and `AppQToolBar` adopt constructor actions/separator placeholders without a QObject parent; explicitly
+  owned actions remain borrowed. Adding an action to a menu or action group does not itself transfer QObject
+  ownership. Dynamic groups must parent their generated actions so retiring the group releases native actions even
+  when compiled callbacks keep Python wrappers alive. `tests/test_qt_lifetime.py` exercises both borrowed and owned cases.
 - Every `QNetworkReply` has one manager/context owner, one freshness rule, and one terminal deletion path. Request
   context must also be released when native destruction skips `finished`, including manager-first teardown with
   retained Python wrappers. Use the shared network-manager tracking boundary; cleanup must not capture a reply
@@ -99,6 +99,11 @@ Use the `manage-qt-pyside6-lifetimes` skill for source lifetime work when availa
   Once-only HTTP completion also guards an in-progress callback: a second reply may finish synchronously inside
   the first callback before the terminal flag is set. Preserve per-request completion mode and the existing final
   flag timing; `tests/test_service_runtime.py` exercises real nested finished delivery and native resource teardown.
+- Modal `exec()` and native file/directory choosers run nested event loops. Recheck the initiating feature and
+  required native widgets after return before reading controls, opening files, mutating a model, or presenting
+  follow-up UI. A pure Python editor binding can survive its destroyed Qt field tree. Publication after a data
+  commit may also destroy the presenter: retain the committed outcome while stopping stale UI work, including
+  the close-confirmation caller. `ModalPickerLifetimeTest` in `tests/test_qt_lifetime.py` challenges these boundaries.
 - Queued delivery never transfers ownership implicitly. The sender may finish before delivery, so callbacks resolve a
   still-valid receiver and current generation in the receiver's Qt thread before touching widgets, models, or wrappers.
   A zero-delay timer yields work but does not establish ordering against an unrelated Qt event. Express required
