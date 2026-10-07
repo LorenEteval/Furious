@@ -110,7 +110,7 @@ worker. Choose tests by the changed contract rather than by filename alone.
 
 | Module | Coverage |
 | --- | --- |
-| [test_isolation_and_navigation.py](test_isolation_and_navigation.py) | Nested/canonical QSettings sandbox checks, outside-path rejection, navigation overlay geometry, dismissal, page/object reuse. |
+| [test_isolation_and_navigation.py](test_isolation_and_navigation.py) | Nested/canonical QSettings sandbox checks, outside-path rejection, navigation overlay geometry, dismissal, page/object reuse, native event delivery when collapse observers delete the target or view. |
 | [test_main_window_geometry.py](test_main_window_geometry.py) | First-show lifecycle, restored/default/legacy geometry, main/routing window reuse, session-only navigation state, protection of never-shown windows' saved geometry. |
 | [test_dialog_geometry.py](test_dialog_geometry.py) | Dialog show/open/exec preparation, sizing/centering, failure cleanup, specialized message-box geometry and transient destruction. |
 | [test_layout_matrix.py](test_layout_matrix.py) | Navigation and message-box layouts in fresh processes at scale factors 1, 1.25, 1.5, and 2, under both themes. |
@@ -118,7 +118,7 @@ worker. Choose tests by the changed contract rather than by filename alone.
 | [test_qt_interactions.py](test_qt_interactions.py) | Real keyboard/mouse/focus and proxy mapping, scoped shortcuts, sorting/selection, stable subscription deletion confirmations, debounced Home search, Tests-menu selection color, shared settings, batched profile mutation and cancellation. |
 | [test_qr_export_scalability.py](test_qr_export_scalability.py) | Production capture cap, immediate single export, incremental yielding, failure/cancel/close paths, immutable snapshots, window-owned state destruction. |
 | [test_stylesheet_states.py](test_stylesheet_states.py) | Targeted rendering/alpha/geometry assertions for table/list insets, popup corners, clear buttons, focus/disabled states, and stylesheet composition. |
-| [test_theme_transition.py](test_theme_transition.py) | Real cross-fades, immediate theme activation, interruption, per-window resize/destruction, coordinator teardown, animation policy, completion callbacks deleting the watched window during native event delivery in an isolated child. |
+| [test_theme_transition.py](test_theme_transition.py) | Real cross-fades, immediate theme activation, interruption, per-window resize/destruction, coordinator teardown, animation policy, native resize/deletion probes, deferred completion delivery, replacement/stop flushing and owner-first cancellation. |
 | [test_qt_lifetime.py](test_qt_lifetime.py) | Native destruction and weak-wrapper/registry evidence across dialogs, menus, actions, timers, signals, message-box buttons/masks, owner-first confirmations, reusable editors, simulated compiled-method retention. |
 
 ### Repeated stress and release confidence

@@ -31,6 +31,8 @@ from Furious.Qt import gettext as _
 from PySide6 import QtCore
 from PySide6.QtWidgets import *
 
+from shiboken6 import isValid
+
 from dataclasses import dataclass
 
 __all__ = ['NavigationView']
@@ -388,6 +390,9 @@ class NavigationView(Mixins.QTranslatable, Mixins.ThemeAware, QWidget):
             and self._isOutsideNavigationClick(watched, event)
         ):
             self.setExpanded(False)
+
+            # Collapse observers may delete the click target or this view.
+            return not isValid(watched)
 
         return False
 

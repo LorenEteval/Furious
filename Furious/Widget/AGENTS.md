@@ -64,3 +64,5 @@ view an independent workflow authority.
   watched target or owner, exercise actual native event delivery in an isolated child; calling the Python
   filter method directly cannot establish safe Qt delivery. Navigation cases live in
   `tests/test_isolation_and_navigation.py`.
+  Outside-click navigation collapse leaves surviving targets' clicks deliverable, but consumes the event if a
+  synchronous observer deletes its target or containing view. Native child probes cover both destruction cases.

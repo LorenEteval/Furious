@@ -17,6 +17,10 @@ behavior, and lifetime primitives; pages and services consume them without creat
   shortcut scope, accessibility, translated-text growth, responsive layout, high-DPI behavior, and both themes.
 - Application-owned theme transitions commit destination state immediately; snapshots are non-interactive presentation
   objects that are interrupted/disposed on replacement, geometry change, window destruction, or application cleanup.
+  Geometry/destruction event filters retire snapshots immediately but defer completion observers through an owned
+  timer: consuming an event does not protect the rest of Qt's native resize call from observer-driven deletion.
+  Explicit stop/replacement flushes pending completion once; coordinator destruction cancels it. The native child
+  probes and pending-completion cases in `tests/test_theme_transition.py` cover these boundaries.
 
 ## Ownership and destruction
 

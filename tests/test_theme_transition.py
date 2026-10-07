@@ -45,7 +45,7 @@ class ThemeTransitionTest(unittest.TestCase):
     """Exercise cross-fades through the real Qt event loop."""
 
     def testCompletionCanDestroyTheWatchedWindowDuringResizeDelivery(self):
-        """Consume the active event when completion deletes its native target."""
+        """Notify deletion-capable observers after the native resize returns."""
         # Unsafe native event delivery can crash rather than raise a Python error.
         # Keep that failure inside an exact, bounded offscreen child process.
         result = runPythonChild(
@@ -80,6 +80,10 @@ for _ in range(30):
 
     with mock.patch('sys.excepthook') as exceptionHook:
         window.resize(170, 110)
+        assert isValid(window)
+        assert destroyed.count() == 0
+        assert finished.count() == 0
+        assert not transition.isRunning()
         processQtEvents()
         exceptionHook.assert_not_called()
 
@@ -102,6 +106,64 @@ for _ in range(30):
         )
 
         assertChildSucceeded(self, result, 'window deletion during resize delivery')
+
+    def testDeferredGeometryCompletionIsFlushedBeforeReplacementOrStop(self):
+        """Retire one pending completion without finishing the replacement."""
+        for replace in (False, True):
+            with self.subTest(replace=replace):
+                window = self.createWindow()
+                transition = self.createTransition([window], duration=100000)
+                finished = QSignalSpy(transition.transitionFinished)
+                transition.apply(lambda: None)
+
+                window.resize(330, 190)
+
+                self.assertFalse(transition.isRunning())
+                self.assertEqual(finished.count(), 0)
+
+                if replace:
+                    transition.apply(lambda: None)
+
+                    self.assertTrue(transition.isRunning())
+                    self.assertEqual(finished.count(), 1)
+
+                    processQtEvents()
+
+                    self.assertTrue(transition.isRunning())
+                    self.assertEqual(finished.count(), 1)
+
+                transition.stop()
+                processQtEvents()
+
+                self.assertFalse(transition.isRunning())
+                self.assertEqual(finished.count(), 2 if replace else 1)
+
+    def testCoordinatorDestructionCancelsDeferredGeometryCompletion(self):
+        """A queued notification cannot outlive its coordinator or timer."""
+        window = self.createWindow()
+        owner = QtCore.QObject()
+        transition = ThemeTransition(
+            parent=owner,
+            duration=100000,
+            windowProvider=lambda: (window,),
+            animationsEnabled=lambda: True,
+        )
+        finished = QSignalSpy(transition.transitionFinished)
+        timer = transition._completionTimer
+        transition.apply(lambda: None)
+
+        window.resize(330, 190)
+
+        self.assertEqual(finished.count(), 0)
+        self.assertTrue(timer.isActive())
+
+        deleteQObject(owner)
+        processQtEvents()
+
+        self.assertFalse(isValid(transition))
+        self.assertFalse(isValid(timer))
+        self.assertEqual(finished.count(), 0)
+        self.assertEqual(self.overlays(window), [])
 
     def testReentrantCoordinatorDestructionClearsStateAndCancelsContinuation(self):
         """Callbacks may delete the coordinator before animation acquisition/start."""

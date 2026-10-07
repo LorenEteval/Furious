@@ -104,6 +104,12 @@ class ThemeTransition(QtCore.QObject):
         self._animationsEnabled = animationsEnabled
         self._animations = {}
         self._animationsByWindow = {}
+        self._completionPending = False
+
+        self._completionTimer = QtCore.QTimer(self)
+        self._completionTimer.setSingleShot(True)
+
+        connectWeakly(self._completionTimer.timeout, self, '_emitPendingCompletion')
 
         self.destroyed.connect(
             functools.partial(
@@ -249,12 +255,12 @@ class ThemeTransition(QtCore.QObject):
                 animation.start()
 
     def _releaseDestroyedOverlays(self):
-        """Native target destruction stops animations without emitting finished."""
+        """Retire native targets before notifying deletion-capable observers."""
         for animation, (_window, overlay) in tuple(self._animations.items()):
             if not isValid(overlay):
-                self._releaseAnimation(animation)
+                self._releaseAnimation(animation, deferNotification=True)
 
-    def _releaseAnimation(self, animation, *, notify=True):
+    def _releaseAnimation(self, animation, *, notify=True, deferNotification=False):
         """Release one animation and its transient overlay exactly once."""
         transition = self._animations.pop(animation, None)
 
@@ -280,7 +286,24 @@ class ThemeTransition(QtCore.QObject):
             overlay.deleteLater()
 
         if notify and not self._animations:
-            self.transitionFinished.emit()
+            if deferNotification:
+                self._completionPending = True
+                self._completionTimer.start(0)
+            else:
+                self._completionTimer.stop()
+                self._completionPending = False
+
+                self.transitionFinished.emit()
+
+    @QtCore.Slot()
+    def _emitPendingCompletion(self):
+        """Notify observers after the native geometry/destruction stack unwinds."""
+        if not self._completionPending:
+            return
+
+        self._completionPending = False
+
+        self.transitionFinished.emit()
 
     @QtCore.Slot(QtCore.QObject)
     def _handleAnimationFinished(self, animation):
@@ -296,18 +319,24 @@ class ThemeTransition(QtCore.QObject):
             QtCore.QEvent.Type.Close,
             QtCore.QEvent.Type.Destroy,
         ):
-            self._releaseAnimation(self._animationsByWindow.get(watched))
+            self._releaseAnimation(
+                self._animationsByWindow.get(watched), deferNotification=True
+            )
 
-        # Completion listeners can destroy this filter or the watched window.
-        # Consume the event only if continuing native delivery would be unsafe.
+        # Finished observers run later: Qt's resize caller can still access the
+        # target even if its event filter consumes the resize event.
         return not isValid(watched)
 
     def stop(self):
         """Stop and dispose every active transition without leaving an overlay."""
         wasRunning = self.isRunning()
+        completionPending = self._completionPending
+
+        self._completionTimer.stop()
+        self._completionPending = False
 
         for animation in tuple(self._animations):
             self._releaseAnimation(animation, notify=False)
 
-        if wasRunning:
+        if wasRunning or completionPending:
             self.transitionFinished.emit()
