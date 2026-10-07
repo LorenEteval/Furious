@@ -260,9 +260,9 @@ class PythonCompatibilityTest(unittest.TestCase):
     def testDistributionVersionKeepsMissingMetadataBehavior(self):
         """The engine reports unavailable only for missing distribution metadata."""
         with mock.patch.object(
-            metadata, 'version', return_value='0.9.7.dev0'
+            metadata, 'version', return_value='0.9.7.dev1'
         ) as version:
-            self.assertEqual(SingTUN.version(), '0.9.7.dev0')
+            self.assertEqual(SingTUN.version(), '0.9.7.dev1')
             version.assert_called_once_with('sing-tun')
 
         with mock.patch.object(

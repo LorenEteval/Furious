@@ -420,7 +420,7 @@ jobs:
             'Xray-core'
             'hysteria2'
             'tun2socks'
-            'sing-tun==0.9.7.dev0'
+            'sing-tun==0.9.7.dev1'
           )
 
           foreach ($binding in $bindings) {
@@ -480,16 +480,17 @@ jobs:
             hysteria \
             hysteria2 \
             tun2socks \
-            sing-tun==0.9.7.dev0
+            sing-tun==0.9.7.dev1
         if: matrix.id != 'windows7-amd64' && matrix.id != 'windows10-amd64'
       - name: Verify sing-tun binding API without host networking
         run: |
           python - <<'PY'
-          from sing_tun import Config, Engine, capabilities
+          from sing_tun import Config, Engine, __upstream_commit__, capabilities
 
           import importlib.metadata
 
-          assert importlib.metadata.version('sing-tun') == '0.9.7.dev0'
+          assert importlib.metadata.version('sing-tun') == '0.9.7.dev1'
+          assert __upstream_commit__ == 'd769a7080ca203f63735ba93e95014e363e25d62'
           assert Config(proxy='socks5://127.0.0.1:1080').stack == 'go'
           assert capabilities()['stacks'] == ('go', 'gvisor', 'system', 'mixed')
           for stack in ('', 'go', 'gvisor', 'system', 'mixed'):

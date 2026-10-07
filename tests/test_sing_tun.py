@@ -396,6 +396,8 @@ class SingTUNConfigurationTest(unittest.TestCase):
                     'UDPTimeout': '15s',
                     'ICMPTimeout': 0,
                     'UDPNATMax': 64,
+                    'UDPMapping': 2,
+                    'UDPFiltering': 2,
                 },
             },
         ):
@@ -409,8 +411,9 @@ class SingTUNConfigurationTest(unittest.TestCase):
                         sys.executable,
                         '-c',
                         'import json,sys,importlib.metadata; '
-                        'from sing_tun import Config, Engine, capabilities; '
-                        'assert importlib.metadata.version("sing-tun") == "0.9.7.dev0"; '
+                        'from sing_tun import Config, Engine, __upstream_commit__, capabilities; '
+                        'assert importlib.metadata.version("sing-tun") == "0.9.7.dev1"; '
+                        'assert __upstream_commit__ == "d769a7080ca203f63735ba93e95014e363e25d62"; '
                         'assert Config(proxy="socks5://127.0.0.1:1080").stack == "go"; '
                         'assert "go" in capabilities()["stacks"]; '
                         'e=Engine(Config(**json.load(sys.stdin))); assert not e.ready; e.close(5); '
