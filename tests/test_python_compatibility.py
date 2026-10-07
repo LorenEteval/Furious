@@ -148,6 +148,7 @@ class PythonCompatibilityTest(unittest.TestCase):
                 version.__ge__.return_value = modern
                 fetch = mock.Mock(return_value=() if modern else {})
                 provider = _MetadataProvider(modern, fetch)
+
                 namespace = self._loadCompatibility(version, provider)
                 compatibility = namespace['PythonCompatibility']
 
@@ -172,6 +173,7 @@ class PythonCompatibilityTest(unittest.TestCase):
                     self.assertEqual(compatibility.entryPoints('missing'), ())
 
                     executor, future = mock.Mock(), mock.Mock()
+
                     compatibility.shutdownExecutor(executor, (future,), wait=False)
 
                     if modern:
@@ -216,6 +218,7 @@ class PythonCompatibilityTest(unittest.TestCase):
                         return {'furious.plugins': entries, 'unrelated': ()}
 
                 provider = _MetadataProvider(selectable, mock.Mock(side_effect=fetch))
+
                 compatibility = self._loadCompatibility(sys.version_info, provider)[
                     'PythonCompatibility'
                 ]
@@ -224,6 +227,7 @@ class PythonCompatibilityTest(unittest.TestCase):
                 self.assertEqual(compatibility.entryPoints('missing'), ())
 
                 registry = PluginRegistry()
+
                 try:
                     with mock.patch.object(
                         RegistryModule, 'PythonCompatibility', compatibility
@@ -250,6 +254,7 @@ class PythonCompatibilityTest(unittest.TestCase):
             PythonCompatibility.entryPoints('furious.tests.nonexistent-entry-points'),
             (),
         )
+
         self.assertEqual(SingTUN.version(), metadata.version('sing-tun'))
 
     def testDistributionVersionKeepsMissingMetadataBehavior(self):
@@ -311,6 +316,7 @@ class PythonCompatibilityTest(unittest.TestCase):
 
                 try:
                     self.assertTrue(started.wait(2))
+
                     queued = executor.submit(queuedRan.set)
                     adapter = (
                         _LegacyExecutor(executor) if version == (3, 8) else executor
@@ -319,6 +325,7 @@ class PythonCompatibilityTest(unittest.TestCase):
                     compatibility = self._loadCompatibility(version)[
                         'PythonCompatibility'
                     ]
+
                     compatibility.shutdownExecutor(adapter, (queued,), wait=False)
 
                     self.assertTrue(queued.cancelled())
@@ -332,8 +339,10 @@ class PythonCompatibilityTest(unittest.TestCase):
                     self.assertTrue(running.result(timeout=2))
                 finally:
                     release.set()
+
                     if queued is not None:
                         queued.cancel()
+
                     executor.shutdown(wait=True)
 
                 self.assertFalse(queuedRan.is_set())
@@ -359,6 +368,7 @@ class PythonCompatibilityTest(unittest.TestCase):
 
             try:
                 self.assertTrue(started.wait(2))
+
                 queued = executor.submit(lambda: None)
                 manager._executor = _LegacyExecutor(executor)
                 manager._future = queued
@@ -378,9 +388,12 @@ class PythonCompatibilityTest(unittest.TestCase):
                 self.assertFalse(running.done())
             finally:
                 release.set()
+
                 if queued is not None:
                     queued.cancel()
+
                 executor.shutdown(wait=True)
+
                 manager.cleanup()
                 deleteQObject(manager)
 

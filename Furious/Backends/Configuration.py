@@ -1596,6 +1596,7 @@ class ConfigXray(CoreConfiguration):
 
             if auth == 'noauth':
                 return endpoint
+
             if auth != 'password':
                 raise ValueError('Unsupported Xray SOCKS authentication')
 
@@ -1978,7 +1979,6 @@ class ConfigHysteria1(CoreConfiguration):
             raise ValueError('Application TUN requires SOCKS UDP forwarding')
 
         endpoint = socksURL(self.socksProxy())
-
         user, password = listener.get('user', ''), listener.get('password', '')
 
         if not user and not password:
@@ -2364,7 +2364,6 @@ class ConfigHysteria2(CoreConfiguration):
             raise ValueError('Application TUN requires SOCKS UDP forwarding')
 
         endpoint = socksURL(self.socksProxy())
-
         user, password = listener.get('username', ''), listener.get('password', '')
 
         if not user and not password:
