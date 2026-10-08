@@ -24,6 +24,9 @@ Read `Furious/Window/MainWindow.py` with `tests/test_ui_behavior.py`; paths are 
   silently normalizing storage, importing tun2socks preferences, or launching a native engine just to open settings.
   The application JSON editor is another view of that same candidate, not a second configuration authority.
   Validate the merged candidate at acceptance; editor syntax checking does not replace model validation.
+  Checkbox requests that can destroy their card use queued delivery after the native setter unwinds. Destroying
+  a card before delivery cancels its request; tests must process the event turn before asserting committed settings.
+  Keep this presentation boundary separate from the controller's synchronous policy and repository commit.
   Translate semantic application validation categories here, preserving technical diagnostics and user JSON keys.
   Do not classify failures by matching exact English exception text.
 - The current page composition shares one subscription workflow between server and subscription presentation, records

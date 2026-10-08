@@ -13,8 +13,9 @@ relative to this source tree's root.
   belongs to `SubscriptionImportService`, and group reconciliation, request generations, timers, persistence, and
   post-commit effects belong to the subscription service/repository path.
 - Automatic detection probes decoders by priority. An explicit decoder ID restricts dispatch to that decoder;
-  an unknown ID or a mismatch must not silently resume automatic detection. Return `None` for a mismatch. Recognizing
-  a share-link envelope does not validate its URI schemes or protocols; the importer owns that decision.
+  an unknown ID or a mismatch must not silently resume automatic detection. Return `None` for a mismatch;
+  an empty `SubscriptionResult` instead describes recognized input and reaches a different import/reconciliation
+  policy. Recognizing a share-link envelope does not validate its URI schemes or protocols; the importer owns that decision.
   Preserve useful names/upstream IDs and never log a complete payload or link. Standard plain/Base64 decoding
   materializes input before per-item import can be cancelled; linear parsing is not a size or responsiveness bound.
   Review decoded size and work limits at this boundary before adding richer formats.

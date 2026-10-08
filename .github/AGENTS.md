@@ -64,6 +64,9 @@ Read `.github/workflows/deploy-pypi.yml` with `tests/README.md`; paths are relat
   interpreter-version checks. The latter use compatible Qt/native wheel pins, dependency consistency, native-binding
   imports without starting runtimes, application compilation, cold imports and real compatibility behavior. These
   checks do not certify the entire suite on every version.
+  Default source discovery includes regular stress but leaves the explicitly enabled very-heavy classes skipped.
+  Standalone benchmarks and compiled lifecycle probes are separate entry points; neither runs merely because the
+  source job or binary matrix succeeds. Check `tests/README.md` for the effective opt-ins and invocation boundaries.
   The reusable workflow is a required dependency of PyPI publication through `workflows/deploy-pypi.yml`, so its
   version matrix must also pass. It can run manually. Hourly binary builds retain their separate artifact scope. Source tests do not establish packaged behavior or Python/Qt
   floors beyond their matrix. Do not call an artifact build a regression-test pass; use `tests/README.md` for

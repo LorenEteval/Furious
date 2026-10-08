@@ -48,7 +48,8 @@ tree's root.
   state. Backend-specific defaults, settings keys, document branches, and host assumptions stay behind the provider.
   Capability presence advertises an operation, not a configured target or successful execution; callers must handle
   absence, unavailable configuration, and operation failure separately (notably statistics, export, and probes).
-- API-version-3 runtime factories return `PreparedRuntime` directly. The runtime is fully prepared before return,
+- Runtime factories admitted by the current plugin API return `PreparedRuntime` directly. The API version is owned
+  by `Plugins.API`, not by a duplicated literal in this guide. The runtime is fully prepared before return,
   starts with zero arguments, raises typed startup failures, and exposes readiness separately. An alternate result
   shape requires an explicit contract/version migration, not an implicit adapter inferred from built-in factories.
   The registry's existing synchronous `startCoreRuntime()` wrapper separately returns runtime/success for

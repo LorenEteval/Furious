@@ -10,13 +10,15 @@ source tree's root.
 - `AppMainProcess` owns one exact Qt application child and one small synchronized crash-log result. Do not add a
   `multiprocessing.Manager` or auxiliary child merely to communicate status, and preserve the platform’s explicit spawn
   behavior.
-- Exception reporting must work before and after application construction. The child runs the supplied application
-  factory; the parent must not construct a Qt application to pass across the process boundary. Signal handlers are
+- Required exception reporting covers failures before and after application construction. The child runs the supplied
+  application factory; the parent must not construct a Qt application to pass across the process boundary. Signal handlers are
   installed only after the factory returns, so pre-construction signals are outside this wrapper's handler coverage.
   Preserve semantic exit codes and original exception/traceback context; crash-log failure is secondary.
   Verify this through a real spawned child: multiprocessing bootstrap can intercept an uncaught factory/run failure
   before `sys.excepthook`. Direct hook tests prove its mapping only, not dispatch from every child failure path;
   compare the actual exit and crash flag before claiming supervision coverage.
+  The current wrapper installs the hook but does not explicitly catch exceptions escaping the supplied factory
+  or `application.run()`. Keep this coverage gap visible instead of describing hook installation as complete dispatch.
 - The parent entry point joins only the child it created and shows the fallback Qt report only for a nonzero result.
   That join follows the GUI session lifetime; it is not a short startup-readiness deadline. Tests must bound their
   own waits and reap their exact child if the fixture fails. A child stuck in cooperative worker cleanup can

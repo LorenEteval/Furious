@@ -22,6 +22,8 @@ Read `Furious/__init__.py` with `tests/test_public_api.py`; paths are relative t
   separately. Importability means preserving the actual side-effect boundary, not merely avoiding a syntax error.
   Python export aliases, distribution names, native-module names, and persisted identifiers serve different consumers;
   inspect each affected surface before renaming one. An import alias does not migrate stored data or transfer ownership.
+  Standard-library imports and child-only native binding imports have different side-effect boundaries. Moving one
+  import must preserve both cold package import and actual spawned-child execution, not only a mocked factory path.
 
 ## State, data, and ownership
 

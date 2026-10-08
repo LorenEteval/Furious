@@ -45,6 +45,8 @@ source tree's root.
 - `SettingsController` is the shared policy path used by Home, Settings, tray, and platform integration. Startup
   registration persists only after host success; other preferences may apply immediately or on the next connection.
   Preserve each setting's actual application timing instead of imposing one transaction order on all preferences.
+  Presentation can queue a checkbox request to let Qt's native setter unwind. The controller remains authoritative
+  when that request is delivered; queued UI timing is not a second preference state or a delayed persistence policy.
   TUN mode, application-engine preference, and the active runtime's captured choice are separate values. A preference
   change affects a subsequent attempt; it neither replaces a live engine nor overrides proxy-core native TUN.
   Registration/defaults and selection signals belong here, while customization storage and host work keep their owners.

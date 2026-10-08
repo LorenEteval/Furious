@@ -11,6 +11,8 @@ tree's root.
   bundled font. It is not a home for settings, subscriptions, or general caches. The Xray updater currently replaces
   assets at the package-resolved data paths, so these files are not necessarily immutable at runtime. Review source,
   installed, and packaged write permissions separately; an application refresh may appear as a source-tree change.
+  A pre-existing asset diff may belong to the user or the runtime updater. Preserve its bytes during source/guidance
+  work instead of treating it as disposable generated output or including it in an unrelated documentation commit.
 - Preserve upstream licenses, provenance, binary/text formats, filenames, and paths consumed by constants, backends,
   tests, setuptools package data, and Nuitka. Do not incidentally reformat generated ACLs or replace binary assets.
 - Markdown files in this directory are repository metadata, not runtime data. Keep top-level and nested Markdown files

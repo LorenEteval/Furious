@@ -2,7 +2,8 @@
 
 ## Learn before changing
 
-- Treat the checked-out tree, tests, build configuration, and verified runtime behavior as the immediate source of truth.
+- Treat the checked-out tree, tests, build configuration, and verified runtime behavior as the immediate source of
+  truth.
   Existing guidance is a maintained model, not an authority that can make itself true.
 - If `.codegraph/` exists, use CodeGraph before broad text searches for structural questions; use `rg` for exact
   follow-up. Inspect callers, tests, persisted formats, platform branches, and packaging consumers before changing a
@@ -65,7 +66,8 @@
   copies unless an API deliberately mutates storage. A failed pre-commit stage leaves persistence unchanged; a failed
   post-commit side effect is reported without pretending the commit rolled back. Identify the unit of commit:
   cancellation of a batched operation may preserve completed batches rather than roll back the entire command.
-- Use stable domain identity, not table rows, proxy indexes, display text, or object position. Async results additionally
+- Use stable domain identity, not table rows, proxy indexes, display text, or object position. Async results
+  additionally
   prove that the target generation/fingerprint is still current before mutation.
 - Distinguish profile identity, subscription membership, remote synchronization ownership, and execution snapshots.
   Moving a profile into a group does not transfer remote ownership; a running core uses its prepared document even
@@ -101,7 +103,8 @@
 - Centralize supported standard-library API differences in `Frozenlib.PythonCompatibility`; select implementations
   once and preserve result/error semantics. Keep pure domain imports independent of the Qt-backed foundation by
   using minimum-compatible typing/runtime APIs at that boundary. Verify both legacy API shapes and actual supported
-  interpreters; `tests/test_python_compatibility.py` anchors the shared behavior, not a complete minimum-version guarantee.
+  interpreters; `tests/test_python_compatibility.py` anchors the shared behavior, not a complete minimum-version
+  guarantee.
 - Generated and curated artifacts have separate sources of truth: never hand-edit
   `Furious/Frozenlib/AppResources.py`; update `Resources.qrc`/resource inputs and regenerate it. Follow
   `Furious/Externals/AGENTS.md` for the translation catalog and `Furious/Data/AGENTS.md` for bundled assets.
@@ -158,4 +161,6 @@
   path as well as its successful caller; a test name is an investigation anchor, not proof of unexercised behavior.
   Keep run-specific counts, versions, diagnostic experiments, and defect inventories in the work report; guidance
   retains the required invariant and a source/test anchor. Do not repeatedly append symptoms to a local guide.
+  Separate an implemented safeguard from a required but unfulfilled contract. Documentation must neither claim
+  a missing safeguard exists nor redefine the defect as intended behavior merely because its tests currently pass.
   During guidance-only work, report defects separately instead of changing production code to satisfy the prose.

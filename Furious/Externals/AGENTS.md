@@ -45,6 +45,8 @@ tree's root.
   brace placeholders is extractable: translate it first, then interpolate with `.format()` outside `_()`.
 - Keep runtime interpolation outside the translatable expression. Translate UI language, not identifiers, protocol
   values, user-defined names, persisted values, paths, or diagnostic payloads.
+  Translate application-owned validation categories through static catalog keys while preserving native diagnostic
+  text and user JSON keys. Do not make localization depend on an upstream exception's exact English wording.
 - When a control stores source text for later retranslation, update that source instead of manually translating one
   rendered instance. Adjacent static literals and multiline literals still form one source key; preserve their
   exact whitespace/newlines when changing layout or formatting. Verify extraction and rendered retranslation

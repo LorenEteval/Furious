@@ -64,9 +64,11 @@ Use the `manage-qt-pyside6-lifetimes` skill for source lifetime work when availa
   that owner, when more native work follows. Name the actual boundary and trace its callers/observers rather than
   assuming every function can destroy arbitrary UI. If the check already passed and the intervening code only reads
   or computes data, do not repeat it. Keep callback-specific checks inside the branch that invokes that callback.
-  Qt receiver disconnection and `connectWeakly()` protect delivery entry, so an immediately repeated receiver check
+  Qt-connected QObject slots and `connectWeakly()` protect delivery entry, so an immediately repeated receiver check
   adds nothing; they do not protect continuation after reentrant delivery. Required workflow-generation checks remain
-  separate. Existing callback, modal, borrowed-object and peer-destruction cases in `tests/test_qt_lifetime.py`,
+  separate from validity. A plain callback retained outside Qt's receiver context needs its own lifetime contract;
+  do not extend QObject-slot disconnection guarantees to arbitrary Python callables. Existing callback,
+  modal, borrowed-object and peer-destruction cases in `tests/test_qt_lifetime.py`,
   `tests/test_frozenlib.py`, and `tests/test_service_runtime.py` challenge these distinctions.
 - Only the GUI thread mutates widgets/live GUI models. Slots do not sleep or perform unbounded file, host, process, or
   network work; split work into bounded event-loop units or an owned worker and reject stale results on return.

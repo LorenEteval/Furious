@@ -38,6 +38,9 @@ source tree's root.
   download path and does not inherit runtime staging or checksum guarantees. Hash jobs receive copied bytes
   and return through the updater's Qt-thread boundary; closing the updater must release request and hash-callback
   contexts independently, including native destruction without a normal reply completion.
+  Checksum workers own copied bytes and opaque job identity, not a download callback or transient Qt receiver.
+  Resolve result context on the updater's Qt thread and discard it at shutdown; a completed hash is not permission
+  to revive a retired download. `tests/test_xray_asset_download.py` covers the blocked-worker destruction case.
 - Routing selection IDs, user routing documents, and translated built-in labels are different contracts.
   Preserve custom document content and named-profile identity while composing runtime routing/API statistics.
   Trace the selected repository routing document separately from the connection's routing branch and prepared

@@ -59,6 +59,9 @@ source tree's root.
   keep connection/remote ownership intact. Favorites, search, and subscription filters intersect in the existing
   proxy model; a favorite mark is persisted metadata, while the filter is presentation state. The profile mutation
   and Home workflow cases in `tests/test_qt_interactions.py` cover these boundaries.
+  Favorite SVG decoration follows the remark's foreground and selected-text roles, including privilege-dependent
+  connection colors. Use the shared color authority and view palette rather than a dark/light test; keep selected
+  icon and text behavior aligned. The selected-rendering cases in `tests/test_qt_interactions.py` are the pixel anchor.
 - Endpoint lookup belongs to `EndpointInfoService`; the map renders validated results and has a no-WebEngine
   fallback. Optional WebEngine import failure must not prevent importing the widget/package, and hidden presentation
   must not retarget a queued lookup.

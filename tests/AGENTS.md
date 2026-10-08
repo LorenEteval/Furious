@@ -87,3 +87,6 @@ Read `tests/support.py` with `tests/README.md`; paths are relative to this sourc
   the contract. For guidance-only changes, verify path preservation, changed-file scope, referenced commands/tests,
   and contradictory claims; run existing behavior tests only to resolve architecture uncertainty rather than adding
   tests of prose.
+  For a blank-line-only cleanup, compare the AST, executable tokens and nonblank lines, compile touched files,
+  and check formatter/diff output. This proves the promised structural equivalence without creating new behavioral
+  tests or repeating a full resource campaign solely for visual spacing.

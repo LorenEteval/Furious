@@ -15,7 +15,8 @@ source tree's root.
   host routing or connection commit. Keep the factory's unsupported routing/TUN combination rejection before
   execution acquisition; do not silently substitute Global routing or borrow native TUN from Hysteria 2.
   Keep MMDB/ACL launch preparation here and application-TUN acquisition/rollback with that workflow. The existing
-  rejection prompt is a compatibility path, not a requirement that runtime factories own UI.
+  rejection prompt and absent prepared launch are compatibility outcomes, not a requirement that runtime factories
+  own UI. Test refusal before acquisition separately from a typed runtime failure after ownership transfers.
 - Routing ACL/MMDB launch inputs remain distinct from the stored connection JSON. Optional files are read into
   launch data before the child starts; a missing/unreadable file is logged and falls back to empty input. Preserve
   that observable fallback unless deliberately changing the contract. The serialized client document and these

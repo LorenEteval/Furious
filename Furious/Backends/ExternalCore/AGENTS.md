@@ -10,7 +10,9 @@ source tree's root.
 - External Core represents one user-selected local executable, not an embedded protocol binding. Keep executable path,
   optional working directory, argument vector, environment overrides, HTTP/SOCKS endpoints, shutdown timeout, remote
   TUN address, and application-TUN opt-in distinct while preserving unknown top-level fields.
-- Loading is observational: do not silently absolutize or rewrite relative paths. Validation before spawn owns path
+- Loading is observational: do not silently absolutize or rewrite relative paths. An explicitly chosen file may
+  be resolved by the editor, while opening a stored document must preserve its path text. The chooser's nested
+  event loop also requires a surviving native field tree before write-back. Validation before spawn owns path
   existence/type, argument and environment types/NULs, endpoint requirements, and a finite bounded shutdown timeout.
   Reject NaN, infinities, Booleans, and integer-to-float overflow before process wait APIs. Preserve the accepted
   finite interval and prove rejection behavior directly; equivalent-looking comparisons are not a substitute

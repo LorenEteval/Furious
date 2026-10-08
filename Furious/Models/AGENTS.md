@@ -17,6 +17,8 @@ root.
   or malformed input becomes an empty object with `constructionError()`. Keep construction and serialization errors
   distinct and preserve useful context through callers. Successful generic mapping construction is not protocol
   validation: backend acceptance belongs to the selected capability, and serializability is a separate check.
+  Profile/configuration `isValid()` methods validate domain data, not QObject lifetime. Keep these checks distinct
+  from native-wrapper guards when auditing similarly named calls or changing a validation contract.
 - `ServerProfile` separates connection data from `ProfileMetadata`. `fromConfiguration()` copies a bare configuration
   but returns an already-supplied profile unchanged; the direct dataclass constructor does not imply copying. A type
   conversion is therefore not an isolation boundary. Choose explicit copy semantics before independent editing or

@@ -30,9 +30,10 @@ source tree's root.
   and release contexts only when execution no longer needs them. Late delivery must not revive a shut-down manager
   or mutate live state. A terminal result ends an operation's publication contract, not necessarily its execution:
   a replacement may be admitted only under the scheduler's resource bounds while cancelled work still occupies a slot.
-  Provider calls, reply aborts, and grouped notifications are reentrancy boundaries too. Recheck native ownership
-  and the captured generation before continuing a stage, restarting a timer, admitting another request, or
-  publishing the next result; a check at callback entry alone cannot establish freshness afterward.
+  External provider callbacks, reply aborts and signal publication can be reentrancy boundaries. Trace the specific
+  callback/observer contract before adding continuation guards; pure preparation is not a destruction boundary.
+  Recheck native ownership and the captured generation before continuing a stage, restarting a timer, admitting
+  another request, or publishing the next result; a check at callback entry alone cannot establish freshness afterward.
 
 ## Connection and network workflows
 

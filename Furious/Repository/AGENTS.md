@@ -20,6 +20,8 @@ to this source tree's root.
   migration deliberately changes it; do not treat every duplicate key as interchangeable.
   Connection JSON export is not a profile-store backup. Verify durable metadata through storage-record/backend
   round trips, including identity, favorites and remote ownership, rather than connection serialization alone.
+  Favorite mutation updates local metadata on the existing profile. Rendering a star must not rewrite the remark,
+  connection document, subscription matching key, or profile identity merely to display that persisted flag.
 - A restore failure remains observable. Automatic cleanup must not replace unreadable persisted bytes with an
   empty fallback; only an explicit successful replacement may do so. Root decoding, complete-collection
   hydration, live replacement, and later serialization are separate failure boundaries. Byte preservation does

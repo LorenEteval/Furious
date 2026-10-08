@@ -47,7 +47,8 @@ Read `Furious/Actions/Import.py` with `tests/test_qt_interactions.py`; paths are
 - Native action destruction also releases its screen-capture handle through the same idempotent cleanup path as
   application shutdown. Destruction callbacks retain plain resource state, not the action. Failed close is diagnosed
   and retains the handle while that state has a surviving owner; native destruction does not provide a retry scheduler.
-  A top-level progress widget borrowed by an action needs explicit native deletion when that action dies.
+  An action-created top-level progress widget is owned by that action even though a QAction cannot be its QWidget
+  parent. Native action destruction must schedule its deletion; ordinary progress close remains reusable.
   Verify native teardown while intentionally retaining action wrappers/bound methods.
 - Small profile imports use the direct bulk path; large imports yield between bounded batches. One operation owns
   captured input and its continuation through completion/cancellation; teardown rejects deferred calls. A parser call

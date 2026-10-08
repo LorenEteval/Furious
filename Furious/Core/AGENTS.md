@@ -48,8 +48,10 @@ relative to this source tree's root.
   queues, or callbacks. Start with `tests/test_runtime_lifecycle.py` and `tests/test_connection_startup_async.py`;
   output/process stress lives in the tiers documented by `tests/README.md`. Review output admission and draining
   together when changing backpressure.
-- `SingTUN` imports the Go binding only in a spawned child. Its bounded status pipe establishes native readiness
-  and the actual device name independently of diagnostic output and process liveness. Cooperative stop is followed
+- `SingTUN` imports the Go binding only in a spawned child. Exercise the real child import path independently of
+  an injected test engine when import or metadata plumbing changes. Distribution-version lookup must not start
+  the native engine. Its bounded status pipe establishes native readiness and the actual device name independently
+  of diagnostic output and process liveness. Cooperative stop is followed
   by exact-child reap and attempt-local host recovery; retain the lease when either fails. Never infer Go cleanup
   from forced termination. Its `SingTUNHostPlan` remains attached through host-worker drain and restoration; tests
   in `tests/test_sing_tun.py` cover startup cancellation, validated status with binding-provided failure reasons,

@@ -11,7 +11,9 @@ relative to this source tree's root.
   owners already exist during election. Plugins are available before repository restoration interprets persisted
   profiles. Register cleanup as each acquisition succeeds, including election-failure paths, and preserve these
   dependencies when changing stage order.
-- Partial startup, normal exit, signals, and event-loop failure converge on one reverse-order cleanup path.
+- Once `DesktopApplication.run()` is entered, partial startup, normal exit and event-loop failure converge on one
+  reverse-order cleanup path. Constructor failures and signals before handler installation need separate outer-process
+  evidence; do not extend the run-loop cleanup guarantee to acquisitions it never reached.
   `aboutToQuit` and the event-loop `finally` may both reach it; repeated entry must not repeat registered stages.
   One callback failure does not skip later stages, but the stack consumes that callback and does not retry it.
   Its successful `close()` return means this invocation ran the stack, not that every resource was released.

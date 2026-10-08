@@ -9,7 +9,11 @@ Read `Resources.qrc` with `tests/test_public_api.py`; paths are relative to this
   remote resources, embedded rasters, editor metadata, or hard-coded page backgrounds.
 - Use the shared icon helpers and the bundled monochrome/default and white variants as appropriate. An SVG's
   `currentColor` alone does not establish Qt theme behavior; verify how `Furious/Qt/QtGui.py` resolves and masks the
-  chosen asset. Reuse that path instead of adding control-specific recoloring, and do not rely on color alone.
+  chosen asset. Theme-only controls reuse that path. Per-item decorations may mask an existing SVG into a native
+  QIcon using the view's foreground and selected-text colors; profile connection/privilege colors are not determined
+  by dark mode alone. `Furious/Widget/ServerTableView.py` and the favorite rendering tests in
+  `tests/test_qt_interactions.py` anchor this exception.
+  Preserve accessible text and do not rely on color alone.
   Mask/opacity helpers cache shared icon values: keep cache size bounded and keys independent of widgets, and avoid
   mutating a cached icon as if it belonged to one control.
 - Preserve license/provenance and the `Resources.qrc` alias contract. Any add, removal, rename, or alias change

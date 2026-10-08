@@ -26,7 +26,9 @@ tree's root.
   owns the editable snapshot, acceptance validation, identity resolution, and eventual write-back. Runtime factories
   likewise transfer fresh execution resources to the workflow owner. Editor acceptance and runtime readiness are
   different validations; neither may silently rewrite stored data to make a later stage succeed. Backend factories
-  may deliberately defer editor/native imports for discovery and process boundaries; do not hoist those imports
+  can return no prepared launch for an unsupported operation. Preserve that outcome without treating a missing
+  launch as execution success or silently selecting another backend.
+  Factories may deliberately defer editor/native imports for discovery and process boundaries; do not hoist those imports
   solely for uniform style without checking cold imports and the spawned-child construction path.
 - `Furious/Plugins/Runtime.py` checks that serialization yields nonempty text and carries structured diagnostics on failure;
   it does not parse pre-serialized strings or validate a backend's complete schema. Keep serialization success,
