@@ -2150,6 +2150,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                 )
 
                 remark = table.sourceModel.index(0, 0)
+
                 self.assertEqual(remark.data(), profiles[0].itemRemark)
                 self.assertFalse(
                     remark.data(QtCore.Qt.ItemDataRole.DecorationRole).isNull()
@@ -2174,6 +2175,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                     if not action.isSeparator()
                     and action.textCompare('Remove From Favorites')
                 )
+
                 remove.trigger()
 
                 self.assertIsNone(remark.data(QtCore.Qt.ItemDataRole.DecorationRole))
@@ -2196,6 +2198,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
         with self.table(2) as (table, _controller):
             profiles = Storage.UserServers()
             profiles[0].metadata.favorite = True
+
             model = table.sourceModel
             remark = model.index(0, 0)
 
@@ -2221,6 +2224,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                 with self.subTest(theme=theme):
                     table.setStyleSheet(AppStyleSheet.forTheme(theme))
                     processQtEvents()
+
                     color = table.palette().color(QtGui.QPalette.ColorRole.Text)
 
                     index = table.proxyIndexFromSourceIndex(remark)
@@ -2230,6 +2234,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
 
                     self.assertEqual(option.text, profiles[0].itemRemark)
                     self.assertFalse(option.icon.isNull())
+
                     image = option.icon.pixmap(16, 16).toImage()
                     colors = {
                         image.pixelColor(x, y).name()
@@ -2237,6 +2242,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                         for y in range(image.height())
                         if image.pixelColor(x, y).alpha() == 255
                     }
+
                     self.assertEqual(colors, {QtGui.QColor(color).name()})
                     self.assertEqual(
                         image.pixelColor(
@@ -2251,6 +2257,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                 profile.metadata.favorite = True
 
             table.activateItemByIndex(0, True)
+
             changes = QSignalSpy(table.sourceModel.dataChanged)
             colors = {}
 
@@ -2289,10 +2296,12 @@ class ProfileMutationBatchTest(unittest.TestCase):
                                 QtCore.Qt.ItemDataRole.DecorationRole,
                                 changes.at(changes.count() - 1)[2],
                             )
+
                             index = table.proxyIndexFromSourceRow(0)
                             foreground = index.data(
                                 QtCore.Qt.ItemDataRole.ForegroundRole
                             )
+
                             self.assertEqual(
                                 foreground, QtGui.QColor(AppHue.currentColor())
                             )
@@ -2301,6 +2310,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                             option = QStyleOptionViewItem()
                             option.initFrom(table)
                             table.itemDelegate().initStyleOption(option, index)
+
                             self.assertEqual(
                                 option.palette.color(QtGui.QPalette.ColorRole.Text),
                                 foreground,
@@ -2320,6 +2330,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                                         for y in range(image.height())
                                         if image.pixelColor(x, y).alpha() == 255
                                     }
+
                                     self.assertEqual(opaqueColors, {foreground.name()})
 
                 self.assertNotEqual(colors[True, False], colors[True, True])
@@ -2330,6 +2341,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
 
                 oldIndex = table.proxyIndexFromSourceRow(0)
                 self.assertIsNone(oldIndex.data(QtCore.Qt.ItemDataRole.ForegroundRole))
+
                 image = (
                     oldIndex.data(QtCore.Qt.ItemDataRole.DecorationRole)
                     .pixmap(16, 16)
@@ -2341,10 +2353,12 @@ class ProfileMutationBatchTest(unittest.TestCase):
                     for y in range(image.height())
                     if image.pixelColor(x, y).alpha() == 255
                 }
+
                 self.assertEqual(
                     opaqueColors,
                     {table.palette().color(QtGui.QPalette.ColorRole.Text).name()},
                 )
+
                 self.assertEqual(
                     table.proxyIndexFromSourceRow(1).data(
                         QtCore.Qt.ItemDataRole.ForegroundRole
@@ -2359,6 +2373,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
 
             table.activateItemByIndex(0, True)
             table.resize(900, 220)
+
             focusWindow = QWidget()
 
             try:
@@ -2384,6 +2399,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                             controller.isConnected.return_value = connected
                             isAdmin.return_value = admin
                             activeRow = int(admin)
+
                             table.activateItemByIndex(activeRow, True)
                             table.sourceModel.emitAllChanged()
 
@@ -2405,6 +2421,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                                     focusWindow.setFocus()
 
                                 processQtEvents()
+
                                 self.assertEqual(table.isActiveWindow(), active)
 
                                 for selected in (False, True, False):
@@ -2416,6 +2433,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                                     processQtEvents()
 
                                     backgrounds = {}
+
                                     for row in (0, 1):
                                         with self.subTest(
                                             theme=theme,
@@ -2451,11 +2469,13 @@ class ProfileMutationBatchTest(unittest.TestCase):
                                                 .grab(cellRect)
                                                 .toImage()
                                             )
+
                                             if selected:
                                                 backgrounds[row] = image.pixelColor(
                                                     image.width() // 2,
                                                     round(5 * image.devicePixelRatio()),
                                                 )
+
                                             option = QStyleOptionViewItem()
                                             option.initFrom(table)
                                             option.widget = table
@@ -2477,6 +2497,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                                                     .translated(-cellRect.topLeft())
                                                 )
                                                 ratio = image.devicePixelRatio()
+
                                                 pixels = [
                                                     image.pixelColor(x, y)
                                                     for x in range(
@@ -2493,7 +2514,9 @@ class ProfileMutationBatchTest(unittest.TestCase):
                                                         ),
                                                     )
                                                 ]
+
                                                 self.assertTrue(pixels)
+
                                                 closest = min(
                                                     max(
                                                         abs(pixel.red() - color.red()),
@@ -2507,14 +2530,17 @@ class ProfileMutationBatchTest(unittest.TestCase):
                                                     )
                                                     for pixel in pixels
                                                 )
+
                                                 self.assertLessEqual(
                                                     closest, 12, element.name
                                                 )
+
                                     if selected:
                                         self.assertEqual(backgrounds[0], backgrounds[1])
             finally:
                 focusWindow.close()
                 focusWindow.deleteLater()
+
                 table.setProperty('keepSelectionHighlighted', False)
 
     def testSmallDuplicationPublishesOneBatchOfIndependentManualCopies(self):

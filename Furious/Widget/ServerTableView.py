@@ -470,6 +470,7 @@ def _subscriptionRemark(item: ServerProfile) -> str:
 def _favoriteIconWithColor(colorName, selectedColorName):
     """Tint the bundled star at common display sizes without retaining a view."""
     source = bootstrapIconWhite('star.svg')
+
     # DecorationRole must expose a native QIcon to Qt's item delegate.
     icon = QIcon()
 
@@ -553,6 +554,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
             palette = (
                 view.palette() if isinstance(view, QWidget) else QApplication.palette()
             )
+
             foreground = self.data(index, QtCore.Qt.ItemDataRole.ForegroundRole)
             color = (
                 foreground
@@ -564,6 +566,7 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
                 view.window().isActiveWindow()
                 or view.property('keepSelectionHighlighted')
             )
+
             # Match DataViews' selected and selected:!active text colors.
             selectedColor = palette.color(
                 QPalette.ColorRole.HighlightedText
