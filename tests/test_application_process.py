@@ -140,6 +140,7 @@ class AppMainProcessTest(unittest.TestCase):
                             )
                         else:
                             logs = list(crashDirectory.iterdir())
+
                             self.assertEqual(len(logs), 1)
 
                             diagnostic = logs[0].read_text(encoding='utf-8')
@@ -187,6 +188,7 @@ class AppMainProcessTest(unittest.TestCase):
         for stage in ('factory', 'runner'):
             with self.subTest(stage=stage), tempfile.TemporaryDirectory() as directory:
                 crashDirectory = Path(directory) / 'crashes'
+
                 process = AppMainProcess(
                     functools.partial(_exitingApplication, stage, str(crashDirectory))
                 )
