@@ -430,6 +430,7 @@ class _ControlContinuationSignals(QtCore.QObject):
 def runControlContinuationProbe(case, iterations=30):
     """Destroy a control during its external callback and inspect continuation."""
     application()
+
     destroyed = []
 
     for _ in range(iterations):
@@ -444,6 +445,7 @@ def runControlContinuationProbe(case, iterations=30):
 
         def toggle():
             calls.append('toggle')
+
             if case == 'tray-toggle':
                 destroyOwner()
 
@@ -476,6 +478,7 @@ def runControlContinuationProbe(case, iterations=30):
                         invoke = control.trigger
                     elif case == 'tray-update':
                         control.changed.connect(destroyOwner)
+
                         controller.state = ConnectionState.Connecting
                         invoke = lambda: signals.stateChanged.emit(controller.state)
                     elif case == 'tray-superseded':
@@ -483,18 +486,22 @@ def runControlContinuationProbe(case, iterations=30):
                         def replaceState():
                             if controller.state is ConnectionState.Connecting:
                                 controller.state = ConnectionState.Disconnected
+
                                 signals.stateChanged.emit(controller.state)
 
                         control.changed.connect(replaceState)
+
                         controller.state = ConnectionState.Connecting
                         invoke = lambda: signals.stateChanged.emit(controller.state)
                     else:
                         AppSettings.set(
                             'ShowProgressBarWhenConnecting', AppBinarySettings.ON_
                         )
+
                         progress.setValue(100 if case == 'tray-progress-start' else 0)
                         progress.installEventFilter(signals)
                         progress._widget.valueChanged.connect(destroyOwner)
+
                         invoke = (
                             signals.progressStarted.emit
                             if case == 'tray-progress-start'
@@ -512,6 +519,7 @@ def runControlContinuationProbe(case, iterations=30):
                     ):
                         control = ConnectionButton(activate, parent=owner)
                     control.setSelectionCount(1)
+
                     invoke = control.click
                 elif case in ('routing-popup', 'routing-state'):
                     options = (RoutingOption('default', 'Default'),)
@@ -524,12 +532,14 @@ def runControlContinuationProbe(case, iterations=30):
                             options, 'default'
                         ),
                     )
+
                     if case == 'routing-popup':
                         with mock.patch(
                             'Furious.Widget.RoutingSelector.AppRoutingController',
                             return_value=routing,
                         ):
                             control = RoutingSelector(parent=owner)
+
                         signals.routingChanged.connect(destroyOwner)
                         invoke = control.showPopup
                     else:
@@ -538,6 +548,7 @@ def runControlContinuationProbe(case, iterations=30):
                             return_value=routing,
                         ):
                             control = RoutingAction(parent=owner)
+
                         control.changed.connect(destroyOwner)
                         invoke = lambda: signals.routingChanged.emit((), 'default')
                 elif case.startswith('settings-'):
@@ -549,6 +560,7 @@ def runControlContinuationProbe(case, iterations=30):
 
                     if case.startswith('settings-toggle'):
                         AppSettings.set('VPNMode', AppBinarySettings.OFF)
+
                         control = _ToggleSettingsCard(
                             'shield.svg', 'VPNMode', request, parent=owner
                         )
@@ -557,10 +569,13 @@ def runControlContinuationProbe(case, iterations=30):
                             'Action setting', checkable=True, parent=owner
                         )
                         action.callback = lambda: request(True)
+
                         control = _ActionToggleSettingsCard(
                             'shield.svg', action, parent=owner
                         )
+
                     invoke = control.checkBox.click
+
                     if case.endswith('-pending'):
 
                         def cancelPendingRequest():
@@ -577,6 +592,7 @@ def runControlContinuationProbe(case, iterations=30):
                     invoke()
                 except Exception as ex:
                     # Any non-exit exceptions
+
                     errors.append(str(ex))
 
                 processQtEvents()
@@ -588,7 +604,9 @@ def runControlContinuationProbe(case, iterations=30):
                     assert control.iconFileName == 'unlock-fill.svg'
                 else:
                     assert not isValid(control), case
+
                 assert not errors, (case, errors)
+
                 if case == 'home-selection':
                     assert not calls, calls
                 elif case == 'tray-toggle':
@@ -599,15 +617,18 @@ def runControlContinuationProbe(case, iterations=30):
                     assert calls == (
                         [] if case.endswith('-pending') else ['request']
                     ), calls
+
                 if case.startswith('tray-') and case != 'tray-superseded':
                     assert not isValid(progress)
         finally:
             if isValid(owner):
                 deleteQObject(owner)
             deleteQObject(signals)
+
             processQtEvents()
 
     assert len(destroyed) == iterations, (case, destroyed)
+
     return {
         'controlContinuationCase': case,
         'cycles': iterations,
@@ -618,6 +639,7 @@ def runControlContinuationProbe(case, iterations=30):
 def runAnimationStopOwnerProbe(iterations=30):
     """Animation state observers may destroy the transition during stop."""
     application()
+
     destroyed = Counter()
     references = []
 
@@ -625,6 +647,7 @@ def runAnimationStopOwnerProbe(iterations=30):
         window = QWidget()
         window.resize(80, 60)
         window.show()
+
         transition = ThemeTransition(
             windowProvider=lambda: [window],
             animationsEnabled=lambda: True,
@@ -635,8 +658,10 @@ def runAnimationStopOwnerProbe(iterations=30):
 
         try:
             transition.apply(lambda: None)
+
             animation = next(iter(transition._animations))
             overlay = transition._animations[animation][1]
+
             animation.destroyed.connect(lambda *_args: destroyed.update(['animation']))
             overlay.destroyed.connect(lambda *_args: destroyed.update(['overlay']))
 
@@ -647,6 +672,7 @@ def runAnimationStopOwnerProbe(iterations=30):
                     deleteQObject(transition)
 
             animation.stateChanged.connect(stateChanged)
+
             transition.stop()
             processQtEvents()
 
@@ -657,13 +683,16 @@ def runAnimationStopOwnerProbe(iterations=30):
             if isValid(transition):
                 deleteQObject(transition)
             deleteQObject(window)
+
         del transition, animation, overlay, window
 
     collectAtBoundary()
+
     assert destroyed == Counter(
         transition=iterations, animation=iterations, overlay=iterations
     )
     assert all(reference() is None for reference in references)
+
     return {
         'animationStopCycles': iterations,
         'destroyed': dict(destroyed),
@@ -674,12 +703,14 @@ def runAnimationStopOwnerProbe(iterations=30):
 def runActionTranslationLifetimeProbe(iterations=30):
     """Action.changed may delete a transient action during text translation."""
     application()
+
     references = []
     destroyed = []
 
     for _ in range(iterations):
         owner = QtCore.QObject()
         action = AppQAction('Original', parent=owner)
+
         references.append(weakref.ref(action))
         action.destroyed.connect(lambda *_args: destroyed.append(True))
         action.changed.connect(lambda: deleteQObject(owner))
@@ -689,15 +720,19 @@ def runActionTranslationLifetimeProbe(iterations=30):
                 'Furious.Qt.QtGui._', side_effect=lambda text: 'Translated ' + text
             ):
                 action.retranslate()
+
             assert not isValid(action)
         finally:
             if isValid(owner):
                 deleteQObject(owner)
+
         del action, owner
 
     collectAtBoundary()
+
     assert len(destroyed) == iterations
     assert all(reference() is None for reference in references)
+
     return {
         'actionTranslationCycles': iterations,
         'destroyed': len(destroyed),

@@ -454,6 +454,7 @@ class QtLifetimeTest(unittest.TestCase):
             'from tests.fixtures.editor_lifetime_probe import runControlContinuationProbe\n'
             f'print(runControlContinuationProbe({case!r}, 30))\n'
         )
+
         assertChildSucceeded(self, result, case)
 
     def testTrayToggleDoesNotRefreshAfterItsOwnerIsDestroyed(self):
@@ -497,6 +498,7 @@ class QtLifetimeTest(unittest.TestCase):
             'from tests.fixtures.editor_lifetime_probe import runActionTranslationLifetimeProbe\n'
             'print(runActionTranslationLifetimeProbe(30))\n'
         )
+
         assertChildSucceeded(self, result, 'action translation owner destruction')
 
     def testAnimationStopObserverCanDestroyItsTransitionOwner(self):
@@ -504,6 +506,7 @@ class QtLifetimeTest(unittest.TestCase):
             'from tests.fixtures.editor_lifetime_probe import runAnimationStopOwnerProbe\n'
             'print(runAnimationStopOwnerProbe(30))\n'
         )
+
         assertChildSucceeded(self, result, 'animation stop owner destruction')
 
     def testActionCallbackCanDestroyItsOwnerBeforeTheVirtualHook(self):

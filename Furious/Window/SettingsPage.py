@@ -215,6 +215,7 @@ class _ToggleSettingsCard(_SettingsCard):
 
         self.checkBox = AppQSwitch()
         self.checkBox.syncChecked(AppSettings.isStateON_(settingName))
+
         # External setting callbacks can delete this card and its checkbox.
         # Finish Qt's native checkbox setter before invoking those callbacks.
         self.checkBox.toggled.connect(
@@ -292,6 +293,7 @@ class _ActionToggleSettingsCard(_SettingsCard):
         self.checkBox = AppQSwitch()
         self.checkBox.syncChecked(action.isChecked())
         self.checkBox.setEnabled(action.isEnabled())
+
         # Plugin action callbacks have the same owner-destruction boundary.
         self.checkBox.toggled.connect(
             self._requestedState, QtCore.Qt.ConnectionType.QueuedConnection
