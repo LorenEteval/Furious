@@ -30,8 +30,8 @@ Read `Furious/Interface/Runtime.py` with `tests/test_interface.py`; paths are re
 - `ApplicationRunner.ExitCode` is the outer application process protocol; it is not interchangeable with a core's
   raw exit code or `RuntimeExitReason`. Preserve the meaning at each boundary instead of translating every nonzero
   value into one generic failure.
-  Declaring the exit enum does not route exceptions into it. Verify the concrete process boundary separately from
-  an exception hook's mapping; bootstrap interception can bypass that hook.
+  Declaring the exit enum does not route exceptions into it. Concrete process wrappers must translate escaping
+  non-exit failures before bootstrap interception; verify real child results separately from direct hook mapping.
 - Model encoders may raise, while configuration construction deliberately captures diagnostics. Callers must inspect
   the contract they consume; successful construction alone proves neither serialization nor backend acceptance.
   Preserve `RuntimeStartError`'s reason/code/details and `RuntimeExit`'s typed meaning across adapters; exception text

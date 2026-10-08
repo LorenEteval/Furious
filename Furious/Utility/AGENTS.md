@@ -14,11 +14,12 @@ source tree's root.
   application factory; the parent must not construct a Qt application to pass across the process boundary. Signal handlers are
   installed only after the factory returns, so pre-construction signals are outside this wrapper's handler coverage.
   Preserve semantic exit codes and original exception/traceback context; crash-log failure is secondary.
-  Verify this through a real spawned child: multiprocessing bootstrap can intercept an uncaught factory/run failure
-  before `sys.excepthook`. Direct hook tests prove its mapping only, not dispatch from every child failure path;
-  compare the actual exit and crash flag before claiming supervision coverage.
-  The current wrapper installs the hook but does not explicitly catch exceptions escaping the supplied factory
-  or `application.run()`. Keep this coverage gap visible instead of describing hook installation as complete dispatch.
+  The wrapper explicitly routes non-exit exceptions escaping the factory or runner through its reporting hook
+  before multiprocessing bootstrap intercepts them, then exits the child with the semantic code. Qt callback
+  exceptions instead request event-loop shutdown. Preserve intentional `SystemExit` and other `BaseException`
+  control flow. A partially constructed QApplication may lack its log manager; save the traceback without assuming
+  full composition. Spawned cases in `tests/test_application_process.py` verify classification, original diagnostics,
+  the shared crash flag, unavailable crash output and intentional exits, separately from direct hook mapping.
 - The parent entry point joins only the child it created and shows the fallback Qt report only for a nonzero result.
   That join follows the GUI session lifetime; it is not a short startup-readiness deadline. Tests must bound their
   own waits and reap their exact child if the fixture fails. A child stuck in cooperative worker cleanup can

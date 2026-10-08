@@ -61,7 +61,7 @@ class AppMainProcess(ProcessContext.Process):
         self.func = func
         self.application = None
 
-    def exceptHook(self, exceptionType, exceptionValue, tb):
+    def exceptHook(self, exceptionType, exceptionValue, tb, *, raiseSystemExit=False):
         """Handle except hook for the app main process."""
         if logger.level < logging.CRITICAL:
             traceback.print_exception(exceptionType, exceptionValue, tb)
@@ -75,7 +75,7 @@ class AppMainProcess(ProcessContext.Process):
 
         self.saveCrashLog(exceptionType, exceptionValue, tb)
 
-        if APP() is not None:
+        if not raiseSystemExit and APP() is not None:
             APP().exit(exitcode)
         else:
             sys.exit(exitcode)
@@ -99,16 +99,13 @@ class AppMainProcess(ProcessContext.Process):
                 traceback.format_exception(exceptionType, exceptionValue, tb),
             )
 
-            if APP() is None:
-                crashLog = f'{stackLog}'
-            else:
-                logManager = AppLogManager()
+            logManager = getattr(APP(), 'logManager', None)
 
-                crashLog = (
-                    f'{logManager.plainText()}\n{stackLog}'
-                    if logManager is not None
-                    else f'{stackLog}'
-                )
+            crashLog = (
+                f'{logManager.plainText()}\n{stackLog}'
+                if logManager is not None
+                else f'{stackLog}'
+            )
 
             with open(CRASH_LOG_DIR / self.logFileName, 'w', encoding='utf-8') as file:
                 file.write(crashLog)
@@ -132,9 +129,16 @@ class AppMainProcess(ProcessContext.Process):
         """Run the app main process task."""
         sys.excepthook = self.exceptHook
 
-        self.application = self.func()
+        try:
+            self.application = self.func()
 
-        for sig in [signal.SIGTERM, signal.SIGINT]:
-            signal.signal(sig, self.handler)
+            for sig in [signal.SIGTERM, signal.SIGINT]:
+                signal.signal(sig, self.handler)
 
-        sys.exit(self.application.run())
+            sys.exit(self.application.run())
+        except Exception:
+            # Any non-exit exceptions
+
+            # Multiprocessing catches escaping failures before sys.excepthook.
+            # The factory/run frame has ended, so no Qt loop can honor exit().
+            self.exceptHook(*sys.exc_info(), raiseSystemExit=True)

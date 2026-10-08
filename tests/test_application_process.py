@@ -22,11 +22,14 @@ from __future__ import annotations
 from Furious.Interface import ApplicationRunner
 from Furious.Utility.AppMainProcess import AppMainProcess
 
+from tests.support import application
+
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
 import importlib
+import functools
 import multiprocessing
 import signal
 import sys
@@ -54,8 +57,158 @@ def _successfulApplication():
     return _SuccessfulApplication()
 
 
+class _FailingApplication(_SuccessfulApplication):
+    """Raise one supplied exception after the factory has returned."""
+
+    def __init__(self, exceptionType):
+        self.exceptionType = exceptionType
+
+    def run(self):
+        raise self.exceptionType('runner fixture failure')
+
+
+def _failingApplication(stage, exceptionType, crashDirectory, *, createQt=False):
+    """Confine crash reporting and optional partial Qt state to the exact child."""
+    AppMainProcessModule.CRASH_LOG_DIR = Path(crashDirectory)
+
+    if createQt:
+        app = application()
+        del app.logManager
+
+        # There is no running event loop after an escaping factory/run failure.
+        app.exit = mock.Mock(side_effect=AssertionError('unexpected Qt exit request'))
+
+    if stage == 'factory':
+        raise exceptionType('factory fixture failure')
+
+    return _FailingApplication(exceptionType)
+
+
+class _ExitingApplication(_SuccessfulApplication):
+    def run(self):
+        sys.exit(17)
+
+
+def _exitingApplication(stage, crashDirectory):
+    AppMainProcessModule.CRASH_LOG_DIR = Path(crashDirectory)
+
+    if stage == 'factory':
+        sys.exit(17)
+
+    return _ExitingApplication()
+
+
 class AppMainProcessTest(unittest.TestCase):
     """Verify exact child ownership, crash mapping, and signal safety."""
+
+    def _checkSpawnedFailure(self, stage, *, createQt=False, failCrashWrite=False):
+        for exceptionType, expected in (
+            (AssertionError, ApplicationRunner.ExitCode.AssertionError),
+            (RuntimeError, ApplicationRunner.ExitCode.UnknownException),
+        ):
+            with self.subTest(stage=stage, exception=exceptionType.__name__):
+                with tempfile.TemporaryDirectory() as directory:
+                    crashDirectory = Path(directory) / 'crashes'
+
+                    if failCrashWrite:
+                        crashDirectory.write_text(
+                            'keep existing file', encoding='utf-8'
+                        )
+
+                    process = AppMainProcess(
+                        functools.partial(
+                            _failingApplication,
+                            stage,
+                            exceptionType,
+                            str(crashDirectory),
+                            createQt=createQt,
+                        )
+                    )
+
+                    try:
+                        process.start()
+                        process.join(15)
+
+                        self.assertFalse(process.is_alive(), 'child did not finish')
+                        self.assertEqual(process.exitcode, expected.value)
+                        self.assertEqual(process.fileWritten.value, not failCrashWrite)
+
+                        if failCrashWrite:
+                            self.assertEqual(
+                                crashDirectory.read_text(encoding='utf-8'),
+                                'keep existing file',
+                            )
+                        else:
+                            logs = list(crashDirectory.iterdir())
+                            self.assertEqual(len(logs), 1)
+
+                            diagnostic = logs[0].read_text(encoding='utf-8')
+                            message = (
+                                'factory fixture failure'
+                                if stage == 'factory'
+                                else 'runner fixture failure'
+                            )
+
+                            self.assertIn(
+                                'Traceback (most recent call last):', diagnostic
+                            )
+                            self.assertIn(
+                                f'{exceptionType.__name__}: {message}', diagnostic
+                            )
+                            self.assertNotIn('unexpected Qt exit request', diagnostic)
+                    finally:
+                        if process.is_alive():
+                            process.terminate()
+                            process.join(5)
+
+                        if process.is_alive():
+                            process.kill()
+                            process.join(5)
+
+                        process.close()
+
+    def testFactoryFailuresReportSemanticExitAndCrashLog(self):
+        self._checkSpawnedFailure('factory')
+
+    def testRunnerFailuresReportSemanticExitAndCrashLog(self):
+        self._checkSpawnedFailure('runner')
+
+    def testFactoryFailureWithPartialQtApplicationReportsAndExits(self):
+        self._checkSpawnedFailure('factory', createQt=True)
+
+    def testRunnerFailureWithQtApplicationReportsAndExits(self):
+        self._checkSpawnedFailure('runner', createQt=True)
+
+    def testCrashWriteFailurePreservesFactoryAndRunnerExitClassification(self):
+        for stage in ('factory', 'runner'):
+            self._checkSpawnedFailure(stage, failCrashWrite=True)
+
+    def testExplicitFactoryAndRunnerExitsDoNotCreateCrashReports(self):
+        for stage in ('factory', 'runner'):
+            with self.subTest(stage=stage), tempfile.TemporaryDirectory() as directory:
+                crashDirectory = Path(directory) / 'crashes'
+                process = AppMainProcess(
+                    functools.partial(_exitingApplication, stage, str(crashDirectory))
+                )
+
+                try:
+                    process.start()
+                    process.join(15)
+
+                    self.assertFalse(process.is_alive(), 'child did not finish')
+                    self.assertEqual(process.exitcode, 17)
+                    self.assertFalse(process.fileWritten.value)
+                    self.assertFalse(crashDirectory.exists())
+                finally:
+                    if process.is_alive():
+                        process.terminate()
+                        process.join(5)
+
+                    if process.is_alive():
+                        process.kill()
+                        process.join(5)
+
+                    process.close()
 
     def testSharedCrashFlagDoesNotCreateAManagerServer(self):
         """Use one synchronized scalar without spawning an unmanaged manager."""
