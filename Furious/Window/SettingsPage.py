@@ -215,7 +215,11 @@ class _ToggleSettingsCard(_SettingsCard):
 
         self.checkBox = AppQSwitch()
         self.checkBox.syncChecked(AppSettings.isStateON_(settingName))
-        self.checkBox.toggled.connect(self._requestedState)
+        # External setting callbacks can delete this card and its checkbox.
+        # Finish Qt's native checkbox setter before invoking those callbacks.
+        self.checkBox.toggled.connect(
+            self._requestedState, QtCore.Qt.ConnectionType.QueuedConnection
+        )
 
         super().__init__(
             iconFileName,
@@ -229,7 +233,7 @@ class _ToggleSettingsCard(_SettingsCard):
     @QtCore.Slot(bool)
     def _requestedState(self, checked: bool):
         """Apply a requested setting and restore persisted state on failure."""
-        if self._callback(checked) is False:
+        if self._callback(checked) is False and Mixins.qObjectIsValid(self):
             self.sync()
 
     def sync(self):
@@ -288,7 +292,10 @@ class _ActionToggleSettingsCard(_SettingsCard):
         self.checkBox = AppQSwitch()
         self.checkBox.syncChecked(action.isChecked())
         self.checkBox.setEnabled(action.isEnabled())
-        self.checkBox.toggled.connect(self._requestedState)
+        # Plugin action callbacks have the same owner-destruction boundary.
+        self.checkBox.toggled.connect(
+            self._requestedState, QtCore.Qt.ConnectionType.QueuedConnection
+        )
 
         action.toggled.connect(self.sync)
         action.changed.connect(self.sync)

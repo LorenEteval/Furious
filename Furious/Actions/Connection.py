@@ -28,6 +28,7 @@ from Furious.Frozenlib import (
     AppConnectionController,
     AppSettings,
     AppSystemTray,
+    Mixins,
 )
 from Furious.Qt import AppQAction, AppQMessageBox, bootstrapIcon, connectWeakly
 from Furious.Qt import gettext as _
@@ -148,6 +149,10 @@ class ConnectAction(AppQAction):
         state = self.controller.state
 
         self.setText(_(state.value))
+
+        if not isValid(self) or self.controller.state is not state:
+            return
+
         self.setChecked(
             state
             in (
@@ -155,6 +160,10 @@ class ConnectAction(AppQAction):
                 ConnectionState.Connected,
             )
         )
+
+        if not isValid(self) or self.controller.state is not state:
+            return
+
         self.setIcon(
             bootstrapIcon(
                 'lock-fill.svg'
@@ -166,24 +175,43 @@ class ConnectAction(AppQAction):
                 else 'unlock-fill.svg'
             )
         )
+
+        if not isValid(self) or self.controller.state is not state:
+            return
+
         self.setEnabled(self.controller.interactionEnabled)
 
     @QtCore.Slot()
     def showProgress(self):
         """Show connection progress when the user preference allows it."""
+        if not Mixins.qObjectIsValid(self.progressWidget):
+            return
+
         if AppSettings.isStateON_('ShowProgressBarWhenConnecting'):
             self.progressWidget.setValue(0)
+
+            if not Mixins.qObjectIsValid(self, self.progressWidget):
+                return
+
             self.progressWidget.start(50)
             self.progressWidget.show()
 
     @QtCore.Slot(bool)
     def hideProgress(self, done: bool):
         """Stop and close the connection progress presentation."""
+        if not Mixins.qObjectIsValid(self.progressWidget):
+            return
+
         if done:
             self.progressWidget.setValue(100)
 
+            if not Mixins.qObjectIsValid(self, self.progressWidget):
+                return
+
         self.progressWidget.close()
-        self.progressWidget.stop()
+
+        if Mixins.qObjectIsValid(self, self.progressWidget):
+            self.progressWidget.stop()
 
     @staticmethod
     @QtCore.Slot(str)
@@ -206,9 +234,11 @@ class ConnectAction(AppQAction):
     def triggeredCallback(self, checked):
         """Delegate the requested operation to the shared controller."""
         self.controller.toggle()
+
         # QAction toggles before its callback. Restore controller-owned state
         # when validation rejected the operation without a state transition.
-        self.syncPresentation()
+        if isValid(self):
+            self.syncPresentation()
 
     def retranslate(self):
         """Refresh the state-derived action text and icon."""

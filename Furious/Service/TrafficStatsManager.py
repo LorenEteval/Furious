@@ -550,8 +550,8 @@ class TrafficStatsManager(
         if self._hasConnected and self._clearUsageOnReconnectEnabled():
             self._clearSessionUsage()
 
-        if not isValid(self) or generation != self._generation:
-            return
+            if not isValid(self) or generation != self._generation:
+                return
 
         self._hasConnected = True
         self._connected = True

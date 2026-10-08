@@ -207,8 +207,10 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
         if callable(self.callback):
             self.callback()
 
-        if isValid(self):
-            self.triggeredCallback(paramChecked)
+            if not isValid(self):
+                return
+
+        self.triggeredCallback(paramChecked)
 
     def _clearMenu(self, *_args):
         """Drop a borrowed submenu wrapper when its native owner destroys it."""
@@ -304,7 +306,7 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
 
         def recursiveTranslate(action, memo):
             """Handle recursive translate for the app q action."""
-            if action in memo:
+            if not isValid(action) or action in memo:
                 return
 
             memo[action] = True
@@ -314,7 +316,14 @@ class AppQAction(Mixins.QTranslatable, Mixins.ThemeAware, QAction):
 
             if not action.isSeparator() and getattr(action, 'translatable', True):
                 action.setText(_(action.text()))
+
+                if not isValid(action):
+                    return
+
                 action.setStatusTip(_(action.statusTip()))
+
+                if not isValid(action):
+                    return
 
             # Some old version PySide6 does not have menu() method
             # for QAction. Protect it

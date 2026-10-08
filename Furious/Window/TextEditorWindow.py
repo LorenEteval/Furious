@@ -339,8 +339,8 @@ class TextEditorWindow(AppQMainWindow):
             if index == Storage.UserActivatedItemIndex():
                 showMBoxNewChangesNextTime(parent=self, method=showChangesMethod)
 
-            if not Mixins.qObjectIsValid(self):
-                return True
+                if not Mixins.qObjectIsValid(self):
+                    return True
 
             self.markAsSaved()
 

@@ -341,7 +341,7 @@ class EndpointInfoService(QtCore.QObject):
     def _setState(self, state: EndpointInfoState) -> bool:
         """Publish changed state and report whether its stage may continue."""
         if state is self.state:
-            return isValid(self)
+            return True
 
         generation = self._generation
 

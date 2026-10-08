@@ -449,6 +449,63 @@ class DelayedReceiver(QtCore.QObject):
 class QtLifetimeTest(unittest.TestCase):
     """Stress direct destruction evidence without relying on process RSS alone."""
 
+    def _checkControlContinuation(self, case):
+        result = runPythonChild(
+            'from tests.fixtures.editor_lifetime_probe import runControlContinuationProbe\n'
+            f'print(runControlContinuationProbe({case!r}, 30))\n'
+        )
+        assertChildSucceeded(self, result, case)
+
+    def testTrayToggleDoesNotRefreshAfterItsOwnerIsDestroyed(self):
+        self._checkControlContinuation('tray-toggle')
+
+    def testTrayStateUpdateStopsAfterChangedDestroysItsOwner(self):
+        self._checkControlContinuation('tray-update')
+
+    def testTrayStateUpdateCannotOverwriteASupersedingState(self):
+        self._checkControlContinuation('tray-superseded')
+
+    def testTrayProgressStartCannotShowAWidgetAfterItsOwnerDies(self):
+        self._checkControlContinuation('tray-progress-start')
+
+    def testTrayProgressFinishCannotCloseAWidgetAfterItsOwnerDies(self):
+        self._checkControlContinuation('tray-progress-finish')
+
+    def testHomeSelectionCannotConnectAfterItsOwnerIsDestroyed(self):
+        self._checkControlContinuation('home-selection')
+
+    def testRoutingRefreshCannotOpenPopupAfterItsOwnerIsDestroyed(self):
+        self._checkControlContinuation('routing-popup')
+
+    def testRoutingStateUpdateStopsAfterVisibilityDestroysItsOwner(self):
+        self._checkControlContinuation('routing-state')
+
+    def testFailedSettingCallbackDoesNotRestoreADestroyedControl(self):
+        self._checkControlContinuation('settings-toggle')
+
+    def testPluginSettingActionCanDestroyItsCardAfterCheckboxDelivery(self):
+        self._checkControlContinuation('settings-action')
+
+    def testDestroyedSettingsCardDropsItsQueuedRequest(self):
+        self._checkControlContinuation('settings-toggle-pending')
+
+    def testDestroyedPluginSettingsCardDropsItsQueuedAction(self):
+        self._checkControlContinuation('settings-action-pending')
+
+    def testActionTranslationStopsAfterChangedDestroysItsOwner(self):
+        result = runPythonChild(
+            'from tests.fixtures.editor_lifetime_probe import runActionTranslationLifetimeProbe\n'
+            'print(runActionTranslationLifetimeProbe(30))\n'
+        )
+        assertChildSucceeded(self, result, 'action translation owner destruction')
+
+    def testAnimationStopObserverCanDestroyItsTransitionOwner(self):
+        result = runPythonChild(
+            'from tests.fixtures.editor_lifetime_probe import runAnimationStopOwnerProbe\n'
+            'print(runAnimationStopOwnerProbe(30))\n'
+        )
+        assertChildSucceeded(self, result, 'animation stop owner destruction')
+
     def testActionCallbackCanDestroyItsOwnerBeforeTheVirtualHook(self):
         """Native deletion during a callback cancels the remaining activation hook."""
         application()

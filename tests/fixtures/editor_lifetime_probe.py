@@ -27,11 +27,11 @@ from Furious.Backends.Xray.AssetListView import XrayAssetListView
 import Furious.Backends.Xray.AssetListView as assetModule
 import Furious.Actions.Import as importModule
 from Furious.Actions.Routing import RoutingAction
-from Furious.Actions.Connection import ConnectionErrorMessageBox
+from Furious.Actions.Connection import ConnectAction, ConnectionErrorMessageBox
 from Furious.Application.TrayIcon import TrayIcon
 from Furious.Application.DesktopApplication import DesktopApplication
 from Furious.Controllers import ConnectionController, RoutingController
-from Furious.Controllers.ConnectionController import ConnectionError
+from Furious.Controllers.ConnectionController import ConnectionError, ConnectionState
 from Furious.Plugins import RoutingOption
 from Furious.Plugins import blankProfile, initializePluginRegistry
 from Furious.Qt import (
@@ -64,7 +64,7 @@ from Furious.Service.ConnectivityManager import ConnectivityManager
 from Furious.Service.UpdateManager import UpdateManager
 from Furious.Service.DnsResolver import DnsResolutionOperation, DnsResolver
 from Furious.Service.TrafficStatsManager import TrafficStatsManager
-from Furious.Frozenlib import Mixins
+from Furious.Frozenlib import AppBinarySettings, AppSettings, Mixins
 from Furious.Plugins import TrafficCounters, TrafficStatsMonitor
 from Furious.Service.ConnectionManager import (
     ConnectionManager,
@@ -73,11 +73,17 @@ from Furious.Service.ConnectionManager import (
 from Furious.Models import CoreConfiguration
 from Furious.Controllers.SettingsController import SettingsController
 from Furious.Repository import Storage
-from Furious.Window.SettingsPage import _TUNBackendSettingsCard
+from Furious.Window.SettingsPage import (
+    _TUNBackendSettingsCard,
+    _ToggleSettingsCard,
+    _ActionToggleSettingsCard,
+)
 from Furious.Window.HomePage import HomePage, NetworkStateBadge, AppConnectivityManager
 from Furious.Window.QRCodeWindow import QRCodeWindow
 from Furious.Window.TextEditorWindow import TextEditorWindow
 from Furious.Widget.ServerTableView import ServerTableView
+from Furious.Widget.ConnectionButton import ConnectionButton
+from Furious.Widget.RoutingSelector import RoutingSelector
 
 import PySide6
 
@@ -402,6 +408,301 @@ def runConnectionRecoveryProbe(iterations=100):
 
         deleteQObject(window)
         processQtEvents()
+
+
+class _ControlContinuationSignals(QtCore.QObject):
+    """Supply real signals without acquiring a connection or host resource."""
+
+    stateChanged = QtCore.Signal(object)
+    routingChanged = QtCore.Signal(object, str)
+    interactionEnabledChanged = QtCore.Signal(bool)
+    progressStarted = QtCore.Signal()
+    progressFinished = QtCore.Signal(bool)
+    notificationRequested = QtCore.Signal(str)
+    errorOccurred = QtCore.Signal(object)
+
+    def eventFilter(self, watched, event):
+        if event.type() in (QtCore.QEvent.Type.Show, QtCore.QEvent.Type.Close):
+            self.events.append(event.type())
+        return False
+
+
+def runControlContinuationProbe(case, iterations=30):
+    """Destroy a control during its external callback and inspect continuation."""
+    application()
+    destroyed = []
+
+    for _ in range(iterations):
+        owner = QWidget()
+        signals = _ControlContinuationSignals()
+        signals.events = []
+        calls = []
+        errors = []
+
+        def destroyOwner(*_args):
+            deleteQObject(owner)
+
+        def toggle():
+            calls.append('toggle')
+            if case == 'tray-toggle':
+                destroyOwner()
+
+        controller = SimpleNamespace(
+            state=ConnectionState.Disconnected,
+            interactionEnabled=True,
+            toggle=toggle,
+            stateChanged=signals.stateChanged,
+            progressStarted=signals.progressStarted,
+            progressFinished=signals.progressFinished,
+            notificationRequested=signals.notificationRequested,
+            errorOccurred=signals.errorOccurred,
+        )
+
+        try:
+            with isolatedSettings(), mock.patch(
+                'sys.excepthook',
+                side_effect=lambda _kind, error, _traceback: errors.append(str(error)),
+            ):
+                if case.startswith('tray-'):
+                    with mock.patch(
+                        'Furious.Actions.Connection.AppConnectionController',
+                        return_value=controller,
+                    ):
+                        control = ConnectAction(parent=owner)
+
+                    progress = control.progressWidget
+
+                    if case == 'tray-toggle':
+                        invoke = control.trigger
+                    elif case == 'tray-update':
+                        control.changed.connect(destroyOwner)
+                        controller.state = ConnectionState.Connecting
+                        invoke = lambda: signals.stateChanged.emit(controller.state)
+                    elif case == 'tray-superseded':
+
+                        def replaceState():
+                            if controller.state is ConnectionState.Connecting:
+                                controller.state = ConnectionState.Disconnected
+                                signals.stateChanged.emit(controller.state)
+
+                        control.changed.connect(replaceState)
+                        controller.state = ConnectionState.Connecting
+                        invoke = lambda: signals.stateChanged.emit(controller.state)
+                    else:
+                        AppSettings.set(
+                            'ShowProgressBarWhenConnecting', AppBinarySettings.ON_
+                        )
+                        progress.setValue(100 if case == 'tray-progress-start' else 0)
+                        progress.installEventFilter(signals)
+                        progress._widget.valueChanged.connect(destroyOwner)
+                        invoke = (
+                            signals.progressStarted.emit
+                            if case == 'tray-progress-start'
+                            else lambda: signals.progressFinished.emit(True)
+                        )
+                elif case == 'home-selection':
+
+                    def activate():
+                        destroyOwner()
+                        return True
+
+                    with mock.patch(
+                        'Furious.Widget.ConnectionButton.AppConnectionController',
+                        return_value=controller,
+                    ):
+                        control = ConnectionButton(activate, parent=owner)
+                    control.setSelectionCount(1)
+                    invoke = control.click
+                elif case in ('routing-popup', 'routing-state'):
+                    options = (RoutingOption('default', 'Default'),)
+                    routing = SimpleNamespace(
+                        state=lambda: (options, 'default'),
+                        stateChanged=signals.routingChanged,
+                        interactionEnabledChanged=signals.interactionEnabledChanged,
+                        interactionEnabled=True,
+                        refresh=lambda force=False: signals.routingChanged.emit(
+                            options, 'default'
+                        ),
+                    )
+                    if case == 'routing-popup':
+                        with mock.patch(
+                            'Furious.Widget.RoutingSelector.AppRoutingController',
+                            return_value=routing,
+                        ):
+                            control = RoutingSelector(parent=owner)
+                        signals.routingChanged.connect(destroyOwner)
+                        invoke = control.showPopup
+                    else:
+                        with mock.patch(
+                            'Furious.Actions.Routing.AppRoutingController',
+                            return_value=routing,
+                        ):
+                            control = RoutingAction(parent=owner)
+                        control.changed.connect(destroyOwner)
+                        invoke = lambda: signals.routingChanged.emit((), 'default')
+                elif case.startswith('settings-'):
+
+                    def request(_checked):
+                        calls.append('request')
+                        destroyOwner()
+                        return False
+
+                    if case.startswith('settings-toggle'):
+                        AppSettings.set('VPNMode', AppBinarySettings.OFF)
+                        control = _ToggleSettingsCard(
+                            'shield.svg', 'VPNMode', request, parent=owner
+                        )
+                    else:
+                        action = AppQAction(
+                            'Action setting', checkable=True, parent=owner
+                        )
+                        action.callback = lambda: request(True)
+                        control = _ActionToggleSettingsCard(
+                            'shield.svg', action, parent=owner
+                        )
+                    invoke = control.checkBox.click
+                    if case.endswith('-pending'):
+
+                        def cancelPendingRequest():
+                            control.checkBox.click()
+                            destroyOwner()
+
+                        invoke = cancelPendingRequest
+                else:
+                    raise ValueError(case)
+
+                control.destroyed.connect(lambda *_args: destroyed.append(case))
+
+                try:
+                    invoke()
+                except Exception as ex:
+                    # Any non-exit exceptions
+                    errors.append(str(ex))
+
+                processQtEvents()
+
+                if case == 'tray-superseded':
+                    assert isValid(control)
+                    assert controller.state is ConnectionState.Disconnected
+                    assert not control.isChecked(), 'superseded state marked connected'
+                    assert control.iconFileName == 'unlock-fill.svg'
+                else:
+                    assert not isValid(control), case
+                assert not errors, (case, errors)
+                if case == 'home-selection':
+                    assert not calls, calls
+                elif case == 'tray-toggle':
+                    assert calls == ['toggle'], calls
+                elif case in ('tray-progress-start', 'tray-progress-finish'):
+                    assert not signals.events, signals.events
+                elif case.startswith('settings-'):
+                    assert calls == (
+                        [] if case.endswith('-pending') else ['request']
+                    ), calls
+                if case.startswith('tray-') and case != 'tray-superseded':
+                    assert not isValid(progress)
+        finally:
+            if isValid(owner):
+                deleteQObject(owner)
+            deleteQObject(signals)
+            processQtEvents()
+
+    assert len(destroyed) == iterations, (case, destroyed)
+    return {
+        'controlContinuationCase': case,
+        'cycles': iterations,
+        'destroyed': len(destroyed),
+    }
+
+
+def runAnimationStopOwnerProbe(iterations=30):
+    """Animation state observers may destroy the transition during stop."""
+    application()
+    destroyed = Counter()
+    references = []
+
+    for _ in range(iterations):
+        window = QWidget()
+        window.resize(80, 60)
+        window.show()
+        transition = ThemeTransition(
+            windowProvider=lambda: [window],
+            animationsEnabled=lambda: True,
+            duration=10000,
+        )
+        references.append(weakref.ref(transition))
+        transition.destroyed.connect(lambda *_args: destroyed.update(['transition']))
+
+        try:
+            transition.apply(lambda: None)
+            animation = next(iter(transition._animations))
+            overlay = transition._animations[animation][1]
+            animation.destroyed.connect(lambda *_args: destroyed.update(['animation']))
+            overlay.destroyed.connect(lambda *_args: destroyed.update(['overlay']))
+
+            def stateChanged(state, _previous):
+                if state == QtCore.QAbstractAnimation.State.Stopped and isValid(
+                    transition
+                ):
+                    deleteQObject(transition)
+
+            animation.stateChanged.connect(stateChanged)
+            transition.stop()
+            processQtEvents()
+
+            assert not isValid(transition)
+            assert not isValid(animation)
+            assert not isValid(overlay)
+        finally:
+            if isValid(transition):
+                deleteQObject(transition)
+            deleteQObject(window)
+        del transition, animation, overlay, window
+
+    collectAtBoundary()
+    assert destroyed == Counter(
+        transition=iterations, animation=iterations, overlay=iterations
+    )
+    assert all(reference() is None for reference in references)
+    return {
+        'animationStopCycles': iterations,
+        'destroyed': dict(destroyed),
+        'retained': 0,
+    }
+
+
+def runActionTranslationLifetimeProbe(iterations=30):
+    """Action.changed may delete a transient action during text translation."""
+    application()
+    references = []
+    destroyed = []
+
+    for _ in range(iterations):
+        owner = QtCore.QObject()
+        action = AppQAction('Original', parent=owner)
+        references.append(weakref.ref(action))
+        action.destroyed.connect(lambda *_args: destroyed.append(True))
+        action.changed.connect(lambda: deleteQObject(owner))
+
+        try:
+            with mock.patch(
+                'Furious.Qt.QtGui._', side_effect=lambda text: 'Translated ' + text
+            ):
+                action.retranslate()
+            assert not isValid(action)
+        finally:
+            if isValid(owner):
+                deleteQObject(owner)
+        del action, owner
+
+    collectAtBoundary()
+    assert len(destroyed) == iterations
+    assert all(reference() is None for reference in references)
+    return {
+        'actionTranslationCycles': iterations,
+        'destroyed': len(destroyed),
+        'retained': 0,
+    }
 
 
 class _ReentrantAction(AppQAction):
@@ -2049,6 +2350,26 @@ def main():
     )
 
     try:
+        # These presentation controls are process-lifetime objects in Furious;
+        # check each once here rather than interpreting their deliberate direct
+        # connections as transient-wrapper retention measurements.
+        for case in (
+            'tray-toggle',
+            'tray-update',
+            'tray-superseded',
+            'tray-progress-start',
+            'tray-progress-finish',
+            'home-selection',
+            'routing-popup',
+            'routing-state',
+            'settings-toggle',
+            'settings-action',
+            'settings-toggle-pending',
+            'settings-action-pending',
+        ):
+            print(json.dumps(runControlContinuationProbe(case, 1)))
+        print(json.dumps(runActionTranslationLifetimeProbe(arguments.iterations)))
+        print(json.dumps(runAnimationStopOwnerProbe(arguments.iterations)))
         print(json.dumps(runModalPickerProbe(arguments.iterations)))
         print(json.dumps(runToolbarOwnershipProbe(arguments.iterations)))
         print(json.dumps(runNotificationAndDnsProbe(arguments.iterations)))

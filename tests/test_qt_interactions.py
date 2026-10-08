@@ -1875,6 +1875,7 @@ class SharedSettingsQtWorkflowTest(unittest.TestCase):
                     QtCore.Qt.MouseButton.LeftButton,
                     pos=tunCard.checkBox.rect().center(),
                 )
+                processQtEvents()
 
                 for switch in (home.tunModeSwitch, tunCard.checkBox):
                     self.assertEqual(

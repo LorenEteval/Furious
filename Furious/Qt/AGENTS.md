@@ -29,6 +29,9 @@ Use the `manage-qt-pyside6-lifetimes` skill for source lifetime work when availa
   timer: consuming an event does not protect the rest of Qt's native resize call from observer-driven deletion.
   Explicit stop/replacement flushes pending completion once; coordinator destruction cancels it. The native child
   probes and pending-completion cases in `tests/test_theme_transition.py` cover these boundaries.
+  Animation `stop()` also emits synchronous state notifications. Recheck animation and coordinator validity before
+  deferred deletion or completion publication if those observers can destroy their owner; the animation-stop child
+  case in `tests/test_qt_lifetime.py` and the compiled fixture verify exact overlay retirement.
 
 ## Ownership and destruction
 
@@ -55,6 +58,16 @@ Use the `manage-qt-pyside6-lifetimes` skill for source lifetime work when availa
 
 ## Signals, threads, and async Qt work
 
+- Add native-validity checks at an identified lifetime boundary, not at every method entry or after every Qt call.
+  Ordinary synchronous methods assume a live receiver. Check borrowed or weakly resolved wrappers before native
+  access; check again after a callback, signal, nested event loop, or virtual hook whose contract permits destroying
+  that owner, when more native work follows. Name the actual boundary and trace its callers/observers rather than
+  assuming every function can destroy arbitrary UI. If the check already passed and the intervening code only reads
+  or computes data, do not repeat it. Keep callback-specific checks inside the branch that invokes that callback.
+  Qt receiver disconnection and `connectWeakly()` protect delivery entry, so an immediately repeated receiver check
+  adds nothing; they do not protect continuation after reentrant delivery. Required workflow-generation checks remain
+  separate. Existing callback, modal, borrowed-object and peer-destruction cases in `tests/test_qt_lifetime.py`,
+  `tests/test_frozenlib.py`, and `tests/test_service_runtime.py` challenge these distinctions.
 - Only the GUI thread mutates widgets/live GUI models. Slots do not sleep or perform unbounded file, host, process, or
   network work; split work into bounded event-loop units or an owned worker and reject stale results on return.
 - Native and Nuitka PySide6 can retain Python callbacks differently. Avoid protected compiled bound methods for
@@ -70,6 +83,15 @@ Use the `manage-qt-pyside6-lifetimes` skill for source lifetime work when availa
   the emitting method resumes. Recheck validity before later native calls; a weak dispatcher protects entry,
   not the rest of an in-flight method. Workflow owners additionally recheck their generation after delivery. `AppQMessageBox` button reuse and
   native-destruction regressions exercise both boundaries.
+  Controller refreshes, selection callbacks, and setting callbacks can likewise end their initiating control's
+  lifetime before returning. QAction text/check/icon/visibility setters publish `changed` synchronously: stop a
+  translation or presentation sequence if its owner dies, and reject a superseded state snapshot before the next
+  setter. `test_qt_lifetime.py` and the control-continuation/translation cases in the compiled lifetime fixture
+  exercise these boundaries without acquiring real host resources.
+  External settings/action requests from checkbox `toggled` signals use queued delivery: those callbacks may
+  delete the card/sender, and Qt's native checkbox setter can still use that sender after signal emission.
+  A post-callback validity check alone does not protect the native stack. Queued requests must also be dropped
+  when their card dies before delivery; the settings cases in `test_qt_lifetime.py` cover both destruction orders.
 - Direct connections are appropriate for deliberately shared persistent lifetimes; syntax alone does not prove a
   leak. Recheck the selected Nuitka/PySide6 callback protection when the toolchain changes. Static weak method names
   are runtime contracts, so renames must update registrations and tests. Weak dispatch itself does not marshal

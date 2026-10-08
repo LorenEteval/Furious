@@ -366,6 +366,17 @@ Home status publication, update notifications ending manager/parent ownership, a
 during the shared post-show event flush. Window/QR probes verify registry and timer cleanup before further work.
 Endpoint lookup covers service destruction/disablement during state and result
 notifications, without admitting the next request from the abandoned stage.
+Control continuations cover tray toggles/state/progress updates, routing refresh/visibility,
+Home selection, and failed settings callbacks that destroy their owner.
+Settings requests run after the native checkbox setter unwinds; destroying a card
+before queued delivery drops both ordinary and plugin-backed requests. QAction
+translation additionally verifies native destruction and weak-wrapper reclamation
+when `changed` deletes the owner. Persistent presentation controls run once per
+compiled invocation; their intentional direct connections are not transient
+retention measurements. Source regressions repeat these boundaries over 30 cycles
+and also verify that a superseding connection state cannot be overwritten.
+Animation-stop observers cover transition destruction during `stateChanged`, with
+exact transition/animation/overlay destruction and weak-wrapper reclamation.
 
 For compiler-sensitive work, compile this fixture separately with Nuitka's
 PySide6 plugin, its imported support code, and required data, then repeat the

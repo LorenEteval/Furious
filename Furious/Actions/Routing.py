@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from Furious.Frozenlib import AppRoutingController
+from Furious.Frozenlib import AppRoutingController, Mixins
 from Furious.Qt import *
 from Furious.Qt import gettext as _
 
@@ -119,7 +119,9 @@ class RoutingAction(AppQAction):
                 self._actionGroup.addAction(action)
 
         self.setVisible(bool(actions))
-        self.setEnabled(self.controller.interactionEnabled)
+
+        if Mixins.qObjectIsValid(self):
+            self.setEnabled(self.controller.interactionEnabled)
 
     def rebuildMenu(self):
         """Refresh plugin options immediately before the tray menu opens."""

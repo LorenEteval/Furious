@@ -279,11 +279,16 @@ class ThemeTransition(QtCore.QObject):
 
         if isValid(animation):
             animation.stop()
+
+        if isValid(animation):
             animation.deleteLater()
 
         if isValid(overlay):
             overlay.hide()
             overlay.deleteLater()
+
+        if not isValid(self):
+            return
 
         if notify and not self._animations:
             if deferNotification:
@@ -337,6 +342,9 @@ class ThemeTransition(QtCore.QObject):
 
         for animation in tuple(self._animations):
             self._releaseAnimation(animation, notify=False)
+
+            if not isValid(self):
+                return
 
         if wasRunning or completionPending:
             self.transitionFinished.emit()

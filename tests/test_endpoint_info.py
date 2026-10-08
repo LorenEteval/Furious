@@ -512,12 +512,16 @@ class EndpointInfoServiceTest(unittest.TestCase):
             self.assertNotIn('first time Network Statistics', privacyText)
 
             card.checkBox.setChecked(True)
+            processQtEvents()
+
             self.assertTrue(AppSettings.isStateON_(PROXY_ENDPOINT_INFO_SETTING))
 
             card.privacyButton.click()
             self.assertEqual(privacyRequests, [True])
 
             card.checkBox.setChecked(False)
+            processQtEvents()
+
             self.assertFalse(AppSettings.isStateON_(PROXY_ENDPOINT_INFO_SETTING))
 
             card.close()

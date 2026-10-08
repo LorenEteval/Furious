@@ -97,7 +97,8 @@ class RoutingSelector(AppQComboBox):
         """Refresh plugin capabilities immediately before showing options."""
         self.controller.refresh(force=True)
 
-        super().showPopup()
+        if Mixins.qObjectIsValid(self):
+            super().showPopup()
 
     def retranslate(self):
         """Refresh option text and routing accessibility metadata."""

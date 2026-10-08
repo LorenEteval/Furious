@@ -140,7 +140,7 @@ class UpdateManager(HttpGetManager):
 
             logger.error(f'bad network reply while checking for updates. {ex}')
 
-            if showMessageBox and isValid(self):
+            if showMessageBox:
                 self.showErrorMessageBox(parent)
         else:
             if versionToValue(tagName) > versionToValue(APPLICATION_VERSION):
@@ -161,8 +161,8 @@ class UpdateManager(HttpGetManager):
                 if callable(hasNewVersionCallback):
                     hasNewVersionCallback(tagName)
 
-                if not isValid(self):
-                    return
+                    if not isValid(self):
+                        return
 
                 if showMessageBox and Mixins.qObjectIsValid(parent):
                     mbox = MBoxQuestionUpdate(
@@ -177,7 +177,7 @@ class UpdateManager(HttpGetManager):
                     # Show the MessageBox asynchronously
                     mbox.open()
             else:
-                if showMessageBox and isValid(self) and Mixins.qObjectIsValid(parent):
+                if showMessageBox and Mixins.qObjectIsValid(parent):
                     mbox = AppQMessageBox(
                         parent=parent,
                         icon=AppQMessageBox.Icon.Information,

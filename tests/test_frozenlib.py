@@ -139,6 +139,7 @@ class FrozenlibQtContextTest(unittest.TestCase):
 
             card = _ToggleSettingsCard(None, 'StartupOnBoot', callback)
             card.checkBox.setChecked(True)
+            processQtEvents()
 
             callback.assert_called_once_with(True)
 

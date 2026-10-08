@@ -100,6 +100,9 @@ class ConnectionButton(AppQPushButton):
             if self._selectionCount != 1 or not self.activateSelected():
                 return
 
+            if not Mixins.qObjectIsValid(self, self.controller):
+                return
+
             self.controller.toggle()
         elif state is ConnectionState.Connected:
             self.controller.toggle()
