@@ -846,9 +846,7 @@ class HomePage(Mixins.QTranslatable, QMainWindow):
             QSizePolicy.Policy.Fixed,
         )
 
-        self.favoritesButton = AppQPushButton(
-            _('Favorites'), icon=bootstrapIcon('star.svg'), parent=self
-        )
+        self.favoritesButton = AppQPushButton(_('Favorites'), parent=self)
         self.favoritesButton.setObjectName('HomeFavoritesButton')
         self.favoritesButton.setCheckable(True)
         self.favoritesButton.setToolTip(_('Show favorite profiles only'))

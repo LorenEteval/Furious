@@ -56,7 +56,14 @@ from Furious.Window.SubscriptionPage import _SubscriptionEditorDialog
 
 from PySide6 import QtCore, QtGui
 from PySide6.QtTest import QSignalSpy, QTest
-from PySide6.QtWidgets import QLineEdit, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QLineEdit,
+    QStyle,
+    QStyleOptionViewItem,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from shiboken6 import isValid
 
@@ -332,7 +339,10 @@ class ServerTableQtInteractionTest(unittest.TestCase):
                 activeRow = Storage.UserActivatedItemIndex()
                 sourceIndex = table.sourceModel.index(activeRow, 0)
                 proxyIndex = table.proxyIndexFromSourceRow(activeRow)
-                expectedRoles = (int(QtCore.Qt.ItemDataRole.ForegroundRole),)
+                expectedRoles = (
+                    int(QtCore.Qt.ItemDataRole.ForegroundRole),
+                    int(QtCore.Qt.ItemDataRole.DecorationRole),
+                )
 
                 self.assertTrue(sourceIndex.isValid())
                 self.assertTrue(proxyIndex.isValid())
@@ -2134,6 +2144,16 @@ class ProfileMutationBatchTest(unittest.TestCase):
 
                 self.assertTrue(all(profile.metadata.favorite for profile in profiles))
                 self.assertEqual(metadataChanged.count(), 1)
+                self.assertIn(
+                    QtCore.Qt.ItemDataRole.DecorationRole,
+                    metadataChanged.at(0)[2],
+                )
+
+                remark = table.sourceModel.index(0, 0)
+                self.assertEqual(remark.data(), profiles[0].itemRemark)
+                self.assertFalse(
+                    remark.data(QtCore.Qt.ItemDataRole.DecorationRole).isNull()
+                )
 
                 add.trigger()
 
@@ -2156,6 +2176,7 @@ class ProfileMutationBatchTest(unittest.TestCase):
                 )
                 remove.trigger()
 
+                self.assertIsNone(remark.data(QtCore.Qt.ItemDataRole.DecorationRole))
                 self.assertEqual(table.proxyModel.rowCount(), 0)
                 self.assertEqual(table._selectedProfileIds(), [])
                 self.assertIs(Storage.UserServers()[0], profiles[0])
@@ -2170,6 +2191,331 @@ class ProfileMutationBatchTest(unittest.TestCase):
                 self.assertEqual(
                     table._visibleProfileIds(), [profiles[0].metadata.profileId]
                 )
+
+    def testFavoriteSVGDecorationTracksTableThemeWithoutChangingRemark(self):
+        with self.table(2) as (table, _controller):
+            profiles = Storage.UserServers()
+            profiles[0].metadata.favorite = True
+            model = table.sourceModel
+            remark = model.index(0, 0)
+
+            self.assertEqual(remark.data(), profiles[0].itemRemark)
+            self.assertEqual(
+                remark.data(QtCore.Qt.ItemDataRole.ToolTipRole), profiles[0].itemRemark
+            )
+            self.assertEqual(remark.data(model.SortRole), profiles[0].itemRemark)
+            self.assertIsNone(
+                model.index(1, 0).data(QtCore.Qt.ItemDataRole.DecorationRole)
+            )
+            self.assertIsNone(
+                model.index(0, 1).data(QtCore.Qt.ItemDataRole.DecorationRole)
+            )
+
+            table.show()
+
+            for theme in (
+                AppStyleSheet.Light,
+                AppStyleSheet.Dark,
+                AppStyleSheet.Light,
+            ):
+                with self.subTest(theme=theme):
+                    table.setStyleSheet(AppStyleSheet.forTheme(theme))
+                    processQtEvents()
+                    color = table.palette().color(QtGui.QPalette.ColorRole.Text)
+
+                    index = table.proxyIndexFromSourceIndex(remark)
+                    option = QStyleOptionViewItem()
+                    option.initFrom(table)
+                    table.itemDelegate().initStyleOption(option, index)
+
+                    self.assertEqual(option.text, profiles[0].itemRemark)
+                    self.assertFalse(option.icon.isNull())
+                    image = option.icon.pixmap(16, 16).toImage()
+                    colors = {
+                        image.pixelColor(x, y).name()
+                        for x in range(image.width())
+                        for y in range(image.height())
+                        if image.pixelColor(x, y).alpha() == 255
+                    }
+                    self.assertEqual(colors, {QtGui.QColor(color).name()})
+                    self.assertEqual(
+                        image.pixelColor(
+                            image.width() // 2, image.height() // 2
+                        ).alpha(),
+                        0,
+                    )
+
+    def testFavoriteSVGMatchesRemarkColorAcrossConnectionStatesAndPrivileges(self):
+        with self.table(2) as (table, controller):
+            for profile in Storage.UserServers():
+                profile.metadata.favorite = True
+
+            table.activateItemByIndex(0, True)
+            changes = QSignalSpy(table.sourceModel.dataChanged)
+            colors = {}
+
+            with (
+                mock.patch(
+                    'Furious.Qt.DynamicTheme.AppConnectionController',
+                    return_value=controller,
+                ),
+                mock.patch('Furious.Qt.DynamicTheme.SystemRuntime.isAdmin') as isAdmin,
+            ):
+                table.show()
+
+                for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
+                    table.setStyleSheet(AppStyleSheet.forTheme(theme))
+
+                    for connected, admin in (
+                        (False, False),
+                        (True, False),
+                        (True, True),
+                        (False, True),
+                    ):
+                        with self.subTest(
+                            theme=theme, connected=connected, admin=admin
+                        ):
+                            controller.isConnected.return_value = connected
+                            isAdmin.return_value = admin
+
+                            if connected:
+                                table.connectedCallback()
+                            else:
+                                table.disconnectedCallback()
+
+                            processQtEvents()
+
+                            self.assertIn(
+                                QtCore.Qt.ItemDataRole.DecorationRole,
+                                changes.at(changes.count() - 1)[2],
+                            )
+                            index = table.proxyIndexFromSourceRow(0)
+                            foreground = index.data(
+                                QtCore.Qt.ItemDataRole.ForegroundRole
+                            )
+                            self.assertEqual(
+                                foreground, QtGui.QColor(AppHue.currentColor())
+                            )
+                            colors[connected, admin] = foreground.name()
+
+                            option = QStyleOptionViewItem()
+                            option.initFrom(table)
+                            table.itemDelegate().initStyleOption(option, index)
+                            self.assertEqual(
+                                option.palette.color(QtGui.QPalette.ColorRole.Text),
+                                foreground,
+                            )
+
+                            for mode in (
+                                QtGui.QIcon.Mode.Normal,
+                                QtGui.QIcon.Mode.Active,
+                            ):
+                                for size in (16, 32):
+                                    image = option.icon.pixmap(
+                                        size, size, mode
+                                    ).toImage()
+                                    opaqueColors = {
+                                        image.pixelColor(x, y).name()
+                                        for x in range(image.width())
+                                        for y in range(image.height())
+                                        if image.pixelColor(x, y).alpha() == 255
+                                    }
+                                    self.assertEqual(opaqueColors, {foreground.name()})
+
+                self.assertNotEqual(colors[True, False], colors[True, True])
+                self.assertEqual(colors[False, False], colors[False, True])
+
+                table.activateItemByIndex(1, True)
+                processQtEvents()
+
+                oldIndex = table.proxyIndexFromSourceRow(0)
+                self.assertIsNone(oldIndex.data(QtCore.Qt.ItemDataRole.ForegroundRole))
+                image = (
+                    oldIndex.data(QtCore.Qt.ItemDataRole.DecorationRole)
+                    .pixmap(16, 16)
+                    .toImage()
+                )
+                opaqueColors = {
+                    image.pixelColor(x, y).name()
+                    for x in range(image.width())
+                    for y in range(image.height())
+                    if image.pixelColor(x, y).alpha() == 255
+                }
+                self.assertEqual(
+                    opaqueColors,
+                    {table.palette().color(QtGui.QPalette.ColorRole.Text).name()},
+                )
+                self.assertEqual(
+                    table.proxyIndexFromSourceRow(1).data(
+                        QtCore.Qt.ItemDataRole.ForegroundRole
+                    ),
+                    QtGui.QColor(AppHue.currentColor()),
+                )
+
+    def testSelectedFavoriteIconMatchesRenderedRemarkAndRestoresProfileColor(self):
+        with self.table(2) as (table, controller):
+            for profile in Storage.UserServers():
+                profile.metadata.favorite = True
+
+            table.activateItemByIndex(0, True)
+            table.resize(900, 220)
+            focusWindow = QWidget()
+
+            try:
+                with (
+                    mock.patch(
+                        'Furious.Qt.DynamicTheme.AppConnectionController',
+                        return_value=controller,
+                    ),
+                    mock.patch(
+                        'Furious.Qt.DynamicTheme.SystemRuntime.isAdmin'
+                    ) as isAdmin,
+                ):
+                    table.show()
+
+                    for theme in (AppStyleSheet.Light, AppStyleSheet.Dark):
+                        table.setStyleSheet(AppStyleSheet.forTheme(theme))
+
+                        for connected, admin in (
+                            (False, False),
+                            (True, False),
+                            (True, True),
+                        ):
+                            controller.isConnected.return_value = connected
+                            isAdmin.return_value = admin
+                            activeRow = int(admin)
+                            table.activateItemByIndex(activeRow, True)
+                            table.sourceModel.emitAllChanged()
+
+                            for active, keepHighlight in (
+                                (True, False),
+                                (False, False),
+                                (False, True),
+                            ):
+                                table.setProperty(
+                                    'keepSelectionHighlighted', keepHighlight
+                                )
+
+                                if active:
+                                    table.activateWindow()
+                                    table.setFocus()
+                                else:
+                                    focusWindow.show()
+                                    focusWindow.activateWindow()
+                                    focusWindow.setFocus()
+
+                                processQtEvents()
+                                self.assertEqual(table.isActiveWindow(), active)
+
+                                for selected in (False, True, False):
+                                    table.clearSelection()
+
+                                    if selected:
+                                        table.selectAll()
+
+                                    processQtEvents()
+
+                                    backgrounds = {}
+                                    for row in (0, 1):
+                                        with self.subTest(
+                                            theme=theme,
+                                            connected=connected,
+                                            admin=admin,
+                                            active=active,
+                                            keepHighlight=keepHighlight,
+                                            selected=selected,
+                                            row=row,
+                                        ):
+                                            if selected:
+                                                role = (
+                                                    'selection_text'
+                                                    if active or keepHighlight
+                                                    else 'text'
+                                                )
+                                                color = QtGui.QColor(
+                                                    AppStyleSheet.Palettes[theme][role]
+                                                )
+                                            elif row == activeRow:
+                                                color = QtGui.QColor(
+                                                    AppHue.currentColor()
+                                                )
+                                            else:
+                                                color = table.palette().color(
+                                                    QtGui.QPalette.ColorRole.Text
+                                                )
+
+                                            index = table.proxyIndexFromSourceRow(row)
+                                            cellRect = table.visualRect(index)
+                                            image = (
+                                                table.viewport()
+                                                .grab(cellRect)
+                                                .toImage()
+                                            )
+                                            if selected:
+                                                backgrounds[row] = image.pixelColor(
+                                                    image.width() // 2,
+                                                    round(5 * image.devicePixelRatio()),
+                                                )
+                                            option = QStyleOptionViewItem()
+                                            option.initFrom(table)
+                                            option.widget = table
+                                            option.rect = cellRect
+                                            option.decorationSize = table.iconSize()
+                                            table.itemDelegate().initStyleOption(
+                                                option, index
+                                            )
+
+                                            for element in (
+                                                QStyle.SubElement.SE_ItemViewItemDecoration,
+                                                QStyle.SubElement.SE_ItemViewItemText,
+                                            ):
+                                                region = (
+                                                    table.style()
+                                                    .subElementRect(
+                                                        element, option, table
+                                                    )
+                                                    .translated(-cellRect.topLeft())
+                                                )
+                                                ratio = image.devicePixelRatio()
+                                                pixels = [
+                                                    image.pixelColor(x, y)
+                                                    for x in range(
+                                                        round(region.left() * ratio),
+                                                        round(
+                                                            (region.right() + 1) * ratio
+                                                        ),
+                                                    )
+                                                    for y in range(
+                                                        round(region.top() * ratio),
+                                                        round(
+                                                            (region.bottom() + 1)
+                                                            * ratio
+                                                        ),
+                                                    )
+                                                ]
+                                                self.assertTrue(pixels)
+                                                closest = min(
+                                                    max(
+                                                        abs(pixel.red() - color.red()),
+                                                        abs(
+                                                            pixel.green()
+                                                            - color.green()
+                                                        ),
+                                                        abs(
+                                                            pixel.blue() - color.blue()
+                                                        ),
+                                                    )
+                                                    for pixel in pixels
+                                                )
+                                                self.assertLessEqual(
+                                                    closest, 12, element.name
+                                                )
+                                    if selected:
+                                        self.assertEqual(backgrounds[0], backgrounds[1])
+            finally:
+                focusWindow.close()
+                focusWindow.deleteLater()
+                table.setProperty('keepSelectionHighlighted', False)
 
     def testSmallDuplicationPublishesOneBatchOfIndependentManualCopies(self):
         with self.table(4) as (table, controller):

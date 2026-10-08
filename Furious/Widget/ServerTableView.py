@@ -466,6 +466,34 @@ def _subscriptionRemark(item: ServerProfile) -> str:
     )
 
 
+@functools.lru_cache(32)
+def _favoriteIconWithColor(colorName, selectedColorName):
+    """Tint the bundled star at common display sizes without retaining a view."""
+    source = bootstrapIconWhite('star.svg')
+    # DecorationRole must expose a native QIcon to Qt's item delegate.
+    icon = QIcon()
+
+    for name, modes in (
+        (colorName, (QIcon.Mode.Normal, QIcon.Mode.Active)),
+        (selectedColorName, (QIcon.Mode.Selected,)),
+    ):
+        color = QColor(name)
+
+        for size in (16, 24, 32, 48, 64):
+            pixmap = source.pixmap(size, size)
+            painter = QPainter(pixmap)
+            painter.setCompositionMode(
+                QPainter.CompositionMode.CompositionMode_SourceIn
+            )
+            painter.fillRect(pixmap.rect(), color)
+            painter.end()
+
+            for mode in modes:
+                icon.addPixmap(pixmap, mode)
+
+    return icon
+
+
 class UserServersTableModel(QtCore.QAbstractTableModel):
     """Expose user servers table data through a Qt item model."""
 
@@ -517,11 +545,46 @@ class UserServersTableModel(QtCore.QAbstractTableModel):
         text = header(server)
 
         if (
-            role == QtCore.Qt.ItemDataRole.DisplayRole
+            role == QtCore.Qt.ItemDataRole.DecorationRole
             and str(header) == 'Remark'
             and server.metadata.favorite
         ):
-            return '\u2605 ' + text
+            view = self.parent()
+            palette = (
+                view.palette() if isinstance(view, QWidget) else QApplication.palette()
+            )
+            foreground = self.data(index, QtCore.Qt.ItemDataRole.ForegroundRole)
+            color = (
+                foreground
+                if foreground is not None
+                else palette.color(QPalette.ColorRole.Text)
+            )
+
+            activeSelection = not isinstance(view, QWidget) or (
+                view.window().isActiveWindow()
+                or view.property('keepSelectionHighlighted')
+            )
+            # Match DataViews' selected and selected:!active text colors.
+            selectedColor = palette.color(
+                QPalette.ColorRole.HighlightedText
+                if activeSelection
+                else QPalette.ColorRole.Text
+            )
+
+            # Optional companion to the delegate's foreground-preserving selection.
+            # ForegroundRole already uses AppHue, including root/non-root colors;
+            # ordinary rows still use the theme's selection text color above.
+            # if (
+            #     foreground is not None
+            #     and isinstance(view, QWidget)
+            #     and view.property('preserveForegroundOnSelection')
+            # ):
+            #     selectedColor = foreground
+
+            return _favoriteIconWithColor(
+                color.name(QColor.NameFormat.HexArgb),
+                selectedColor.name(QColor.NameFormat.HexArgb),
+            )
 
         if (
             role == QtCore.Qt.ItemDataRole.DisplayRole
@@ -886,11 +949,19 @@ class ServerTableView(
 
         super().__init__(*args, **kwargs)
 
+        # Optional alternative: keep the active profile's highlight when selected.
+        # To enable, uncomment this line and the companion blocks in
+        # UserServersTableModel.data and _AppQItemViewSelectionDelegate.paint.
+        # The selected-row rendering regression must then expect AppHue for the
+        # active profile, while ordinary rows retain their theme selection colors.
+        # self.setProperty('preserveForegroundOnSelection', True)
+
         self.sourceModel = UserServersTableModel(self.Headers, parent=self)
 
         self.proxyModel = UserServersSortFilterProxyModel(parent=self)
         self.proxyModel.setSourceModel(self.sourceModel)
         self.setModel(self.proxyModel)
+        self.setIconSize(QtCore.QSize(16, 16))
 
         self._sortSelectionSnapshot = None
         self.proxyModel.sortAboutToStart.connect(self._captureSortSelection)
@@ -1225,14 +1296,20 @@ class ServerTableView(
         """Update the user servers Qt table view for a disconnected state."""
         self.sourceModel.emitRowChanged(
             Storage.UserActivatedItemIndex(),
-            roles=[QtCore.Qt.ItemDataRole.ForegroundRole],
+            roles=[
+                QtCore.Qt.ItemDataRole.ForegroundRole,
+                QtCore.Qt.ItemDataRole.DecorationRole,
+            ],
         )
 
     def connectedCallback(self):
         """Update the user servers Qt table view for a connected state."""
         self.sourceModel.emitRowChanged(
             Storage.UserActivatedItemIndex(),
-            roles=[QtCore.Qt.ItemDataRole.ForegroundRole],
+            roles=[
+                QtCore.Qt.ItemDataRole.ForegroundRole,
+                QtCore.Qt.ItemDataRole.DecorationRole,
+            ],
         )
 
     def handleItemSelectionChanged(self, *args):
@@ -1503,7 +1580,7 @@ class ServerTableView(
         self.sourceModel.dataChanged.emit(
             self.sourceModel.index(rows[0], 0),
             self.sourceModel.index(rows[-1], self.sourceModel.columnCount() - 1),
-            [QtCore.Qt.ItemDataRole.DisplayRole],
+            [QtCore.Qt.ItemDataRole.DecorationRole],
         )
 
         if not isValid(self):

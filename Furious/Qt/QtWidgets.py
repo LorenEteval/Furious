@@ -744,6 +744,19 @@ class _AppQItemViewSelectionDelegate(QStyledItemDelegate):
                 painter.drawRoundedRect(selectionRect, self.Radius, self.Radius)
                 painter.restore()
 
+            # Optional alternative: preserve the model foreground when selected.
+            # Enable together with ServerTableView's property and icon-color block.
+            # The rounded selection background is already painted above; native
+            # contents can now use the profile color without selection/hover rules.
+            # if (
+            #     self.parent().property('preserveForegroundOnSelection')
+            #     and index.data(QtCore.Qt.ItemDataRole.ForegroundRole) is not None
+            # ):
+            #     option = QStyleOptionViewItem(option)
+            #     option.state &= ~(
+            #         QStyle.StateFlag.State_Selected | QStyle.StateFlag.State_MouseOver
+            #     )
+
         super().paint(painter, option, index)
 
 
