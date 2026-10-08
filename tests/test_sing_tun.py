@@ -55,7 +55,7 @@ from Furious.Controllers.ConnectionController import (
     ConnectionController,
     ConnectionState,
 )
-from Furious.Qt import gettext as _
+from Furious.Qt import AppQDialogButtonBox, gettext as _
 from Furious.Service.RuntimeLease import RuntimeEventRouter, RuntimeLeaseState
 from Furious.Service.LogManager import LogManager, TUN_LOG_CATEGORY
 
@@ -599,6 +599,41 @@ class SingTUNUIAndStorageTest(unittest.TestCase):
         dialog.reject()
         processQtEvents()
         self.assertFalse(isValid(dialog))
+
+    def testDialogButtonsUseInitialLanguageAndFollowLanguageChanges(self):
+        for initialLanguage in ('ZH', 'RU', 'EN'):
+            with self.subTest(language=initialLanguage), isolatedSettings():
+                AppSettings.set('Language', initialLanguage)
+
+                dialog = self._dialog({})
+                buttons = dialog.findChild(AppQDialogButtonBox)
+                buttonsByRole = {
+                    buttons.buttonRole(button): button for button in buttons.buttons()
+                }
+                cancelButton = buttonsByRole[buttons.ButtonRole.RejectRole]
+                okButton = buttonsByRole[buttons.ButtonRole.AcceptRole]
+
+                original = dialog.document()
+
+                dialog.open()
+                processQtEvents()
+
+                try:
+                    self.assertEqual(cancelButton.text(), _('Cancel'))
+                    self.assertEqual(okButton.text(), _('OK'))
+
+                    for language in ('EN', 'ZH', 'RU', 'EN'):
+                        AppSettings.set('Language', language)
+                        Mixins.QTranslatable.retranslateAll()
+                        processQtEvents()
+
+                        self.assertEqual(cancelButton.text(), _('Cancel'))
+                        self.assertEqual(okButton.text(), _('OK'))
+
+                        self.assertEqual(dialog.document(), original)
+                finally:
+                    dialog.reject()
+                    processQtEvents()
 
     def testUnsupportedSettingsMessagesAreLocalizedAndRetranslatable(self):
         """Reject unknown options with localized text without committing settings."""

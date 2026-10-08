@@ -355,10 +355,9 @@ class SingTUNSettingsDialog(AppQTransientDialog):
 
         layout.addWidget(self.errorLabel)
 
-        buttons = AppQDialogButtonBox(
-            AppQDialogButtonBox.StandardButton.Ok
-            | AppQDialogButtonBox.StandardButton.Cancel
-        )
+        buttons = AppQDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
+        buttons.addButton(_('OK'), AppQDialogButtonBox.ButtonRole.AcceptRole)
+        buttons.addButton(_('Cancel'), AppQDialogButtonBox.ButtonRole.RejectRole)
 
         connectWeakly(buttons.accepted, self, 'accept')
         connectWeakly(buttons.rejected, self, 'reject')
