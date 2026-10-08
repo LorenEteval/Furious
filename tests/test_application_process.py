@@ -24,6 +24,7 @@ from Furious.Utility.AppMainProcess import AppMainProcess
 
 from tests.support import application
 
+from contextlib import redirect_stderr
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -37,6 +38,22 @@ import tempfile
 import unittest
 
 AppMainProcessModule = importlib.import_module('Furious.Utility.AppMainProcess')
+
+
+class _CapturedAppMainProcess(AppMainProcess):
+    """Retain expected child tracebacks without creating CI error annotations."""
+
+    def __init__(self, func, diagnosticPath):
+        super().__init__(func)
+
+        self.diagnosticPath = diagnosticPath
+
+    def run(self):
+        # Capture inside the spawned child and keep the real supervision path.
+        # SystemExit unwinds this context and flushes the file before join returns.
+        with open(self.diagnosticPath, 'w', encoding='utf-8') as diagnostic:
+            with redirect_stderr(diagnostic):
+                super().run()
 
 
 class _SuccessfulApplication:
@@ -109,20 +126,22 @@ class AppMainProcessTest(unittest.TestCase):
             with self.subTest(stage=stage, exception=exceptionType.__name__):
                 with tempfile.TemporaryDirectory() as directory:
                     crashDirectory = Path(directory) / 'crashes'
+                    diagnosticPath = Path(directory) / 'stderr.log'
 
                     if failCrashWrite:
                         crashDirectory.write_text(
                             'keep existing file', encoding='utf-8'
                         )
 
-                    process = AppMainProcess(
+                    process = _CapturedAppMainProcess(
                         functools.partial(
                             _failingApplication,
                             stage,
                             exceptionType,
                             str(crashDirectory),
                             createQt=createQt,
-                        )
+                        ),
+                        str(diagnosticPath),
                     )
 
                     try:
@@ -130,8 +149,31 @@ class AppMainProcessTest(unittest.TestCase):
                         process.join(15)
 
                         self.assertFalse(process.is_alive(), 'child did not finish')
-                        self.assertEqual(process.exitcode, expected.value)
+
+                        diagnostic = diagnosticPath.read_text(encoding='utf-8')
+
+                        # repr keeps diagnostics visible on failure without emitting
+                        # traceback-shaped lines that CI mistakes for another error.
+                        self.assertEqual(
+                            process.exitcode, expected.value, repr(diagnostic)
+                        )
                         self.assertEqual(process.fileWritten.value, not failCrashWrite)
+
+                        message = (
+                            'factory fixture failure'
+                            if stage == 'factory'
+                            else 'runner fixture failure'
+                        )
+
+                        self.assertEqual(
+                            diagnostic.count('Traceback (most recent call last):'),
+                            1,
+                            repr(diagnostic),
+                        )
+                        self.assertIn(
+                            f'{exceptionType.__name__}: {message}', diagnostic
+                        )
+                        self.assertNotIn('unexpected Qt exit request', diagnostic)
 
                         if failCrashWrite:
                             self.assertEqual(
@@ -143,20 +185,17 @@ class AppMainProcessTest(unittest.TestCase):
 
                             self.assertEqual(len(logs), 1)
 
-                            diagnostic = logs[0].read_text(encoding='utf-8')
-                            message = (
-                                'factory fixture failure'
-                                if stage == 'factory'
-                                else 'runner fixture failure'
-                            )
+                            crashDiagnostic = logs[0].read_text(encoding='utf-8')
 
                             self.assertIn(
-                                'Traceback (most recent call last):', diagnostic
+                                'Traceback (most recent call last):', crashDiagnostic
                             )
                             self.assertIn(
-                                f'{exceptionType.__name__}: {message}', diagnostic
+                                f'{exceptionType.__name__}: {message}', crashDiagnostic
                             )
-                            self.assertNotIn('unexpected Qt exit request', diagnostic)
+                            self.assertNotIn(
+                                'unexpected Qt exit request', crashDiagnostic
+                            )
                     finally:
                         if process.is_alive():
                             process.terminate()

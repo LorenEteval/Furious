@@ -100,7 +100,7 @@ worker. Choose tests by the changed contract rather than by filename alone.
 
 | Module | Coverage |
 | --- | --- |
-| [test_application_process.py](test_application_process.py) | Exact application-child ownership, spawned factory/runner failure classification and crash reporting, partial Qt startup, crash-write failure, intentional exits, exception/signal handling and command-line dispatch. |
+| [test_application_process.py](test_application_process.py) | Exact application-child ownership, spawned factory/runner failure classification and crash reporting, captured and asserted expected child diagnostics, partial Qt startup, crash-write failure, intentional exits, exception/signal handling and command-line dispatch. |
 | [test_architecture_refactors.py](test_architecture_refactors.py) | Startup acquisition/rollback including partial controller construction and cleanup retry, singleton election and real isolated IPC race, tray/exit policy, host integration ownership, bounded core-log transport, connection transactions, stylesheet composition. |
 | [test_connection_startup_async.py](test_connection_startup_async.py) | Real local-listener readiness, timeout/cancel/replacement, semantic exits, DNS reply lifetime, mocked platform-specific TUN sequencing. |
 | [test_controllers.py](test_controllers.py) | Connection state/error/reconnect transitions, reentrant cancellation/replacement before launch and during completion, startup restoration, shared settings, routing fallback persistence and tray/selector agreement after custom-routing disable/re-enable. |
